@@ -27,6 +27,8 @@ Consumes the [intent](../intent/android-native.md) and [spec](../specs/android-n
 
 AN-19 (#2898) is out of scope for this run.
 
+AN-18 also delivers the native app's user manual with screenshots of the implemented screens: `docs/user/android-app/` (`manual.json`, `manual.pdf`, `screenshots/`, provenance), with the sections of `docs/user/cordova-app` ([decision on #2897](https://github.com/WizardFactory/TodayWeather/issues/2897#issuecomment-6716907228)).
+
 ## AN-01 — project skeleton, imported assets and CI (#2880)
 
 Design skipped: no system flow; the module layout is fixed by #2877. Archify not applicable (no structure diagram changes; the service overview gains the Android client in AN-19).
@@ -103,3 +105,146 @@ Design decision: read the WebView `localStorage` as the first source, because th
 JVM: `CordovaMigrationTest` (10), `LevelDbReaderTest` (5, files written by a test writer). Device: `run-upgrade-test.sh` on API 36 (LevelDB) and API 24 (SQLite localStorage) emulators. Smoke: debug build without the Firebase configuration starts with analytics off.
 
 Review round 1 (F1–F8): slots kept for broken city entries, coordinate validation and serialization, MANIFEST-based LevelDB reading with real-LevelDB fixtures, wall-time `secs2date`, locale-independent number formatting (also in AN-02's warning times), push record validation, the upgrade test's preconditions (negative run exits 4 without the Firebase configuration), and `MigrationRunner` with a JVM re-run test. Round 2: record times must be real dates (non-lenient check); the LevelDB fixtures keep a non-empty write-ahead log.
+
+## AN-04 — push re-registration after the update (#2883)
+
+Design: `PushRegistration` reproduces `Push.init`/`loadPushInfo`/`_makePostObj` as pure Kotlin. `PushSync` (`core-data`) runs registrations one at a time: read the stored state, send, store the token. The app runs the start registration after the migration when it is opened (`MainActivity`, once per open as the Cordova web page; not for a process started in the background), with an FCM token (`FirebaseTokenSource`) and an HTTP transport. `MessagingService.onNewToken` hands a token to WorkManager (`PushTokenWorker`, one unique chain), so the replacement completes after the process ends. The server URL is a private build input. Device tests swap token and transport in `TestTodayWeatherApp` (androidTest), so no test sends anything and the app has no test mode. Path version `v000903` (decision 2, AN-06 confirms).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN04-US1 | Cordova user with alarms updates; token unchanged | Migrated records, stored token | Open the native app | One `POST /v000903/push-list` with every record once, same `Device-Id` | Server unreachable: no retry until the next start (as Cordova) | AC1, AC2 |
+| AN04-US2 | Same user; FCM token changed | Stored token differs | Open the app | `PUT /v000903/push` (new/old token), then the list; stored token updated | – | AC1, AC2 |
+| AN04-US3 | Maintainer | Emulator, APKs | `run-upgrade-test.sh … token-a` and `… token-b` | Both pass; requests recorded, none sent; both packages removed before the network returns | Preconditions missing: exit 4; interrupted or failed run: packages removed, then network restored | AC2, AC3 |
+| AN04-US4 | User whose FCM token changes twice while the app runs | Stored token A | FCM delivers B, then C | `PUT` A→B, then B→C; stored token C | The process ends before the work runs: a later process completes it | AC1, AC2 |
+| AN04-US5 | User in a daylight-saving zone with an alert whose start equals its end | New York, record at a transition | Open the app | End time one local minute earlier, as `setMinutes` in V8 | – | AC1 |
+
+### Acceptance (from #2883)
+
+- AC1: unit tests compare the native requests (path, headers, body) with the Cordova app's for first, unchanged and changed tokens.
+- AC2: the emulator upgrade test passes for both token cases; every migrated record registered once with the same `Device-Id`; no request reaches the production push server.
+- AC3: delivery.
+
+### Checks
+
+JVM: `PushRegistrationTest` (Cordova goldens: first, unchanged, changed token, air unit, no token, New York daylight-saving alerts), `PushSyncTest` (B then C with a held transport; a token during the start registration), `HttpPushTransportTest`. Device: `run-upgrade-test.sh` for `token-a` and `token-b` on API 36 and `token-b` on API 24, including `PushTokenWorkTest` (token work interrupted with its `PUT` in flight by the end of the process, completed by the next process without an app open). Script cleanup: success, interrupted (TERM) and failed runs leave neither package installed and restore the network; `test-cleanup.sh` (adb test double, CI) keeps the device offline with exit 5 when the package query fails (also after partial output), answers with anything but a package list, or still lists a package.
+
+Review round 1 (F1–F5): cleanup before the network returns on every exit; registrations serialized; token work in WorkManager; local-time end-minute decrement with V8's daylight-saving rules; `service.push.js` in the CI path filters. Also corrected: the start registration ran on every process start, including background starts for FCM; it now runs when the app is opened. Round 2 (F1): a failed or unreadable package query no longer counts as removed. Round 3 (F1): the query's exit status and the whole answer are checked.
+
+## AN-05 — hourly and daily charts (#2884)
+
+Design: `core-domain` `chart/` builds each chart as the SVG its Cordova directive draws (`Svg`, D3 v3 arithmetic, `ChartMetrics` from the screen size, header labels, legend texts and the opening offset from `ChartPosition`). `app` `ui/chart/` draws the scenes with Compose (`HourlyChartView`, `DailyChartView`), light theme only (themes are AN-07); the expander reports to the caller, and the screen (AN-08) keeps `expandShortChart`. References come from the Cordova debug build on the emulator (`tools/chart-reference/capture.sh`, sharing the offline guard with the upgrade test in `tools/emulator/offline.sh`) and live under `core-domain/src/test/resources/chart-reference/` with provenance and per-comparison tolerances. Robolectric renders the screenshots (SDK 34; SDK 36 needs Java 21). Archify not applicable (app-internal component, no service structure or flow change).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN05-US1 | User checks the hourly forecast | Weather loaded | Open the forecast | The chart opens with the current hour in the second column. Day and hour labels, lines for today and yesterday, value circles, the current-temperature dots, icons, rain chance and amount and the pinned legend appear as in Cordova | Missing values are drawn as Cordova draws them (empty text, no image) | AC1, AC2 |
+| AN05-US2 | Same user looks back and ahead | Hourly chart shown | Scroll to both ends | The first and last columns are as in Cordova | – | AC2 |
+| AN05-US3 | User reads wind and humidity | Hourly chart shown | Tap the expander | Wind direction and speed rows and humidity rows appear; tapping again hides them | – | AC1, AC2 |
+| AN05-US4 | User checks the coming days | Weather loaded | Open the daily forecast and scroll | Today is in the third column. Weekday and date, morning and afternoon icons, rain chance and amount, bars on one scale and today's dot appear as in Cordova | – | AC1, AC2 |
+| AN05-US5 | Maintainer refreshes the references after a Cordova chart change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `capture.sh`, `device-smoke.sh`, `./gradlew test` | New references and provenance. The emulator is offline while the build is installed, and the network and display are restored afterwards | Non-emulator serial or a network that stays up: refused | AC2, AC3 |
+
+### Acceptance (from #2884)
+
+- AC1: the scenes match the Cordova SVG, labels, legend and opening offsets for every captured fixture and size (`ChartSceneTest`).
+- AC2: screenshot comparisons pass at 384×832, 360×780 and 412×892 within recorded tolerances at the opening position and both scroll ends (`ChartScreenshotTest`). References and provenance are under `android/`, and the tests run in both CI jobs.
+- AC3: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM: `ChartSceneTest` (15 fixture-size captures, element by element), `ChartScreenshotTest` (18 comparisons), `ChartBehaviorTest`. Device: `device-smoke.sh` on API 36 (18 comparisons with the emulator's fonts). CI: `check-sources.mjs` in the job with `client/`.
+
+## AN-06 — spike review, estimate and decisions (#2885)
+
+Decision record, no code. Gates G1 (AN-03, AN-04), G2 (AN-05) and G3 (AN-02) pass; evidence on #2885 (https://github.com/WizardFactory/TodayWeather/issues/2885#issuecomment-6718290519). AK's decisions, the estimate for AN-07 to AN-18 (about 42–64 agent hours) and the open place-search decision are in #2877: https://github.com/WizardFactory/TodayWeather/issues/2877#issuecomment-6718290258.
+
+- Go for AN-07 to AN-18 now, in task-graph order; no budget set; AN-19 excluded.
+- `v000903` for every call. Cordova anomalies are kept unless AK approves a fix; A01 is the fix (AN-08). A24, the 12:00 AM picker deleting the alarm, the weather-address 501 and D37 are kept.
+- Text follows the system font scale, verified up to 1.3 (AN-18). Cordova Android receives fixes only.
+- Open, blocking AN-10 only: Places SDK for Android or Places web service (key restriction, billing, usage measured in the Google Cloud console). Recommended: the Places SDK for Android with an Android-restricted key in the same project.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN06-US1 | AK decides whether to continue | Gates merged | Read #2885 and #2877 | Gate evidence linked; decisions, estimate and the open item with the sub-issue it blocks | A failed gate keeps #2885 open | AC1, AC2 |
+| AN06-US2 | Implementer of a later sub-issue | #2877 decision comment | Look up a decision | Each decision has a value or names the sub-issue it blocks | – | AC2, AC3 |
+
+### Acceptance (from #2885)
+
+- AC1: the gates pass, with their evidence linked from #2885.
+- AC2: #2877 has the decision comment (go, priority, budget, estimate, each decision; an open decision names the sub-issue it blocks).
+- AC3: delivery (plan and intent updated, review PASS, CI, merge).
+
+## AN-07 — app shell, navigation, themes and languages (#2886)
+
+Design (survey: `reports/sdlc/android-an-07/shell-survey.md`, from the Cordova templates, controllers and SCSS):
+
+- `core-domain` `shell/`: `AppLanguage` (the first system locale picks one of the six catalogs as angular-translate does: en, de, ko, ja, zh-CN, zh-TW; zh-HK and zh-TW to zh-TW, other zh to zh-CN, else en) and the region (last part of the first locale with a region, default KR) that shows the Korea-only menu rows; `Theme` (light, dark, photo, old) with the icon and weather image folders of `theme.js`; `StartupPage` ("0" hourly, "1" daily, "2" locations, "3" air, others hourly); `WeatherPhotos` (the photo feed grouped by tags and chosen per sky icon as `service.weatherutil.js` does, checked against goldens from the Cordova code).
+- `app` `ui/shell/`: the bottom tab bar (Locations, Hourly, Daily, Air; the selected weather or air tab shows the refresh glyph and reports a refresh, a second tap within 700 ms does nothing; items up to 150 dp, centered on wide windows), the header bar (44 dp, menu button, title centered clear of the wider button group as Ionic's `calcWidths` places it, actions), the full-screen side menu (200 ms slide; rows in Cordova order, rows 1–4 only for region KR; AN-12, AN-13 and AN-15 connect the rows), dialogs, and the exit confirmation on a main tab (`LOC_DO_YOU_WANT_TO_EXIT`). Geometry follows Ionic as measured on the Cordova screen: half-pixel bar hairlines, icon buttons with a transparent 1 dp border at 0.87 opacity, menu row edges on device pixels, and text on the baseline of its own font as Chrome places it when a fallback font draws Korean. Theme colors come from the Cordova SCSS per theme and page (the old theme colors Hourly and Daily; the photo theme's weather headers are clear with outlined text). Edge-to-edge with the Cordova status bar color and light icons, side insets kept clear, a reserved slot under the tab bar for the AN-15 banner, and the content width following the window (600 dp and wider included).
+- Glyphs and icons: Ionicons 2.0.1 (from the Cordova build's Ionic 1.3.5, MIT) and Material Icons (`client/www/fonts`, Apache 2.0) as fonts, and the Cordova launcher and splash icons (`client/tw.resources`), all with provenance.
+- Language: the activity applies the AppLanguage locale to its resources. Text follows the system font scale (AN-06); glyphs and the bars' fixed lines (44 dp title, 42 dp blocks) keep their size, the tab bar and menu rows grow, a tab label too long for its item wraps onto a second line, and a menu value that no longer fits beside its label moves under it.
+- Launch: the launcher keeps the Cordova component name `net.wizardfactory.todayweather/.MainActivity` (so home-screen shortcuts keep working without an alias), `singleTop`; the splash screen stays until the migration finishes, and entry intents (launcher, notification taps) wait for it.
+- Photo theme: `TW_WEATHER_PHOTOS_URL` (private input, like the server URL; without it no photo, as in Cordova builds from the template config). `WeatherPhotoFeed` (core-data) loads it when the app opens and when a network comes back, with `_retryGetHttp`'s attempts (another 2 s later while none has answered, up to three, 20 s each; the first to answer decides and the others are cancelled), shared while it runs and kept once per process after a success. Hourly and Daily show the chosen photo behind the header block (AN-08 fills the block and chooses each place's photo on its weather updates).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN07-US1 | User moves between tabs | App open | Tap each tab; tap the selected Hourly tab | Tab content switches; the selected weather or air tab shows the refresh glyph and a tap asks for a refresh | Second tap within 700 ms does nothing | AC1 |
+| AN07-US2 | User starts on the chosen page | Startup page set to daily | Open the app | The Daily tab is selected | Unknown value: Hourly | AC1 |
+| AN07-US3 | User opens the menu and leaves | App open | Tap the menu button; press back | Menu slides in with the Cordova rows (KR rows for region KR); back closes it | – | AC1, AC2 |
+| AN07-US4 | User leaves the app | Main tab, no dialog | Press back; Cancel; back; OK | Exit question; Cancel keeps the app; OK closes it | Back on a dialog closes only the dialog | AC1 |
+| AN07-US5 | User switches theme and language | Theme set; system language English | Open the app | Colors and images of the theme; English texts | Unsupported language: English | AC2 |
+| AN07-US6 | Tablet or foldable user resizes and rotates | Large screen emulator | Resize, rotate, multi-window | Nothing clipped; tab bar and header adapt | – | AC3 |
+| AN07-US7 | Cordova user updates | Home-screen shortcut to the Cordova app | Update; tap the shortcut; a notification tap during the migration | The native app opens; the entry intent is handled after the migration | – | AC4 |
+| AN07-US8 | Maintainer refreshes the shell references after a Cordova shell change | Emulator, Cordova debug APK | `check-sources.mjs` fails for the shell; run `tools/shell-reference/capture.sh`, `./gradlew test`, `tools/large-screen/run-shell-fit.sh` | New references and provenance; tests pass within the recorded tolerances. The emulator is offline while an app is installed; network, display, rotation and navigation are restored | Non-emulator serial or a network that stays up: refused | AC2, AC5 |
+
+### Acceptance (from #2886)
+
+- AC1: UI tests pass for tab switching, the startup-page setting, opening and closing the menu, back on a dialog and the exit confirmation.
+- AC2: screenshot tests cover the shell in each theme, in Korean and English (with Cordova comparisons of the tab bar, header bar and menu).
+- AC3: on tablet and foldable emulators, resizing and rotating leave no clipped content.
+- AC4: after an update from the Cordova build on an emulator, the existing home-screen shortcut opens the native app, and an instrumented test shows an entry intent arriving during the migration is handled after it finishes.
+- AC5: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM: `ShellLogicTest` (languages, region, themes, startup page; `corpus/photos.json` from the Cordova code: two feeds' groups and 195 choices), `WeatherPhotoFeedTest`, `ShellTest`, `EntryIntentsTest`, `ShellScreenshotKoTest`/`ShellScreenshotEnTest` (24 comparisons: tab bar, header and menu in four themes against screen captures of the Cordova build, `tools/shell-reference`; recorded tolerances and measured sensitivity), `ShellFitKoTest`/`ShellFitEnTest` (22 cases: eight windows from 320×480 to 1280×800 dp and three of them at font scale 1.3, in Korean and English) and `ShellFitJaTest`/`DeTest`/`ZhCnTest`/`ZhTwTest` (the three narrowest cases each). The references are cut from the screen: DevTools screenshots drew the English menu's rows 2.5 dp shorter than the layout and the screen. CI: `tools/emulator/check-sources.mjs` covers the chart and shell sources. Emulators: `tools/large-screen/run-shell-fit.sh` (`ShellFitDeviceTest` while the display rotates, shrinks to a split-screen half and folds; gesture and three-button navigation) on a Pixel Tablet and a Pixel Fold API 36 image; `tools/upgrade/run-upgrade-test.sh` with `EntryIntentTest` and the launcher-shortcut check on API 36 and API 24. Archify not applicable (app-internal UI, no service structure or flow change).
+
+## AN-08 — weather data layer and weather screens S03, S04 (#2887)
+
+Design (survey: `reports/sdlc/android-an-08/forecast-survey.md`, from `service.weatherutil.js`, `service.weatherinfo.js`, `controller.tabctrl.js`, `controller.forecastctrl.js`, the two templates and the SCSS):
+
+- `core-data` requests: the route of `getWeatherByGeoInfo` (coordinates when `location.lat` is truthy, A05 kept; else the address with `대한민국 ` added, split into the KMA town route `/v000903/kma/addr/{first}[/{second}][/{third}]`, or the free-form `/weather/v000903/addr/{address}`, which answers 501), `/weather/v000903/coord/{lat},{long}`, the units query in `Units.getAllUnits()` order plus `airForecastSource=kaq`, and `Accept-Language` from the app's languages in Chrome's form (`ko-KR,ko;q=0.9,…`), since the WebView sent its default header and the gateway reads it. Attempts follow `_getHttp`/`_retryGetHttp` (another 2 s later while none has answered, up to three, 10 s each, the first to settle decides; the others are cancelled); one HTTP client serves the weather and the photo feed.
+- `core-data` `WeatherRepository`: each place's weather in memory and in a file cache, so a cold start shows the last data while it loads (Cordova saved the weather with the city). A response applies to the place that requested it (A01 fix): it is keyed by the place (current position, coordinates or address), and only the latest request of a key applies. The rest is Cordova's: `updateCity` keeps old fields a response omits (A02), the current-position slot takes the response's name, country, address and location, the ten-minute gate lives in memory only, and a failure keeps the cached data. Loads: app open, re-tapping the selected weather tab and the retry button bypass the gate; resume and switching places are gated; the refresh-interval timer restarts with every load.
+- `core-domain` `Forecast`: the values of ForecastCtrl for S03 and S04 from the converted place (hero temperature with `getTemp`, summary, yesterday text, update time, the S03 hourly and daily AQI lists, the detail weather and air rows with the Cordova formatting, the three-day details of S04, the pollen popup rows, attribution), checked against goldens generated from the Cordova controller code.
+- `app` screens: S03 and S04 as the shell's Hourly and Daily pages: the header block (photo box in the photo theme, arrows with more than one place, temperature, sky icon, summary and air summary), the hourly chart with the expander (`expandShortChart`) and the daily chart (AN-05), the air and detail cards, the pollen popup, attribution; the title with the place name, the current-position glyph and the loading spinner, the bell and share buttons (AN-14 and AN-16 open their pages); swiping or the arrows switch places; the retry confirmation (O03: 오류, 날씨 정보를 가져오지 못하였습니다, 닫기/확인). Card and chart colors per theme from the SCSS.
+- Kept for later sub-issues: the current position's own lookup (AN-10), the pages behind the bell, share, air summary and units links (AN-14, AN-16, AN-09, AN-12), and S08's reload of all places (AN-12 calls the repository).
+- Screenshot references: "manual pages 3–9" are the states those pages show (S03 at the top and in its details, S04, and both charts at their ends). The manual's images are live data at 411 dp, so the comparison uses captures of the same states from the Cordova build at 384×832 with corpus fixtures (`tools/forecast-reference`, like the chart and shell references); the charts' ends are covered by the AN-05 references.
+- As built: `ForecastScope` is ForecastCtrl's scope per visit (checked against the controller run under Node, `corpus/forecast.json`), `ForecastPage` the templates, `WeatherSession` TabCtrl's loading, `PlaceIndex` WeatherInfo's place selection. The spinner follows the selected place's request (with A01 fixed, a request for another place no longer shows on this one); it stays white, hidden by the light bar (A08 kept). The stale attribution of a place without a source is kept (screen-element-bindings.md anomaly 2). Line boxes follow the WebView's font metrics rounded to device pixels (`CssMetrics`), which also corrects the AN-05 chart header rows (their tolerances re-recorded lower); text uses unhinted advances. The charts zoom with the font scale as a whole (their columns come from the screen width), so their text follows the scale and keeps its room. The repository stores one answer at a time and an older answer, a failure included, counts for nothing; `AppStateHolder` is the store's only writer after the migration (PushSync writes through it) and shows the last saved state with the unsaved changes on top; a change whose save fails stays and is saved with the next write (review rounds 1 to 4). The refresh timer lives with the app open (`OpenedModel`), as TabCtrl did; a return to the foreground is any resume after the first. Dialogs use the shell's Material dialog, as the exit question does.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN08-US1 | User checks a Korean place's weather | Seoul saved, network | Open the app | S03 shows temperature, sky, summary, comparison with yesterday, the hourly chart, air and detail cards as Cordova | Server fails: cached data stays and the retry confirmation offers 확인 to load again | AC1, AC2, AC3 |
+| AN08-US2 | User checks the coming days | Weather loaded | Open the Daily tab | S04 shows the daily chart, air forecast and the three-day details | – | AC2, AC3 |
+| AN08-US3 | User checks an overseas place | London saved | Open the app, switch to London | S03 and S04 show London's data without Korean-only cards; Visual Crossing attribution | – | AC2 |
+| AN08-US4 | User switches places while one is loading | Two places, slow network | Swipe to the other place before the response arrives | Each place shows its own weather (A01 fixed) | – | AC1 |
+| AN08-US5 | User refreshes | Weather shown | Tap the selected Hourly tab; wait for the refresh interval; reopen within ten minutes | A tap and the timer load again; reopening within ten minutes does not | – | AC1 |
+| AN08-US6 | User with an old address-only place | Place without coordinates | Open the app | The KMA town route loads it; a free-form address gets the server's 501 and the retry confirmation | – | AC1 |
+| AN08-US7 | Maintainer refreshes the forecast references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/forecast-reference/capture.sh`, `./gradlew test` | New references and provenance; the emulator is offline while an app is installed and restored afterwards | Non-emulator serial: refused | AC3, AC4 |
+
+### Acceptance (from #2887)
+
+- AC1: unit tests cover request paths and versions, unit parameters, `Accept-Language`, attempts and timeouts, late responses per the A01 decision and the refresh gate.
+- AC2: on an emulator against production, S03 and S04 render for Seoul and London.
+- AC3: screenshot comparisons of the states on manual pages 3–9 pass at 384×832 against the Cordova build with the same data.
+- AC4: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM: `ForecastScopeTest` (58 visits against ForecastCtrl, TabCtrl helpers, place selection), `ForecastPageTest` (every captured element of both pages for Seoul and London, template rules, link arrows), `WeatherRequestsTest`, `WeatherRepositoryTest`, `WeatherSessionTest` (senders, gate, timer, swipes, retry, saved place updates, photos), `ForecastScreenshotTest` (19 blocks within recorded tolerances; sensitivity in `tolerances.json`), `WeatherTabTest`, `ForecastFitKoTest`/`ForecastFitEnTest` (font scale 1.3), and the AN-05 and AN-07 suites. Mutation checks: four changes to `ForecastScope` and `ForecastPage` each fail the goldens; of nine page changes the screenshots catch seven (for the other two, `ForecastPageTest` checks the link arrows and the icon size is not checked). Device: `run-production-weather.sh` (Seoul and London on both pages from production, API 36; its cleanup takes the emulator offline unless the removal is confirmed, `test-cleanup.sh`), `device-smoke.sh` (AN-05 charts) and `run-upgrade-test.sh` (G1) on API 36. CI: `check-sources.mjs` covers the forecast references.

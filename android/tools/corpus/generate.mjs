@@ -489,6 +489,439 @@ function specialCases() {
     return out;
 }
 
+// Push registration after a start (gate G1, push part): the requests the real Push service sends for a
+// first, an unchanged and a changed FCM token, including loadPushInfo's repair and 3 s repost.
+const PUSH_CITIES = [
+    {currentPosition: true, disable: false, name: '회현동', address: '대한민국 서울특별시 중구 회현동', source: 'KMA',
+        location: {lat: 37.56, long: 126.98}},
+    {currentPosition: false, disable: false, name: '명동', address: '대한민국 서울특별시 중구 명동', source: 'KMA',
+        location: {lat: 37.56, long: 126.98}},
+    {currentPosition: false, disable: false, name: 'London', address: 'United Kingdom London', country: 'GB', source: 'VC',
+        location: {lat: 51.51, long: -0.13}},
+];
+const PUSH_LIST = [
+    {cityIndex: 0, id: 1, startTime: '2026-11-07T22:00:00.000Z', endTime: '2026-11-08T13:00:00.000Z', enable: true, category: 'alert', name: 'stale'},
+    {cityIndex: 1, id: 1, startTime: '2026-11-07T22:00:00.000Z', endTime: '2026-11-08T13:00:00.000Z', enable: true, category: 'alert',
+        name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 1, id: 2, time: '2026-11-07T22:40:00.000Z', dayOfWeek: [false, true, true, true, true, true, false], enable: true,
+        category: 'alarm', name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 2, id: 1, startTime: '2026-11-08T03:00:00.000Z', endTime: '2026-11-08T03:00:00.000Z', enable: false, category: 'alert',
+        name: 'London', source: 'VC', location: {long: -0.13}},
+    {cityIndex: 2, id: 2, time: '2026-11-07T21:00:00.000Z', dayOfWeek: [true, true, true, true, true, true, true], enable: false,
+        category: 'alarm', name: 'London', source: 'VC', location: {lat: 51.51, long: -0.13}},
+];
+
+// Alerts whose start equals their end: the end moves one minute back in local time (setMinutes), which
+// differs from 60 seconds across New York's daylight-saving changes: 01:00 EST becomes 00:59 EDT, 01:30 EST
+// becomes the earlier 01:29 (EDT) and 03:00 EDT becomes the skipped 02:59, read with the earlier offset.
+const DST_LIST = ['2026-11-01T06:00:00.000Z', '2026-11-01T06:30:00.000Z', '2026-11-01T05:00:00.000Z', '2026-03-08T07:00:00.000Z',
+    '2026-03-08T07:30:00.000Z']
+    .map((t, i) => ({cityIndex: 2, id: i + 1, startTime: t, endTime: t, enable: true, category: 'alert', name: 'London', source: 'VC',
+        location: {lat: 51.51, long: -0.13}}));
+
+function pushRequests(storedToken, newToken, airUnit, zone = 'Asia/Seoul', list = PUSH_LIST) {
+    process.env.TZ = zone;
+    let factory;
+    const timers = [];
+    const calls = [];
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }})}, console: quiet, window: {},
+        clientConfig: {package: 'todayWeather', serverUrl: 'https://server'}, ionic: {Platform: {isAndroid: () => true, isIOS: () => false}},
+        setTimeout: (fn) => timers.push(fn), Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: list}};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set() {}};
+    const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
+    const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit};
+    const Units = {getAllUnits: () => clone(units)};
+    const WeatherInfo = {getCityOfIndex: (i) => clone(PUSH_CITIES[i])};
+    let tokenCallback;
+    const Firebase = {init(t) { tokenCallback = t; }, inited: true};
+    const push = factory($http, TwStorage, Util, loadWeatherUtil(units), WeatherInfo, Units, {$broadcast() {}}, Firebase);
+    push.init();
+    if (newToken) tokenCallback(undefined, newToken);
+    timers.splice(0).forEach((fn) => fn());
+    delete process.env.TZ;
+    return calls;
+}
+
+function pushCases() {
+    return {
+        cities: PUSH_CITIES, pushList: PUSH_LIST, deviceId: 'device-uuid', language: 'ko-KR', appVersion: '1.1.1',
+        now: FixedDate.now(), zone: 'Asia/Seoul',
+        cases: [
+            ['first-token', null, 'token-b', 'airkorea'], ['unchanged-token', 'token-a', 'token-a', 'airkorea'],
+            ['changed-token', 'token-a', 'token-b', 'airkorea'], ['changed-token-airnow', 'token-a', 'token-b', 'airnow'],
+            ['no-token', null, null, 'airkorea'],
+        ].map(([name, storedToken, newToken, airUnit]) => ({name, storedToken, newToken, airUnit,
+            requests: pushRequests(storedToken, newToken, airUnit)})).concat([
+            {name: 'dst-new-york', storedToken: 'token-a', newToken: 'token-a', airUnit: 'airnow', zone: 'America/New_York',
+                pushList: DST_LIST, requests: pushRequests('token-a', 'token-a', 'airnow', 'America/New_York', DST_LIST)},
+        ]),
+    };
+}
+
+// WeatherUtil.loadWeatherPhotos with a $http that answers with synthetic feeds (the feed URL is a private build
+// input; the body is a JSON array, docs/rewrite/client-data-contracts.md), then findWeatherPhoto for every
+// weather image name with Math.random fixed. Kotlin: WeatherPhotos.
+function photoCases() {
+    const photo = (id, tags) => ({id, ...(tags === undefined ? {} : {tags}), twUrls: {regular: `https://photos.test.invalid/${id}.jpg`}});
+    const feed = [
+        photo('sun-1', ['sun']), photo('sun-2', ['sun']), photo('sun-3', ['sun']),
+        photo('sun-small-1', ['sun', 'smallcloud']), photo('sun-small-2', ['smallcloud', 'sun']),
+        photo('sun-big-1', ['sun', 'bigcloud']),
+        photo('moon-1', ['moon']), photo('moon-small-1', ['moon', 'smallcloud']), photo('moon-big-1', ['bigcloud', 'moon']),
+        photo('cloud-1', ['cloud']), photo('cloud-2', ['cloud']),
+        photo('rain-1', ['rain']), photo('rain-sun-1', ['sun', 'rain']), photo('snow-1', ['snow']),
+        photo('lightning-1', ['rain', 'lightning']),
+        photo('null-tag-1', [null, 'sun']), photo('fog-1', ['fog']),
+        photo('string-tags-1', 'sun'), photo('no-tags-1', undefined), 7,
+    ];
+    // A null item throws in the grouping loop: the items after it stay out of the groups.
+    const broken = [photo('cloud-1', ['cloud']), null, photo('sun-1', ['sun'])];
+    let factory;
+    const random = {value: 0};
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }}), isArray: Array.isArray},
+        console: quiet, clientConfig: {debug: false, weatherPhotosUrl: 'https://photos.test.invalid/list.json'}, window: {},
+        setTimeout: () => 0, clearTimeout() {}, random,
+    };
+    vm.runInNewContext('Math.random = function () { return random.value; };\n' +
+        fs.readFileSync(path.join(JS, 'service.weatherutil.js'), 'utf8'), context);
+    // A $q whose promises settle at once; the feed request answers without a network.
+    const $q = {defer() {
+        let state = null, value;
+        const waiting = [];
+        const settle = (s, v) => {
+            if (state) return;
+            state = s; value = v;
+            waiting.splice(0).forEach(([ok, err]) => (s === 'ok' ? ok : err)?.(v));
+        };
+        return {resolve: (v) => settle('ok', v), reject: (e) => settle('err', e), promise: {then(ok, err) {
+            if (state) (state === 'ok' ? ok : err)?.(value); else waiting.push([ok, err]);
+            return this;
+        }}};
+    }};
+    const requests = [];
+    let body;
+    const $http = (options) => {
+        requests.push(options);
+        return {success(fn) { fn(clone(body), 200); return {error() {}}; }};
+    };
+    const util = factory($q, $http, {ga: {trackEvent() {}, trackException() {}}}, {getUnit() {}}, {track() {}});
+    const load = (value) => {
+        body = value;
+        delete context.window.weatherPhotos;
+        try { util.loadWeatherPhotos(); } catch (e) { /* a broken item ends the grouping, as on the device */ }
+        return Object.fromEntries(Object.entries(context.window.weatherPhotos).map(([k, v]) => [k, v.map((p) => p.id)]));
+    };
+    const brokenGroups = load(broken);
+    const groups = load(feed);
+    const icons = fs.readdirSync(path.join(ROOT, 'client/www/img/weather_default')).filter((f) => f.endsWith('.png'))
+        .map((f) => f.slice(0, -4)).sort();
+    const cases = [];
+    for (const skyIcon of [...icons, '', null]) {
+        for (const r of [0, 0.5, 0.999]) {
+            random.value = r;
+            cases.push({skyIcon, random: r, photo: util.findWeatherPhoto(skyIcon === null ? {} : {skyIcon})});
+        }
+    }
+    return {request: {url: requests[0].url, timeout: requests[0].timeout}, feeds: [{name: 'feed', feed, groups},
+        {name: 'null-item', feed: broken, groups: brokenGroups}], cases};
+}
+
+// WeatherUtil.getWeatherByGeoInfo with a recording $http: the URL each place and unit setting requests, or the
+// rejection for a place without coordinates or address. Kotlin: WeatherRequests.url.
+function requestCases() {
+    let factory;
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }}), isArray: Array.isArray},
+        console: quiet, clientConfig: {debug: false, serverUrl: 'https://server.test.invalid'}, window: {},
+        setTimeout: () => 0, clearTimeout() {},
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.weatherutil.js'), 'utf8'), context);
+    const settle = () => {
+        let state = null, value;
+        const waiting = [];
+        const done = (s, v) => { if (state) return; state = s; value = v; waiting.splice(0).forEach(([ok, err]) => (s === 'ok' ? ok : err)?.(v)); };
+        const promise = {then(ok, err) {
+            const next = settle();
+            const run = (s, v) => {
+                try {
+                    const f = s === 'ok' ? ok : err;
+                    if (f) next.resolve(f(v)); else (s === 'ok' ? next.resolve : next.reject)(v);
+                } catch (e) { next.reject(e); }
+            };
+            if (state) run(state, value); else waiting.push([(v) => run('ok', v), (v) => run('err', v)]);
+            return next.promise;
+        }};
+        return {resolve: (v) => done('ok', v), reject: (e) => done('err', e), promise};
+    };
+    const $q = {defer: settle, reject: (e) => { const d = settle(); d.reject(e); return d.promise; },
+        all: (list) => { const d = settle(); const out = []; let left = list.length;
+            list.forEach((p, i) => p.then((v) => { out[i] = v; if (--left === 0) d.resolve(out); }, d.reject)); return d.promise; }};
+    let requested = [];
+    const $http = (options) => {
+        requested.push(options);
+        return {success(fn) { fn({}, 200); return {error() {}}; }};
+    };
+    let units;
+    const util = factory($q, $http, {ga: {trackEvent() {}, trackException() {}}}, {getAllUnits: () => units, getUnit: (k) => units[k]},
+        {track() {}});
+    const KR = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const US = {temperatureUnit: 'F', windSpeedUnit: 'mph', pressureUnit: 'inHg', distanceUnit: 'mi', precipitationUnit: 'in', airUnit: 'airnow'};
+    const DE = {temperatureUnit: 'C', windSpeedUnit: 'km/h', pressureUnit: 'mb', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'aqicn'};
+    const CASES = [
+        ['seoul', {location: {lat: 37.5665, long: 126.978}}, KR],
+        ['london-us-units', {location: {lat: 51.51, long: -0.13}}, US],
+        ['whole-degrees', {location: {lat: 37, long: 127}}, DE],
+        ['small-fraction', {location: {lat: 0.0005, long: -0.25}}, KR],
+        ['latitude-zero-uses-address', {location: {lat: 0, long: 126.9}, address: '대한민국 서울특별시 중구 명동'}, KR],
+        ['address-four-parts', {address: '대한민국 서울특별시 중구 명동'}, KR],
+        ['address-without-country', {address: '서울특별시 중구 명동'}, KR],
+        ['address-gu', {address: '대한민국 경기도 성남시 분당구'}, KR],
+        ['address-five-parts', {address: '대한민국 경기도 성남시 분당구 정자동'}, KR],
+        ['address-eup', {address: '대한민국 세종특별자치시 조치원읍'}, KR],
+        ['address-region-only', {address: '대한민국 서울특별시'}, KR],
+        ['address-free-form', {address: 'United Kingdom London Westminster Abbey Road'}, KR],
+        ['address-country-only', {address: '대한민국'}, KR],
+        ['no-location-or-address', {}, KR],
+        ['empty-address', {address: ''}, KR],
+    ];
+    return CASES.map(([name, geoInfo, u]) => {
+        units = u;
+        requested = [];
+        let error = null;
+        util.getWeatherByGeoInfo(clone(geoInfo)).then(() => {}, (e) => { error = e && e.message ? 'rejected' : String(e); });
+        return {name, geoInfo, units: u, ...(requested.length ? {url: requested[0].url, timeout: requested[0].timeout} : {}), ...(error ? {error} : {})};
+    });
+}
+
+// ForecastCtrl, the controller of S03 ("short", /tab/forecast) and S04 ("mid", /tab/dailyforecast), for one visit of a
+// page: the whole controller runs with TabCtrl's initSize, the real WeatherUtil and a WeatherInfo holding the visit's
+// places; the first place is applied when the page opens and each later one as a swipe applies it (applyEvent). After
+// each apply the case records the scope values the templates read, so values left over from an earlier place (an
+// early return, a field assigned only when truthy) are part of the record. A place's record is what the native data
+// layer shows (core-data cityRecord): the converted response's truthy weather fields and the saved place's own fields,
+// with the case's mutations applied to it. Kotlin: ForecastScope.
+const PLACE_WEATHER_FIELDS = ['currentWeather', 'timeTable', 'timeChart', 'dayTable', 'dayChart', 'source', 'airInfo', 'airInfoList'];
+
+function cityRecord(util, place) {
+    const converted = util.convertWeatherData([{data: input(place.fixture)}]);
+    const city = {};
+    PLACE_WEATHER_FIELDS.forEach((f) => { if (converted[f]) city[f] = converted[f]; });
+    ['name', 'address', 'country', 'location'].forEach((k) => { if (place.place[k] != null) city[k] = clone(place.place[k]); });
+    city.currentPosition = !!place.place.currentPosition;
+    if (place.place.photo != null) city.photo = place.place.photo;
+    (place.mutations || []).forEach((m) => {
+        const parent = m.path.slice(0, -1).reduce((o, k) => o[k], city);
+        const key = m.path[m.path.length - 1];
+        if (m.op === 'delete') delete parent[key];
+        else if (m.op === 'set') parent[key] = clone(m.value);
+        else throw new Error(`unknown mutation ${m.op}`);
+    });
+    return city;
+}
+
+function forecastVisit(util, visit) {
+    const tr = translations(visit.lang);
+    const units = visit.units;
+    const handlers = {};
+    const $scope = {$on: (name, fn) => { handlers[name] = fn; }, startPopup() { $scope.startPopupCalled = true; }};
+    const cities = visit.places.map((p) => cityRecord(util, p));
+    let index = 0;
+    const WeatherInfo = {
+        getCityIndex: () => index, setCityIndex(i) { index = i; }, getCityOfIndex: (i) => (i in cities ? cities[i] : null),
+        getEnabledCityCount: () => cities.filter((c) => !c.disable).length, reloadCity() {},
+    };
+    let controller;
+    const context = {
+        angular: {module: () => ({controller: (_, fn) => { controller = fn; }}), element: () => ({css() {}})},
+        console: quiet, sprintf, clientConfig: {package: 'todayWeather'}, window: {screen: {width: visit.width, height: visit.height}},
+        document: {querySelector: () => null, getElementById: () => null}, ionic: {Platform: {isIOS: () => false, isAndroid: () => true}},
+        setTimeout: () => 0, $scope,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'controller.forecastctrl.js'), 'utf8'), context);
+    vm.runInContext('$scope.initSize = ' + extract('controller.tabctrl.js', '$scope.initSize = function'), context);
+    const $translate = (keys) => ({
+        then(ok) {
+            ok(Object.fromEntries(keys.map((k) => [k, tr[k]])));
+            return {finally(fn) { fn(); }};
+        },
+    });
+    const snapshot = () => {
+        const s = $scope;
+        const of = (value) => (value === undefined ? undefined : cities.findIndex((c) => PLACE_WEATHER_FIELDS.some((f) => c[f] === value) ||
+            (c.dayChart && c.dayChart === value)));
+        const record = {
+            address: s.address, currentPosition: s.currentPosition, hasPush: s.hasPush, source: s.source, photo: s.photo,
+            cityCount: s.cityCount, timeWidth: s.timeWidth, dayWidth: s.dayWidth,
+            currentWeatherOf: of(s.currentWeather), timeTableOf: of(s.timeTable), timeChartOf: of(s.timeChart), dayChartOf: of(s.dayChart),
+            hourlyAqiForecast: s.hourlyAqiForecast, dailyAqiForecast: s.dailyAqiForecast,
+            airForecastPubdate: s.airForecastPubdate, airForecastSource: s.airForecastSource, updateTime: s.updateTime,
+            chartShortHeight: s.chartShortHeight, chartShortDetailHeight: s.chartShortDetailHeight, chartMidHeight: s.chartMidHeight,
+            showDetailWeather: s.showDetailWeather, summary: s.summary, hasSummaryAir: 'summaryAir' in s, summaryAir: s.summaryAir,
+            diffTempStr: s.diffTempStr, headerHeight: s.headerHeight, bigFontSize: s.bigFontSize, bigImageSize: s.bigImageSize,
+            smallImageSize: s.smallImageSize, expand: s.expand,
+            temp: s.currentWeather ? s.getTemp(s.currentWeather.t1h) : undefined,
+            feelsLike: s.currentWeather ? s.getTemp(s.currentWeather.sensorytem) : undefined,
+            showHourlyAqiForecast: s.showHourlyAqiForecast(),
+        };
+        if (visit.type === 'mid') {
+            record.hasDustForecast = s.hasDustForecast();
+            record.dailyDetail = s.dayChart && s.dayChart[0] ? s.dayChart[0].values.map((d) => s.checkDailyDetailWeather(d)) : undefined;
+            record.threeDays = {pop: s.hasPropertyInThreeDays(['pop']), ultrvGrade: s.hasPropertyInThreeDays(['ultrvGrade']),
+                rain: s.hasPropertyInThreeDays(['pty', 'rn1', 'r06', 's06'])};
+        }
+        return clone(record);
+    };
+    controller($scope, WeatherInfo, util, {ga: {trackEvent() {}, trackException() {}}}, {}, {settingsInfo: {theme: visit.theme}},
+        {path: () => (visit.type === 'mid' ? '/tab/dailyforecast' : '/tab/forecast')}, {clearHistory() {}}, $translate,
+        {getUnit: (k) => units[k]}, {hasPushInfo: (i) => visit.places[i].hasPush === true},
+        {get: () => visit.expandShortChart ?? null, set() {}});
+    const applied = [snapshot()];
+    for (let i = 1; i < cities.length; i++) {
+        index = i;
+        handlers.applyEvent({}, 'swipe');
+        applied.push(snapshot());
+    }
+    return {name: visit.name, type: visit.type, lang: visit.lang, theme: visit.theme, width: visit.width, height: visit.height,
+        units, expandShortChart: visit.expandShortChart ?? null, places: visit.places, applied};
+}
+
+function forecastCases(util) {
+    const KR = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const F = {...KR, temperatureUnit: 'F'};
+    const US = {temperatureUnit: 'F', windSpeedUnit: 'mph', pressureUnit: 'inHg', distanceUnit: 'mi', precipitationUnit: 'in', airUnit: 'airnow'};
+    const seoul = {fixture: 'kma-seoul', place: {name: '회현동', address: '대한민국 서울특별시 중구 회현동', country: 'KR',
+        location: {lat: 37.56, long: 126.98}, photo: 'seoul.jpg'}};
+    const london = {fixture: 'vc-london', place: {name: '런던', address: '영국 런던', country: 'GB', location: {lat: 51.51, long: -0.13}}};
+    const at = (place, extra) => ({...place, ...extra, place: {...place.place, ...(extra.place || {})}});
+    const hourly = input('kma-seoul').airInfoList[0].pollutants.aqi.hourly;
+    const daily = input('kma-seoul').airInfoList[0].pollutants.aqi.daily;
+    const sixDays = [0, 1, 2, 3, 4, 5].map((i) => ({...daily[i % daily.length], date: `2026-11-${String(8 + i).padStart(2, '0')}`,
+        fromToday: i, dayOfWeek: i % 7}));
+    const air = ['airInfoList', 0, 'pollutants', 'aqi'];
+    const visits = [
+        {name: 'seoul', places: [seoul]},
+        {name: 'london', places: [london]},
+        {name: 'seoul-then-london', theme: 'photo', places: [seoul, london, seoul]},
+        // ForecastCtrl assigns source only when truthy: London without its source keeps the previous attribution.
+        {name: 'london-then-no-source', places: [london, at(london, {mutations: [{op: 'delete', path: ['source']}]})]},
+        {name: 'seoul-fahrenheit', units: F, places: [at(seoul, {fixture: 'kma-seoul-f'})]},
+        {name: 'london-fahrenheit', units: F, places: [at(london, {fixture: 'vc-london-f'})]},
+        {name: 'seoul-english', lang: 'en', places: [at(seoul, {fixture: 'kma-seoul-en'})]},
+        {name: 'seoul-imperial', lang: 'en', units: US, places: [at(seoul, {fixture: 'kma-seoul-imperial'})]},
+        {name: 'seoul-aqicn', units: {...KR, airUnit: 'aqicn', windSpeedUnit: 'kt', pressureUnit: 'mmHg'}, places: [at(seoul, {fixture: 'kma-seoul-aqicn'})]},
+        {name: 'seoul-who', units: {...KR, airUnit: 'airkorea_who', windSpeedUnit: 'bft', pressureUnit: 'mb'}, places: [at(seoul, {fixture: 'kma-seoul-who'})]},
+        {name: 'tokyo', units: {...KR, windSpeedUnit: 'km/h', airUnit: 'airnow'}, places: [{fixture: 'vc-tokyo', place: {name: '도쿄', address: '일본 도쿄', country: 'JP', location: {lat: 35.68, long: 139.69}}}]},
+        {name: 'newyork-sydney', places: [{fixture: 'vc-newyork', place: {name: '뉴욕', address: '미국 뉴욕', country: 'US', location: {lat: 40.71, long: -74.01}}},
+            {fixture: 'vc-sydney', place: {name: '시드니', address: '호주 시드니', country: 'AU', location: {lat: -33.87, long: 151.21}}}]},
+        {name: 'jeju-current-position', places: [{fixture: 'kma-jeju', hasPush: true, place: {address: '대한민국 제주특별자치도 제주시 연동', currentPosition: true, location: {lat: 33.5, long: 126.53}}}]},
+        {name: 'address-title', places: [at(seoul, {place: {name: null, address: '대한민국 경기도 성남시 분당구 정자동'}})]},
+        {name: 'one-hourly-aqi', places: [at(seoul, {mutations: [{op: 'set', path: [...air, 'hourly'],
+            value: hourly.filter((h) => h.date >= '2026-11-08 00:00').slice(0, 1).concat(hourly.filter((h) => h.date < '2026-11-08 00:00').slice(-3))}]})]},
+        {name: 'air-last-missing', places: [at(seoul, {mutations: [{op: 'delete', path: ['airInfoList', 0, 'last']}]})]},
+        {name: 'no-air', places: [at(seoul, {mutations: [{op: 'delete', path: ['airInfoList']}, {op: 'delete', path: ['currentWeather', 'arpltn']}]})]},
+        {name: 'six-daily-aqi', places: [at(seoul, {mutations: [{op: 'set', path: [...air, 'daily'], value: sixDays}]})]},
+        {name: 'six-daily-aqi-narrow', width: 320, height: 568, places: [at(seoul, {mutations: [{op: 'set', path: [...air, 'daily'], value: sixDays}]})]},
+        {name: 'tablet', width: 800, height: 1280, places: [seoul, london]},
+        {name: 'short-phone', width: 360, height: 592, places: [seoul]},
+        {name: 'summary-weather-missing', places: [at(seoul, {mutations: [{op: 'delete', path: ['currentWeather', 'summaryWeather']},
+            {op: 'delete', path: ['currentWeather', 'summaryAir']}]})]},
+        {name: 'yesterday-missing', places: [at(seoul, {mutations: [{op: 'delete', path: ['currentWeather', 'yesterday']}]})]},
+        {name: 'same-as-yesterday', places: [at(seoul, {mutations: [{op: 'set', path: ['currentWeather', 't1h'], value: 5.6},
+            {op: 'set', path: ['currentWeather', 'yesterday', 't1h'], value: 5.6}]})]},
+        // An early return keeps everything of the previous place; a missing current weather stops after showDetailWeather.
+        {name: 'no-day-chart', places: [seoul, at(london, {mutations: [{op: 'delete', path: ['dayChart']}]})]},
+        {name: 'no-current-weather', places: [seoul, at(london, {mutations: [{op: 'delete', path: ['currentWeather']}]})]},
+        {name: 'no-time-chart', places: [seoul, at(london, {mutations: [{op: 'delete', path: ['timeChart']}]})]},
+        {name: 'no-places', places: []},
+        {name: 'expanded', expandShortChart: true, places: [seoul]},
+    ];
+    const cases = [];
+    for (const v of visits) {
+        for (const type of ['short', 'mid']) {
+            cases.push(forecastVisit(util, {lang: 'ko', theme: 'light', width: 384, height: 832, units: KR, ...v, type,
+                places: v.places.map((p) => ({hasPush: false, ...p}))}));
+        }
+    }
+    return cases;
+}
+
+// TabCtrl's template helpers of S03/S04 and the pollen popup rows (showPollenInfo with a recording $ionicPopup).
+function forecastHelperCases() {
+    const units = {airUnit: 'airkorea'};
+    const $scope = {};
+    let popup = null;
+    const context = {
+        $scope, console: quiet, Units: {getUnit: (k) => units[k], getAirUnitStr: null},
+        $translate: {instant: (k) => k}, $ionicPopup: {alert: (o) => { popup = o; return {finally(fn) { fn(); }}; }},
+    };
+    $scope.$new = () => ({$destroy() {}});
+    const code = ['dayToFullString', 'getDayString', 'dayToString', 'convertMMDD', 'convertDD', 'getCurrentAirUnitStr', 'showPollenInfo']
+        .map((f) => `$scope.${f} = ` + extract('controller.tabctrl.js', `$scope.${f} = function`))
+        .concat(['Units.getAirUnitStr = ' + extract('controller.units.js', 'obj.getAirUnitStr = function')]).join('\n');
+    vm.runInNewContext(code, context);
+    const days = [-4, -3, -2, -1, 0, 1, 2, 3, 4, '0', '-1', null, 1.5];
+    const out = {
+        getDayString: days.concat([undefined]).map((d) => ({args: [d ?? null], undefinedArg: d === undefined, expected: $scope.getDayString(d) ?? null})),
+        dayToString: [0, 1, 2, 3, 4, 5, 6, 7, -1, '3', null].map((d) => ({args: [d], expected: $scope.dayToString(d) ?? null})),
+        dayToFullString: [0, 1, 2, 3, 4, 5, 6, 7, '3', null].map((d) => ({args: [d], expected: $scope.dayToFullString(d) ?? null})),
+        convertMMDD: ['2026.11.07 00:00', '2026-11-07', '20261107', '', 20261107, null].map((v) => ({args: [v], expected: $scope.convertMMDD(v)})),
+        convertDD: ['2026-11-08', '2026.11.08 00:00', '2026-11', 8, null].map((v) => ({args: [v], expected: $scope.convertDD(v)})),
+        currentAirUnitStr: ['airkorea', 'airkorea_who', 'airnow', 'aqicn', 'unknown', null].map((u) => {
+            units.airUnit = u;
+            return {args: [u], expected: $scope.getCurrentAirUnitStr() ?? null};
+        }),
+        pollen: [
+            {},
+            {pollenGrade: 2, pollenStr: '높음', flowerWoodyGrade: 2, flowerWoodyStr: '높음', flowerPineGrade: 0, flowerPineStr: '낮음'},
+            {pollenGrade: 1, pollenStr: '보통', flowerWeedsGrade: 1, flowerWeedsStr: '보통'},
+            {pollenGrade: 3, pollenStr: '매우높음', flowerWoodyGrade: 3, flowerWoodyStr: '매우높음', flowerPineGrade: 1, flowerPineStr: '보통',
+                flowerWeedsGrade: 0, flowerWeedsStr: '낮음'},
+            {flowerWoodyGrade: 2, flowerWoodyStr: '높음'},
+        ].map((day) => {
+            popup = null;
+            $scope.showPollenInfo(day);
+            return {args: [day], expected: popup && {title: popup.title, okText: popup.okText, cssClass: popup.cssClass,
+                rows: clone(popup.scope.pollenTypes)}};
+        }),
+    };
+    return out;
+}
+
+// WeatherInfo's selection of the place to show (setFirstCityIndex, setNextCityIndex, setPrevCityIndex,
+// getEnabledCityCount) for lists of one to four places with the current position (index 0) on or off, from every
+// index. Kotlin: PlaceIndex.
+function cityIndexCases(util) {
+    const out = [];
+    for (const count of [1, 2, 3, 4]) {
+        for (const firstDisabled of [false, true]) {
+            const {info} = loadWeatherInfo(util);
+            for (let i = 0; i < count; i++) {
+                info.addCity({address: `대한민국 서울특별시 중구 동${i}`, location: {lat: 37 + i / 100, long: 127}, currentPosition: i === 0});
+            }
+            if (firstDisabled) info.getCityOfIndex(0).disable = true;
+            for (let from = -1; from < count; from++) {
+                const run = (op) => {
+                    if (from >= 0) info.setCityIndex(from); else info.setCityIndex(0);
+                    if (from < 0) { info.setFirstCityIndex(); return info.getCityIndex(); }
+                    info[op]();
+                    return info.getCityIndex();
+                };
+                out.push({count, firstDisabled, from, enabled: info.getEnabledCityCount(),
+                    first: from < 0 ? run() : undefined,
+                    next: from >= 0 ? run('setNextCityIndex') : undefined,
+                    previous: from >= 0 ? run('setPrevCityIndex') : undefined});
+            }
+        }
+    }
+    return out;
+}
+
 // ---------------------------------------------------------------- write
 const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km',
     precipitationUnit: 'mm', airUnit: 'airkorea'};
@@ -507,9 +940,18 @@ write('weather-info.json', [await lateResponseCase(util)]);
 write('air.json', airCases());
 write('nation.json', await nationCases());
 write('special.json', specialCases());
+write('photos.json', photoCases());
+write('requests.json', requestCases());
+write('forecast.json', {visits: forecastCases(util), helpers: forecastHelperCases(), cityIndex: cityIndexCases(util)});
+{
+    const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
+    fs.mkdirSync(path.dirname(file), {recursive: true});
+    fs.writeFileSync(file, JSON.stringify(pushCases(), null, 1) + '\n');
+}
 
 const sources = ['service.weatherutil.js', 'service.weatherinfo.js', 'controller.forecastctrl.js', 'controller.tabctrl.js',
-    'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js']
+    'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js', 'service.push.js',
+    'controller.units.js']
     .map((f) => `client/www/js/${f}`).concat(['client/www/locales/ko.json', 'client/www/locales/en.json']);
 write('source.json', {
     generator: 'android/tools/corpus/generate.mjs',
