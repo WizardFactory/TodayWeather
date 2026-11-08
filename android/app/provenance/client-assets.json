@@ -1,6 +1,6 @@
 {
  "tool": "android/tools/import_client_assets.py",
- "license": "Same repository and license as client/ (TodayWeather, WizardFactory)",
+ "license": "Same repository and license as client/ (TodayWeather, WizardFactory), except res/font/material_icons.ttf: Material Icons, Apache License 2.0 (Google)",
  "renamed_string_keys": {
   "LOC_TODAYWEATHER-TODAY_THAN_YESTERDAY?": "LOC_TODAYWEATHER_TODAY_THAN_YESTERDAY_",
   "LOC_TODAY_THAN_YESTERDAY?": "LOC_TODAY_THAN_YESTERDAY_"
@@ -2409,6 +2409,13 @@
    "source_sha256": "6fa81ce55153cd2eeed87b3eb7728e36ffc3033d27a69e375c8a9a4620d5d44a",
    "output": "src/main/assets/img/weather_old/sun_snow_lightning.png",
    "output_sha256": "6fa81ce55153cd2eeed87b3eb7728e36ffc3033d27a69e375c8a9a4620d5d44a"
+  },
+  {
+   "source": "client/www/fonts/MaterialIcons-Regular.ttf",
+   "commit": "243f9cadb5874065df3e9e5a2dc0af33d2a1d532",
+   "source_sha256": "b7f4a3ab562048f28dd1fa691601bc43363a61d0f876d16d8316c52e4f32d696",
+   "output": "src/main/res/font/material_icons.ttf",
+   "output_sha256": "b7f4a3ab562048f28dd1fa691601bc43363a61d0f876d16d8316c52e4f32d696"
   },
   {
    "source": "client/www/locales/de.json",
