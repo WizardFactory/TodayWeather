@@ -124,6 +124,29 @@ class WeatherPhotoFeedTest {
         server.close()
     }
 
+    /** #2912 review F3: only the 20 s of `_getHttp(url, 20000)` limit an attempt; OkHttp's 10 s defaults do not. */
+    @Test
+    fun anAnswerAfterTwelveSecondsStillArrives() = runBlocking {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(12, TimeUnit.SECONDS).build())
+        assertEquals(feedBody, HttpPhotoFeedGet().get(server.url("/photos/list.json").toString()))
+        server.close()
+    }
+
+    @Test
+    fun theTimeoutEndsAnAttempt() = runBlocking {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse.Builder().body(feedBody).headersDelay(5, TimeUnit.SECONDS).build())
+        val start = System.nanoTime()
+        val failure = runCatching { HttpPhotoFeedGet(timeoutMs = 1_000).get(server.url("/photos/list.json").toString()) }.exceptionOrNull()
+        val elapsed = (System.nanoTime() - start) / 1_000_000
+        assertNotNull(failure, "a 5 s answer within a 1 s limit")
+        assertTrue(elapsed in 900..3_000, "ended after $elapsed ms")
+        server.close()
+    }
+
     @Test
     fun theFeedComesOverHttpAndAnErrorStatusFails() = runBlocking {
         val server = MockWebServer()

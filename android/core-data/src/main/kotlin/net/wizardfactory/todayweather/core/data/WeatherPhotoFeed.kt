@@ -27,12 +27,19 @@ fun interface PhotoFeedGet {
 }
 
 /**
- * [PhotoFeedGet] over HTTP with the Cordova app's 20-second timeout per attempt (`_getHttp(url, 20000)`). Cancelling
- * the caller cancels the call, so a slower attempt ends when another has answered.
+ * [PhotoFeedGet] over HTTP with the Cordova app's timeout of [timeoutMs] per attempt (`_getHttp(url, 20000)`). Like
+ * `$http`'s timeout it bounds the whole request; OkHttp's 10-second connect, read and write limits are off, so they
+ * cannot end a slower answer first. Cancelling the caller cancels the call, so a slower attempt ends when another has
+ * answered.
  */
-class HttpPhotoFeedGet(
-    private val client: OkHttpClient = OkHttpClient.Builder().callTimeout(20, TimeUnit.SECONDS).build(),
-) : PhotoFeedGet {
+class HttpPhotoFeedGet(timeoutMs: Long = 20_000) : PhotoFeedGet {
+    private val client = OkHttpClient.Builder()
+        .callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+        .connectTimeout(0, TimeUnit.MILLISECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .writeTimeout(0, TimeUnit.MILLISECONDS)
+        .build()
+
     override suspend fun get(url: String): String = suspendCancellableCoroutine { continuation ->
         val call = client.newCall(Request.Builder().url(url).build())
         continuation.invokeOnCancellation { call.cancel() }
