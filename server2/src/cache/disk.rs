@@ -4,38 +4,176 @@ use crate::storage::{Error, Object, RecordId, sha256};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, VecDeque},
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     path::{Path, PathBuf},
     sync::{
-        Arc, Mutex,
+        Arc, Condvar, Mutex, Weak,
         atomic::{AtomicU64, AtomicUsize, Ordering},
     },
     time::UNIX_EPOCH,
 };
-use tokio::{
-    sync::{OwnedSemaphorePermit, Semaphore},
-    time::Instant,
-};
+use tokio::time::Instant;
 
 const MAGIC: &[u8; 8] = b"TWCACHE1";
 const HEADER: usize = 16 * 1024;
 const MAX_BODY: usize = 65 * 1024 * 1024;
-const OPERATIONS: u32 = 2;
+/// Loads queued at once on the cache thread; each waits only for the loads ahead of it.
+const LOADS: usize = 8;
+/// Disk fills and removals pending at once (reserved, queued or running); more are dropped.
+const WRITES: usize = 2;
 const ENTRY_LIMIT: usize = 131_072;
 pub const DEFAULT_MAX_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 /// A cache is configured explicitly; construction performs no filesystem I/O.
 /// The namespace must identify the S3 endpoint, bucket, region and cache schema.
+///
+/// Its loads and writes run on its own thread, started with the first of them, never on the
+/// blocking pool (KMA-RESTART-CPU DISK-CACHE). Loads go first; a load that arrives while a write
+/// runs misses (the caller reads S3) instead of waiting for it, and a fill or removal that finds
+/// `WRITES` pending is dropped and counted. Request work never waits on a disk write.
 pub struct DiskCache {
     directory: PathBuf,
     maximum: u64,
     entries: usize,
     state: Mutex<State>,
-    gate: Arc<Semaphore>,
+    worker: Arc<Worker>,
     counters: Counters,
     #[cfg(test)]
     fail_write: std::sync::atomic::AtomicBool,
+    /// Test seam: the next write signals once it holds the cache, then waits for release.
+    #[cfg(test)]
+    hold_write: Mutex<Option<HeldWrite>>,
+}
+#[cfg(test)]
+type HeldWrite = (
+    tokio::sync::oneshot::Sender<()>,
+    std::sync::mpsc::Receiver<()>,
+);
+/// The queues of a cache's thread; the thread holds only a weak reference to its cache.
+#[derive(Default)]
+struct Worker {
+    queue: Mutex<Queue>,
+    ready: Condvar,
+    done: tokio::sync::Notify,
+}
+#[derive(Default)]
+struct Queue {
+    loads: VecDeque<Load>,
+    writes: VecDeque<WriteJob>,
+    /// Write slots taken by [`DiskCache::writer`] and not yet enqueued.
+    reserved: usize,
+    running: Option<Running>,
+    started: bool,
+    closed: bool,
+}
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Running {
+    Load,
+    Write,
+}
+struct Load {
+    key: String,
+    maximum: usize,
+    reply: tokio::sync::oneshot::Sender<io::Result<Option<Object>>>,
+}
+enum WriteJob {
+    Fill { key: String, object: Object },
+    Remove { key: String },
+}
+enum Job {
+    Load(Load),
+    Write(WriteJob),
+}
+impl Queue {
+    fn writes_pending(&self) -> usize {
+        self.reserved + self.writes.len() + usize::from(self.running == Some(Running::Write))
+    }
+    fn idle(&self) -> bool {
+        self.loads.is_empty()
+            && self.writes.is_empty()
+            && self.reserved == 0
+            && self.running.is_none()
+    }
+    /// Close for good: queued loads see their reply dropped (a miss).
+    fn close(&mut self) {
+        self.closed = true;
+        self.loads.clear();
+        self.writes.clear();
+    }
+}
+impl Worker {
+    fn lock(&self) -> std::sync::MutexGuard<'_, Queue> {
+        self.queue.lock().unwrap_or_else(|p| p.into_inner())
+    }
+    /// The cache thread: one job at a time, loads before writes, until the cache is dropped.
+    fn run(&self, cache: &Weak<DiskCache>) {
+        /// Whatever ends the thread closes the queues, so no load waits for it.
+        struct Closer<'a>(&'a Worker);
+        impl Drop for Closer<'_> {
+            fn drop(&mut self) {
+                let mut q = self.0.lock();
+                q.close();
+                q.running = None;
+                drop(q);
+                self.0.done.notify_waiters();
+            }
+        }
+        let _closer = Closer(self);
+        loop {
+            let job = {
+                let mut q = self.lock();
+                loop {
+                    if q.closed {
+                        return;
+                    }
+                    if let Some(load) = q.loads.pop_front() {
+                        q.running = Some(Running::Load);
+                        break Job::Load(load);
+                    }
+                    if let Some(write) = q.writes.pop_front() {
+                        q.running = Some(Running::Write);
+                        break Job::Write(write);
+                    }
+                    q = self.ready.wait(q).unwrap_or_else(|p| p.into_inner());
+                }
+            };
+            let Some(cache) = cache.upgrade() else {
+                return;
+            };
+            let fill = matches!(job, Job::Write(WriteJob::Fill { .. }));
+            let ran = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match job {
+                Job::Load(Load {
+                    key,
+                    maximum,
+                    reply,
+                }) => {
+                    let _ = reply.send(cache.load_file(&key, maximum));
+                }
+                Job::Write(WriteJob::Fill { key, object }) => {
+                    if cache.write_file(&key, object).is_err() {
+                        cache.counters.errors.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+                Job::Write(WriteJob::Remove { key }) => {
+                    let mut s = cache.state.lock().unwrap_or_else(|p| p.into_inner());
+                    cache.remove(&mut s, &sha256(key.as_bytes()));
+                    cache.counters.corrupt.fetch_add(1, Ordering::Relaxed);
+                }
+            }));
+            if ran.is_err() {
+                cache.counters.errors.fetch_add(1, Ordering::Relaxed);
+            }
+            if fill {
+                cache.counters.pending.fetch_sub(1, Ordering::SeqCst);
+            }
+            // Release the cache before signalling idle: a caller that then drops it frees its
+            // owner lock at once.
+            drop(cache);
+            self.lock().running = None;
+            self.done.notify_waiters();
+        }
+    }
 }
 #[derive(Default)]
 struct State {
@@ -63,6 +201,7 @@ struct Counters {
     root_peak: AtomicU64,
     entries: AtomicUsize,
     pending: AtomicUsize,
+    dropped: AtomicU64,
 }
 /// Sanitized counts only: no raw key, path, endpoint or coordinate labels.
 #[derive(Clone, Debug, Serialize)]
@@ -79,6 +218,7 @@ pub struct Metrics {
     pub peak_root_reserved_bytes: u64,
     pub entries: usize,
     pub pending_writes: usize,
+    pub dropped_writes: u64,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -222,10 +362,12 @@ impl DiskCache {
             maximum: maximum_bytes,
             entries: maximum_entries,
             state: Mutex::new(State::default()),
-            gate: Arc::new(Semaphore::new(OPERATIONS as usize)),
+            worker: Arc::default(),
             counters: Counters::default(),
             #[cfg(test)]
             fail_write: std::sync::atomic::AtomicBool::new(false),
+            #[cfg(test)]
+            hold_write: Mutex::new(None),
         })
     }
     pub fn metrics(&self) -> Metrics {
@@ -243,13 +385,42 @@ impl DiskCache {
             peak_root_reserved_bytes: c.root_peak.load(Ordering::Relaxed),
             entries: c.entries.load(Ordering::Relaxed),
             pending_writes: c.pending.load(Ordering::Relaxed),
+            dropped_writes: c.dropped.load(Ordering::Relaxed),
         }
     }
-    /// Observe completion of owned local work; this is not an S3 durability acknowledgment.
+    /// Observe completion of owned local work (nothing reserved, queued or running); this is
+    /// not an S3 durability acknowledgment.
     pub async fn idle(&self, deadline: Instant) -> bool {
-        tokio::time::timeout_at(deadline, self.gate.clone().acquire_many_owned(OPERATIONS))
-            .await
-            .is_ok_and(|r| r.is_ok())
+        loop {
+            let done = self.worker.done.notified();
+            tokio::pin!(done);
+            done.as_mut().enable();
+            if self.worker.lock().idle() {
+                return true;
+            }
+            if tokio::time::timeout_at(deadline, done).await.is_err() {
+                return false;
+            }
+        }
+    }
+    /// Start the cache thread with the first job; false when it cannot run (closed).
+    fn started(self: &Arc<Self>, q: &mut Queue) -> bool {
+        if q.closed {
+            return false;
+        }
+        if !q.started {
+            let worker = self.worker.clone();
+            let cache = Arc::downgrade(self);
+            let spawned = std::thread::Builder::new()
+                .name("disk-cache".into())
+                .spawn(move || worker.run(&cache));
+            if spawned.is_err() {
+                q.close();
+                return false;
+            }
+            q.started = true;
+        }
+        true
     }
     fn charge(&self, state: &State, temp: u64) {
         let bytes = state.bytes.saturating_add(temp);
@@ -448,17 +619,27 @@ impl DiskCache {
                 let Ok(key) = id.object_key() else {
                     return None;
                 };
-                let Ok(permit) = self.gate.clone().try_acquire_owned() else {
-                    self.counters.misses.fetch_add(1, Ordering::Relaxed);
-                    return None;
-                };
-                let cache = self.clone();
-                let found = crate::observability::spawn_blocking(move || {
-                    let _permit = permit;
-                    cache.load_file(&key, maximum)
-                })
-                .await;
-                match found {
+                let (reply, found) = tokio::sync::oneshot::channel();
+                {
+                    let mut q = self.worker.lock();
+                    // A load waits only for the loads ahead of it: while a write runs, or with
+                    // the load queue full, it misses and the caller reads S3.
+                    if q.running == Some(Running::Write)
+                        || q.loads.len() >= LOADS
+                        || !self.started(&mut q)
+                    {
+                        drop(q);
+                        self.counters.misses.fetch_add(1, Ordering::Relaxed);
+                        return None;
+                    }
+                    q.loads.push_back(Load {
+                        key,
+                        maximum,
+                        reply,
+                    });
+                }
+                self.worker.ready.notify_one();
+                match found.await {
                     Ok(Ok(Some(o))) => Some(o),
                     Ok(Ok(None)) => {
                         self.counters.misses.fetch_add(1, Ordering::Relaxed);
@@ -482,28 +663,37 @@ impl DiskCache {
         )
         .await
     }
-    pub(crate) async fn invalidate(self: &Arc<Self>, id: &RecordId) {
+    /// Remove a cached object that failed verification, on the cache thread (not awaited;
+    /// dropped and counted when `WRITES` are pending).
+    pub(crate) fn invalidate(self: &Arc<Self>, id: &RecordId) {
         let Ok(key) = id.object_key() else { return };
-        let Ok(permit) = self.gate.clone().try_acquire_owned() else {
+        let mut q = self.worker.lock();
+        if q.writes_pending() >= WRITES || !self.started(&mut q) {
+            drop(q);
+            self.counters.dropped.fetch_add(1, Ordering::Relaxed);
             return;
-        };
-        let cache = self.clone();
-        let _ = crate::observability::spawn_blocking(move || {
-            let _permit = permit;
-            let mut s = cache.state.lock().unwrap_or_else(|p| p.into_inner());
-            cache.remove(&mut s, &sha256(key.as_bytes()));
-            cache.counters.corrupt.fetch_add(1, Ordering::Relaxed);
-        })
-        .await;
+        }
+        q.writes.push_back(WriteJob::Remove { key });
+        drop(q);
+        self.worker.ready.notify_one();
     }
+    /// Reserve a disk fill before the caller copies the object; none (dropped and counted)
+    /// when `WRITES` are pending. Reserving never touches the disk or starts the thread.
     pub(crate) fn writer(self: &Arc<Self>, id: &RecordId) -> Option<Writer> {
         if !eligible(id) {
             return None;
         }
+        let key = id.object_key().ok()?;
+        let mut q = self.worker.lock();
+        if q.closed || q.writes_pending() >= WRITES {
+            drop(q);
+            self.counters.dropped.fetch_add(1, Ordering::Relaxed);
+            return None;
+        }
+        q.reserved += 1;
         Some(Writer {
             cache: self.clone(),
-            key: id.object_key().ok()?,
-            permit: self.gate.clone().try_acquire_owned().ok()?,
+            key: Some(key),
         })
     }
     fn write_file(&self, key: &str, object: Object) -> io::Result<()> {
@@ -520,6 +710,11 @@ impl DiskCache {
             return Err(failed());
         }
         let mut s = self.state.lock().unwrap_or_else(|p| p.into_inner());
+        #[cfg(test)]
+        if let Some((reached, release)) = self.hold_write.lock().unwrap().take() {
+            let _ = reached.send(());
+            let _ = release.recv();
+        }
         self.open(&mut s)?;
         let size = 52 + header.len() as u64 + object.body.len() as u64;
         let unit = s.unit.max(4096);
@@ -607,31 +802,47 @@ impl DiskCache {
         result
     }
 }
-/// Reserves memory/blocking work before the caller makes the optional object copy.
+/// A reserved disk fill: the caller makes the optional object copy only after reserving.
 pub(crate) struct Writer {
     cache: Arc<DiskCache>,
-    key: String,
-    permit: OwnedSemaphorePermit,
+    key: Option<String>,
 }
 impl Writer {
-    pub(crate) fn enqueue(self, object: Object) {
-        let Self { cache, key, permit } = self;
+    /// Queue the fill on the cache thread (never waits).
+    pub(crate) fn enqueue(mut self, object: Object) {
+        let Some(key) = self.key.take() else { return };
+        let cache = &self.cache;
+        let mut q = cache.worker.lock();
+        q.reserved -= 1;
+        if !cache.started(&mut q) {
+            drop(q);
+            cache.counters.dropped.fetch_add(1, Ordering::Relaxed);
+            cache.worker.done.notify_waiters();
+            return;
+        }
+        q.writes.push_back(WriteJob::Fill { key, object });
         cache.counters.pending.fetch_add(1, Ordering::SeqCst);
-        crate::observability::spawn_blocking(move || {
-            struct Pending(Arc<DiskCache>);
-            impl Drop for Pending {
-                fn drop(&mut self) {
-                    self.0.counters.pending.fetch_sub(1, Ordering::SeqCst);
-                }
-            }
-            let _permit = permit;
-            let _pending = Pending(cache.clone());
-            if cache.write_file(&key, object).is_err() {
-                cache.counters.errors.fetch_add(1, Ordering::Relaxed);
-            }
-            // Release cache ownership before the operation permit signals idle.
-            drop(cache);
-        });
+        drop(q);
+        cache.worker.ready.notify_one();
+    }
+}
+impl Drop for Writer {
+    /// A reservation never enqueued is released.
+    fn drop(&mut self) {
+        if self.key.is_some() {
+            let mut q = self.cache.worker.lock();
+            q.reserved -= 1;
+            drop(q);
+            self.cache.worker.done.notify_waiters();
+        }
+    }
+}
+impl Drop for DiskCache {
+    /// The thread ends; queued work is discarded (the cache is disposable).
+    fn drop(&mut self) {
+        self.worker.lock().close();
+        self.worker.ready.notify_all();
+        self.worker.done.notify_waiters();
     }
 }
 
@@ -877,6 +1088,105 @@ mod fault_tests {
         symlink(&outside, &raw).unwrap();
         assert!(c.load(&id, 8192).await.is_none());
         assert_eq!(fs::read(outside).unwrap(), b"DO-NOT-READ-OR-WRITE");
+        drop(c);
+        fs::remove_dir_all(root).unwrap();
+    }
+    /// A held write: the seam fires on the next write once it holds the cache.
+    fn hold(
+        c: &DiskCache,
+    ) -> (
+        tokio::sync::oneshot::Receiver<()>,
+        std::sync::mpsc::Sender<()>,
+    ) {
+        let (reached, held) = tokio::sync::oneshot::channel();
+        let (release, wait) = std::sync::mpsc::channel();
+        *c.hold_write.lock().unwrap() = Some((reached, wait));
+        (held, release)
+    }
+    /// DISK-CACHE: a load while a cache write is held answers at once instead of waiting for it.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_held_cache_write_does_not_delay_a_load() {
+        let (root, c, id, o) = setup();
+        c.writer(&id).unwrap().enqueue(o.clone());
+        assert!(
+            c.idle(Instant::now() + std::time::Duration::from_secs(3))
+                .await
+        );
+        let (held, release) = hold(&c);
+        let mut other = id.clone();
+        other.fetched_at_ms += 1;
+        c.writer(&other).unwrap().enqueue(o);
+        held.await.unwrap();
+        let load =
+            tokio::time::timeout(std::time::Duration::from_millis(500), c.load(&id, 8192)).await;
+        release.send(()).unwrap();
+        assert!(load.is_ok(), "a held write delayed the load");
+        assert!(
+            c.idle(Instant::now() + std::time::Duration::from_secs(3))
+                .await
+        );
+        drop(c);
+        fs::remove_dir_all(root).unwrap();
+    }
+    /// DISK-CACHE: with the only blocking thread held, a cache write completes and a load hits.
+    #[test]
+    fn cache_loads_and_writes_do_not_use_the_blocking_pool() {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .max_blocking_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let (root, c, id, o) = setup();
+            let (started, held) = tokio::sync::oneshot::channel::<()>();
+            let (release, wait) = std::sync::mpsc::channel::<()>();
+            let blocking = tokio::task::spawn_blocking(move || {
+                let _ = started.send(());
+                let _ = wait.recv();
+            });
+            held.await.unwrap();
+            c.writer(&id).unwrap().enqueue(o);
+            let written = c
+                .idle(Instant::now() + std::time::Duration::from_secs(2))
+                .await;
+            let read =
+                tokio::time::timeout(std::time::Duration::from_secs(2), c.load(&id, 8192)).await;
+            release.send(()).unwrap();
+            blocking.await.unwrap();
+            assert!(written, "the write waited for the blocking pool");
+            assert!(
+                read.is_ok_and(|r| r.is_some()),
+                "the load waited for the blocking pool"
+            );
+            drop(c);
+            fs::remove_dir_all(root).unwrap();
+        });
+    }
+    /// DISK-CACHE: while a write is held, one more fill is reserved and the next is dropped and
+    /// counted; the reserved one still lands.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn fills_beyond_the_pending_bound_are_dropped_and_counted() {
+        let (root, c, id, o) = setup();
+        let (held, release) = hold(&c);
+        c.writer(&id).unwrap().enqueue(o.clone());
+        held.await.unwrap();
+        let mut next = id.clone();
+        next.fetched_at_ms += 1;
+        let mut last = next.clone();
+        last.fetched_at_ms += 1;
+        let queued = c.writer(&next);
+        let refused = c.writer(&last);
+        assert!(queued.is_some());
+        assert!(refused.is_none());
+        assert_eq!(c.metrics().dropped_writes, 1);
+        queued.unwrap().enqueue(o);
+        release.send(()).unwrap();
+        assert!(
+            c.idle(Instant::now() + std::time::Duration::from_secs(3))
+                .await
+        );
+        assert_eq!(c.metrics().writes, 2);
         drop(c);
         fs::remove_dir_all(root).unwrap();
     }

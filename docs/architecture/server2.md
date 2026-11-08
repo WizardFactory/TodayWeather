@@ -2479,6 +2479,17 @@ TLS, timeouts and the disabled proxies are unchanged, and IP-literal URLs (IMDS,
 peers) resolve nothing. The legacy HTTP hop connects to a loopback IP literal only. The smoke and
 measurement tools under `examples/` keep reqwest's default resolver.
 
+**Disk cache.** The verified raw disk cache ([S15b-4c](#verified-disposable-raw-disk-cache-s15b-4c))
+runs its loads, fills and removals on its own thread (`disk-cache`, started with its first job),
+no longer on the blocking pool. Loads go first, at most 8 queued, each waiting only for the loads
+ahead of it; a load that arrives while a fill or removal runs misses and the caller reads S3, so
+request work never waits on a disk write. At most 2 fills or removals are pending (reserved,
+queued or running), the bound the shared 2-operation gate gave before; a further one is dropped
+and counted (`dropped_writes`), and a removal is no longer awaited by the read that found the
+corrupt copy. The owner and root locks, the caps and the eviction are unchanged and still taken
+on that thread. The thread holds only a weak reference: dropping the cache ends it and discards
+queued work (the cache is disposable).
+
 ### S15b-2 s station registry seed (2026-10-15)
 
 AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with

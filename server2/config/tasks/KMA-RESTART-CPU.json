@@ -7,6 +7,7 @@
     "server2/Cargo.toml",
     "server2/config/tasks/KMA-RESTART-CPU.json",
     "server2/src/api/mod.rs",
+    "server2/src/cache/disk.rs",
     "server2/src/dns.rs",
     "server2/src/gateway/backend.rs",
     "server2/src/geocode/mod.rs",
@@ -18,6 +19,7 @@
     "server2/src/push/deliver/fcm.rs",
     "server2/src/push/deliver/weather.rs",
     "server2/src/storage/credentials.rs",
+    "server2/src/storage/store.rs",
     "server2/src/storage/transport.rs",
     "server2/src/world/air_transport.rs",
     "server2/src/world/transport.rs"
