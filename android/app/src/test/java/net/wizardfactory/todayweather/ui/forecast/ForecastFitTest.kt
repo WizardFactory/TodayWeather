@@ -43,8 +43,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * S03 and S04 at font scale 1.3 (AN-06: text follows the system font scale), on a phone, a small window and a tablet,
  * for Seoul (every Korean card) and London: no text is ellipsized or cut, and none reaches past the window's sides
- * ([ShellFit]). The chart's own texts are drawn, not laid out; the chart references cover them. Images go to
- * build/forecast-fit/.
+ * ([ShellFit]). The charts' texts are drawn, not laid out: the charts zoom with the font scale as a whole, and the
+ * chart references cover them. Images go to build/forecast-fit/.
  */
 abstract class ForecastFitTest(private val lang: String) {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()

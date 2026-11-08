@@ -130,6 +130,22 @@ class WeatherSessionTest {
         assertEquals(before + 1, t.requests.size, "OK reloads at once")
     }
 
+    /** #2913 F2: the failure of a request a later one replaced does not ask to retry. */
+    @Test
+    fun anOlderFailureDoesNotAskToRetry() = runTest {
+        val first = CompletableDeferred<String>()
+        var call = 0
+        val t = setup(http = { url, _ -> if (++call == 1) first.await() else if ("51.51" in url) londonBody else seoulBody })
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        t.session.reload(WeatherSession.Sender.TAB)
+        runCurrent()
+        first.completeExceptionally(HttpStatusException(500))
+        runCurrent()
+        assertFalse(t.session.retry.value)
+        assertEquals("회현동", t.state.value.places[0].name, "the later answer was saved")
+    }
+
     @Test
     fun theRefreshTimerRestartsWithEveryLoad() = runTest {
         val t = setup(interval = "30")

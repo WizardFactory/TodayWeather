@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -42,7 +44,8 @@ sealed interface LoadResult {
 /**
  * The weather of the saved places (#2887): the requests of `getWeatherByGeoInfo`, the response conversion and the
  * city updates of `WeatherInfo`. A response applies to the place that requested it, whichever place is selected when
- * it arrives (the A01 fix): entries are keyed by the place ([key]) and only the latest request of a key applies.
+ * it arrives (the A01 fix): entries are keyed by the place ([key]) and only the latest request of a key applies; an
+ * answer to an older request, a failure included, is [LoadResult.Superseded], and answers are stored one at a time.
  * The rest is the Cordova behavior: fields a response leaves out keep their old value (A02), the ten-minute gate
  * lives in memory only, and a failure keeps what was there. Entries are cached in [cacheDir] as Cordova saved the
  * weather with the city, so a cold start shows them while it loads.
@@ -60,6 +63,7 @@ class WeatherRepository(
     private val loadTimes = HashMap<String, Long>()
     private val latestRequest = HashMap<String, Long>()
     private var requests = 0L
+    private val commits = Mutex()
 
     /** Entries by place key, as loaded or read from the cache in this process. */
     val weather: StateFlow<Map<String, WeatherEntry>> = entries.asStateFlow()
@@ -105,23 +109,31 @@ class WeatherRepository(
         } finally {
             synchronized(this) { if (latestRequest[key] == request) running.update { it - key } }
         }
+        // An answer to a request a later one replaced counts for nothing, a failure included.
+        if (!latest(key, request)) return LoadResult.Superseded
         val converted = body.mapCatching { WeatherConverter.convert(Json.parseToJsonElement(it)) }
         val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull())
-        val previous = cached(place)
-        val entry = WeatherEntry(merge(previous?.weather, city), clock())
-        val updated = updatePlace(place, city)
-        synchronized(this) {
-            if (latestRequest[key] != request) return LoadResult.Superseded
-            loadTimes[key] = entry.loadedAt
-            // A place that gets its coordinates from the response is found under its new key from now on.
+        // One answer at a time is stored, and only while it is the latest of its place, so a slower write of an
+        // older answer cannot follow a newer one in memory or in the cache.
+        return commits.withLock {
+            if (!latest(key, request)) return@withLock LoadResult.Superseded
+            val previous = cached(place)
+            val entry = WeatherEntry(merge(previous?.weather, city), clock())
+            val updated = updatePlace(place, city)
             val newKey = key(updated)
-            if (newKey != key) loadTimes[newKey] = entry.loadedAt
+            synchronized(this) {
+                loadTimes[key] = entry.loadedAt
+                // A place that gets its coordinates from the response is found under its new key from now on.
+                if (newKey != key) loadTimes[newKey] = entry.loadedAt
+            }
             entries.update { it + (key to entry) + (newKey to entry) }
+            writeCache(key, entry)
+            if (newKey != key) writeCache(newKey, entry)
+            LoadResult.Loaded(key, entry, updated)
         }
-        writeCache(key, entry)
-        if (key(updated) != key) writeCache(key(updated), entry)
-        return LoadResult.Loaded(key, entry, updated)
     }
+
+    private fun latest(key: String, request: Long) = synchronized(this) { latestRequest[key] == request }
 
     private suspend fun readCache(key: String): WeatherEntry? = withContext(io) {
         val file = cacheFile(key) ?: return@withContext null
@@ -136,9 +148,14 @@ class WeatherRepository(
         val file = cacheFile(key) ?: return@withContext
         runCatching {
             file.parentFile?.mkdirs()
-            val temp = File(file.path + ".tmp")
-            temp.writeText(JsonObject(mapOf("loadedAt" to JsonPrimitive(entry.loadedAt), "weather" to entry.weather)).toString())
-            temp.renameTo(file)
+            // A file of its own, renamed over the entry: a reader sees the old entry or the new one, never half.
+            val temp = File.createTempFile(file.nameWithoutExtension, ".tmp", file.parentFile)
+            try {
+                temp.writeText(JsonObject(mapOf("loadedAt" to JsonPrimitive(entry.loadedAt), "weather" to entry.weather)).toString())
+                if (!temp.renameTo(file)) temp.delete()
+            } finally {
+                if (temp.exists()) temp.delete()
+            }
         }
     }
 

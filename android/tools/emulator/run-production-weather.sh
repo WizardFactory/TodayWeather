@@ -4,7 +4,8 @@
 # Requires the debug and androidTest APKs built with the private server URL (TW_SERVER_URL in the environment or
 # android/private.properties; README "Private build inputs"). The emulator needs a network for this run: weather
 # requests are read-only GETs, push requests are recorded by the test app and never sent, and both packages are
-# uninstalled on every exit. Screenshots and the instrumentation output go to out-dir.
+# uninstalled on every exit; when that cannot be confirmed the emulator goes offline and the script exits 5
+# (tools/emulator/offline.sh online_cleanup). Screenshots and the instrumentation output go to out-dir.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 . "$HERE/offline.sh"
@@ -12,18 +13,7 @@ emulator_guard
 OUT=${1:-/tmp/tw-production-weather}
 APP=$HERE/../../app/build/outputs/apk
 mkdir -p "$OUT"
-cleanup() {
-    status=$?
-    trap - EXIT INT TERM
-    adb uninstall $PKG.test >/dev/null 2>&1 || true
-    adb uninstall $PKG >/dev/null 2>&1 || true
-    if adb shell pm list packages 2>/dev/null | tr -d '\r' | grep -Eqx "package:$PKG(\.test)?"; then
-        echo "cleanup: $PKG is still installed" >&2
-        exit 5
-    fi
-    exit $status
-}
-trap cleanup EXIT
+trap online_cleanup EXIT
 trap 'exit 130' INT TERM
 
 adb shell dumpsys connectivity | grep -q "Active default network: none" && { echo "The emulator has no network" >&2; exit 3; }

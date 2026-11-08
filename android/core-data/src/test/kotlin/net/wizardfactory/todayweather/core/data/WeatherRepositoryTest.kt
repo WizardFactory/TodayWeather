@@ -116,6 +116,70 @@ class WeatherRepositoryTest {
         assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
     }
 
+    /** #2913 F2: a failed answer to a request a later one replaced does not count (no retry confirmation for it). */
+    @Test
+    fun anOlderFailureIsSuperseded() = runTest {
+        val first = CompletableDeferred<String>()
+        var call = 0
+        // The cache runs on the test's scheduler, so no time passes and the older request makes one attempt only.
+        val repo = WeatherRepository("https://server.test.invalid", null, { _, _ -> if (++call == 1) first.await() else seoulBody },
+            { now }, kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        assertIs<LoadResult.Loaded>(repo.load(seoul, units, listOf("ko"), force = true))
+        assertEquals(2, call, "one attempt each")
+        first.completeExceptionally(HttpStatusException(500))
+        assertEquals(LoadResult.Superseded, older.await())
+        assertEquals(currentOf(WeatherEntry(converted(seoulBody), 0)), currentOf(repo.cached(seoul)))
+    }
+
+    /**
+     * #2913 F4: answers are stored one at a time. The older answer's cache write is held while a newer request is sent
+     * and answered; the I/O then runs newest first, as a thread pool may. The newer answer stays in memory and in the
+     * cache, because it cannot start storing before the older one has finished.
+     */
+    @Test
+    fun aSlowerWriteOfAnOlderAnswerCannotFollowANewerOne() = runTest {
+        val cache = Files.createTempDirectory("weather").toFile()
+        val io = Manual()
+        val newer = Json.parseToJsonElement(seoulBody).jsonObject
+            .let { JsonObject(it + ("current" to JsonObject(it["current"]!!.jsonObject + ("t1h" to kotlinx.serialization.json.JsonPrimitive(-5))))) }
+            .toString()
+        var call = 0
+        val repo = WeatherRepository("https://server.test.invalid", cache, { _, _ -> if (++call == 1) seoulBody else newer }, { now }, io)
+        val older = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        io.runAll() // the older answer reads the cache, then queues its write
+        runCurrent()
+        val later = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        while (io.pending()) {
+            io.runLast()
+            runCurrent()
+        }
+        assertIs<LoadResult.Loaded>(later.await())
+        older.await()
+        assertEquals("-5", currentOf(repo.cached(seoul))["t1h"]!!.jsonPrimitive.content)
+        val restarted = WeatherRepository("https://server.test.invalid", cache, { _, _ -> error("no request") }, { now }, io)
+        val fromCache = async { restarted.cached(seoul) }
+        runCurrent()
+        while (io.pending()) {
+            io.runLast()
+            runCurrent()
+        }
+        assertEquals("-5", currentOf(fromCache.await())["t1h"]!!.jsonPrimitive.content, "the cache keeps the newer answer")
+        cache.deleteRecursively()
+    }
+
+    /** A dispatcher whose tasks run when the test says, in the order it chooses. */
+    private class Manual : kotlinx.coroutines.CoroutineDispatcher() {
+        private val tasks = ArrayDeque<Runnable>()
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) { tasks += block }
+        fun pending() = tasks.isNotEmpty()
+        fun runLast() = tasks.removeLast().run()
+        fun runAll() { while (tasks.isNotEmpty()) tasks.removeFirst().run() }
+    }
+
     /** A02 (kept): `updateCity` replaces a field only when the response has a truthy value for it. */
     @Test
     fun fieldsAResponseLeavesOutKeepTheirValues() = runTest {

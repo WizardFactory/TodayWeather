@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -144,9 +146,7 @@ fun WeatherPage(
             HeaderBlock(page, content.metrics, theme, colors, photo, photoGradient, onPrevious, onNext, onAction)
             Spacer(Modifier.height(5.dp))
             Box(Modifier.testTag(ForecastTags.block(1))) {
-                // The charts are drawn to their columns, which the screen's width sets: their text keeps its size whatever
-                // the font scale, as glyphs do, or larger text would run into the next column.
-                Icon {
+                Zoomed {
                     if (!daily && page.showChart && content.hourly != null) {
                         HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart)
                     }
@@ -272,6 +272,16 @@ private fun Summary(text: String, colors: ForecastColors, modifier: Modifier) {
             }
         }
     }
+}
+
+/**
+ * The charts at the system font scale (AN-06: text follows it). They are drawn to columns of a seventh of the screen,
+ * so they zoom as a whole: their text grows with the scale and keeps its room, and the chart scrolls further.
+ */
+@Composable
+private fun Zoomed(content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    CompositionLocalProvider(LocalDensity provides Density(density.density * density.fontScale, 1f), content = content)
 }
 
 /** `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. */
