@@ -75,7 +75,7 @@ impl Http {
         {
             return Err(GatewayError::InvalidConfiguration);
         }
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())
             .no_proxy()

@@ -2459,6 +2459,26 @@ the zone-state read beside a cycle that never ends, the lanes (including a full 
 whole first answer with every stored family slowed and with prompt reads; listed with their names
 in the [spec](../../specs/issue-2614-kma-restart-race.md). Not measured: the restart on EC2.
 
+### Restart CPU: name resolution and the disk cache off the blocking pool (2026-11-08)
+
+The EC2 restart comparisons of #2900 found the four blocking threads of the runtime (beside two
+workers, `src/lib.rs`) saturated after a restart: page parsing and folds queued behind restore
+decoding, disk-cache loads and writes, and DNS lookups. AK chose on 2026-11-08 to take DNS and the
+disk cache off the blocking pool first and measure again
+([intent](../../intent/issue-2614-kma-restart-cpu.md),
+[spec](../../specs/issue-2614-kma-restart-cpu.md),
+[plan](../../plans/issue-2614-kma-restart-cpu.md)).
+
+**Name resolution.** Every outbound HTTP client of the service starts from `dns::client()`, whose
+resolver is hickory's async one (`hickory-resolver` 0.26, the version reqwest 0.13 integrates)
+instead of reqwest's default getaddrinfo on the blocking pool. It reads the system configuration
+(`/etc/resolv.conf` and the hosts file) when a client first resolves a name, asks A and AAAA
+together and puts the IPv4 addresses first, as getaddrinfo orders them on the IPv4-only hosts the
+service runs on. Without a readable configuration lookups fail; no public resolver stands in.
+TLS, timeouts and the disabled proxies are unchanged, and IP-literal URLs (IMDS, the S3 test
+peers) resolve nothing. The legacy HTTP hop connects to a loopback IP literal only. The smoke and
+measurement tools under `examples/` keep reqwest's default resolver.
+
 ### S15b-2 s station registry seed (2026-10-15)
 
 AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with

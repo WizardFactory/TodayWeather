@@ -1,0 +1,47 @@
+{
+  "task": "KMA-RESTART-CPU",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "server2 runtime: async DNS resolution and a dedicated disk-cache thread so the blocking pool serves first-answer work after a restart; a restore CPU admission only if the EC2 re-measure needs it. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/Cargo.lock",
+    "server2/Cargo.toml",
+    "server2/config/tasks/KMA-RESTART-CPU.json",
+    "server2/src/api/mod.rs",
+    "server2/src/dns.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/geocode/mod.rs",
+    "server2/src/geocode/town.rs",
+    "server2/src/lib.rs",
+    "server2/src/notice/translate.rs",
+    "server2/src/providers/public.rs",
+    "server2/src/providers/transport.rs",
+    "server2/src/push/deliver/fcm.rs",
+    "server2/src/push/deliver/weather.rs",
+    "server2/src/storage/credentials.rs",
+    "server2/src/storage/transport.rs",
+    "server2/src/world/air_transport.rs",
+    "server2/src/world/transport.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-restart-cpu.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-restart-cpu.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-restart-cpu.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Threads and the disk-cache path."
+    }
+  ]
+}

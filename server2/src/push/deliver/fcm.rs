@@ -176,7 +176,7 @@ impl Fcm {
         }
         Ok(Self {
             stopping: std::sync::atomic::AtomicBool::new(false),
-            client: reqwest::Client::builder()
+            client: crate::dns::client()
                 .redirect(reqwest::redirect::Policy::none())
                 // reqwest otherwise re-sends requests refused by an HTTP/2 protocol NACK.
                 .retry(reqwest::retry::never())
