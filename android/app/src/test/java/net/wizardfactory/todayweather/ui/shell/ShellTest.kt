@@ -1,7 +1,11 @@
 package net.wizardfactory.todayweather.ui.shell
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -18,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Shell behavior (#2886 AC1): tabs, startup page, menu, back on a dialog and the exit confirmation. */
+/** Shell behavior (#2886 AC1): tabs, startup page, menu rows, back on a dialog and the exit confirmation. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
@@ -28,9 +32,9 @@ class ShellTest {
     private val refreshed = mutableListOf<Tab>()
     private var exits = 0
 
-    private fun show(startup: Tab = Tab.HOURLY, region: String = "KR") {
+    private fun show(startup: Tab = Tab.HOURLY, region: String = "KR", values: Map<MenuRow, String> = emptyMap()) {
         rule.setContent {
-            TodayWeatherShell(ShellState(Theme.LIGHT, region, startup, "2.0.0"), onRefresh = { refreshed += it }, onMenuRow = {}, onExit = { exits++ })
+            TodayWeatherShell(ShellState(Theme.LIGHT, region, startup, "2.0.0", values), onRefresh = { refreshed += it }, onMenuRow = {}, onExit = { exits++ })
         }
         rule.waitForIdle()
     }
@@ -89,6 +93,21 @@ class ShellTest {
         rule.waitForIdle()
         rule.onNodeWithTag(ShellTags.row(MenuRow.SPECIAL_WEATHER)).assertDoesNotExist()
         rule.onNodeWithTag(ShellTags.row(MenuRow.UNITS)).assertExists()
+    }
+
+    @Test
+    fun menuRowsShowTheirValuesAndKoreaOnlyRowsTheirChevrons() {
+        show(values = mapOf(MenuRow.THEME to "밝은 테마", MenuRow.ANALYTICS to "꺼짐"))
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.waitForIdle()
+        val chevrons = rule.onAllNodes(hasText(Glyphs.CHEVRON_RIGHT), useUnmergedTree = true)
+        chevrons.assertCountEquals(4)
+        for (row in listOf(MenuRow.SPECIAL_WEATHER, MenuRow.NATIONAL_WEATHER, MenuRow.NATIONAL_AIR, MenuRow.NULLSCHOOL_WIND)) {
+            rule.onNode(hasText(Glyphs.CHEVRON_RIGHT) and hasAnyAncestor(hasTestTag(ShellTags.row(row))), useUnmergedTree = true).assertExists()
+        }
+        rule.onNode(hasText("밝은 테마") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.THEME))), useUnmergedTree = true).assertExists()
+        rule.onNode(hasText("선택적 이용 통계 · 꺼짐") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.ANALYTICS))), useUnmergedTree = true).assertExists()
+        rule.onNode(hasText("2.0.0") and hasAnyAncestor(hasTestTag(ShellTags.row(MenuRow.VERSION))), useUnmergedTree = true).assertExists()
     }
 
     @Test

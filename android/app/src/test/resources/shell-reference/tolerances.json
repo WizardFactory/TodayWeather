@@ -1,0 +1,138 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the screen captures in shell-reference/<lang>",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts (Korean glyphs up to 1 px narrower) and centered text on whole device pixels. The photo theme's header is white with a grey outline over the white page, so only the mean sees it.",
+ "sensitivity": "Measured 2026-11-08 by changing the shell and rerunning: tab items 1 dp lower fails all 8 tab comparisons (strong 0.031-0.037); no hairlines fails every tab comparison and the light, dark and old headers on the mean; no photo outline fails both photo headers (mean 2.73); menu blocks without the 0.87 opacity fail the dark menus only; a missing analytics value fails the Korean dark menu only; missing chevrons and a regular title weight pass, so ShellTest checks the menu's rows, values and chevrons.",
+ "cases": {
+  "en-US-dark-header": {
+   "strong": 0.00761,
+   "mean": 1.797,
+   "heightDifference": 0
+  },
+  "en-US-dark-menu": {
+   "strong": 0.01302,
+   "mean": 2.514,
+   "heightDifference": 0
+  },
+  "en-US-dark-tabs": {
+   "strong": 0.00064,
+   "mean": 1.574,
+   "heightDifference": 0
+  },
+  "en-US-light-header": {
+   "strong": 0.00982,
+   "mean": 1.946,
+   "heightDifference": 0
+  },
+  "en-US-light-menu": {
+   "strong": 0.00821,
+   "mean": 1.941,
+   "heightDifference": 0
+  },
+  "en-US-light-tabs": {
+   "strong": 0.00075,
+   "mean": 1.734,
+   "heightDifference": 0
+  },
+  "en-US-old-header": {
+   "strong": 0.00955,
+   "mean": 1.984,
+   "heightDifference": 0
+  },
+  "en-US-old-menu": {
+   "strong": 0.00895,
+   "mean": 2.016,
+   "heightDifference": 0
+  },
+  "en-US-old-tabs": {
+   "strong": 0.00083,
+   "mean": 1.738,
+   "heightDifference": 0
+  },
+  "en-US-photo-header": {
+   "strong": 0.0,
+   "mean": 1.521,
+   "heightDifference": 0
+  },
+  "en-US-photo-menu": {
+   "strong": 0.00931,
+   "mean": 2.138,
+   "heightDifference": 0
+  },
+  "en-US-photo-tabs": {
+   "strong": 0.00075,
+   "mean": 1.734,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-header": {
+   "strong": 0.00761,
+   "mean": 1.797,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-menu": {
+   "strong": 0.01773,
+   "mean": 3.307,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-tabs": {
+   "strong": 0.00104,
+   "mean": 2.474,
+   "heightDifference": 0
+  },
+  "ko-KR-light-header": {
+   "strong": 0.00982,
+   "mean": 1.946,
+   "heightDifference": 0
+  },
+  "ko-KR-light-menu": {
+   "strong": 0.01223,
+   "mean": 2.714,
+   "heightDifference": 0
+  },
+  "ko-KR-light-tabs": {
+   "strong": 0.00139,
+   "mean": 2.575,
+   "heightDifference": 0
+  },
+  "ko-KR-old-header": {
+   "strong": 0.00955,
+   "mean": 1.984,
+   "heightDifference": 0
+  },
+  "ko-KR-old-menu": {
+   "strong": 0.0119,
+   "mean": 2.645,
+   "heightDifference": 0
+  },
+  "ko-KR-old-tabs": {
+   "strong": 0.00177,
+   "mean": 2.731,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-header": {
+   "strong": 0.0,
+   "mean": 1.521,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-menu": {
+   "strong": 0.01259,
+   "mean": 2.769,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-tabs": {
+   "strong": 0.00139,
+   "mean": 2.575,
+   "heightDifference": 0
+  }
+ }
+}

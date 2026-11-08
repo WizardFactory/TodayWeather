@@ -6,24 +6,29 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -38,17 +43,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.max
+import kotlin.math.roundToInt
 import net.wizardfactory.todayweather.R
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
@@ -141,7 +159,7 @@ fun TodayWeatherShell(
             enter = slideInHorizontally(tween(200)) { -it },
             exit = slideOutHorizontally(tween(200)) { -it },
         ) {
-            SideMenu(state, colors) { row ->
+            SideMenu(state) { row ->
                 if (row == null) menuOpen = false else onMenuRow(row)
             }
         }
@@ -157,32 +175,62 @@ fun TodayWeatherShell(
     }
 }
 
-/** `.bar-header`: 44 dp with a 1 dp bottom line, the menu button on the left and a centered 19 sp title. */
+/**
+ * The header bar of a tab (`ion-nav-bar`, `.bar.bar-header`): 44 dp with a hairline at the bottom, the menu button
+ * at the left, the page's [actions] at the right and the title (19 sp, medium) centered between equal sides that
+ * clear the wider group of buttons, as Ionic places it (ionic.bundle.js `calcWidths`: that group plus 10 dp, and
+ * the title's 10 dp margin).
+ */
 @Composable
-fun HeaderBar(colors: ShellColors, title: String, onMenu: () -> Unit, actions: @Composable () -> Unit = {}) {
-    Box(
-        Modifier.fillMaxWidth().height(45.dp).background(colors.headerBar).drawBehind {
-            drawLine(colors.headerLine, Offset(0f, size.height - 0.5f * density), Offset(size.width, size.height - 0.5f * density), strokeWidth = 1 * density)
+fun HeaderBar(colors: ShellColors, title: String, onMenu: () -> Unit, actions: @Composable RowScope.() -> Unit = {}) {
+    Layout(
+        content = {
+            BarButton(Glyphs.NAVICON, colors, onMenu, Modifier.testTag(ShellTags.MENU_BUTTON))
+            Row { actions() }
+            BarTitle(title, colors)
         },
-    ) {
-        Text(
-            title, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-            style = TextStyle(fontSize = 19.sp, color = colors.headerText, platformStyle = PlatformTextStyle(includeFontPadding = false)),
-            modifier = Modifier.align(Alignment.Center).padding(horizontal = 48.dp),
-        )
-        Glyph(Glyphs.NAVICON, 32.sp, colors.headerText, 44.dp,
-            Modifier.align(Alignment.CenterStart).clickable(onClick = onMenu).testTag(ShellTags.MENU_BUTTON))
-        Row(Modifier.align(Alignment.CenterEnd)) { actions() }
+        modifier = Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true),
+    ) { (menu, buttons, text), constraints ->
+        val loose = constraints.copy(minWidth = 0)
+        val left = menu.measure(loose)
+        val right = buttons.measure(loose)
+        val padding = 5.dp.roundToPx()
+        val side = max(left.width, right.width) + 20.dp.roundToPx()
+        val label = text.measure(constraints.copy(minWidth = 0, maxWidth = (constraints.maxWidth - 2 * side).coerceAtLeast(0)))
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            label.place((constraints.maxWidth - label.width) / 2, 0)
+            left.place(padding, 0)
+            right.place(constraints.maxWidth - padding - right.width, 0)
+        }
     }
 }
 
-/** `.tabs.tabs-icon-top`: 49 dp with a 1 dp top line; items up to 150 dp, 32 sp glyphs and 10 sp labels, 0.7 opacity unless selected. */
+/**
+ * An icon button of a header bar (`.bar .button.button-icon`) below the bar's 5 dp padding: a transparent 1 dp
+ * border, [padding] at each side, a 32 sp glyph on a 32 dp line with 2 dp at each side, and 0.87 opacity, which
+ * every `.button` has in ionic.app.scss.
+ */
+@Composable
+fun BarButton(glyph: String, colors: ShellColors, onClick: () -> Unit, modifier: Modifier = Modifier, padding: Dp = 8.dp) {
+    Box(modifier.padding(top = 5.dp).alpha(0.87f).clickable(onClick = onClick).padding(vertical = 1.dp, horizontal = 1.dp + padding + 2.dp)) {
+        OutlinedText(glyph, line(32.sp, 32.sp, colors.headerText, family = Glyphs.ionicons), colors.headerOutline)
+    }
+}
+
+/** `.bar .title` on Android: one line of 44 dp, 19 sp, medium. */
+@Composable
+private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Modifier) {
+    OutlinedText(title, line(19.sp, 44.sp, colors.headerText, FontWeight.Medium), colors.headerOutline, modifier)
+}
+
+/**
+ * `.tabs.tabs-icon-top`: 49 dp with a hairline at the top and the items 2 dp below it. Each item, up to 150 dp
+ * wide, has a 32 sp glyph on a 32 dp line over a 10 sp label on a 14 dp line, at 0.7 opacity unless selected.
+ */
 @Composable
 fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(50.dp).background(colors.tabBar).drawBehind {
-            drawLine(colors.tabLine, Offset(0f, 0.5f * density), Offset(size.width, 0.5f * density), strokeWidth = 1 * density)
-        }.padding(top = 1.dp),
+        Modifier.fillMaxWidth().height(49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
         for (tab in Tab.entries) {
@@ -194,56 +242,128 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
                 Tab.AIR -> (if (on) Glyphs.REFRESH else Glyphs.CLOUD_OUTLINE) to R.string.LOC_AIR_INFORMATION
             }
             Column(
-                Modifier.weight(1f).widthIn(max = 150.dp).height(49.dp).alpha(if (on) 1f else 0.7f)
+                Modifier.weight(1f).widthIn(max = 150.dp).fillMaxHeight().alpha(if (on) 1f else 0.7f)
                     .clickable { onTab(tab) }.testTag(ShellTags.tab(tab)),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
             ) {
-                Glyph(glyph, 32.sp, colors.tabText, 32.dp)
-                Text(stringResource(label), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = TextStyle(fontSize = 10.sp, lineHeight = 14.sp, color = colors.tabText, platformStyle = PlatformTextStyle(includeFontPadding = false)))
+                LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons))
+                LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText))
             }
         }
     }
 }
 
-/** The full-screen side menu (S06): header with back arrow and title, then the rows; [onRow] null means close. */
+/**
+ * The full-screen side menu (S06): the theme's header with the back arrow and the app name, then the rows. Plain
+ * rows (`.item`) share 1 dp borders; the analytics, ad privacy, policy and terms rows are blocks
+ * (`.item.button.button-block`) with 9 to 10 dp around them. [onRow] null means close.
+ */
 @Composable
-fun SideMenu(state: ShellState, colors: ShellColors, onRow: (MenuRow?) -> Unit) {
-    val menuColors = colors.copy(headerBar = if (state.theme == Theme.DARK) colors.headerBar else Color.White,
-        headerText = if (state.theme == Theme.DARK) Color.White else Color.Black,
-        headerLine = if (state.theme == Theme.DARK) colors.headerLine else Color(0xFFDDDDDD))
-    Column(Modifier.fillMaxSize().background(menuColors.menuList).testTag(ShellTags.MENU)) {
+fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
+    val colors = ShellColors.menu(state.theme)
+    // .menu: a 1 dp border at the bottom of the panel.
+    Column(Modifier.fillMaxSize().background(Color(0xFFD2D2D2)).padding(bottom = 1.dp).background(colors.menuList).testTag(ShellTags.MENU)) {
         Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
-        Box(Modifier.fillMaxWidth().height(45.dp).background(menuColors.headerBar).drawBehind {
-            drawLine(menuColors.headerLine, Offset(0f, size.height - 0.5f * density), Offset(size.width, size.height - 0.5f * density), strokeWidth = 1 * density)
-        }) {
-            Text(stringResource(R.string.LOC_TODAYWEATHER), modifier = Modifier.align(Alignment.Center),
-                style = TextStyle(fontSize = 19.sp, color = menuColors.headerText, platformStyle = PlatformTextStyle(includeFontPadding = false)))
-            Glyph(Glyphs.ARROW_BACK, 32.sp, menuColors.headerText, 44.dp,
-                Modifier.align(Alignment.CenterStart).clickable { onRow(null) }.testTag(ShellTags.MENU_BACK))
+        // A plain `.bar.bar-header`: the title is centered over the whole bar with its 10 dp margins.
+        Box(Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
+            BarTitle(stringResource(R.string.LOC_TODAYWEATHER), colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
+            BarButton(Glyphs.ARROW_BACK, colors, { onRow(null) }, Modifier.padding(start = 5.dp).testTag(ShellTags.MENU_BACK))
         }
+        val rows = MenuRow.entries.filter { !it.krOnly || state.region == "KR" }
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-            for (row in MenuRow.entries) {
-                if (row.krOnly && state.region != "KR") continue
-                val value = state.menuValues[row] ?: if (row == MenuRow.VERSION) state.version else null
-                Row(
-                    Modifier.fillMaxWidth().background(menuColors.menuItem).drawBehind {
-                        drawLine(menuColors.menuBorder, Offset(0f, size.height - 0.5f * density), Offset(size.width, size.height - 0.5f * density), strokeWidth = 1 * density)
-                    }.clickable { onRow(row) }.padding(horizontal = 16.dp, vertical = 16.dp).testTag(ShellTags.row(row)),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (row.button) Arrangement.Center else Arrangement.Start,
-                ) {
-                    Text(stringResource(row.textKey), modifier = if (row.button) Modifier else Modifier.weight(1f),
-                        style = TextStyle(fontSize = if (row.button) 15.sp else 16.sp, color = menuColors.menuText,
-                            platformStyle = PlatformTextStyle(includeFontPadding = false)))
-                    if (value != null) {
-                        Text(value, style = TextStyle(fontSize = 16.sp, color = menuColors.menuText.copy(alpha = 0.6f),
-                            platformStyle = PlatformTextStyle(includeFontPadding = false)))
-                    }
-                    if (row.chevron) Glyph(Glyphs.CHEVRON_RIGHT, 16.sp, menuColors.menuText, 20.dp)
+            // Chrome puts each box edge on the device pixel nearest its fractional position; so does this list.
+            val px = LocalDensity.current.density
+            var y = 0f
+            fun snapped(height: Dp): Dp {
+                val top = Math.round(y)
+                y += height.value * px
+                return ((Math.round(y) - top) / px).dp
+            }
+            rows.forEachIndexed { i, row ->
+                val previous = rows.getOrNull(i - 1)
+                if (row.button) {
+                    Spacer(Modifier.height(snapped(if (previous?.button == true) 10.dp else 9.dp)))
+                    MenuButton(row, state.menuValues[row], colors, snapped(47.dp)) { onRow(row) }
+                    if (rows.getOrNull(i + 1)?.button == false) Spacer(Modifier.height(snapped(9.dp)))
+                } else {
+                    MenuItem(row, state, colors, snapped(1.dp), snapped(54.85.dp)) { onRow(row) }
+                    if (rows.getOrNull(i + 1)?.button != false) Box(Modifier.fillMaxWidth().height(snapped(1.dp)).background(colors.menuBorder))
                 }
             }
         }
     }
+}
+
+/** `.item`: a border above, 16 dp padding around a 16 sp line of 22.85 dp, and the value or a chevron at the right. */
+@Composable
+private fun MenuItem(row: MenuRow, state: ShellState, colors: ShellColors, border: Dp, height: Dp, onClick: () -> Unit) {
+    val value = state.menuValues[row] ?: if (row == MenuRow.VERSION) state.version else null
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(ShellTags.row(row))) {
+        Box(Modifier.fillMaxWidth().height(border).background(colors.menuBorder))
+        Row(Modifier.fillMaxWidth().height(height).background(colors.menuItem).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            val style = line(16.sp, 22.85.sp, colors.menuText)
+            LineText(stringResource(row.textKey), style, Modifier.weight(1f))
+            if (value != null) LineText(value, style)
+            // The chevron sits on the row's baseline (`<i class="icon ion-chevron-right">` floated in the text's line).
+            if (row.chevron) LineText(Glyphs.CHEVRON_RIGHT, line(16.sp, 22.85.sp, colors.menuText, family = Glyphs.ionicons), baselineOf = style)
+        }
+    }
+}
+
+/**
+ * `.item.button.button-block`: a 47 dp block with a 1 dp border and 4 dp corners, a bold 15 sp label followed by
+ * " · [value]" when the row has one (the analytics choice), at 0.87 opacity.
+ */
+@Composable
+private fun MenuButton(row: MenuRow, value: String?, colors: ShellColors, height: Dp, onClick: () -> Unit) {
+    val text = stringResource(row.textKey).let { if (value != null) "$it · $value" else it }
+    Box(
+        Modifier.fillMaxWidth().height(height).alpha(0.87f).clip(RoundedCornerShape(4.dp)).background(colors.menuItem)
+            .border(1.dp, colors.menuBorder, RoundedCornerShape(4.dp)).clickable(onClick = onClick).testTag(ShellTags.row(row)),
+    ) {
+        LineText(text, line(15.sp, 42.sp, colors.menuText, FontWeight.Bold), Modifier.align(Alignment.TopCenter).padding(top = 1.dp, start = 12.dp, end = 12.dp))
+    }
+}
+
+/** A CSS line box: [lineHeight] with half the leading above the font's ascent and half below its descent. */
+private fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal, family: FontFamily? = null) =
+    TextStyle(
+        fontSize = size, lineHeight = lineHeight, color = color, fontWeight = weight, fontFamily = family,
+        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+        platformStyle = PlatformTextStyle(includeFontPadding = false),
+    )
+
+/**
+ * One line of [text] where Chrome puts it: on the baseline of a line in the font of [baselineOf]. Android lowers a
+ * line drawn by a taller fallback font, such as Noto Sans CJK for Korean, while Chrome keeps the first font's
+ * baseline. Icon fonts draw their own glyphs; an icon inside a line of text takes the text's baseline.
+ */
+@Composable
+private fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style) {
+    val measurer = rememberTextMeasurer()
+    val reference = if (baselineOf.fontFamily == null) "x" else text
+    val baseline = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf).firstBaseline }
+    Text(text, modifier.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) { placeable.place(0, baseline.roundToInt() - placeable[FirstBaseline]) }
+    }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = style)
+}
+
+/** [text] in [style] with the photo theme's [outline]: four 0.5 dp diagonal shadows (`text-shadow`). */
+@Composable
+private fun OutlinedText(text: String, style: TextStyle, outline: Color?, modifier: Modifier = Modifier) {
+    Box(modifier) {
+        if (outline != null) {
+            for ((dx, dy) in listOf(-0.5f to -0.5f, 0.5f to -0.5f, -0.5f to 0.5f, 0.5f to 0.5f)) {
+                LineText(text, style.copy(color = outline), Modifier.offset(dx.dp, dy.dp))
+            }
+        }
+        LineText(text, style)
+    }
+}
+
+/** Ionic draws a bar's 1 px border as a hairline: the half CSS pixel on the inner side of its top or [bottom] edge. */
+private fun Modifier.hairline(color: Color, bottom: Boolean) = drawBehind {
+    val h = 0.5.dp.toPx()
+    drawRect(color, Offset(0f, if (bottom) size.height - h else h), Size(size.width, h))
 }

@@ -18,11 +18,11 @@ Sizes: 384×832, 360×780 and 412×892 dp. Fixtures come from the AN-02 corpus: 
 - `ChartScreenshotTest` (app, Robolectric native graphics, SDK 34): the Compose charts at each size and position against the PNGs; passes within the tolerance recorded for that comparison (`ImageDiff`: the share of pixels that differ by more than 64 after a 3×3 blur, the mean difference and the height). Renders and difference overlays go to `app/build/chart-compare/`.
 - `ChartBehaviorTest` (app): opening offsets equal the WebView's, and the expander shows and hides the detail rows.
 - `ChartDeviceTest` (app, device): the same comparison on the emulator with its own fonts; run by `device-smoke.sh`.
-- CI runs the JVM tests in both Android jobs; the job with `client/` also runs `check-sources.mjs`, which fails when a chart source in `client/www` no longer matches the one in `provenance.json`.
+- CI runs the JVM tests in both Android jobs; the job with `client/` also runs [`tools/emulator/check-sources.mjs`](../emulator/check-sources.mjs), which fails when a chart source in `client/www` no longer matches the one in `provenance.json`.
 
 ## Recapturing
 
-After a change to the Cordova charts (`check-sources.mjs` fails), build the Cordova debug APK from the same revision (`client/`: `npx cordova prepare android && npx cordova compile android --debug`, with the private inputs) and run:
+After a change to the Cordova charts (`check-sources.mjs` fails for the chart references), build the Cordova debug APK from the same revision (`client/`: `npx cordova prepare android && npx cordova compile android --debug`, with the private inputs) and run:
 
 ```sh
 cd android
