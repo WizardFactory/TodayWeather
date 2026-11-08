@@ -34,8 +34,11 @@ android {
         buildConfigField("String", "SERVER_URL", "\"" + serverUrl.trimEnd('/') + "\"")
     }
 
-    // Device tests read the golden corpus generated for core-domain.
+    // Device tests read the golden corpus generated for core-domain and the chart references; the image
+    // comparison is shared by the JVM and device tests.
     sourceSets["androidTest"].assets.srcDir("../core-domain/src/test/resources")
+    sourceSets["test"].kotlin.srcDir("src/sharedTest/java")
+    sourceSets["androidTest"].kotlin.srcDir("src/sharedTest/java")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -48,6 +51,7 @@ android {
     }
 
     testOptions {
+        unitTests.isIncludeAndroidResources = true
         unitTests.all { it.systemProperty("tw.projectDir", project.projectDir.absolutePath) }
     }
 }
@@ -74,7 +78,14 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.org.json)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }

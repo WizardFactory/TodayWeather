@@ -1,0 +1,26 @@
+{
+ "size": "384x832",
+ "env": {
+  "screen": {
+   "width": 384,
+   "height": 832
+  },
+  "devicePixelRatio": 2,
+  "language": "ko-KR",
+  "userAgent": "Mozilla/5.0 (Linux; Android 16; sdk_gphone64_arm64 Build/BE2A.250530.026.F3; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/133.0.6943.137 Mobile Safari/537.36",
+  "theme": "light"
+ },
+ "fixtures": [
+  "kma-seoul",
+  "vc-london",
+  "kma-jeju",
+  "vc-newyork",
+  "vc-sydney",
+  "vc-tokyo",
+  "kma-seoul-fahrenheit",
+  "kma-rain-everywhere",
+  "kma-current-index-first",
+  "kma-midnight-today-first-day",
+  "kma-seoul-sharp"
+ ]
+}

@@ -4,70 +4,24 @@
 # token: the FCM token the native app gets; the seed stores token-a, so token-a is the unchanged case
 # and token-b (default) the changed one.
 # The emulator stays offline while the Cordova app or the native app is installed, so neither gets an
-# FCM token or writes to the production push server: on every exit both packages are uninstalled before
-# the network comes back, and the network stays off if they cannot be removed. Requires the native debug
-# and androidTest APKs (./gradlew assembleDebug assembleDebugAndroidTest) signed with the same debug key
-# as the Cordova APK.
+# FCM token or writes to the production push server (tools/emulator/offline.sh: on every exit both
+# packages are uninstalled before the network comes back, and the network stays off if that cannot be
+# confirmed). Requires the native debug and androidTest APKs (./gradlew assembleDebug
+# assembleDebugAndroidTest) signed with the same debug key as the Cordova APK.
 set -eu
-case "${ANDROID_SERIAL:-}" in emulator-[0-9]*) ;; *) echo "Set ANDROID_SERIAL to an emulator" >&2; exit 2 ;; esac
-[ "$(adb get-state 2>/dev/null)" = device ] || { echo "No device $ANDROID_SERIAL" >&2; exit 2; }
+HERE=$(cd "$(dirname "$0")" && pwd)
+. "$HERE/../emulator/offline.sh"
+emulator_guard
 CORDOVA_APK=$1
 OUT=${2:-/tmp/tw-upgrade}
 TOKEN=${3:-token-b}
-HERE=$(cd "$(dirname "$0")" && pwd)
 APP=$HERE/../../app/build/outputs/apk
-PKG=net.wizardfactory.todayweather
 mkdir -p "$OUT"
-
-# Airplane mode on (1) or off (0): `cmd connectivity` on API 29+, which prints nothing on success; older
-# images answer "No shell command implementation." with exit status 0 and need the setting and broadcast
-# (with `adb root`).
-airplane() {
-    if [ -n "$(adb shell cmd connectivity airplane-mode "$([ "$1" = 1 ] && echo enable || echo disable)" 2>&1)" ]; then
-        adb root >/dev/null 2>&1 || true; adb wait-for-device
-        adb shell settings put global airplane_mode_on "$1"
-        adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state "$([ "$1" = 1 ] && echo true || echo false)" >/dev/null
-    fi
-}
-
-cleanup() {
-    status=$?
-    trap - EXIT INT TERM
-    set +e
-    adb uninstall $PKG.test >/dev/null 2>&1
-    adb uninstall $PKG >/dev/null 2>&1
-    # The network comes back only when the package query succeeds, its whole answer is a package list
-    # with the framework package, and it lists neither package; anything else counts as still installed.
-    if ! packages=$(adb shell pm list packages 2>/dev/null); then
-        echo "cleanup: the package query failed; the emulator stays offline" >&2
-        exit 5
-    fi
-    packages=$(printf '%s\n' "$packages" | tr -d '\r' | sed '/^$/d')
-    if printf '%s\n' "$packages" | grep -qv "^package:" || ! printf '%s\n' "$packages" | grep -qx "package:android"; then
-        echo "cleanup: cannot read the package list; the emulator stays offline" >&2
-        exit 5
-    fi
-    if printf '%s\n' "$packages" | grep -Eqx "package:$PKG(\.test)?"; then
-        echo "cleanup: $PKG is still installed; the emulator stays offline" >&2
-        exit 5
-    fi
-    airplane 0
-    adb shell svc wifi enable
-    adb shell svc data enable
-    exit $status
-}
-trap cleanup EXIT
+trap offline_cleanup EXIT
 trap 'exit 130' INT TERM
 
-# Offline before the Cordova app starts: airplane mode plus Wi-Fi and data off. Abort if a default
-# network is still active.
-airplane 1
-adb shell svc wifi disable || true
-adb shell svc data disable || true
-sleep 3
-if ! adb shell dumpsys connectivity | grep -q "Active default network: none"; then
-    echo "The emulator still has a network; refusing to start the Cordova app" >&2; exit 3
-fi
+# Offline before the Cordova app starts.
+go_offline
 adb uninstall $PKG.test >/dev/null 2>&1 || true
 adb uninstall $PKG >/dev/null 2>&1 || true
 

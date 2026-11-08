@@ -1,0 +1,107 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova wrapper height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64 and the CI runner; the references are chart-reference/<WxH>/kma-seoul captures",
+ "why": "Residual differences are glyph rasterization (system Roboto versions), text baselines on whole device pixels in the WebView, and Korean line boxes 0.5 dp taller on Android (font metrics rounded outward, Chrome rounds to nearest), which adds 1 px to the wrapper at 360 and 384. Removing the today line raised strong by 0.0023 at 384x832 opening, which the margin of 0.0015 detects; grey today circles, a 2 dp shift and 16 sp hour labels raised it to 0.022, 0.052 and 0.025.",
+ "cases": {
+  "360x780-daily-end": {
+   "strong": 0.00656,
+   "mean": 3.207,
+   "heightDifference": 1
+  },
+  "360x780-daily-opening": {
+   "strong": 0.00777,
+   "mean": 3.704,
+   "heightDifference": 1
+  },
+  "360x780-daily-start": {
+   "strong": 0.00821,
+   "mean": 3.674,
+   "heightDifference": 1
+  },
+  "360x780-hourly-end": {
+   "strong": 0.00459,
+   "mean": 3.556,
+   "heightDifference": 1
+  },
+  "360x780-hourly-opening": {
+   "strong": 0.00594,
+   "mean": 3.599,
+   "heightDifference": 1
+  },
+  "360x780-hourly-start": {
+   "strong": 0.005,
+   "mean": 3.495,
+   "heightDifference": 1
+  },
+  "384x832-daily-end": {
+   "strong": 0.00593,
+   "mean": 2.927,
+   "heightDifference": 1
+  },
+  "384x832-daily-opening": {
+   "strong": 0.00709,
+   "mean": 3.423,
+   "heightDifference": 1
+  },
+  "384x832-daily-start": {
+   "strong": 0.00749,
+   "mean": 3.339,
+   "heightDifference": 1
+  },
+  "384x832-hourly-end": {
+   "strong": 0.0056,
+   "mean": 3.666,
+   "heightDifference": 1
+  },
+  "384x832-hourly-opening": {
+   "strong": 0.00699,
+   "mean": 3.824,
+   "heightDifference": 1
+  },
+  "384x832-hourly-start": {
+   "strong": 0.00605,
+   "mean": 3.737,
+   "heightDifference": 1
+  },
+  "412x892-daily-end": {
+   "strong": 0.00532,
+   "mean": 2.739,
+   "heightDifference": 0
+  },
+  "412x892-daily-opening": {
+   "strong": 0.00636,
+   "mean": 3.186,
+   "heightDifference": 0
+  },
+  "412x892-daily-start": {
+   "strong": 0.00675,
+   "mean": 3.138,
+   "heightDifference": 0
+  },
+  "412x892-hourly-end": {
+   "strong": 0.00299,
+   "mean": 2.463,
+   "heightDifference": 0
+  },
+  "412x892-hourly-opening": {
+   "strong": 0.00449,
+   "mean": 2.62,
+   "heightDifference": 0
+  },
+  "412x892-hourly-start": {
+   "strong": 0.00375,
+   "mean": 2.554,
+   "heightDifference": 0
+  }
+ }
+}

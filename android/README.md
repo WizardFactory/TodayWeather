@@ -52,6 +52,10 @@ Do not edit the generated files. While iOS stays on Cordova, change translations
 
 `core-domain` is checked against outputs of the Cordova code itself: [`tools/corpus/generate.mjs`](tools/corpus/README.md) runs the client's conversion and display functions under Node and writes `core-domain/src/test/resources/corpus/`; `GoldenCorpusTest` must match every case. CI regenerates the corpus and fails on a diff, so a change in the Cordova code shows up as a corpus change. Known behavior differences are listed in [`tools/corpus/differences.md`](tools/corpus/differences.md).
 
+## Charts
+
+The hourly and daily forecast charts (gate G2, AN-05) are ported from the Cordova D3 directives (`ngShortChart`, `ngShortDetailChart`, `ngMidChart`). `core-domain` (`chart/`) builds each chart as the SVG the directive draws, element by element: D3 v3 bands and `.nice()` scales, the inserted current point, labels, icons and the opening scroll offset. Sizes come from the screen size as in the Cordova forecast screen (`ChartMetrics`). `app` (`ui/chart/`) draws it with Compose: `HourlyChartView` (header, chart, pinned legend, detail rows behind the expander) and `DailyChartView`, with the light-theme styles of the Cordova SCSS and the imported images. The charts are compared with captures of the Cordova build on the emulator at 384×832, 360×780 and 412×892 dp, at the opening position and both scroll ends; see [`tools/chart-reference`](tools/chart-reference/README.md).
+
 ## Data migration from the Cordova app
 
 On every start the app runs `CordovaMigrator` (core-storage); after the first successful run it does nothing. It builds `files/app_state.json` (DataStore, `AppState`) from the Cordova app's storage and leaves that storage unchanged, because the rollback hand-back (AN-17) reads it.
