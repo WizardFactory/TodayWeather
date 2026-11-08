@@ -599,8 +599,10 @@ pub fn get_past_mid(cx: &mut Cx) -> Flow {
 /// `_getDaySummaryListByShort` gives them for the days the rows reach (D-2 and D-1), while the
 /// observations give the types, texts and extremes (AK 2026-11-08).
 const PAST_DAY_FIELDS: [&str; 5] = ["pop", "r06", "s06", "lgtAm", "lgtPm"];
-/// `overlay(inputs)` inside `mergeMidWithShort`, merging only `fields` of the day summaries when
-/// given.
+/// `overlay(inputs)` inside `mergeMidWithShort`. With `fields` only those fields of the day
+/// summaries are merged, whatever their halves: a summary whose half has no known type, with no
+/// valid text, still gives its rows' probability, amounts and lightning (review
+/// AP-past-daily-fields), while legacy keeps only days with both texts and their extremes.
 fn overlay(daily: &Arr, inputs: &[V], fields: Option<&[&str]>) {
     let short_rows: Vec<V> = inputs
         .iter()
@@ -639,9 +641,10 @@ fn overlay(daily: &Arr, inputs: &[V], fields: Option<&[&str]>) {
     let summaries: Vec<V> = day_summary_list_by_short(&short_rows)
         .into_iter()
         .filter(|r| {
-            policy::complete(r)
-                && policy::weather(&r.get("wfAm"))
-                && policy::weather(&r.get("wfPm"))
+            fields.is_some()
+                || (policy::complete(r)
+                    && policy::weather(&r.get("wfAm"))
+                    && policy::weather(&r.get("wfPm")))
         })
         .collect();
     let precipitation = sum_day_precipitation(inputs);

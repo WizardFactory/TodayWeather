@@ -391,6 +391,42 @@ fn past_days_take_probability_amounts_and_lightning_from_their_kept_rows() {
     );
 }
 
+/// Review AP-past-daily-fields: a past day keeps the probability, amounts and lightning of its
+/// kept rows whatever its halves' types. On 2026-09-22 (D-2) the afternoon's hours have no known
+/// type and lie out of the nowcast's reach, and 07:00..09:00 measured 0.5 mm an hour.
+#[test]
+fn a_past_day_with_an_untyped_half_keeps_its_kept_rows_fields() {
+    let sc = scenario("rain-categories");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Current => without(docs, "currentData", |d, t| {
+            (d == "20260922" && t >= "1300") || (d == "20260923" && t == "0000")
+        }),
+        _ => docs,
+    };
+    let mut typeless: Vec<String> = (13..24).map(|h| format!("20260922{h:02}00")).collect();
+    typeless.push("202609230000".into());
+    let typeless: Vec<&str> = typeless.iter().map(String::as_str).collect();
+    let raining = ["202609220700", "202609220800", "202609220900"];
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(hours_history(&typeless, &raining)),
+            town_model: patch,
+        },
+    );
+    let legacy = recorded_body("rain-categories");
+    let (d22, was) = (day(&body, "20260922"), day(&legacy, "20260922"));
+    assert!(
+        d22.get("ptyPm").is_none() && d22.get("wfPm").is_none(),
+        "an untyped half: {d22}"
+    );
+    assert_eq!(d22["wfAm"], "흐리고 비", "{d22}");
+    for field in ["pop", "s06", "lgtAm", "lgtPm"] {
+        assert_eq!(d22[field], was[field], "{field} of the kept rows: {d22}");
+    }
+    assert_eq!(d22["r06"], 1.5, "the measured amounts: {d22}");
+}
+
 /// Failure path: with no publication covering the current slot the row keeps what legacy sends
 /// for a missing publication (probability 0), and the request is still answered.
 #[test]
@@ -665,12 +701,18 @@ fn precipitation_history(untyped: &[&str], typed: &[&str]) -> OrderedJson {
 /// ASOS hourly records for September 17..23, dry except the `typeless` hours, which report
 /// neither a type nor an amount.
 fn typeless_history(typeless: &[&str]) -> OrderedJson {
+    hours_history(typeless, &[])
+}
+/// [`typeless_history`] with the `raining` hours raining 0.5 mm.
+fn hours_history(typeless: &[&str], raining: &[&str]) -> OrderedJson {
     let mut hourly = Vec::new();
     for day in 17..=23 {
         for hour in 0..24 {
             let key = format!("202609{day:02}{hour:02}00");
             let values = if typeless.contains(&key.as_str()) {
                 json!({"t1h":17,"reh":60,"sky":4,"wsd":2,"vec":180})
+            } else if raining.contains(&key.as_str()) {
+                json!({"t1h":17,"reh":60,"sky":4,"pty":1,"rn1":0.5,"wsd":2,"vec":180})
             } else {
                 json!({"t1h":17,"reh":60,"sky":4,"pty":0,"rn1":0,"wsd":2,"vec":180})
             };

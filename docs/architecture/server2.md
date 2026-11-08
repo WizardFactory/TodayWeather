@@ -3976,9 +3976,10 @@ the [history contract](../../server2/config/contracts/kma-history.v1.json):
   `_mergeShortWithCurrent` keeps them. Without a stored publication it sends legacy's
   missing-forecast values (probability 0). No source observes LGT, so a past slot's LGT is legacy
   `_summaryLgt`'s 0 rather than the recovered-row −1 (`short::merge_short_with_current`). Past
-  days take probability, rain and snow amounts and AM/PM LGT from those rows where legacy
-  `_getDaySummaryListByShort` gives them, D-2 and D-1; their types, texts and extremes stay
-  observed (`mid::PAST_DAY_FIELDS`). Nothing older than the 54 h read window is read, and no
+  days D-2 and D-1 take probability, rain and snow amounts and AM/PM LGT from those rows as legacy
+  `_getDaySummaryListByShort` sums them, also when a half has no known type and so no text (legacy
+  keeps only days with both texts; review AP-past-daily-fields); their types, texts and extremes
+  stay observed (`mid::PAST_DAY_FIELDS`). Nothing older than the 54 h read window is read, and no
   publication is acquired for a past row.
 - **Wet-bulb rain** (`wet-bulb-rain-v2`). An uncoded normal-QC ASOS amount at a wet-bulb
   temperature of at least 5 °C is rain in every month, not only April to October; in November to

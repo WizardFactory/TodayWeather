@@ -390,7 +390,7 @@
     },
     "past-forecast-v1": {
       "implementation": "server2/src/domestic/kma/short.rs",
-      "summary": "Under ASOS-primary only, AK 2026-11-08: a past three-hour row (label + 3 h <= now) keeps the stored publication's values for the fields no history source observes (probability, wave height, snow amount and text, wind components), as legacy _mergeShortWithCurrent keeps them, with the observed fields over them; without a stored publication it sends legacy's missing-forecast values. Its LGT is legacy _summaryLgt's value for its hours, 0 when none has one. Past days take probability, rain and snow amounts and AM/PM LGT from those rows where legacy _getDaySummaryListByShort gives them (D-2 and D-1); their types, texts and extremes stay observed. No older publication is read or acquired for a past row."
+      "summary": "Under ASOS-primary only, AK 2026-11-08: a past three-hour row (label + 3 h <= now) keeps the stored publication's values for the fields no history source observes (probability, wave height, snow amount and text, wind components), as legacy _mergeShortWithCurrent keeps them, with the observed fields over them; without a stored publication it sends legacy's missing-forecast values. Its LGT is legacy _summaryLgt's value for its hours, 0 when none has one. Past days D-2 and D-1 take probability, rain and snow amounts and AM/PM LGT from those rows as legacy _getDaySummaryListByShort sums them, also when a half has no known type and so no text (legacy keeps only days with both texts); their types, texts and extremes stay observed. No older publication is read or acquired for a past row."
     },
     "nowcast-fill-v1": {
       "implementation": "server2/src/domestic/kma/source/fill.rs",

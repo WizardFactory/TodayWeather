@@ -347,7 +347,8 @@ measured amount. The fields no history source observes (probability, wave
 height, snow amount and text, wind components) keep the stored publication's
 values, as legacy keeps them (AK 2026-11-08, `past-forecast-v1`); LGT is legacy
 `_summaryLgt`'s 0, and past days take probability, amounts and AM/PM LGT from
-those rows for D-2 and D-1. No older publication is read or acquired for a past
+those rows for D-2 and D-1, whether or not their halves have a known type. No
+older publication is read or acquired for a past
 row. Without a stored publication the answer keeps legacy's missing values:
 probability 0 (`adjustShort`), snow −1 through the cm-to-mm conversion, and wind
 components −100 where ASOS fills an hour that no grid observation holds. Under
