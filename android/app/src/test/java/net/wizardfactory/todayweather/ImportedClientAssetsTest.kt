@@ -51,8 +51,10 @@ class ImportedClientAssetsTest {
         val imported = File(appDir, "src/main/assets/img").walkTopDown().filter { it.isFile }.toList() +
             File(appDir, "src/main/assets/data/towns.json") +
             File(appDir, "src/main/res").listFiles()!!.map { File(it, "client_strings.xml") }.filter { it.isFile } +
-            File(appDir, "src/main/res/font/material_icons.ttf")
-        assertEquals(342 + 1 + 6 + 1, imported.size)
+            File(appDir, "src/main/res/font/material_icons.ttf") +
+            File(appDir, "src/main/res").listFiles()!!.map { File(it, "ic_launcher.png") }.filter { it.isFile } +
+            File(appDir, "src/main/res/drawable-nodpi/splash_icon.png")
+        assertEquals(342 + 1 + 6 + 1 + 6 + 1, imported.size)
         for (file in imported) {
             val rel = file.relativeTo(appDir).invariantSeparatorsPath
             assertEquals("hash of $rel", recorded[rel], sha256(file))

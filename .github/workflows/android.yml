@@ -27,6 +27,9 @@ on:
       - "client/www/index.html"
       - "client/www/templates/tabs-android.html"
       - "client/www/js/controller.settingctrl.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/android/icon/**"
+      - "client/tw.resources/android-launcher-icon.png"
       - ".github/workflows/android.yml"
   push:
     branches: [master]
@@ -56,6 +59,9 @@ on:
       - "client/www/index.html"
       - "client/www/templates/tabs-android.html"
       - "client/www/js/controller.settingctrl.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/android/icon/**"
+      - "client/tw.resources/android-launcher-icon.png"
       - ".github/workflows/android.yml"
 permissions:
   contents: read

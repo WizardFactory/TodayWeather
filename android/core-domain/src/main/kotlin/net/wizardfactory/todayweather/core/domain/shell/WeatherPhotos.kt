@@ -9,8 +9,9 @@ import kotlinx.serialization.json.JsonPrimitive
 /**
  * The weather photo feed of the photo theme (`loadWeatherPhotos` and `findWeatherPhoto` in
  * client/www/js/service.weatherutil.js): photos grouped by their joined tags, and a photo for a sky icon.
+ * The goldens in corpus/photos.json come from the Cordova code (tools/corpus/generate.mjs).
  */
-class WeatherPhotos private constructor(private val groups: Map<String, List<JsonObject>>) {
+class WeatherPhotos private constructor(internal val groups: Map<String, List<JsonObject>>) {
     /**
      * `findWeatherPhoto`: the first group whose key is in [skyIcon] and has photos, and its photo at
      * `floor(random * (size - 1))`, so the last photo of a group is never chosen. [random] is in [0, 1).
@@ -31,11 +32,14 @@ class WeatherPhotos private constructor(private val groups: Map<String, List<Jso
     companion object {
         val KEYS = listOf("lightning", "rain", "snow", "sun_smallcloud", "sun_bigcloud", "sun", "moon_smallcloud", "moon_bigcloud", "moon", "cloud")
 
-        /** Groups the feed's `data` items; items without a `tags` array are skipped. */
+        /**
+         * Groups the items of the feed, a JSON array (docs/rewrite/client-data-contracts.md); items without a `tags`
+         * array are skipped. A null item ends the grouping: reading its tags throws in the Cordova loop.
+         */
         fun parse(feed: JsonElement): WeatherPhotos {
             val groups = KEYS.associateWith { mutableListOf<JsonObject>() }
-            val items = ((feed as? JsonObject)?.get("data") as? JsonArray).orEmpty()
-            for (item in items) {
+            for (item in (feed as? JsonArray).orEmpty()) {
+                if (item is JsonNull) break
                 val photo = item as? JsonObject ?: continue
                 val tags = photo["tags"] as? JsonArray ?: continue
                 // Array.prototype.join: null and undefined join as "".

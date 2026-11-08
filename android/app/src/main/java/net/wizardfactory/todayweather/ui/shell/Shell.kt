@@ -16,16 +16,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -137,21 +141,23 @@ fun TodayWeatherShell(
     Box(Modifier.fillMaxSize().background(colors.page)) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
-            Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
-                page(selected, colors)
-                HeaderBar(colors, title = "", onMenu = { menuOpen = true })
-            }
-            TabBar(selected, colors) { tab ->
-                val now = System.currentTimeMillis()
-                if (tab == selected) {
-                    // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
-                    if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
-                } else {
-                    selected = tab
+            Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
+                Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
+                    page(selected, colors)
+                    HeaderBar(colors, title = "", onMenu = { menuOpen = true })
                 }
-                lastTap = now
+                TabBar(selected, colors) { tab ->
+                    val now = System.currentTimeMillis()
+                    if (tab == selected) {
+                        // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
+                        if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
+                    } else {
+                        selected = tab
+                    }
+                    lastTap = now
+                }
+                banner()
             }
-            banner()
             Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
         }
         AnimatedVisibility(
@@ -241,8 +247,9 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
                 Tab.DAILY -> (if (on) Glyphs.REFRESH else Glyphs.CALENDAR) to R.string.LOC_DAILY_FORECAST
                 Tab.AIR -> (if (on) Glyphs.REFRESH else Glyphs.CLOUD_OUTLINE) to R.string.LOC_AIR_INFORMATION
             }
+            // .tab-item: flex 1 up to 150 dp; wider windows center the items (.tabs justify-content).
             Column(
-                Modifier.weight(1f).widthIn(max = 150.dp).fillMaxHeight().alpha(if (on) 1f else 0.7f)
+                Modifier.weight(1f, fill = false).widthIn(max = 150.dp).fillMaxWidth().fillMaxHeight().alpha(if (on) 1f else 0.7f)
                     .clickable { onTab(tab) }.testTag(ShellTags.tab(tab)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -261,16 +268,15 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
 @Composable
 fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
     val colors = ShellColors.menu(state.theme)
-    // .menu: a 1 dp border at the bottom of the panel.
-    Column(Modifier.fillMaxSize().background(Color(0xFFD2D2D2)).padding(bottom = 1.dp).background(colors.menuList).testTag(ShellTags.MENU)) {
+    Column(Modifier.fillMaxSize().background(colors.menuList).testTag(ShellTags.MENU)) {
         Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
         // A plain `.bar.bar-header`: the title is centered over the whole bar with its 10 dp margins.
-        Box(Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
+        Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
             BarTitle(stringResource(R.string.LOC_TODAYWEATHER), colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
             BarButton(Glyphs.ARROW_BACK, colors, { onRow(null) }, Modifier.padding(start = 5.dp).testTag(ShellTags.MENU_BACK))
         }
         val rows = MenuRow.entries.filter { !it.krOnly || state.region == "KR" }
-        Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides).verticalScroll(rememberScrollState())) {
             // Chrome puts each box edge on the device pixel nearest its fractional position; so does this list.
             val px = LocalDensity.current.density
             var y = 0f
@@ -291,8 +297,15 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
                 }
             }
         }
+        // .menu: a 1 dp border at the bottom of the panel, above the navigation bar.
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD2D2D2)))
+        Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
+
+/** The side insets the shell keeps clear of: a navigation bar or a camera cutout at the side in landscape. */
+private val WindowInsets.Companion.sides: WindowInsets
+    @Composable get() = safeDrawing.only(WindowInsetsSides.Horizontal)
 
 /** `.item`: a border above, 16 dp padding around a 16 sp line of 22.85 dp, and the value or a chevron at the right. */
 @Composable

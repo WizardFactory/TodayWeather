@@ -2,8 +2,16 @@ package net.wizardfactory.todayweather.core.domain.shell
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import java.io.File
 import kotlin.test.assertNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Language, region, theme, startup page and photo feed rules of the Cordova shell (#2886). */
 class ShellLogicTest {
@@ -46,32 +54,27 @@ class ShellLogicTest {
         assertEquals(Tab.HOURLY, StartupPage.tab(null))
     }
 
-    /** Grouping by joined tags in the Cordova order, and the photo index floor(random * (n - 1)). */
+    /**
+     * The Cordova code's grouping and choice (corpus/photos.json): groups by joined tags, the first group in the
+     * icon name with photos, and the photo at floor(random * (n - 1)), for every weather image name.
+     */
     @Test
-    fun photosAreGroupedAndChosenAsInCordova() {
-        val feed = Json.parseToJsonElement("""{"data": [
-            {"tags": ["sun", "smallcloud"], "twUrls": {"regular": "sun-small-1"}},
-            {"tags": ["sun", "smallcloud"], "twUrls": {"regular": "sun-small-2"}},
-            {"tags": ["sun", "smallcloud"], "twUrls": {"regular": "sun-small-3"}},
-            {"tags": ["rain", "sun"], "twUrls": {"regular": "rain-1"}},
-            {"tags": ["lightning", "rain"], "twUrls": {"regular": "lightning-1"}},
-            {"tags": ["moon"], "twUrls": {"regular": "moon-1"}},
-            {"tags": "cloud", "twUrls": {"regular": "skipped"}},
-            {"tags": ["cloud", null], "twUrls": {"regular": "cloud-1"}},
-            {"tags": ["fog"], "twUrls": {"regular": "none"}}
-        ]}""")
-        val photos = WeatherPhotos.parse(feed)
-        assertEquals("sun-small-1", photos.find("sun_smallcloud", 0.0))
-        assertEquals("sun-small-2", photos.find("sun_smallcloud", 0.99)) // floor(0.99 * 2) = 1: the last is never chosen
-        // "rain" comes before "sun" in the group order, so a rain icon finds the rain photo first.
-        assertEquals("rain-1", photos.find("sun_smallcloud_rain", 0.5))
-        assertEquals("lightning-1", photos.find("cloud_lightning", 0.7))
-        assertEquals("moon-1", photos.find("moon", 0.3))
-        assertEquals("cloud-1", photos.find("cloud", 0.3))
-        // Empty groups (sun_bigcloud, sun) are skipped; "cloud" is also in the icon name.
-        assertEquals("cloud-1", photos.find("sun_bigcloud", 0.3))
-        assertNull(photos.find("fog", 0.3), "no group key in the icon name")
-        assertNull(photos.find(null, 0.3))
-        assertNull(WeatherPhotos.parse(Json.parseToJsonElement("{}")).find("sun", 0.3))
+    fun photosMatchTheCordovaCode() {
+        val corpus = Json.parseToJsonElement(File(javaClass.getResource("/corpus/photos.json")!!.toURI()).readText()).jsonObject
+        assertEquals(20000, corpus["request"]!!.jsonObject["timeout"]!!.jsonPrimitive.int)
+        for (feed in corpus["feeds"]!!.jsonArray.map { it.jsonObject }) {
+            val groups = WeatherPhotos.parse(feed["feed"]!!).groups.mapValues { (_, photos) -> photos.map { it["id"]!!.jsonPrimitive.content } }
+            val expected = feed["groups"]!!.jsonObject.mapValues { (_, ids) -> ids.jsonArray.map { it.jsonPrimitive.content } }
+            assertEquals(expected, groups, feed["name"]!!.jsonPrimitive.content)
+        }
+        val photos = WeatherPhotos.parse(corpus["feeds"]!!.jsonArray.first().jsonObject["feed"]!!)
+        val cases = corpus["cases"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(195, cases.size)
+        for (case in cases) {
+            val icon = case["skyIcon"]!!.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+            val random = case["random"]!!.jsonPrimitive.double
+            assertEquals(case["photo"]!!.jsonPrimitive.contentOrNull, photos.find(icon, random), "$icon at $random")
+        }
+        assertNull(WeatherPhotos.parse(Json.parseToJsonElement("{}")).find("sun", 0.3), "not an array")
     }
 }

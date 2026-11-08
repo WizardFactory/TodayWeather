@@ -9,6 +9,7 @@ import kotlinx.coroutines.async
 import net.wizardfactory.todayweather.core.data.HttpPushTransport
 import net.wizardfactory.todayweather.core.data.PushSync
 import net.wizardfactory.todayweather.core.data.PushTransport
+import net.wizardfactory.todayweather.core.data.WeatherPhotoFeed
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.AppStateStore
 import net.wizardfactory.todayweather.core.storage.CordovaMigrator
@@ -21,6 +22,7 @@ open class TodayWeatherApp : Application() {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     open fun serverUrl(): String = BuildConfig.SERVER_URL
+    open fun weatherPhotosUrl(): String = BuildConfig.WEATHER_PHOTOS_URL
     open fun tokenSource(): TokenSource = FirebaseTokenSource(this)
     open fun pushTransport(): PushTransport = HttpPushTransport(serverUrl())
 
@@ -34,6 +36,9 @@ open class TodayWeatherApp : Application() {
 
     /** Handles an entry intent after the migration; notification taps are AN-14's work. */
     protected open fun onEntryIntent(intent: android.content.Intent) {}
+
+    /** The weather photo feed of the photo theme, loaded once per process (AN-08 chooses each place's photo). */
+    val photos: WeatherPhotoFeed by lazy { WeatherPhotoFeed(weatherPhotosUrl(), appScope) }
 
     /** Push registrations (gate G1, push part), one at a time. */
     val push: PushSync by lazy {
