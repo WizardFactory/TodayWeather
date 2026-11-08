@@ -33,6 +33,29 @@ pub fn merge_list(dst: &Arr, src: &[V]) {
     }
     dst.sort_by(sort_by_date_time);
 }
+/// [`merge_list`] of `fields` only: a day's other fields stay as they are.
+fn merge_fields(dst: &Arr, src: &[V], fields: &[&str]) {
+    for item in src {
+        let target = match dst
+            .items()
+            .into_iter()
+            .find(|d| strict_eq(&d.get("date"), &item.get("date")))
+        {
+            Some(target) => target,
+            None => {
+                let row = V::Obj(obj(vec![("date", item.get("date"))]));
+                dst.push(row.clone());
+                row
+            }
+        };
+        for field in fields {
+            if item.has(field) {
+                target.set(field, item.get(field));
+            }
+        }
+    }
+    dst.sort_by(sort_by_date_time);
+}
 /// `_sortByDateTime(a, b)`.
 fn sort_by_date_time(a: &V, b: &V) -> f64 {
     let (ad, bd) = (a.get("date"), b.get("date"));
@@ -572,8 +595,13 @@ pub fn get_past_mid(cx: &mut Cx) -> Flow {
     }
     Flow::Next
 }
-/// `overlay(inputs)` inside `mergeMidWithShort`.
-fn overlay(daily: &Arr, inputs: &[V]) {
+/// The day fields past days take from their kept short rows under ASOS-primary: legacy's
+/// `_getDaySummaryListByShort` gives them for the days the rows reach (D-2 and D-1), while the
+/// observations give the types, texts and extremes (AK 2026-11-08).
+const PAST_DAY_FIELDS: [&str; 5] = ["pop", "r06", "s06", "lgtAm", "lgtPm"];
+/// `overlay(inputs)` inside `mergeMidWithShort`, merging only `fields` of the day summaries when
+/// given.
+fn overlay(daily: &Arr, inputs: &[V], fields: Option<&[&str]>) {
     let short_rows: Vec<V> = inputs
         .iter()
         .map(|src| {
@@ -652,7 +680,10 @@ fn overlay(daily: &Arr, inputs: &[V]) {
             }
         }
     }
-    merge_list(daily, &summaries);
+    match fields {
+        Some(fields) => merge_fields(daily, &summaries, fields),
+        None => merge_list(daily, &summaries),
+    }
     for row in daily.items() {
         let date = to_str(&row.get("date"));
         let Some(totals) = precipitation.iter().find(|d| d.date == date) else {
@@ -665,6 +696,9 @@ fn overlay(daily: &Arr, inputs: &[V]) {
             continue;
         }
         for (field, value) in [("r06", &totals.r06), ("s06", &totals.s06)] {
+            if fields.is_some_and(|fields| !fields.contains(&field)) {
+                continue;
+            }
             match value {
                 None => (),
                 Some(None) => precip::clear(&row, field),
@@ -692,7 +726,7 @@ pub fn merge_mid_with_short(cx: &mut Cx) -> Flow {
         })
         .collect();
     if !extended.is_empty() {
-        overlay(mid.get("dailyData").a(), &extended);
+        overlay(mid.get("dailyData").a(), &extended, None);
     }
     let mut daily_short = cx.r("short");
     let mut daily_pub = cx.r("shortPubDate");
@@ -724,13 +758,19 @@ pub fn merge_mid_with_short(cx: &mut Cx) -> Flow {
                 .into_iter()
                 .filter(|row| {
                     policy::in_window(&row.get("date"), now)
-                        && (!observed_primary || !super::js::lt(&row.get("date"), &s(&today)))
                         && limit
                             .as_ref()
                             .is_some_and(|l| super::js::le(&row.get("date"), &s(l)))
                 })
                 .collect();
-            overlay(&daily, &rows);
+            // Under ASOS-primary the rows of past days give only what observations cannot.
+            let (past, rows): (Vec<V>, Vec<V>) = rows
+                .into_iter()
+                .partition(|row| observed_primary && super::js::lt(&row.get("date"), &s(&today)));
+            overlay(&daily, &rows, None);
+            if !past.is_empty() {
+                overlay(&daily, &past, Some(&PAST_DAY_FIELDS));
+            }
         });
     }
     // finish(): the ASOS daily merge and status run before the window filter. The precipitation

@@ -1,0 +1,45 @@
+{
+  "task": "KMA-ASOS-PRIMARY-PARITY",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "KMA ASOS-primary history: past rows keep stored forecast values (legacy missing-forecast values otherwise), wet-bulb rain typing in every month, grid nowcast fill for unknown precipitation hours within 23 h, daily summaries from the filled hours. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-ASOS-PRIMARY-PARITY.json",
+    "server2/config/contracts/kma-history.v1.json",
+    "server2/src/domestic/kma/short.rs",
+    "server2/src/domestic/kma/mid.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/tests/domestic/observed_history.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-asos-primary-parity.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-asos-primary-parity.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-asos-primary-parity.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "ASOS-primary assembly rules."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "History merge and nowcast fill."
+    },
+    {
+      "path": "docs/reference/external-apis/kma.md",
+      "category": "documentation",
+      "reason": "ASOS-primary contract."
+    }
+  ]
+}

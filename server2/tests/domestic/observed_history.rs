@@ -228,29 +228,167 @@ fn the_row_marked_current_keeps_its_forecast_when_the_observation_lags() {
         assert_eq!(shown[field], was[field], "{field}: {shown}");
     }
     let past = short_row(&body, "20260924", 3);
-    assert_eq!(past["wav"], -1, "an unmarked past row stays past: {past}");
+    assert_eq!(
+        past["r06Hours"], 3,
+        "an unmarked past row takes its rain from the observed hours: {past}"
+    );
 }
 
-/// Past rows (label + 3 h <= now) keep the ASOS-primary rule, and no forecast precipitation
-/// total stays behind the cleared amounts: the hidden total kept the forecast's text beside the
-/// measured amount and turned the cleared -1 into -10 snow. The recording forecasts
-/// `30.0~50.0mm` rain for 2026-09-23 06:00 and `5.0cm 이상` snow for 09:00 (ASOS-filled), and
-/// nothing for 2026-09-24 03:00 (grid-observed).
+/// Past rows (label + 3 h <= now) take their rain from the observations, and no forecast rain
+/// total stays behind the cleared amount: the hidden total kept the forecast's text beside the
+/// measured amount. The recording forecasts `30.0~50.0mm` rain for 2026-09-23 06:00
+/// (ASOS-filled) and nothing for 2026-09-24 03:00 (grid-observed), whose snow is never -10. The
+/// snow amount no observation supplies is the stored publication's
+/// (`a_past_row_keeps_its_stored_forecast_values_under_the_observed_ones`).
 #[test]
 fn a_past_row_keeps_no_forecast_total_behind_its_cleared_amounts() {
     let legacy = recorded_body("rain-categories");
     assert_eq!(short_row(&legacy, "20260923", 6)["r06Str"], "30~50mm");
-    assert_eq!(short_row(&legacy, "20260923", 9)["s06Str"], "5~?cm");
     let body = assembled_scenario("rain-categories", Some(history()));
     let wet = short_row(&body, "20260923", 6);
     assert_eq!(wet["r06"], 1.5, "three measured ASOS hours: {wet}");
     assert_eq!(wet["r06Str"], "1.5mm", "the measured amount's text: {wet}");
-    let snowy = short_row(&body, "20260923", 9);
-    assert_eq!(snowy["wav"], -1, "no past forecast value: {snowy}");
-    assert_eq!(snowy["s06"], 0, "{snowy}");
-    assert!(snowy.get("s06Str").is_none(), "no forecast text: {snowy}");
     let observed = short_row(&body, "20260924", 3);
     assert_eq!(observed["s06"], 0, "never -10: {observed}");
+}
+
+/// AK 2026-11-08: a past row keeps the values of the stored publication covering it that no
+/// observation supplies (probability, wave height, snow amount and its text), as legacy
+/// `_mergeShortWithCurrent` keeps them, with the ASOS-observed fields over them. The recording
+/// forecasts `5.0cm 이상` snow and wave 0.8 for 2026-09-23 09:00, which ASOS observed.
+#[test]
+fn a_past_row_keeps_its_stored_forecast_values_under_the_observed_ones() {
+    let legacy = recorded_body("rain-categories");
+    let body = assembled_scenario("rain-categories", Some(history()));
+    let (past, was) = (
+        short_row(&body, "20260923", 9),
+        short_row(&legacy, "20260923", 9),
+    );
+    for field in ["pop", "wav", "s06", "s06Str"] {
+        assert_eq!(
+            past[field], was[field],
+            "{field} as legacy keeps it: {past}"
+        );
+    }
+    assert_eq!(
+        (past["wav"].clone(), past["s06Str"].clone()),
+        (json!(0.8), json!("5~?cm"))
+    );
+    assert_eq!(
+        (
+            past["t3h"].clone(),
+            past["reh"].clone(),
+            past["pty"].clone()
+        ),
+        (json!(17), json!(60), json!(1)),
+        "ASOS fields: {past}"
+    );
+    assert_eq!(past["rn1"], 1.5);
+    assert_eq!(
+        past["r06"], 1.5,
+        "the measured amount, not the forecast's: {past}"
+    );
+    // No observation reports lightning; legacy `_summaryLgt` sends 0 for such a slot.
+    assert_eq!(past["lgt"], 0, "{past}");
+    assert_eq!(past["lgt"], was["lgt"]);
+}
+
+/// Lightning of a past slot: no observation source reports it (ASOS has no such field, the grid
+/// nowcast neither), so legacy's `_summaryLgt` sends 0 for the slot's missing hourly values. A
+/// slot ASOS fills without a grid observation is the same value under ASOS-primary; legacy mode
+/// keeps its own answer for those hours.
+#[test]
+fn a_past_slot_asos_fills_sends_legacys_lightning() {
+    let sc = scenario("domestic-v000903");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Current => without(docs, "currentData", |d, t| {
+            d == "20260923" && ["1000", "1100", "1200"].contains(&t)
+        }),
+        _ => docs,
+    };
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(history()),
+            town_model: patch,
+        },
+    );
+    let filled = short_row(&body, "20260923", 12);
+    assert_eq!(filled["t3h"], 17, "ASOS filled the slot: {filled}");
+    assert_eq!(filled["lgt"], 0, "{filled}");
+    let legacy = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc),
+            town_model: patch,
+        },
+    );
+    let was = short_row(&legacy, "20260923", 12);
+    assert_eq!(
+        filled["pop"], was["pop"],
+        "the stored probability: {filled}"
+    );
+}
+
+/// Failure path: a past slot that no stored publication covers sends what legacy sends for a
+/// missing forecast (probability 0 via `adjustShort`, wave -1); no older publication is read.
+#[test]
+fn without_a_stored_publication_a_past_row_sends_legacys_missing_forecast_values() {
+    let sc = scenario("rain-categories");
+    let patch: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Short => without(docs, "shortData", |d, t| d == "20260923" && t == "0900"),
+        _ => docs,
+    };
+    let legacy = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc),
+            town_model: patch,
+        },
+    );
+    let body = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(history()),
+            town_model: patch,
+        },
+    );
+    let (past, was) = (
+        short_row(&body, "20260923", 9),
+        short_row(&legacy, "20260923", 9),
+    );
+    assert_eq!(
+        (was["pop"].clone(), was["wav"].clone()),
+        (json!(0), json!(-1))
+    );
+    for field in ["pop", "wav", "s06"] {
+        assert_eq!(past[field], was[field], "{field}: {past}");
+    }
+}
+
+/// The probability, amounts and lightning of past days follow from their kept rows, as legacy's
+/// `_getDaySummaryListByShort` gives them for the days the short rows reach (D-2 and D-1), while
+/// their types, texts and extremes stay observed. The rain amount is the sum of the slots'
+/// measured amounts.
+#[test]
+fn past_days_take_probability_amounts_and_lightning_from_their_kept_rows() {
+    let legacy = recorded_body("rain-categories");
+    let body = assembled_scenario("rain-categories", Some(history()));
+    for date in ["20260922", "20260923"] {
+        let (now, was) = (day(&body, date), day(&legacy, date));
+        for field in ["pop", "s06", "lgtAm", "lgtPm"] {
+            assert_eq!(now[field], was[field], "{date} {field}: {now}");
+        }
+        assert_eq!(now["wfAm"], "흐리고 비", "{date} observed: {now}");
+    }
+    // Every hour ASOS observed rains 0.5 mm; 2026-09-24 00:00 is a dry grid-observed hour.
+    for (date, rain) in [("20260922", 12.), ("20260923", 11.5)] {
+        assert_eq!(day(&body, date)["r06"], rain, "{date}");
+    }
+    assert!(
+        day(&body, "20260921").get("pop").is_none(),
+        "the short rows do not reach D-3, as in legacy"
+    );
 }
 
 /// Failure path: with no publication covering the current slot the row keeps what legacy sends
@@ -287,19 +425,21 @@ fn without_a_covering_publication_the_current_row_keeps_legacys_missing_values()
 }
 
 /// Legacy `adjustShort` sends a missing probability as 0, so "-1%" never reaches the app; past
-/// ASOS rows included.
+/// ASOS rows included. No stored publication covers 2026-09-22 03:00.
 #[test]
 fn a_missing_probability_reaches_the_client_as_legacy_sends_it() {
     let body = assembled(true);
-    assert_eq!(short_row(&body, "20260923", 3)["pop"], 0);
+    assert_eq!(short_row(&body, "20260922", 3)["pop"], 0);
     for row in body["short"].as_array().unwrap() {
         assert!(row["pop"].as_f64().unwrap() >= 0., "{row}");
     }
 }
 
 /// ASOS measures no wind components. Hours it fills without a grid observation carry legacy's
-/// missing value -100 for them (`_convertSummaryTo3H`), so their past slot keeps that sentinel
-/// rather than the validation template's -1; grid-observed components stay.
+/// missing value -100 for them (`_convertSummaryTo3H`) rather than the validation template's -1,
+/// which would read as a measured component. Their past slot therefore keeps the components of
+/// the stored publication covering it, as legacy keeps a field no observation supplies (AK
+/// 2026-11-08), or -100 without one; grid-observed components stay.
 #[test]
 fn asos_filled_hours_keep_the_missing_wind_component_value() {
     let sc = scenario("domestic-v000903");
@@ -307,6 +447,13 @@ fn asos_filled_hours_keep_the_missing_wind_component_value() {
         TownModel::Current => without(docs, "currentData", |d, t| {
             d == "20260923" && ["1000", "1100", "1200"].contains(&t)
         }),
+        _ => docs,
+    };
+    let bare: fn(TownModel, OrderedJson) -> OrderedJson = |model, docs| match model {
+        TownModel::Current => without(docs, "currentData", |d, t| {
+            d == "20260923" && ["1000", "1100", "1200"].contains(&t)
+        }),
+        TownModel::Short => without(docs, "shortData", |d, t| d == "20260923" && t == "1200"),
         _ => docs,
     };
     let body = assembled_from(
@@ -320,7 +467,21 @@ fn asos_filled_hours_keep_the_missing_wind_component_value() {
     assert_eq!(filled["t3h"], 17, "ASOS filled the slot: {filled}");
     assert_eq!(
         (filled["uuu"].clone(), filled["vvv"].clone()),
-        (json!(-100), json!(-100))
+        (json!(1), json!(-2)),
+        "the stored publication's: {filled}"
+    );
+    let unforecast = assembled_from(
+        sc,
+        &Patched {
+            inner: replay(sc).with_history(history()),
+            town_model: bare,
+        },
+    );
+    let unforecast = short_row(&unforecast, "20260923", 12);
+    assert_eq!(
+        (unforecast["uuu"].clone(), unforecast["vvv"].clone()),
+        (json!(-100), json!(-100)),
+        "{unforecast}"
     );
     let observed = short_row(&body, "20260923", 15);
     assert_eq!(
@@ -429,20 +590,14 @@ fn asos_primary_replaces_forecast_history_and_uses_official_daily_values() {
     );
     assert_eq!(row["r06Hours"], 3);
     assert_eq!(row["pty"], 1);
-    // The forecast total behind the cleared amount is gone (#2614 parity): the unsupported snow
-    // amount finalizes like every past row without a covering publication, no amount over no
-    // hours, and never inherits the forecast's amount or text.
-    assert_eq!(
-        (row["s06"].clone(), row["s06Hours"].clone()),
-        (json!(0), json!(0)),
-        "an unsupported snow amount cannot inherit the forecast: {row}"
-    );
-    assert!(row.get("s06Text").is_none());
-    assert!(row.get("s06Str").is_none());
-    assert_eq!(
-        row["pop"], 0,
-        "ASOS has no precipitation probability; legacy adjustShort sends a missing one as 0"
-    );
+    // AK 2026-11-08: ASOS has no precipitation probability and no snow amount, so the row keeps
+    // the stored publication's, as legacy keeps them.
+    let legacy = recorded_body("domestic-v000903");
+    let was = short_row(&legacy, "20260923", 3);
+    for field in ["pop", "s06", "s06Hours"] {
+        assert_eq!(row[field], was[field], "{field}: {row}");
+    }
+    assert_eq!(row["pop"], 20);
 }
 
 #[test]

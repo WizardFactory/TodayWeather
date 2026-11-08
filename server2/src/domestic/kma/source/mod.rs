@@ -91,7 +91,7 @@ use tokio::time::Instant;
 /// Observed-history derivation identity for stored summaries; a new aggregation rule must change
 /// it so that summaries built under an earlier rule are not reused. Its last segment is the
 /// `aggregation_policy_version` of `server2/config/contracts/kma-history.v1.json`.
-pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v1;station-altitude-v1;stored-read-window-v1";
+pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v1;station-altitude-v1;stored-read-window-v1;past-forecast-v1";
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;

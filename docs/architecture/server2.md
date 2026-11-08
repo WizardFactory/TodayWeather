@@ -3918,9 +3918,10 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   the observation's time, so a lagging observation (a grid nowcast before HH:40 at a slot
   boundary, or a late live reading) marks a row already past by the clock. The wipe applies
   `convertUnits`'s rule to the same inputs, which are final by then (`short::shown_current`,
-  `present::marked_current`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
-  keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
-  rain or snow text beside a measured amount.
+  `present::marked_current`). Past rows keep the ASOS-primary rule for the fields history
+  observes (see the next section for the others); their cleared rain amount no longer keeps the
+  forecast total behind it, which had left the forecast's rain text beside a measured amount and
+  turned −1 snow into −10.
 - **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
   also requires the previous publication, the newest covering slot HH (`required::foreground`).
   When the observation lags, the row shown as current is the slot before the clock's, and the
@@ -3944,7 +3945,8 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
 - **Sentinels.** A missing probability is 0 on every row (legacy `adjustShort`, so the app never
   prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
   ASOS fills without a grid observation (a row of legacy's validation template) carries wind
-  components −100, the value legacy's three-hour summary skips, instead of the template's −1.
+  components −100, the value legacy's three-hour summary skips, instead of the template's −1, so
+  its past slot keeps the stored publication's components or −100 without one.
 - **Yesterday.** Under ASOS-primary only, the comparison adds one branch that legacy lacks
   (`compare_sources`; legacy mode keeps legacy's `can_compare`, which the kma-rich paired replay
   of frozen legacy inputs checks): the live reading of station X in
@@ -3955,9 +3957,31 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
 
 `adjustShort` later drops trailing rows without a temperature; that moves the mark only when the
 current slot and every later row have none, so the wipe's rule matches `convertUnits` otherwise.
-Past-slot forecast values, ASOS precipitation rules and fetching older publications for past rows
-wait for AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`,
-`present`, `required` and `previous_short_tests` (library).
+AK decided past-slot forecast values and the ASOS precipitation rules on 2026-11-08 (next
+section); older publications are not fetched for past rows. Tests: `observed_history` and
+`parity_evidence` (domestic), `policy`, `present`, `required` and `previous_short_tests`
+(library).
+
+### #2614 KMA ASOS-primary parity: past rows, precipitation fill and past days
+
+On 2026-11-08 AK chose the recommended options for the gaps the 2026-11-07 parity run left
+([intent](../../intent/issue-2614-kma-asos-primary-parity.md),
+[acceptance](../../specs/issue-2614-kma-asos-primary-parity.md)). Under ASOS-primary, recorded in
+the [history contract](../../server2/config/contracts/kma-history.v1.json):
+
+- **Past forecast values** (`past-forecast-v1`). A past row (label + 3 h ≤ now) loses the forecast
+  values of the fields history observes (temperature, humidity, sky, type, rain, wind speed and
+  direction, extremes), which the observations then set, and keeps the stored publication's values
+  for the others (probability, wave height, snow amount and text, wind components), as legacy
+  `_mergeShortWithCurrent` keeps them. Without a stored publication it sends legacy's
+  missing-forecast values (probability 0). No source observes LGT, so a past slot's LGT is legacy
+  `_summaryLgt`'s 0 rather than the recovered-row −1 (`short::merge_short_with_current`). Past
+  days take probability, rain and snow amounts and AM/PM LGT from those rows where legacy
+  `_getDaySummaryListByShort` gives them, D-2 and D-1; their types, texts and extremes stay
+  observed (`mid::PAST_DAY_FIELDS`). Nothing older than the 54 h read window is read, and no
+  publication is acquired for a past row.
+
+Legacy replay mode is unchanged; the kma-rich and kma paired replays check it.
 
 ### #2819 D1 forecast-zone recovery
 

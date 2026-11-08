@@ -337,12 +337,18 @@ what it gets today). So does the row the client shows as current (`currentIndex`
 which follows the observation's time and can therefore be past by the clock when
 the observation lags. From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
 the previous one is read from S3 or acquired, at most once per cell and
-publication; so is the publication covering a lagging row shown as current. Clearing a historical row's forecast amounts also clears the totals
-kept beside them; its snow amount then finalizes like that of every past row
-without a covering publication (0 over 0 hours) and no forecast text remains.
-The answer keeps legacy's missing values: probability 0 (`adjustShort`), snow
-−1 through the cm-to-mm conversion, and wind components −100 where ASOS fills an
-hour that no grid observation holds. Under ASOS-primary the yesterday comparison also pairs
+publication; so is the publication covering a lagging row shown as current.
+A historical row loses the forecast values of the fields history observes, and
+the rain total kept beside its amount, so no forecast text remains beside a
+measured amount. The fields no history source observes (probability, wave
+height, snow amount and text, wind components) keep the stored publication's
+values, as legacy keeps them (AK 2026-11-08, `past-forecast-v1`); LGT is legacy
+`_summaryLgt`'s 0, and past days take probability, amounts and AM/PM LGT from
+those rows for D-2 and D-1. No older publication is read or acquired for a past
+row. Without a stored publication the answer keeps legacy's missing values:
+probability 0 (`adjustShort`), snow −1 through the cm-to-mm conversion, and wind
+components −100 where ASOS fills an hour that no grid observation holds. Under
+ASOS-primary the yesterday comparison also pairs
 the live reading of station X in the current hour with X's ASOS hour exactly 24 h
 earlier, one thermometer; other stations, hours and sources keep the safeguard,
 which is a last-resort rule since `yesterday.t1h` must be sent. See the

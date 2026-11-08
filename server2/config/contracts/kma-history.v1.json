@@ -4,8 +4,8 @@
   "slice": "precipitation-1",
   "scope": "Seven completed KST days of Korean (KMA) history in the existing mobile response: precipitation presence and type from hourly rows through the public three-hour slots to the AM/PM day halves.",
   "not_a_claim": "This contract does not certify seven-day history, source completeness, SKY, snow or LGT values, or latency.",
-  "checked_at": "2026-11-05",
-  "aggregation_policy_version": "stored-read-window-v1",
+  "checked_at": "2026-11-08",
+  "aggregation_policy_version": "past-forecast-v1",
   "evidence": [
     "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
     "docs/evidence/research/kma-asos-closure-qualification-2026-10-25.md",
@@ -375,6 +375,10 @@
     "station-altitude-v1": {
       "implementation": "server2/src/domestic/kma/source/representative.rs",
       "summary": "Under ASOS-primary only, AK 2026-11-03: a town listed in data/town_elevations.csv keeps its nearest city station when any of three elevation estimates lies within 200 m of the station altitude. Otherwise it takes the nearest station within 35 km that all three estimates accept, or no station. An island station serves only its county and keeps it; Jeju stations serve only Jeju. Unlisted towns keep the nearest station. Stations 185 and 188 keep their measurements but not wind."
+    },
+    "past-forecast-v1": {
+      "implementation": "server2/src/domestic/kma/short.rs",
+      "summary": "Under ASOS-primary only, AK 2026-11-08: a past three-hour row (label + 3 h <= now) keeps the stored publication's values for the fields no history source observes (probability, wave height, snow amount and text, wind components), as legacy _mergeShortWithCurrent keeps them, with the observed fields over them; without a stored publication it sends legacy's missing-forecast values. Its LGT is legacy _summaryLgt's value for its hours, 0 when none has one. Past days take probability, rain and snow amounts and AM/PM LGT from those rows where legacy _getDaySummaryListByShort gives them (D-2 and D-1); their types, texts and extremes stay observed. No older publication is read or acquired for a past row."
     }
   },
   "invariants": [
@@ -395,9 +399,10 @@
     },
     {
       "id": "I3",
-      "statement": "Missing rain never becomes 0; existing missing behavior for snow and LGT is preserved.",
+      "statement": "Missing rain never becomes 0. Snow and LGT have no history source: a past slot keeps the stored publication's snow amount and legacy _summaryLgt's LGT (past-forecast-v1).",
       "checked_by": [
-        "server2/tests/domestic/asos.rs"
+        "server2/tests/domestic/asos.rs",
+        "server2/tests/domestic/observed_history.rs"
       ]
     },
     {
