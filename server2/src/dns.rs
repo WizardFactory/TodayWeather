@@ -15,14 +15,63 @@ pub fn client() -> reqwest::ClientBuilder {
 }
 
 /// hickory's resolver with the system configuration (`/etc/resolv.conf` and the hosts file),
-/// built on a client's first lookup inside its runtime. A and AAAA are asked together and the
-/// IPv4 addresses come first, as getaddrinfo orders them on the IPv4-only hosts the service
-/// runs on. Without a readable system configuration lookups fail: no public resolver stands in.
+/// built on a client's first lookup inside its runtime. It asks for A first and for AAAA only
+/// when the name has no A, as getaddrinfo (AI_ADDRCONFIG) does on the IPv4-only hosts the
+/// service runs on: IPv4 comes first, and a name the hosts file maps to IPv4 answers from it
+/// without waiting for DNS. Without a readable system configuration lookups fail: no public
+/// resolver stands in.
 #[derive(Default)]
-struct AsyncDns(OnceLock<Result<TokioResolver, String>>);
+struct AsyncDns {
+    source: Source,
+    resolver: OnceLock<Result<TokioResolver, String>>,
+}
+/// What a client's resolver is built from.
+#[derive(Default)]
+enum Source {
+    /// The system configuration.
+    #[default]
+    System,
+    /// A given configuration, options and hosts table (tests).
+    #[cfg(test)]
+    Fixed(Box<Fixed>),
+}
+#[cfg(test)]
+struct Fixed {
+    config: hickory_resolver::config::ResolverConfig,
+    options: hickory_resolver::config::ResolverOpts,
+    hosts: Arc<hickory_resolver::Hosts>,
+}
+impl AsyncDns {
+    fn build(&self) -> Result<TokioResolver, String> {
+        let mut builder = match &self.source {
+            Source::System => TokioResolver::builder_tokio()
+                .map_err(|e| format!("system DNS configuration: {e}"))?,
+            #[cfg(test)]
+            Source::Fixed(fixed) => {
+                let mut builder = TokioResolver::builder_with_config(
+                    fixed.config.clone(),
+                    hickory_resolver::net::runtime::TokioRuntimeProvider::default(),
+                );
+                *builder.options_mut() = fixed.options.clone();
+                builder
+            }
+        };
+        builder.options_mut().ip_strategy = LookupIpStrategy::Ipv4thenIpv6;
+        let resolver = builder.build().map_err(|e| format!("DNS resolver: {e}"))?;
+        #[cfg(test)]
+        let resolver = {
+            let mut resolver = resolver;
+            if let Source::Fixed(fixed) = &self.source {
+                resolver.set_hosts(fixed.hosts.clone());
+            }
+            resolver
+        };
+        Ok(resolver)
+    }
+}
 impl reqwest::dns::Resolve for AsyncDns {
     fn resolve(&self, name: reqwest::dns::Name) -> reqwest::dns::Resolving {
-        let resolver = self.0.get_or_init(system_resolver).clone();
+        let resolver = self.resolver.get_or_init(|| self.build()).clone();
         Box::pin(async move {
             let found = resolver?.lookup_ip(name.as_str()).await?;
             let addrs: Vec<SocketAddr> = found.iter().map(|ip| SocketAddr::new(ip, 0)).collect();
@@ -31,16 +80,110 @@ impl reqwest::dns::Resolve for AsyncDns {
         })
     }
 }
-fn system_resolver() -> Result<TokioResolver, String> {
-    let mut builder =
-        TokioResolver::builder_tokio().map_err(|e| format!("system DNS configuration: {e}"))?;
-    builder.options_mut().ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
-    builder.build().map_err(|e| format!("DNS resolver: {e}"))
-}
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use hickory_resolver::config::{
+        ConnectionConfig, NameServerConfig, ResolverConfig, ResolverOpts,
+    };
+    use reqwest::dns::Resolve;
+    use std::{
+        net::SocketAddr,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst},
+        },
+        time::Duration,
+    };
+
+    /// A DNS server on loopback UDP that never answers; it counts the queries it receives.
+    struct Silent {
+        port: u16,
+        queries: Arc<AtomicUsize>,
+        stop: Arc<AtomicBool>,
+    }
+    impl Silent {
+        fn start() -> Self {
+            let socket = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_millis(50)))
+                .unwrap();
+            let port = socket.local_addr().unwrap().port();
+            let (queries, stop) = (
+                Arc::new(AtomicUsize::new(0)),
+                Arc::new(AtomicBool::new(false)),
+            );
+            let (seen, stopped) = (queries.clone(), stop.clone());
+            std::thread::spawn(move || {
+                let mut buffer = [0u8; 512];
+                while !stopped.load(SeqCst) {
+                    if socket.recv_from(&mut buffer).is_ok() {
+                        seen.fetch_add(1, SeqCst);
+                    }
+                }
+            });
+            Self {
+                port,
+                queries,
+                stop,
+            }
+        }
+    }
+    impl Drop for Silent {
+        fn drop(&mut self) {
+            self.stop.store(true, SeqCst);
+        }
+    }
+    /// One UDP name server on loopback at `port`.
+    fn servers(port: u16) -> ResolverConfig {
+        let mut udp = ConnectionConfig::udp();
+        udp.port = port;
+        ResolverConfig::from_parts(
+            None,
+            vec![],
+            vec![NameServerConfig::new(
+                std::net::Ipv4Addr::LOCALHOST.into(),
+                true,
+                vec![udp],
+            )],
+        )
+    }
+    /// A client resolver built from `config`, `options` and a hosts file text.
+    fn fixed(config: ResolverConfig, options: ResolverOpts, hosts: &str) -> super::AsyncDns {
+        let mut table = hickory_resolver::Hosts::default();
+        table.read_hosts_conf(hosts.as_bytes()).unwrap();
+        super::AsyncDns {
+            source: super::Source::Fixed(Box::new(super::Fixed {
+                config,
+                options,
+                hosts: Arc::new(table),
+            })),
+            resolver: Default::default(),
+        }
+    }
+
+    /// DNS (RC-hosts-aaaa-stall): a name the hosts file maps to IPv4 only answers from it while
+    /// the DNS server does not answer: no query is sent and the address arrives within the S3
+    /// connect limit (1 s), as getaddrinfo answers it on an IPv4-only host.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn an_ipv4_hosts_entry_answers_without_waiting_for_dns() {
+        let dns = Silent::start();
+        let resolver = fixed(
+            servers(dns.port),
+            ResolverOpts::default(),
+            "192.0.2.10 s3.test\n",
+        );
+        let found: Vec<SocketAddr> = tokio::time::timeout(
+            Duration::from_secs(1),
+            resolver.resolve("s3.test".parse().unwrap()),
+        )
+        .await
+        .expect("the lookup waited for the DNS server")
+        .unwrap()
+        .collect();
+        assert_eq!(found, vec![SocketAddr::from(([192, 0, 2, 10], 0))]);
+        assert_eq!(dns.queries.load(SeqCst), 0, "queries sent to DNS");
+    }
 
     /// DNS: every outbound HTTP client of the service starts from [`super::client`] (no other
     /// reqwest client construction in `src/`).
@@ -84,7 +227,6 @@ mod tests {
     /// DNS: A and AAAA answers keep getaddrinfo's order on an IPv4-only host, IPv4 first.
     #[tokio::test]
     async fn the_resolver_answers_ipv4_first() {
-        use reqwest::dns::Resolve;
         let found: Vec<std::net::SocketAddr> = super::AsyncDns::default()
             .resolve("localhost".parse().unwrap())
             .await

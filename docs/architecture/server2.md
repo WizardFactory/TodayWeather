@@ -2472,9 +2472,12 @@ disk cache off the blocking pool first and measure again
 **Name resolution.** Every outbound HTTP client of the service starts from `dns::client()`, whose
 resolver is hickory's async one (`hickory-resolver` 0.26, the version reqwest 0.13 integrates)
 instead of reqwest's default getaddrinfo on the blocking pool. It reads the system configuration
-(`/etc/resolv.conf` and the hosts file) when a client first resolves a name, asks A and AAAA
-together and puts the IPv4 addresses first, as getaddrinfo orders them on the IPv4-only hosts the
-service runs on. Without a readable configuration lookups fail; no public resolver stands in.
+(`/etc/resolv.conf` and the hosts file) when a client first resolves a name, asks for A first and
+for AAAA only when the name has no A, as getaddrinfo (AI_ADDRCONFIG) does on the IPv4-only hosts
+the service runs on: IPv4 comes first, and a name the hosts file maps to IPv4 answers from it
+without waiting for DNS (asked together, the AAAA query to an unanswering server held the IPv4
+answer past the S3 connect limit). Without a readable configuration lookups fail; no public
+resolver stands in.
 TLS, timeouts and the disabled proxies are unchanged, and IP-literal URLs (IMDS, the S3 test
 peers) resolve nothing. The legacy HTTP hop connects to a loopback IP literal only. The smoke and
 measurement tools under `examples/` keep reqwest's default resolver.
