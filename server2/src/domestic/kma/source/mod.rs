@@ -90,9 +90,15 @@ use std::sync::Arc;
 use tokio::time::Instant;
 
 /// Observed-history derivation identity for stored summaries; a new aggregation rule must change
-/// it so that summaries built under an earlier rule are not reused. Its last segment is the
-/// `aggregation_policy_version` of `server2/config/contracts/kma-history.v1.json`.
+/// it, and bump [`OBSERVED_HISTORY_REVISION`], so that summaries built under an earlier rule are
+/// not reused. Its last segment is the `aggregation_policy_version` of
+/// `server2/config/contracts/kma-history.v1.json`.
 pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v2;station-altitude-v1;stored-read-window-v1;past-forecast-v1;nowcast-fill-v1;untyped-half-v1";
+/// The comparable revision of [`OBSERVED_HISTORY_POLICY`] that stored grid summaries record:
+/// bump it with every change of the policy, so that a summary of the newer derivation supersedes
+/// those of an older one, which are no longer read (review AP-summary-policy-compat). Summaries
+/// stored before revisions were recorded read as revision 0.
+pub const OBSERVED_HISTORY_REVISION: u32 = 1;
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
@@ -1571,7 +1577,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         content_sha256: crate::storage::sha256(OBSERVED_HISTORY_POLICY.as_bytes()),
                     });
                 }
-                summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
+                let policy = if self.observed_history {
+                    OBSERVED_HISTORY_REVISION
+                } else {
+                    0
+                };
+                summary_inputs(
+                    &town,
+                    grid,
+                    &history,
+                    (ids, policy),
+                    stations.as_deref(),
+                    asos,
+                )
             }
             _ => None,
         };
@@ -1679,7 +1697,7 @@ fn summary_inputs(
     town: &Doc,
     grid: crate::history::Grid,
     history: &OrderedJson,
-    mut ids: Vec<InputId>,
+    (mut ids, policy): (Vec<InputId>, u32),
     folded: Option<&observe::Folded>,
     asos: Option<observe::AsosView>,
 ) -> Option<GridInputs> {
@@ -1732,6 +1750,7 @@ fn summary_inputs(
     };
     Some(GridInputs {
         town: town_key,
+        policy,
         grid: (grid.nx(), grid.ny()),
         ids,
         asos,

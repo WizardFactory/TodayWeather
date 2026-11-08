@@ -16,7 +16,19 @@
     "server2/tests/domestic.rs",
     "server2/tests/domestic/nowcast_fill.rs",
     "server2/tests/domestic/shown_publication.rs",
-    "server2/src/domestic/kma/policy.rs"
+    "server2/src/domestic/kma/policy.rs",
+    "server2/src/summary/mod.rs",
+    "server2/src/summary/store.rs",
+    "server2/src/summary/recorder.rs",
+    "server2/src/summary/lookup.rs",
+    "server2/src/summary/grid.rs",
+    "server2/src/summary/asos.rs",
+    "server2/src/summary/vc.rs",
+    "server2/tests/summary/support.rs",
+    "server2/tests/summary/record.rs",
+    "server2/tests/summary/lookup.rs",
+    "server2/tests/summary/model.rs",
+    "server2/tests/summary/derive.rs"
   ],
   "outside": [
     {

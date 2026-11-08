@@ -6,6 +6,7 @@
   "not_a_claim": "This contract does not certify seven-day history, source completeness, SKY, snow or LGT values, or latency.",
   "checked_at": "2026-11-08",
   "aggregation_policy_version": "untyped-half-v1",
+  "aggregation_policy_revision": 1,
   "evidence": [
     "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
     "docs/evidence/research/kma-asos-closure-qualification-2026-10-25.md",

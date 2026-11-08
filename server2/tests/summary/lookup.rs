@@ -495,3 +495,44 @@ async fn a_slower_lookup_with_older_vc_records_never_supersedes_newer_ones() {
     assert_eq!(found.summary.inputs.latest_fetched_ms, base + 400);
     assert_eq!(t.keys().len(), 2);
 }
+
+/// Review AP-summary-policy-compat: a lookup of the observed source's policy revision does not
+/// read a grid summary of an older policy; it takes the newer one, or the next source when only
+/// the older exists.
+#[tokio::test]
+async fn an_older_policy_grid_summary_is_not_read() {
+    let t = Arc::new(MemorySummaries::new());
+    let store = SummaryStore::new(t.clone());
+    let (older, newer) = policy_pair(0, 1, true);
+    let mut older = older;
+    older.date = 20251015;
+    older.values = day_row("20251015", 24., 20., 10.);
+    store.publish(&older, deadline()).await.unwrap();
+    let lookup = Lookup::new(t.clone(), None, None).with_grid_policy(1);
+    let target = target(true, false, false);
+    assert!(
+        lookup
+            .last_year(&target, 20261015, deadline())
+            .await
+            .unwrap()
+            .is_none(),
+        "only an older policy's summary"
+    );
+    let mut newer = newer;
+    newer.date = 20251015;
+    newer.values = day_row("20251015", 24., 23., 10.);
+    store.publish(&newer, deadline()).await.unwrap();
+    let found = lookup
+        .last_year(&target, 20261015, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!((found.source, found.summary.policy), (Source::Grid, 1));
+    // Without a policy every revision is read, a newer policy's first.
+    let any = Lookup::new(t.clone(), None, None)
+        .last_year(&target, 20261015, deadline())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(any.summary.policy, 1);
+}

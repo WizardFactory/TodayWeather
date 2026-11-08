@@ -8,6 +8,8 @@
   Tests: `nowcast_fill::unknown_hours_of_the_last_23_hours_take_the_grid_nowcast`, `nowcast_fill::a_late_nowcast_fills_the_next_answer` (domestic); `source::fill::tests::known_hours_and_hours_beyond_the_reach_ask_for_nothing`, `source::fill::tests::an_unknown_type_or_amount_asks_for_its_nowcast`, `source::fill::tests::a_rule_derived_value_and_a_winter_three_hour_amount_are_known`, `source::fill::tests::a_day_not_yet_released_asks_for_its_reachable_hours_and_a_loading_answer_for_none` (library).
 - **DAILY:** past days built from filled hours keep their AM/PM fields.
   Tests (domestic): `nowcast_fill::a_past_half_built_from_filled_hours_keeps_its_fields`, `observed_history::a_past_half_without_a_known_type_has_no_prefix_text`.
+- **SUMMARY-POLICY (review AP-summary-policy-compat):** stored grid summaries record the observed policy revision (`OBSERVED_HISTORY_REVISION`, also in the history contract); of two summaries of the same originals and fetch time, the newer policy's is read whatever the order of their hashes, an older policy's never supersedes it, and a lookup given the revision does not read an older one.
+  Tests: `record::the_newer_policy_revision_is_read_whatever_the_hash_order`, `record::a_newer_policy_revision_supersedes_and_an_older_one_never_wins`, `lookup::an_older_policy_grid_summary_is_not_read`, `model::policy_revisions_round_trip_and_order_first` (summary); `observed_history::a_changed_observed_policy_bumps_its_summary_revision` (domestic).
 - **DOCUMENTS:** contract, history contract JSON and architecture text match the code.
 - **PLACEMENT:** the placement gate passes against `server2/config/tasks/KMA-ASOS-PRIMARY-PARITY.json` (base `origin/feat/2614-kma-response-parity`), and the artifact policy passes on outgoing commits.
 

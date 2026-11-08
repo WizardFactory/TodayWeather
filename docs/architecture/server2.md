@@ -421,7 +421,7 @@ raw/v2/{source}/{kind}/{YYYY}/{MM}/{DD}/{period}/{key_sha256}/
   {fetched_at_ms}-{raw_sha256}.raw.gz
 index/v2/{source}/{kind}/{key_sha256}/{partition}.json
 packs/v2/{source}/{kind}/{key_sha256}/{date}/{pack_sha256}.pack
-summary/v2/{source}/{key_sha256}/{date}/{latest_fetched_ms}-{count}-{revision_sha256}.json
+summary/v2/{source}/{key_sha256}/{date}/[p{policy}-]{latest_fetched_ms}-{count}-{revision_sha256}.json
 state/v2/...
 budgets/v2/...
 ```
@@ -2996,13 +2996,20 @@ Grid summaries are keyed by town, not grid: `mergeCurrentByStnHourly` corrects a
 its own stations and ASOS mapping, so towns of one grid can differ. AK approved town keys and
 lookup-only VC derivation on 2026-10-16 (decision 6); revision volume is measured after S15b-4.
 
-**Objects.** `summary/v2/{source}/{key_sha256}/{YYYYMMDD}/{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`,
+**Objects.** `summary/v2/{source}/{key_sha256}/{YYYYMMDD}/[p{policy:04}-]{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`,
 created with `If-None-Match: *` (a 412 counts only when the stored bytes are identical) and never
 deleted; the role has no delete permission and no lifecycle rule exists, so retention is unbounded
-(at least the three years of D6/O-4). The body records the canonical key, date, values and the
-input set (`count`, `latestFetchedMs`, SHA-256 of the sorted input identity lines, per-family
-counts). The newest revision is the greatest name whose body verifies; a later newest input sorts
-later.
+(at least the three years of D6/O-4). The body records the canonical key, date, the derivation
+policy revision when there is one, values and the input set (`count`, `latestFetchedMs`, SHA-256
+of the sorted input identity lines, per-family counts). Grid summaries of the observed source carry
+`OBSERVED_HISTORY_REVISION`, which every change of `OBSERVED_HISTORY_POLICY` bumps; summaries
+stored before revisions existed, and ASOS and VC summaries, have none (0). The newest revision is
+the greatest name whose body verifies: a newer policy revision sorts first, then a later newest
+input. A re-summary of the same originals under another policy changes only the input digest, so
+without that order an older policy's revision with a greater hash would keep winning (review
+AP-summary-policy-compat). A lookup given the observed revision (`Lookup::with_grid_policy`; no
+production route builds a lookup yet) does not read an older policy's grid summary, and the
+recorder never lets one supersede a newer policy's.
 
 **Complete inputs and late revisions.** The KMA snapshot records summary inputs only when its
 reads were complete; a listed group that S06 excludes (not eligible, or a raw body missing) makes a
@@ -3029,7 +3036,9 @@ request). Per source, key and date it skips an input digest it already examined;
 the date in S3 (another process may have written), and a new revision is written when its newest
 input is newer than the stored newest revision's (also with equal values, so the stored order follows
 the inputs) or as new with other values. An older input set never supersedes a newer one. A late
-input therefore recomputes the day; an older input set never supersedes a newer one.
+input therefore recomputes the day; an older input set never supersedes a newer one. The policy
+revision comes before both: a newer policy's summary supersedes an older one's, and an older one's,
+from a process still on that policy, is not written over it.
 
 S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog
 is not listed now reads as empty. Before, the absent catalog's lookup answered "incomplete", so a

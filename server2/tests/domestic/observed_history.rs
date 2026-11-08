@@ -1124,3 +1124,26 @@ fn a_past_half_without_a_known_type_has_no_prefix_text() {
     assert_eq!(d20["wfAm"], "흐림", "a known half keeps its text: {d20}");
     assert!(missing_dates(&body).contains(&"20260920".to_string()));
 }
+
+/// Review AP-summary-policy-compat: stored grid summaries record the comparable revision of the
+/// observed policy, which the contract carries too. A change of the policy string must bump it,
+/// or summaries of the earlier derivation would still be read; the pin names revision 1's policy.
+#[test]
+fn a_changed_observed_policy_bumps_its_summary_revision() {
+    use server2::domestic::kma::source::{OBSERVED_HISTORY_POLICY, OBSERVED_HISTORY_REVISION};
+    let pinned = server2::storage::sha256(OBSERVED_HISTORY_POLICY.as_bytes());
+    assert_eq!(
+        (OBSERVED_HISTORY_REVISION, pinned.as_str()),
+        (
+            1,
+            "493f0858ea225606eb8542ea8596db126078d148833a33b1fbce3b3b3dbc921e"
+        ),
+        "a new policy needs a new OBSERVED_HISTORY_REVISION and pin"
+    );
+    let contract: Value =
+        serde_json::from_str(include_str!("../../config/contracts/kma-history.v1.json")).unwrap();
+    assert_eq!(
+        contract["aggregation_policy_revision"],
+        OBSERVED_HISTORY_REVISION
+    );
+}
