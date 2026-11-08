@@ -1,0 +1,43 @@
+{
+  "task": "KMA-CLIENT-VALIDATION",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Verification tooling only: capture the production API answer for a path with one GET, and judge a server2 KMA body against a reference body field by field and row by row, with AK's slow-provider exclusions; the server2 CI entrypoint runs its tests. No server2 runtime change, no deployment and no production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-CLIENT-VALIDATION.json",
+    "server2/tools/ci.py",
+    "server2/tools/verification/kma_client_validation.py",
+    "server2/tools/verification/test_kma_client_validation.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-client-validation.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-client-validation.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-client-validation.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/mobile-api.md",
+      "category": "documentation",
+      "reason": "The client delivery eval paragraph says what it checks and points to client validation."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "Same correction where the data design cites the eval."
+    },
+    {
+      "path": "docs/evidence/research/kma-speed-options-2026-11-04.md",
+      "category": "documentation",
+      "reason": "Dated note: its passes are the wire-shape check, not client validation."
+    }
+  ]
+}

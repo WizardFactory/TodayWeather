@@ -4,6 +4,8 @@ Investigated on 2026-11-04 at master `0e6ad85d`, after PR #2861 merged. Nothing 
 
 **Until the [EC2 measurement of 2026-11-05](#measured-on-ec2-against-real-providers-and-s3) the merged path had never been timed end to end against real providers, on any host, and that measurement replaces the modeled first-request figures below.** Figures below are labelled *modeled* (the real code with injected delays), *measured* (with its environment), *counted* from the code, or *calculated*. No modeled or calculated figure is a production latency claim.
 
+**Note added 2026-11-07.** "Passes" and "both validators" in this record mean the wire-shape check (`kma_client_eval.py`) and the forecast and history checks of `kma_full_response_contract.py`. They are not client validation as AK defined it on 2026-11-07: a body must give the client everything the production answer for the same path and publications gives, except parts whose provider is slow. That check is [`kma_client_validation.py`](../../../server2/tools/verification/kma_client_validation.py).
+
 ## Measured on EC2 against real providers and S3
 
 Measured on 2026-11-05 and 2026-11-06 on one t3.small Spot host in ap-northeast-2d, with the CI-verified musl binaries, real providers and a new bucket in the same region. `Before` is `478232c9`, the head merged as `0e6ad85d`. `After` is `558db418` in the first window and `29243e6e` in the second, so the two windows are not the same code: the review corrections between them include an absent RSS that overlaps stored reads. Times are from a loopback client and include geocoding, with no network to a real client. Each process served its requests in order and stopped.
@@ -120,6 +122,8 @@ The agreed flow for this case is: collect from providers, assemble, respond to t
 The real source and gateway code ran through the `full_response` integration test on a release build, with an empty loopback S3 peer, two async workers and 12 S3 requests in flight. Each stubbed provider call slept for a delay taken from the October laptop evidence: SHRT 1,300 ms, ODAM 80 ms, VSRT 110 ms, mid outlook 320 ms, mid land 33 ms, mid temperature 37 ms, RSS 60 ms, ASOS hourly 421 ms, ASOS daily 206 ms. AWS and city pages use an assumed 200 ms. Each S3 GET and LIST sleeps for the stated delay, and the loopback peer adds about 8 ms. Clock 10:50 KST, `/weather/v000903/coord/37.58,126.97`, three runs per case. The temporary test and timing edits were reverted.
 
 "Passes" means `kma_client_eval.py` reports no violation, and `kma_full_response_contract.py` reports no daily gap, with `historyStatus` listing no missing hour or day.
+
+**Note added 2026-11-07.** These passes are the wire-shape and forecast checks, not client validation as AK defined it on 2026-11-07; see [`kma_client_validation.py`](../../../server2/tools/verification/kma_client_validation.py).
 
 ### The normal path without S3 delay
 
