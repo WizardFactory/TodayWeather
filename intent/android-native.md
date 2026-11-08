@@ -26,7 +26,7 @@ Each sub-issue's completion criteria are its acceptance criteria. Per-task IDs (
 
 ## AN-06 decisions (recommended defaults, AK 2026-11-08)
 
-Recorded in #2877 when AN-06 closes: go; API path `v000903` for every call (option A); keep the Cordova behavior for documented anomalies except where the recommendation is a fix (A01: tie each response to the place that requested it); follow the system font scale and verify layouts up to 1.3; Cordova Android receives fixes only; place search follows the Cordova app's current provider.
+Recorded in #2877 by AN-06 (https://github.com/WizardFactory/TodayWeather/issues/2877#issuecomment-6718290258): go; API path `v000903` for every call (option A); keep the Cordova behavior for documented anomalies except where the recommendation is a fix (A01: tie each response to the place that requested it); follow the system font scale and verify layouts up to 1.3; Cordova Android receives fixes only; place search follows the Cordova app's current provider (Google Places). Open, blocking AN-10 only: whether the native client uses the Places SDK for Android or the Places web service (key restriction, billing and usage need the Google Cloud console).
 
 ## Scope
 

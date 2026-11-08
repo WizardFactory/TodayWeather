@@ -155,3 +155,25 @@ Design: `core-domain` `chart/` builds each chart as the SVG its Cordova directiv
 ### Checks
 
 JVM: `ChartSceneTest` (15 fixture-size captures, element by element), `ChartScreenshotTest` (18 comparisons), `ChartBehaviorTest`. Device: `device-smoke.sh` on API 36 (18 comparisons with the emulator's fonts). CI: `check-sources.mjs` in the job with `client/`.
+
+## AN-06 — spike review, estimate and decisions (#2885)
+
+Decision record, no code. Gates G1 (AN-03, AN-04), G2 (AN-05) and G3 (AN-02) pass; evidence on #2885 (https://github.com/WizardFactory/TodayWeather/issues/2885#issuecomment-6718290519). AK's decisions, the estimate for AN-07 to AN-18 (about 42–64 agent hours) and the open place-search decision are in #2877: https://github.com/WizardFactory/TodayWeather/issues/2877#issuecomment-6718290258.
+
+- Go for AN-07 to AN-18 now, in task-graph order; no budget set; AN-19 excluded.
+- `v000903` for every call. Cordova anomalies are kept unless AK approves a fix; A01 is the fix (AN-08). A24, the 12:00 AM picker deleting the alarm, the weather-address 501 and D37 are kept.
+- Text follows the system font scale, verified up to 1.3 (AN-18). Cordova Android receives fixes only.
+- Open, blocking AN-10 only: Places SDK for Android or Places web service (key restriction, billing, usage measured in the Google Cloud console). Recommended: the Places SDK for Android with an Android-restricted key in the same project.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN06-US1 | AK decides whether to continue | Gates merged | Read #2885 and #2877 | Gate evidence linked; decisions, estimate and the open item with the sub-issue it blocks | A failed gate keeps #2885 open | AC1, AC2 |
+| AN06-US2 | Implementer of a later sub-issue | #2877 decision comment | Look up a decision | Each decision has a value or names the sub-issue it blocks | – | AC2, AC3 |
+
+### Acceptance (from #2885)
+
+- AC1: the gates pass, with their evidence linked from #2885.
+- AC2: #2877 has the decision comment (go, priority, budget, estimate, each decision; an open decision names the sub-issue it blocks).
+- AC3: delivery (plan and intent updated, review PASS, CI, merge).
