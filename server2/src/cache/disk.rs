@@ -43,10 +43,13 @@ pub struct DiskCache {
     fail_write: std::sync::atomic::AtomicBool,
     /// Test seam: the next write signals once it holds the cache, then waits for release.
     #[cfg(test)]
-    hold_write: Mutex<Option<HeldWrite>>,
+    hold_write: Mutex<Option<Held>>,
+    /// Test seam: the next load signals once it runs, then waits for release.
+    #[cfg(test)]
+    hold_load: Mutex<Option<Held>>,
 }
 #[cfg(test)]
-type HeldWrite = (
+type Held = (
     tokio::sync::oneshot::Sender<()>,
     std::sync::mpsc::Receiver<()>,
 );
@@ -56,6 +59,12 @@ struct Worker {
     queue: Mutex<Queue>,
     ready: Condvar,
     done: tokio::sync::Notify,
+    /// Test seam: the jobs the thread ran, in order.
+    #[cfg(test)]
+    ran: Mutex<Vec<&'static str>>,
+    /// Test seam: signalled when the thread ends.
+    #[cfg(test)]
+    exited: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
 }
 #[derive(Default)]
 struct Queue {
@@ -117,6 +126,10 @@ impl Worker {
                 q.running = None;
                 drop(q);
                 self.0.done.notify_waiters();
+                #[cfg(test)]
+                if let Some(exited) = self.0.exited.lock().unwrap().take() {
+                    let _ = exited.send(());
+                }
             }
         }
         let _closer = Closer(self);
@@ -141,6 +154,12 @@ impl Worker {
             let Some(cache) = cache.upgrade() else {
                 return;
             };
+            #[cfg(test)]
+            self.ran.lock().unwrap().push(match &job {
+                Job::Load(_) => "load",
+                Job::Write(WriteJob::Fill { .. }) => "fill",
+                Job::Write(WriteJob::Remove { .. }) => "remove",
+            });
             let fill = matches!(job, Job::Write(WriteJob::Fill { .. }));
             let ran = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match job {
                 Job::Load(Load {
@@ -368,6 +387,8 @@ impl DiskCache {
             fail_write: std::sync::atomic::AtomicBool::new(false),
             #[cfg(test)]
             hold_write: Mutex::new(None),
+            #[cfg(test)]
+            hold_load: Mutex::new(None),
         })
     }
     pub fn metrics(&self) -> Metrics {
@@ -540,6 +561,11 @@ impl DiskCache {
         Ok(())
     }
     fn load_file(&self, key: &str, maximum: usize) -> io::Result<Option<Object>> {
+        #[cfg(test)]
+        if let Some((reached, release)) = self.hold_load.lock().unwrap().take() {
+            let _ = reached.send(());
+            let _ = release.recv();
+        }
         let mut s = self.state.lock().unwrap_or_else(|p| p.into_inner());
         self.open(&mut s)?;
         let name = sha256(key.as_bytes());
@@ -1091,17 +1117,27 @@ mod fault_tests {
         drop(c);
         fs::remove_dir_all(root).unwrap();
     }
-    /// A held write: the seam fires on the next write once it holds the cache.
+    /// Arm a hold seam: it fires on the next write (or load) on the cache thread.
     fn hold(
-        c: &DiskCache,
+        seam: &Mutex<Option<Held>>,
     ) -> (
         tokio::sync::oneshot::Receiver<()>,
         std::sync::mpsc::Sender<()>,
     ) {
         let (reached, held) = tokio::sync::oneshot::channel();
         let (release, wait) = std::sync::mpsc::channel();
-        *c.hold_write.lock().unwrap() = Some((reached, wait));
+        *seam.lock().unwrap() = Some((reached, wait));
         (held, release)
+    }
+    /// Wait (bounded) until `ready` holds for the cache's queues.
+    async fn until(c: &DiskCache, ready: impl Fn(&Queue) -> bool) {
+        for _ in 0..400 {
+            if ready(&c.worker.lock()) {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        }
+        panic!("the cache queues never reached the expected state");
     }
     /// DISK-CACHE: a load while a cache write is held answers at once instead of waiting for it.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -1112,15 +1148,21 @@ mod fault_tests {
             c.idle(Instant::now() + std::time::Duration::from_secs(3))
                 .await
         );
-        let (held, release) = hold(&c);
+        let (held, release) = hold(&c.hold_write);
         let mut other = id.clone();
         other.fetched_at_ms += 1;
         c.writer(&other).unwrap().enqueue(o);
         held.await.unwrap();
+        let misses = c.metrics().misses;
         let load =
             tokio::time::timeout(std::time::Duration::from_millis(500), c.load(&id, 8192)).await;
         release.send(()).unwrap();
         assert!(load.is_ok(), "a held write delayed the load");
+        assert!(
+            load.unwrap().is_none(),
+            "a load while a write runs is a miss"
+        );
+        assert_eq!(c.metrics().misses, misses + 1);
         assert!(
             c.idle(Instant::now() + std::time::Duration::from_secs(3))
                 .await
@@ -1168,7 +1210,7 @@ mod fault_tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn fills_beyond_the_pending_bound_are_dropped_and_counted() {
         let (root, c, id, o) = setup();
-        let (held, release) = hold(&c);
+        let (held, release) = hold(&c.hold_write);
         c.writer(&id).unwrap().enqueue(o.clone());
         held.await.unwrap();
         let mut next = id.clone();
@@ -1188,6 +1230,108 @@ mod fault_tests {
         );
         assert_eq!(c.metrics().writes, 2);
         drop(c);
+        fs::remove_dir_all(root).unwrap();
+    }
+    /// DISK-CACHE: with one load running (held) and LOADS more queued, the next load misses at
+    /// once instead of queuing; the queued ones are then served.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn a_full_load_queue_misses_at_once() {
+        let (root, c, id, o) = setup();
+        c.writer(&id).unwrap().enqueue(o);
+        assert!(
+            c.idle(Instant::now() + std::time::Duration::from_secs(3))
+                .await
+        );
+        let load = |c: &Arc<DiskCache>| {
+            let (c, id) = (c.clone(), id.clone());
+            tokio::spawn(async move { c.load(&id, 8192).await })
+        };
+        let (held, release) = hold(&c.hold_load);
+        let first = load(&c);
+        held.await.unwrap();
+        let queued: Vec<_> = (0..LOADS).map(|_| load(&c)).collect();
+        until(&c, |q| q.loads.len() == LOADS).await;
+        let misses = c.metrics().misses;
+        let full =
+            tokio::time::timeout(std::time::Duration::from_millis(100), c.load(&id, 8192)).await;
+        assert!(
+            matches!(full, Ok(None)),
+            "a load beyond the queue waited instead of missing"
+        );
+        assert_eq!(c.metrics().misses, misses + 1);
+        release.send(()).unwrap();
+        assert!(first.await.unwrap().is_some());
+        for queued in queued {
+            assert!(queued.await.unwrap().is_some());
+        }
+        drop(c);
+        fs::remove_dir_all(root).unwrap();
+    }
+    /// DISK-CACHE: when the thread is free again, a queued load runs before a fill queued
+    /// earlier.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn queued_loads_run_before_queued_fills() {
+        let (root, c, id, o) = setup();
+        c.writer(&id).unwrap().enqueue(o.clone());
+        assert!(
+            c.idle(Instant::now() + std::time::Duration::from_secs(3))
+                .await
+        );
+        let load = |c: &Arc<DiskCache>| {
+            let (c, id) = (c.clone(), id.clone());
+            tokio::spawn(async move { c.load(&id, 8192).await })
+        };
+        let (held, release) = hold(&c.hold_load);
+        let first = load(&c);
+        held.await.unwrap();
+        let mut other = id.clone();
+        other.fetched_at_ms += 1;
+        c.writer(&other).unwrap().enqueue(o);
+        let second = load(&c);
+        until(&c, |q| q.writes.len() == 1 && q.loads.len() == 1).await;
+        release.send(()).unwrap();
+        assert!(first.await.unwrap().is_some());
+        assert!(second.await.unwrap().is_some());
+        assert!(
+            c.idle(Instant::now() + std::time::Duration::from_secs(3))
+                .await
+        );
+        assert_eq!(
+            *c.worker.ran.lock().unwrap(),
+            ["fill", "load", "load", "fill"]
+        );
+        drop(c);
+        fs::remove_dir_all(root).unwrap();
+    }
+    /// DISK-CACHE: the thread ends once the last reference to its cache is gone (here the one it
+    /// held for a running fill), and a fill still queued then is discarded, not written.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn the_thread_ends_after_the_last_reference_and_discards_queued_work() {
+        let (root, c, id, o) = setup();
+        let (exit, exited) = tokio::sync::oneshot::channel();
+        *c.worker.exited.lock().unwrap() = Some(exit);
+        let (held, release) = hold(&c.hold_write);
+        c.writer(&id).unwrap().enqueue(o.clone());
+        held.await.unwrap();
+        let mut other = id.clone();
+        other.fetched_at_ms += 1;
+        c.writer(&other).unwrap().enqueue(o);
+        until(&c, |q| q.writes.len() == 1).await;
+        let raw = |id: &RecordId| {
+            c.directory.join(format!(
+                "{}.raw",
+                sha256(id.object_key().unwrap().as_bytes())
+            ))
+        };
+        let (running, queued) = (raw(&id), raw(&other));
+        drop(c);
+        release.send(()).unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(2), exited)
+            .await
+            .expect("the cache thread outlived its cache")
+            .unwrap();
+        assert!(running.exists(), "the running fill completes");
+        assert!(!queued.exists(), "the queued fill was written");
         fs::remove_dir_all(root).unwrap();
     }
 }
