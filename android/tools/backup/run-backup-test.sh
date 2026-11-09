@@ -19,7 +19,10 @@ OUT=${2:-/tmp/tw-backup}
 APP=$HERE/../../app/build/outputs/apk
 RUNNER=$PKG.test/$PKG.TestRunner
 mkdir -p "$OUT"
-LOCAL=com.android.localtransport/.LocalTransport
+# The local transport: com.android.localtransport/.LocalTransport, android/com.android.internal.backup.LocalTransport on
+# older releases.
+LOCAL=$(adb shell bmgr list transports | tr -d '\r' | sed -n 's/^[ *]*\([^ ]*LocalTransport\)$/\1/p' | head -1)
+[ -n "$LOCAL" ] || { echo "no local backup transport" >&2; exit 1; }
 TRANSPORT=$(adb shell bmgr list transports | sed -n 's/^ *\* *//p' | tr -d '\r')
 ENABLED=$(adb shell bmgr enabled | tr -d '\r')
 put_back() {
