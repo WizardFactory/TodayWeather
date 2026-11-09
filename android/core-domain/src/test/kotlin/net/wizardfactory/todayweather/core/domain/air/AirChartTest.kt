@@ -1,6 +1,6 @@
 package net.wizardfactory.todayweather.core.domain.air
 
-import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,7 +75,7 @@ class AirChartTest {
 
     @Test
     fun aSlotTheApplyDidNotReachDrawsNothing() {
-        val scope = AirScope(ChartMetrics(384.0, 832.0), "airkorea", ZoneId.of("Asia/Seoul"))
+        val scope = AirScope(ChartMetrics(384.0, 832.0), "airkorea", TimeZone.getTimeZone("Asia/Seoul"))
         scope.open(AirReferences.set(AirReferences.seoul(), listOf("airInfoList", 0, "last", "dataTime"), JsonPrimitive("2026-11-10 00:00")), null, 1, false)
         val chart = AirChart.build(scope.airChart!!, scope.standard, "시", 384.0)
         assertEquals(emptyList(), chart.ticks)

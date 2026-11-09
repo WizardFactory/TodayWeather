@@ -1,6 +1,6 @@
 package net.wizardfactory.todayweather.core.domain.air
 
-import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -65,7 +65,7 @@ class AirPageTest {
     @Test
     fun valuesShowAsTheyCameAndZeroOnlyInTheStationsAsADash() {
         // Tokyo under airnow: so2 0 and the decimals as sent (no toFixed).
-        val tokyo = AirScope(ChartMetrics(384.0, 832.0), "airnow", ZoneId.of("Asia/Seoul"))
+        val tokyo = AirScope(ChartMetrics(384.0, 832.0), "airnow", TimeZone.getTimeZone("Asia/Seoul"))
         tokyo.open(AirReferences.record("vc-tokyo", "도쿄", "일본 도쿄", "JP"), "so2", 1, false)
         val page = AirPage(tokyo, AirReferences.ko)
         assertEquals("0", page.main!!.value)
@@ -78,7 +78,7 @@ class AirPageTest {
         assertNull(page.chartTitle)
         assertNull(page.daily)
         // A station whose value is 0 shows "-" there; the main box shows 0.
-        val zero = AirScope(ChartMetrics(384.0, 832.0), "airkorea", ZoneId.of("Asia/Seoul"))
+        val zero = AirScope(ChartMetrics(384.0, 832.0), "airkorea", TimeZone.getTimeZone("Asia/Seoul"))
         zero.open(AirReferences.set(AirReferences.seoul(), listOf("airInfoList", 0, "last", "pm25Value"), JsonPrimitive(0)), "pm25", 1, false)
         val zeroPage = AirPage(zero, AirReferences.ko)
         assertEquals("0", zeroPage.main!!.value)

@@ -14,7 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import java.io.File
-import java.time.ZoneId
+import java.util.TimeZone
 import javax.imageio.ImageIO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -123,7 +123,7 @@ class AirScreenshotTest {
 
     /** The visit capture.mjs showed: its places as the data layer records them (cityRecord), then its link code or tap. */
     private fun scope(state: String, metrics: ChartMetrics): AirScope {
-        val scope = AirScope(metrics, "airkorea", ZoneId.of("Asia/Seoul"))
+        val scope = AirScope(metrics, "airkorea", TimeZone.getTimeZone("Asia/Seoul"))
         val seoul = city("kma-seoul", Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.56, 126.98)))
         when (state) {
             "vc-london" -> scope.open(city("vc-london", Place(false, false, "런던", "영국 런던", "GB", Location(51.51, -0.13))), null, 2, false)

@@ -16,6 +16,7 @@ import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
+import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.ui.forecast.ForecastTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.Assume.assumeTrue
@@ -42,10 +43,18 @@ class ProductionWeatherTest {
         assumeTrue("needs -e weather production", TestRunner.args.getString("weather") == "production")
         rule.waitUntil(30_000) { app.appState.current() != null }
         rule.runOnUiThread {
-            app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = 1) }
+            // Korean units, as on the ko-KR emulator, whatever the device's region (°F would round the temperatures).
+            app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = 1, units = UnitSettings.defaults("KR")) }
         }
         rule.waitForIdle()
-        // Tapping the selected Hourly tab loads the selected place at once (`reloadEvent` "tab").
+        // A visit keeps the units it opened with, as ForecastCtrl did until its page was left: open Hourly again so it
+        // starts with the Korean units (the app opened on Hourly in the device's region).
+        rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.waitForIdle()
+        Thread.sleep(800)
+        // Tapping the selected Hourly tab, past the 700 ms guard, loads the selected place at once (`reloadEvent` "tab").
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
         show(seoul, "seoul")
         rule.onNodeWithTag(ForecastTags.NEXT).performClick()

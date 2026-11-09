@@ -19,6 +19,7 @@ import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
+import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.ui.air.AirTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.Assert.assertTrue
@@ -45,7 +46,8 @@ class ProductionAirTest {
     fun seoulShowsItsStationsAndAnotherStationShowsItsValues() {
         assumeTrue("needs -e weather production", TestRunner.args.getString("weather") == "production")
         rule.waitUntil(30_000) { app.appState.current() != null }
-        rule.runOnUiThread { app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1) } }
+        // Korean units (the airkorea standard), whatever the device's region.
+        rule.runOnUiThread { app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1, units = UnitSettings.defaults("KR")) } }
         rule.waitForIdle()
         // The first tap selects the Air tab; the next, past the 700 ms guard, loads Seoul at once (`reloadEvent` "tab").
         rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()

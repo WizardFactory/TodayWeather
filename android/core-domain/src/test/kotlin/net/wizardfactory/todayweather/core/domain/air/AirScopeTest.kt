@@ -1,7 +1,7 @@
 package net.wizardfactory.todayweather.core.domain.air
 
 import java.io.File
-import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,7 +43,7 @@ class AirScopeTest {
             val records = places.map { CorpusPlaces.record(corpus, it) }
             val airUnit = visit["units"]!!.jsonObject.str("airUnit")
             val scope = AirScope(ChartMetrics(visit["width"]!!.jsonPrimitive.double, visit["height"]!!.jsonPrimitive.double), airUnit,
-                ZoneId.of(visit.str("zone")!!))
+                TimeZone.getTimeZone(visit.str("zone")!!))
             val hasPush = { i: Int -> places.getOrNull(i)?.get("hasPush")?.jsonPrimitive?.boolean == true }
             var index = visit["index"]!!.jsonPrimitive.int
             val applied = visit["applied"]!!.jsonArray.map { it.jsonObject }

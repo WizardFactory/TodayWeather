@@ -1,10 +1,7 @@
 package net.wizardfactory.todayweather.core.domain.air
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.OffsetDateTime
-import java.time.ZoneId
+import java.util.Calendar
+import java.util.TimeZone
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -15,6 +12,7 @@ import net.wizardfactory.todayweather.core.domain.AddressFormat
 import net.wizardfactory.todayweather.core.domain.AirQuality
 import net.wizardfactory.todayweather.core.domain.AirStandard
 import net.wizardfactory.todayweather.core.domain.Js
+import net.wizardfactory.todayweather.core.domain.Warnings
 import net.wizardfactory.todayweather.core.domain.chart.ChartMetrics
 
 /**
@@ -29,13 +27,13 @@ class AirSeries(val data: List<JsonElement?>, val maxValue: Double?)
  * pollutant of the link, [apply] `_applyWeatherData` for the selected place's record, [setCode] and [setStation] the
  * taps on a detail or station cell, and [applyEvent] TabCtrl's `applyEvent` (a swipe or a load), which returns to the
  * first station. [airUnit] is the air standard (TabCtrl's `setAirUnit`); [zone] the device's time zone, in which a
- * missing chart slot is dated.
+ * missing chart slot is dated (java.util time, available on API 24).
  *
  * `_applyWeatherData` runs in one `try`: at the first value it cannot read it stops, and everything it has not
  * reached keeps what an earlier place set, as on the Cordova page. A Kotlin null stands for an unset value
  * (undefined) and [JsonNull] for null, as in [Js].
  */
-class AirScope(val metrics: ChartMetrics, val airUnit: String?, private val zone: ZoneId = ZoneId.systemDefault()) {
+class AirScope(val metrics: ChartMetrics, val airUnit: String?, private val zone: TimeZone = TimeZone.getDefault()) {
     /** TabCtrl's `aqiStandard` and `aqiMaxValue`; null for an unknown standard. */
     val standard: AirStandard? = AirQuality.standard(airUnit)
 
@@ -227,33 +225,19 @@ class AirScope(val metrics: ChartMetrics, val airUnit: String?, private val zone
 
     /**
      * `new Date(date.replace(/\s+/g, 'T'))` moved by `setHours(getHours() - 12 + i)` in the device's zone and printed
-     * as `YYYY-MM-DD HH:mm`: local wall-clock arithmetic, a time a daylight-saving change skips moving forward.
+     * as `YYYY-MM-DD HH:mm`: V8's date reading ([Warnings.jsDate]) and local wall-clock arithmetic, a time a
+     * daylight-saving change skips moving forward.
      */
     private fun slotDate(date: String, i: Int): String {
-        val start = parse(date.replace(WHITE_SPACE, "T")) ?: return "NaN-aN-aN aN:aN"
-        val moved = start.toLocalDate().atStartOfDay().plusHours((start.hour - 12 + i).toLong())
-            .plusMinutes(start.minute.toLong()).plusSeconds(start.second.toLong()).plusNanos(start.nano.toLong())
-        val shown = moved.atZone(zone).toLocalDateTime()
-        fun pad(n: Int) = "0$n".takeLast(2)
-        return "${shown.year}-${pad(shown.monthValue)}-${pad(shown.dayOfMonth)} ${pad(shown.hour)}:${pad(shown.minute)}"
-    }
-
-    /** The JavaScript date-time string forms (`YYYY-MM-DDTHH:mm[:ss[.sss]]`, local unless an offset is given) in the zone. */
-    private fun parse(text: String): LocalDateTime? {
-        val m = DATE_TIME.matchEntire(text) ?: return null
-        val (y, mo, d, h, mi) = m.destructured
-        val s = m.groups[6]?.value?.toInt() ?: 0
-        val ms = m.groups[7]?.value?.padEnd(3, '0')?.toInt() ?: 0
-        val offset = m.groups[8]?.value
-        val day = runCatching { LocalDate.of(y.toInt(), mo.toInt(), d.toInt()) }.getOrNull() ?: return null
-        val hour = h.toInt()
-        if (hour > 24 || mi.toInt() > 59 || s > 59 || (hour == 24 && (mi.toInt() != 0 || s != 0 || ms != 0))) return null
-        val local = if (hour == 24) day.plusDays(1).atStartOfDay() else LocalDateTime.of(day, LocalTime.of(hour, mi.toInt(), s, ms * 1_000_000))
-        return if (offset == null) {
-            local.atZone(zone).toLocalDateTime()
-        } else {
-            OffsetDateTime.of(local, java.time.ZoneOffset.of(if (offset == "Z") "Z" else offset)).atZoneSameInstant(zone).toLocalDateTime()
+        val millis = Warnings.jsDate(JsonPrimitive(date.replace(WHITE_SPACE, "T")), zone) ?: return "NaN-aN-aN aN:aN"
+        val t = Calendar.getInstance(zone).apply {
+            isLenient = true
+            timeInMillis = millis
+            set(Calendar.HOUR_OF_DAY, get(Calendar.HOUR_OF_DAY) - 12 + i)
         }
+        fun pad(n: Int) = "0$n".takeLast(2)
+        return "${t.get(Calendar.YEAR)}-${pad(t.get(Calendar.MONTH) + 1)}-${pad(t.get(Calendar.DAY_OF_MONTH))} " +
+            "${pad(t.get(Calendar.HOUR_OF_DAY))}:${pad(t.get(Calendar.MINUTE))}"
     }
 
     private class Stopped : RuntimeException() {
@@ -263,7 +247,6 @@ class AirScope(val metrics: ChartMetrics, val airUnit: String?, private val zone
     companion object {
         private val FALLBACK = listOf("pm25", "pm10", "o3", "no2", "co", "so2", "aqi")
         private val WHITE_SPACE = Regex("\\s+")
-        private val DATE_TIME = Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:\d{2})?""")
 
         private fun stop(): Nothing = throw Stopped()
 

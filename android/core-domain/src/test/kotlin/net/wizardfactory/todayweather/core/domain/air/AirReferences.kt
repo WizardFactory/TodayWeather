@@ -1,7 +1,7 @@
 package net.wizardfactory.todayweather.core.domain.air
 
 import java.io.File
-import java.time.ZoneId
+import java.util.TimeZone
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -36,7 +36,7 @@ object AirReferences {
 
     /** The visit of [state] at 384×832 in Seoul's zone: the places capture.mjs added, then its link code or tap. */
     fun scope(state: String): AirScope {
-        val scope = AirScope(ChartMetrics(384.0, 832.0), "airkorea", ZoneId.of("Asia/Seoul"))
+        val scope = AirScope(ChartMetrics(384.0, 832.0), "airkorea", TimeZone.getTimeZone("Asia/Seoul"))
         when (state) {
             "vc-london" -> scope.open(record("vc-london", "런던", "영국 런던", "GB"), null, 2, false)
             "kma-jeju-no-air" -> scope.open(noAir(), null, 3, false)
