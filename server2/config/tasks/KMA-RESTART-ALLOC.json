@@ -1,0 +1,18 @@
+{
+  "task": "KMA-RESTART-ALLOC",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Measurement candidate for step 0 of the restart re-examination (AK 2026-11-10): #2907 plus only two commits of #2916, mimalloc as the global allocator and the observed KMA waits counted from the request's accept, to measure on EC2 how much of the first-answer overrun the allocator removes. No other restart machinery. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/Cargo.lock",
+    "server2/Cargo.toml",
+    "server2/config/tasks/KMA-RESTART-ALLOC.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/lib.rs",
+    "server2/src/resolver/race.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs"
+  ],
+  "outside": []
+}
