@@ -70,6 +70,9 @@ class AndroidLocationAccessTest {
         // Android 12+'s "Approximate": only coarse access.
         assertEquals(PermissionStatus.GRANTED, prompt(access, activity, granted = false to true, rationale = false))
         assertEquals(PermissionStatus.GRANTED, access.status())
+        // "Only this time" ends after the app: the next attempt asks again (the plugin's flag made it final, B24).
+        shadowOf(app).denyPermissions(fine, coarse)
+        assertEquals(PermissionStatus.NOT_REQUESTED, access.status())
     }
 
     @Test
