@@ -648,3 +648,37 @@ async fn a_retained_acquisition_flight_holds_no_evicted_page() {
     );
     assert!(page.upgrade().is_none(), "the evicted page is freed");
 }
+
+/// RB-acquisition-readback (review round 5): a successful acquisition reaches the waiter of its
+/// flight even when the acquisition bodies evict it before the waiter reads it (a 0-byte budget
+/// keeps nothing, so every entry leaves as it is put), and its pages are freed once the last
+/// waiter has taken it.
+#[tokio::test(start_paused = true)]
+async fn an_acquisition_evicted_at_once_still_reaches_its_waiter() {
+    let now = kst(20261018, 2030);
+    let provider = Arc::new(Provider::new(now));
+    let mut s = fixture(provider, now);
+    s.acquired = Arc::new(Mutex::new(records::Bodies::new(0, 1)));
+    let p = publication(20261018, 1700);
+    let request = grid_request(schedule::Family::Short, grid(), p).unwrap();
+    let acquired = s
+        .acquire(
+            "test/short".into(),
+            fetch::ForecastRequest::DataGoKr(request),
+            LATEST_RETRY,
+            Instant::now() + Duration::from_secs(5),
+        )
+        .await
+        .expect("the waiter has the acquisition");
+    assert!(
+        s.acquired
+            .lock()
+            .unwrap()
+            .get("test/short", Duration::MAX)
+            .is_none(),
+        "the bodies kept nothing"
+    );
+    let page = Arc::downgrade(&acquired.pages[0]);
+    drop(acquired);
+    assert!(page.upgrade().is_none(), "freed after the last waiter");
+}

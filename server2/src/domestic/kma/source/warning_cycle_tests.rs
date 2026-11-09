@@ -138,42 +138,52 @@ async fn memo_remaining_uses_real_attempt_expiry_not_a_fixed_timer_phase() {
     assert!(attempts.claim("warnings", Duration::from_millis(60)));
 }
 
-#[tokio::test]
+/// The owned flight expires at its own 20 ms deadline while the work it launched runs on: the
+/// lane keeps the inner abort handle, and aborting it leaves the lane idle. A paused clock makes
+/// the owner's expiry come before the waiter's slack (it once raced on CI), and the test waits
+/// for the inner work's start signal before it looks at the expiry.
+#[tokio::test(start_paused = true)]
 async fn actual_owned_flight_expiry_does_not_lose_the_inner_abort_handle() {
     use crate::resolver::{OwnedConfig, Waited};
     let flights = OwnedFlights::<String, ()>::new(OwnedConfig::default()).unwrap();
     let lane = Lane::default();
     let l = lane.clone();
     let attempts = Attempts::default();
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let result = flights
-        .wait(
-            "warnings/test".into(),
-            Duration::from_millis(20),
-            move |_| {
-                let lease = l.claim(&attempts, Duration::ZERO).unwrap();
-                async move {
-                    l.launch(lease, move || async {
-                        let _ = tx.send(());
-                        std::future::pending::<()>().await;
-                    })
-                    .await
-                }
-            },
-        )
-        .await;
-    rx.await.unwrap();
-    assert_eq!(result, Waited::Expired);
+    let (started, inner) = tokio::sync::oneshot::channel();
+    let waiter = {
+        let flights = flights.clone();
+        tokio::spawn(async move {
+            flights
+                .wait(
+                    "warnings/test".into(),
+                    Duration::from_millis(20),
+                    move |_| {
+                        let lease = l.claim(&attempts, Duration::ZERO).unwrap();
+                        async move {
+                            l.launch(lease, move || async {
+                                let _ = started.send(());
+                                std::future::pending::<()>().await;
+                            })
+                            .await
+                        }
+                    },
+                )
+                .await
+        })
+    };
+    inner.await.expect("the inner work started");
+    assert_eq!(waiter.await.unwrap(), Waited::Expired);
     assert_eq!(
         flights.running(),
         0,
         "generic pool idle is not collector termination"
     );
-    assert!(lane.0.borrow().running);
+    assert!(lane.0.borrow().running, "the inner work outlives its owner");
     lane.abort();
     tokio::time::timeout(Duration::from_secs(1), lane.idle())
         .await
-        .unwrap();
+        .expect("idle after the abort");
+    assert!(!lane.0.borrow().running);
 }
 #[tokio::test]
 async fn abort_before_inner_first_poll_drops_lease_without_constructing_provider() {

@@ -326,6 +326,8 @@ pub struct S3Source<T> {
     /// This process's acquisitions, kept under a byte budget for a request that cannot acquire
     /// the key again while the stored read does not hold it (KMA-RESTART-BOUND).
     acquired: Arc<std::sync::Mutex<records::Bodies>>,
+    /// The acquisitions handed to the waiters of their flights (KMA-RESTART-BOUND).
+    deliveries: Deliveries,
     observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback (shared with the image
     /// forecast production of the observed source).
@@ -492,6 +494,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
             .expect("static owned zone read bounds"),
             restores: Arc::default(),
+            deliveries: Deliveries::default(),
             acquired: Arc::new(std::sync::Mutex::new(records::Bodies::new(
                 ACQUIRED_BYTES,
                 ACQUIRED_ENTRIES,
@@ -595,15 +598,23 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             return fetched_of(&records);
         }
         let owned_for = request.owned_for();
+        // Registered before the flight can end, so a successful acquisition reaches this waiter
+        // even when the acquisition bodies evict it at once (review round 5).
+        let waiter = self.deliveries.wait(&key);
         let start = publication_flight(
             acquire,
             admission,
             request,
-            (self.acquired.clone(), key.clone()),
+            (self.acquired.clone(), self.deliveries.clone(), key.clone()),
         );
-        // The flight keeps what it acquired in the budgeted acquisition bodies and answers
-        // whether it did (KMA-RESTART-BOUND, review round 4): no body is held outside the budget.
+        // The flight keeps what it acquired in the budgeted acquisition bodies, hands it to the
+        // registered waiters and answers whether it did (KMA-RESTART-BOUND, review rounds 4 and
+        // 5): the flight's own result holds no body.
         let _ = self.owned.join(key.clone(), until, owned_for, start).await;
+        if let Some(fetched) = waiter.take() {
+            return Some(fetched);
+        }
+        drop(waiter);
         // KMA-RESTART-BOUND (review round 3): an acquisition this process made stays usable when
         // its key is not acquired again (the retry memo, a consumed Short slot) and the stored
         // read does not hold it yet (a restore still running).
@@ -1297,7 +1308,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             latest.partition()
         );
         let attempts = self.attempts.clone();
-        let (owned, kept) = (self.owned.clone(), self.acquired.clone());
+        let (owned, kept, deliveries) = (
+            self.owned.clone(),
+            self.acquired.clone(),
+            self.deliveries.clone(),
+        );
         let claim = key.clone();
         let _ = self
             .passes
@@ -1326,7 +1341,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                                                 memo: LATEST_RETRY,
                                             },
                                             request.clone(),
-                                            (kept.clone(), key.clone()),
+                                            (kept.clone(), deliveries.clone(), key.clone()),
                                         ),
                                     )
                                 })
@@ -2562,13 +2577,72 @@ impl PublicationAdmission {
         }
     }
 }
+/// KMA-RESTART-BOUND (review round 5): the acquisitions an owned flight hands to the requests
+/// waiting on it, independent of the acquisition bodies' eviction. A key's acquisition is held
+/// only while a waiter of the key is registered ([`Deliveries::wait`]) and is released when the
+/// last one leaves; the budgeted bodies stay the only long-lived holder.
+#[derive(Clone, Default)]
+struct Deliveries(Arc<std::sync::Mutex<Handed>>);
+/// Per key: its registered waiters and the acquisition handed to them.
+type Handed = HashMap<String, (usize, Option<Fetched>)>;
+impl Deliveries {
+    fn wait(&self, key: &str) -> Delivery {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .entry(key.to_owned())
+            .or_insert((0, None))
+            .0 += 1;
+        Delivery {
+            deliveries: self.clone(),
+            key: key.to_owned(),
+        }
+    }
+    /// Hand `fetched` to the registered waiters of `key` (none registered: nothing is held).
+    fn deliver(&self, key: &str, fetched: &Fetched) {
+        if let Some(entry) = self
+            .0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get_mut(key)
+        {
+            entry.1 = Some(fetched.clone());
+        }
+    }
+}
+/// One registered waiter of a key's acquisition.
+struct Delivery {
+    deliveries: Deliveries,
+    key: String,
+}
+impl Delivery {
+    fn take(&self) -> Option<Fetched> {
+        self.deliveries
+            .0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&self.key)
+            .and_then(|(_, fetched)| fetched.clone())
+    }
+}
+impl Drop for Delivery {
+    fn drop(&mut self) {
+        let mut map = self.deliveries.0.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(entry) = map.get_mut(&self.key) {
+            entry.0 -= 1;
+            if entry.0 == 0 {
+                map.remove(&self.key);
+            }
+        }
+    }
+}
 /// Claim admission under owned-flight creation. The provider/publication owner
 /// survives a caller that stops waiting, as before.
 fn publication_flight(
     acquire: Arc<dyn fetch::ForecastAcquire>,
     admission: PublicationAdmission,
     request: fetch::ForecastRequest,
-    (kept, key): (Arc<std::sync::Mutex<records::Bodies>>, String),
+    (kept, deliveries, key): (Arc<std::sync::Mutex<records::Bodies>>, Deliveries, String),
 ) -> impl FnOnce(Instant) -> BoxFuture<'static, bool> {
     move |_| {
         let fresh = admission.claim();
@@ -2585,6 +2659,7 @@ fn publication_flight(
             else {
                 return false;
             };
+            deliveries.deliver(&key, &fetched);
             kept.lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .put(key, vec![fetched], 0);
