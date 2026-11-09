@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
@@ -136,7 +137,9 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     val opened = remember(visit) { BooleanArray(1) }
     // The apply is the visit's own state, so it runs while composing, before the page reads it. A load starting applies
     // the place as it is (`applyEvent` "loadWeatherData"), so a theme chosen on S08 shows the saved photo at once (#2915 F2).
-    val applied = remember(visit, record, hasPush, applies) {
+    // A photo the feed gave the place alone is `loadWeatherPhotosEvent`: the photo, without an apply (#2915 F4).
+    val weather = remember(record) { record?.let { JsonObject(it - "photo") } }
+    val applied = remember(visit, weather, hasPush, applies) {
         if (!opened[0]) {
             opened[0] = true
             visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
@@ -145,6 +148,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
         }
         Any()
     }
+    remember(visit, record?.get("photo")) { visit.photoLoaded(record) }
     val units = state.units
     val page = remember(applied, units, texts) {
         ForecastPage(visit, PageUnits(units.temperatureUnit, units.windSpeedUnit, units.pressureUnit, units.distanceUnit,

@@ -170,6 +170,18 @@ class ForecastScope(
         scrolls++
     }
 
+    /**
+     * `loadWeatherPhotosEvent`: the feed gave the selected place a photo; in the photo theme the page takes it, without an
+     * apply (the charts stay where they are; #2915 F4). Nothing for a place without an address or a daily chart.
+     */
+    fun photoLoaded(city: JsonObject?) {
+        if (!photoTheme) return
+        if (city == null || city["address"] == JsonNull) return
+        val dayChart = city["dayChart"]
+        if (dayChart == null || dayChart == JsonNull) return
+        photo = city["photo"]
+    }
+
     /** `getTemp(temp)`: "" without a value, rounded in °F, otherwise the value as it came. */
     fun temp(value: JsonElement?): String = when {
         value == null || value == JsonNull -> ""

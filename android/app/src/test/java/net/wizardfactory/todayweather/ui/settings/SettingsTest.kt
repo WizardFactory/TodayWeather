@@ -104,16 +104,20 @@ class SettingsTest {
      * The app on Seoul (the current position off) opening on [startupPage], with the photo [feed]; the server answers in
      * the requested unit, or fails once [failing] is set.
      */
-    private fun show(startupPage: String = "0", feed: net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos? = null) {
+    private var feedNow: net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos? = null
+    private lateinit var session: WeatherSession
+
+    private fun show(startupPage: String = "0", feed: net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos? = null, theme: String = "light") {
+        feedNow = feed
         memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1,
-            units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage)))
+            units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage, theme = theme)))
         val repository = WeatherRepository("https://server.test.invalid", null,
             HttpGet { url, _ ->
                 requests += url
                 if (failing) throw net.wizardfactory.todayweather.core.data.HttpStatusException(500)
                 if ("temperatureUnit=F" in url) seoulF else seoulC
             }, io = Dispatchers.Unconfined)
-        val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { feed })
+        session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { feedNow })
         val settings = SettingsActions(memory, session) { pushes += memory.current().units }
         val handoffs = MenuHandoffs(openSystem = { opened += it }, sendFeedback = { feedback++ })
         rule.setContent {
@@ -269,6 +273,27 @@ class SettingsTest {
         rule.waitForIdle()
         back()
         assertEquals("the same data applied again brought it back", daily, chartScroll(), 0.5f)
+    }
+
+    /**
+     * #2915 F4: a feed that arrives after the weather gives the place its photo alone (`loadWeatherPhotosEvent`): the photo
+     * theme shows it, and the hourly chart stays where the user moved it (no apply, no scroll).
+     */
+    @Test
+    fun aPhotoFromTheFeedAloneKeepsTheChartWhereItWas() {
+        show(theme = "photo")
+        rule.onAllNodesWithTag(ForecastTags.PHOTO, useUnmergedTree = true).assertCountEquals(0)
+        val opening = chartScroll()
+        swipeChart()
+        val moved = chartScroll()
+        assertTrue("the hourly chart moved: $opening", moved != opening)
+        feedNow = net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos.parse(kotlinx.serialization.json.Json.parseToJsonElement(
+            """[{"tags": ["moon", "bigcloud"], "twUrls": {"regular": "http://127.0.0.1:9/moon.jpg"}}]"""))
+        kotlinx.coroutines.runBlocking { session.photosLoaded() }
+        rule.waitForIdle()
+        assertEquals("http://127.0.0.1:9/moon.jpg", memory.current().places[1].photo)
+        rule.waitUntil(10_000) { rule.onAllNodesWithTag(ForecastTags.PHOTO, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        assertEquals("the photo alone does not scroll the chart", moved, chartScroll(), 0.5f)
     }
 
     @Test
