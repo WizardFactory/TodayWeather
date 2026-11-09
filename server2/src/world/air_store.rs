@@ -253,10 +253,19 @@ impl<T: CatalogTransport + 'static> AirStore for CatalogAirStore<T> {
 /// a process (S13a-R1-F02): every object, control, list and budget request holds a permit, so
 /// the combined in-flight S3 requests never exceed `limit` (the loopback S3 test peer drops
 /// connections beyond 16).
+///
+/// Bulk work (KMA-RESTART-READS: the warning collector, zone replay, publications and the
+/// persisted warning feed) uses a [`BoundedS3::bulk`] view. It also takes a permit of one lane
+/// shared by every clone, a third of the admission, so it never holds the permits request reads
+/// need: after a restart the warning acquisition made 859 S3 requests in 9 s while the first
+/// request's reads waited.
 pub struct BoundedS3<T> {
     inner: Arc<T>,
     gate: Arc<Semaphore>,
     limit: usize,
+    lane: Arc<Semaphore>,
+    lane_limit: usize,
+    bulk: bool,
 }
 impl<T> Clone for BoundedS3<T> {
     fn clone(&self) -> Self {
@@ -264,28 +273,72 @@ impl<T> Clone for BoundedS3<T> {
             inner: self.inner.clone(),
             gate: self.gate.clone(),
             limit: self.limit,
+            lane: self.lane.clone(),
+            lane_limit: self.lane_limit,
+            bulk: self.bulk,
         }
     }
+}
+/// The permits of one admitted S3 request: the lane permit (bulk views only) and the shared one.
+pub(crate) struct Admission<'a> {
+    _lane: Option<tokio::sync::SemaphorePermit<'a>>,
+    _shared: tokio::sync::SemaphorePermit<'a>,
 }
 impl<T> BoundedS3<T> {
     pub fn new(inner: T, limit: usize) -> Self {
         let limit = limit.max(1);
+        let lane_limit = (limit / 3).max(1);
         Self {
             inner: Arc::new(inner),
             gate: Arc::new(Semaphore::new(limit)),
             limit,
+            lane: Arc::new(Semaphore::new(lane_limit)),
+            lane_limit,
+            bulk: false,
         }
     }
     pub fn limit(&self) -> usize {
         self.limit
     }
+    /// The same admission for bulk work: each request first takes a lane permit.
+    pub fn bulk(&self) -> Self {
+        Self {
+            bulk: true,
+            ..self.clone()
+        }
+    }
+    pub fn is_bulk(&self) -> bool {
+        self.bulk
+    }
+    /// Shared permits bulk work can hold at once.
+    pub fn lane_limit(&self) -> usize {
+        self.lane_limit
+    }
     /// Permits currently free (for tests and metrics).
     pub fn available(&self) -> usize {
         self.gate.available_permits()
     }
-    /// One admission permit, for request kinds implemented outside this file (S16 summaries).
-    pub(crate) async fn permit(&self) -> Result<tokio::sync::SemaphorePermit<'_>, Error> {
-        self.gate.acquire().await.map_err(|_| Error::Capacity)
+    /// Lane permits currently free (for tests and metrics).
+    pub fn lane_available(&self) -> usize {
+        self.lane.available_permits()
+    }
+    /// A bulk request waits for its lane permit before taking a shared one, so a waiting bulk
+    /// request holds no shared permit.
+    pub(crate) async fn admit(&self) -> Result<Admission<'_>, Error> {
+        let lane = if self.bulk {
+            Some(self.lane.acquire().await.map_err(|_| Error::Capacity)?)
+        } else {
+            None
+        };
+        let shared = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        Ok(Admission {
+            _lane: lane,
+            _shared: shared,
+        })
+    }
+    /// One admission, for request kinds implemented outside this file (S16 summaries).
+    pub(crate) async fn permit(&self) -> Result<Admission<'_>, Error> {
+        self.admit().await
     }
     /// The admitted transport.
     pub(crate) fn inner(&self) -> &T {
@@ -297,15 +350,15 @@ impl<T: crate::storage::ObjectTransport> crate::storage::ObjectTransport for Bou
         self.inner.raw_cache()
     }
     async fn put(&self, record: &crate::storage::PreparedRecord) -> Result<u16, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner.put(record).await
     }
     async fn head(&self, key: &str) -> Result<crate::storage::Object, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner.head(key).await
     }
     async fn get(&self, key: &str, maximum: usize) -> Result<crate::storage::Object, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner.get(key, maximum).await
     }
     /// Credentials only; no S3 request, so no admission permit.
@@ -319,7 +372,7 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
         key: &str,
         maximum: usize,
     ) -> Result<crate::storage::ControlObject, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner.get_control(key, maximum).await
     }
     async fn put_control(
@@ -328,7 +381,7 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
         body: &[u8],
         condition: &crate::storage::WriteCondition,
     ) -> Result<u16, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner.put_control(key, body, condition).await
     }
     async fn list_raw_document(
@@ -338,7 +391,7 @@ impl<T: CatalogTransport> CatalogTransport for BoundedS3<T> {
         maximum_keys: usize,
         maximum_bytes: usize,
     ) -> Result<Vec<u8>, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner
             .list_raw_document(prefix, token, maximum_keys, maximum_bytes)
             .await
@@ -351,7 +404,7 @@ impl<T: crate::history::IndexListing + Send + Sync> crate::history::IndexListing
         prefix: &str,
         token: Option<&str>,
     ) -> Result<crate::storage::ListPage, Error> {
-        let _permit = self.gate.acquire().await.map_err(|_| Error::Capacity)?;
+        let _permit = self.admit().await?;
         self.inner.list_index(prefix, token).await
     }
 }
@@ -361,8 +414,7 @@ impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for Bound
         key: &str,
     ) -> Result<crate::budget::BudgetObject, crate::budget::BudgetError> {
         let _permit = self
-            .gate
-            .acquire()
+            .admit()
             .await
             .map_err(|_| crate::budget::BudgetError::Transport)?;
         self.inner.get_budget(key).await
@@ -374,8 +426,7 @@ impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for Bound
         condition: &crate::storage::WriteCondition,
     ) -> Result<u16, crate::budget::BudgetError> {
         let _permit = self
-            .gate
-            .acquire()
+            .admit()
             .await
             .map_err(|_| crate::budget::BudgetError::Transport)?;
         self.inner.put_budget(key, body, condition).await
