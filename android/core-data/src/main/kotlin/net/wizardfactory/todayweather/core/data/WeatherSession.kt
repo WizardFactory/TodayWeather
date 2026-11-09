@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -60,10 +61,17 @@ class WeatherSession(
     }
 
     private val retryShown = MutableStateFlow(false)
+    private val applyEvents = MutableStateFlow(0)
     private var timer: Job? = null
 
     /** The retry confirmation is open (`LOC_ERROR`, `LOC_FAIL_TO_GET_WEATHER_INFO`, `LOC_CLOSE` and `LOC_OK`). */
     val retry: StateFlow<Boolean> = retryShown.asStateFlow()
+
+    /**
+     * TabCtrl's `applyEvent`s so far: one at each `loadWeatherData` (also when the gate stops the load) and one after
+     * each applied response. S05 returns to its first station on each.
+     */
+    val applies: StateFlow<Int> = applyEvents.asStateFlow()
 
     /** `reloadEvent`: ignored while the retry confirmation is open; a resume or a return from search waits for the gate. */
     fun reload(sender: Sender) {
@@ -125,10 +133,11 @@ class WeatherSession(
         loadWeatherData()
     }
 
-    /** `loadWeatherData`: restarts the timer, then loads the selected place unless the gate stops it. */
+    /** `loadWeatherData`: restarts the timer and fires `applyEvent`, then loads the selected place unless the gate stops it. */
     private fun loadWeatherData() {
         val s = state.current() ?: return
         restartTimer(s)
+        applyEvents.update { it + 1 }
         val place = s.places.getOrNull(s.placeIndex) ?: return
         if (!repository.canLoad(place)) return
         val units = s.units
@@ -153,8 +162,8 @@ class WeatherSession(
     }
 
     /**
-     * `updateCity`'s changes to the place that requested the weather, and its new photo, wherever it is in the list now.
-     * Without the feed the photo is none and the feed loads (`_getPhoto`).
+     * `updateCity`'s changes to the place that requested the weather, and its new photo, wherever it is in the list now,
+     * then `applyEvent`. Without the feed the photo is none and the feed loads (`_getPhoto`).
      */
     private suspend fun save(result: LoadResult.Loaded) {
         val feed = photos()
@@ -174,6 +183,7 @@ class WeatherSession(
                 )
             })
         }
+        applyEvents.update { it + 1 }
     }
 
     /** `findWeatherPhoto(currentWeather)`. */
