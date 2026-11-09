@@ -166,6 +166,13 @@ fn day_before(partition: &str) -> String {
         .map_or_else(|| partition.to_owned(), |p| format!("{:08}", p.date()))
 }
 
+/// One group of a forecast-zone day partition, as its catalog lists it.
+struct ZoneGroup {
+    id: crate::storage::CatalogId,
+    partition: String,
+    completion: u64,
+    members: Vec<crate::storage::Envelope>,
+}
 /// The forecast-zone memory of a source and how to refresh it, cloneable into owned work
 /// (KMA-RESTART-BOUND: a request with a head start does not cancel a zone read it stops waiting
 /// for).
@@ -266,6 +273,56 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
         });
         Ok(zones)
     }
+    /// The groups one day partition of the forecast-zone lists names: its catalog, the partition,
+    /// each group's completion instant and member envelopes.
+    async fn zone_groups(
+        &self,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<Vec<ZoneGroup>, crate::storage::Error> {
+        let id = records::catalog("data-go-kr", "forecast-zone", key, partition)?;
+        Ok(self
+            .reader
+            .listed_groups(&id, deadline)
+            .await?
+            .into_iter()
+            .map(|(completion, members)| ZoneGroup {
+                id: id.clone(),
+                partition: partition.to_owned(),
+                completion,
+                members,
+            })
+            .collect())
+    }
+    /// One group's acquisition, read and checked on its own (`lookup_members`): None when it is
+    /// incomplete or excluded.
+    async fn zone_group(
+        &self,
+        group: &ZoneGroup,
+        deadline: Instant,
+    ) -> Result<Option<Fetched>, crate::storage::Error> {
+        let Some(first) = group.members.first() else {
+            return Ok(None);
+        };
+        let Some(acquisition) = self
+            .reader
+            .members(&group.id, std::slice::from_ref(&first.identity), deadline)
+            .await?
+            .and_then(|acquisitions| acquisitions.into_iter().next())
+        else {
+            return Ok(None);
+        };
+        Ok(Some(Fetched {
+            fetched_at_ms: group.completion,
+            partition: group.partition.clone(),
+            pages: acquisition.iter().map(|r| r.bytes.clone()).collect(),
+            raw_ids: acquisition
+                .iter()
+                .map(|r| r.envelope.identity.object_key())
+                .collect::<Result<_, _>>()?,
+        }))
+    }
     /// The zones held, if any.
     fn held_now(&self) -> Option<Arc<Zones>> {
         self.held.lock().unwrap_or_else(|e| e.into_inner()).clone()
@@ -302,35 +359,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
             .into_iter()
             .filter(|p| from.is_none_or(|f| p.as_str() >= f))
             .collect();
-        // KMA-RESTART-BOUND (review round 7): each group in its own catalog read, so a day
+        // KMA-RESTART-BOUND (review rounds 7 and 8): each group in its own catalog read, so a day
         // partition holding many lists (one per process start) is not one read bound by the
-        // catalog's 3 s operation deadline, which a slow store made the owned refresh miss on
-        // every attempt. Every group is checked by S06 (descriptor, members, completeness): an
-        // incomplete or excluded group is left out as a whole read leaves it, and a defect fails.
+        // catalog's 3 s operation deadline. Every group is checked by S06 (descriptor, members,
+        // completeness): an incomplete or excluded group is left out as a whole read leaves it,
+        // and a defect fails. The listings and the groups are read [`records::LOOKUPS`] at a
+        // time, so many accumulated lists end within the owned refresh (every list is folded,
+        // as before).
+        let mut groups = Vec::new();
+        for chunk in parts.chunks(records::LOOKUPS) {
+            let listed = crate::history::join_all(
+                chunk
+                    .iter()
+                    .map(|partition| self.zone_groups(&key, partition, deadline))
+                    .collect(),
+            )
+            .await;
+            for partition in listed {
+                groups.extend(partition?);
+            }
+        }
         let mut fetched = Vec::new();
-        for partition in &parts {
-            let id = records::catalog("data-go-kr", "forecast-zone", &key, partition)?;
-            for (completion, members) in self.reader.listed_groups(&id, deadline).await? {
-                let Some(first) = members.first() else {
-                    continue;
-                };
-                let Some(acquisition) = self
-                    .reader
-                    .members(&id, std::slice::from_ref(&first.identity), deadline)
-                    .await?
-                    .and_then(|acquisitions| acquisitions.into_iter().next())
-                else {
-                    continue;
-                };
-                fetched.push(Fetched {
-                    fetched_at_ms: completion,
-                    partition: partition.clone(),
-                    pages: acquisition.iter().map(|r| r.bytes.clone()).collect(),
-                    raw_ids: acquisition
-                        .iter()
-                        .map(|r| r.envelope.identity.object_key())
-                        .collect::<Result<_, _>>()?,
-                });
+        for chunk in groups.chunks(records::LOOKUPS) {
+            let read = crate::history::join_all(
+                chunk
+                    .iter()
+                    .map(|group| self.zone_group(group, deadline))
+                    .collect(),
+            )
+            .await;
+            for group in read {
+                fetched.extend(group?);
             }
         }
         fetched.sort_by_key(identity);

@@ -2829,6 +2829,41 @@ async fn an_incomplete_zone_group_with_known_pages_does_not_override_a_valid_lis
     );
 }
 
+/// RB-zone-refill, round 8: the day's partition has accumulated twelve valid lists (one per process
+/// start; the newest moves Seoul to `11B10102`) and every list read takes 2.6 s. Read one after
+/// another the refresh needed over 31 s, past the owned refresh's 30 s, and never ended; the
+/// groups are read together, so it ends well within that and folds every list as before.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn many_accumulated_zone_lists_are_read_within_the_owned_refresh() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    for back in (2..=12).rev() {
+        store_zone_list(&peer, land_zone_page(), NOW - f64::from(back) * 10_000.).await;
+    }
+    store_moved_seoul_zones_at(&peer, NOW - 10_000.).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    counted.delay_gets(
+        "raw/v2/data-go-kr/forecast-zone/",
+        0,
+        Duration::from_millis(2600),
+    );
+    let process = Restarted::new(&peer, &counted);
+    let started = Instant::now();
+    let zones = process
+        .source
+        .refresh_zones(NOW, Instant::now() + Duration::from_secs(60))
+        .await
+        .unwrap();
+    let took = started.elapsed();
+    assert_eq!(
+        counted.get("GET raw/v2/data-go-kr/forecast-zone"),
+        12,
+        "every list"
+    );
+    assert!(took < Duration::from_secs(12), "{took:?}");
+    assert_eq!(seoul_land_zone(&zones), ["11B10102"], "the newest list");
+}
+
 /// RB-zone-group-eligibility: a group with an earlier list's pages and a corrupt descriptor is
 /// still a defect of the refresh (as the whole-partition read surfaced it), not a copy of the
 /// list.
