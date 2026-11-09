@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -17,6 +18,8 @@ import net.wizardfactory.todayweather.analytics.ConsentStore
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.PushState
+import net.wizardfactory.todayweather.core.storage.Settings
+import net.wizardfactory.todayweather.core.storage.UnitSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -28,9 +31,11 @@ import org.junit.runner.RunWith
 /**
  * Backup and restore against the recorded policy (#2895 AC2; README "Backup and device transfer"), run by
  * tools/backup/run-backup-test.sh with `backup`:
- * - `seed`: places, the selected one, an FCM token, an analytics opt-in, a weather cache file and a Firebase file;
+ * - `seed`: places, the selected one, units, settings, an alarm, an FCM token, an analytics opt-in, a weather cache
+ *   file and a Firebase file;
  * - `native`, after `bmgr backupnow`, a reinstall and `bmgr restore`: the state came back; the analytics choice, the
- *   weather cache and the Firebase file did not; the open app replaces the restored token with its own on the server;
+ *   weather cache and the Firebase file did not; the open app replaces the restored token with its own on the server
+ *   and posts the alarm list with it;
  * - `cordova`, after a Cordova 1.1.1 backup restored into this build: the Cordova data migrates (`seeded`), and the
  *   Cordova files outside the policy stayed behind.
  */
@@ -43,6 +48,11 @@ class BackupRestoreTest {
     private val places = listOf(Place.currentPositionPlaceholder(), Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.56, 126.98)),
         Place(false, false, "런던", "영국 런던", "GB", Location(51.51, -0.13)))
 
+    private val units = UnitSettings.defaults("KR").with("temperatureUnit", "F")
+    private val settings = Settings(startupPage = "1", refreshInterval = "30", theme = "photo")
+    private val alarm = Json.parseToJsonElement(
+        """{"cityIndex":1,"id":2,"time":"2026-11-07T22:40:00.000Z","dayOfWeek":[false,true,true,true,true,true,false],"enable":true,"category":"alarm"}""",
+    ).jsonObject
     private val cache get() = File(context.filesDir, "weather/seed.json")
     private fun firebase() = context.getSharedPreferences("com.google.android.gms.appid", Context.MODE_PRIVATE)
 
@@ -51,7 +61,9 @@ class BackupRestoreTest {
         assumeTrue("needs -e backup seed", step == "seed")
         runBlocking {
             app.migration.await()
-            app.appState.dataStore.updateData { it.copy(places = places, placeIndex = 2, push = PushState(fcmToken = "token-a")) }
+            app.appState.dataStore.updateData {
+                it.copy(places = places, placeIndex = 2, units = units, settings = settings, push = PushState(fcmToken = "token-a", records = listOf(alarm)))
+            }
         }
         assertTrue(app.analytics.setCollectionEnabled(true))
         cache.parentFile!!.mkdirs()
@@ -66,18 +78,25 @@ class BackupRestoreTest {
         val state = runBlocking { app.migration.await().let { app.appState.dataStore.updateData { s -> s } } }
         assertEquals(places, state.places)
         assertEquals(2, state.placeIndex)
+        assertEquals(units, state.units)
+        assertEquals(settings, state.settings)
+        assertEquals(listOf(alarm), state.push.records)
         assertEquals("token-a", state.push.fcmToken)
         assertNull("the analytics choice stays behind", context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE).getString(ConsentStore.KEY, null))
         assertFalse(app.analytics.choice.value)
         assertFalse("the weather cache stays behind", cache.exists())
         assertNull("Firebase's files stay behind", firebase().getString("seed", null))
-        // The open app registers its own token: the server replaces the restored one (AN-04).
+        // The open app registers its own token: the server replaces the restored one and gets the list (AN-04).
         app.sent.clear()
         val outcome = runBlocking { app.onOpened().await() }!!
-        assertEquals(listOf("PUT"), outcome.requests.map { it.method })
-        val body = outcome.requests.single().body as JsonObject
+        assertEquals(listOf("PUT", "POST"), outcome.requests.map { it.method })
+        val body = outcome.requests[0].body as JsonObject
         assertEquals(JsonPrimitive("token-b"), body["newToken"])
         assertEquals(JsonPrimitive("token-a"), body["oldToken"])
+        val posted = (outcome.requests[1].body as JsonArray).single().jsonObject
+        assertEquals(JsonPrimitive(2), posted["id"])
+        assertEquals(JsonPrimitive("token-b"), posted["fcmToken"])
+        assertEquals(JsonPrimitive("F"), posted["units"]!!.jsonObject["temperatureUnit"])
     }
 
     @Test
