@@ -186,6 +186,24 @@ impl KmaBackend {
         deadline: Instant,
     ) -> Result<Outcome, GatewayError> {
         let deadline = deadline.min(Instant::now() + self.request_budget());
+        self.outcome_until(request, deadline, deadline).await
+    }
+    /// [`Self::outcome`] for one city of the nation composition (KMA-NATION-DEADLINE): the inputs
+    /// keep the request budget, and the assembly may queue for the CPU admission until `finish`.
+    pub async fn outcome_finishing(
+        &self,
+        request: KmaRequest,
+        finish: Instant,
+    ) -> Result<Outcome, GatewayError> {
+        let inputs = finish.min(Instant::now() + self.request_budget());
+        self.outcome_until(request, inputs, finish).await
+    }
+    async fn outcome_until(
+        &self,
+        request: KmaRequest,
+        deadline: Instant,
+        finish: Instant,
+    ) -> Result<Outcome, GatewayError> {
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
         }
@@ -206,7 +224,7 @@ impl KmaBackend {
         let config = self.config;
         // S16: only a snapshot whose reads were complete records summaries.
         let inputs = self.summaries.as_ref().and_then(|_| store.summary_inputs());
-        let permit = tokio::time::timeout_at(deadline, self.cpu.clone().acquire_owned())
+        let permit = tokio::time::timeout_at(finish, self.cpu.clone().acquire_owned())
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
