@@ -2234,7 +2234,7 @@ below hold for failures too:
 
 | Dataset | When | Acquisitions |
 | --- | --- | --- |
-| AWS minute page (`nph-aws_txt_min`) | newest stored page older than 2 minutes | at most one per 2 minutes, whatever the outcome: ≤ 30/h, ≤ 720/day (keyless) |
+| AWS minute page (`nph-aws_txt_min`) | newest stored page older than 2 minutes; while a page of the last 20 minutes is held the request answers with it and does not wait (KMA-MINUTE-PAGE: the page took 2.1-2.6 s on EC2, at the observed 2.5 s bound) | at most one per 2 minutes, whatever the outcome: ≤ 30/h, ≤ 720/day (keyless) |
 | AWS hourly page (`…?YYYYMMDDHH00&0&MINDB_60M&0&m`) | the latest KST hour from minute 15 and the hour before; one owned backfill pass over the missing hours of the 8-day `getCityHourlyList` window, three at a time (legacy `getStnPastHourlyWeather`) | latest/previous: each ≤ 6/h until acquired; backfill: each hour at most once per 6 h (≤ 190 per 6 h in an outage, 190 once at a cold start) |
 | City page (`currentweather.jsp?tm=`) | the latest hour; the page serves only its latest hour | ≤ 6/h while missing |
 | ASOS hourly/daily range (data.go.kr, per station) | one recovery run per mapped station at most once per hour (legacy lease and hourly job): the station's incomplete D-7..D-1 keys in contiguous ranges, as legacy `Recovery.run`; at most two stations' ranges in flight | cold 2 per station; then ≤ 2/day per mapped station, plus ≤ 1 run/h per station while ranges stay incomplete (≤ 8 pages per range) |

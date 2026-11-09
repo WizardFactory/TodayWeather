@@ -1,0 +1,32 @@
+{
+  "task": "KMA-MINUTE-PAGE",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "KMA AWS minute page: a held page of the last 20 minutes answers while the next page is acquired beside the request. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-MINUTE-PAGE.json",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/tests/domestic/observe.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-minute-page.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-minute-page.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-minute-page.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The request-time minute page rule."
+    }
+  ]
+}
