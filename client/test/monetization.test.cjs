@@ -411,14 +411,13 @@ test('adapter defers queued native loads past the silent minimum interval and ca
 
 test('native banner load failure reports only a bounded numeric error code', () => {
     let factory;
-    const listeners = new Map(), tracked = [], logs = [];
+    const listeners = new Map(), output = {log: [], info: [], warn: []};
     const document = {
         addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
         removeEventListener(n, fn) { listeners.get(n)?.delete(fn); }
     };
     const cordova = {plugins: {emiAdmobPlugin: {initialize() {}, metaData() {}}}};
-    // iOS forwards console.log, not console.info, to the device console (#2871 real-device check).
-    const console = {log(x) { logs.push(x); }, info() {}, warn() {}};
+    const console = Object.fromEntries(Object.keys(output).map(m => [m, x => output[m].push(x)]));
     vm.runInNewContext(read('www/js/service.admobemi.js'), {
         angular: {module() { return {factory(n, fn) { factory = fn; }}; }}, document, window: {cordova}, cordova,
         ionic: {Platform: {isIOS: () => false}}, console, setTimeout() {}, clientConfig: {releaseAds: true}
@@ -434,10 +433,12 @@ test('native banner load failure reports only a bounded numeric error code', () 
     assert.deepEqual(errors.map(e => e.params.error_code), [3]);
     assert.equal(errors[0].params.ad_format, 'banner');
     assert.equal(mon.events.filter(e => e.name === 'ad_lifecycle' && e.params.action === 'failed').length, 6);
-    const logged = logs.join('\n');
+    // iOS forwards console.log, not console.info, to the device console (#2871 real-device check).
+    const logged = output.log.join('\n');
     assert.match(logged, /"error_code":3/);
-    assert.equal(logs.filter(l => /"error_code":"unavailable"/.test(l)).length, 5);
-    assert.doesNotMatch(JSON.stringify(mon.events) + logged, /ca-app-pub|No fill|com\.google|secret/);
+    assert.equal(output.log.filter(l => /"error_code":"unavailable"/.test(l)).length, 5);
+    // No console channel may carry the native message, IDs or invalid codes.
+    assert.doesNotMatch(JSON.stringify(mon.events) + JSON.stringify(output), /ca-app-pub|No fill|com\.google|secret/);
 });
 
 // emi-indo-cordova-plugin-admob 3.0.4 Android: initialize() calls back success immediately, then UMP updates
