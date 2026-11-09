@@ -84,6 +84,7 @@ import net.wizardfactory.todayweather.core.domain.forecast.WeatherRow
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.ui.chart.DailyChartView
 import net.wizardfactory.todayweather.ui.chart.HourlyChartView
+import net.wizardfactory.todayweather.ui.chart.rememberOpeningScroll
 import net.wizardfactory.todayweather.ui.chart.rememberChartImages
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.FixedLine
@@ -102,6 +103,8 @@ object ForecastTags {
     const val NEXT = "forecast-next"
     const val SUMMARY_AIR = "forecast-summary-air"
     const val ATTRIBUTION = "forecast-attribution"
+    /** The photo theme's photo box (`[photo-url]`), when it has a picture. */
+    const val PHOTO = "forecast-photo"
     const val POLLEN = "forecast-pollen"
     /** Block [i] of the page as the references number them: 1 the chart, then the cards and the attribution. */
     fun block(i: Int) = if (i == 0) HEADER else "forecast-block-$i"
@@ -114,6 +117,8 @@ class WeatherPageContent(
     val metrics: ChartMetrics,
     val hourly: HourlyChart?,
     val daily: DailyChart?,
+    /** The visit's complete applies ([ForecastScope.scrolls]): each brings the charts back to today's position. */
+    val scrolls: Int = 0,
 )
 
 /**
@@ -148,9 +153,13 @@ fun WeatherPage(
             Box(Modifier.testTag(ForecastTags.block(1))) {
                 Zoomed {
                     if (!daily && page.showChart && content.hourly != null) {
-                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart)
+                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart,
+                            scrollState = rememberOpeningScroll(content.hourly, content.hourly.openingOffset, content.scrolls))
                     }
-                    if (daily && content.daily != null) DailyChartView(content.daily, colors = colors.chart)
+                    if (daily && content.daily != null) {
+                        DailyChartView(content.daily, colors = colors.chart,
+                            scrollState = rememberOpeningScroll(content.daily, content.daily.openingOffset, content.scrolls))
+                    }
                 }
             }
             Spacer(Modifier.height(10.dp))
@@ -188,7 +197,7 @@ private fun HeaderBlock(
         .testTag(ForecastTags.HEADER)) {
         // Percentages of the block's width, as in CSS.
         val width = maxWidth
-        if (photo != null) PhotoBox(photo, gradient, Modifier.matchParentSize())
+        if (photo != null) PhotoBox(photo, gradient, Modifier.matchParentSize().testTag(ForecastTags.PHOTO))
         Row(
             Modifier.fillMaxWidth().heightIn(min = metrics.headerHeight.dp).padding(top = 44.dp, bottom = colors.headerBottom),
             verticalAlignment = Alignment.CenterVertically,
@@ -284,11 +293,15 @@ internal fun Zoomed(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDensity provides Density(density.density * density.fontScale, 1f), content = content)
 }
 
-/** `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. */
+/**
+ * `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. The photo
+ * covers the box from its top left (`background-size: cover` at the default `background-position: 0 0`), so a wider
+ * photo is cut at the right.
+ */
 @Composable
 private fun PhotoBox(photo: ImageBitmap, gradient: Boolean, modifier: Modifier) {
     Box(modifier.graphicsLayer(alpha = 0.8f)) {
-        Image(photo, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
+        Image(photo, null, Modifier.matchParentSize(), alignment = Alignment.TopStart, contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
         if (gradient) {
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
                 0f to Color(0x4D000000), 0.95f to Color(0x4D000000), 1f to Color(0xE6FFFFFF))))

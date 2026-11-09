@@ -27,8 +27,10 @@ enum class ForecastType { SHORT, MID }
 class ForecastScope(
     val type: ForecastType,
     val metrics: ChartMetrics,
-    private val fahrenheit: Boolean,
-    private val photoTheme: Boolean,
+    /** The temperature unit is °F (`Units.getUnit('temperatureUnit')`), as the next apply and `getTemp` read it. */
+    var fahrenheit: Boolean,
+    /** The photo theme (`settingsInfo.theme`), as the next apply reads it. */
+    var photoTheme: Boolean,
     private val yesterday: YesterdayText,
     expandShortChart: Boolean?,
 ) {
@@ -68,6 +70,9 @@ class ForecastScope(
      * chart directives redraw when their arrays change.
      */
     var chartPlace: JsonObject? = null; private set
+
+    /** Complete applies so far: each sets the charts' `scrollLeft` back to today's position (#2915 F3). */
+    var scrolls: Int = 0; private set
 
     /** `init`: false when no place is enabled (Cordova opens the start popup instead). */
     fun open(city: JsonObject?, enabledCount: Int, hasPush: Boolean): Boolean {
@@ -161,6 +166,20 @@ class ForecastScope(
             dayChart?.let { put("dayChart", it) }
             cw?.let { put("currentWeather", it) }
         })
+        // A complete apply scrolls both charts to today's position 300 ms later (`getTodayPosition`), the same data too.
+        scrolls++
+    }
+
+    /**
+     * `loadWeatherPhotosEvent`: the feed gave the selected place a photo; in the photo theme the page takes it, without an
+     * apply (the charts stay where they are; #2915 F4). Nothing for a place without an address or a daily chart.
+     */
+    fun photoLoaded(city: JsonObject?) {
+        if (!photoTheme) return
+        if (city == null || city["address"] == JsonNull) return
+        val dayChart = city["dayChart"]
+        if (dayChart == null || dayChart == JsonNull) return
+        photo = city["photo"]
     }
 
     /** `getTemp(temp)`: "" without a value, rounded in °F, otherwise the value as it came. */

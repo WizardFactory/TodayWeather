@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -123,12 +124,24 @@ object ShellTags {
     fun row(row: MenuRow) = "shell-menu-${row.name.lowercase()}"
 }
 
-/** The selected tab: the tab bar changes it, and so can a page (S03's air cells open the Air tab, S05's weather opens S03). */
-class ShellNavigation(initial: Tab) {
+/**
+ * The selected tab and the side menu: the tab bar changes the tab, and so can a page (S03's air cells open the Air tab,
+ * S05's weather opens S03); the menu button opens the menu, and the rows that leave it close it (`toggleLeft`).
+ */
+class ShellNavigation(initial: Tab, menuOpen: Boolean = false) {
     var selected: Tab by mutableStateOf(initial)
+    var menuOpen: Boolean by mutableStateOf(menuOpen)
 
     companion object {
-        val Saver: Saver<ShellNavigation, String> = Saver(save = { it.selected.name }, restore = { ShellNavigation(Tab.valueOf(it)) })
+        /** The tab and the menu; a state saved before the menu was kept (the tab's name alone) or with a tab no longer there restores what it can. */
+        val Saver: Saver<ShellNavigation, Any> = Saver(save = { listOf(it.selected.name, it.menuOpen) }, restore = { saved ->
+            val (tab, menu) = when (saved) {
+                is String -> saved to false
+                is List<*> -> saved.getOrNull(0) to (saved.getOrNull(1) == true)
+                else -> null to false
+            }
+            Tab.entries.firstOrNull { it.name == tab }?.let { ShellNavigation(it, menu) }
+        })
     }
 }
 
@@ -153,6 +166,8 @@ class TabContent(
  * bottom tab bar, the full-screen side menu, the exit confirmation and a slot for the bottom banner (AN-15).
  * Android back closes the menu, then a dialog, and on a main tab asks before leaving ([onExit]). [content] gives
  * the selected tab's page and bar; it is composed while its tab is selected, so a page starts afresh each time.
+ * [overlay] shows a page over the tab page and the tab bar (the settings pages, #2891): the tab stays as it was
+ * under it, as the Cordova tabs stayed cached under a page outside them.
  */
 @Composable
 fun TodayWeatherShell(
@@ -164,37 +179,43 @@ fun TodayWeatherShell(
     navigation: ShellNavigation = rememberShellNavigation(state.startupTab),
     /** A tab the user selected on the tab bar. */
     onSelect: (Tab) -> Unit = {},
+    overlay: @Composable BoxScope.() -> Unit = {},
     content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
     val selected = navigation.selected
-    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    val menuOpen = navigation.menuOpen
     var exitAsked by rememberSaveable { mutableStateOf(false) }
     var lastTap by remember { mutableLongStateOf(0L) }
     val colors = ShellColors.of(state.theme, selected)
 
-    BackHandler(enabled = menuOpen) { menuOpen = false }
+    BackHandler(enabled = menuOpen) { navigation.menuOpen = false }
     BackHandler(enabled = !menuOpen && !exitAsked) { exitAsked = true }
 
     Box(Modifier.fillMaxSize().background(colors.page)) {
         Column(Modifier.fillMaxSize()) {
             Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
             Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
-                val tab = content(selected)
-                Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
-                    tab.page(this, colors)
-                    HeaderBar(colors, tab.title, onMenu = { menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
-                        scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
-                }
-                TabBar(selected, colors) { tab ->
-                    val now = System.currentTimeMillis()
-                    if (tab == selected) {
-                        // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
-                        if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
-                    } else {
-                        navigation.selected = tab
-                        onSelect(tab)
+                Box(Modifier.fillMaxWidth().weight(1f)) {
+                    Column(Modifier.fillMaxSize()) {
+                        val tab = content(selected)
+                        Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
+                            tab.page(this, colors)
+                            HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
+                                scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
+                        }
+                        TabBar(selected, colors) { tab ->
+                            val now = System.currentTimeMillis()
+                            if (tab == selected) {
+                                // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
+                                if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
+                            } else {
+                                navigation.selected = tab
+                                onSelect(tab)
+                            }
+                            lastTap = now
+                        }
                     }
-                    lastTap = now
+                    overlay()
                 }
                 banner()
             }
@@ -206,7 +227,7 @@ fun TodayWeatherShell(
             exit = slideOutHorizontally(tween(200)) { -it },
         ) {
             SideMenu(state) { row ->
-                if (row == null) menuOpen = false else onMenuRow(row)
+                if (row == null) navigation.menuOpen = false else onMenuRow(row)
             }
         }
         if (exitAsked) {
@@ -332,11 +353,7 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
     val colors = ShellColors.menu(state.theme)
     Column(Modifier.fillMaxSize().background(colors.menuList).testTag(ShellTags.MENU)) {
         Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
-        // A plain `.bar.bar-header`: the title is centered over the whole bar with its 10 dp margins.
-        Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
-            BarTitle(stringResource(R.string.LOC_TODAYWEATHER), colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
-            BarButton(Glyphs.ARROW_BACK, colors, { onRow(null) }, Modifier.padding(start = 5.dp).testTag(ShellTags.MENU_BACK))
-        }
+        PlainHeader(stringResource(R.string.LOC_TODAYWEATHER), colors, { onRow(null) }, Modifier.windowInsetsPadding(WindowInsets.sides), ShellTags.MENU_BACK)
         val rows = MenuRow.entries.filter { !it.krOnly || state.region == "KR" }
         Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides).verticalScroll(rememberScrollState())) {
             // Chrome puts each box edge on the device pixel nearest its fractional position; so does this list.
@@ -365,8 +382,20 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
     }
 }
 
+/**
+ * A plain `.bar.bar-header` (the menu, the settings pages): 44 dp in the theme's color with a hairline at the bottom,
+ * the title centered over the whole bar with its 10 dp margins and the back arrow at the left ([onBack]).
+ */
+@Composable
+internal fun PlainHeader(title: String, colors: ShellColors, onBack: () -> Unit, modifier: Modifier = Modifier, backTag: String) {
+    Box(modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
+        BarTitle(title, colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
+        BarButton(Glyphs.ARROW_BACK, colors, onBack, Modifier.padding(start = 5.dp).testTag(backTag))
+    }
+}
+
 /** The side insets the shell keeps clear of: a navigation bar or a camera cutout at the side in landscape. */
-private val WindowInsets.Companion.sides: WindowInsets
+internal val WindowInsets.Companion.sides: WindowInsets
     @Composable get() = safeDrawing.only(WindowInsetsSides.Horizontal)
 
 /** `.item`: a border above, 16 dp padding around a 16 sp line of 22.85 dp, and the value or a chevron at the right. */
@@ -389,7 +418,7 @@ private fun MenuItem(row: MenuRow, state: ShellState, colors: ShellColors, borde
  * leaves no room for both, the value moves under the label, 16 dp from the row's edges, and the row grows.
  */
 @Composable
-private fun LabelAndValue(label: String, value: String?, style: TextStyle, modifier: Modifier) {
+internal fun LabelAndValue(label: String, value: String?, style: TextStyle, modifier: Modifier) {
     Layout(content = { LineText(label, style); if (value != null) LineText(value, style) }, modifier) { parts, constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val right = parts.getOrNull(1)?.measure(loose)
@@ -437,11 +466,14 @@ internal fun Icon(content: @Composable () -> Unit) {
 
 /**
  * A CSS line of a fixed [height] (`line-height` in px): its text, which follows the font scale, centered in it as
- * the half-leading centers a line's font box.
+ * the half-leading centers a line's font box. A text taller than the line (a fallback font's box, a larger font scale)
+ * keeps its height and overflows the line equally above and below, as glyphs overflow a CSS line box.
  */
 @Composable
 internal fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Box(modifier.height(height), contentAlignment = Alignment.Center) { content() }
+    Box(modifier.height(height), contentAlignment = Alignment.Center) {
+        Box(Modifier.wrapContentHeight(unbounded = true)) { content() }
+    }
 }
 
 /**

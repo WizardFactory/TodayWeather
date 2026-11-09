@@ -26,11 +26,18 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import net.wizardfactory.todayweather.core.data.SettingsActions
 import net.wizardfactory.todayweather.core.data.WeatherEntry
 import net.wizardfactory.todayweather.core.data.WeatherSession
+import net.wizardfactory.todayweather.core.domain.settings.About
+import net.wizardfactory.todayweather.core.domain.settings.Handoffs
+import net.wizardfactory.todayweather.core.domain.settings.SettingLists
 import net.wizardfactory.todayweather.core.domain.shell.StartupPage
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
@@ -41,6 +48,9 @@ import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
+import net.wizardfactory.todayweather.ui.settings.SettingsRoutes
+import net.wizardfactory.todayweather.ui.settings.SettingsScreen
+import net.wizardfactory.todayweather.ui.shell.IonicAlert
 import net.wizardfactory.todayweather.ui.shell.MenuRow
 import net.wizardfactory.todayweather.ui.shell.ShellState
 import net.wizardfactory.todayweather.ui.shell.TabContent
@@ -89,7 +99,13 @@ class MainActivity : ComponentActivity() {
                         locationEnabled = ::isLocationEnabled,
                     )
                 }
-                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish)
+                val handoffs = remember(context) {
+                    // The user agent may load the WebView the first time: the mail is built off the main thread.
+                    MenuHandoffs(openSystem = { url -> Handoff.openSystem(this, url) }, sendFeedback = {
+                        lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
+                    })
+                }
+                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings, handoffs = handoffs)
             }
         }
     }
@@ -120,8 +136,9 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * The app's screens over the saved [state]: the shell with the weather tabs (#2887), the Air tab (#2888) and the retry
- * confirmation. The Locations tab and the menu's pages come with their sub-issues (AN-10, AN-12, AN-13, AN-15).
+ * The app's screens over the saved [state]: the shell with the weather tabs (#2887), the Air tab (#2888), the settings
+ * pages over the tabs and the menu's hand-offs and About popup (#2891), and the retry confirmation. The Locations tab and
+ * the menu's other pages come with their sub-issues (AN-10, AN-13, AN-15).
  */
 @Composable
 fun AppContent(
@@ -133,13 +150,24 @@ fun AppContent(
     host: WeatherTabHost,
     version: String,
     onExit: () -> Unit,
+    settings: SettingsActions? = null,
+    handoffs: MenuHandoffs = MenuHandoffs(),
 ) {
     val theme = Theme.of(state.settings.theme)
     val navigation = rememberShellNavigation(StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
+    // The settings pages open over the tabs (SettingsRoutes), last on top; a saved route this version does not have is
+    // dropped. About is a popup over the menu (O10).
+    var saved by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val pages = saved.filter(SettingsRoutes::known)
+    fun open(route: String) { saved = saved.filter(SettingsRoutes::known) + route }
+    fun back() { saved = saved.filter(SettingsRoutes::known).dropLast(1) }
+    var about by rememberSaveable { mutableStateOf(false) }
     val applies by session.applies.collectAsState()
+    val texts = host.texts
+    val openUnits = { open(SettingsRoutes.UNITS) }
     TodayWeatherShell(
         ShellState(
             theme = theme,
@@ -147,55 +175,69 @@ fun AppContent(
             startupTab = StartupPage.tab(state.settings.startupPage),
             version = version,
             menuValues = mapOf(
-                MenuRow.STARTUP_PAGE to stringResource(startupPageLabel(state.settings.startupPage)),
-                MenuRow.REFRESH_INTERVAL to stringResource(refreshIntervalLabel(state.settings.refreshInterval)),
-                MenuRow.THEME to stringResource(themeLabel(state.settings.theme)),
+                MenuRow.STARTUP_PAGE to texts[SettingLists.startupPageLabel(state.settings.startupPage)],
+                MenuRow.REFRESH_INTERVAL to texts[SettingLists.refreshIntervalLabel(state.settings.refreshInterval)],
+                MenuRow.THEME to texts[SettingLists.themeLabel(state.settings.theme)],
                 // Off until the opt-in of AN-15 (AnalyticsGuard keeps collection off).
                 MenuRow.ANALYTICS to stringResource(R.string.LOC_ANALYTICS_DISABLED),
             ),
         ),
         // The selected Hourly, Daily or Air tab reloads the selected place (`reloadEvent` "tab").
         onRefresh = { session.reload(WeatherSession.Sender.TAB) },
-        onMenuRow = {}, // AN-12, AN-13 and AN-15 open the pages
+        // SettingCtrl's `clickMenu` and `settingRadio`: the rows that leave the menu close it first (`toggleLeft`).
+        onMenuRow = { row ->
+            when (row) {
+                MenuRow.UNITS -> {
+                    navigation.menuOpen = false
+                    openUnits()
+                }
+                MenuRow.STARTUP_PAGE, MenuRow.REFRESH_INTERVAL, MenuRow.THEME -> {
+                    val name = when (row) {
+                        MenuRow.STARTUP_PAGE -> "startupPage"
+                        MenuRow.REFRESH_INTERVAL -> "refreshInterval"
+                        else -> "theme"
+                    }
+                    navigation.menuOpen = false
+                    settings?.opened(name)
+                    open(SettingsRoutes.list(name))
+                }
+                MenuRow.NULLSCHOOL_WIND -> handoffs.openSystem(Handoffs.NULLSCHOOL)
+                MenuRow.SEND_FEEDBACK -> {
+                    navigation.menuOpen = false
+                    handoffs.sendFeedback()
+                }
+                MenuRow.RATE -> {
+                    navigation.menuOpen = false
+                    handoffs.openSystem(Handoffs.STORE)
+                }
+                MenuRow.ABOUT -> about = true
+                else -> {} // AN-13 and AN-15
+            }
+        },
         onExit = onExit,
         navigation = navigation,
         onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
+        overlay = {
+            pages.lastOrNull()?.let { route ->
+                SettingsScreen(route, state, theme, texts, onBack = ::back,
+                    onUnit = { name -> open(SettingsRoutes.list(name)) },
+                    onChoose = { name, value -> settings?.choose(name, value) })
+            }
+        },
     ) { tab ->
         when (tab) {
             Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, host, onAirInfo = { code ->
                 // `goAirInfoPage(code)`: /tab/air?code=.
                 airCode = code
                 navigation.selected = Tab.AIR
-            })
-            Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY })
+            }, onUnits = openUnits, applies = applies)
+            Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
+                onUnits = openUnits)
             else -> TabContent() // AN-10
         }
     }
+    if (about) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = { about = false }) }
     if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
-}
-
-/** Labels of the menu values (controller.settingctrl.js L207-L282). */
-internal fun startupPageLabel(value: String) = when (value) {
-    "1" -> R.string.LOC_DAILY_FORECAST
-    "2" -> R.string.LOC_SAVED_LOCATIONS
-    "3" -> R.string.LOC_AIR_INFORMATION
-    else -> R.string.LOC_HOURLY_FORECAST
-}
-
-internal fun refreshIntervalLabel(value: String) = when (value) {
-    "30" -> R.string.LOC_30_MINUTES
-    "60" -> R.string.LOC_1_HOUR
-    "180" -> R.string.LOC_3_HOURS
-    "360" -> R.string.LOC_6_HOURS
-    "720" -> R.string.LOC_12_HOURS
-    else -> R.string.LOC_MANUAL
-}
-
-internal fun themeLabel(value: String) = when (value) {
-    "photo" -> R.string.LOC_WEATHER_PHOTO_THEME
-    "dark" -> R.string.LOC_DARK_THEME
-    "old" -> R.string.LOC_OLD_THEME
-    else -> R.string.LOC_LIGHT_THEME
 }
 
 /**
@@ -216,6 +258,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     val photoLoader = PhotoLoader(app)
 
     val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos)
+
+    /** The settings pages' changes; a unit change posts the push list again in the app's scope (`Push.updateUnits`). */
+    val settings = SettingsActions(twApp.appState, session) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateUnits() } }
 
     init {
         twApp.onOpened()

@@ -52,6 +52,21 @@
    "sha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18"
   },
   {
+   "path": "client/www/js/controller.setting.radio.js",
+   "commit": "7d5659396ed413144cb1ae63980a0b956ccba267",
+   "sha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f"
+  },
+  {
+   "path": "client/www/js/controller.settingctrl.js",
+   "commit": "a262c570efab4da418c557a95d036d1177cc5c49",
+   "sha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29"
+  },
+  {
+   "path": "client/www/js/service.util.js",
+   "commit": "2154640a3acedf3f77759e5389fe102569c4c30d",
+   "sha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c"
+  },
+  {
    "path": "client/www/locales/ko.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"

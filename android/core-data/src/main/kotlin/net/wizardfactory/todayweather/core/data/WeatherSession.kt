@@ -90,6 +90,15 @@ class WeatherSession(
         loadWeatherData()
     }
 
+    /**
+     * A choice on S08 (`RadioCtrl.valueChanged` then `_resetUpdateTimeCities`, #2891): every place may load again
+     * (`reloadCity`), then the selected one loads unless the retry confirmation is open (`reloadEvent` "resume").
+     */
+    fun settingChanged() {
+        repository.invalidateAll()
+        reload(Sender.RESUME)
+    }
+
     /** `onSwipeLeft` (the header swiped left, or its right arrow): the next place, then a gated load. */
     fun next() = move(PlaceIndex::next)
 
