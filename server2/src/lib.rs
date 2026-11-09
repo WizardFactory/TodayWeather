@@ -10,6 +10,15 @@ pub mod resolver;
 pub mod runtime_services;
 pub mod startup;
 pub mod storage;
+
+/// KMA-RESTART-BOUND: mimalloc serves every allocation of the server2 binaries, examples and tests
+/// (declared here, in the library they all link). The release binary is static musl, whose
+/// malloc (mallocng) takes one process-wide lock for every allocation and free: on EC2 after a
+/// restart both vCPUs were saturated for 4-5 s with 47-70% of the samples in musl's `__unlock`,
+/// and the request assembly took about 1 s instead of 42-81 ms. mimalloc keeps per-thread heaps.
+#[global_allocator]
+static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use axum::{
     Router,
     body::Body,
@@ -313,4 +322,20 @@ pub fn public_router_with_routes(state: Arc<SharedState>, routes: Router) -> Rou
         .with_state(state)
         .merge(routes)
         .layer(middleware::from_fn(observability::http))
+}
+
+#[cfg(test)]
+mod allocator_tests {
+    /// KMA-RESTART-BOUND: heap allocations, small and large, on this thread and on others, come
+    /// from mimalloc's heap (musl's or the system's malloc would not be in its region).
+    #[test]
+    fn heap_allocations_come_from_mimalloc() {
+        let in_mimalloc = |p: *const u8| unsafe { libmimalloc_sys::mi_is_in_heap_region(p.cast()) };
+        let small = Box::new(7u64);
+        let large = vec![1u8; 8 << 20];
+        assert!(in_mimalloc((&*small as *const u64).cast()));
+        assert!(in_mimalloc(large.as_ptr()));
+        let other = std::thread::spawn(|| vec![2u8; 4096]).join().unwrap();
+        assert!(in_mimalloc(other.as_ptr()));
+    }
 }
