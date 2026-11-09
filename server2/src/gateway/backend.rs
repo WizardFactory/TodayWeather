@@ -377,7 +377,7 @@ impl BackendDispatcher {
         family: Family,
         path: String,
         lang: String,
-        deadline: Instant,
+        (accepted, deadline): (Instant, Instant),
         owner: Arc<OwnedSemaphorePermit>,
     ) -> Result<OrderedJson, GatewayError> {
         let native = {
@@ -388,7 +388,9 @@ impl BackendDispatcher {
                 .and_then(|s| s.native.clone())
         };
         if let Some(native) = native {
-            let attempt_deadline = deadline.min(Instant::now() + native.request_budget());
+            // KMA-RESTART-BOUND: the budget counts from the accept of the request, so geocoding
+            // before the dispatch does not move the observed KMA waits later.
+            let attempt_deadline = deadline.min(accepted + native.request_budget());
             match tokio::time::timeout_at(
                 attempt_deadline,
                 native.fetch_or_forward(path.clone(), lang.clone(), attempt_deadline),

@@ -185,6 +185,10 @@ impl KmaBackend {
     /// S17b: assemble a parsed request (a gateway backend or a direct public route) from the
     /// source's snapshot. Async source preparation remaps KR before reads; a source compatibility
     /// marker is a counted dependency failure and cannot cause a legacy hop.
+    ///
+    /// Through the gateway `deadline` is the request's accept instant plus [`Self::request_budget`]
+    /// (KMA-RESTART-BOUND), so the instants the source derives from it (its head start and waits)
+    /// count from the accept, the geocode included; the `min` below only bounds direct callers.
     pub async fn outcome(
         &self,
         request: KmaRequest,

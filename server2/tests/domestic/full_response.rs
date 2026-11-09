@@ -2376,3 +2376,142 @@ async fn a_fast_restart_asks_no_provider() {
     assert_eq!(doubles.office.fetched.load(SeqCst), 0, "no narrative");
     assert_eq!(body, produced, "the producing process's answer");
 }
+
+/// The fixed Seoul geocode of [`FixedGeo`], answered after 300 ms.
+struct SlowGeo;
+impl Geocoder for SlowGeo {
+    fn coord(&self, loc: [f64; 2], lang: String) -> BoxFuture<'_, Result<GeoClient, GatewayError>> {
+        Box::pin(async move {
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            FixedGeo.coord(loc, lang).await
+        })
+    }
+    fn addr(&self, _: String, lang: String) -> BoxFuture<'_, Result<GeoClient, GatewayError>> {
+        self.coord([0., 0.], lang)
+    }
+}
+/// Station page and ASOS providers that never answer.
+struct Silent;
+impl Acquire for Silent {
+    fn web(
+        &self,
+        _: WebRequest,
+        _: Instant,
+    ) -> BoxFuture<'_, Result<server2::domestic::Acquired, DomesticError>> {
+        Box::pin(std::future::pending())
+    }
+    fn asos(
+        &self,
+        _: AsosRequest,
+        _: Instant,
+    ) -> BoxFuture<'_, Result<server2::domestic::Acquired, DomesticError>> {
+        Box::pin(std::future::pending())
+    }
+}
+
+/// ACCEPT-CLOCK (KMA-RESTART-BOUND): the observed request's waits count from the HTTP accept of
+/// the request, not from the KMA dispatch after geocoding. With a geocoder that takes 300 ms and
+/// station providers that never answer (an empty in-memory store, a paused clock), the wait for
+/// the station pages still ends 2.5 s after the accept, and the answer is sent then.
+#[tokio::test(start_paused = true)]
+async fn the_observed_wait_counts_from_the_accept_of_the_request() {
+    let mem = super::life_s3::MemS3::default();
+    let warning = Arc::new(
+        WarningStore::new(
+            mem.clone(),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let source = S3Source::new_observed_with_warning_store(
+        mem,
+        Arc::new(|| NOW),
+        Arc::new(Silent),
+        Arc::new(Unreachable),
+        warning,
+    )
+    .unwrap();
+    let backends = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+    let backend = Arc::new(KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    ));
+    backend.register(&backends);
+    KmaBackend::select(&backends, BackendMode::Native).unwrap();
+    let gateway = Gateway::new(Arc::new(SlowGeo), backends)
+        .with_weather_geocoder(Arc::new(SlowGeo), vec![Version::V000903]);
+    let accepted = Instant::now();
+    let response = gateway.handle(http_request()).await;
+    let took = accepted.elapsed();
+    assert_eq!(response.status(), 200);
+    assert_eq!(
+        took,
+        Duration::from_millis(2500),
+        "answered at the bound from the accept"
+    );
+}
+
+/// ACCEPT-CLOCK on every weather path that reaches the observed source: v000903, v000901 and the
+/// unversioned path (v000901 by default, most product traffic). Each answers 2.5 s after the
+/// accept with a 300 ms geocoder. With a gateway deadline shorter than the native budget the
+/// answer still comes by that deadline, counted from the accept.
+#[tokio::test(start_paused = true)]
+async fn the_observed_wait_counts_from_the_accept_on_every_weather_path() {
+    let gateway = |deadline: Option<Duration>| {
+        let mem = super::life_s3::MemS3::default();
+        let warning = Arc::new(
+            WarningStore::new(
+                mem.clone(),
+                CatalogLimits::default(),
+                StoreConfig::default(),
+            )
+            .unwrap(),
+        );
+        let source = S3Source::new_observed_with_warning_store(
+            mem,
+            Arc::new(|| NOW),
+            Arc::new(Silent),
+            Arc::new(Unreachable),
+            warning,
+        )
+        .unwrap();
+        let backends = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+        server2::domestic::kma::backend::select_native_versions(
+            &backends,
+            Arc::new(source),
+            &[Version::V000901, Version::V000903],
+        )
+        .unwrap();
+        let gateway = match deadline {
+            Some(d) => Gateway::with_limits(Arc::new(SlowGeo), backends, 10, d).unwrap(),
+            None => Gateway::new(Arc::new(SlowGeo), backends),
+        };
+        gateway.with_weather_geocoder(Arc::new(SlowGeo), vec![Version::V000901, Version::V000903])
+    };
+    for uri in [
+        "/weather/v000903/coord/37.58,126.97",
+        "/weather/v000901/coord/37.58,126.97",
+        "/weather/coord/37.58,126.97",
+    ] {
+        let gateway = gateway(None);
+        let request = Request::builder().uri(uri).body(Body::empty()).unwrap();
+        let accepted = Instant::now();
+        let response = gateway.handle(request).await;
+        assert_eq!(response.status(), 200, "{uri}");
+        assert_eq!(accepted.elapsed(), Duration::from_millis(2500), "{uri}");
+    }
+    let gateway = gateway(Some(Duration::from_secs(2)));
+    let request = Request::builder()
+        .uri("/weather/v000903/coord/37.58,126.97")
+        .body(Body::empty())
+        .unwrap();
+    let accepted = Instant::now();
+    let _ = gateway.handle(request).await;
+    assert!(
+        accepted.elapsed() <= Duration::from_secs(2),
+        "{:?}",
+        accepted.elapsed()
+    );
+}
