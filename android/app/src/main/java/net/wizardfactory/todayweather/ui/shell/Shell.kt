@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -119,6 +120,7 @@ object ShellTags {
     const val MENU = "shell-menu"
     const val MENU_BACK = "shell-menu-back"
     const val EXIT_DIALOG = "shell-exit-dialog"
+    const val BANNER = "shell-banner"
     fun tab(tab: Tab) = "shell-tab-${tab.state}"
     fun page(tab: Tab) = "shell-page-${tab.state}"
     fun row(row: MenuRow) = "shell-menu-${row.name.lowercase()}"
@@ -163,11 +165,13 @@ class TabContent(
 
 /**
  * The frame every screen shares (gate of AN-07, #2886): the page of the selected tab under its header bar, the
- * bottom tab bar, the full-screen side menu, the exit confirmation and a slot for the bottom banner (AN-15).
+ * bottom tab bar, the full-screen side menu, the exit confirmation and the bottom banner (AN-15).
  * Android back closes the menu, then a dialog, and on a main tab asks before leaving ([onExit]). [content] gives
  * the selected tab's page and bar; it is composed while its tab is selected, so a page starts afresh each time.
  * [overlay] shows a page over the tab page and the tab bar (the settings pages, #2891): the tab stays as it was
- * under it, as the Cordova tabs stayed cached under a page outside them.
+ * under it, as the Cordova tabs stayed cached under a page outside them. [popups] shows the app's own popups.
+ * Everything but the [banner] is drawn in the area the Cordova WebView had: the AdMob plugin put the banner under it,
+ * above the navigation bar, so the menu, the pages and the popups end at the banner's top edge while it shows.
  */
 @Composable
 fun TodayWeatherShell(
@@ -175,11 +179,13 @@ fun TodayWeatherShell(
     onRefresh: (Tab) -> Unit,
     onMenuRow: (MenuRow) -> Unit,
     onExit: () -> Unit,
-    banner: @Composable () -> Unit = {},
+    /** The banner while it shows (the plugin's `showBannerAd`); null: none, and the app has the whole window. */
+    banner: (@Composable () -> Unit)? = null,
     navigation: ShellNavigation = rememberShellNavigation(state.startupTab),
     /** A tab the user selected on the tab bar. */
     onSelect: (Tab) -> Unit = {},
     overlay: @Composable BoxScope.() -> Unit = {},
+    popups: @Composable BoxScope.() -> Unit = {},
     content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
     val selected = navigation.selected
@@ -193,41 +199,41 @@ fun TodayWeatherShell(
 
     Box(Modifier.fillMaxSize().background(colors.page)) {
         Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
-            Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
-                Box(Modifier.fillMaxWidth().weight(1f)) {
-                    Column(Modifier.fillMaxSize()) {
-                        val tab = content(selected)
-                        Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
-                            tab.page(this, colors)
-                            HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
-                                scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
-                        }
-                        TabBar(selected, colors) { tab ->
-                            val now = System.currentTimeMillis()
-                            if (tab == selected) {
-                                // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
-                                if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
-                            } else {
-                                navigation.selected = tab
-                                onSelect(tab)
+            // The WebView's area. With a banner under it, the navigation bar is below the banner, not in this area.
+            val web = if (banner != null) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)) else Modifier
+            Box(Modifier.fillMaxWidth().weight(1f).then(web)) {
+                Column(Modifier.fillMaxSize()) {
+                    Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
+                    Box(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
+                        Column(Modifier.fillMaxSize()) {
+                            val tab = content(selected)
+                            Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
+                                tab.page(this, colors)
+                                HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
+                                    scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
                             }
-                            lastTap = now
+                            TabBar(selected, colors) { tab ->
+                                val now = System.currentTimeMillis()
+                                if (tab == selected) {
+                                    // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
+                                    if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
+                                } else {
+                                    navigation.selected = tab
+                                    onSelect(tab)
+                                }
+                                lastTap = now
+                            }
                         }
+                        overlay()
                     }
-                    overlay()
+                    Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
                 }
-                banner()
+                MenuPanel(state, navigation, onMenuRow)
+                popups()
             }
-            Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
-        }
-        AnimatedVisibility(
-            visible = menuOpen,
-            enter = slideInHorizontally(tween(200)) { -it },
-            exit = slideOutHorizontally(tween(200)) { -it },
-        ) {
-            SideMenu(state) { row ->
-                if (row == null) navigation.menuOpen = false else onMenuRow(row)
+            if (banner != null) {
+                Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).testTag(ShellTags.BANNER)) { banner() }
+                Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
             }
         }
         if (exitAsked) {
@@ -339,6 +345,20 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
                 // A label too long for its item (large text, a narrow window) wraps onto a second line.
                 LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText).copy(textAlign = TextAlign.Center, hyphens = Hyphens.Auto, lineBreak = LineBreak.Heading), maxLines = 2)
             }
+        }
+    }
+}
+
+/** The side menu sliding in over the page (200 ms). */
+@Composable
+private fun MenuPanel(state: ShellState, navigation: ShellNavigation, onMenuRow: (MenuRow) -> Unit) {
+    AnimatedVisibility(
+        visible = navigation.menuOpen,
+        enter = slideInHorizontally(tween(200)) { -it },
+        exit = slideOutHorizontally(tween(200)) { -it },
+    ) {
+        SideMenu(state) { row ->
+            if (row == null) navigation.menuOpen = false else onMenuRow(row)
         }
     }
 }

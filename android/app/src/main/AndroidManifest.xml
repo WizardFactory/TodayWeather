@@ -18,6 +18,17 @@
         <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <!-- Screen views are the app's own (Analytics.screen), as Ionic's routes were (config.xml). -->
+        <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
+        <!-- Crash reports are collected regardless of the analytics choice, as in the Cordova build. -->
+        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="true" />
+
+        <!-- AdMob (AN-15): Google's sample app ID in debug builds, TW_ADMOB_APP_ID_ANDROID in release builds, and the
+             flags the Cordova build's AdMob plugin set. -->
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${admobAppId}" />
+        <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT" android:value="true" />
+        <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION" android:value="true" />
+        <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING" android:value="true" />
 
         <!-- initOrder above FirebaseInitProvider's 100: revokes analytics before Firebase starts. -->
         <provider

@@ -7,6 +7,7 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -34,12 +35,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.wizardfactory.todayweather.ads.AdMobBanner
+import net.wizardfactory.todayweather.ads.AdsConsent
+import net.wizardfactory.todayweather.ads.BannerSlot
+import net.wizardfactory.todayweather.ads.TwAds
+import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.data.SettingsActions
+import net.wizardfactory.todayweather.core.data.Telemetry
 import net.wizardfactory.todayweather.core.data.WeatherEntry
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.domain.settings.About
 import net.wizardfactory.todayweather.core.domain.settings.Handoffs
 import net.wizardfactory.todayweather.core.domain.settings.SettingLists
+import net.wizardfactory.todayweather.core.domain.shell.AppLanguage
 import net.wizardfactory.todayweather.core.domain.shell.StartupPage
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
@@ -56,7 +64,9 @@ import net.wizardfactory.todayweather.ui.nation.NationScreen
 import net.wizardfactory.todayweather.ui.settings.SettingsRoutes
 import net.wizardfactory.todayweather.ui.settings.SettingsScreen
 import net.wizardfactory.todayweather.ui.shell.IonicAlert
+import net.wizardfactory.todayweather.ui.shell.IonicPopup
 import net.wizardfactory.todayweather.ui.shell.MenuRow
+import net.wizardfactory.todayweather.ui.shell.PopupButton
 import net.wizardfactory.todayweather.ui.shell.ShellState
 import net.wizardfactory.todayweather.ui.shell.TabContent
 import net.wizardfactory.todayweather.ui.shell.TodayWeatherShell
@@ -70,6 +80,7 @@ import net.wizardfactory.todayweather.ui.shell.rememberShellNavigation
 class MainActivity : ComponentActivity() {
     private val app get() = application as TodayWeatherApp
     private lateinit var opened: OpenedModel
+    private lateinit var banner: AdMobBanner
     private var resumedBefore = false
 
     override fun attachBaseContext(newBase: Context) {
@@ -85,6 +96,13 @@ class MainActivity : ComponentActivity() {
         opened = ViewModelProvider(this)[OpenedModel::class.java]
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
+        // The banner belongs to this activity: a configuration change loads a new one at the new width (V21).
+        banner = AdMobBanner(this, BuildConfig.BANNER_AD_UNIT, app.analytics::track)
+        opened.ads.attach(banner)
+        opened.consent.start(this)
+        val privacy = PrivacyActions(app.analytics.choice, app.analytics::setCollectionEnabled) { onUnavailable ->
+            opened.consent.openPrivacyOptions(this, onUnavailable)
+        }
         setContent {
             val state by app.appState.state.collectAsState()
             state?.let { s ->
@@ -110,7 +128,10 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
                     })
                 }
-                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings, handoffs = handoffs, nation = opened.nation)
+                val shown by opened.ads.shown.collectAsState()
+                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
+                    handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (shown) ({ BannerSlot(banner) }) else null,
+                    onScreen = app.analytics::screen)
             }
         }
     }
@@ -120,6 +141,18 @@ class MainActivity : ComponentActivity() {
         // Cordova's `resume`: each return to the foreground reloads the selected place if the gate allows.
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
         resumedBefore = true
+        banner.resume()
+    }
+
+    override fun onPause() {
+        banner.pause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        opened.ads.detach(banner)
+        banner.destroy()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -145,8 +178,9 @@ class MainActivity : ComponentActivity() {
  * - the shell with the weather tabs (#2887) and the Air tab (#2888);
  * - over the tabs, the settings pages, the menu's hand-offs and About popup (#2891), and the nationwide and warning
  *   pages (#2892);
+ * - the menu's privacy rows, the banner under the tab bar and the routes reported to analytics (#2894);
  * - the retry confirmation.
- * The Locations tab and the menu's other rows come with their sub-issues (AN-10, AN-15).
+ * The Locations tab comes with AN-10.
  */
 @Composable
 fun AppContent(
@@ -161,6 +195,11 @@ fun AppContent(
     settings: SettingsActions? = null,
     handoffs: MenuHandoffs = MenuHandoffs(),
     nation: NationLoads? = null,
+    privacy: PrivacyActions? = null,
+    /** The banner while it shows (AN-15). */
+    banner: (@Composable () -> Unit)? = null,
+    /** The route shown, as the Cordova state names it (`$stateChangeSuccess`, `screen_view`). */
+    onScreen: (String) -> Unit = {},
 ) {
     val theme = Theme.of(state.settings.theme)
     val navigation = rememberShellNavigation(StartupPage.tab(state.settings.startupPage))
@@ -185,7 +224,13 @@ fun AppContent(
     }
     val nationPages by (nation?.pages ?: remember { MutableStateFlow(emptyMap()) }).collectAsState()
     var about by rememberSaveable { mutableStateOf(false) }
+    // 선택적 이용 통계's popup and the privacy alerts (`showAlert('TodayWeather', …)`), by their message.
+    var analyticsPopup by rememberSaveable { mutableStateOf(false) }
+    var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
+    val analyticsChoice by (privacy?.choice ?: remember { MutableStateFlow(false) }).collectAsState()
     val applies by session.applies.collectAsState()
+    val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
+    LaunchedEffect(screen) { onScreen(screen) }
     val texts = host.texts
     val openUnits = { open(SettingsRoutes.UNITS) }
     TodayWeatherShell(
@@ -198,8 +243,7 @@ fun AppContent(
                 MenuRow.STARTUP_PAGE to texts[SettingLists.startupPageLabel(state.settings.startupPage)],
                 MenuRow.REFRESH_INTERVAL to texts[SettingLists.refreshIntervalLabel(state.settings.refreshInterval)],
                 MenuRow.THEME to texts[SettingLists.themeLabel(state.settings.theme)],
-                // Off until the opt-in of AN-15 (AnalyticsGuard keeps collection off).
-                MenuRow.ANALYTICS to stringResource(R.string.LOC_ANALYTICS_DISABLED),
+                MenuRow.ANALYTICS to stringResource(if (analyticsChoice) R.string.LOC_ANALYTICS_ALLOWED else R.string.LOC_ANALYTICS_DISABLED),
             ),
         ),
         // The selected Hourly, Daily or Air tab reloads the selected place (`reloadEvent` "tab").
@@ -234,9 +278,15 @@ fun AppContent(
                 MenuRow.SPECIAL_WEATHER -> openNation(NationRoutes.WARNINGS)
                 MenuRow.NATIONAL_WEATHER -> openNation(NationRoutes.NATION)
                 MenuRow.NATIONAL_AIR -> openNation(NationRoutes.NATION_AIR)
-                else -> {} // AN-15
+                // The privacy rows leave the menu open.
+                MenuRow.ANALYTICS -> analyticsPopup = true
+                MenuRow.AD_PRIVACY -> privacy?.openAdPrivacy?.invoke { privacyAlert = R.string.LOC_AD_PRIVACY_UNAVAILABLE }
+                MenuRow.PRIVACY_POLICY, MenuRow.TERMS ->
+                    handoffs.openSystem(Handoffs.policyPage(if (row == MenuRow.TERMS) "terms" else "privacy", AppLanguage.catalog(AppLocale.systemTags().firstOrNull())))
+                MenuRow.VERSION -> {}
             }
         },
+        banner = banner,
         onExit = onExit,
         navigation = navigation,
         onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
@@ -253,6 +303,21 @@ fun AppContent(
                 }
             }
         },
+        popups = {
+            if (about) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = { about = false }) }
+            if (analyticsPopup) {
+                // `chooseAnalytics`: back closes it without a choice.
+                fun choose(value: Boolean) {
+                    analyticsPopup = false
+                    if (privacy?.setAnalytics?.invoke(value) == false) privacyAlert = R.string.LOC_PRIVACY_SAVE_FAILED
+                }
+                IonicPopup(stringResource(R.string.LOC_ANALYTICS_CHOICE), listOf(stringResource(R.string.LOC_ANALYTICS_DETAIL)),
+                    listOf(PopupButton(stringResource(R.string.LOC_ANALYTICS_DENY)) { choose(false) },
+                        PopupButton(stringResource(R.string.LOC_ANALYTICS_ALLOW)) { choose(true) }),
+                    onBack = { analyticsPopup = false })
+            }
+            privacyAlert?.let { message -> IonicAlert("TodayWeather", listOf(stringResource(message)), stringResource(R.string.LOC_OK), onClose = { privacyAlert = null }) }
+        },
     ) { tab ->
         when (tab) {
             Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, host, onAirInfo = { code ->
@@ -265,7 +330,6 @@ fun AppContent(
             else -> TabContent() // AN-10
         }
     }
-    if (about) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = { about = false }) }
     if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
 }
 
@@ -286,7 +350,14 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     val photoLoader = PhotoLoader(app)
 
-    val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos)
+    val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos,
+        telemetry = Telemetry { name, params -> twApp.analytics.track(name, params) })
+
+    /** The banner of this app open (TabCtrl's `TwAds.init`) and its Remote Config policy. */
+    val ads = TwAds(viewModelScope, RemoteBannerConfig(twApp.remoteConfigSource(), viewModelScope), twApp.analytics::track, SystemClock::elapsedRealtime)
+
+    /** UMP and the Ads SDK start of this app open. */
+    val consent = AdsConsent(twApp.adsPlatform(), BuildConfig.RELEASE_ADS, twApp.analytics::track, ads::onSdkReady)
 
     /** The settings pages' changes; a unit change posts the push list again in the app's scope (`Push.updateUnits`). */
     val settings = SettingsActions(twApp.appState, session) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateUnits() } }
@@ -296,6 +367,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     init {
         twApp.onOpened()
+        twApp.analytics.onOpened()
         loadPhotos()
         connectivity.registerDefaultNetworkCallback(online)
         viewModelScope.launch {
@@ -314,6 +386,13 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         connectivity.unregisterNetworkCallback(online)
     }
+}
+
+/** The Cordova state name of a page over the tabs (`screen_view`). */
+private fun screenName(route: String): String = when {
+    route == SettingsRoutes.UNITS -> "units"
+    SettingsRoutes.known(route) -> "setting-radio"
+    else -> route // the nationwide and warning pages are named as their states
 }
 
 /** The device's languages for `Accept-Language`, as the WebView sent them. */

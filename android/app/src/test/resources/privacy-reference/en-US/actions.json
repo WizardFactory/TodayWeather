@@ -1,0 +1,190 @@
+{
+ "lang": "en-US",
+ "languages": {
+  "navigator": "en-US",
+  "util": "en-US"
+ },
+ "steps": [
+  {
+   "step": "menu",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": null,
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "popup",
+   "page": "#/tab/forecast",
+   "popups": 1,
+   "menu": true,
+   "choice": false,
+   "stored": null,
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": [
+    "Optional usage analyticsAllow Google Firebase Analytics to collect screen usage, weather request results, and app, device and installation information to improve the app? Custom events exclude actual location, address, push tokens and device UUIDs. Weather remains available if you decline. Withdraw anytime in this menu. Analytics data is not permitted for advertising use. Advertising, crash diagnostics and notifications are handled separately.Decline / withdrawAllow"
+   ]
+  },
+  {
+   "step": "back",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": null,
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": [],
+   "early": {
+    "popups": 0,
+    "menu": true
+   }
+  },
+  {
+   "step": "allow",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": true,
+   "stored": "true",
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "deny",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "privacy policy",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "terms",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "ad privacy",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [
+    "called",
+    "success"
+   ],
+   "popupTexts": []
+  },
+  {
+   "step": "about",
+   "page": "#/tab/forecast",
+   "popups": 1,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [
+    "called",
+    "success"
+   ],
+   "popupTexts": [
+    "TodayWeatherWeather information : Korea Meteorological AdministrationAir Quality Index : Korea Environment CorporationPlease note that this real-time data has not been checked and may contain errors.OK"
+   ]
+  },
+  {
+   "step": "about back",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [
+    "called",
+    "success"
+   ],
+   "popupTexts": [],
+   "early": {
+    "popups": 0,
+    "menu": true
+   }
+  }
+ ]
+}

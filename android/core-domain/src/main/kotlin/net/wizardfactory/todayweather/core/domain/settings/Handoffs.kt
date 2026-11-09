@@ -13,6 +13,20 @@ object Handoffs {
     const val STORE = "market://details?id=net.wizardfactory.todayweather"
 
     /**
+     * 개인정보처리방침 ([kind] `privacy`) and 이용약관 (`terms`), `openPolicy`: the page of the app's [language] catalog,
+     * Korean without a suffix, `.ja` for Japanese and `.en` otherwise. The Cordova build compared `navigator.language`
+     * (`ko-KR`) with `ko`, so it always opened the English page (B13).
+     */
+    fun policyPage(kind: String, language: String): String {
+        val suffix = when (language) {
+            "ko" -> ""
+            "ja" -> ".ja"
+            else -> ".en"
+        }
+        return "https://todayweather.ai/mobile/$kind$suffix.html"
+    }
+
+    /**
      * 의견보내기 (`Util.sendMail`): a `mailto:` link to [to] with the translated [subject] as it is and a body with the
      * app [version], the device [uuid] and the [userAgent], encoded by `encodeURIComponent` (D37: the UUID stays).
      */

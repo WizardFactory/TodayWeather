@@ -163,6 +163,36 @@ Tests:
 
 The production test is `ProductionNationTest` (`tools/emulator/run-production-weather.sh` on API 33 or later, with the app's language set to ko-KR so the rows show).
 
+## Ads, usage analytics and crash reports (AN-15)
+
+The bottom banner, the usage analytics opt-in and Crashlytics (#2894), from `service.twads.js`, `service.admobemi.js`, `service.monetization.js`, SettingCtrl's privacy rows and the plugin settings of the Cordova build:
+
+- **Banner (`app` `ads/`):**
+  - `AdsConsent` runs UMP as the AdMob plugin does when the app opens: update, the consent form when required, then the Ads SDK in the same session as soon as ads may be requested (#2871). A consent stored from an earlier session starts it at once. When UMP fails, release builds show no ads; debug builds, which use Google's test units as the Cordova test-unit builds did, start the SDK without UMP once, unless the failure is a consent decision.
+  - `TwAds` loads the banner once the SDK has started and shows it as `BannerGate` (core-domain) allows: after the Remote Config policy has finished, `tw_banner_delay_seconds` after the app opened, not when `tw_banner_enabled` is false. It counts one `ad_policy_exposure` per app open and keeps loads 5 s apart. AN-10's start page will hide it with `setShowAds(false)`.
+  - The banner belongs to the activity (`AdMobBanner`): the anchored adaptive size for the window's width without the side insets. A configuration change loads a new one at the new width, as the orientation change did.
+  - It sits under the tab bar and above the navigation bar, where the plugin put it. The menu, the pages and the in-app popups end at its top edge, as they ended at the WebView's; the strip appears with the banner (B15).
+  - `RemoteBannerConfig`: defaults `true` and `0`, fetch timeout 10 s, minimum interval 3600 s. The activated values are read first, so an offline start keeps the kill switch; then a fetch. A pair applies only whole (`"true"`/`"false"`, ASCII digits up to 120). The policy is final after the fetch applied or failed, or after 12 s; later answers are ignored. Without Firebase the defaults apply.
+- **Usage analytics (`app` `analytics/`):**
+  - Off until the user opts in on 선택적 이용 통계 (동의함 or 꺼짐): the Ionic popup with 거부 / 철회 and 동의; Android back closes it without a choice (B17). A grant sets analytics storage granted and ad storage, ad user data and ad personalization denied, then enables collection; a withdrawal stops it at once.
+  - `ConsentStore` keeps the choice and the SDK's collection state in two private preference files written with `commit()`. A failed write removes the choice, so an old grant cannot survive, and shows `LOC_PRIVACY_SAVE_FAILED`. At the start a grant is restored only when both records hold it, as the plugin's persisted flag corroborated WebView storage.
+  - `EarlyStartProvider` turns collection off before Firebase starts, then applies the stored choice. A Cordova opt-in does not carry over: it was only in WebView storage.
+  - Events follow `AnalyticsSchema` (core-domain), with `measurement_version` 1 and `traffic_type` (`development` for debug builds, `production` for release builds): `weather_fetch` and `weather_load` from `WeatherRepository` and `WeatherSession` (an answer a newer request replaced reports only its request), the ad events, and `screen_view` with the Cordova state names (`tab.forecast`, `units`, `setting-radio`, `nation` …) and `screen_class` `Cordova` (B16). `favorite_change` and `location_permission` come with AN-10 and AN-11, which add those actions.
+  - Automatic screen reporting is off, as in `config.xml`.
+- **Menu rows:** 광고 개인정보 선택 shows UMP's privacy options form where one is required, else `LOC_AD_PRIVACY_UNAVAILABLE` (B14). 개인정보처리방침 and 이용약관 open `todayweather.ai/mobile/{privacy|terms}.html` with `.ja` or `.en` for the app's language in the browser (B13). The menu stays open.
+- **Crashlytics:** collects crash reports independent of the analytics choice, as the Cordova build did. The Crashlytics Gradle plugin is applied with the Google services plugin when `app/google-services.json` exists (it writes the build ID Crashlytics needs). The app has no native code, so the NDK library of the Cordova build is not included.
+- **Popups:** `IonicPopup` is AN-12's Ionic alert with its buttons side by side (5 dp apart, at 0.87 opacity) and the text broken as Chrome breaks it (`chromeLines`); screen readers get the text without those breaks.
+
+Tests:
+- `BannerGateTest` and `AnalyticsSchemaTest` (core-domain): the gate with the delay, the kill switch, a page's hiding and the exposure; the Remote Config pair; the event schema.
+- `WeatherTelemetryTest` (core-data): the outcomes and durations of `weather_fetch` and `weather_load`.
+- `AnalyticsTest`: grant, withdrawal, failed writes, an SDK failure, the start's corroboration, screens and a broken bridge.
+- `TwAdsTest` and `AdsConsentTest`: the banner's loads and visibility, a new activity, the Remote Config timeout; the SDK start after consent, with a stored consent, against a decision, and after a UMP failure in release and debug builds; the ad privacy row.
+- `PrivacyMenuTest`: the rows, the popup, back, the failure alert, the policy pages per language, the screens reported, and the menu and popups above a banner.
+- `PrivacyScreenshotTest`: the menu with 꺼짐 and 동의함 and the popup against `tools/privacy-reference` in Korean and English, and the popup's lines against the capture's line boxes.
+
+The emulator check is `tools/emulator/run-ads-check.sh` (#2894 AC2): online, a banner of Google's test unit loads and shows in its place while the Analytics debug log shows no event; offline, an opt-in through the popup logs `screen_view`, so the first check cannot pass vacuously.
+
 ## Data migration from the Cordova app
 
 On every start the app runs `CordovaMigrator` (core-storage); after the first successful run it does nothing. It builds `files/app_state.json` (DataStore, `AppState`) from the Cordova app's storage and leaves that storage unchanged, because the rollback hand-back (AN-17) reads it.
@@ -194,7 +224,7 @@ Private inputs stay out of Git, docs and logs, as in the Cordova build (`npm run
 - `app/google-services.json`: Firebase configuration for the existing project (push, analytics, Crashlytics, Remote Config). The build applies the Google services plugin only when the file exists; without it Firebase stays uninitialized and the app runs with analytics off.
 - `TW_SERVER_URL` and `TW_WEATHER_PHOTOS_URL` (environment or `android/private.properties`): the legacy server and the weather photo feed. Without them the app makes no requests to them; without the feed the photo theme shows no photo, as Cordova builds from the template configuration.
 - `TW_MAIL_TO` (environment or `android/private.properties`): the feedback address of 의견보내기, `mailTo` of the Cordova build's `client.config.js`. Without it the mail opens without a recipient.
-- AdMob application ID and ad unit IDs for release builds. Debug builds use Google's test units.
+- `TW_ADMOB_APP_ID_ANDROID` and `TW_ADMOB_BANNER_ANDROID` (environment or `android/private.properties`): the AdMob application ID and banner unit of release builds, as the Cordova release build reads them from `client/.env`. Packaging a release (`packageRelease`, `bundleRelease`) fails without them or with Google's sample IDs. Debug builds always use Google's sample application ID and test banner unit.
 - Release signing inputs (AN-19).
 
 The build and the unit tests run without them.
