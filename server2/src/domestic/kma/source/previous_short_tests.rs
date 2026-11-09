@@ -509,6 +509,7 @@ async fn a_slow_latest_publication_does_not_hold_back_the_previous_one() {
             now,
             started + Duration::from_secs(8),
             until,
+            until,
         )
         .await
         .unwrap();
@@ -554,6 +555,7 @@ async fn unusable_previous(latest_stored: bool) -> (Vec<Doc>, Duration, Vec<Publ
             grid(),
             now,
             started + Duration::from_secs(8),
+            started + Duration::from_secs(1),
             started + Duration::from_secs(1),
         )
         .await

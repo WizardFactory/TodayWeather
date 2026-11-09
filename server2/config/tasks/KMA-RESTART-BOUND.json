@@ -1,0 +1,47 @@
+{
+  "task": "KMA-RESTART-BOUND",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "server2 runtime: a stored read that fails because the store is slow, busy or unreachable leaves its part absent (raced or acquired from its provider where one exists) instead of failing the answer with 501; mimalloc as the global allocator; the observed KMA waits counted from the gateway's accept of the request. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/Cargo.lock",
+    "server2/Cargo.toml",
+    "server2/config/tasks/KMA-RESTART-BOUND.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/previous_short_tests.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/lib.rs",
+    "server2/src/resolver/race.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-restart-bound.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-restart-bound.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-restart-bound.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Request bound, restart race and the restart bound section."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The request's one wait counts from the accept; unavailable reads."
+    }
+  ]
+}

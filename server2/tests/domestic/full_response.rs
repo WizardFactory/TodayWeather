@@ -2376,3 +2376,152 @@ async fn a_fast_restart_asks_no_provider() {
     assert_eq!(doubles.office.fetched.load(SeqCst), 0, "no narrative");
     assert_eq!(body, produced, "the producing process's answer");
 }
+
+/// A forecast acquirer that logs every request it is asked (`{request:?}`) before forwarding it
+/// to [`Forecasts`].
+struct Logged {
+    inner: Forecasts,
+    log: Arc<std::sync::Mutex<Vec<String>>>,
+}
+impl ForecastAcquire for Logged {
+    fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
+        self.log.lock().unwrap().push(format!("{request:?}"));
+        self.inner.acquire(request)
+    }
+    fn cached(&self, request: &ForecastRequest) -> Published {
+        self.inner.cached(request)
+    }
+}
+/// A restarted process of the observed source reading through `counted`, whose forecast
+/// acquirer logs what it is asked; its answer to the Seoul town, and that log.
+async fn restarted_answer(
+    peer: &Peer,
+    counted: &Counted,
+) -> (
+    Result<server2::domestic::kma::Outcome, GatewayError>,
+    Vec<String>,
+) {
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let log = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let doubles = Doubles::new(peer);
+    let warning = Arc::new(
+        WarningStore::new(
+            counted.bulk(),
+            CatalogLimits::default(),
+            StoreConfig::default(),
+        )
+        .unwrap(),
+    );
+    let source = S3Source::new_observed_with_warning_store(
+        counted.clone(),
+        Arc::new(|| NOW),
+        doubles.pages.clone(),
+        Arc::new(Unreachable),
+        warning,
+    )
+    .unwrap()
+    .with_life(Some(doubles.life.clone()))
+    .with_forecast(Some(Arc::new(Logged {
+        inner: Forecasts {
+            writer,
+            calls: Arc::new(AtomicUsize::new(0)),
+        },
+        log: log.clone(),
+    })));
+    let service = Arc::new(Service::new(counted.clone(), doubles.office.clone()).unwrap());
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    )
+    .with_narrative(Some(service));
+    let outcome = backend
+        .outcome(
+            super::source_s3::request(),
+            Instant::now() + Duration::from_secs(8),
+        )
+        .await;
+    let asked = log.lock().unwrap().clone();
+    (outcome, asked)
+}
+fn body_of(outcome: Result<server2::domestic::kma::Outcome, GatewayError>) -> serde_json::Value {
+    match outcome {
+        Ok(server2::domestic::kma::Outcome::Json(body)) => {
+            serde_json::from_slice(&body.to_bytes()).unwrap()
+        }
+        other => panic!("not an answer (the gateway answers 501): {other:?}"),
+    }
+}
+
+/// NO-501 (KMA-RESTART-BOUND): after a restart the forecast-zone read the request waits for ends
+/// past the catalog's 3 s deadline, as on EC2 on 2026-11-09 (today's partition held one list per
+/// process start, each restored and decoded one after another on a busy CPU). The request answers
+/// with the zones of an empty store (the release's land zones), so the mid forecast is still
+/// found, instead of failing the answer.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_zone_read_past_the_catalog_deadline_answers_with_the_empty_store_zones() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let produced = produced_answer(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/data-go-kr/forecast-zone/"]);
+    let started = Instant::now();
+    let (outcome, _) = restarted_answer(&peer, &counted).await;
+    let took = started.elapsed();
+    gate.open();
+    assert!(gate.was_reached(), "the zone list was read");
+    assert!(took >= Duration::from_secs(3), "{took:?}");
+    let body = body_of(outcome);
+    assert_eq!(body["midData"], produced["midData"]);
+    assert_eq!(body["short"], produced["short"]);
+}
+
+/// NO-501: after a restart the current observations' grid read ends past the catalog deadline (as
+/// a chunk of six partitions did on EC2). The read is raced from the head start: the publications
+/// the request needs come from their provider within the request bound, as on an empty store, and
+/// the read's failure leaves its partitions absent instead of failing the answer, which equals the
+/// producing process's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_grid_read_past_the_catalog_deadline_answers_from_the_provider() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let produced = produced_answer(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/data-go-kr/ultra-srt-ncst/"]);
+    let (outcome, asked) = restarted_answer(&peer, &counted).await;
+    gate.open();
+    assert!(gate.was_reached(), "the current grid was read");
+    let latest = asked
+        .iter()
+        .filter(|a| a.contains("UltraSrtNcst") && a.contains("1000"))
+        .count();
+    assert_eq!(latest, 1, "the latest publication, once: {asked:?}");
+    assert_eq!(body_of(outcome), produced, "the producing process's answer");
+}
+
+/// NO-501: the town RSS and the three mid forecasts' stored reads end past the catalog deadline.
+/// Each read not done at the head start races its latest publication's provider, so the answer
+/// equals the producing process's and each provider is asked once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn rss_and_mid_reads_past_the_catalog_deadline_answer_from_the_providers() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let produced = produced_answer(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/kma-web/town-rss/", "raw/v2/data-go-kr/mid-"]);
+    let (outcome, asked) = restarted_answer(&peer, &counted).await;
+    gate.open();
+    assert!(gate.was_reached(), "the RSS and mid forecasts were read");
+    for family in [
+        "Rss(",
+        "family: MidFcst",
+        "family: MidLandFcst",
+        "family: MidTa",
+    ] {
+        let n = asked.iter().filter(|a| a.contains(family)).count();
+        assert_eq!(n, 1, "{family}: {asked:?}");
+    }
+    assert_eq!(body_of(outcome), produced, "the producing process's answer");
+}

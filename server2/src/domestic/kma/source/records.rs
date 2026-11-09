@@ -486,6 +486,72 @@ impl<T: IndexListing + Clone> Reader<T> {
         });
         Ok((out, excluded))
     }
+    /// [`Self::all_counted`] for a read a request waits on (KMA-RESTART-BOUND): a partition whose
+    /// read fails because the store is slow, busy or unreachable ([`absent`]) is left out and
+    /// named in [`Partial::unread`], so the request treats it as absent instead of failing. A
+    /// defect (a corrupt or invalid object) is still an error.
+    pub async fn available(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partitions: &[String],
+        deadline: Instant,
+    ) -> Result<Partial, Error> {
+        let mut read = Partial::default();
+        for chunk in partitions.chunks(LOOKUPS) {
+            let reads = crate::history::join_all(
+                chunk
+                    .iter()
+                    .map(|p| self.acquisitions_counted(source, kind, key, p, deadline))
+                    .collect(),
+            )
+            .await;
+            for (partition, r) in chunk.iter().zip(reads) {
+                match r {
+                    Ok((f, e)) => {
+                        read.fetched.extend(f);
+                        read.excluded += e;
+                    }
+                    Err(e) if absent(&e) => read.unread.push(partition.clone()),
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+        read.fetched.sort_by(|a, b| {
+            a.fetched_at_ms
+                .cmp(&b.fetched_at_ms)
+                .then_with(|| a.partition.cmp(&b.partition))
+        });
+        Ok(read)
+    }
+}
+/// A request's read of several partitions ([`Reader::available`]).
+#[derive(Debug, Clone, Default)]
+pub struct Partial {
+    /// The acquisitions of the partitions read, ordered by fetch instant (stable by partition).
+    pub fetched: Vec<Fetched>,
+    /// Listed groups S06 excluded (S16 completeness).
+    pub excluded: usize,
+    /// Partitions whose read was [`absent`]: their acquisitions are absent for this request.
+    pub unread: Vec<String>,
+}
+impl Partial {
+    /// Whether every listed group was read (S16 records only from such a read).
+    pub fn complete(&self) -> bool {
+        self.excluded == 0 && self.unread.is_empty()
+    }
+}
+/// KMA-RESTART-BOUND: whether a failed read leaves what it reads absent for the request instead
+/// of failing the answer. True when the store was slow, busy or unreachable: its deadline passed
+/// (on EC2 after a restart, a catalog read on a saturated CPU passed the catalog's 3 s deadline),
+/// an admission or connection failed, or it answered an error status. False for a defect in what
+/// it holds (a corrupt or invalid object), which keeps failing the answer.
+pub fn absent(e: &Error) -> bool {
+    matches!(
+        e,
+        Error::Timeout | Error::Transport | Error::Capacity | Error::Status(_) | Error::Ambiguous
+    )
 }
 /// Complete groups have already been validated. Fold each original raw body once
 /// when a discovery and a RAM handoff both include that same full identity.
@@ -553,5 +619,26 @@ mod tests {
             2,
             "same digest/time in another full RawId must remain distinct"
         );
+    }
+    /// KMA-RESTART-BOUND: a slow, busy or unreachable store leaves the read absent; a defect in
+    /// what it holds does not.
+    #[test]
+    fn only_an_unavailable_store_leaves_a_read_absent() {
+        for e in [
+            Error::Timeout,
+            Error::Transport,
+            Error::Capacity,
+            Error::Status(503),
+            Error::Ambiguous,
+        ] {
+            assert!(absent(&e), "{e:?}");
+        }
+        for e in [
+            Error::Corrupt("catalog"),
+            Error::Invalid("key"),
+            Error::NotFound,
+        ] {
+            assert!(!absent(&e), "{e:?}");
+        }
     }
 }

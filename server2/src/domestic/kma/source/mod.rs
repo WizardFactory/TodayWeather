@@ -541,7 +541,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .filter(|c| c.folded.elapsed() < ZONE_REFOLD)
             .map(|c| day_before(&c.last.1));
         if let (Some(from), Some(c)) = (incremental, cache.as_ref()) {
-            let fetched = self.zone_lists(now, Some(&from), deadline).await?;
+            let fetched = match self.zone_lists(now, Some(&from), deadline).await {
+                Ok(fetched) => fetched,
+                // KMA-RESTART-BOUND: an unavailable read keeps the zones held; the next request
+                // reads again.
+                Err(e) if records::absent(&e) => return Ok(c.zones.clone()),
+                Err(e) => return Err(format!("forecast-zone read: {e}")),
+            };
             let new: Vec<&Fetched> = fetched
                 .iter()
                 .filter(|f| f.fetched_at_ms as f64 <= now && !c.seen.contains(&identity(f)))
@@ -569,7 +575,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 return Ok(zones);
             }
         }
-        let fetched = self.zone_lists(now, None, deadline).await?;
+        let fetched = match self.zone_lists(now, None, deadline).await {
+            Ok(fetched) => fetched,
+            // KMA-RESTART-BOUND: an unavailable read (on EC2 after a restart, today's partition
+            // restored past the catalog deadline) answers with the zones held, or else the zones
+            // of an empty store, without keeping them: the next request reads again.
+            Err(e) if records::absent(&e) => {
+                return Ok(match cache.as_ref() {
+                    Some(c) => c.zones.clone(),
+                    None => self.empty_store_zones(),
+                });
+            }
+            Err(e) => return Err(format!("forecast-zone read: {e}")),
+        };
         let mut zones = Zones::default();
         let mut seen = std::collections::HashSet::new();
         let mut last = None;
@@ -587,11 +605,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // No list stored: legacy's empty collection (`findForecastZoneByName` finds nothing).
             // The observed response uses the release's land zones until a list is stored, so its
             // first answer can ask for mid temperatures.
-            return Ok(if self.observed_history {
-                Zones::packaged()
-            } else {
-                Arc::new(Zones::default())
-            });
+            return Ok(self.empty_store_zones());
         };
         let zones = Arc::new(zones);
         *cache = Some(ZoneCache {
@@ -603,6 +617,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         });
         Ok(zones)
     }
+    /// The zones of a store without a list: legacy's empty collection (`findForecastZoneByName`
+    /// finds nothing); the observed response uses the release's land zones, so its first answer
+    /// can ask for mid temperatures.
+    fn empty_store_zones(&self) -> Arc<Zones> {
+        if self.observed_history {
+            Zones::packaged()
+        } else {
+            Arc::new(Zones::default())
+        }
+    }
     /// Every `forecast-zone` acquisition since [`HISTORY_START_MONTH`] (or from partition `from`),
     /// in fold order (completion instant, partition).
     async fn zone_lists(
@@ -610,7 +634,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         from: Option<&str>,
         deadline: Instant,
-    ) -> Result<Vec<Fetched>, String> {
+    ) -> Result<Vec<Fetched>, crate::storage::Error> {
         let key = ProviderKey::Named {
             id: "forecast-zones".into(),
         };
@@ -621,16 +645,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let parts: Vec<String> = self
             .reader
             .partitions("data-go-kr", "forecast-zone", &key, &months, deadline)
-            .await
-            .map_err(|e| format!("forecast-zone listing: {e}"))?
+            .await?
             .into_iter()
             .filter(|p| from.is_none_or(|f| p.as_str() >= f))
             .collect();
         let mut fetched = self
             .reader
             .all("data-go-kr", "forecast-zone", &key, &parts, deadline)
-            .await
-            .map_err(|e| format!("forecast-zone read: {e}"))?;
+            .await?;
         fetched.sort_by_key(identity);
         Ok(fetched)
     }
@@ -645,13 +667,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
-        self.grid_answer_by(family, grid, now, deadline, wait_bound(deadline))
+        let until = wait_bound(deadline);
+        self.grid_answer_by(family, grid, now, deadline, until, until)
             .await
             .map(|(docs, _, _)| docs)
     }
     /// [`Self::grid_answer`] waiting for an acquisition only until `until` (the request's bound),
     /// with the S16 identities of the acquisitions it folded (`None` when S06 excluded a listed
-    /// group: a partial read).
+    /// group or a read was unavailable: a partial read). A stored read still running at `race_at`
+    /// (before `until`) races the latest publication's provider.
     async fn grid_answer_by(
         &self,
         family: Family,
@@ -659,8 +683,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
         until: Instant,
+        race_at: Instant,
     ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
-        self.grid_answer_with(family, grid, now, deadline, until, Link::None)
+        self.grid_answer_with(family, grid, now, deadline, (until, race_at), Link::None)
             .await
     }
     /// [`Self::grid_answer_by`] with what the observed answer of this family shares with another
@@ -673,7 +698,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         grid: crate::history::Grid,
         now: f64,
         deadline: Instant,
-        until: Instant,
+        (until, race_at): (Instant, Instant),
         link: Link<'_>,
     ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
         let coord = Coord {
@@ -693,16 +718,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 lookback_ms(family)
             };
         let months = records::months(from, now);
-        let parts = self
+        // KMA-RESTART-BOUND: an unavailable listing leaves every publication absent, as on an
+        // empty store (the request acquires what it needs), and the read partial.
+        let (parts, unlisted) = match self
             .reader
             .partitions(sf.source(), sf.kind(), &key, &months, deadline)
             .await
-            .map_err(|e| format!("{} listing: {e}", sf.kind()))?;
+        {
+            Ok(parts) => (parts, false),
+            Err(e) if records::absent(&e) => (Vec::new(), true),
+            Err(e) => return Err(format!("{} listing: {e}", sf.kind())),
+        };
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
         let read = || async {
             self.reader
-                .all_counted(sf.source(), sf.kind(), &key, &wanted, deadline)
+                .available(sf.source(), sf.kind(), &key, &wanted, deadline)
                 .await
                 .map_err(|e| format!("{} read: {e}", sf.kind()))
         };
@@ -717,7 +748,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     && usable(family, coord, f)
             })
         };
-        let (mut fetched, excluded, own) = if self.observed_history {
+        let (mut fetched, complete, own) = if self.observed_history {
             let (newest, shown) = match link {
                 Link::Newest(newest) => (Some(newest), None),
                 Link::Shown(shown) => (None, Some(shown)),
@@ -729,19 +760,41 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // What the listing shows absent is requested at once, so stored history does not
             // delay the provider.
             let absent = |p: &Publication| !wanted.iter().any(|w| *w == p.partition());
+            // KMA-RESTART-BOUND: a stored read not done at the head start is raced: the listed
+            // publications the request needs are acquired as on an empty store, so a read that
+            // ends late or fails (on EC2 after a restart, past the catalog deadline) leaves them
+            // on the answer.
+            let raced = {
+                let stored = stored.clone();
+                async move {
+                    if race_at >= until {
+                        return false;
+                    }
+                    let mut read = stored;
+                    crate::resolver::race::restored_by(
+                        &mut read,
+                        race_at,
+                        crate::observability::Component::Domestic,
+                    )
+                    .await
+                    .is_none()
+                }
+                .shared()
+            };
             // A listed publication is requested again as soon as the stored read shows it
             // unusable, whatever else is still being acquired (review
             // RP-previous-acquisition-starvation).
             let unusable = |listed: Vec<Publication>| {
-                let stored = stored.clone();
+                let (stored, raced) = (stored.clone(), raced.clone());
                 async move {
-                    if listed.is_empty() {
+                    if listed.is_empty() || raced.await {
                         return listed;
                     }
+                    // A publication whose partition was unread is missing too.
                     match stored.await {
-                        Ok((fetched, _)) => listed
+                        Ok(read) => listed
                             .into_iter()
-                            .filter(|p| missing(&fetched, p))
+                            .filter(|p| missing(&read.fetched, p))
                             .collect(),
                         Err(_) => Vec::new(),
                     }
@@ -778,7 +831,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 // The newest document once the stored read and the latest publication settled,
                 // without today's earlier acquisitions (review RP-lagging-current-publication).
                 if let Some(newest) = newest {
-                    let mut known = stored.clone().await.map(|(f, _)| f).unwrap_or_default();
+                    let mut known = stored
+                        .clone()
+                        .await
+                        .map(|read| read.fetched)
+                        .unwrap_or_default();
                     known.extend(parts.0.iter().chain(&parts.1).cloned());
                     let as_of = (self.clock)().max(now);
                     let _ = newest.send(grid_documents(family, coord, &known, as_of).pop());
@@ -809,7 +866,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 (earlier_first, earlier_again),
                 (shown_first, shown_again),
             ) = tokio::join!(stored.clone(), latest_part, acquired(earlier), shown_part);
-            let (mut fetched, excluded) = stored?;
+            let read = stored?;
+            let complete = read.complete();
+            let mut fetched = read.fetched;
             // The fold order is the stored acquisitions, the ones of absent publications, then
             // the ones asked again.
             fetched.extend(
@@ -821,9 +880,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     .chain(earlier_again)
                     .chain(shown_again),
             );
-            (fetched, excluded, None)
+            (fetched, complete, None)
         } else {
-            let (mut fetched, excluded) = read().await?;
+            let read = read().await?;
+            let complete = read.complete();
+            // A publication whose read was unavailable is not proved missing.
+            let proved = read.unread.is_empty() && !unlisted;
+            let mut fetched = read.fetched;
             // S16: this request's own acquisition keeps its stored fetch time in its identity
             // (the fold sees it at the request instant).
             let mut own: Option<InputId> = None;
@@ -836,7 +899,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     .skip(1)
                     .take(reach)
                     .copied()
-                    .filter(|p| missing(&fetched, p))
+                    .filter(|p| proved && missing(&fetched, p))
                     .collect();
                 if missing(&fetched, &latest)
                     && let Some(f) = self.latest_grid(sf, grid, latest, now, until).await
@@ -850,7 +913,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     self.backfill(sf, grid, latest, backfill).await;
                 }
             }
-            (fetched, excluded, own)
+            (fetched, complete, own)
         };
         if self.observed_history {
             records::deduplicate(&mut fetched);
@@ -860,7 +923,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         } else {
             now
         };
-        let ids = (excluded == 0).then(|| {
+        let ids = (complete && !unlisted).then(|| {
             if self.observed_history {
                 fetched
                     .iter()
@@ -1038,16 +1101,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
-        self.rss_answer_by(grid, now, deadline, wait_bound(deadline))
-            .await
+        let until = wait_bound(deadline);
+        self.rss_answer_by(grid, now, deadline, until, until).await
     }
-    /// [`Self::rss_answer`] waiting for an acquisition only until `until`.
+    /// [`Self::rss_answer`] waiting for an acquisition only until `until`; a stored read still
+    /// running at `race_at` (before `until`) races the latest publication's provider.
     async fn rss_answer_by(
         &self,
         grid: crate::history::Grid,
         now: f64,
         deadline: Instant,
         until: Instant,
+        race_at: Instant,
     ) -> Result<Vec<Doc>, String> {
         let coord = Coord {
             mx: f64::from(grid.nx()),
@@ -1061,11 +1126,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 RSS_LOOKBACK_MS
             };
         let months = records::months(from, now);
-        let parts = self
+        // KMA-RESTART-BOUND: an unavailable listing leaves every publication absent.
+        let parts = match self
             .reader
             .partitions("kma-web", "town-rss", &key, &months, deadline)
             .await
-            .map_err(|e| format!("town-rss listing: {e}"))?;
+        {
+            Ok(parts) => parts,
+            Err(e) if records::absent(&e) => Vec::new(),
+            Err(e) => return Err(format!("town-rss listing: {e}")),
+        };
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
         let oldest = schedule::from_ms(from as i64).partition();
         let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
@@ -1083,18 +1153,33 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         };
         // Observed: what the listing shows absent is requested while the stored reads run.
         let absent_first = self.observed_history && !wanted.contains(&latest.partition());
-        let (read, requested) = tokio::join!(
-            self.reader
-                .all("kma-web", "town-rss", &key, &wanted, deadline),
-            async {
-                if absent_first {
-                    request_latest().await
-                } else {
-                    None
+        let read = self
+            .reader
+            .available("kma-web", "town-rss", &key, &wanted, deadline)
+            .shared();
+        let (read, requested) = tokio::join!(read.clone(), async {
+            if absent_first {
+                return request_latest().await;
+            }
+            // KMA-RESTART-BOUND: a stored read not done at the head start races the latest
+            // publication's provider.
+            if self.observed_history && race_at < until {
+                let mut read = read.clone();
+                if crate::resolver::race::restored_by(
+                    &mut read,
+                    race_at,
+                    crate::observability::Component::Domestic,
+                )
+                .await
+                .is_none()
+                {
+                    return request_latest().await;
                 }
             }
-        );
-        let mut fetched = read.map_err(|e| format!("town-rss read: {e}"))?;
+            None
+        });
+        // An unread partition is absent: its latest publication is requested below.
+        let mut fetched = read.map_err(|e| format!("town-rss read: {e}"))?.fetched;
         if let Some(f) = requested {
             fetched.push(visible(f, now));
         } else if !absent_first
@@ -1122,17 +1207,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         now: f64,
         deadline: Instant,
     ) -> Result<Vec<Doc>, String> {
-        self.mid_answer_by(
-            model,
-            reg_id,
-            collected,
-            now,
-            deadline,
-            wait_bound(deadline),
-        )
-        .await
+        let until = wait_bound(deadline);
+        self.mid_answer_by(model, reg_id, collected, now, deadline, (until, until))
+            .await
     }
-    /// [`Self::mid_answer`] waiting for an acquisition only until `until`.
+    /// [`Self::mid_answer`] waiting for an acquisition only until `until`; under the observed
+    /// source a stored read of the latest publication still running at `race_at` (before
+    /// `until`) races its provider.
     async fn mid_answer_by(
         &self,
         model: MidModel,
@@ -1140,7 +1221,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         collected: bool,
         now: f64,
         deadline: Instant,
-        until: Instant,
+        (until, race_at): (Instant, Instant),
     ) -> Result<Vec<Doc>, String> {
         let (kind, key) = match model {
             MidModel::Forecast => ("mid-fcst", format!("stn-{}", reg_id.to_ascii_lowercase())),
@@ -1166,16 +1247,26 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         if !self.observed_history {
             // Legacy `saveOnlyLastOne`: the last completed acquisition of the newest month.
             for month in history_months(now).into_iter().rev() {
-                let parts = self
+                // KMA-RESTART-BOUND: an unavailable listing or read leaves the month absent and
+                // ends the search with what the request acquired (no older save is read).
+                let read = match self
                     .reader
                     .partitions("data-go-kr", kind, &key, &[month], deadline)
                     .await
-                    .map_err(|e| format!("{kind} listing: {e}"))?;
-                let mut fetched = self
-                    .reader
-                    .all("data-go-kr", kind, &key, &parts, deadline)
-                    .await
-                    .map_err(|e| format!("{kind} read: {e}"))?;
+                {
+                    Ok(parts) => self
+                        .reader
+                        .available("data-go-kr", kind, &key, &parts, deadline)
+                        .await
+                        .map_err(|e| format!("{kind} read: {e}"))?,
+                    Err(e) if records::absent(&e) => records::Partial {
+                        unread: vec![format!("{month:06}")],
+                        ..Default::default()
+                    },
+                    Err(e) => return Err(format!("{kind} listing: {e}")),
+                };
+                let unread = !read.unread.is_empty();
+                let mut fetched = read.fetched;
                 if collected
                     && month == latest.date() / 100
                     && !present(&fetched, &latest_part, now)
@@ -1184,18 +1275,24 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     fetched.push(visible(f, now));
                 }
                 let found = mid_documents(model, reg_id, &fetched, now);
-                if !found.is_empty() {
+                if !found.is_empty() || unread {
                     return Ok(found);
                 }
             }
             // No acquisition was ever saved: legacy has no document either.
             return Ok(Vec::new());
         }
-        let listed = self
+        // KMA-RESTART-BOUND: an unavailable listing leaves every publication absent (the latest
+        // is requested below, as on an empty store).
+        let listed = match self
             .reader
             .partitions("data-go-kr", kind, &key, &history_months(now), deadline)
             .await
-            .map_err(|e| format!("{kind} listing: {e}"))?;
+        {
+            Ok(listed) => listed,
+            Err(e) if records::absent(&e) => Vec::new(),
+            Err(e) => return Err(format!("{kind} listing: {e}")),
+        };
         // Each save replaces the whole document, so the newest publication that organizes is the
         // answer: start there and stop at the first document.
         if collected
@@ -1208,26 +1305,49 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             }
         }
         for partition in listed.iter().rev() {
-            let mut fetched = self
-                .reader
-                .all(
-                    "data-go-kr",
-                    kind,
-                    &key,
-                    std::slice::from_ref(partition),
-                    deadline,
-                )
-                .await
-                .map_err(|e| format!("{kind} read: {e}"))?;
-            if collected
-                && *partition == latest_part
+            let read = self.reader.available(
+                "data-go-kr",
+                kind,
+                &key,
+                std::slice::from_ref(partition),
+                deadline,
+            );
+            let latest_here = collected && *partition == latest_part;
+            // KMA-RESTART-BOUND: the latest publication's stored read not done at the head start
+            // races its provider, so a read that ends late or fails leaves it on the answer.
+            let (read, raced) = if latest_here && race_at < until {
+                let read = read.shared();
+                tokio::join!(read.clone(), async {
+                    let mut pending = read.clone();
+                    match crate::resolver::race::restored_by(
+                        &mut pending,
+                        race_at,
+                        crate::observability::Component::Domestic,
+                    )
+                    .await
+                    {
+                        Some(_) => None,
+                        None => request_latest().await,
+                    }
+                })
+            } else {
+                (read.await, None)
+            };
+            let read = read.map_err(|e| format!("{kind} read: {e}"))?;
+            // An unread partition is absent and ends the search with what the request acquired
+            // (an older save is not the document legacy answers).
+            let unread = !read.unread.is_empty();
+            let mut fetched = read.fetched;
+            if let Some(f) = raced {
+                fetched.push(visible(f, now));
+            } else if latest_here
                 && !present(&fetched, &latest_part, now)
                 && let Some(f) = request_latest().await
             {
                 fetched.push(visible(f, now));
             }
             let found = mid_documents(model, reg_id, &fetched, now);
-            if !found.is_empty() {
+            if !found.is_empty() || unread {
                 return Ok(found);
             }
         }
@@ -1315,7 +1435,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             let mid = async {
                 let zones = self.zones(now, deadline).await?;
                 let mids = self
-                    .mids(&region, &city, &zones, now, deadline, until)
+                    .mids(&region, &city, &zones, now, deadline, (until, race_at))
                     .await?;
                 Ok::<_, String>((zones, mids))
             };
@@ -1429,8 +1549,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     } else {
                         Link::None
                     };
-                    self.grid_answer_with(Family::Current, grid, now, deadline, until, link)
-                        .await
+                    self.grid_answer_with(
+                        Family::Current,
+                        grid,
+                        now,
+                        deadline,
+                        (until, race_at),
+                        link,
+                    )
+                    .await
                 }
                 None => Ok((Vec::new(), None, Vec::new())),
             }
@@ -1463,7 +1590,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             }
             let zones = self.zones(now, deadline).await?;
             let mids = self
-                .mids(&region, &city, &zones, now, deadline, until)
+                .mids(&region, &city, &zones, now, deadline, (until, race_at))
                 .await?;
             Ok::<_, String>((zones, mids))
         };
@@ -1504,9 +1631,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 };
                 tokio::join!(
                     current_grid,
-                    self.grid_answer_by(Family::Shortest, grid, now, deadline, until),
-                    self.grid_answer_with(Family::Short, grid, now, deadline, until, shown),
-                    self.rss_answer_by(grid, now, deadline, until),
+                    self.grid_answer_by(Family::Shortest, grid, now, deadline, until, race_at),
+                    self.grid_answer_with(
+                        Family::Short,
+                        grid,
+                        now,
+                        deadline,
+                        (until, race_at),
+                        shown
+                    ),
+                    self.rss_answer_by(grid, now, deadline, until, race_at),
                 )
             },
             observations,
@@ -1600,7 +1734,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         zones: &Zones,
         now: f64,
         deadline: Instant,
-        until: Instant,
+        bound: (Instant, Instant),
     ) -> Result<HashMap<(MidModel, String), Vec<Doc>>, String> {
         let mut mids = HashMap::new();
         if let Ok(row) = region_code(region, city) {
@@ -1623,7 +1757,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     .iter()
                     .map(|(model, reg_id)| {
                         let collected = collected(*model, reg_id, zones);
-                        self.mid_answer_by(*model, reg_id, collected, now, deadline, until)
+                        self.mid_answer_by(*model, reg_id, collected, now, deadline, bound)
                     })
                     .collect(),
             )
