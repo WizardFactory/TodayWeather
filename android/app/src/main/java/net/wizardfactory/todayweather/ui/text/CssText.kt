@@ -8,11 +8,16 @@ import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.isSpecified
@@ -87,6 +92,67 @@ internal object CssMetrics {
             c in 0xAC00..0xD7FF || c in 0xF900..0xFAFF || c in 0xFE30..0xFE4F || c in 0xFF00..0xFFEF
     }
 }
+
+/**
+ * [text] in the fonts Chrome draws it with: every character the first font (Roboto) has stays in it, and only Korean,
+ * Chinese and Japanese go to the fallback font. Android keeps the fallback for the punctuation, spaces and digits
+ * between Korean letters, whose advances differ. A span of the default family around them makes Android start a new
+ * font run there, as Chrome does.
+ */
+internal fun chromeRuns(text: String): AnnotatedString = buildAnnotatedString {
+    var i = 0
+    while (i < text.length) {
+        val cjk = CssMetrics.cjk(text.substring(i, i + 1))
+        var j = i + 1
+        while (j < text.length && CssMetrics.cjk(text.substring(j, j + 1)) == cjk) j++
+        if (cjk) append(text.substring(i, j)) else withStyle(SpanStyle(fontFamily = FontFamily.SansSerif)) { append(text.substring(i, j)) }
+        i = j
+    }
+}
+
+/** Korean syllables, CJK ideographs and kana: the letters Chrome breaks between (`word-break: normal`). */
+private fun cjkLetter(c: Char): Boolean = c.code in 0xAC00..0xD7A3 || c.code in 0x4E00..0x9FFF || c.code in 0x3400..0x4DBF || c.code in 0x3040..0x30FF
+
+/**
+ * [text] with a zero-width space wherever Chrome may break a line between letters: between two Korean, Chinese or
+ * Japanese letters, before an opening bracket after one and after a closing bracket before one. Android allows these
+ * too, but Samsung's keeps Korean words whole (seen on a Galaxy S21+, Android 15); the spaces give the breaks back.
+ * [source] maps each index of [text], and its end, to the index in the original text.
+ */
+internal class ChromeBreaks(val text: String, val source: IntArray)
+
+internal fun chromeBreaks(text: String): ChromeBreaks {
+    val out = StringBuilder()
+    val source = ArrayList<Int>(text.length + 8)
+    for (i in text.indices) {
+        if (i > 0) {
+            val a = text[i - 1]
+            val b = text[i]
+            if (cjkLetter(a) && cjkLetter(b) || cjkLetter(a) && b in "([{" || a in ")]}" && cjkLetter(b)) {
+                out.append('\u200B')
+                source += i
+            }
+        }
+        out.append(text[i])
+        source += i
+    }
+    source += text.length
+    return ChromeBreaks(out.toString(), source.toIntArray())
+}
+
+/** [text] broken into lines of at most [width] px as Chrome breaks it (greedy, with chromeBreaks and chromeRuns). */
+internal fun chromeLines(measurer: TextMeasurer, text: String, style: TextStyle, width: Int): List<String> {
+    val breaks = chromeBreaks(text)
+    val result = measurer.measure(chromeRuns(breaks.text), style.copy(lineBreak = LineBreak.Simple), constraints = Constraints(maxWidth = width))
+    return (0 until result.lineCount).map {
+        text.substring(breaks.source[result.getLineStart(it)], breaks.source[result.getLineEnd(it, visibleEnd = true)])
+    }
+}
+
+/** The widest piece of [text] between Chrome's break opportunities (CSS min-content), in px. */
+internal fun chromeMinWidth(measurer: TextMeasurer, text: String, style: TextStyle): Int =
+    chromeBreaks(text).text.split('\u200B', ' ').filter { it.isNotEmpty() }
+        .maxOfOrNull { measurer.measure(chromeRuns(it), style).size.width } ?: 0
 
 /**
  * A line of `line-height: normal` as the WebView lays it out: the ascent and descent of the fonts its text uses and

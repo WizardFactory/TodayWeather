@@ -1,0 +1,168 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova image height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in nation-reference/<lang>",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, white Korean text on the light label colors and the bold mode buttons most. Layout follows the WebView: `line-height: normal` from CssMetrics with Chrome's borrowed pixel on 16 px Korean lines, the h2 on Roboto's baseline in 19.2 dp lines, Roboto for the characters it has between Korean letters (chromeRuns), Chrome's breaks between Korean syllables (chromeBreaks), CSS shrink-to-fit labels, the mode buttons on Chrome's pixel-snapped widths and the strip's tabs painted in DOM order. Every comparison has the Cordova height. The S12 cards after the first sit up to 1 device pixel off: each h2's 19.2 dp line leaves Chrome 0.4 px into a pixel, which a layout in whole pixels cannot follow (warnings-1 and the pages that show it, about 1 to 1.6 percent strong). NationGeometryTest checks the cards' tops and heights within 0.5 dp. The loading spinner's phase differs between captures (a few pixels).",
+ "sensitivity": "Measured 2026-11-09 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-13/checks/mutations-1.log to mutations-3.log):\n- labels 2 dp lower fail 18 comparisons; lighter label colors fail 18;\n- a map 4 dp lower fails 9; tabs 4 dp to the right fail 9;\n- card padding 18 dp fails 10; punctuation in the fallback font fails 10;\n- the h2 centered as LineText does fails 8;\n- no space after the image fails 4; no borrowed pixel fails 4; empty comment lines dropped fail 2;\n- the tab page's colors instead of the menu's fail 2; labels without the shrink-to-fit limit fail 1 (nation-wind); a loading box 10 dp wider fails 1.\nChanges too small for the pixels fail NationGeometryTest: labels 1 dp lower, the mode buttons in thirds, the icon line 2 dp taller, the cards without their 1 dp overlap. NationFitTest catches labels past the window and heading lines that do not grow with the text.",
+ "cases": {
+  "en-KR/nation-air-pm2.5": {
+   "strong": 0.00068,
+   "mean": 0.568,
+   "heightDifference": 0
+  },
+  "en-KR/nation-weather": {
+   "strong": 0.00124,
+   "mean": 0.83,
+   "heightDifference": 0
+  },
+  "en-KR/warnings": {
+   "strong": 0.01534,
+   "mean": 5.246,
+   "heightDifference": 0
+  },
+  "en-KR/warnings-0": {
+   "strong": 0.0009,
+   "mean": 1.374,
+   "heightDifference": 0
+  },
+  "en-KR/warnings-1": {
+   "strong": 0.01446,
+   "mean": 6.567,
+   "heightDifference": 1
+  },
+  "en-KR/warnings-2": {
+   "strong": 0.00233,
+   "mean": 1.257,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-co": {
+   "strong": 0.00058,
+   "mean": 1.203,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-failed": {
+   "strong": 0.00058,
+   "mean": 0.332,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-no2": {
+   "strong": 0.00055,
+   "mean": 1.042,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-o3": {
+   "strong": 0.00086,
+   "mean": 0.958,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-pm10": {
+   "strong": 0.00057,
+   "mean": 0.568,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-pm2.5": {
+   "strong": 0.00058,
+   "mean": 0.552,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-pm2.5-airnow": {
+   "strong": 0.00058,
+   "mean": 0.641,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-air-so2": {
+   "strong": 0.00052,
+   "mean": 1.111,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-loading": {
+   "strong": 0.00059,
+   "mean": 0.398,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-rain": {
+   "strong": 0.00073,
+   "mean": 0.888,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-weather": {
+   "strong": 0.00073,
+   "mean": 0.748,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-weather-dark": {
+   "strong": 0.0007,
+   "mean": 0.74,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-weather-failed": {
+   "strong": 0.00073,
+   "mean": 0.578,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-weather-old": {
+   "strong": 0.00053,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-wind": {
+   "strong": 0.00073,
+   "mean": 1.164,
+   "heightDifference": 0
+  },
+  "ko-KR/nation-wind-kph": {
+   "strong": 0.00073,
+   "mean": 1.019,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings": {
+   "strong": 0.01048,
+   "mean": 4.58,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings-0": {
+   "strong": 0.00121,
+   "mean": 1.512,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings-1": {
+   "strong": 0.01554,
+   "mean": 6.68,
+   "heightDifference": 1
+  },
+  "ko-KR/warnings-2": {
+   "strong": 9e-05,
+   "mean": 0.932,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings-dark": {
+   "strong": 0.01035,
+   "mean": 4.571,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings-empty": {
+   "strong": 0.00063,
+   "mean": 0.168,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings-failed": {
+   "strong": 0.00063,
+   "mean": 0.168,
+   "heightDifference": 0
+  },
+  "ko-KR/warnings-old": {
+   "strong": 0.01012,
+   "mean": 4.551,
+   "heightDifference": 0
+  }
+ }
+}

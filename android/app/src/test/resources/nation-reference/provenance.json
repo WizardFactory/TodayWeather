@@ -1,0 +1,412 @@
+{
+ "tool": "android/tools/nation-reference/capture.sh",
+ "cordovaApk": {
+  "sha256": "964443f77cdba9aeae7f4b55118ac2dd2cd7fb579a25ce8ad17cc8b09b8c41e9",
+  "versionCode": "100091",
+  "versionName": "1.1.1",
+  "sources": [
+   {
+    "file": "client/www/index.html",
+    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "tracked": true,
+    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "matchesClient": true,
+    "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
+   },
+   {
+    "file": "client/www/templates/nation.html",
+    "apkSha256": "9282590bc4cb58ea6dede8535c44b66c7c9a8c82b286987137ddc0ff8cd00237",
+    "tracked": true,
+    "clientSha256": "9282590bc4cb58ea6dede8535c44b66c7c9a8c82b286987137ddc0ff8cd00237",
+    "matchesClient": true,
+    "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+   },
+   {
+    "file": "client/www/templates/nation-air.html",
+    "apkSha256": "3163bf54680a8f664a3cd754c62d42436fbc95c82a51cc98f85938986f810202",
+    "tracked": true,
+    "clientSha256": "3163bf54680a8f664a3cd754c62d42436fbc95c82a51cc98f85938986f810202",
+    "matchesClient": true,
+    "lastCommit": "41b1da09fa6bc912a8d0f33e565753ec7d5eeb1c"
+   },
+   {
+    "file": "client/www/templates/kma-special.html",
+    "apkSha256": "0fd4a8a7290e7d6798b309587bae711a2e4a3ce6cfe8ad9d10b9dfa98c1ab13b",
+    "tracked": true,
+    "clientSha256": "0fd4a8a7290e7d6798b309587bae711a2e4a3ce6cfe8ad9d10b9dfa98c1ab13b",
+    "matchesClient": true,
+    "lastCommit": "986f085de2d6b0b7d2e0c004ace8f4ea003baf3d"
+   },
+   {
+    "file": "client/www/js/controller.nation.js",
+    "apkSha256": "f6e551d1aeabf8d8c0f8ac80fd8dc1acd599fccc40f911ee5e1cb2099725f1df",
+    "tracked": true,
+    "clientSha256": "f6e551d1aeabf8d8c0f8ac80fd8dc1acd599fccc40f911ee5e1cb2099725f1df",
+    "matchesClient": true,
+    "lastCommit": "38ce90a9165306713e943512bc17e691a44d3dea"
+   },
+   {
+    "file": "client/www/js/controller.nation.air.js",
+    "apkSha256": "3507191eebbe090dd2aa0b98bcb15295b84a44d519726cfcb1e9f1087634fae7",
+    "tracked": true,
+    "clientSha256": "3507191eebbe090dd2aa0b98bcb15295b84a44d519726cfcb1e9f1087634fae7",
+    "matchesClient": true,
+    "lastCommit": "2341ca6dc1b7fdd41c1d07f1bb1636238271666a"
+   },
+   {
+    "file": "client/www/js/controller.kma.special.js",
+    "apkSha256": "2be626aaf8f0fd8091a8e5d9f726847d45d29f924167ae448172c5212fc95583",
+    "tracked": true,
+    "clientSha256": "2be626aaf8f0fd8091a8e5d9f726847d45d29f924167ae448172c5212fc95583",
+    "matchesClient": true,
+    "lastCommit": "986f085de2d6b0b7d2e0c004ace8f4ea003baf3d"
+   },
+   {
+    "file": "client/www/js/controller.settingctrl.js",
+    "apkSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+    "tracked": true,
+    "clientSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+    "matchesClient": true,
+    "lastCommit": "a262c570efab4da418c557a95d036d1177cc5c49"
+   },
+   {
+    "file": "client/www/js/controller.units.js",
+    "apkSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
+    "tracked": true,
+    "clientSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
+    "matchesClient": true,
+    "lastCommit": "71b55e62f3abe5e399d8a7092e86f7c686481c58"
+   },
+   {
+    "file": "client/www/js/controller.setting.radio.js",
+    "apkSha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f",
+    "tracked": true,
+    "clientSha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f",
+    "matchesClient": true,
+    "lastCommit": "7d5659396ed413144cb1ae63980a0b956ccba267"
+   },
+   {
+    "file": "client/www/js/service.weatherutil.js",
+    "apkSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "tracked": true,
+    "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/app.js",
+    "apkSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "tracked": true,
+    "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/locales/ko.json",
+    "apkSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "tracked": true,
+    "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/locales/en.json",
+    "apkSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "tracked": true,
+    "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/data/theme.js",
+    "apkSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "tracked": true,
+    "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "matchesClient": true,
+    "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
+   },
+   {
+    "file": "client/www/css/ionic.app.css",
+    "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "tracked": false,
+    "generatedFrom": "client/scss/ionic.app.scss",
+    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "matchesClient": true
+   },
+   {
+    "file": "client/www/img/kr.png",
+    "apkSha256": "2a4298f62c4a741725c938b20eae06d1b157ca3aa16f8b04834eb11469b66437",
+    "tracked": true,
+    "clientSha256": "2a4298f62c4a741725c938b20eae06d1b157ca3aa16f8b04834eb11469b66437",
+    "matchesClient": true,
+    "lastCommit": "6fc2e419fdc63b3ad618eb2e6d1fe61d37f564be"
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "file": "client/scss/ionic.app.scss",
+   "sha256": "927bd183ff47493c995577b37cbb4ce427e55b946bd895d9933f14570f95747b",
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "emulator": {
+  "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+  "sdk": "36"
+ },
+ "display": "384x832 dp at density 2 (wm size 768x1664, wm density 320)",
+ "language": "per-app locale ko-KR, then en-KR (English with the region Korea, so the Korean menu rows show)",
+ "images": "cut from the screen (screencap): S10 and S11 from the top of the page to 20 CSS px under the map; S12 and the loading, empty and failed states as the screen shows them; each S12 card whole (stitched when taller than the screen under the header)",
+ "server": "a stand-in inside the WebView: corpus fixture kma-seoul for the place, corpus inputs nation.json for /v000903/nation/KR and special.json for /v000903/kma/special; an empty answer, a 500 and a 4 s late answer where a state needs one",
+ "place": "kma-seoul (회현동)",
+ "files": [
+  {
+   "file": "en-KR/nation-air-pm2.5.json",
+   "sha256": "eaa4cfd1d761d54a42bef20fd65d8e8914919a89f5684008bfac6133029f4a03"
+  },
+  {
+   "file": "en-KR/nation-air-pm2.5.png",
+   "sha256": "953118741aa6342d56c762a7083662b3e58c913d9c3fadb5e0ca84cb866810c8"
+  },
+  {
+   "file": "en-KR/nation-weather.json",
+   "sha256": "568ac1695d9daac4a1cade4062a8ac39f56b22c5dbc66368bb558156759378cd"
+  },
+  {
+   "file": "en-KR/nation-weather.png",
+   "sha256": "c18a654f8bc4a0953913fb598be5e21a0e61d7a60818b34506133e5f3c9f0fba"
+  },
+  {
+   "file": "en-KR/requests.json",
+   "sha256": "73c8cedff970d99ce5bd718883b7abae64c9f8375966fe65464d648ad01e4445"
+  },
+  {
+   "file": "en-KR/warnings-0.json",
+   "sha256": "adf88583b7ea13af5fd6d1324762072dacd1a1106ba35ff858ed33964acd475f"
+  },
+  {
+   "file": "en-KR/warnings-0.png",
+   "sha256": "f1875557cbdd034fb1118c7059826d43e0a80d6ac35fa23bd8b2a72485d5048b"
+  },
+  {
+   "file": "en-KR/warnings-1.json",
+   "sha256": "435140e98d3c6a9e6b162657dc8a9af88dce5e0db0deb93834f540b5b53015d7"
+  },
+  {
+   "file": "en-KR/warnings-1.png",
+   "sha256": "c98ca95ef97d768ff7c0da44bbcd35ee77ee0f1ba8293165a7123fcacf1b1bc6"
+  },
+  {
+   "file": "en-KR/warnings-2.json",
+   "sha256": "2897730d18ee421582a6e5b153be6bf38a12b2e13def1c109c8b17341a5deddc"
+  },
+  {
+   "file": "en-KR/warnings-2.png",
+   "sha256": "1441cb92cf898b6bfe75ccf2c9672bcb31fda0b8235e5b3f22ef71a561d55aef"
+  },
+  {
+   "file": "en-KR/warnings.json",
+   "sha256": "df14e4edc6da921c88fbf731f7c5493d4447f20483d2edcc329cb0d3a9548f07"
+  },
+  {
+   "file": "en-KR/warnings.png",
+   "sha256": "64b2e6ef395858558d24a12db67a93132e2b4b1d4a5b6ba8532061e7f70b3cfb"
+  },
+  {
+   "file": "ko-KR/nation-air-co.json",
+   "sha256": "b98589cd82d4eb06405e70a766da25645d201d1b16652aaaf2130d5241513152"
+  },
+  {
+   "file": "ko-KR/nation-air-co.png",
+   "sha256": "bddcfc9ac3234252ca5ece61aa9e0c02d4d896715b19b6b6463e259bd8791305"
+  },
+  {
+   "file": "ko-KR/nation-air-failed.json",
+   "sha256": "334f23f0d3d57bf98df65ea574f1058d7177c7685250387f8c847f00644c35a2"
+  },
+  {
+   "file": "ko-KR/nation-air-failed.png",
+   "sha256": "de692867a631ebf967f127e5a374d0b074218e5cedb463921b16e2edbbd3eba3"
+  },
+  {
+   "file": "ko-KR/nation-air-no2.json",
+   "sha256": "ca830a8c1c26f3854787cefb1931a68a2e7f27cf1103a3ba8cf596867a922c8b"
+  },
+  {
+   "file": "ko-KR/nation-air-no2.png",
+   "sha256": "ddf796eb66e2f0e652d16aa362d92a1fd6e101578af7143f4ecf6d6d6acaab96"
+  },
+  {
+   "file": "ko-KR/nation-air-o3.json",
+   "sha256": "6b16aee532f8ed21ee9a646d7cbbb9bdce3d152784870bb932a7fc22c197d20e"
+  },
+  {
+   "file": "ko-KR/nation-air-o3.png",
+   "sha256": "2eb49473ffd86544bf1fed48d0ab25f1b6259ec47cd5bf162e9be78869de3ad1"
+  },
+  {
+   "file": "ko-KR/nation-air-pm10.json",
+   "sha256": "7260431d51f34914e71d65b1b35b3e6d86a57f2a0bc5492319fc539b316717e8"
+  },
+  {
+   "file": "ko-KR/nation-air-pm10.png",
+   "sha256": "28ea0ec1f11cdd0cb1cd10c6fdea2e8166dbc94e6bbbcdfd7a11481b416714b2"
+  },
+  {
+   "file": "ko-KR/nation-air-pm2.5-airnow.json",
+   "sha256": "54204504cf3a7edfc178ca982c8a983827b62c72b3d83a2895780feb492bb2dc"
+  },
+  {
+   "file": "ko-KR/nation-air-pm2.5-airnow.png",
+   "sha256": "03b3520a02eb18f7e18b4ef934e911ce411ab8b36a37d23f79998d145620e59d"
+  },
+  {
+   "file": "ko-KR/nation-air-pm2.5.json",
+   "sha256": "c7dfb78b18c1efe27477f9f78ecdd9179cf926bf4f2824afcc556ddc151bd76f"
+  },
+  {
+   "file": "ko-KR/nation-air-pm2.5.png",
+   "sha256": "c69fe50c4c01fb7d49ba7ffd654a070f69969e1d69a8b0ed9f6935b44b9841b0"
+  },
+  {
+   "file": "ko-KR/nation-air-so2.json",
+   "sha256": "74abdf57f7ea8deab31ff0826db3f1c115d4a3cbd0eca4db86ed6526adc36e4b"
+  },
+  {
+   "file": "ko-KR/nation-air-so2.png",
+   "sha256": "eb31f7d6e2e915493bac66f0636dd246c5e30878c846bef642cfff869815ac81"
+  },
+  {
+   "file": "ko-KR/nation-loading.json",
+   "sha256": "184fb4217f957390ec81752fffa3e8c922eef9556434e2389fb8bc38eff98167"
+  },
+  {
+   "file": "ko-KR/nation-loading.png",
+   "sha256": "6092f295306ec14844fd8dc1baa5404d38f99fd7d9534531370e49d55d831f1d"
+  },
+  {
+   "file": "ko-KR/nation-rain.json",
+   "sha256": "48d7633c06323947fbb47f103189952acd42c52ef0edc2397e329e6e3ba7cd9b"
+  },
+  {
+   "file": "ko-KR/nation-rain.png",
+   "sha256": "904519731b87daf04c71238c5e444e1fef4e89da26c76b971f8503cc76283331"
+  },
+  {
+   "file": "ko-KR/nation-weather-dark.json",
+   "sha256": "44861021d800808c33f9cfb34eea6155929fad0de1a668c45a71247af53812a3"
+  },
+  {
+   "file": "ko-KR/nation-weather-dark.png",
+   "sha256": "c1f09051e951881be06c0792c17b65b5f460123077ca220cae50711d22be29cc"
+  },
+  {
+   "file": "ko-KR/nation-weather-failed.json",
+   "sha256": "537ea5c565137972e3f8948bab92a6f59f6e5623b652647c5f5fd7d143f79d6f"
+  },
+  {
+   "file": "ko-KR/nation-weather-failed.png",
+   "sha256": "39d47bba861448d1e636b6b004604ff73f70b03b6316de6ced9a5ec88dbf7788"
+  },
+  {
+   "file": "ko-KR/nation-weather-old.json",
+   "sha256": "16189a4e21143025bd4a19e66195b5334addd0a72d3e527a926109f1be16a7b4"
+  },
+  {
+   "file": "ko-KR/nation-weather-old.png",
+   "sha256": "9d367d9fcc10e5034ab529adcb8df84ea5cd16e936a6938305b39771f570b738"
+  },
+  {
+   "file": "ko-KR/nation-weather.json",
+   "sha256": "ea83837e21f3498ecc8cde044615e4154c52d197c11baede0e5e17cd181ba677"
+  },
+  {
+   "file": "ko-KR/nation-weather.png",
+   "sha256": "c9dd4e95a206a36f9cdaa3a1b7df0e3ef17f7bf87389d837087e9ab06bfccf7e"
+  },
+  {
+   "file": "ko-KR/nation-wind-kph.json",
+   "sha256": "272edc38fed98905fbffcd7fe25d17ae8af61bc6857fafd25c9d4e690b5e400a"
+  },
+  {
+   "file": "ko-KR/nation-wind-kph.png",
+   "sha256": "ac89d251c593b517777c7cc0c6212441492aa1cc1f8ed58804cc58cd5a258ca5"
+  },
+  {
+   "file": "ko-KR/nation-wind.json",
+   "sha256": "26d47ef1d9d911d9bd882c7f440dcce7edce442974152d9bc474448ebed7c0d5"
+  },
+  {
+   "file": "ko-KR/nation-wind.png",
+   "sha256": "5255c0923f0b686ddc59b299c3a0e7b1298d629f23ec5507b107f131dfe97d3b"
+  },
+  {
+   "file": "ko-KR/requests.json",
+   "sha256": "df6d9617523d94f9653add1e38aabb13c312951483147861e4c4fc46733c104c"
+  },
+  {
+   "file": "ko-KR/warnings-0.json",
+   "sha256": "69cc6c6e35a60fb71dab76b701f8cef0babfd61d214ad190f956039ad7f208a8"
+  },
+  {
+   "file": "ko-KR/warnings-0.png",
+   "sha256": "d68a5a901d37b16b7cd952ef4036b518b0080a75b96253331e3c7f98a2fffde3"
+  },
+  {
+   "file": "ko-KR/warnings-1.json",
+   "sha256": "f5e453a2e26e7dfacef059e1cfffd420024a18b54c1c607729f2b9e1bef75256"
+  },
+  {
+   "file": "ko-KR/warnings-1.png",
+   "sha256": "e99bc4b93c47f505a2ea661eee82ae64e1f663fef88c7274d4f96a935c538bd1"
+  },
+  {
+   "file": "ko-KR/warnings-2.json",
+   "sha256": "cb302c7f044deada3b88128985b5fc07619d23e563b54e6c15b359335f939ebd"
+  },
+  {
+   "file": "ko-KR/warnings-2.png",
+   "sha256": "a439d10f45405dcfd4aa617dd26aae5e48c80a77206770516050a820f0753d49"
+  },
+  {
+   "file": "ko-KR/warnings-dark.json",
+   "sha256": "d97fc2103f2779f93a1639d430b72c8dd1e226294c86433b189140006d424c62"
+  },
+  {
+   "file": "ko-KR/warnings-dark.png",
+   "sha256": "3b0c8339d7804a6bdfc9ed8589982155f70ade2d8e5d492f02ca230f46e9c286"
+  },
+  {
+   "file": "ko-KR/warnings-empty.json",
+   "sha256": "fc8215fca00a1d5660628ea440944dd50179a8bfcf5fd1d062457671de7f7bd9"
+  },
+  {
+   "file": "ko-KR/warnings-empty.png",
+   "sha256": "b3d42de6aed094de8d3a7a818e9386125d1be83977309ce36961ed614ad1f52c"
+  },
+  {
+   "file": "ko-KR/warnings-failed.json",
+   "sha256": "3f1ebd23804a6234a9d3c877c0c9b6704541ba07c718168aad32f2e7eaf8b9d4"
+  },
+  {
+   "file": "ko-KR/warnings-failed.png",
+   "sha256": "b3d42de6aed094de8d3a7a818e9386125d1be83977309ce36961ed614ad1f52c"
+  },
+  {
+   "file": "ko-KR/warnings-old.json",
+   "sha256": "95e554f537d643723633a4e3985c4c6ec7edbe1e1076a58cae3462f37ee47738"
+  },
+  {
+   "file": "ko-KR/warnings-old.png",
+   "sha256": "753baa454fa7dde9bbc793389227f1052d5d4e0646285ddc5c10c8616b336a63"
+  },
+  {
+   "file": "ko-KR/warnings.json",
+   "sha256": "c64f37bef153da4cb9300a2e3a524d621bdb5809ec94fd340d88d49fb9652a86"
+  },
+  {
+   "file": "ko-KR/warnings.png",
+   "sha256": "764d6da3b0cd5773609c7aaba1196caf46c8ee66a86933a59a246ddf207b2d54"
+  }
+ ]
+}

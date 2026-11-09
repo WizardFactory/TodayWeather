@@ -315,3 +315,62 @@ Design (sources: `units.html`, `setting-radio.html`, `controller.units.js`, `con
 ### Checks
 
 JVM: `SettingListsTest` (core-domain: S07's rows for seven regions' defaults and rarer units in Korean and English, every list, the menu's values, the hand-off targets and About against `settings.json`), `PushRegistrationTest` (core-storage: the list after a unit change, with and without a token or list, against `push.json`), `SettingsActionsTest` (core-data: the save, push and load of all 24 choices against the Cordova traces, the weather request against the one the Cordova build sent, the timer when the list opens and on a choice, the retry confirmation), `SettingsTest` (app: the pages and menu rows, back, the S03 and S05 links, About in both languages, the hand-off intents), `SettingsScreenshotTest` (36 comparisons: S07 in each theme and in °F, every S08 list and the theme list in each theme, S03 in °F, dark and photo themes block by block, About in Korean and English; manual pages 25–31 and 36) `SettingsGeometryTest` (the rows, the check mark and the popup's parts against the captured rects within 0.5 dp) and `SettingsFitKoTest`/`SettingsFitEnTest` (font scale 1.3). Mutation checks: twelve changes to the lists, targets, actions and push update each fail the goldens; of eight screen changes the comparisons catch six, and the geometry test the other two (`checks/mutations-*.log`). Device: `run-settings-handoffs.sh` (`SettingsHandoffTest`, offline) in ko-KR and en-US: the browser (Chrome) and the mail app (Gmail) open with the Cordova intents on API 36, the store (Play Store) on an API 34 Play image; About in both languages.
+
+## AN-13 — nationwide weather, nationwide air and warnings S10–S12 (#2892)
+
+Design. Sources: `nation.html`, `nation-air.html`, `kma-special.html`, `controller.nation.js`, `controller.nation.air.js`, `controller.kma.special.js`, `getNationWeather` in `service.weatherutil.js`, `clickMenu` and the menu in `index.html`, and the `$ionicLoading` template in `app.js`. Behavior and layout were checked on the Cordova debug build with `tools/nation-reference`.
+
+- `core-data` `NationSource`:
+  - `getNationWeather` (`/v000903/nation/KR`, units query, three attempts 2 s apart, 20 s each);
+  - KmaSpecialCtrl's request (`/v000903/kma/special`, 3 s, one attempt);
+  - strict JSON as `JSON.parse` reads it.
+- `core-domain` `nation/`: `NationPages` (the labels of S10's three modes and S11's six pollutants from the AN-02 `Nationwide` rules), `WarningCards` (S12's cards) and `BoundHtml` (`ng-bind-html` after `$sanitize`).
+- `app` `ui/nation/`:
+  - `NationLoads` sends a page's request when it opens and keeps the answer while the page is open.
+  - `NationScreen` draws the pages over the tabs with the menu's header colors on #F5F5F5, with `$ionicLoading` and Android back blocked while S10 or S11 loads.
+  - The menu's three rows close the menu and open their page (`clickMenu`).
+  - Text follows Chrome:
+    - line boxes from `CssMetrics`, with the borrowed pixel on 16 px Korean lines;
+    - the h2 on Roboto's baseline in its 19.2 dp lines;
+    - characters Roboto has drawn in Roboto between Korean letters (`chromeRuns`);
+    - breaks between Korean syllables on every device (`chromeBreaks`; Samsung's Android keeps Korean words whole).
+- Labels are CSS shrink-to-fit at their fixed positions. The mode buttons have Chrome's pixel-snapped widths, and the strip's tabs are painted in DOM order.
+- Kept (AN-06): B9, back blocked while loading (`tools/corpus/differences.md`), and B10, Chrome's line breaking.
+- Differ: B11, S12's `imageUrl` is not drawn (only scraper-era documents have one). B12, an answer that is not a list shows no card.
+- AK 2026-11-09: the build is also checked on the attached phone (Galaxy S21+, Android 15), installed in place. That check found the Samsung line breaking (B10).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN13-US1 | User reads the current warnings | Region KR | Menu, 기상특보; scroll; back | The menu closes; each bulletin shows its name and time, its hazards and areas, the note for warnings and preliminary warnings, and its comment; back returns to the tab | Request fails or times out (3 s): no card | AC1, AC2, AC3 |
+| AN13-US2 | User compares the weather across the country | Region KR, TodayWeather | Menu, 전국날씨; 강수량; 풍향/풍속; back | A loading box, then 15 cities with sky icon and temperature; precipitation with its unit; wind direction and speed with its unit | Request fails: the names only | AC1, AC2, AC3 |
+| AN13-US3 | User compares fine dust by province | Region KR | Menu, 전국미세먼지; tap PM10 … SO2; swipe the strip; CO; back | 17 provinces with the pollutant's value on its grade color in the chosen air standard; the strip scrolls to CO | Request fails: names on translucent black | AC1, AC2, AC3 |
+| AN13-US4 | User leaves while the map loads | Slow network | Open 전국날씨; press back during loading | Back does nothing until the answer or the failure (Ionic), then works | – | AC1 |
+| AN13-US5 | User turns the phone while a page is open | A page shown | Rotate | The page keeps its answer, mode and tab; no new request | – | AC1 |
+| AN13-US6 | Maintainer refreshes the nationwide references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/nation-reference/capture.sh`, `./gradlew test` | New references, requests and provenance; offline while the Cordova build is installed | Recorded tolerances exceeded: explain or fix | AC3 |
+
+### Acceptance (from #2892)
+
+- AC1: unit tests cover the parsing of the nationwide and warning responses, including empty and failed responses.
+- AC2: on an emulator against production, nationwide weather in all three modes, nationwide air in all six tabs and the warnings render.
+- AC3: screenshot comparison with manual pages 32–35 passes.
+- AC4: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM:
+- `NationPagesTest` (core-domain): every label of the captured S10 and S11 states, both card sets, the note rule, missing fields, `ng-bind-html`, and empty and failed answers.
+- `NationSourceTest` (core-data): the URLs and headers against `nation-reference/ko-KR/requests.json`, the late answer's three attempts, the 3 s timeout against a server, and empty, failed, non-JSON and non-object answers.
+- `NationLoadsTest`.
+- `NationTest`: menu rows, requests per opening, back while loading, modes and tabs, a failed answer, saved-state restore.
+- `NationScreenshotTest`: 30 comparisons within `tolerances.json`.
+- `NationGeometryTest`: labels, buttons, tabs, cards and the loading box within 0.5 dp.
+
+Mutation checks are in `reports/sdlc/android-an-13/checks/mutations-*.log`.
+
+Device:
+- `ProductionNationTest` in `run-production-weather.sh` (API 36, ko-KR): three modes, six tabs, the warnings' cards against the answer.
+- The attached phone: the three pages from production, installed in place.
+
+CI: `check-sources.mjs` covers the nation references; the workflow paths include the three templates.

@@ -16,6 +16,7 @@ export const REFERENCE_SETS = [
     {name: 'forecast', provenance: 'app/src/test/resources/forecast-reference/provenance.json', tool: 'android/tools/forecast-reference/capture.sh'},
     {name: 'air', provenance: 'app/src/test/resources/air-reference/provenance.json', tool: 'android/tools/air-reference/capture.sh'},
     {name: 'settings', provenance: 'app/src/test/resources/settings-reference/provenance.json', tool: 'android/tools/settings-reference/capture.sh'},
+    {name: 'nation', provenance: 'app/src/test/resources/nation-reference/provenance.json', tool: 'android/tools/nation-reference/capture.sh'},
 ];
 
 /**

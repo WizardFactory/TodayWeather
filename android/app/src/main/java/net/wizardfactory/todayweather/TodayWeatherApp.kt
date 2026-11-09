@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import net.wizardfactory.todayweather.core.data.HttpPushTransport
+import net.wizardfactory.todayweather.core.data.NationSource
 import net.wizardfactory.todayweather.core.data.PushSync
 import net.wizardfactory.todayweather.core.data.PushTransport
 import net.wizardfactory.todayweather.core.data.WeatherPhotoFeed
@@ -47,6 +48,9 @@ open class TodayWeatherApp : Application() {
 
     /** Each place's weather, cached in files so a cold start shows the last weather while it loads (#2887). */
     val weather: WeatherRepository by lazy { WeatherRepository(serverUrl(), File(filesDir, "weather")) }
+
+    /** The requests of the nationwide and warning pages (#2892). */
+    val nation: NationSource by lazy { NationSource(serverUrl()) }
 
     /** Push registrations (gate G1, push part), one at a time; their token is saved in turn with the screens' changes. */
     val push: PushSync by lazy {

@@ -283,11 +283,12 @@ fun RetryDialog(onClose: () -> Unit, onRetry: () -> Unit) {
 const val RETRY_DIALOG = "weather-retry-dialog"
 
 /**
- * `<ion-spinner icon="bubbles">` in the title: nine dots around a circle, each fading in turn, in white (`.body-content
- * .bar p svg`), which the light theme's white bar hides (A08, kept).
+ * `<ion-spinner icon="bubbles">`: nine dots around a circle, each fading in turn. In the title it is white
+ * (`.body-content .bar p svg`), which the light theme's white bar hides (A08, kept); `$ionicLoading` draws it in
+ * [color] (`spinner-stable`).
  */
 @Composable
-internal fun Bubbles(modifier: Modifier) {
+internal fun Bubbles(modifier: Modifier, color: Color = Color.White) {
     val turn by rememberInfiniteTransition(label = "bubbles").animateFloat(0f, 1f,
         infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart), label = "turn")
     Canvas(modifier) {
@@ -295,7 +296,7 @@ internal fun Bubbles(modifier: Modifier) {
         for (i in 0 until 9) {
             val angle = 2 * PI * i / 9
             val phase = ((turn - i / 9f) % 1f + 1f) % 1f
-            drawCircle(Color.White, radius = r * 5 / 32 * (1 - phase), center = Offset(r + (r * 24 / 32 * cos(angle)).toFloat(), r + (r * 24 / 32 * sin(angle)).toFloat()))
+            drawCircle(color, radius = r * 5 / 32 * (1 - phase), center = Offset(r + (r * 24 / 32 * cos(angle)).toFloat(), r + (r * 24 / 32 * sin(angle)).toFloat()))
         }
     }
 }
