@@ -226,7 +226,7 @@ The emulator check is `tools/backup/run-backup-test.sh <cordova-debug.apk>` (#28
 1. `EntryLinkDeviceTest` opens `todayweather://2` with `am start` in a stopped app (cold) and `todayweather://1` in the open app (warm). A link delivered again as Recents delivers it selects nothing, and the same link without that flag then selects its place.
 2. A native backup (`bmgr`, local transport) restored after a reinstall: `BackupRestoreTest` checks what came back (places, units, settings, an alarm), what stayed behind, and that the open app replaces the token and posts the list.
 3. A Cordova 1.1.1 backup restored into this build: the Cordova data migrates and its other files stay behind.
-The script sets the backup transport for the run and puts it back on every exit.
+On API 31 and later, steps 2 and 3 run again as device transfers: the local transport's `is_device_transfer` parameter makes Android apply the `device-transfer` section. On API 24 to 30 both kinds use `backup_rules.xml`; the check runs on API 24 and API 36. The script sets the backup transport and its parameters for the run and puts them back on every exit.
 
 ## Data migration from the Cordova app
 

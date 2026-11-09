@@ -5,11 +5,14 @@
 # 2. a native backup (`bmgr backupnow`, local transport) restored after a reinstall (`bmgr restore`): BackupRestoreTest
 #    checks what came back against the policy in android/README.md;
 # 3. a Cordova 1.1.1 backup restored into this build: the Cordova data migrates, and Cordova files outside the policy stay
-#    behind.
+#    behind;
+# on API 31+, 2 and 3 again as device transfers: the local transport's `is_device_transfer` parameter makes Android apply
+# the device-transfer section of data_extraction_rules.xml (a probe build without app_state.json in that section restored
+# it from a cloud backup and not from a transfer).
 #   ANDROID_SERIAL=emulator-5554 android/tools/backup/run-backup-test.sh <cordova-debug.apk> [out-dir]
 # The emulator stays offline while either app is installed (tools/emulator/offline.sh), so neither gets an FCM token or
-# reaches a server; the test app records push requests. The backup transport and its on/off state are set for the run and
-# put back on every exit. Requires the native debug and androidTest APKs signed with the Cordova APK's debug key.
+# reaches a server; the test app records push requests. The backup transport, its parameters and its on/off state are set
+# for the run and put back on every exit. Requires the native debug and androidTest APKs signed with the Cordova APK's debug key.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 . "$HERE/../emulator/offline.sh"
@@ -25,7 +28,10 @@ LOCAL=$(adb shell bmgr list transports | tr -d '\r' | sed -n 's/^[ *]*\([^ ]*Loc
 [ -n "$LOCAL" ] || { echo "no local backup transport" >&2; exit 1; }
 TRANSPORT=$(adb shell bmgr list transports | sed -n 's/^ *\* *//p' | tr -d '\r')
 ENABLED=$(adb shell bmgr enabled | tr -d '\r')
+PARAMS=$(adb shell settings get secure backup_local_transport_parameters | tr -d '\r')
 put_back() {
+    if [ "$PARAMS" = null ]; then adb shell settings delete secure backup_local_transport_parameters >/dev/null 2>&1
+    else adb shell settings put secure backup_local_transport_parameters "$PARAMS" >/dev/null 2>&1; fi
     [ -n "$TRANSPORT" ] && adb shell bmgr transport "$TRANSPORT" >/dev/null 2>&1
     case "$ENABLED" in *disabled*) adb shell bmgr enable false >/dev/null 2>&1 ;; esac
 }
@@ -83,35 +89,49 @@ check link-cold -e link cold -e class $PKG.EntryLinkDeviceTest#coldStartSelected
 check link-warm -e link warm -e class $PKG.EntryLinkDeviceTest#warmStartSelectsThePlace
 check link-recents -e link recents -e class $PKG.EntryLinkDeviceTest#aRelaunchFromRecentsKeepsThePlace
 
-# 2. A native backup restored into a fresh install.
-fresh
-check backup-seed -e backup seed -e class $PKG.BackupRestoreTest#seed
-backup backup-native
-adb uninstall $PKG >/dev/null
-adb install "$APP/debug/app-debug.apk" >/dev/null
-restore restore-native
-check backup-native-check -e backup native -e token token-b -e class $PKG.BackupRestoreTest#nativeBackupRestoresThePolicy
+# 2. A native backup restored into a fresh install; $1 names the pass's files.
+native_restore() {
+    fresh
+    check backup-seed$1 -e backup seed -e class $PKG.BackupRestoreTest#seed
+    backup backup-native$1
+    adb uninstall $PKG >/dev/null
+    adb install "$APP/debug/app-debug.apk" >/dev/null
+    restore restore-native$1
+    check backup-native-check$1 -e backup native -e token token-b -e class $PKG.BackupRestoreTest#nativeBackupRestoresThePolicy
+}
 
-# 3. A Cordova 1.1.1 backup restored into this build.
-adb uninstall $PKG.test >/dev/null 2>&1 || true
-adb uninstall $PKG >/dev/null 2>&1 || true
-adb install "$CORDOVA_APK" >/dev/null
-adb shell am start -n $PKG/.MainActivity >/dev/null
-node "$HERE/../upgrade/seed-cordova.mjs" "$ANDROID_SERIAL" > "$OUT/seeded.json"
-adb shell am force-stop $PKG
-adb shell run-as $PKG ls -R . > "$OUT/cordova-files.txt"
-# Files of the Cordova app the policy leaves out and the restored native app does not make while the test runs.
-ABSENT=""
-for f in app_webview/Default/Cookies shared_prefs/WebViewChromiumPrefs.xml app_webview/Default/Preferences; do
-    adb shell run-as $PKG ls "$f" >/dev/null 2>&1 && ABSENT="$ABSENT$f,"
-done
-[ -n "$ABSENT" ] || { echo "no Cordova file outside the policy to check" >&2; exit 1; }
-echo "Cordova files that must stay behind: $ABSENT" | tee "$OUT/absent.txt"
-backup backup-cordova
-adb uninstall $PKG >/dev/null
-adb install "$APP/debug/app-debug.apk" >/dev/null
-adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
-restore restore-cordova
-SEEDED=$(base64 < "$OUT/seeded.json" | tr -d '\n')
-check backup-cordova-check -e backup cordova -e seeded "$SEEDED" -e absent "$ABSENT" -e class $PKG.BackupRestoreTest#cordovaBackupRestoresAndMigrates
+# 3. A Cordova 1.1.1 backup restored into this build; $1 names the pass's files.
+cordova_restore() {
+    adb uninstall $PKG.test >/dev/null 2>&1 || true
+    adb uninstall $PKG >/dev/null 2>&1 || true
+    adb install "$CORDOVA_APK" >/dev/null
+    adb shell am start -n $PKG/.MainActivity >/dev/null
+    node "$HERE/../upgrade/seed-cordova.mjs" "$ANDROID_SERIAL" > "$OUT/seeded$1.json"
+    adb shell am force-stop $PKG
+    adb shell run-as $PKG ls -R . > "$OUT/cordova-files$1.txt"
+    # Files of the Cordova app the policy leaves out and the restored native app does not make while the test runs.
+    ABSENT=""
+    for f in app_webview/Default/Cookies shared_prefs/WebViewChromiumPrefs.xml app_webview/Default/Preferences; do
+        adb shell run-as $PKG ls "$f" >/dev/null 2>&1 && ABSENT="$ABSENT$f,"
+    done
+    [ -n "$ABSENT" ] || { echo "no Cordova file outside the policy to check" >&2; exit 1; }
+    echo "Cordova files that must stay behind: $ABSENT" | tee "$OUT/absent$1.txt"
+    backup backup-cordova$1
+    adb uninstall $PKG >/dev/null
+    adb install "$APP/debug/app-debug.apk" >/dev/null
+    adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
+    restore restore-cordova$1
+    SEEDED=$(base64 < "$OUT/seeded$1.json" | tr -d '\n')
+    check backup-cordova-check$1 -e backup cordova -e seeded "$SEEDED" -e absent "$ABSENT" -e class $PKG.BackupRestoreTest#cordovaBackupRestoresAndMigrates
+}
+
+native_restore ""
+cordova_restore ""
+# Device transfers use their own section of the rules from API 31 (earlier releases apply fullBackupContent to both).
+if [ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" -ge 31 ]; then
+    adb shell settings put secure backup_local_transport_parameters is_device_transfer=true
+    native_restore -transfer
+    cordova_restore -transfer
+    echo "device transfers passed"
+fi
 echo "entry links and backup passed; evidence in $OUT"
