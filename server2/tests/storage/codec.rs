@@ -230,3 +230,24 @@ fn validated_group_builder_requires_s06_descriptor_for_completeness() {
     invalid.members = 0;
     assert!(r.with_fetch_group(invalid, &limits).is_err());
 }
+/// A raw key with out-of-range numbers is not a record identity (no arithmetic overflow).
+#[test]
+fn absurd_record_keys_are_refused() {
+    let hash = "a".repeat(64);
+    for key in [
+        format!("raw/v2/kma-web/aws-hourly/500000/01/01/0000/{hash}/1-{hash}.raw.gz"),
+        format!("raw/v2/kma-web/aws-hourly/2026/4294967295/01/0000/{hash}/1-{hash}.raw.gz"),
+        format!("raw/v2/kma-web/aws-hourly/2026/09/99999/0000/{hash}/1-{hash}.raw.gz"),
+        format!(
+            "raw/v2/kma-web/aws-hourly/2026/09/24/0000/{hash}/99999999999999999999-{hash}.raw.gz"
+        ),
+    ] {
+        assert!(
+            server2::storage::RecordId::from_object_key(&key).is_err(),
+            "{key}"
+        );
+    }
+    let good = format!("raw/v2/kma-web/aws-hourly/2026/09/24/1000/{hash}/1-{hash}.raw.gz");
+    let id = server2::storage::RecordId::from_object_key(&good).unwrap();
+    assert_eq!(id.object_key().unwrap(), good);
+}

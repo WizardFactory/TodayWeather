@@ -264,7 +264,9 @@ is read by the tests or measurement tool.
 The cache holds verified immutable raw objects for `data-go-kr`, `kma-web`, `vc`
 and the exact `airkorea-image` / `airkorea-forecast-image` pair. AirKorea's image
 raws are included; the decoded hourly forecast (`airkorea-forecast-hourly`, made by
-the process timer and read from S3) and packs are **not** cached on disk.
+the process timer and read from S3), the KMA station page products
+(`kma-web` / `station-pages`, made by any process that folds the station pages) and packs
+are **not** cached on disk.
 Mutable catalogs, absence proofs, state, budgets, push tokens, geocode and exact
 request coordinates are excluded. Catalog/group publication checks still use S3.
 Filename and namespace hashes do not replace the raw codec's identity validation.
