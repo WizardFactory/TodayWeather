@@ -42,6 +42,16 @@
       "path": "docs/operations/server2-native-verification.md",
       "category": "documentation",
       "reason": "The D1 smoke and unit controls under the 24-hour rule instead of the success latch."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-zone-refresh.sequence.json",
+      "category": "documentation",
+      "reason": "Archify source: zones from the newest stored list, bounded selection and 24 h acquisition."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-zone-refresh.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
     }
   ]
 }
