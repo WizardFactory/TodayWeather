@@ -11,8 +11,8 @@
   "heightDifference": 0
  },
  "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in settings-reference/<lang>",
- "why": "TBD",
- "sensitivity": "TBD",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, and the advances of Korean glyphs (the settings rows and the popup use unhinted advances, TextMotion.Animated, which halved the difference). Line boxes follow the WebView: rows of 54.85 dp between shared 1 dp borders on Chrome's device pixels, the popup's body on `line-height: normal` (CssMetrics), its title and button lines on Roboto's baseline, so every comparison has the Cordova height. The S03 blocks are the forecast references' (AN-08) in °F and in the dark and photo themes; the photo covers the header block from its top left.",
+ "sensitivity": "Measured 2026-11-09 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-12/checks/mutations-1.log, mutations-2.log): rows 2 dp taller fail 19 comparisons, choices 4 dp to the right 19, the popup 10 dp wider 2, a lighter backdrop 2, the photo centered as AN-08 had it 1 (hourly-photo-0), the tab page's colors instead of the menu's 4 (photo and old themes). A check mark 4 dp higher and the popup's body on Compose's own line height change too few pixels to fail; SettingsGeometryTest compares the rows, the check mark and the popup's parts with the captured rects within 0.5 dp and fails for both.",
  "cases": {
   "en-US/about": {
    "strong": 0.00266,

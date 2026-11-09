@@ -35,6 +35,7 @@ import net.wizardfactory.todayweather.ui.text.CssMetrics
 
 object PopupTags {
     const val POPUP = "ionic-popup"
+    const val BODY = "ionic-popup-body"
     const val BUTTON = "ionic-popup-button"
 }
 
@@ -62,7 +63,9 @@ fun IonicAlert(title: String, lines: List<String>, button: String, onClose: () -
             val normal = remember(text, density) {
                 CssMetrics.line(AnnotatedString(text), style, style, density).let { (it.ascent + it.descent) / density.density / density.fontScale }
             }
-            Text(text, Modifier.fillMaxWidth().padding(10.dp), style = line(14.sp, normal.sp, Color.Black).copy(textMotion = TextMotion.Animated))
+            Box(Modifier.fillMaxWidth().testTag(PopupTags.BODY)) {
+                Text(text, Modifier.fillMaxWidth().padding(10.dp), style = line(14.sp, normal.sp, Color.Black).copy(textMotion = TextMotion.Animated))
+            }
             // .popup-buttons: 10 dp around the button, whose 20 dp line sits in its middle (a `<button>` centers its content).
             Box(Modifier.fillMaxWidth().padding(10.dp)) {
                 Box(Modifier.fillMaxWidth().height(45.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFF387EF5))
