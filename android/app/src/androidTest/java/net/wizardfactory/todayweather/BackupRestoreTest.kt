@@ -73,6 +73,7 @@ class BackupRestoreTest {
             app.migration.await()
             app.appState.dataStore.updateData {
                 it.copy(places = places, placeIndex = 2, units = units, settings = settings, push = PushState(fcmToken = "token-a", records = listOf(alarm)))
+                    .afterStart()
             }
         }
         assertTrue(app.analytics.setCollectionEnabled(true))

@@ -14,13 +14,20 @@ import net.wizardfactory.todayweather.core.storage.AppState
 
 /**
  * The share button of S03, S04 and S05 (TabCtrl's `doTabShare`, O16): the selected place's message through the system
- * chooser, as the socialsharing plugin sent it. Without a location nothing is shared; the Cordova build opened O02
- * there, which comes with AN-10.
+ * chooser, as the socialsharing plugin sent it. Without a selected place or its location nothing is shared, and O02
+ * asks how to start instead ([onNoLocation], `startPopup`).
  */
-class WeatherShare(private val context: Context, private val state: () -> AppState?, private val weather: () -> Map<String, WeatherEntry>) {
+class WeatherShare(
+    private val context: Context,
+    private val state: () -> AppState?,
+    private val weather: () -> Map<String, WeatherEntry>,
+    private val onNoLocation: () -> Unit = {},
+) {
     fun share() {
         val s = state() ?: return
-        val record = s.places.getOrNull(s.placeIndex)?.let { cityRecord(it, weather()[WeatherRepository.key(it)]) }
+        val place = s.places.getOrNull(s.placeIndex)
+        if (place?.location == null) return onNoLocation()
+        val record = cityRecord(place, weather()[WeatherRepository.key(place)])
         val texts = ShareMessage.Texts(context.getString(R.string.LOC_CURRENT), context.getString(R.string.LOC_HIGHEST),
             context.getString(R.string.LOC_LOWEST), context.getString(R.string.LOC_TODAYWEATHER))
         val message = ShareMessage.build(record, texts, AppLocale.systemTags().firstOrNull().orEmpty()) ?: return
@@ -57,10 +64,11 @@ class EntryLinks {
 
     /**
      * Hands each queued place index to [open] once the saved state is there ([state] is null until it has been read
-     * after the migration): a cold start's link arrives with the migration's end, which can come first.
+     * after the migration) and [ready]: a cold start's link arrives with the migration's end, which can come first, and
+     * a link waits while the start page shows (AN-10).
      */
-    suspend fun deliver(state: StateFlow<AppState?>, open: (Double) -> Unit) {
-        state.first { it != null }
+    suspend fun deliver(state: StateFlow<AppState?>, ready: (AppState) -> Boolean = { true }, open: (Double) -> Unit) {
+        state.first { it != null && ready(it) }
         for (index in indexes) open(index)
     }
 }

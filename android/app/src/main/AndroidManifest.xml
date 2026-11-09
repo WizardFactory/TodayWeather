@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The photo feed loads again when a network comes back (the Cordova online event). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The current position (AN-10): precise and approximate, asked together; no GPS hardware needed, as the Cordova
+         build declared (GPS_REQUIRED false). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
         android:name=".TodayWeatherApp"

@@ -24,4 +24,5 @@ object Glyphs {
     const val CHEVRON_RIGHT = ""
     const val CHEVRON_LEFT = ""
     const val CHECKMARK = "\uF122"
+    const val SEARCH = "\uF21F"
 }

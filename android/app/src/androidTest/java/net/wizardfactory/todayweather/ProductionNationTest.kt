@@ -34,6 +34,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -49,7 +50,11 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ProductionNationTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    @get:Rule val chain: RuleChain = RuleChain.outerRule(StateRule {
+        it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1, units = UnitSettings.defaults("KR"))
+    }).around(rule)
 
     private val app get() = rule.activity.application as TestTodayWeatherApp
     private val seoul = Place(false, false, "서울", "대한민국 서울특별시 중구", "KR", Location(37.56, 126.98))
@@ -58,7 +63,6 @@ class ProductionNationTest {
     fun theNationwidePagesAndTheWarningsRenderFromProduction() {
         assumeTrue("needs -e weather production", TestRunner.args.getString("weather") == "production")
         rule.waitUntil(30_000) { app.appState.current() != null }
-        rule.runOnUiThread { app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1, units = UnitSettings.defaults("KR")) } }
         rule.waitForIdle()
 
         open(MenuRow.NATIONAL_WEATHER)
