@@ -257,6 +257,23 @@ class SettingsTest {
         inPopup("OK").assertExists()
     }
 
+    /** Saved state from another version: routes it does not know are dropped; the shell restores what it can. */
+    @Test
+    fun savedStateFromAnotherVersionDoesNotBreakTheScreens() {
+        assertTrue(SettingsRoutes.known(SettingsRoutes.UNITS))
+        assertTrue(SettingsRoutes.known(SettingsRoutes.list("airUnit")))
+        assertTrue(SettingsRoutes.known(SettingsRoutes.list("theme")))
+        assertTrue(!SettingsRoutes.known(SettingsRoutes.list("language")))
+        assertTrue(!SettingsRoutes.known("nation"))
+        val scope = androidx.compose.runtime.saveable.SaverScope { true }
+        val saver = net.wizardfactory.todayweather.ui.shell.ShellNavigation.Saver
+        val saved = with(saver) { scope.save(net.wizardfactory.todayweather.ui.shell.ShellNavigation(Tab.AIR, menuOpen = true)) }!!
+        with(saver.restore(saved)!!) { assertEquals(Tab.AIR, selected); assertTrue(menuOpen) }
+        with(saver.restore("DAILY")!!) { assertEquals("the tab's name alone (AN-09)", Tab.DAILY, selected); assertTrue(!menuOpen) }
+        assertEquals(null, saver.restore(listOf("WIND", true)))
+        assertEquals(null, saver.restore(3))
+    }
+
     /** The intents the Cordova build sent (InAppBrowser `_system`, the WebView's `mailto:`), from the activity. */
     @Test
     fun theHandOffIntentsAreTheCordovaOnes() {

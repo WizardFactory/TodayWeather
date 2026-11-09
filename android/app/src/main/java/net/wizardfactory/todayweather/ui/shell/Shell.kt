@@ -133,8 +133,15 @@ class ShellNavigation(initial: Tab, menuOpen: Boolean = false) {
     var menuOpen: Boolean by mutableStateOf(menuOpen)
 
     companion object {
-        val Saver: Saver<ShellNavigation, List<Any>> = Saver(save = { listOf(it.selected.name, it.menuOpen) },
-            restore = { ShellNavigation(Tab.valueOf(it[0] as String), it[1] as Boolean) })
+        /** The tab and the menu; a state saved before the menu was kept (the tab's name alone) or with a tab no longer there restores what it can. */
+        val Saver: Saver<ShellNavigation, Any> = Saver(save = { listOf(it.selected.name, it.menuOpen) }, restore = { saved ->
+            val (tab, menu) = when (saved) {
+                is String -> saved to false
+                is List<*> -> saved.getOrNull(0) to (saved.getOrNull(1) == true)
+                else -> null to false
+            }
+            Tab.entries.firstOrNull { it.name == tab }?.let { ShellNavigation(it, menu) }
+        })
     }
 }
 

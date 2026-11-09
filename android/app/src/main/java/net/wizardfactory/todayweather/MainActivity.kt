@@ -26,10 +26,12 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.wizardfactory.todayweather.core.data.SettingsActions
 import net.wizardfactory.todayweather.core.data.WeatherEntry
 import net.wizardfactory.todayweather.core.data.WeatherSession
@@ -98,7 +100,10 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val handoffs = remember(context) {
-                    MenuHandoffs(openSystem = { url -> Handoff.openSystem(this, url) }, sendFeedback = { Handoff.openLink(this, Handoff.feedbackMail(this)) })
+                    // The user agent may load the WebView the first time: the mail is built off the main thread.
+                    MenuHandoffs(openSystem = { url -> Handoff.openSystem(this, url) }, sendFeedback = {
+                        lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
+                    })
                 }
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings, handoffs = handoffs)
             }
@@ -153,12 +158,16 @@ fun AppContent(
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
-    // The settings pages open over the tabs (SettingsRoutes), last on top; About is a popup over the menu (O10).
-    var pages by rememberSaveable { mutableStateOf(listOf<String>()) }
+    // The settings pages open over the tabs (SettingsRoutes), last on top; a saved route this version does not have is
+    // dropped. About is a popup over the menu (O10).
+    var saved by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val pages = saved.filter(SettingsRoutes::known)
+    fun open(route: String) { saved = saved.filter(SettingsRoutes::known) + route }
+    fun back() { saved = saved.filter(SettingsRoutes::known).dropLast(1) }
     var about by rememberSaveable { mutableStateOf(false) }
     val applies by session.applies.collectAsState()
     val texts = host.texts
-    val openUnits = { pages = pages + SettingsRoutes.UNITS }
+    val openUnits = { open(SettingsRoutes.UNITS) }
     TodayWeatherShell(
         ShellState(
             theme = theme,
@@ -190,7 +199,7 @@ fun AppContent(
                     }
                     navigation.menuOpen = false
                     settings?.opened(name)
-                    pages = pages + SettingsRoutes.list(name)
+                    open(SettingsRoutes.list(name))
                 }
                 MenuRow.NULLSCHOOL_WIND -> handoffs.openSystem(Handoffs.NULLSCHOOL)
                 MenuRow.SEND_FEEDBACK -> {
@@ -210,8 +219,8 @@ fun AppContent(
         onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
         overlay = {
             pages.lastOrNull()?.let { route ->
-                SettingsScreen(route, state, theme, texts, onBack = { pages = pages.dropLast(1) },
-                    onUnit = { name -> pages = pages + SettingsRoutes.list(name) },
+                SettingsScreen(route, state, theme, texts, onBack = ::back,
+                    onUnit = { name -> open(SettingsRoutes.list(name)) },
                     onChoose = { name, value -> settings?.choose(name, value) })
             }
         },

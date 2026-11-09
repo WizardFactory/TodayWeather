@@ -107,6 +107,10 @@ private fun Item(row: SettingsRow, radio: Boolean, colors: ShellColors, border: 
 object SettingsRoutes {
     const val UNITS = "units"
     fun list(name: String) = "list:$name"
+
+    /** Whether [route] names a page (a saved route from another version may not). */
+    fun known(route: String): Boolean =
+        route == UNITS || route.startsWith("list:") && route.removePrefix("list:") in SettingLists.UNITS + SettingLists.SETTINGS
 }
 
 /**
