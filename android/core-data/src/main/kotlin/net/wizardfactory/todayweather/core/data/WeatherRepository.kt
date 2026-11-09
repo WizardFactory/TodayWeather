@@ -39,9 +39,10 @@ sealed interface LoadResult {
 
     /**
      * No weather: the place has neither coordinates nor address, the request failed, or the body did not convert.
-     * [network]: the request failed (an error with a status for `updateWeatherData`).
+     * [network]: the request failed (an error with a status for `updateWeatherData`). [unconvertible]: the body was JSON
+     * that `convertWeatherData` could not convert, which the start page reports as an existing place.
      */
-    data class Failed(val error: Throwable?, val network: Boolean = false) : LoadResult
+    data class Failed(val error: Throwable?, val network: Boolean = false, val unconvertible: Boolean = false) : LoadResult
 }
 
 /**
@@ -125,7 +126,8 @@ class WeatherRepository(
         // An answer to a request a later one replaced counts for nothing, a failure included.
         if (!latest(key, request)) return LoadResult.Superseded
         val converted = parsed.mapCatching { WeatherConverter.convert(it) }
-        val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull(), network = body.isFailure)
+        val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull(), network = body.isFailure,
+            unconvertible = parsed.isSuccess)
         // One answer at a time is stored, and only while it is the latest of its place, so a slower write of an
         // older answer cannot follow a newer one in memory or in the cache.
         return commits.withLock {

@@ -82,6 +82,46 @@ class PushRegistrationTest {
         }
     }
 
+    /**
+     * `Push.updateCityInfo` after `WeatherInfo.updateCity` (AN-10): the moved current position posts its records, an
+     * unchanged place posts nothing, a changed source posts that place's records, and without a token the list is only
+     * saved.
+     */
+    @Test
+    fun aChangedPlaceUpdatesItsRecordsAsCordovaDoes() {
+        val cases = corpus["cityChanged"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(5, cases.size)
+        for (case in cases) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val after = case["cities"]!!.jsonArray.map { c ->
+                val o = c.jsonObject
+                val loc = o["location"]!!.jsonObject
+                Place(currentPosition = o["currentPosition"]!!.jsonPrimitive.content == "true", disable = false,
+                    name = o["name"]?.jsonPrimitive?.content, address = o["address"]?.jsonPrimitive?.content,
+                    country = o["country"]?.jsonPrimitive?.content, source = o["source"]?.jsonPrimitive?.content,
+                    location = Location(loc["lat"]!!.jsonPrimitive.content.toDouble(), loc["long"]!!.jsonPrimitive.content.toDouble()))
+            }
+            val ctx = PushRegistration.Context(
+                deviceId = corpus["deviceId"]!!.jsonPrimitive.content, language = corpus["language"]!!.jsonPrimitive.content,
+                appVersion = corpus["appVersion"]!!.jsonPrimitive.content, units = UnitSettings.defaults("KR"),
+                nowMillis = corpus["now"]!!.jsonPrimitive.long, zone = TimeZone.getTimeZone(corpus["zone"]!!.jsonPrimitive.content),
+            )
+            val token = case["storedToken"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content
+            val before = case["before"]!!.jsonArray.map { it.jsonObject }
+            val result = PushRegistration.onCityChanged(PushState(fcmToken = token, records = before), after, case["index"]!!.jsonPrimitive.content.toInt(), ctx)
+            val expected = case["requests"]!!.jsonArray.map { it.jsonObject }
+            assertEquals(expected.size, result.requests.size, "$name: request count")
+            expected.zip(result.requests).forEach { (e, a) ->
+                assertEquals(e["method"]!!.jsonPrimitive.content, a.method, name)
+                assertEquals(e["url"]!!.jsonPrimitive.content.removePrefix("https://server").replace("/v000902/", "/v000903/"), a.path, name)
+                assertEquals(e["headers"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }, a.headers, name)
+                assertEquals(e["data"], a.body, "$name body")
+            }
+            val saved = case["saved"]?.takeIf { it != JsonNull }?.jsonArray?.map { it.jsonObject }
+            assertEquals(saved ?: before, result.state.records, "$name: the saved list")
+        }
+    }
+
     @Test
     fun aRefreshedTokenIsReplacedWithoutTheStartRepost() {
         val ctx = PushRegistration.Context("d", "ko-KR", "2.0.0", UnitSettings.defaults("KR"), 0, TimeZone.getTimeZone("UTC"))
