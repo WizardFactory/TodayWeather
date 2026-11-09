@@ -1045,6 +1045,86 @@
         S = [S[0], { name: 'W2_world_tokyo', run: function () { return worldCity(/iPhone|iPad/.test(navigator.userAgent) ? '도쿄' : 'Tokyo', 'tokyo'); } }];
     }
 
+    // ---------- manual mode (window.TW_HARNESS_MODE === 'manual'): menu privacy choices for the user manual ----------
+    // Captures the dialogs the full scenarios do not open. Android back closes them without a value, which the
+    // app treats as no choice (controller.settingctrl.js), so the analytics setting stays at its default.
+    if (window.TW_HARNESS_MODE === 'manual') {
+        S = [S[0], { name: 'M1_privacy_choices', run: function () {
+            function menuButton(expr, label) {
+                var menu = svc('$ionicSideMenuDelegate');
+                return (menu.isOpenLeft() ? Promise.resolve() : openMenu()).then(function () {
+                    var el = byNg(expr);
+                    if (el) { el.scrollIntoView({ block: 'center' }); }
+                    return sleep(600).then(function () { check(label, !!el && !!click(el, label)); return sleep(1500); });
+                });
+            }
+            return Promise.resolve()
+                .then(function () { return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab'); })
+                .then(function () { return idle(30000); })
+                .then(function () { return menuButton('chooseAnalytics()', 'menu-analytics'); })
+                .then(function () { return waitFor(function () { return !!find('.popup-container.active .popup-buttons button'); }, 8000, 'analytics-popup'); })
+                .then(function () { return shot('m1-analytics-choice'); })
+                .then(function () { return host('back', 3000); })
+                .then(function () { check('analytics-unchanged', svc('Monetization').getCollectionChoice() === false); })
+                .then(function () { return menuButton('openAdPrivacy()', 'menu-ad-privacy'); })
+                .then(function () { return sleep(4000); })
+                .then(function () { return shot('m1-ad-privacy'); })
+                .then(function () { return host('back', 3000); });
+        } }, { name: 'M2_station_and_push_dialogs', run: function () {
+            function popupButton(re) {
+                return all('.popup-container.active .popup-buttons button').filter(visible)
+                    .filter(function (b) { return re.test(b.textContent.trim()); })[0];
+            }
+            function popupShown(label) { return waitFor(function () { return !!find('.popup-container.active .popup-buttons button'); }, 8000, label); }
+            return Promise.resolve()
+                .then(function () { return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab'); })
+                .then(function () { return idle(30000); })
+                // S05: the measuring-station cards below the air details
+                .then(function () { return tab(3); })
+                .then(function () { return idle(30000); })
+                .then(function () {
+                    var card = find('[ng-if="stnList"]') || find('[ng-if="airInfo && airInfo.dataTime"]');
+                    check('air-station-card', !!card);
+                    if (card) { card.scrollIntoView({ block: 'center' }); }
+                    return sleep(1500);
+                })
+                .then(function () { return shot('m2-air-station'); })
+                // S09 dialogs: O14 time picker (closed without a change), then O12 save confirm (closed, edits discarded)
+                .then(function () { return tab(1); })
+                .then(function () { click(byNg('goPushPage()'), 'bell(goPushPage)'); return sleep(2500); })
+                .then(function () { check('push-page', stateName() === 'setting-push', stateName()); })
+                .then(function () { var add = byNg('onOpenTimePicker(alarmList.length)'); check('add-alarm-row', !!add && !!click(add, 'add-alarm')); return popupShown('time-picker'); })
+                .then(function () { return shot('m2-time-picker'); })
+                .then(function () { var c = popupButton(/^(닫기|Close)$/); check('time-picker-close', !!c && !!click(c, 'time-picker-close')); return sleep(1200); })
+                .then(function () { var day = byNg('toggleEnableDay(value)'); check('weekday-toggle', !!day && !!click(day, 'weekday[0]')); return sleep(800); })
+                .then(function () { var b = find('.bar [ng-click="onClose()"]') || byNg('onClose()'); check('push-back', !!b && !!click(b, 'push-back')); return popupShown('save-confirm'); })
+                .then(function () { return shot('m2-save-confirm'); })
+                .then(function () { var c = popupButton(/^(닫기|Close)$/); check('save-confirm-close', !!c && !!click(c, 'save-confirm-close')); return sleep(2000); })
+                .then(function () { check('no-push-write', pushWrites('POST').length === 0, 'POST /push-list count=' + pushWrites('POST').length); });
+        } }, { name: 'M3_chart_ranges', run: function () {
+            // Both ends of the hourly (S03) and daily (S04) charts, to show how far each scrolls.
+            function ends(id, tag) {
+                var el = document.getElementById(id);
+                check(tag + '-chart', !!el && visible(el));
+                if (!el) { return Promise.resolve(); }
+                var start = el.scrollLeft, max = el.scrollWidth - el.clientWidth;
+                el.scrollLeft = 0;
+                return sleep(800).then(function () { check(tag + '-start', el.scrollLeft <= 1, 'max=' + max); return shot('m3-' + tag + '-start'); })
+                    .then(function () { el.scrollLeft = max; return sleep(800); })
+                    .then(function () { check(tag + '-end', el.scrollLeft >= max - 1, 'scrollLeft=' + Math.round(el.scrollLeft) + ' max=' + max); return shot('m3-' + tag + '-end'); })
+                    .then(function () { el.scrollLeft = start; return sleep(300); });
+            }
+            return Promise.resolve()
+                .then(function () { return waitFor(function () { return /^tab\./.test(stateName()); }, 20000, 'tab'); })
+                .then(function () { return idle(30000); })
+                .then(function () { if (stateName() !== 'tab.forecast') { return tab(1); } })
+                .then(function () { return ends('chartShortScroll', 'hourly'); })
+                .then(function () { return tab(2); })
+                .then(function () { return idle(30000); })
+                .then(function () { return ends('chartMidScroll', 'daily'); });
+        } }];
+    }
+
     // The update-info popup (O05) was removed, so a popup after a warm launch is a failure. Record it and
     // close it like a user would so the scenario can continue.
     function dismissLaunchPopup(i) {

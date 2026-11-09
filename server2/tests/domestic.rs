@@ -22,12 +22,16 @@ mod observe;
 mod observed_history;
 #[path = "domestic/parity.rs"]
 mod parity;
+#[path = "domestic/parity_evidence.rs"]
+mod parity_evidence;
 #[path = "domestic/qs.rs"]
 mod qs;
 #[path = "domestic/quota.rs"]
 mod quota;
 #[path = "domestic/replay.rs"]
 mod replay;
+#[path = "domestic/shown_publication.rs"]
+mod shown_publication;
 #[path = "domestic/source.rs"]
 mod source;
 #[path = "domestic/source_s3.rs"]

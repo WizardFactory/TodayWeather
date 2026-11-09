@@ -164,6 +164,10 @@ impl<T: CatalogTransport + Send + Sync + 'static> WarningFeed<T> {
             cache: Mutex::new(HashMap::new()),
         }
     }
+    /// The S3 transport this feed reads and publishes through.
+    pub fn transport(&self) -> &T {
+        &self.transport
+    }
     async fn bounded<F, R>(&self, f: F) -> Result<R, Error>
     where
         F: std::future::Future<Output = Result<R, Error>>,

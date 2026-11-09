@@ -342,7 +342,12 @@ instance headroom remains unqualified. Normal retries retain the same original
 bytes (9 s attempts, backoff capped at 30 s). Deterministic invalid input parks
 until shutdown; corrupt stored/control reads remain eligible for retry.
 Body end/error/drop releases publication; a 10 s dormancy cap, no-waiter detection
-and shutdown also release it. The hook proves server body termination, not remote
+and shutdown also release it. A caller is a waiter from the moment it creates or joins an
+acquisition, and the waiters are counted together with the Ready announcement, under the lock
+callers create and join entries under. A waiter that takes the batch and returns at once, one not
+yet polled again when a fast provider is done, or a response that joins after the creator was
+cancelled but before Ready therefore never makes its response's raw look unwaited: on a loaded
+runner such an order published a group before the body ended (CI run 42379684133, 2026-11-07). The hook proves server body termination, not remote
 receipt. Quiesce rejects queued misses and a 34 s shutdown drain counts abandoned
 served originals. No durable copy means exact crash recovery can be impossible.
 
@@ -1708,7 +1713,7 @@ The table records the S10c state.
 | --- | --- | --- |
 | Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1), `kma-v000901`, `kma-v000902` (S17a), `town` (S17b) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
-| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
+| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets; warning work holds at most a third of it through the bulk lane (KMA-RESTART-READS). The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
 | Geocoder quotas | `SERVER2_GEOCODER_KAKAO_DAILY_UNITS` (per key), `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS` | Required with that provider's key. One S08 window per key and UTC day, owner = domain-separated SHA-256 of the key. |
 | World weather | `VC_SECRET_KEY`, `SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` | URL defaults to the legacy Timeline root `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/`. |
@@ -2581,6 +2586,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | --- | --- | --- |
 | Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
 | Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
+| Previous short publication (`getVilageFcst`, observed response only; [#2614](#2614-kma-answer-parity-current-row-sentinels-and-yesterday)) | From HH+2:10 to HH+2:59, when the latest starts after the current three-hour slot HH; also when a lagging observation shows the slot before the clock's as current and the latest starts after it. Only when it is not in S3 for the cell | 3 hours: one attempt per cell and publication |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
 | Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
@@ -3738,7 +3744,12 @@ Exact reverse coordinates retain the geocoder's memory-only contract.
 
 The KMA source and request-driven collector share WarningStore. The persisted S12
 feed hook is installed before the collector enters Arc; zone publication precedes
-feed publication. There is no startup collection. Notice serving constructs no
+feed publication. The store and the feed use the bulk lane of the shared S3 admission
+(KMA-RESTART-READS): together they hold at most a third of its permits. On 2026-11-07 the
+first request after a restart started the collector, whose progress load, zone replay and
+publications made 859 S3 requests in 9 s while the request's observation reads waited past
+their bound. With the lane, request reads keep two thirds of the admission and the warning
+work finishes later. There is no startup collection. Notice serving constructs no
 Translator; publication/translation stays in the CLI. Push starts its existing
 registration writer only, with success after durable S3 journal publication.
 
@@ -3906,6 +3917,64 @@ in that specific smoke and covered separately by source/history regressions.
 The [proposed contract](diagrams/server2-late-publication.html) and
 [editable source](diagrams/server2-late-publication.sequence.json) preserve their
 pre-implementation base identity; they are not execution or readiness evidence.
+
+### #2614 KMA answer parity: current row, sentinels and yesterday
+
+AK defined client validation on 2026-11-07: a server2 answer gives the client all the data the
+client receives today, except parts left out because their provider is slow; legacy omission
+rules are last-resort safeguards. An EC2 parity run that day (server2 from an empty bucket against
+the production API, five places, 18:31–19:29 KST) found these defects independent of what S3 holds
+([intent](../../intent/issue-2614-kma-response-parity.md),
+[acceptance](../../specs/issue-2614-kma-response-parity.md)). Under ASOS-primary:
+
+- **Current row.** A three-hour row is past once its interval has passed (label + 3 h ≤ now). The
+  current-time row (label ≤ now < label + 3 h) keeps the forecast of the newest publication
+  covering it, with observed fields merged over it as legacy `_mergeShortWithCurrent` does, so its
+  `pop`, `wav`, `s06` and `r06`, and today's `tmn`/`tmx` where legacy keeps them, reach the client
+  again (`short::past_slot`). So does the row the client shows as current: `currentIndex` follows
+  the observation's time, so a lagging observation (a grid nowcast before HH:40 at a slot
+  boundary, or a late live reading) marks a row already past by the clock. The wipe applies
+  `convertUnits`'s rule to the same inputs, which are final by then (`short::shown_current`,
+  `present::marked_current`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
+  keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
+  rain or snow text beside a measured amount.
+- **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
+  also requires the previous publication, the newest covering slot HH (`required::foreground`).
+  When the observation lags, the row shown as current is the slot before the clock's, and the
+  source requires the publication covering it as well: `shown::publications` applies
+  `present::marked_current` to the current observation as the chain will build it. The station's
+  time decides it as soon as the station state is in (`shown::station_time`); without a station
+  reading, the newest current document does, once the current answer's stored read and latest
+  publication have settled. Neither waits for today's earlier current acquisitions (review
+  RP-lagging-current-publication); when the latest observation is unavailable, the newest stored
+  one decides, and an earlier one still being acquired is not waited for. Each of these
+  publications is read when listed, otherwise acquired as owned single-flight work under the
+  request's wait, with a three-hour retry bound per cell and publication. Each publication the request needs starts as
+  soon as that is known, whatever else is still being acquired: an absent one at once, a listed
+  one when the stored read proves it unusable. A slow acquisition, of the latest or of another
+  absent publication, therefore cannot leave the others no time (review
+  RP-previous-acquisition-starvation). They are always inside the 54 h read window.
+  This adds at most one `getVilageFcst` acquisition (one or two pages of 999 rows) per cell and
+  publication, at most 8 a day, and only when that publication was not stored while it was the
+  latest: a cell first requested in such a window, or after a failed or unusable acquisition. A
+  failure leaves the row with legacy's values for a missing publication.
+- **Sentinels.** A missing probability is 0 on every row (legacy `adjustShort`, so the app never
+  prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
+  ASOS fills without a grid observation (a row of legacy's validation template) carries wind
+  components −100, the value legacy's three-hour summary skips, instead of the template's −1.
+- **Yesterday.** Under ASOS-primary only, the comparison adds one branch that legacy lacks
+  (`compare_sources`; legacy mode keeps legacy's `can_compare`, which the kma-rich paired replay
+  of frozen legacy inputs checks): the live reading of station X in
+  the current hour (`KMA_STATION_LIVE`) and X's ASOS hour exactly 24 h earlier (`KMA_ASOS`) are one
+  thermometer, so `current.yesterday.t1h` is sent. Other stations, hours and sources keep the
+  safeguard, a stored grid yesterday row keeps its precedence, and `comparisonAvailable: true`
+  still short-circuits. In the run every pair was such a pair.
+
+`adjustShort` later drops trailing rows without a temperature; that moves the mark only when the
+current slot and every later row have none, so the wipe's rule matches `convertUnits` otherwise.
+Past-slot forecast values, ASOS precipitation rules and fetching older publications for past rows
+wait for AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`,
+`present`, `required` and `previous_short_tests` (library).
 
 ### #2819 D1 forecast-zone recovery
 

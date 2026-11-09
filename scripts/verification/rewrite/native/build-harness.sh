@@ -9,7 +9,7 @@ OUT=/tmp/tw-harness
 mkdir -p "$OUT"
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 
-MODE=${2:-full}   # full | layout | layout-live | world | upgrade | capture-air | capture-charts
+MODE=${2:-full}   # full | layout | layout-live | world | upgrade | capture-air | capture-charts | manual
 inject() { # $1 = www dir
     cp "$HERE/tw-harness.js" "$1/tw-harness.js"
     perl -0pi -e "s#<head>#<head>\n    <script>window.TW_HARNESS_MODE = '$MODE';</script>\n    <script src=\"tw-harness.js\"></script>#" "$1/index.html"

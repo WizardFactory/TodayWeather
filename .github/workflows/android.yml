@@ -1,0 +1,117 @@
+name: Android
+on:
+  pull_request:
+    paths:
+      - "android/**"
+      - "client/www/img/**"
+      - "client/www/locales/**"
+      - "client/www/data/town.js"
+      - "client/www/js/service.weatherutil.js"
+      - "client/www/js/service.weatherinfo.js"
+      - "client/www/js/service.push.js"
+      - "client/www/js/app.js"
+      - "client/www/js/service.weatherinfo.js"
+      - "client/www/templates/tab-forecast.html"
+      - "client/www/templates/tab-dailyforecast.html"
+      - "client/www/templates/tab-air.html"
+      - "client/www/css/ionic.app.css"
+      - "client/www/lib/d3/d3.js"
+      - "client/www/data/theme.js"
+      - "client/scss/ionic.app.scss"
+      - "client/bower.json"
+      - "client/www/js/controller.forecastctrl.js"
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
+      - "client/www/js/controller.nation.js"
+      - "client/www/js/controller.nation.air.js"
+      - "client/www/js/controller.kma.special.js"
+      - "client/www/js/controller.units.js"
+      - "client/www/index.html"
+      - "client/www/templates/tabs-android.html"
+      - "client/www/js/controller.settingctrl.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/android/icon/**"
+      - "client/tw.resources/android-launcher-icon.png"
+      - ".github/workflows/android.yml"
+  push:
+    branches: [master]
+    paths:
+      - "android/**"
+      - "client/www/img/**"
+      - "client/www/locales/**"
+      - "client/www/data/town.js"
+      - "client/www/js/service.weatherutil.js"
+      - "client/www/js/service.weatherinfo.js"
+      - "client/www/js/service.push.js"
+      - "client/www/js/app.js"
+      - "client/www/js/service.weatherinfo.js"
+      - "client/www/templates/tab-forecast.html"
+      - "client/www/templates/tab-dailyforecast.html"
+      - "client/www/templates/tab-air.html"
+      - "client/www/css/ionic.app.css"
+      - "client/www/lib/d3/d3.js"
+      - "client/www/data/theme.js"
+      - "client/scss/ionic.app.scss"
+      - "client/bower.json"
+      - "client/www/js/controller.forecastctrl.js"
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
+      - "client/www/js/controller.nation.js"
+      - "client/www/js/controller.nation.air.js"
+      - "client/www/js/controller.kma.special.js"
+      - "client/www/js/controller.units.js"
+      - "client/www/index.html"
+      - "client/www/templates/tabs-android.html"
+      - "client/www/js/controller.settingctrl.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/android/icon/**"
+      - "client/tw.resources/android-launcher-icon.png"
+      - ".github/workflows/android.yml"
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Build and test (with client import check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Imported client assets and golden corpus are current
+        run: |
+          python3 android/tools/import_client_assets.py
+          node android/tools/corpus/generate.mjs
+          git diff --exit-code -- android
+          test -z "$(git status --porcelain -- android)"
+      - name: Chart and shell references match the client sources
+        run: node android/tools/emulator/check-sources.mjs
+      - name: Build and unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug test
+      - name: Upgrade test cleanup (adb test double)
+        run: sh android/tools/upgrade/test-cleanup.sh
+  without-client:
+    name: Build and test without client/
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove client/
+        run: rm -rf client && test ! -e client
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and unit tests
+        working-directory: android
+        run: ./gradlew assembleDebug test

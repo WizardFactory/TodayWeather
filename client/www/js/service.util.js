@@ -67,6 +67,24 @@ angular.module('service.util', [])
             }
         };
 
+        /**
+         * Classifies a cordova.plugins.diagnostic 7.x location authorization status as 'granted', 'requestable'
+         * (the system prompt can still appear) or 'denied'. 7.x has no permissionStatus.DENIED: Android reports
+         * DENIED_ONCE/DENIED_ALWAYS and iOS denied_always/restricted. Any other status counts as denied, so a
+         * location request always settles instead of leaving its loading state running.
+         */
+        obj.classifyLocationPermission = function(status) {
+            var permissionStatus = cordova.plugins.diagnostic.permissionStatus;
+            if (status === permissionStatus.GRANTED || status === permissionStatus.GRANTED_WHEN_IN_USE) {
+                return 'granted';
+            }
+            if (status === permissionStatus.NOT_REQUESTED
+                || (ionic.Platform.isAndroid() && status === permissionStatus.DENIED_ONCE)) {
+                return 'requestable';
+            }
+            return 'denied';
+        };
+
         obj.placesUrl = 'js!https://maps.googleapis.com/maps/api/js?libraries=places';
         if (clientConfig.googleapikey) {
             obj.placesUrl += '&key='+clientConfig.googleapikey;
