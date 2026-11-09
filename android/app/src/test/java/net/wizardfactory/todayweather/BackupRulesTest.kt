@@ -3,6 +3,7 @@ package net.wizardfactory.todayweather
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.junit.Test
 import org.w3c.dom.Element
 
@@ -36,7 +37,7 @@ class BackupRulesTest {
         val manifest = File(System.getProperty("tw.projectDir")!!, "src/main/AndroidManifest.xml").readText()
         for (attr in listOf("android:allowBackup=\"true\"", "android:fullBackupContent=\"@xml/backup_rules\"",
                 "android:dataExtractionRules=\"@xml/data_extraction_rules\"")) {
-            assert(attr in manifest) { attr }
+            assertTrue(attr in manifest, attr)
         }
     }
 }
