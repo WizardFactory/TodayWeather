@@ -9,7 +9,7 @@
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f3883e25e94ac97b9226ba1e99b5a23bccd16ecd",
+      "revision": "9c8d68aa24f6b18b011025aec295dabbd0815caa",
       "link_mode": "local-only"
     }
   },
@@ -22,9 +22,9 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 365,
-          "end_line": 414,
-          "label": "Existing interface / proposed recovery change"
+          "line": 536,
+          "end_line": 555,
+          "label": "zones(): memory, check time, selector"
         }
       ]
     },
@@ -36,9 +36,9 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 365,
-          "end_line": 414,
-          "label": "Existing interface / proposed recovery change"
+          "line": 536,
+          "end_line": 555,
+          "label": "zones(): install only a higher identity"
         }
       ]
     },
@@ -50,9 +50,9 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 382,
-          "end_line": 410,
-          "label": "Existing interface / proposed recovery change"
+          "line": 692,
+          "end_line": 739,
+          "label": "acquire_zones(): 24 h rule, owned flight"
         }
       ]
     },
@@ -63,10 +63,10 @@
       "sublabel": "control objects only",
       "sources": [
         {
-          "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 198,
-          "end_line": 226,
-          "label": "Existing interface / proposed recovery change"
+          "path": "server2/src/domestic/kma/source/records.rs",
+          "line": 230,
+          "end_line": 278,
+          "label": "listed_groups(): catalog control objects only"
         }
       ]
     },
@@ -78,9 +78,9 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 1348,
-          "end_line": 1361,
-          "label": "Existing interface / proposed recovery change"
+          "line": 605,
+          "end_line": 688,
+          "label": "newest_zone_list(): anchor, members, identity"
         }
       ]
     }
