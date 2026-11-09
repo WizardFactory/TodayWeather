@@ -21,8 +21,9 @@
 //!
 //! S15b-4a acquires missing forecast inputs at request time ([`fetch`]): the latest grid, RSS and
 //! mid publications (waiting at most 3 s), legacy's grid backfill in one owned pass per cell, the
-//! forecast-zone list until one successful process refresh and the 3-minute warning cycle. A missing input is no
-//! longer a forward reason: the snapshot answers what is stored, as legacy answers absent data.
+//! forecast-zone list when the newest stored one is more than 24 h old (KMA-ZONE-NEWEST) and the
+//! 3-minute warning cycle. A missing input is no longer a forward reason: the snapshot answers
+//! what is stored, as legacy answers absent data.
 pub mod air_forecast;
 pub mod air_input;
 pub mod airkorea;
@@ -97,13 +98,15 @@ pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;publ
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
 /// A KST month before every server2 raw record (S13 and S13b landed in October 2026). Histories
-/// legacy keeps without a time bound (the last stored mid document, forecast-zone fields) are
-/// folded from here; earlier months hold no record.
+/// legacy keeps without a time bound (the last stored mid document) are folded from here, and the
+/// newest forecast-zone list is looked for from here; earlier months hold no record.
 pub const HISTORY_START_MONTH: u32 = 202601;
-/// Full forecast-zone refold interval; between refolds only newer acquisitions are applied.
-const ZONE_REFOLD: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
-/// Incremental forecast-zone refresh interval.
+/// How often a process checks S3 for a newer forecast-zone list (KMA-ZONE-NEWEST): memory answers
+/// in between, and a check that finds the installed list again counts as one.
 const ZONE_REFRESH: std::time::Duration = std::time::Duration::from_secs(600);
+/// A forecast-zone list that completed more than this before a request is acquired again
+/// (KMA-ZONE-NEWEST, AK 2026-11-10: not on every process start).
+const ZONE_ACQUIRE_AGE_MS: f64 = DAY_MS;
 
 /// How far back a family's publications can still own a retained document: the 216-hour
 /// retention plus the latest slot a publication writes (its horizon and one trailing day).
@@ -138,26 +141,79 @@ pub(crate) fn history_months(now: f64) -> Vec<u32> {
     out
 }
 
-struct ZoneCache {
+/// The forecast-zone memory (KMA-ZONE-NEWEST): the zones of the newest list this process
+/// installed with that list's identity, and the last successful check of S3, kept apart from the
+/// identity. The release's land zones and an empty collection carry no identity (no acquisition
+/// instant).
+struct ZoneMemory {
     zones: Arc<Zones>,
-    refreshed: std::time::Instant,
-    folded: std::time::Instant,
-    /// Identities of the acquisitions folded so far, and the last one in fold order.
-    seen: std::collections::HashSet<Identity>,
-    last: Identity,
+    identity: Option<Identity>,
+    checked: Option<Instant>,
+}
+impl ZoneMemory {
+    /// Whether a list of `identity` replaces the installed one: only a newer list does, so a
+    /// slower, older result never replaces a newer one.
+    fn newer(&self, identity: &Identity) -> bool {
+        self.identity.as_ref().is_none_or(|have| identity > have)
+    }
+}
+/// The zones of one complete list: [`Zones::apply`] on an empty collection, which leaves the
+/// active zones the list would leave at the end of a fold (no zone is retired).
+fn zones_of(list: &[Doc], completed: u64) -> Zones {
+    let mut zones = Zones::default();
+    zones.apply(list, completed as f64);
+    zones
 }
 /// An acquisition identity in fold order: (completion instant, partition, content digest).
 type Identity = (u64, String, String);
 fn identity(f: &Fetched) -> Identity {
-    let mut digest = Vec::new();
-    for page in &f.pages {
-        digest.extend_from_slice(crate::storage::sha256(page).as_bytes());
-    }
     (
         f.fetched_at_ms,
         f.partition.clone(),
-        crate::storage::sha256(&digest),
+        pages_digest(f.pages.iter().map(|page| crate::storage::sha256(page))),
     )
+}
+/// The content digest of an acquisition: the SHA-256 of its pages' SHA-256 hashes (hex) in page
+/// order. A catalog entry carries its page's hash, so the catalog alone gives the same digest.
+fn pages_digest<S: AsRef<str>>(hashes: impl IntoIterator<Item = S>) -> String {
+    let mut digest = Vec::new();
+    for hash in hashes {
+        digest.extend_from_slice(hash.as_ref().as_bytes());
+    }
+    crate::storage::sha256(&digest)
+}
+/// One acquisition's records as a [`Fetched`] of catalog partition `partition`, its pages in
+/// [`records::page_order`]: completed at its last page's arrival.
+fn zone_fetched(mut records: Vec<crate::storage::RawRecord>, partition: &str) -> Option<Fetched> {
+    records.sort_by(|a, b| records::page_order(&a.envelope).cmp(&records::page_order(&b.envelope)));
+    Some(Fetched {
+        fetched_at_ms: records
+            .iter()
+            .map(|r| r.envelope.identity.fetched_at_ms)
+            .max()?,
+        partition: partition.to_owned(),
+        raw_ids: records
+            .iter()
+            .map(|r| r.envelope.identity.object_key().ok())
+            .collect::<Option<Vec<_>>>()?,
+        pages: records.into_iter().map(|r| r.bytes).collect(),
+    })
+}
+/// The list and identity of an owned forecast-zone acquisition (None: not a complete list). Its
+/// catalog partition is its KST fetch day, its records' period (`ZoneRequest::partition`).
+fn acquired_zone_list(records: Vec<crate::storage::RawRecord>) -> Option<(Identity, Vec<Doc>)> {
+    let day = format!(
+        "{:08}",
+        records.first()?.envelope.identity.period.local_date
+    );
+    let fetched = zone_fetched(records, &day)?;
+    let list = complete_list(&fetched.page_refs())?;
+    Some((identity(&fetched), list))
+}
+fn zone_key() -> ProviderKey {
+    ProviderKey::Named {
+        id: "forecast-zones".into(),
+    }
 }
 /// The KST day partition (`YYYYMMDD`) one day before `partition`.
 fn day_before(partition: &str) -> String {
@@ -173,7 +229,8 @@ pub struct S3Source<T> {
     town_resolver: towns::Resolver<T>,
     warnings: Arc<WarningService<T>>,
     clock: Clock,
-    zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
+    /// KMA-ZONE-NEWEST forecast-zone memory; its lock also orders every install.
+    zones: Arc<tokio::sync::Mutex<Option<ZoneMemory>>>,
     observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback (shared with the image
     /// forecast production of the observed source).
@@ -194,8 +251,6 @@ pub struct S3Source<T> {
     attempts: Arc<Attempts>,
     /// B3 latest Short slots; generic retries and historical backfill stay independent.
     latest_short: Arc<late::LatestShort>,
-    /// A complete readable forecast-zone list was published by this process refresh.
-    zones_requested: Arc<std::sync::atomic::AtomicBool>,
     /// Requests and the process timer share one controlled warning cycle owner.
     warning_cycles: Option<Arc<warning_cycle::WarningCycles<T>>>,
 }
@@ -349,7 +404,6 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .expect("static backfill pass bounds"),
             attempts: Arc::new(Attempts::default()),
             latest_short: Arc::new(late::LatestShort::default()),
-            zones_requested: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             warning_cycles: None,
         })
     }
@@ -473,166 +527,215 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         self.life = self.life.with_acquire(acquire);
         self
     }
-    /// The forecast-zone collection at `now`: every complete `forecast-zone` acquisition since
-    /// [`HISTORY_START_MONTH`] folded in fetch order (fields an older list set and a newer one
-    /// omits stay, as legacy `$set` keeps them). Memory applies newer acquisitions every
-    /// 10 minutes and refolds everything daily.
+    /// The forecast-zone collection at `now` (KMA-ZONE-NEWEST, AK 2026-11-10): the zones of the
+    /// newest complete stored list ([`Self::refresh_zones`]), answered from memory and checked
+    /// against S3 again once the last successful check is 10 minutes old. When the newest list
+    /// known completed more than 24 h before `now`, or none is stored, the request starts the
+    /// owned acquisition and does not wait for it; the acquired list is installed when it is
+    /// newer. A failed check is the request's error, as before (memory is kept).
     pub async fn zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
-        // One successful process refresh, without making the request wait. Failed attempts
-        // remain demand-retryable under the existing five-minute admission; only a complete
-        // readable published list invalidates memory and ends this process refresh.
-        if let Some(acquire) = self.forecast.clone()
-            && !self
-                .zones_requested
-                .load(std::sync::atomic::Ordering::SeqCst)
-        {
-            let request = fetch::ForecastRequest::Zones;
-            let owned_for = request.owned_for();
-            let requested = self.zones_requested.clone();
-            let attempts = self.attempts.clone();
-            let cache = self.zones.clone();
-            let _ = self
-                .owned
-                .join(
-                    "forecast-zones".into(),
-                    Instant::now(),
-                    owned_for,
-                    move |_| {
-                        let fresh = !requested.load(std::sync::atomic::Ordering::SeqCst)
-                            && attempts.claim("forecast-zones", LATEST_RETRY);
-                        async move {
-                            if fresh {
-                                let _ = crate::observability::spawn(async move {
-                                    if let Ok(Some(records)) = acquire.acquire(request).await
-                                        && let Some(fetched) = fetched_of(&records)
-                                        && complete_list(&fetched.page_refs()).is_some()
-                                    {
-                                        let mut memory = cache.lock().await;
-                                        memory.take();
-                                        requested.store(true, std::sync::atomic::Ordering::SeqCst);
-                                    }
-                                })
-                                .await;
-                            }
-                            None
-                        }
-                    },
-                )
-                .await;
-        }
-        {
-            let cache = self.zones.lock().await;
-            if let Some(c) = cache.as_ref()
-                && c.refreshed.elapsed() < ZONE_REFRESH
-            {
-                return Ok(c.zones.clone());
+        let (zones, identity) = {
+            let mut memory = self.zones.lock().await;
+            let recent = memory
+                .as_ref()
+                .and_then(|m| m.checked)
+                .is_some_and(|checked| checked.elapsed() < ZONE_REFRESH);
+            match memory.as_ref() {
+                Some(m) if recent => (m.zones.clone(), m.identity.clone()),
+                _ => self.check_zones(&mut memory, now, deadline).await?,
             }
-        }
-        self.refresh_zones(now, deadline).await
-    }
-    /// Refresh the forecast-zone memory now (the 10-minute refresh of [`Self::zones`]).
-    pub async fn refresh_zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
-        let mut cache = self.zones.lock().await;
-        // Incremental: re-read the partitions from one day before the last folded acquisition
-        // (an acquisition's day partition is its fetch day). A new acquisition there that sorts
-        // before the last folded one (a late publication) cannot be appended: refold everything.
-        let incremental = cache
+        };
+        if identity
             .as_ref()
-            .filter(|c| c.folded.elapsed() < ZONE_REFOLD)
-            .map(|c| day_before(&c.last.1));
-        if let (Some(from), Some(c)) = (incremental, cache.as_ref()) {
-            let fetched = self.zone_lists(now, Some(&from), deadline).await?;
-            let new: Vec<&Fetched> = fetched
-                .iter()
-                .filter(|f| f.fetched_at_ms as f64 <= now && !c.seen.contains(&identity(f)))
-                .collect();
-            if new.iter().all(|f| identity(f) > c.last) {
-                let mut zones = (*c.zones).clone();
-                let (mut seen, mut last) = (c.seen.clone(), c.last.clone());
-                for f in new {
-                    if let Some(list) = complete_list(&f.page_refs()) {
-                        zones.apply(&list, f.fetched_at_ms as f64);
-                    }
-                    let id = identity(f);
-                    seen.insert(id.clone());
-                    last = last.max(id);
-                }
-                let zones = Arc::new(zones);
-                let folded = c.folded;
-                *cache = Some(ZoneCache {
-                    zones: zones.clone(),
-                    refreshed: std::time::Instant::now(),
-                    folded,
-                    seen,
-                    last,
-                });
-                return Ok(zones);
-            }
+            .is_none_or(|id| now - id.0 as f64 > ZONE_ACQUIRE_AGE_MS)
+        {
+            self.acquire_zones().await;
         }
-        let fetched = self.zone_lists(now, None, deadline).await?;
-        let mut zones = Zones::default();
-        let mut seen = std::collections::HashSet::new();
-        let mut last = None;
-        let mut applied = false;
-        for f in fetched.iter().filter(|f| f.fetched_at_ms as f64 <= now) {
-            if let Some(list) = complete_list(&f.page_refs()) {
-                zones.apply(&list, f.fetched_at_ms as f64);
-                applied = true;
-            }
-            let id = identity(f);
-            seen.insert(id.clone());
-            last = Some(id);
-        }
-        let (true, Some(last)) = (applied, last) else {
-            // No list stored: legacy's empty collection (`findForecastZoneByName` finds nothing).
-            // The observed response uses the release's land zones until a list is stored, so its
-            // first answer can ask for mid temperatures.
-            return Ok(if self.observed_history {
+        Ok(zones)
+    }
+    /// Check S3 now (the 10-minute check of [`Self::zones`]): select the newest complete stored
+    /// list and install it when it is newer than memory's. The check time moves on every
+    /// successful check, also when it finds the installed list again or nothing.
+    pub async fn refresh_zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
+        let mut memory = self.zones.lock().await;
+        self.check_zones(&mut memory, now, deadline)
+            .await
+            .map(|(zones, _)| zones)
+    }
+    /// [`Self::refresh_zones`] under the zones lock: the installed zones and their identity.
+    async fn check_zones(
+        &self,
+        memory: &mut Option<ZoneMemory>,
+        now: f64,
+        deadline: Instant,
+    ) -> Result<(Arc<Zones>, Option<Identity>), String> {
+        // On the heap: the selector's catalog reads would otherwise enlarge every snapshot's
+        // future (a debug test thread of 2 MiB overflowed).
+        let newest = Box::pin(self.newest_zone_list(now, deadline)).await?;
+        let m = memory.get_or_insert_with(|| ZoneMemory {
+            // No list installed: legacy's empty collection (`findForecastZoneByName` finds
+            // nothing). The observed response uses the release's land zones until a list is
+            // stored, so its first answer can ask for mid temperatures.
+            zones: if self.observed_history {
                 Zones::packaged()
             } else {
                 Arc::new(Zones::default())
-            });
-        };
-        let zones = Arc::new(zones);
-        *cache = Some(ZoneCache {
-            zones: zones.clone(),
-            refreshed: std::time::Instant::now(),
-            folded: std::time::Instant::now(),
-            seen,
-            last,
+            },
+            identity: None,
+            checked: None,
         });
-        Ok(zones)
+        if let Some((identity, list)) = newest
+            && m.newer(&identity)
+        {
+            m.zones = Arc::new(zones_of(&list, identity.0));
+            m.identity = Some(identity);
+        }
+        m.checked = Some(Instant::now());
+        Ok((m.zones.clone(), m.identity.clone()))
     }
-    /// Every `forecast-zone` acquisition since [`HISTORY_START_MONTH`] (or from partition `from`),
-    /// in fold order (completion instant, partition).
-    async fn zone_lists(
+    /// The newest complete stored forecast-zone list at `now` with its identity (None: no
+    /// eligible list is stored). Candidates come from catalog control objects alone, in the
+    /// fold's order (completion instant, partition, digest of the pages); a group is restored only
+    /// when it is tried. Day partitions are tried newest first; the first with an eligible list
+    /// is the anchor, and only the day before it can hold a list that completed later: a list's
+    /// partition is the latest KST day one of its pages was requested on, and its pages arrive
+    /// within the provider budget (10 pages, 2 attempts of 10 s: 200 s) of that request, so a list
+    /// of two days before the anchor completed before any list of the anchor's day began. A
+    /// corrupt or unreadable store is the read's error, as before.
+    async fn newest_zone_list(
         &self,
         now: f64,
-        from: Option<&str>,
         deadline: Instant,
-    ) -> Result<Vec<Fetched>, String> {
-        let key = ProviderKey::Named {
-            id: "forecast-zones".into(),
+    ) -> Result<Option<(Identity, Vec<Doc>)>, String> {
+        let days = self
+            .reader
+            .partitions(
+                "data-go-kr",
+                "forecast-zone",
+                &zone_key(),
+                &history_months(now),
+                deadline,
+            )
+            .await
+            .map_err(|e| format!("forecast-zone listing: {e}"))?;
+        for (i, day) in days.iter().enumerate().rev() {
+            let Some(anchor) = self.eligible_zone_list(day, None, now, deadline).await? else {
+                continue;
+            };
+            let before = day_before(day);
+            if days[..i].binary_search(&before).is_ok()
+                && let Some(later) = self
+                    .eligible_zone_list(&before, Some(&anchor.0), now, deadline)
+                    .await?
+            {
+                return Ok(Some(later));
+            }
+            return Ok(Some(anchor));
+        }
+        Ok(None)
+    }
+    /// The highest eligible list of one day partition, above `above` when given: its groups from
+    /// the catalog alone in descending order key, each restored ([`Reader::members`]) until one
+    /// is complete (S06), equals its catalog entries and is a list legacy would have written
+    /// ([`complete_list`]). Lists that completed after `now` are skipped.
+    async fn eligible_zone_list(
+        &self,
+        day: &str,
+        above: Option<&Identity>,
+        now: f64,
+        deadline: Instant,
+    ) -> Result<Option<(Identity, Vec<Doc>)>, String> {
+        let read = |e: crate::storage::Error| format!("forecast-zone read: {e}");
+        let id = records::catalog("data-go-kr", "forecast-zone", &zone_key(), day).map_err(read)?;
+        let mut candidates: Vec<(Identity, crate::storage::Envelope)> = self
+            .reader
+            .listed_groups(&id, deadline)
+            .await
+            .map_err(read)?
+            .into_iter()
+            .filter(|g| g.completed as f64 <= now)
+            .map(|g| {
+                let key = (g.completed, day.to_owned(), pages_digest(&g.raw_sha256));
+                (key, g.member)
+            })
+            .filter(|(key, _)| above.is_none_or(|above| key > above))
+            .collect();
+        candidates.sort_by(|a, b| b.0.cmp(&a.0));
+        for (key, member) in candidates {
+            let Some(groups) = self
+                .reader
+                .members(&id, std::slice::from_ref(&member.identity), deadline)
+                .await
+                .map_err(read)?
+            else {
+                // Not complete: the next newest.
+                continue;
+            };
+            let restored = groups
+                .into_iter()
+                .next()
+                .and_then(|records| zone_fetched(records, day));
+            let Some(fetched) = restored.filter(|f| identity(f) == key) else {
+                return Err(format!(
+                    "forecast-zone read: a restored list of {day} differs from its catalog entries"
+                ));
+            };
+            if let Some(list) = complete_list(&fetched.page_refs()) {
+                return Ok(Some((key, list)));
+            }
+        }
+        Ok(None)
+    }
+    /// Start the owned forecast-zone acquisition without waiting for it. One runs at a time, and
+    /// a failure is retried under the existing five-minute admission. Its complete list is
+    /// installed when it is newer than memory's.
+    async fn acquire_zones(&self) {
+        let Some(acquire) = self.forecast.clone() else {
+            return;
         };
-        let months: Vec<u32> = history_months(now)
-            .into_iter()
-            .filter(|m| from.is_none_or(|f| format!("{m:06}").as_str() >= &f[..6]))
-            .collect();
-        let parts: Vec<String> = self
-            .reader
-            .partitions("data-go-kr", "forecast-zone", &key, &months, deadline)
-            .await
-            .map_err(|e| format!("forecast-zone listing: {e}"))?
-            .into_iter()
-            .filter(|p| from.is_none_or(|f| p.as_str() >= f))
-            .collect();
-        let mut fetched = self
-            .reader
-            .all("data-go-kr", "forecast-zone", &key, &parts, deadline)
-            .await
-            .map_err(|e| format!("forecast-zone read: {e}"))?;
-        fetched.sort_by_key(identity);
-        Ok(fetched)
+        let request = fetch::ForecastRequest::Zones;
+        let owned_for = request.owned_for();
+        let attempts = self.attempts.clone();
+        let memory = self.zones.clone();
+        let _ = self
+            .owned
+            .join(
+                "forecast-zones".into(),
+                Instant::now(),
+                owned_for,
+                move |_| {
+                    let fresh = attempts.claim("forecast-zones", LATEST_RETRY);
+                    async move {
+                        if fresh {
+                            let _ = crate::observability::spawn(async move {
+                                if let Ok(Some(records)) = acquire.acquire(request).await
+                                    && let Some((identity, list)) = acquired_zone_list(records)
+                                {
+                                    let zones = Arc::new(zones_of(&list, identity.0));
+                                    let mut memory = memory.lock().await;
+                                    match memory.as_mut() {
+                                        Some(m) if !m.newer(&identity) => {}
+                                        Some(m) => {
+                                            m.zones = zones;
+                                            m.identity = Some(identity);
+                                        }
+                                        None => {
+                                            *memory = Some(ZoneMemory {
+                                                zones,
+                                                identity: Some(identity),
+                                                checked: None,
+                                            });
+                                        }
+                                    }
+                                }
+                            })
+                            .await;
+                        }
+                        None
+                    }
+                },
+            )
+            .await;
     }
     /// The documents of one grid family at `now`. A missing latest publication is acquired
     /// (waiting at most 3 s); the earlier publications legacy's backfill keeps (current and
@@ -1922,17 +2025,16 @@ pub fn mid_documents(model: MidModel, reg_id: &str, fetched: &[Fetched], now: f6
     }
     doc.answer()
 }
-/// The forecast-zone collection at `now`; None when no complete list was fetched.
+/// The forecast-zone collection of these acquisitions at `now` (KMA-ZONE-NEWEST): the newest
+/// complete list that completed by `now` (completion instant, partition, digest of the pages),
+/// applied to an empty collection; None when none is complete.
 pub fn zone_documents(fetched: &[Fetched], now: f64) -> Option<Zones> {
-    let mut zones = Zones::default();
-    let mut applied = false;
-    for f in fetched.iter().filter(|f| f.fetched_at_ms as f64 <= now) {
-        if let Some(list) = complete_list(&f.page_refs()) {
-            zones.apply(&list, f.fetched_at_ms as f64);
-            applied = true;
-        }
-    }
-    applied.then_some(zones)
+    fetched
+        .iter()
+        .filter(|f| f.fetched_at_ms as f64 <= now)
+        .filter_map(|f| complete_list(&f.page_refs()).map(|list| (identity(f), list)))
+        .max_by(|a, b| a.0.cmp(&b.0))
+        .map(|(identity, list)| zones_of(&list, identity.0))
 }
 fn apply_grid(docs: &mut GridDocs, family: Family, coord: Coord, f: &Fetched) {
     if let Some(Organized::Rows(rows)) = organized(family, coord, f) {

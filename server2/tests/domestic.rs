@@ -52,6 +52,8 @@ mod support;
 mod switch;
 #[path = "domestic/v8_date.rs"]
 mod v8_date;
+#[path = "domestic/zone_select.rs"]
+mod zone_select;
 
 #[path = "domestic/towns.rs"]
 mod towns;

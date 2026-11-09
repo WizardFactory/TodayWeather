@@ -1,0 +1,47 @@
+{
+  "task": "KMA-ZONE-NEWEST",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "PR-Z of the restart re-examination (AK decisions 1-3 of 2026-11-10, design section 11): forecast zones from the newest complete stored list, selected from catalog control objects with one restored group, installed in memory only when newer, checked every 10 minutes, and acquired when the newest list is more than 24 h old or none is stored; the daily refold and the per-process success gate are removed. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-ZONE-NEWEST.json",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/domestic/kma/source/zone_retry_tests.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/source.rs",
+    "server2/tests/domestic/source_s3_oracle.rs",
+    "server2/tests/domestic/zone_select.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-zone-newest.md",
+      "category": "documentation",
+      "reason": "Task intent and AK decisions 1-3 of 2026-11-10."
+    },
+    {
+      "path": "specs/issue-2614-kma-zone-newest.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-zone-newest.md",
+      "category": "documentation",
+      "reason": "Plan and scenarios."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The forecast-zone selection, memory and acquisition replace the fold, the daily refold and the D1 success latch."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "A restarted process reads the newest forecast-zone list, not every stored list."
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "The D1 smoke and unit controls under the 24-hour rule instead of the success latch."
+    }
+  ]
+}
