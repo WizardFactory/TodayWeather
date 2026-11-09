@@ -1657,9 +1657,9 @@ fn uv_page(issued: &str) -> Vec<u8> {
 /// listings; each LIST takes `list_delay` and each GET `get_delay` (virtual time), and the most
 /// GETs in flight at once is kept.
 #[derive(Clone, Default)]
-struct MemS3(Arc<Mutex<MemData>>);
+pub(super) struct MemS3(Arc<Mutex<MemData>>);
 #[derive(Default)]
-struct MemData {
+pub(super) struct MemData {
     objects: std::collections::BTreeMap<String, server2::storage::Object>,
     controls: std::collections::BTreeMap<String, (Vec<u8>, u64)>,
     revision: u64,
