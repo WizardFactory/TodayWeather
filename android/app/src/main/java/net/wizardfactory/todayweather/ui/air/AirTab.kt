@@ -48,16 +48,18 @@ import net.wizardfactory.todayweather.ui.shell.line
  * ([code], `?code=`, else the overall index). It applies the selected place's record whenever it changes, and on each
  * of TabCtrl's `applyEvent`s ([applies]: a load starting, the gate included, or a response applied) it returns to
  * the first station first. A detail or station cell selects its pollutant or station and brings the page to the top;
- * the current weather opens S03 ([onWeather]); the standard opens the units page and the forecast source its popup
- * (O08). The title, location glyph (inert on S05, A10), spinner, bell and share are the weather pages'.
+ * the current weather opens S03 ([onWeather]); the standard opens the units page ([onUnits], `goUnitsPage`) and the
+ * forecast source its popup (O08). The title, location glyph (inert on S05, A10), spinner, bell and share are the
+ * weather pages'. A new air standard chosen on S08 goes to the visit as it is (`changeAirUnitEvent`).
  */
 @Composable
 fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme, host: WeatherTabHost,
-                   code: String?, applies: Int, onWeather: () -> Unit): TabContent {
+                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}): TabContent {
     val metrics = rememberScreenMetrics()
     val texts = host.texts
     val airUnit = state.units.airUnit
-    val visit = remember(metrics, airUnit) { AirScope(metrics, airUnit) }
+    val visit = remember(metrics) { AirScope(metrics, airUnit) }
+    visit.airUnit = airUnit
     val index = state.placeIndex
     val place = state.places.getOrNull(index)
     LaunchedEffect(place) { place?.let { host.readCache(it) } }
@@ -79,7 +81,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
         Any()
     }
     var taps by remember(visit) { mutableIntStateOf(0) }
-    val page = remember(applied, taps, texts) { AirPage(visit, texts) }
+    val page = remember(applied, taps, texts, airUnit) { AirPage(visit, texts) }
     val content = remember(page, metrics) { AirContent(page, metrics, visit.airChart, visit.standard, texts["LOC_HOUR"]) }
     val scroll = remember(visit) { ScrollState(0) }
     val scope = rememberCoroutineScope()
@@ -124,7 +126,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
                 onWeather = onWeather,
                 onAction = { action ->
                     when (action) {
-                        PageAction.Units -> host.onUnits()
+                        PageAction.Units -> onUnits()
                         is PageAction.AirForecastInfo -> if (action.source == "kaq" || action.source == "airkorea") source = action.source
                         else -> {}
                     }

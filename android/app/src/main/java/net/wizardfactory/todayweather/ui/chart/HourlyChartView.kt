@@ -56,11 +56,14 @@ const val EXPANDER_TAG = "chart-expander"
 /** Scroll offset in px for an offset in dp, snapped down to a device pixel as the WebView does. */
 internal fun scrollPixels(offset: Double, density: Float): Int = floor(offset * density).toInt()
 
-/** A scroll state at the chart's opening offset, new for new chart data (the Cordova app scrolls on every apply). */
+/**
+ * A scroll state at the chart's opening offset, new for new chart data and for each complete apply ([applies]), as the
+ * Cordova app sets `scrollLeft` after every apply, the same data too.
+ */
 @Composable
-internal fun rememberOpeningScroll(chart: Any, offset: Double): ScrollState {
+internal fun rememberOpeningScroll(chart: Any, offset: Double, applies: Int = 0): ScrollState {
     val density = LocalDensity.current.density
-    return remember(chart, density) { ScrollState(scrollPixels(offset, density)) }
+    return remember(chart, density, applies) { ScrollState(scrollPixels(offset, density)) }
 }
 
 /**

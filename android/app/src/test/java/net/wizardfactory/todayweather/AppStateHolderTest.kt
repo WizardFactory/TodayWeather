@@ -121,6 +121,32 @@ class AppStateHolderTest {
         assertEquals(store.value, holder.current())
     }
 
+    /**
+     * #2915 F1: a unit chosen on S08 while the store cannot be written. The push update reads the state through the
+     * writer, which fails twice (the change, then its own read): it sends nothing and throws nothing, the screens keep
+     * the unit, and once the store works again the next write saves it.
+     */
+    @Test
+    fun aUnitWhoseSaveFailsPostsNothingFailsNothingAndIsSavedLater() = runTest {
+        val store = FailingOnceStore(AppState(placeIndex = 0)).apply { failures = 2 }
+        val holder = AppStateHolder(store, CoroutineScope(StandardTestDispatcher(testScheduler)), CompletableDeferred(AppState()).also { it.complete(AppState()) })
+        runCurrent()
+        val sent = mutableListOf<net.wizardfactory.todayweather.core.storage.PushRequest>()
+        val sync = net.wizardfactory.todayweather.core.data.PushSync(holder.dataStore, { sent += it; 200 }) { state ->
+            net.wizardfactory.todayweather.core.storage.PushRegistration.Context("device", "ko-KR", "2.0.0", state.units, 0, java.util.TimeZone.getTimeZone("Asia/Seoul"))
+        }
+        holder.change { it.copy(units = it.units.with("temperatureUnit", "F")) }
+        val update = async { sync.updateUnits() }
+        runCurrent()
+        assertEquals("nothing sent, nothing thrown", null, update.await())
+        assertEquals(emptyList<Any>(), sent)
+        assertEquals("F", holder.current()?.units?.temperatureUnit)
+        holder.change { it.copy(expandShortChart = true) }
+        runCurrent()
+        assertEquals("saved with the next write", "F", store.value.units.temperatureUnit)
+        assertEquals(store.value, holder.current())
+    }
+
     @Test
     fun changesAreSavedInTheOrderTheyWereMade() {
         val dispatcher = Lifo()

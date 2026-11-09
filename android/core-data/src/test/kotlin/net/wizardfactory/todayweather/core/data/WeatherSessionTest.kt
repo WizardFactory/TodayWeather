@@ -58,6 +58,41 @@ class WeatherSessionTest {
         return Setup(state, session, requests)
     }
 
+    /** `branchInit` (A20): `setCityIndex` within the list, then `reloadEvent 'deeplink'`, which loads at once. */
+    @Test
+    fun anEntryLinkSelectsItsPlaceAndLoadsIt() = runTest {
+        val t = setup()
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        t.session.openPlace(1.0)
+        runCurrent()
+        assertEquals(1, t.state.value.placeIndex)
+        assertTrue("51.51" in t.requests.last(), "London loads")
+        val before = t.requests.size
+        t.session.openPlace(1.0)
+        runCurrent()
+        assertEquals(before + 1, t.requests.size, "a link loads also within the ten minutes")
+        for (index in listOf(2.0, -1.0, 1e20)) {
+            t.session.openPlace(index)
+            runCurrent()
+            assertEquals(1, t.state.value.placeIndex, "$index is out of range: the selection stays")
+        }
+        assertEquals(before + 4, t.requests.size, "and the selected place still reloads")
+    }
+
+    @Test
+    fun anEntryLinkWhileTheRetryConfirmationIsOpenOnlySelects() = runTest {
+        val t = setup(http = HttpGet { _, _ -> throw HttpStatusException(500) })
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        assertTrue(t.session.retry.value)
+        val before = t.requests.size
+        t.session.openPlace(1.0)
+        runCurrent()
+        assertEquals(1, t.state.value.placeIndex)
+        assertEquals(before, t.requests.size, "reloadEvent is skipped while the popup is open")
+    }
+
     @Test
     fun theAppOpenAndATabTapLoadAtOnceAResumeWaitsForTheGate() = runTest {
         val t = setup()
