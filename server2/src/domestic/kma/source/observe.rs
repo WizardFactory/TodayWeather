@@ -670,13 +670,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 )
                 .await;
                 self.apply_products(&mut reads);
-                crate::history::join_all(
+                let flushed = crate::history::join_all(
                     reads
                         .into_iter()
                         .map(|r| self.complete_day(&self.reader, r, deadline))
                         .collect(),
                 )
                 .await;
+                // A flush that waited for one of these reads is compared now, whether or not
+                // the read changed a page.
+                if flushed.contains(&true) {
+                    let _ = self.want_products(now_ms);
+                }
                 self.fold_held(now_ms).await;
             },
             async {
@@ -712,9 +717,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if !rest.is_empty() || !later.is_empty() {
             let _ = self.start(Flight::LoadRest, Duration::ZERO, move |this| {
                 Box::pin(async move {
+                    let mut flushed = false;
                     for day in rest {
-                        this.complete_day(&this.bulk, day, Instant::now() + READ_DEADLINE)
+                        flushed |= this
+                            .complete_day(&this.bulk, day, Instant::now() + READ_DEADLINE)
                             .await;
+                    }
+                    if flushed {
+                        let _ = this.want_products(now_ms);
                     }
                     this.restore_minutes(&this.bulk, later, floor, Instant::now() + READ_DEADLINE)
                         .await;
@@ -884,23 +894,27 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// only the listed groups not accounted for are restored: the excluded ones again and the new
     /// ones, and a new page newer than the held one of its kind and hour is parsed and held.
     /// Otherwise, or when such a page does not parse, every page of the day is read as before
-    /// (the newest complete page of each hour).
-    async fn complete_day(&self, reader: &Reader<T>, r: DayRead, deadline: Instant) {
+    /// (the newest complete page of each hour). True when the day was read and a fill pass's
+    /// flush waits for it ([`Self::day_read`]).
+    async fn complete_day(&self, reader: &Reader<T>, r: DayRead, deadline: Instant) -> bool {
         let DayRead {
             day, listed, base, ..
         } = r;
         let Some(listed) = listed else {
             self.day_failed(day);
-            return;
+            return false;
         };
         if let Some(base) = base {
             match self.compare_day(reader, day, &listed, base, deadline).await {
                 Ok(Some((changed, accounted))) => return self.day_read(day, accounted, changed),
                 Ok(None) => {}
-                Err(()) => return self.day_failed(day),
+                Err(()) => {
+                    self.day_failed(day);
+                    return false;
+                }
             }
         }
-        self.raw_day(reader, day, &listed, deadline).await;
+        self.raw_day(reader, day, &listed, deadline).await
     }
     /// [`Self::complete_day`] with pages held. Ok(None): a new newest page does not parse.
     async fn compare_day(
@@ -1042,14 +1056,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
         Ok(out)
     }
-    /// Read every page of one day (each complete acquisition is restored and parsed).
+    /// Read every page of one day (each complete acquisition is restored and parsed). True as
+    /// [`Self::complete_day`].
     async fn raw_day(
         &self,
         reader: &Reader<T>,
         day: u32,
         listed: &[ListedPage],
         deadline: Instant,
-    ) {
+    ) -> bool {
         let partition = format!("{day:08}");
         let (aws, city_k) = (aws_key(), city_key());
         let (want_hourly, want_city) = (
@@ -1077,7 +1092,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             },
         );
         let (Ok((hourly, hourly_excluded)), Ok((city, city_excluded))) = (hourly, city) else {
-            return self.day_failed(day);
+            self.day_failed(day);
+            return false;
         };
         // S16: every listed group is complete (known) or excluded.
         let key = |r: &RawRecord| r.envelope.identity.object_key().ok();
@@ -1116,10 +1132,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }
         }
         // S16: a group S06 excluded makes the day's read partial.
-        self.day_read(day, accounted, true);
+        self.day_read(day, accounted, true)
     }
     /// A day read completely: its listed groups found complete and those S06 excluded (S16).
-    fn day_read(&self, day: u32, accounted: Accounted, changed: bool) {
+    /// True when a fill pass's flush waits for the day (SF-flush-read-recovery): the read can make
+    /// a day storable without changing a page, and then no fold asks the product worker, so the
+    /// caller does.
+    fn day_read(&self, day: u32, accounted: Accounted, changed: bool) -> bool {
         let mut s = self.state();
         s.pages.days.insert(day, std::time::Instant::now());
         s.pages.unreadable.remove(&day);
@@ -1135,6 +1154,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
+        s.flush.contains(&day)
     }
     /// A day whose catalogs or pages could not be read (S16; nothing is stored for it).
     fn day_failed(&self, day: u32) {
@@ -3258,3 +3278,6 @@ mod tests {
         assert!(s.flush.contains(&DAY), "waits for the fold");
     }
 }
+#[cfg(test)]
+#[path = "observe_flush_tests.rs"]
+mod flush_tests;

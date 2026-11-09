@@ -1613,26 +1613,6 @@ fn pages_restored(counted: &Counted, day: u32) -> usize {
         })
         .sum()
 }
-/// Station 108's hourly rows with a one-hour rain amount (`rs1h`, which the assembly answers as
-/// the `rn1` of `KMA_STATION_HOURLY` in `short`, `dailyData` and `current.yesterday`) from hour
-/// `from` to `to`.
-fn rain_hours_of_108(f: &Folded, from: Publication, to: Publication) -> usize {
-    let shift = 9. * HOUR_MS as f64;
-    let (from, to) = (
-        schedule::to_ms(from) as f64 + shift,
-        schedule::to_ms(to) as f64 + shift,
-    );
-    f.hourly
-        .docs()
-        .iter()
-        .filter(|d| {
-            d.get("stnId") == Some(&Val::Num(108.)) && matches!(d.get("rs1h"), Some(Val::Num(_)))
-        })
-        .map(date_of)
-        .filter(|t| (from..=to).contains(t))
-        .count()
-}
-
 /// FLUSH (KMA-STATION-FLUSH V1, the rn1 gap of restart b1): a raced restart stores today's product
 /// while its fill pass still waits for the hours S3 does not list. When the pass ends with those
 /// pages, the day's product is stored again within ten minutes of the first, with no request and
@@ -1723,13 +1703,13 @@ async fn the_end_of_a_fill_pass_reaches_a_running_product_worker() {
     );
 }
 
-/// EARLY-FOLD (KMA-STATION-FLUSH V2): a restart folds today's and yesterday's pages as soon as it
-/// holds them, before the minute pages. With the minute pages of its read held back, the first
-/// answer has station 108's rain rows of every hour of both days. It is not complete for S16 while
-/// the rest of the read runs, and once the minute pages arrive the answers equal the producing
-/// process's.
+/// EARLY-FOLD (KMA-STATION-FLUSH V2) over the S3 peer: order and final result only. The time
+/// contract (the first answer within its wait has today's and yesterday's rows) is checked on a
+/// paused clock (`observe_flush_tests.rs`, SF-real-clock-deadlines). With the minute pages of a
+/// restart's read held, the first answer reaches them and is not complete (S16); once they arrive
+/// the answers equal the producing process's.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn todays_and_yesterdays_pages_are_folded_before_the_minute_pages() {
+async fn held_minute_pages_leave_the_first_answer_incomplete_until_they_arrive() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = seeded_peer(&[], Vec::new()).await;
     let (_, _, a_folded) = producing(&peer).await;
@@ -1742,21 +1722,16 @@ async fn todays_and_yesterdays_pages_are_folded_before_the_minute_pages() {
         minutes.was_reached(),
         "the minute pages are read during the answer"
     );
-    assert_eq!(
-        rain_hours_of_108(&first, p(20260923, 0), p(TODAY, 1000)),
-        35,
-        "the rain rows of today and yesterday on the first answer"
-    );
     assert!(!complete, "not complete while the read runs (S16)");
     same(&*settle(&b).await, &a_folded, "settled");
 }
 
-/// EARLY-FOLD (DR-V-early-fold-order): an older day's product read does not hold back today's and
-/// yesterday's pages. With the 09-20 product read held, the first answer has the rain rows of
-/// every hour of both days and is not complete for S16; once the read ends the answers equal the
-/// producing process's.
+/// EARLY-FOLD (DR-V-early-fold-order) over the S3 peer: order and final result only (the time
+/// contract is on a paused clock). With the 09-20 product read of a restart held, the first answer
+/// reaches it and is not complete (S16); once the read ends the answers equal the producing
+/// process's.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn an_older_days_slow_product_does_not_hold_back_today_and_yesterday() {
+async fn a_held_older_day_product_leaves_the_first_answer_incomplete_until_it_arrives() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = seeded_peer(&[], Vec::new()).await;
     let (_, _, a_folded) = producing(&peer).await;
@@ -1769,13 +1744,88 @@ async fn an_older_days_slow_product_does_not_hold_back_today_and_yesterday() {
         older.was_reached(),
         "the 09-20 product is read during the answer"
     );
-    assert_eq!(
-        rain_hours_of_108(&first, p(20260923, 0), p(TODAY, 1000)),
-        35,
-        "the rain rows of today and yesterday on the first answer"
-    );
     assert!(!complete, "not complete while the read runs (S16)");
     same(&*settle(&b).await, &a_folded, "settled");
+}
+
+/// EARLY-FOLD (SF-older-city-set-test): a city station that only an older day's city page names
+/// (강남, 400, at 09-20 08:00). A process reading the raw pages folds today and yesterday before
+/// the older days and stores their products for a city set without the station. The restart after
+/// it stores them for the whole set, so the newest product of every day has the station. A restart
+/// whose 09-20 product read is held applies today's and yesterday's products before the older
+/// days' and folds them for the smaller set; that first answer is not complete (S16). Once the read
+/// ends, the pages folded for the smaller set are read in full again (`Flight::Expand`, bulk lane),
+/// and the settled answers, values and page identities, equal a cold read of the same raw pages.
+/// The cost of this order: today's and yesterday's AWS pages are read in full again, and their
+/// products are stored again for the smaller set.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_city_station_only_an_older_day_names_is_read_in_full_after_the_early_fold() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let hour = p(20260920, 800);
+    let named = page_record(
+        "city-obs",
+        hour,
+        schedule::to_ms(hour) as u64 + 50 * 60_000,
+        city_page_of(hour, &[("108", "서울"), ("400", "강남")]),
+    );
+    let peer = seeded_peer(&[], vec![named.clone()]).await;
+    let newest = |stored: Vec<Value>| {
+        stored
+            .into_iter()
+            .max_by(|x, y| {
+                x["made"]
+                    .as_f64()
+                    .unwrap()
+                    .total_cmp(&y["made"].as_f64().unwrap())
+            })
+            .unwrap()
+    };
+    let has_400 = |product: &Value| {
+        product["cityIds"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| id == "400")
+    };
+    let full = |counted: &Counted, day: &str| {
+        counted.get(&format!("bulk GET raw/v2/kma-web/aws-hourly/2026/09/{day}"))
+    };
+    let _ = producing(&peer).await;
+    for day in [20260923, TODAY] {
+        assert!(!has_400(&newest(products(&peer, day).await)), "{day}");
+    }
+    let _ = producing(&peer).await;
+    for day in DAYS {
+        assert!(has_400(&newest(products(&peer, day).await)), "{day}");
+    }
+    // The restart, its 09-20 product read held.
+    let (b, b_counted) = process(&peer);
+    let held = b_counted.hold(&["raw/v2/kma-web/station-pages/2026/09/20/"]);
+    let first = answer(&b).await;
+    let complete = b.settled(NOW as i64, &first);
+    held.open();
+    assert!(
+        held.was_reached(),
+        "the 09-20 product is read during the answer"
+    );
+    assert!(!complete, "not complete while the read runs (S16)");
+    let b_folded = settle(&b).await;
+    assert_eq!(
+        (full(&b_counted, "23"), full(&b_counted, "24")),
+        (24, 11),
+        "today's and yesterday's AWS pages read in full again"
+    );
+    for day in [20260923, TODAY] {
+        let stored = products(&peer, day).await;
+        assert_eq!(stored.len(), 3, "{day}");
+        assert!(
+            !has_400(&newest(stored)),
+            "{day}: stored again for the smaller set"
+        );
+    }
+    let cold = seeded_peer(&[], vec![named]).await;
+    let (d, _) = process(&cold);
+    same(&b_folded, &*settle(&d).await, "a cold read");
 }
 
 /// RESIDUAL (DR-V-residual-lag): the end of a fill pass is not the only time a process acquires
