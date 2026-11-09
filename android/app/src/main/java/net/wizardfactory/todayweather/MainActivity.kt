@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
                         onExpand = { expand -> app.appState.change { it.copy(expandShortChart = expand) } },
                         onLocationGlyph = ::switchToLocationSettings,
                         locationEnabled = ::isLocationEnabled,
+                        onShare = WeatherShare(this, app.appState::current) { app.weather.weather.value }::share,
                     )
                 }
                 val handoffs = remember(context) {
@@ -369,6 +370,8 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     init {
         twApp.onOpened()
         twApp.analytics.onOpened()
+        // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`).
+        viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, session::openPlace) }
         loadPhotos()
         connectivity.registerDefaultNetworkCallback(online)
         viewModelScope.launch {

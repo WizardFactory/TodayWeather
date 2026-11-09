@@ -50,6 +50,7 @@ class TestTodayWeatherApp : TodayWeatherApp() {
 
     override fun onEntryIntent(intent: Intent) {
         handled += intent to migration.isCompleted
+        super.onEntryIntent(intent)
     }
 
     /**

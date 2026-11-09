@@ -193,6 +193,42 @@ Tests:
 
 The emulator check is `tools/emulator/run-ads-check.sh` (#2894 AC2): online, a banner of Google's test unit loads and shows in its place while the Analytics debug log shows no event; offline, an opt-in through the popup logs `screen_view`, so the first check cannot pass vacuously.
 
+## Sharing, entry links and backup (AN-16)
+
+Sharing (O16), `todayweather://` links and device transfer (#2895), from TabCtrl's `doTabShare`, `branchInit` and the shipped 1.1.1 APK:
+
+- **Share (`core-domain` `ShareMessage`, `app` `WeatherShare`):** the share buttons of S03, S04 and S05 send the selected place's message through the system chooser, as the socialsharing plugin did (`ACTION_SEND`, plain text, no chooser title).
+  - The message has the place (its name, else the shortened address), `현재 t1h˚` with the sky's emoji, `최고 tmx˚, 최저 tmn˚`, the summary (`summaryWeather` and `summaryAir`, else `summary`), then the app name and the Branch link: `wgVmUTfVoM` when the device language has `ko`, `II1JstpVoM` otherwise.
+  - Values print as JavaScript prints them (`undefined`, `null`). Without weather or a sky icon the message is the place line alone, as in the Cordova build (V20).
+  - A place without a location shares nothing; the Cordova build opened O02 there, which comes with AN-10.
+- **Entry links (`EntryLinks`, `WeatherSession.openPlace`):** `MainActivity` registers `todayweather` (`VIEW`, `DEFAULT`, `BROWSABLE`). After the migration (`EntryIntents`), `todayweather://N` selects place N, read as `branchInit` reads it (the first `todayweather://` removed, then `parseInt`). The place reloads at once (`reloadEvent 'deeplink'`), on cold and warm starts; the page shown stays.
+  - An index outside the places keeps the selection but still reloads (A20); an empty or non-numeric link does nothing.
+  - Recents opens a finished task again with the link that started it (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`); that delivery selects nothing.
+  - 1.1.1 Android registered no scheme, so these links opened nothing there (B18). They come from the iOS widget and serve the Android widgets to come.
+- **Backup and device transfer:** the policy, in `res/xml/data_extraction_rules.xml` (API 31+, cloud backup and device transfer) and `res/xml/backup_rules.xml` (API 24–30).
+  - Backed up:
+    - `files/app_state.json`: places, the selected place, units, settings, alarms and their push records;
+    - the Cordova storage the migration reads (`app_webview/Default/Local Storage/`, `app_webview/Local Storage/` and the suite `group.net.wizardfactory.todayweather`), so a backup or transfer taken from Cordova 1.1.1 restores into this app and migrates.
+  - Not backed up (B19; 1.1.1 backed up everything):
+    - the weather cache, which loads again;
+    - the analytics choice: off again, until the user opts in;
+    - Firebase's token and installation: the new device gets a new FCM token, and the first open replaces the restored token on the server and posts the list (AN-04), as 1.1.1 did after a restore;
+    - the measurement, AdMob and UMP state: UMP asks again where consent is required;
+    - the default preference suite `net.wizardfactory.todayweather_preferences`, where UMP keeps the IAB consent strings (`IABTCF_*`, `IABGPP_*`). The Cordova app kept only old units there, and its start moves them into localStorage and the group suite (`TwStorage.init`), so a 1.1.1 backup has them there. The migration still reads the suite on an in-place upgrade.
+  - Location is the system's permission; the app asks for it when it needs the current position (AN-10).
+
+Tests:
+- `ShareMessageTest` and `EntryLinkTest` (core-domain): the message lines and values, the link per language, the throw kept as the place line, the emoji; the index as `parseInt` reads it.
+- `WeatherSessionTest`: a link selects and loads its place, also within the ten minutes, keeps the selection out of range, and only selects while the retry confirmation is open.
+- `ShareTest`: the chooser from each tab with the message, the English link, nothing without a location, and the links' queue (not a link delivered again from Recents).
+- `BackupRulesTest`: the three rule lists include exactly the policy above, and the manifest names both files.
+
+The emulator check is `tools/backup/run-backup-test.sh <cordova-debug.apk>` (#2895 AC2), offline:
+1. `EntryLinkDeviceTest` opens `todayweather://2` with `am start` in a stopped app (cold) and `todayweather://1` in the open app (warm). A link delivered again as Recents delivers it selects nothing, and the same link without that flag then selects its place.
+2. A native backup (`bmgr`, local transport) restored after a reinstall: `BackupRestoreTest` checks what came back (places, units, settings, an alarm), what stayed behind (also UMP's consent strings), and that the open app replaces the token and posts the list.
+3. A Cordova 1.1.1 backup restored into this build: the Cordova data migrates; its other files and the consent strings the script writes into its default suite stay behind.
+On API 31 and later, steps 2 and 3 run again as device transfers: the local transport's `is_device_transfer` parameter makes Android apply the `device-transfer` section. On API 24 to 30 both kinds use `backup_rules.xml`; the check runs on API 24 and API 36. The script sets the backup transport and its parameters for the run and puts them back on every exit.
+
 ## Data migration from the Cordova app
 
 On every start the app runs `CordovaMigrator` (core-storage); after the first successful run it does nothing. It builds `files/app_state.json` (DataStore, `AppState`) from the Cordova app's storage and leaves that storage unchanged, because the rollback hand-back (AN-17) reads it.
