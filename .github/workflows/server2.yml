@@ -1,13 +1,28 @@
 name: Server2
 on:
   pull_request:
-    paths:
-      - "server2/**"
-      - ".github/workflows/server2.yml"
+  push:
+    branches: [master]
 permissions:
   contents: read
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      heavy: ${{ steps.scope.outputs.heavy }}
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: scope
+        run: python3 tools/ci.py --audit-only
   foundation:
+    needs: scope
+    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -23,8 +38,10 @@ jobs:
           name: server2-linux-musl-verified
           path: reports/verification/server2-local-first/artifact-native/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
   goldens:
+    needs: scope
+    if: ${{ !cancelled() && needs.scope.outputs.heavy != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
