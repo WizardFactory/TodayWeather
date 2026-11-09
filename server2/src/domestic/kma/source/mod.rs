@@ -168,6 +168,8 @@ fn day_before(partition: &str) -> String {
 
 /// One group of a forecast-zone day partition, as its catalog lists it.
 struct ZoneGroup {
+    /// The group's descriptor key (its identity in the catalog).
+    key: String,
     id: crate::storage::CatalogId,
     partition: String,
     completion: u64,
@@ -178,6 +180,8 @@ struct ZoneGroup {
 /// for).
 struct ZoneMemory<T> {
     reader: Reader<T>,
+    /// The groups verified by this process's refreshes, by descriptor key (review round 9).
+    verified: Arc<std::sync::Mutex<records::Bodies>>,
     cache: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
     held: Arc<std::sync::Mutex<Option<Arc<Zones>>>>,
     observed: bool,
@@ -287,7 +291,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
             .listed_groups(&id, deadline)
             .await?
             .into_iter()
-            .map(|(completion, members)| ZoneGroup {
+            .map(|(key, completion, members)| ZoneGroup {
+                key,
                 id: id.clone(),
                 partition: partition.to_owned(),
                 completion,
@@ -296,12 +301,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
             .collect())
     }
     /// One group's acquisition, read and checked on its own (`lookup_members`): None when it is
-    /// incomplete or excluded.
+    /// incomplete or excluded. A group verified by an earlier refresh of this process is not read
+    /// again (review round 9: a refresh cut at its limit loses nothing).
     async fn zone_group(
         &self,
         group: &ZoneGroup,
         deadline: Instant,
     ) -> Result<Option<Fetched>, crate::storage::Error> {
+        if let Some((fetched, _)) = self
+            .verified
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&group.key, VERIFIED_AGE)
+        {
+            return Ok(fetched.first().cloned());
+        }
         let Some(first) = group.members.first() else {
             return Ok(None);
         };
@@ -313,7 +327,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
         else {
             return Ok(None);
         };
-        Ok(Some(Fetched {
+        let fetched = Fetched {
             fetched_at_ms: group.completion,
             partition: group.partition.clone(),
             pages: acquisition.iter().map(|r| r.bytes.clone()).collect(),
@@ -321,7 +335,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
                 .iter()
                 .map(|r| r.envelope.identity.object_key())
                 .collect::<Result<_, _>>()?,
-        }))
+        };
+        self.verified.lock().unwrap_or_else(|e| e.into_inner()).put(
+            group.key.clone(),
+            vec![fetched.clone()],
+            0,
+        );
+        Ok(Some(fetched))
     }
     /// The zones held, if any.
     fn held_now(&self) -> Option<Arc<Zones>> {
@@ -379,6 +399,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
                 groups.extend(partition?);
             }
         }
+        // A verified group the catalogs no longer list is forgotten (a full listing only).
+        if from.is_none() {
+            let listed: std::collections::HashSet<&str> =
+                groups.iter().map(|g| g.key.as_str()).collect();
+            self.verified
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .retain(|key| listed.contains(key));
+        }
         let mut fetched = Vec::new();
         for chunk in groups.chunks(records::LOOKUPS) {
             let read = crate::history::join_all(
@@ -406,6 +435,8 @@ pub struct S3Source<T> {
     zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
     /// The zones of the last zone read, readable while a refresh holds `zones` (KMA-RESTART-BOUND).
     held_zones: Arc<std::sync::Mutex<Option<Arc<Zones>>>>,
+    /// The forecast-zone groups this process verified, kept across refreshes (KMA-RESTART-BOUND).
+    zone_groups: Arc<std::sync::Mutex<records::Bodies>>,
     /// The owned zone refresh a request with a head start joins (KMA-RESTART-BOUND).
     zone_reads: crate::resolver::OwnedFlights<(), Result<Arc<Zones>, String>>,
     /// The owned listings and partition reads of the observed requests (KMA-RESTART-BOUND).
@@ -574,6 +605,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             clock,
             zones: Arc::new(tokio::sync::Mutex::new(None)),
             held_zones: Arc::default(),
+            zone_groups: Arc::new(std::sync::Mutex::new(records::Bodies::new(
+                VERIFIED_BYTES,
+                VERIFIED_ENTRIES,
+            ))),
             zone_reads: crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
                 running: 1,
                 entries: 1,
@@ -856,6 +891,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     fn zone_memory(&self) -> ZoneMemory<T> {
         ZoneMemory {
             reader: self.reader.clone(),
+            verified: self.zone_groups.clone(),
             cache: self.zones.clone(),
             held: self.held_zones.clone(),
             observed: self.observed_history,
@@ -2569,6 +2605,11 @@ pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId>
 const ACQUIRED_BYTES: usize = 32 * 1024 * 1024;
 const ACQUIRED_ENTRIES: usize = 4096;
 const ACQUIRED_AGE: std::time::Duration = PREVIOUS_SHORT_RETRY;
+/// The verified forecast-zone groups kept across refreshes: bytes, entries and age (a refold is
+/// due daily).
+const VERIFIED_BYTES: usize = 64 * 1024 * 1024;
+const VERIFIED_ENTRIES: usize = 8192;
+const VERIFIED_AGE: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
 /// How long an owned forecast-zone refresh runs at most (KMA-RESTART-BOUND).
 const ZONE_READ_FOR: std::time::Duration = std::time::Duration::from_secs(30);
 /// Retry bound for generic latest and backfill acquisitions. Latest Short uses

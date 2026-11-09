@@ -227,13 +227,13 @@ impl<T: IndexListing + Clone> Reader<T> {
             .map(|(group, (fetched, e))| (fetched, group, e))
             .collect())
     }
-    /// The groups one catalog lists: (completion instant, every member envelope in page order),
-    /// from the catalog control object alone; empty when the catalog does not exist.
+    /// The groups one catalog lists: (group key, completion instant, every member envelope in
+    /// page order), from the catalog control object alone; empty when the catalog does not exist.
     pub async fn listed_groups(
         &self,
         id: &CatalogId,
         deadline: Instant,
-    ) -> Result<Vec<(u64, Vec<Envelope>)>, Error> {
+    ) -> Result<Vec<(String, u64, Vec<Envelope>)>, Error> {
         let limits = CatalogLimits::default();
         let object = match tokio::time::timeout_at(
             deadline,
@@ -259,10 +259,10 @@ impl<T: IndexListing + Clone> Reader<T> {
             entry.1.push(e);
         }
         Ok(groups
-            .into_values()
-            .map(|(fetched, mut members)| {
+            .into_iter()
+            .map(|(group, (fetched, mut members))| {
                 members.sort_by_key(|e| e.pagination.as_ref().map_or(1, |p| p.page));
-                (fetched, members)
+                (group, fetched, members)
             })
             .collect())
     }
@@ -697,6 +697,17 @@ impl Bodies {
                 self.bytes -= old.bytes;
             }
         }
+    }
+    /// Keep only the entries whose key `keep` accepts.
+    pub fn retain(&mut self, keep: impl Fn(&str) -> bool) {
+        let bytes = &mut self.bytes;
+        self.map.retain(|key, body| {
+            let kept = keep(key);
+            if !kept {
+                *bytes -= body.bytes;
+            }
+            kept
+        });
     }
     /// The acquisitions under `key` and their count, if kept for less than `age`.
     pub fn get(&self, key: &str, age: std::time::Duration) -> Option<(&[Fetched], usize)> {

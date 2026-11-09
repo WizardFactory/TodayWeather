@@ -2864,6 +2864,66 @@ async fn many_accumulated_zone_lists_are_read_within_the_owned_refresh() {
     assert_eq!(seoul_land_zone(&zones), ["11B10102"], "the newest list");
 }
 
+/// RB-zone-refill, round 9: twenty-four valid lists accumulated (alternately the release's land
+/// zones and Seoul under `11B10102`, the newest moved) and every list read takes 2.6 s. A refresh
+/// cut at its limit keeps the groups it verified, so the next one reads only the others, and the
+/// zones it installs equal a prompt full read. (The owned refresh's limit is 30 s; this one is
+/// given 6 s, the same cut at a smaller scale: the lists are read eight at a time, so the third
+/// eight are in flight at the cut.)
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_cut_zone_refresh_resumes_without_reading_verified_groups_again() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    for back in (1..=24u32).rev() {
+        let page = if back % 2 == 1 {
+            moved_seoul_page()
+        } else {
+            land_zone_page()
+        };
+        store_zone_list(&peer, page, NOW - f64::from(back) * 10_000.).await;
+    }
+    let prompt = Restarted::new(&peer, &Counted::new(peer.transport_limited(4)))
+        .source
+        .refresh_zones(NOW, Instant::now() + Duration::from_secs(60))
+        .await
+        .unwrap();
+    let counted = Counted::new(peer.transport_limited(4));
+    counted.delay_gets(
+        "raw/v2/data-go-kr/forecast-zone/",
+        0,
+        Duration::from_millis(2600),
+    );
+    let process = Restarted::new(&peer, &counted);
+    let raw = "GET raw/v2/data-go-kr/forecast-zone";
+    let cut = process
+        .source
+        .refresh_zones(NOW, Instant::now() + Duration::from_secs(6))
+        .await
+        .unwrap();
+    let first = counted.get(raw);
+    assert_ne!(
+        format!("{:?}", cut.docs()),
+        format!("{:?}", prompt.docs()),
+        "the first refresh was cut"
+    );
+    let zones = process
+        .source
+        .refresh_zones(NOW, Instant::now() + Duration::from_secs(60))
+        .await
+        .unwrap();
+    let second = counted.get(raw) - first;
+    assert!(
+        second <= 8,
+        "only the groups in flight at the cut are read again: {first} + {second}"
+    );
+    assert_eq!(
+        format!("{:?}", zones.docs()),
+        format!("{:?}", prompt.docs()),
+        "the zones of a prompt full read"
+    );
+    assert_eq!(seoul_land_zone(&zones), ["11B10102"]);
+}
+
 /// RB-zone-group-eligibility: a group with an earlier list's pages and a corrupt descriptor is
 /// still a defect of the refresh (as the whole-partition read surfaced it), not a copy of the
 /// list.
