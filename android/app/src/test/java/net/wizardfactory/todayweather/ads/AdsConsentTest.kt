@@ -20,24 +20,41 @@ import org.robolectric.annotation.Config
 class AdsConsentTest {
     private val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
 
-    /** UMP as told: [allowed] whether ads may be requested; [update] null leaves the update without an answer. */
+    /**
+     * UMP as told: [allowed] whether ads may be requested; [update] null leaves the update without an answer until
+     * [answerUpdate]; [formAnswers] false leaves the form open until [answerForm].
+     */
     private class Platform(var allowed: Boolean, var update: String? = "ok", var formGivesConsent: Boolean = true) : AdsPlatform {
         val calls = mutableListOf<String>()
+        val formActivities = mutableListOf<Activity>()
         var privacyRequired = false
         var privacyShows = true
+        var formAnswers = true
+        private var pendingUpdate: (() -> Unit)? = null
+        private var pendingForm: ((Boolean) -> Unit)? = null
         override fun canRequestAds() = allowed
         override fun requestConsentUpdate(activity: Activity, onUpdated: () -> Unit, onFailed: (String) -> Unit) {
             calls += "update"
             when (val u = update) {
                 "ok" -> onUpdated()
-                null -> {}
+                null -> pendingUpdate = onUpdated
                 else -> onFailed(u)
             }
         }
-        override fun showConsentFormIfRequired(activity: Activity, onDone: () -> Unit) {
+        fun answerUpdate() = pendingUpdate!!.invoke()
+        override fun showConsentFormIfRequired(activity: Activity, onDone: (Boolean) -> Unit) {
             calls += "form"
+            formActivities += activity
+            if (!formAnswers) {
+                pendingForm = onDone
+                return
+            }
             if (formGivesConsent) allowed = true
-            onDone()
+            onDone(false)
+        }
+        fun answerForm(failed: Boolean) {
+            if (!failed && formGivesConsent) allowed = true
+            pendingForm!!.invoke(failed)
         }
         override fun startSdk(onReady: () -> Unit) {
             calls += "sdk"
@@ -62,6 +79,42 @@ class AdsConsentTest {
         consent(platform).start(activity)
         assertEquals(listOf("update", "form", "sdk"), platform.calls)
         assertEquals(1, ready)
+    }
+
+    @Test
+    fun anUpdateAnsweredAfterARotationShowsTheFormOnTheNewActivity() {
+        val platform = Platform(allowed = false, update = null)
+        val c = consent(platform)
+        val first = Robolectric.buildActivity(Activity::class.java).setup()
+        c.start(first.get())
+        first.pause().stop().destroy()
+        c.stop(first.get())
+        val second = Robolectric.buildActivity(Activity::class.java).setup().get()
+        c.start(second)
+        platform.answerUpdate()
+        assertEquals(listOf(second), platform.formActivities, "the form opens on the shown activity")
+        assertEquals(1, ready)
+        c.start(second)
+        assertEquals(listOf("update", "form", "sdk"), platform.calls, "the SDK starts once")
+    }
+
+    @Test
+    fun aFormLostWithItsActivityShowsOnTheNextOne() {
+        val platform = Platform(allowed = false)
+        platform.formAnswers = false
+        val c = consent(platform)
+        val first = Robolectric.buildActivity(Activity::class.java).setup()
+        c.start(first.get())
+        assertEquals(listOf(first.get()), platform.formActivities)
+        first.pause().stop().destroy()
+        c.stop(first.get())
+        platform.answerForm(failed = true)
+        assertEquals(0, ready)
+        platform.formAnswers = true
+        val second = Robolectric.buildActivity(Activity::class.java).setup().get()
+        c.start(second)
+        assertEquals(listOf(first.get(), second), platform.formActivities)
+        assertEquals(1, ready, "consent given on the new activity starts the SDK")
     }
 
     @Test

@@ -4,14 +4,20 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -39,12 +45,16 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import net.wizardfactory.todayweather.ui.text.CssMetrics
+import net.wizardfactory.todayweather.ui.text.chromeBreaks
 import net.wizardfactory.todayweather.ui.text.chromeLines
 import net.wizardfactory.todayweather.ui.text.chromeRuns
 
@@ -70,15 +80,18 @@ fun IonicAlert(title: String, lines: List<String>, button: String, onClose: () -
  * An Ionic popup (`$ionicPopup.show`): over the page the backdrop darkens (40 % black), a 250 dp popup in its middle,
  * white at 90 %: the [title] (15 sp, medium, centered) over a 1 dp line, the [lines] (14 sp) and the [buttons] side by
  * side (`.popup-buttons`: flex, 5 dp apart, 45 dp, bold 15 sp, at 0.87 opacity as the app's buttons are). Text breaks
- * as Chrome breaks it. Android back runs [onBack]; taps elsewhere do nothing. It covers the area between the system
- * bars, as the WebView did.
+ * as Chrome breaks it, and a text taller than the popup allows scrolls. Android back runs [onBack]; taps elsewhere do
+ * nothing. It covers the area between the system bars, as the WebView did.
  */
 @Composable
 fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, onBack: () -> Unit, modifier: Modifier = Modifier) {
     BackHandler(onBack = onBack)
-    Box(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).background(Color(0x66000000)).pointerInput(Unit) {},
+    BoxWithConstraints(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).background(Color(0x66000000)).pointerInput(Unit) {},
         contentAlignment = Alignment.Center) {
-        Column(Modifier.width(250.dp).background(Color(0xE6FFFFFF)).testTag(PopupTags.POPUP)) {
+        // `.popup`: at most 90 % of the area high; the body scrolls (`.popup-body { overflow: auto }`), the head and the
+        // buttons keep their height.
+        val popupWidth = min(maxWidth, 250.dp)
+        Column(Modifier.width(250.dp).heightIn(max = maxHeight * 0.9f).background(Color(0xE6FFFFFF)).testTag(PopupTags.POPUP)) {
             // .popup-head: the title on an 18 dp line with 15 dp above and below and 10 dp at the sides, a 1 dp line under it.
             FixedLine(18.dp, Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 15.dp)) {
                 LineText(title, line(15.sp, TextUnit.Unspecified, Color.Black, FontWeight.Medium).copy(textMotion = TextMotion.Animated))
@@ -93,7 +106,7 @@ fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, o
             val normal = remember(text, density) {
                 CssMetrics.line(AnnotatedString(text), style, style, density).let { (it.ascent + it.descent) / density.density / density.fontScale }
             }
-            Box(Modifier.fillMaxWidth().testTag(PopupTags.BODY)) {
+            Box(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).testTag(PopupTags.BODY)) {
                 // Screen readers get the text without the line breaks; the layout stays the drawn one.
                 var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
                 Text(chromeRuns(text), Modifier.fillMaxWidth().padding(10.dp).clearAndSetSemantics {
@@ -102,14 +115,24 @@ fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, o
                 }, style = line(14.sp, normal.sp, Color.Black).copy(textMotion = TextMotion.Animated), onTextLayout = { layout = it })
             }
             // .popup-buttons: 10 dp around the buttons, whose 20 dp lines sit in their middle (a `<button>` centers its content).
-            Row(Modifier.fillMaxWidth().padding(10.dp)) {
+            // A label too long for its button wraps there and the buttons grow together (flex row), as `.button` does not
+            // cut its text.
+            val labelWidth = with(density) { (((popupWidth - 20.dp - 5.dp * (buttons.size - 1)) / buttons.size) - 26.dp).roundToPx() }
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(10.dp)) {
                 buttons.forEachIndexed { i, b ->
                     if (i > 0) Spacer(Modifier.width(5.dp))
-                    Box(Modifier.weight(1f).height(45.dp).alpha(0.87f).clip(RoundedCornerShape(2.dp))
+                    Box(Modifier.weight(1f).fillMaxHeight().heightIn(min = 45.dp).alpha(0.87f).clip(RoundedCornerShape(2.dp))
                         .background(if (b.positive) Color(0xFF387EF5) else Color(0xFFF8F8F8))
-                        .border(1.dp, Color.Transparent, RoundedCornerShape(2.dp)).clickable(onClick = b.onTap).testTag(PopupTags.BUTTON),
-                        contentAlignment = Alignment.Center) {
-                        FixedLine(20.dp) { LineText(b.text, line(15.sp, TextUnit.Unspecified, if (b.positive) Color.White else Color(0xFF444444), FontWeight.Bold)) }
+                        .border(1.dp, Color.Transparent, RoundedCornerShape(2.dp)).clickable(onClick = b.onTap).testTag(PopupTags.BUTTON)
+                        .padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
+                        val label = line(15.sp, TextUnit.Unspecified, if (b.positive) Color.White else Color(0xFF444444), FontWeight.Bold)
+                        val fits = remember(b.text, density, labelWidth) { measurer.measure(b.text, label).size.width <= labelWidth }
+                        if (fits) {
+                            FixedLine(20.dp) { LineText(b.text, label) }
+                        } else {
+                            Text(chromeRuns(chromeBreaks(b.text).text), style = label.copy(lineHeight = 20.sp, textAlign = TextAlign.Center,
+                                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)))
+                        }
                     }
                 }
             }

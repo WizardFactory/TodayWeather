@@ -436,7 +436,7 @@ JVM:
 - `AnalyticsTest` (app): grant, withdrawal, failed writes, compensation for an SDK failure, the start's corroboration, screens.
 - `TwAdsTest` (with Remote Config) and `AdsConsentTest`: the SDK start after consent and with a cached consent, the debug and release UMP failures, the delay, the kill switch, the one exposure, the spacing and the recreation.
 - `PrivacyMenuTest`: the row value, the dialog, back, the failure alert, the ad privacy form and message, the policy URLs per language, the screens reported, and the menu and popups ending at a banner's top.
-- `PrivacyScreenshotTest`: the popup and the rows against `privacy-reference` within recorded tolerances, and the popup's lines against the capture's line boxes.
+- `PrivacyScreenshotTest`: the popup and the rows against `privacy-reference` within recorded tolerances, and the popup's lines against the capture's line boxes; `PrivacyGeometryTest`; `PrivacyFitTest` (320×480 dp, font scale 1.3, a banner).
 
 Device:
 - `tools/emulator/run-ads-check.sh` (API 36):

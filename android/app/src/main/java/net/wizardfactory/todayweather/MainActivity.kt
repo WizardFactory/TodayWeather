@@ -150,6 +150,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        opened.consent.stop(this)
         opened.ads.detach(banner)
         banner.destroy()
         super.onDestroy()
