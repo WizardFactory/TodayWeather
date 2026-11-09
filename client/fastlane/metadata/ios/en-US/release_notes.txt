@@ -1,1 +1,1 @@
-Updated the app runtime. This version does not include iOS widgets or in-app purchases. Open the app to check the weather.
+Fixed the app freezing when location permission is denied. Improved stability on first launch.

@@ -4,7 +4,9 @@ use server2::{
     storage::{
         CatalogId, CatalogLimits, Error, GroupDeclaration, GroupMember, Limits, Period,
         ProviderKey, RawRecord,
-        response_first::{Batch, Config, Publisher, ResponseScope, Writer},
+        response_first::{
+            Batch, Checkpoint, Config, Publisher, ReleaseReason, ResponseScope, Writer,
+        },
     },
 };
 use std::{
@@ -829,4 +831,302 @@ fn inheriting_a_scope_keeps_nested_futures_small() {
     let nested = inherit(inherit(inherit(inherit(large))));
     let size = std::mem::size_of_val(&nested);
     assert!(size < 4 * 1024, "{size} bytes on the caller's stack");
+}
+
+/// A batch of one grid's current conditions (distinct natural keys for many acquisitions).
+fn batch_grid(nx: u16, ny: u16) -> Batch {
+    let r = RawRecord::new(
+        "kma",
+        "current",
+        &ProviderKey::Grid { nx, ny },
+        Period {
+            local_date: 20261025,
+            slot: "1200".into(),
+        },
+        1792897200000,
+        200,
+        "application/json",
+        None,
+        Arc::from(&b"{\"t1h\":17}"[..]),
+        &Limits::default(),
+    )
+    .unwrap();
+    let d = GroupDeclaration::new(
+        vec![GroupMember {
+            envelope: r.envelope.clone(),
+            catalogs: vec![CatalogId::for_record(&r.envelope.identity, "20261025-1200").unwrap()],
+        }],
+        &CatalogLimits::default(),
+    )
+    .unwrap();
+    Batch {
+        declaration: d,
+        records: vec![r],
+    }
+}
+/// Stress check (not a regression test: its orders depend on the scheduler; the deterministic
+/// ones are the `Checkpoint` tests below). 2,000 scoped acquisitions with instant providers,
+/// created from the test thread; run on a saturated machine with
+/// `cargo test --test response_first -- --ignored`. None may be released as unwaited
+/// (NoWaiters) before the body ends; a dormancy release on a slow machine is not this defect.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "stress check: run under CPU saturation"]
+async fn stress_scoped_instant_acquisitions_are_never_released_unwaited() {
+    let sink = Arc::new(Sink::default());
+    let writer = Writer::new(
+        sink.clone(),
+        Config {
+            retained_bytes: 64 << 20,
+            group_bytes: 16384,
+            entries: 8192,
+            ..Config::default()
+        },
+    )
+    .unwrap();
+    let scope = ResponseScope::default();
+    scope
+        .run(async {
+            for i in 0..2000u16 {
+                writer
+                    .acquire(
+                        format!("current/{i}"),
+                        16384,
+                        Instant::now() + Duration::from_secs(5),
+                        async move { Ok(Some(batch_grid(1 + i % 140, 1 + i / 140))) },
+                    )
+                    .await
+                    .unwrap();
+            }
+        })
+        .await;
+    let unwaited = released_early(&scope)
+        .into_iter()
+        .filter(|r| *r == ReleaseReason::NoWaiters)
+        .count();
+    assert_eq!(unwaited, 0, "released as unwaited before the body ended");
+    drop(scope.body(axum::body::Body::from("weather")));
+    sink.allow.add_permits(4000);
+    assert!(writer.drain(Instant::now() + Duration::from_secs(10)).await);
+    assert_eq!(writer.stats().durable, 2000);
+}
+
+/// A publisher that also holds the writer at one [`Checkpoint`]: the test learns when the writer
+/// got there ([`Held::reached`]) and lets it go on ([`Held::go`]). Publications are counted and
+/// wait for `allow`, as [`Sink`]'s.
+struct Held {
+    at: Checkpoint,
+    reached: tokio::sync::watch::Sender<bool>,
+    open: tokio::sync::watch::Sender<bool>,
+    /// Every checkpoint passed so far.
+    passed: tokio::sync::watch::Sender<Vec<Checkpoint>>,
+    sink: Sink,
+}
+impl Held {
+    fn at(at: Checkpoint) -> Self {
+        Self {
+            at,
+            reached: tokio::sync::watch::channel(false).0,
+            open: tokio::sync::watch::channel(false).0,
+            passed: tokio::sync::watch::channel(Vec::new()).0,
+            sink: Sink::default(),
+        }
+    }
+    async fn reached(&self) {
+        let _ = self.reached.subscribe().wait_for(|r| *r).await;
+    }
+    /// Wait until the writer passed `point`.
+    async fn passed(&self, point: Checkpoint) {
+        let _ = self
+            .passed
+            .subscribe()
+            .wait_for(|p| p.contains(&point))
+            .await;
+    }
+    fn go(&self) {
+        self.open.send_replace(true);
+    }
+}
+impl Publisher for Held {
+    fn publish(&self, batch: Arc<Batch>, deadline: Instant) -> BoxFuture<'_, Result<(), Error>> {
+        self.sink.publish(batch, deadline)
+    }
+    fn checkpoint(&self, point: Checkpoint) -> BoxFuture<'_, ()> {
+        Box::pin(async move {
+            if point == self.at {
+                self.reached.send_replace(true);
+                let _ = self.open.subscribe().wait_for(|o| *o).await;
+            }
+            self.passed.send_modify(|p| p.push(point));
+        })
+    }
+}
+/// A writer whose checks before a body ends stay clear of its 10 s dormancy cap.
+fn held_writer(held: Arc<Held>) -> Arc<Writer> {
+    Writer::new(
+        held,
+        Config {
+            retained_bytes: 32768,
+            group_bytes: 16384,
+            dormancy: Duration::from_secs(10),
+            ..Config::default()
+        },
+    )
+    .unwrap()
+}
+/// The batches `scope` used that were released before its body ended, and why.
+fn released_early(scope: &ResponseScope) -> Vec<ReleaseReason> {
+    scope
+        .batches()
+        .into_iter()
+        .filter_map(|b| b.released.map(|r| r.1))
+        .collect()
+}
+
+/// RFW-zero-count-join: the response that created an acquisition is cancelled, so nobody waits
+/// for it; another response joins it after its batch is valid and before it is Ready. That
+/// response is a waiter: the batch is held until its body ends, not released as unwaited
+/// (NoWaiters) and published while it is still being sent.
+#[tokio::test]
+async fn a_response_joining_before_ready_holds_a_cancelled_creators_batch() {
+    let held = Arc::new(Held::at(Checkpoint::Validated));
+    let writer = held_writer(held.clone());
+    let key = "grid/current/60/127/20261025-1200";
+    let (provide, provided) = tokio::sync::oneshot::channel::<()>();
+    let creator = tokio::spawn({
+        let writer = writer.clone();
+        async move {
+            let scope = ResponseScope::default();
+            scope
+                .run(writer.acquire(
+                    key.into(),
+                    16384,
+                    Instant::now() + Duration::from_secs(5),
+                    async move {
+                        let _ = provided.await;
+                        Ok(Some(batch()))
+                    },
+                ))
+                .await
+        }
+    });
+    tokio::task::yield_now().await;
+    creator.abort();
+    match creator.await {
+        Err(e) => assert!(e.is_cancelled()),
+        Ok(_) => panic!("the creator ran to its end"),
+    }
+    provide.send(()).unwrap();
+    held.reached().await;
+    let joiner = ResponseScope::default();
+    let joined = tokio::spawn({
+        let (writer, joiner) = (writer.clone(), joiner.clone());
+        async move {
+            joiner
+                .run(writer.acquire(
+                    key.into(),
+                    16384,
+                    Instant::now() + Duration::from_secs(5),
+                    async { panic!("the joiner starts no provider") },
+                ))
+                .await
+        }
+    });
+    tokio::task::yield_now().await;
+    held.go();
+    assert!(joined.await.unwrap().unwrap().is_some());
+    assert_eq!(
+        released_early(&joiner),
+        Vec::new(),
+        "released before the body ended"
+    );
+    assert_eq!(
+        held.sink.attempts.load(SeqCst),
+        0,
+        "published before the body ended"
+    );
+    drop(joiner.body(axum::body::Body::from("weather")));
+    held.sink.allow.add_permits(1);
+    assert!(writer.drain(Instant::now() + Duration::from_secs(5)).await);
+    assert_eq!(writer.stats().durable, 1);
+}
+
+/// One scoped acquisition of `writer` by a response of its own (`scope`), with an instant
+/// provider.
+fn respond(
+    writer: &Arc<Writer>,
+    scope: &ResponseScope,
+) -> tokio::task::JoinHandle<Result<Option<Arc<server2::storage::response_first::RamReady>>, Error>>
+{
+    let (writer, scope) = (writer.clone(), scope.clone());
+    tokio::spawn(async move {
+        scope
+            .run(writer.acquire(
+                "grid/current/60/127/20261025-1200".into(),
+                16384,
+                Instant::now() + Duration::from_secs(5),
+                async { Ok(Some(batch())) },
+            ))
+            .await
+    })
+}
+/// The body of `scope` ends and its batch becomes durable.
+async fn body_ends(held: &Held, writer: &Arc<Writer>, scope: &ResponseScope) {
+    drop(scope.body(axum::body::Body::from("weather")));
+    held.sink.allow.add_permits(1);
+    assert!(writer.drain(Instant::now() + Duration::from_secs(5)).await);
+    assert_eq!(writer.stats().durable, 1);
+}
+
+/// RFW-test-scheduling: the creating caller is paused right after it created the entry and
+/// started its job, and the job makes the batch Ready meanwhile. The caller was a waiter from the
+/// start, so its batch is held until its body ends.
+#[tokio::test]
+async fn a_creator_not_yet_waiting_when_its_batch_is_ready_holds_it() {
+    let held = Arc::new(Held::at(Checkpoint::Created));
+    let writer = held_writer(held.clone());
+    let scope = ResponseScope::default();
+    let creator = respond(&writer, &scope);
+    held.reached().await;
+    held.passed(Checkpoint::Announced).await;
+    held.go();
+    assert!(creator.await.unwrap().unwrap().is_some());
+    assert_eq!(
+        released_early(&scope),
+        Vec::new(),
+        "released before the body ended"
+    );
+    assert_eq!(
+        held.sink.attempts.load(SeqCst),
+        0,
+        "published before the body ended"
+    );
+    body_ends(&held, &writer, &scope).await;
+}
+
+/// RFW-test-scheduling: the job is paused right after it made the batch Ready, and the waiting
+/// response takes the batch and returns meanwhile. It was counted before Ready, so its batch is
+/// held until its body ends.
+#[tokio::test]
+async fn a_waiter_that_takes_the_batch_at_once_holds_it() {
+    let held = Arc::new(Held::at(Checkpoint::Announced));
+    let writer = held_writer(held.clone());
+    let scope = ResponseScope::default();
+    let waiter = respond(&writer, &scope);
+    held.reached().await;
+    assert!(waiter.await.unwrap().unwrap().is_some());
+    held.go();
+    for _ in 0..8 {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(
+        released_early(&scope),
+        Vec::new(),
+        "released before the body ended"
+    );
+    assert_eq!(
+        held.sink.attempts.load(SeqCst),
+        0,
+        "published before the body ended"
+    );
+    body_ends(&held, &writer, &scope).await;
 }

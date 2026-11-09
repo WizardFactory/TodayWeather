@@ -175,6 +175,27 @@ impl NativeFamilies {
         Ok(families)
     }
 }
+/// The process warning store on the bulk lane of the shared admission: the collector, zone
+/// replay and publications never hold the permits request reads need (KMA-RESTART-READS).
+pub fn warning_store(
+    s3: &BoundedS3<HttpS3Transport>,
+) -> Result<crate::warnings::store::WarningStore<BoundedS3<HttpS3Transport>>, crate::storage::Error>
+{
+    crate::warnings::store::WarningStore::new(
+        s3.bulk(),
+        crate::storage::CatalogLimits::default(),
+        crate::warnings::store::StoreConfig::default(),
+    )
+}
+/// The persisted push warning feed on the same bulk lane.
+pub fn warning_feed(
+    s3: &BoundedS3<HttpS3Transport>,
+) -> crate::push::deliver::warning_feed::WarningFeed<BoundedS3<HttpS3Transport>> {
+    crate::push::deliver::warning_feed::WarningFeed::new(
+        Arc::new(s3.bulk()),
+        Arc::new(crate::budget::SystemClock),
+    )
+}
 /// The process S3 client from the S3 settings ([`S3Settings`]), behind one bounded admission.
 /// With the instance role the one transport holds the process credential cache.
 pub fn shared_s3(
@@ -324,14 +345,7 @@ pub fn from_vars_at(var: Var, builtins: &Builtins) -> Result<Option<Arc<Gateway>
     };
     let warnings = s3
         .as_ref()
-        .map(|s3| {
-            crate::warnings::store::WarningStore::new(
-                s3.clone(),
-                crate::storage::CatalogLimits::default(),
-                crate::warnings::store::StoreConfig::default(),
-            )
-            .map(Arc::new)
-        })
+        .map(|s3| warning_store(s3).map(Arc::new))
         .transpose()
         .map_err(|_| GatewayError::InvalidConfiguration)?;
     build_shared(var, builtins, families, base, s3, warnings, None).map(|built| built.gateway)

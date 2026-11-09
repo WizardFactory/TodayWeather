@@ -394,7 +394,8 @@ pub fn set_yesterday(cx: &mut Cx) -> Flow {
     if !current.truthy() || !list.truthy() {
         return Flow::Next;
     }
-    let _ = catch(|| current.set("yesterday", policy::yesterday(&current, &list)));
+    let primary = policy::observations_primary(&cx.req);
+    let _ = catch(|| current.set("yesterday", policy::yesterday(&current, &list, primary)));
     Flow::Next
 }
 
@@ -558,8 +559,10 @@ fn convert_weather_data(w: &V, query: &V) {
     let to_wind = query.get("windSpeedUnit");
     let to_press = query.get("pressureUnit");
     let to_dist = query.get("distanceUnit");
+    // cm to mm. Legacy multiplies unconditionally; its finalized rows never hold the missing
+    // value -1 here, so it stays -1 rather than becoming -10 (#2614 parity).
     for name in ["s06", "sn1", "s1d"] {
-        if w.has(name) {
+        if w.has(name) && !strict_eq(&w.get(name), &n(-1.)) {
             w.set(name, to_number(&w.get(name)) * 10.);
         }
     }
@@ -622,21 +625,34 @@ fn convert_air_info(info: &V, unit: &V, current_date: &V) {
         }
     }
 }
+/// `current.dateObj` as `convertUnits` sets it: the station minute's time when the current carries
+/// one, else the current's own date and time.
+pub(super) fn current_date_obj(current: &V) -> V {
+    V::from(if current.has("stnDateTime") {
+        time::dotted_to_dot_space(&sv(&current.get("stnDateTime")))
+    } else {
+        time::dot_space(&to_str(&add(&current.get("date"), &current.get("time"))))
+    })
+}
+/// A short row's `dateObj`, from its date and (still string) time.
+pub(super) fn row_date_obj(row: &V) -> V {
+    V::from(time::dot_space(&to_str(&add(
+        &row.get("date"),
+        &row.get("time"),
+    ))))
+}
+/// `convertUnits`'s `currentIndex` rule: a row whose `dateObj` is not after the current's, when it
+/// is the last row or the next row's is not before it. Legacy never sets `foundCurrentIndex`, so
+/// every qualifying row is marked. The ASOS-primary wipe applies the same rule
+/// (`short::shown_current`), so the row the client shows as current keeps its forecast.
+pub(super) fn marked_current(date_obj: &V, next: Option<&V>, current_date: &V) -> bool {
+    le(date_obj, current_date) && next.is_none_or(|next| le(current_date, &row_date_obj(next)))
+}
 pub fn convert_units_mw(cx: &mut Cx) -> Flow {
     let query = cx.r("query");
     let _ = catch(|| {
         let current = cx.r("current");
-        if current.has("stnDateTime") {
-            current.set(
-                "dateObj",
-                time::dotted_to_dot_space(&sv(&current.get("stnDateTime"))),
-            );
-        } else {
-            current.set(
-                "dateObj",
-                time::dot_space(&to_str(&add(&current.get("date"), &current.get("time")))),
-            );
-        }
+        current.set("dateObj", current_date_obj(&current));
         let current_date = current.get("dateObj");
         current.set(
             "time",
@@ -674,10 +690,7 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
         // Legacy never sets foundCurrentIndex, so every qualifying row is marked.
         let found = false;
         for (index, v) in rows.iter().enumerate() {
-            v.set(
-                "dateObj",
-                time::dot_space(&to_str(&add(&v.get("date"), &v.get("time")))),
-            );
+            v.set("dateObj", row_date_obj(v));
             v.set(
                 "time",
                 parse_int(&V::from(super::js::slice(&sv(&v.get("time")), 0, Some(-2)))),
@@ -686,17 +699,8 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
                 "fromToday",
                 time::diff_days(&v.get("dateObj"), &current_date),
             );
-            if !found && le(&v.get("dateObj"), &current_date) {
-                if index == rows.len() - 1 {
-                    v.set("currentIndex", true);
-                } else {
-                    let next = &rows[index + 1];
-                    let next_date =
-                        time::dot_space(&to_str(&add(&next.get("date"), &next.get("time"))));
-                    if le(&current_date, &V::from(next_date)) {
-                        v.set("currentIndex", true);
-                    }
-                }
+            if !found && marked_current(&v.get("dateObj"), rows.get(index + 1), &current_date) {
+                v.set("currentIndex", true);
             }
             convert_weather_data(v, &query);
         }
@@ -1309,8 +1313,9 @@ pub fn get_summary(cx: &mut Cx) -> Flow {
     }
     let l = cx.locale;
     let query = cx.r("query");
+    let primary = policy::observations_primary(&cx.req);
     let r = catch(|| {
-        current.set("yesterday", policy::yesterday(&current, &list));
+        current.set("yesterday", policy::yesterday(&current, &list, primary));
         current.set(
             "summary",
             summary(&current, &current.get("yesterday"), &query, l),
@@ -1350,7 +1355,7 @@ pub fn data_to_fixed(cx: &mut Cx) -> Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domestic::kma::js::Arr;
+    use crate::domestic::kma::js::{Arr, Ob, obj};
     #[test]
     fn unit_switches_compare_like_legacy() {
         let arr = |u: &str| V::Arr(Arr::from_vec(vec![V::s(u)]));
@@ -1379,5 +1384,19 @@ mod tests {
             &convert_units("m/s", &arr("m/s"), &n(2.)),
             &n(2.)
         ));
+    }
+    /// Legacy `_convertWeatherData` turns centimetres into millimetres (`*= 10`). Its finalized
+    /// rows never hold the -1 sentinel there, so a missing amount must stay -1, never -10.
+    #[test]
+    fn a_missing_snow_amount_stays_missing_through_the_cm_to_mm_conversion() {
+        let row = V::Obj(obj(vec![("s06", n(-1.)), ("sn1", n(-1.)), ("s1d", n(-1.))]));
+        convert_weather_data(&row, &V::Obj(Ob::new()));
+        for name in ["s06", "sn1", "s1d"] {
+            assert!(strict_eq(&row.get(name), &n(-1.)), "{name}");
+        }
+        let measured = V::Obj(obj(vec![("s06", n(1.5)), ("s1d", n(0.))]));
+        convert_weather_data(&measured, &V::Obj(Ob::new()));
+        assert!(strict_eq(&measured.get("s06"), &n(15.)));
+        assert!(strict_eq(&measured.get("s1d"), &n(0.)));
     }
 }

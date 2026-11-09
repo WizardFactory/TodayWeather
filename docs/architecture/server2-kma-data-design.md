@@ -329,6 +329,25 @@ Do not keep only every sixth VSRT publication merely because each covers six
 hours: overlapping forecasts can have different values. Any such thinning
 requires a value-equivalence proof.
 
+On the public axis a three-hour row is historical once its interval has passed
+(label + 3 h ≤ now). The current-time row (label ≤ now < label + 3 h) keeps the
+forecast of the newest publication covering it, with the observed fields merged
+over it as legacy `_mergeShortWithCurrent` does (AK 2026-11-07: the client gets
+what it gets today). So does the row the client shows as current (`currentIndex`),
+which follows the observation's time and can therefore be past by the clock when
+the observation lags. From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
+the previous one is read from S3 or acquired, at most once per cell and
+publication; so is the publication covering a lagging row shown as current. Clearing a historical row's forecast amounts also clears the totals
+kept beside them; its snow amount then finalizes like that of every past row
+without a covering publication (0 over 0 hours) and no forecast text remains.
+The answer keeps legacy's missing values: probability 0 (`adjustShort`), snow
+−1 through the cm-to-mm conversion, and wind components −100 where ASOS fills an
+hour that no grid observation holds. Under ASOS-primary the yesterday comparison also pairs
+the live reading of station X in the current hour with X's ASOS hour exactly 24 h
+earlier, one thermometer; other stations, hours and sources keep the safeguard,
+which is a last-resort rule since `yesterday.t1h` must be sent. See the
+[#2614 parity record](server2.md#2614-kma-answer-parity-current-row-sentinels-and-yesterday).
+
 The machine-checked precipitation slice of this contract is
 [`server2/config/contracts/kma-history.v1.json`](../../server2/config/contracts/kma-history.v1.json)
 (version 1, slice `precipitation-1`). It declares sources, hourly/slot/half
@@ -369,6 +388,17 @@ and the app, slot and date order, and the observed-history rules.
 `cargo test --test legacy_versions client_eval` runs it on every native recorded
 scenario in legacy and ASOS-primary mode. `python3 kma_client_eval.py --body <file>
 --version <v> --surface <s> [--observed-history]` checks a captured body.
+
+The eval is the wire-shape check: types, required wire fields, consumer reads and observed
+history. It does not show that the client gets everything it gets today. On 2026-11-07 it
+passed all 36 bodies of an EC2 restart run, although every first answer after a restart lacked
+past days and yesterday's values. Client validation (AK, 2026-11-07) is
+[`kma_client_validation.py`](../../server2/tools/verification/kma_client_validation.py).
+`capture --path <path> --out <dir>` records the production answer with one GET. `compare
+--reference <capture> --candidate <body>` requires every reference row, field and valid value
+of the same publications, except air quality, life indices (UV, pollen, food poisoning) and the
+KASI extras other than sunrise and sunset, which it lists apart. It exits 0 (pass), 1 (missing
+data) or 2 (not comparable).
 
 ## S3 layout and ownership
 

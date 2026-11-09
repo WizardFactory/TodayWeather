@@ -1,0 +1,1 @@
+Behoben: Die App blieb hängen, wenn die Standortberechtigung abgelehnt wurde. Stabilität beim ersten Start verbessert.
