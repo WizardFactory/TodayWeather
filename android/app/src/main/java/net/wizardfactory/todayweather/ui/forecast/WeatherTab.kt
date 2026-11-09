@@ -87,8 +87,6 @@ class WeatherTabHost(
     val onNext: () -> Unit,
     /** Saves `expandShortChart`. */
     val onExpand: (Boolean) -> Unit,
-    /** The units page (AN-12). */
-    val onUnits: () -> Unit = {},
     /** The selected place's alarms (AN-14). */
     val onBell: () -> Unit = {},
     /** Sharing the weather (AN-16). */
@@ -111,11 +109,13 @@ object WeatherTabTags {
  * The Hourly or Daily tab (#2887): a visit of ForecastCtrl's scope, new each time the tab opens, that applies the
  * selected place's record whenever it changes (a swipe, a load, the cache), as `applyEvent` did; the page, its title
  * with the current position's location glyph or the loading spinner, the bell and share buttons, and the pollen and
- * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`).
+ * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`) and the
+ * standard opens S07 ([onUnits], `goUnitsPage`). The visit reads the temperature unit and the theme as it applies, as
+ * ForecastCtrl did, so a change on the settings pages over it shows in the next apply.
  */
 @Composable
 fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
-                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}): TabContent {
+                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -123,6 +123,9 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
         ForecastScope(type, metrics, state.units.temperatureUnit == "F", theme == Theme.PHOTO,
             YesterdayText(texts["LOC_SAME_AS_YESTERDAY"], texts["LOC_THAN_YESTERDAY"]), state.expandShortChart)
     }
+    // `Units.getUnit('temperatureUnit')` and `settingsInfo.theme` as ForecastCtrl reads them.
+    visit.fahrenheit = state.units.temperatureUnit == "F"
+    visit.photoTheme = theme == Theme.PHOTO
     val index = state.placeIndex
     val place = state.places.getOrNull(index)
     LaunchedEffect(place) { place?.let { host.readCache(it) } }
@@ -164,7 +167,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     val onAction: (PageAction) -> Unit = { action ->
         when (action) {
             is PageAction.AirInfo -> onAirInfo(action.code)
-            PageAction.Units -> host.onUnits()
+            PageAction.Units -> onUnits()
             is PageAction.AirForecastInfo -> if (action.source == "kaq" || action.source == "airkorea") source = action.source
             is PageAction.Pollen -> pollen = action.rows
             is PageAction.Url -> openUrl(context, action.url)

@@ -27,8 +27,10 @@ enum class ForecastType { SHORT, MID }
 class ForecastScope(
     val type: ForecastType,
     val metrics: ChartMetrics,
-    private val fahrenheit: Boolean,
-    private val photoTheme: Boolean,
+    /** The temperature unit is °F (`Units.getUnit('temperatureUnit')`), as the next apply and `getTemp` read it. */
+    var fahrenheit: Boolean,
+    /** The photo theme (`settingsInfo.theme`), as the next apply reads it. */
+    var photoTheme: Boolean,
     private val yesterday: YesterdayText,
     expandShortChart: Boolean?,
 ) {

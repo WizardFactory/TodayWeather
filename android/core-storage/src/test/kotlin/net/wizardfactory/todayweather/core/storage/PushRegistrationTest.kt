@@ -17,16 +17,17 @@ import kotlinx.serialization.json.long
 class PushRegistrationTest {
     private val corpus = Json.parseToJsonElement(File(javaClass.getResource("/corpus/push.json")!!.toURI()).readText()).jsonObject
 
+    private val places = corpus["cities"]!!.jsonArray.map { c ->
+        val o = c.jsonObject
+        val loc = o["location"]!!.jsonObject
+        Place(currentPosition = o["currentPosition"]!!.jsonPrimitive.content == "true", disable = false,
+            name = o["name"]?.jsonPrimitive?.content, address = o["address"]?.jsonPrimitive?.content,
+            country = o["country"]?.jsonPrimitive?.content, source = o["source"]?.jsonPrimitive?.content,
+            location = Location(loc["lat"]!!.jsonPrimitive.content.toDouble(), loc["long"]!!.jsonPrimitive.content.toDouble()))
+    }
+
     @Test
     fun requestsMatchCordovaForEveryTokenCase() {
-        val places = corpus["cities"]!!.jsonArray.map { c ->
-            val o = c.jsonObject
-            val loc = o["location"]!!.jsonObject
-            Place(currentPosition = o["currentPosition"]!!.jsonPrimitive.content == "true", disable = false,
-                name = o["name"]?.jsonPrimitive?.content, address = o["address"]?.jsonPrimitive?.content,
-                country = o["country"]?.jsonPrimitive?.content, source = o["source"]?.jsonPrimitive?.content,
-                location = Location(loc["lat"]!!.jsonPrimitive.content.toDouble(), loc["long"]!!.jsonPrimitive.content.toDouble()))
-        }
         for (case in corpus["cases"]!!.jsonArray.map { it.jsonObject }) {
             fun str(k: String) = case[k]?.takeIf { it != JsonNull }?.jsonPrimitive?.content
             val units = UnitSettings("C", "m/s", "hPa", "km", "mm", str("airUnit")!!)
@@ -49,6 +50,35 @@ class PushRegistrationTest {
                 assertEquals(e["data"], a.body, "${str("name")} ${a.method} body")
             }
             assertEquals(str("newToken") ?: str("storedToken"), result.state.fcmToken, "${str("name")}: stored token")
+        }
+    }
+
+    /** `Push.updateUnits` after a unit change on S08 (#2891): the repaired list with the new units, or nothing. */
+    @Test
+    fun aUnitChangePostsTheListAsCordovaDoes() {
+        val cases = corpus["unitsChanged"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(4, cases.size)
+        for (case in cases) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val changed = case["units"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
+            val units = UnitSettings.defaults("KR").let { u -> changed.entries.fold(u) { acc, (k, v) -> acc.with(k, v) } }
+            val ctx = PushRegistration.Context(
+                deviceId = corpus["deviceId"]!!.jsonPrimitive.content, language = corpus["language"]!!.jsonPrimitive.content,
+                appVersion = corpus["appVersion"]!!.jsonPrimitive.content, units = units,
+                nowMillis = corpus["now"]!!.jsonPrimitive.long, zone = TimeZone.getTimeZone(corpus["zone"]!!.jsonPrimitive.content),
+            )
+            val token = case["storedToken"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content
+            val state = PushState(fcmToken = token, records = case["pushList"]!!.jsonArray.map { it.jsonObject })
+            val result = PushRegistration.onUnitsChanged(state, places, ctx)
+            val expected = case["requests"]!!.jsonArray.map { it.jsonObject }
+            assertEquals(expected.size, result.requests.size, "$name: request count")
+            expected.zip(result.requests).forEach { (e, a) ->
+                assertEquals(e["method"]!!.jsonPrimitive.content, a.method, name)
+                assertEquals(e["url"]!!.jsonPrimitive.content.removePrefix("https://server").replace("/v000902/", "/v000903/"), a.path, name)
+                assertEquals(e["headers"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }, a.headers, name)
+                assertEquals(e["data"], a.body, "$name body")
+            }
+            assertEquals(token, result.state.fcmToken, "$name: the token stays")
         }
     }
 

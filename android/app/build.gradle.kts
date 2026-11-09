@@ -11,13 +11,15 @@ if (file("google-services.json").exists()) {
     apply(plugin = libs.plugins.google.services.get().pluginId)
 }
 
-// The legacy server URL and the weather photo feed URL are private inputs too (README.md): TW_SERVER_URL and
-// TW_WEATHER_PHOTOS_URL from the environment or android/private.properties. Empty: no requests to them.
+// The legacy server URL, the weather photo feed URL and the feedback address are private inputs too (README.md):
+// TW_SERVER_URL, TW_WEATHER_PHOTOS_URL and TW_MAIL_TO from the environment or android/private.properties. Empty: no
+// requests to them, and a feedback mail without a recipient.
 val privateProps = Properties().apply {
     rootProject.file("private.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
 }
 val serverUrl: String = System.getenv("TW_SERVER_URL") ?: privateProps.getProperty("TW_SERVER_URL", "")
 val weatherPhotosUrl: String = System.getenv("TW_WEATHER_PHOTOS_URL") ?: privateProps.getProperty("TW_WEATHER_PHOTOS_URL", "")
+val mailTo: String = System.getenv("TW_MAIL_TO") ?: privateProps.getProperty("TW_MAIL_TO", "")
 
 android {
     namespace = "net.wizardfactory.todayweather"
@@ -34,6 +36,7 @@ android {
         testInstrumentationRunner = "net.wizardfactory.todayweather.TestRunner"
         buildConfigField("String", "SERVER_URL", "\"" + serverUrl.trimEnd('/') + "\"")
         buildConfigField("String", "WEATHER_PHOTOS_URL", "\"" + weatherPhotosUrl + "\"")
+        buildConfigField("String", "MAIL_TO", "\"" + mailTo + "\"")
     }
 
     // Device tests read the golden corpus generated for core-domain and the chart references; the image
@@ -90,6 +93,7 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.intents)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }

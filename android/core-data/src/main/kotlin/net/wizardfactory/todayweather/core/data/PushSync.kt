@@ -37,6 +37,16 @@ class PushSync(
         send(state, PushRegistration.onTokenRefresh(state.push, state.places, token, ctx))
     }
 
+    /**
+     * A unit changed on S08 (`Push.updateUnits`): the list again with the new units. The state is read through the
+     * store's writer, after the writes asked for before this one, so the unit just chosen is in it.
+     */
+    suspend fun updateUnits(): Outcome? = lock.withLock {
+        val state = store.updateData { it }
+        val ctx = context(state) ?: return null
+        send(state, PushRegistration.onUnitsChanged(state.push, state.places, ctx))
+    }
+
     private suspend fun send(state: AppState, result: PushRegistration.Result): Outcome {
         val statuses = result.requests.map { transport.send(it) }
         if (result.state.fcmToken != state.push.fcmToken) {

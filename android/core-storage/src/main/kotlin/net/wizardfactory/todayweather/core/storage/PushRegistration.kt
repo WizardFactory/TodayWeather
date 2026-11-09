@@ -61,6 +61,16 @@ object PushRegistration {
     fun postList(state: PushState, ctx: Context) = PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
         JsonArray(state.records.map { postObject(it, state, ctx) }))
 
+    /**
+     * `Push.updateUnits` after a unit change (#1845; S08, #2891): the list as `loadPushInfo` repaired it, posted again
+     * with the new units of [ctx]; nothing without records or a token (`_postPushList` stops without one).
+     */
+    fun onUnitsChanged(push: PushState, places: List<Place>, ctx: Context): Result {
+        val state = push.copy(records = push.records.map { repair(it, places) })
+        if (state.records.isEmpty() || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(postList(state, ctx)), state)
+    }
+
     private fun jsonHeaders(ctx: Context, language: Boolean) = buildMap {
         put("Content-Type", "application/json")
         if (language) put("Accept-Language", ctx.language)

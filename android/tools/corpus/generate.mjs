@@ -504,6 +504,148 @@ function specialCases() {
     return out;
 }
 
+// Settings (S07, S08), the menu's hand-offs and About (O10), #2891: UnitsCtrl, SettingCtrl, radioList and RadioCtrl run
+// with recorders for what they change (storage, the push list, events, each city's load time, navigation, the menu),
+// and Util for the mail and store targets. The configuration is a placeholder: the real feedback address is a private
+// build input. The trace of each step is what the native settings must do in the same order. Kotlin: SettingLists,
+// Handoffs (core-domain), SettingsActions (core-data).
+const SETTINGS_CONFIG = {package: 'todayWeather', mailTo: 'feedback@example.com',
+    androidStoreUrl: 'market://details?id=net.wizardfactory.todayweather'};
+const SETTINGS_UA = 'Mozilla/5.0 (Linux; Android 16; sdk_gphone64_arm64 Build/BP41.250916.012; wv) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.122 Mobile Safari/537.36';
+const KR_UNITS = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+const KR_SETTINGS = {startupPage: '0', refreshInterval: '0', theme: 'light'};
+
+function settingsApp(lang, {units = KR_UNITS, settingsInfo = KR_SETTINGS, region = 'KR', cities = 3} = {}) {
+    const tr = translations(lang);
+    const trace = [];
+    const reg = {};
+    const mod = {factory(n, f) { reg[n] = f; return mod; }, controller(n, f) { reg[n] = f; return mod; }};
+    const window = {location: {}, device: {uuid: 'device-uuid'}};
+    const cordova = {InAppBrowser: {open: (url, target) => trace.push(['InAppBrowser.open', url, target])}};
+    window.cordova = cordova;
+    const ionic = {Platform: {isIOS: () => false, isAndroid: () => true, ua: SETTINGS_UA}};
+    const context = {angular: {module: () => mod, noop() {}, element: () => ({hasClass: () => false})}, console: quiet,
+        clientConfig: SETTINGS_CONFIG, window, cordova, ionic, document: {getElementsByClassName: () => []}};
+    vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'client/www/data/theme.js'), 'utf8'), context);
+    for (const file of ['service.util.js', 'controller.units.js', 'controller.setting.radio.js', 'controller.settingctrl.js']) {
+        vm.runInNewContext(fs.readFileSync(path.join(JS, file), 'utf8'), context);
+    }
+    const stored = {units: clone(units), settingsInfo: clone(settingsInfo)};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set: (k, v) => { stored[k] = clone(v); trace.push(['TwStorage.set', k, clone(v)]); }};
+    const $translate = (keys) => ({
+        then(ok) {
+            ok(Array.isArray(keys) ? Object.fromEntries(keys.map((k) => [k, tr[k] ?? k])) : (tr[keys] ?? keys));
+            return {finally(fn) { fn(); }};
+        },
+    });
+    const Monetization = {init() {}, screen() {}, track() {}, setCollectionEnabled() {}, getCollectionChoice: () => false};
+    const Util = reg.Util({}, Monetization);
+    Object.assign(Util, {version: '2.0.0', region, language: lang, uuid: 'device-uuid'});
+    const Units = reg.Units(TwStorage, Util);
+    Units.loadUnits();
+    trace.length = 0; // loadUnits saves repaired or default units; the steps start after the load
+    const Push = {updateUnits() { trace.push(['Push.updateUnits', clone(Units.getAllUnits())]); }};
+    const $rootScope = {settingsInfo: clone(settingsInfo), title: 'LOC_TODAYWEATHER', state: 'forecast',
+        $broadcast: (name, sender) => trace.push(['$broadcast', name, sender ?? null])};
+    const radioList = reg.radioList($rootScope, Units, TwStorage, Util, Push);
+    const $location = {path: (p) => trace.push(['$location.path', p])};
+    const $ionicSideMenuDelegate = {toggleLeft: () => trace.push(['toggleLeft']), isOpen: () => true};
+    const $ionicHistory = {goBack: () => trace.push(['goBack'])};
+    const $ionicPopup = {alert(options) { trace.push(['$ionicPopup.alert', clone(options)]); return {then() {}}; }};
+    const WeatherInfo = {getCityCount: () => cities, reloadCity: (i) => trace.push(['WeatherInfo.reloadCity', i])};
+    const scope = () => { const handlers = {}; return {$on: (n, f) => { handlers[n] = f; }, $emit(n) { handlers[n]?.(); }, $evalAsync: (f) => f()}; };
+    const menu = scope();
+    reg.SettingCtrl(menu, $rootScope, Util, $ionicHistory, $translate, $ionicSideMenuDelegate, $ionicPopup, $location, TwStorage, radioList, Monetization);
+    return {
+        trace, stored, Units, menu, window,
+        unitsPage() {
+            const $scope = scope();
+            reg.UnitsCtrl($scope, $translate, $ionicHistory, Units, Util, Push, $location, radioList);
+            $scope.$emit('$ionicView.enter');
+            return $scope;
+        },
+        // The S08 page RadioCtrl shows for the list radioList holds.
+        radioPage() {
+            const $scope = scope();
+            reg.RadioCtrl($rootScope, $scope, $ionicHistory, Util, radioList, WeatherInfo);
+            return $scope;
+        },
+        text: (key) => (key === undefined || key === null ? '' : tr[key] ?? key),
+    };
+}
+
+function settingsCases() {
+    const take = (app) => app.trace.splice(0);
+    const page = (app, $scope) => ({title: $scope.title, value: $scope.data.value,
+        items: $scope.list.map((i) => ({label: i.label, value: i.value, ko: app.text(i.label)}))});
+    const out = {config: SETTINGS_CONFIG, ua: SETTINGS_UA, version: '2.0.0', uuid: 'device-uuid', cities: 3};
+
+    // S07 rows of each region's default units and of rarer values (the translate filter shows a missing key as itself).
+    out.units = [];
+    for (const [name, opts] of [['KR', {region: 'KR', units: null}], ['JP', {region: 'JP', units: null}], ['US', {region: 'US', units: null}],
+        ['DE', {region: 'DE', units: null}], ['CN', {region: 'CN', units: null}], ['TW', {region: 'TW', units: null}], ['other', {region: 'FR', units: null}],
+        ['beaufort-who', {units: {...KR_UNITS, windSpeedUnit: 'bft', pressureUnit: 'mb', airUnit: 'airkorea_who'}}],
+        ['knots-aqicn', {units: {...KR_UNITS, windSpeedUnit: 'kt', distanceUnit: 'mi', precipitationUnit: 'in', airUnit: 'aqicn'}}],
+        ['aircn', {units: {...KR_UNITS, airUnit: 'aircn'}}], ['partial', {units: {temperatureUnit: 'F'}}]]) {
+        for (const lang of ['ko', 'en']) {
+            const app = settingsApp(lang, opts);
+            const $scope = app.unitsPage();
+            out.units.push({name, lang, region: opts.region ?? 'KR', stored: opts.units, units: app.Units.getAllUnits(),
+                rows: $scope.units.map((u) => ({name: u.name, nameKey: $scope.getUnitNameStr(u.name), valueKey: $scope.getUnitValueStr(u) ?? null,
+                    name_text: app.text($scope.getUnitNameStr(u.name)), value_text: app.text($scope.getUnitValueStr(u))}))});
+        }
+    }
+
+    // Opening each S08 list and choosing each other value, from KR defaults.
+    out.lists = [];
+    const UNIT_NAMES = ['temperatureUnit', 'windSpeedUnit', 'pressureUnit', 'distanceUnit', 'precipitationUnit', 'airUnit'];
+    for (const name of [...UNIT_NAMES, 'startupPage', 'refreshInterval', 'theme']) {
+        const open = (app) => {
+            if (UNIT_NAMES.includes(name)) {
+                const $scope = app.unitsPage();
+                $scope.settingRadio($scope.units.find((u) => u.name === name));
+            } else {
+                app.menu.settingRadio(name);
+            }
+        };
+        const first = settingsApp('ko');
+        open(first);
+        const opened = take(first);
+        const shown = page(first, first.radioPage());
+        const choices = shown.items.filter((i) => i.value !== shown.value).map((item) => {
+            const app = settingsApp('ko');
+            open(app);
+            const $scope = app.radioPage();
+            take(app);
+            $scope.data.value = item.value;
+            $scope.valueChanged($scope.list.find((i) => i.value === item.value));
+            return {value: item.value, trace: take(app), stored: app.stored};
+        });
+        out.lists.push({name, opened, page: shown, en: page(settingsApp('en'), (() => { const a = settingsApp('en'); open(a); return a.radioPage(); })()), choices});
+    }
+
+    // The values the menu shows at the right of its rows, every value of each list and one it does not have.
+    const labels = settingsApp('ko').menu;
+    out.menuValues = {
+        startupPage: ['0', '1', '2', '3', '4', '5', ''].map((v) => ({value: v, key: labels.getStartupPageValueStr(v)})),
+        refreshInterval: ['0', '30', '60', '180', '360', '720', '15', ''].map((v) => ({value: v, key: labels.getRefreshIntervalValueStr(v)})),
+        theme: ['photo', 'light', 'dark', 'old', 'blue', ''].map((v) => ({value: v, key: labels.getThemeValueStr(v)})),
+    };
+
+    // The menu's hand-offs and About, in Korean and English; the mail row sets window.location.href (Util.sendMail).
+    out.menu = [];
+    for (const lang of ['ko', 'en']) {
+        for (const row of ['nullschool', 'sendMail', 'openMarket', 'openInfo']) {
+            const app = settingsApp(lang);
+            take(app);
+            app.menu.clickMenu(row);
+            out.menu.push({lang, row, trace: take(app), location: app.window.location.href ?? null});
+        }
+    }
+    return out;
+}
+
 // Push registration after a start (gate G1, push part): the requests the real Push service sends for a
 // first, an unchanged and a changed FCM token, including loadPushInfo's repair and 3 s repost.
 const PUSH_CITIES = [
@@ -562,6 +704,37 @@ function pushRequests(storedToken, newToken, airUnit, zone = 'Asia/Seoul', list 
     return calls;
 }
 
+// Push.updateUnits after a unit change on S08 (#1845, #2891): the list as loadPushInfo repaired it at the start, posted
+// with the new units when there is a list and a token; nothing without either.
+function pushUnitsRequests(storedToken, list, newUnits) {
+    process.env.TZ = 'Asia/Seoul';
+    let factory;
+    const timers = [];
+    const calls = [];
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }})}, console: quiet, window: {},
+        clientConfig: {package: 'todayWeather', serverUrl: 'https://server'}, ionic: {Platform: {isAndroid: () => true, isIOS: () => false}},
+        setTimeout: (fn) => timers.push(fn), Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: list}};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set() {}};
+    const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
+    let units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const Units = {getAllUnits: () => clone(units)};
+    const WeatherInfo = {getCityOfIndex: (i) => clone(PUSH_CITIES[i])};
+    const Firebase = {init() {}, inited: true};
+    const push = factory($http, TwStorage, Util, loadWeatherUtil(units), WeatherInfo, Units, {$broadcast() {}}, Firebase);
+    push.init();
+    timers.splice(0).forEach((fn) => fn());
+    calls.length = 0;
+    units = {...units, ...newUnits};
+    push.updateUnits();
+    delete process.env.TZ;
+    return calls;
+}
+
 function pushCases() {
     return {
         cities: PUSH_CITIES, pushList: PUSH_LIST, deviceId: 'device-uuid', language: 'ko-KR', appVersion: '1.1.1',
@@ -575,6 +748,13 @@ function pushCases() {
             {name: 'dst-new-york', storedToken: 'token-a', newToken: 'token-a', airUnit: 'airnow', zone: 'America/New_York',
                 pushList: DST_LIST, requests: pushRequests('token-a', 'token-a', 'airnow', 'America/New_York', DST_LIST)},
         ]),
+        unitsChanged: [
+            ['fahrenheit', 'token-a', PUSH_LIST, {temperatureUnit: 'F'}],
+            ['airnow', 'token-a', PUSH_LIST, {airUnit: 'airnow', windSpeedUnit: 'mph'}],
+            ['no-token', null, PUSH_LIST, {temperatureUnit: 'F'}],
+            ['no-list', 'token-a', [], {temperatureUnit: 'F'}],
+        ].map(([name, storedToken, pushList, units]) => ({name, storedToken, pushList, units,
+            requests: pushUnitsRequests(storedToken, pushList, units)})),
     };
 }
 
@@ -1107,6 +1287,7 @@ write('nation.json', await nationCases());
 write('special.json', specialCases());
 write('photos.json', photoCases());
 write('requests.json', requestCases());
+write('settings.json', settingsCases());
 write('forecast.json', {visits: forecastCases(util), helpers: forecastHelperCases(), cityIndex: cityIndexCases(util)});
 {
     const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
@@ -1116,7 +1297,7 @@ write('forecast.json', {visits: forecastCases(util), helpers: forecastHelperCase
 
 const sources = ['service.weatherutil.js', 'service.weatherinfo.js', 'controller.forecastctrl.js', 'controller.tabctrl.js',
     'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js', 'service.push.js',
-    'controller.units.js']
+    'controller.units.js', 'controller.setting.radio.js', 'controller.settingctrl.js', 'service.util.js']
     .map((f) => `client/www/js/${f}`).concat(['client/www/locales/ko.json', 'client/www/locales/en.json']);
 write('source.json', {
     generator: 'android/tools/corpus/generate.mjs',

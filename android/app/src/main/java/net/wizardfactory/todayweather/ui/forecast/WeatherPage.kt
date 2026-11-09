@@ -284,11 +284,15 @@ internal fun Zoomed(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalDensity provides Density(density.density * density.fontScale, 1f), content = content)
 }
 
-/** `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. */
+/**
+ * `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. The photo
+ * covers the box from its top left (`background-size: cover` at the default `background-position: 0 0`), so a wider
+ * photo is cut at the right.
+ */
 @Composable
 private fun PhotoBox(photo: ImageBitmap, gradient: Boolean, modifier: Modifier) {
     Box(modifier.graphicsLayer(alpha = 0.8f)) {
-        Image(photo, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
+        Image(photo, null, Modifier.matchParentSize(), alignment = Alignment.TopStart, contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
         if (gradient) {
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
                 0f to Color(0x4D000000), 0.95f to Color(0x4D000000), 1f to Color(0xE6FFFFFF))))

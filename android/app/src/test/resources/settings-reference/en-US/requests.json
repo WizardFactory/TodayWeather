@@ -1,0 +1,44 @@
+{
+ "lang": "en-US",
+ "after": {
+  "page": "#/tab/forecast",
+  "settings": {
+   "startupPage": "0",
+   "refreshInterval": "0",
+   "theme": "light"
+  },
+  "units": {
+   "temperatureUnit": "F",
+   "windSpeedUnit": "mph",
+   "pressureUnit": "inHg",
+   "distanceUnit": "mi",
+   "precipitationUnit": "in",
+   "airUnit": "airnow"
+  },
+  "popups": 0,
+  "menu": true,
+  "body": "light-theme"
+ },
+ "requests": [
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/start"
+  },
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=airnow&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/start"
+  }
+ ]
+}
