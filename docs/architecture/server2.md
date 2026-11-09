@@ -2573,8 +2573,10 @@ unless the memory already holds a list fetched later) and clears the memory as b
 source keeps its deadline and reads directly.
 
 A refresh reads each group of a day's forecast-zone partition in its own catalog read (the
-catalog's control object lists the groups, then `lookup_members` reads one group), and a list
-stored again with the same pages is read once (review round 7). The whole partition used to be one
+catalog's control object lists the groups, then `lookup_members` reads and checks one group: its
+descriptor, declared members, completeness and raw members), so an incomplete group stays out and
+a corrupt one fails the refresh as before (review round 7; a list stored again is read again, no
+body is reused by its pages). The whole partition used to be one
 catalog lookup under the catalog's 3 s operation deadline: with one list per process start a slow
 store made every refresh of the day miss that deadline however long the owned work could run, so
 the memory was never filled (a test of two stored lists at 2.6 s per read failed every time
