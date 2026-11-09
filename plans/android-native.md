@@ -446,3 +446,42 @@ Device:
 - The attached phone: installed in place; the banner and the four rows, without opting in.
 
 CI: `check-sources.mjs` covers the privacy references; the workflow paths include the Cordova sources read here.
+
+## AN-16 — sharing, entry links and backup (#2895)
+
+Design. Sources: `doTabShare` and `_makeMessageForTodayWeather` in `controller.tabctrl.js`, `getWeatherEmoji`, `branchInit` in `service.branch.js`, `setCityIndex`, the `reloadEvent` handler, the socialsharing plugin's Android code, and the shipped 1.1.1 APK's manifest. Investigation: `reports/sdlc/android-an-16/investigation.md`.
+
+- `core-domain` `share/`:
+  - `ShareMessage`: the message of `_makeMessageForTodayWeather` with the city line and the Branch link per language. Values are joined as JavaScript does, and a missing `currentWeather` or `skyIcon` leaves the city line only (V20).
+  - `EntryLink`: the place index of `todayweather://N`, with the first scheme removed and JavaScript's `parseInt`; empty or NaN gives none.
+- `core-data` `WeatherSession.openPlace(index)`: `setCityIndex` (only within the list) then `reloadEvent 'deeplink'`, which loads at once unless the retry confirmation is open.
+- `app`:
+  - the share buttons of S03, S04 and S05 send the message through the system chooser (`ACTION_SEND`, `text/plain`, no title), as the plugin did; without a location they do nothing until AN-10 opens O02;
+  - `MainActivity` registers `todayweather` (`VIEW`, `DEFAULT`, `BROWSABLE`), and `TodayWeatherApp` hands a link from `EntryIntents` to the open app's session after the migration, on cold and warm starts. The link that Recents delivers again when it opens a finished task (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`) selects nothing.
+- Backup (`res/xml/backup_rules.xml` for API 24–30, `data_extraction_rules.xml` for API 31+):
+  - included: `files/app_state.json`, and the Cordova sources the migration reads (WebView Local Storage and the two preference suites), so a backup or device transfer from Cordova 1.1.1 restores and migrates;
+  - excluded: the weather cache, the analytics consent (off again), Firebase's token and installation (a new FCM token; PushSync replaces the restored token and posts the list, as after a 1.1.1 restore), and the measurement, AdMob and UMP state (UMP asks again where required).
+  - The policy is recorded in `android/README.md`.
+- Differences (`tools/corpus/differences.md`): B18, `todayweather://N` opens place N; 1.1.1 Android registered no scheme and opened nothing. B19, the backup policy above; 1.1.1 backed up everything.
+- Archify not applicable: no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN16-US1 | User shares the weather | A place with weather | Tap share on S03, S04 or S05; pick an app | The chooser shows the Cordova message: place, current temperature and emoji, high and low, summary, app name and the Branch link of the language | No weather yet: the city line only; no location: nothing (O02 with AN-10) | AC1 |
+| AN16-US2 | User opens a place from a link | Places saved | Open `todayweather://2` with the app closed, then with it open | Place 2 is selected and loads, on cold and warm starts, after the migration | Out of range: the selected place reloads; not a number or empty: nothing; the task opened again from Recents: nothing | AC1 |
+| AN16-US3 | User moves to a new phone | Places, alarms and an analytics opt-in | Back up; restore on another device | Places, settings and alarms come back; analytics is off; a new FCM token replaces the old one on the server; the weather loads afresh | – | AC2 |
+| AN16-US4 | Cordova user moves to a new phone that installs the native app | Cordova 1.1.1 with places | Back up; restore into the native app | The Cordova data restores and migrates | – | AC2 |
+
+### Acceptance (from #2895)
+
+- AC1: UI tests cover the share text and the routing of `todayweather://N`.
+- AC2: an emulator backup and restore follows the recorded policy.
+- AC3: delivery (README with the policy, review PASS, CI, merge).
+
+### Checks
+
+- JVM: `ShareMessageTest` and `EntryLinkTest` (core-domain), `WeatherSessionTest` for `openPlace`, `ShareTest` (app): the chooser intent from each tab and the links' queue, and `BackupRulesTest`: the rule files against the policy.
+- Device: `tools/backup/run-backup-test.sh` (offline): `EntryLinkDeviceTest` on cold and warm starts and for a link delivered again from Recents; with `bmgr` and the local transport, a native backup restored into the native app and a Cordova 1.1.1 backup restored into the native app, with `BackupRestoreTest` checking what came back.
+- Mutations: `reports/sdlc/android-an-16/probe/mutations.py` (one rule at a time; the named test class must fail).

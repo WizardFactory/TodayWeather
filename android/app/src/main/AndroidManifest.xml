@@ -10,6 +10,9 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@style/Theme.TodayWeather">
         <!-- Analytics defaults of the Cordova build (cordova-plugin-firebasex-analytics variables). -->
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
@@ -55,6 +58,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- todayweather://N, the place links of the TodayWeather widget (AN-16). 1.1.1 registered no scheme. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="todayweather" />
             </intent-filter>
         </activity>
     </application>

@@ -60,8 +60,13 @@ open class TodayWeatherApp : Application() {
     /** Entry intents (launcher, notification taps), handled in order once the migration has finished. */
     val entryIntents: EntryIntents by lazy { EntryIntents(appScope, migration, ::onEntryIntent) }
 
-    /** Handles an entry intent after the migration; notification taps are AN-14's work. */
-    protected open fun onEntryIntent(intent: android.content.Intent) {}
+    /** The place indexes of `todayweather://N` links, for the open app's session (AN-16). */
+    val entryLinks = EntryLinks()
+
+    /** Handles an entry intent after the migration: links here; notification taps are AN-14's work. */
+    protected open fun onEntryIntent(intent: android.content.Intent) {
+        entryLinks.accept(intent)
+    }
 
     /** The weather photo feed of the photo theme, loaded once per process (AN-08 chooses each place's photo). */
     val photos: WeatherPhotoFeed by lazy { WeatherPhotoFeed(weatherPhotosUrl(), appScope) }

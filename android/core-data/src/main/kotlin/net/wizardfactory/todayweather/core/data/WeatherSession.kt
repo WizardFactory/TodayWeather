@@ -61,6 +61,9 @@ class WeatherSession(
 
         /** The refresh interval setting changed (AN-12): only the timer restarts. */
         REFRESH_INTERVAL,
+
+        /** An entry link selected a place (`todayweather://N`, AN-16). */
+        DEEPLINK,
     }
 
     private val retryShown = MutableStateFlow(false)
@@ -91,6 +94,17 @@ class WeatherSession(
         }
         repository.invalidate(place)
         loadWeatherData()
+    }
+
+    /**
+     * `branchInit` for `todayweather://N` (A20): `setCityIndex` selects [index] when it is within the places, then
+     * `reloadEvent 'deeplink'` loads the selected place at once, unless the retry confirmation is open. The page shown
+     * stays.
+     */
+    fun openPlace(index: Double) {
+        val s = state.current() ?: return
+        if (index >= 0 && index < s.places.size) state.change { it.copy(placeIndex = index.toInt()) }
+        reload(Sender.DEEPLINK)
     }
 
     /**
