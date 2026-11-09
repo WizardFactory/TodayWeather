@@ -16,6 +16,7 @@ Task declaration: `server2/config/tasks/KMA-RESTART-BOUND.json`. Stacked on #290
 12. Round 7 (full-suite failure on fb9ab02b): the zone refresh reads each group of the day's partition in its own catalog read; the zone-refill test made deterministic on observable GET completion.
 13. Review round 7: every zone group checked by `lookup_members` (no body reuse by pages); the zone read boxed (the full suite's default-stack run overflowed in `air_s3`); the GET-completion helper counts a GET cancelled during admission and fails after 60 s.
 14. Review round 8: the zone listings and groups read eight at a time (the fold over every list unchanged, not the newest list alone); regression test first, seen failing.
+15. Review round 9: the zone refresh keeps verified groups across attempts (resumable; same fold); residual one-list-per-start growth stated.
 
 R2 (a shorter bound on the assembly's CPU permit) is not done: the permit wait already ends at the request deadline, and a shorter bound would have to drop required data or answer without the assembly; the allocator removes the measured cause of the slow assembly, and MEASURE shows whether more is needed.
 

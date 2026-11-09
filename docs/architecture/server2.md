@@ -2580,7 +2580,15 @@ body is reused by its pages). The partitions' listings and the groups are read e
 (review round 8): twelve accumulated lists at 2.6 s per read took over 31 s one after another,
 past the owned refresh's 30 s, and never completed. Every list is still folded in fetch order
 (older lists keep fields a newer one omits and the zones it no longer lists, retired), so the
-zones are unchanged; reading only the newest complete list would drop those. The whole partition used to be one
+zones are unchanged; reading only the newest complete list would drop those. A refresh is
+resumable (review round 9): each group it reads and checks is kept by its descriptor key across
+refreshes (budgeted `Bodies`: 64 MiB, 8,192 groups, a day at most; a group the catalogs no longer
+list is forgotten at the next full listing), so a refresh cut at its limit loses nothing and the
+next one reads only the groups not yet verified; once every listed group is verified the lists
+are folded as before and installed. Incomplete groups are not kept (read again each time) and a
+defect still fails the refresh. Residual: the day partition still gains one list per process
+start; the refresh no longer restarts from nothing, but a cold process still reads each list
+once. The whole partition used to be one
 catalog lookup under the catalog's 3 s operation deadline: with one list per process start a slow
 store made every refresh of the day miss that deadline however long the owned work could run, so
 the memory was never filled (a test of two stored lists at 2.6 s per read failed every time
