@@ -10,6 +10,12 @@ import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 
+/** A consent form loaded to be shown once. */
+fun interface ConsentFormHandle {
+    /** Shows it on [activity]; [onDone] runs when it closes, true on an error. */
+    fun show(activity: Activity, onDone: (Boolean) -> Unit)
+}
+
 /** Google's consent platform (UMP) and the Ads SDK start, as the AdMob plugin calls them. */
 interface AdsPlatform {
     /** Ads may be requested: consent obtained or not required, also as stored from an earlier session. */
@@ -18,8 +24,14 @@ interface AdsPlatform {
     /** `requestConsentInfoUpdate`; [onFailed] gets the error's message. */
     fun requestConsentUpdate(activity: Activity, onUpdated: () -> Unit, onFailed: (String) -> Unit)
 
-    /** The consent form when consent is required and has not been given; [onDone] runs after it, true on an error. */
-    fun showConsentFormIfRequired(activity: Activity, onDone: (Boolean) -> Unit)
+    /** Consent is required and UMP has a form for it (when `loadAndShowConsentFormIfRequired` would show one). */
+    fun consentFormRequired(): Boolean
+
+    /**
+     * Loads the consent form without an activity, so the form shows on the activity shown when it has loaded:
+     * [onLoaded] or [onFailed], once.
+     */
+    fun loadConsentForm(onLoaded: (ConsentFormHandle) -> Unit, onFailed: () -> Unit)
 
     /** `MobileAds.initialize`; [onReady] runs on the main thread. */
     fun startSdk(onReady: () -> Unit)
@@ -40,11 +52,21 @@ class GoogleAdsPlatform(private val context: Context) : AdsPlatform {
         info.requestConsentInfoUpdate(activity, params, { onUpdated() }, { error -> onFailed(error.message) })
     }
 
-    override fun showConsentFormIfRequired(activity: Activity, onDone: (Boolean) -> Unit) {
-        UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { error ->
-            if (error != null) Log.w(TAG, "consent form_failed")
-            onDone(error != null)
-        }
+    override fun consentFormRequired() =
+        info.consentStatus == ConsentInformation.ConsentStatus.REQUIRED && info.isConsentFormAvailable
+
+    override fun loadConsentForm(onLoaded: (ConsentFormHandle) -> Unit, onFailed: () -> Unit) {
+        UserMessagingPlatform.loadConsentForm(context, { form ->
+            onLoaded { activity, onDone ->
+                form.show(activity) { error ->
+                    if (error != null) Log.w(TAG, "consent form_failed")
+                    onDone(error != null)
+                }
+            }
+        }, {
+            Log.w(TAG, "consent form_load_failed")
+            onFailed()
+        })
     }
 
     override fun startSdk(onReady: () -> Unit) {
@@ -67,8 +89,9 @@ class GoogleAdsPlatform(private val context: Context) : AdsPlatform {
  * requested; with a consent stored from an earlier session it starts at once. When UMP fails, release builds show no
  * ads, as Google's consent guidance asks; debug builds, which use Google's test units, start the SDK without UMP
  * once, unless the failure is a consent decision ([releaseAds]). [onReady] runs once the SDK has started.
- * The form shows on the activity shown when it is due ([start], [stop]): an update answered after a configuration
- * change, or a form lost with its activity, shows it on the next one.
+ * The form loads without an activity and shows on the activity shown when it has loaded ([start], [stop]), as the
+ * plugin loaded it and then showed it: an update or a form answered after a configuration change, or a form lost
+ * with its activity, shows on the next one.
  */
 class AdsConsent(
     private val platform: AdsPlatform,
@@ -79,6 +102,8 @@ class AdsConsent(
     private var requested = false
     private var updated = false
     private var formDone = false
+    private var formLoading = false
+    private var loadedForm: ConsentFormHandle? = null
     private var formActivity: Activity? = null
     private var current: Activity? = null
     private var started = false
@@ -95,6 +120,7 @@ class AdsConsent(
             platform.requestConsentUpdate(activity, onUpdated = {
                 updated = true
                 showForm()
+                startIfAllowed()
             }, onFailed = { reason ->
                 startIfAllowed()
                 consentFailed(reason)
@@ -111,11 +137,32 @@ class AdsConsent(
         if (formActivity === activity) formActivity = null
     }
 
+    /** The plugin's `handleConsentForm`: the form when consent is required, loaded, then shown. */
     private fun showForm() {
+        if (formDone || formLoading || formActivity != null) return
+        loadedForm?.let { return show(it) }
+        if (!platform.consentFormRequired()) {
+            formDone = true
+            return
+        }
+        formLoading = true
+        platform.loadConsentForm(onLoaded = { form ->
+            formLoading = false
+            loadedForm = form
+            show(form)
+        }, onFailed = {
+            formLoading = false
+            formDone = true
+            startIfAllowed()
+        })
+    }
+
+    /** Shows the loaded [form] on the activity shown now; without one, the next activity shows it. */
+    private fun show(form: ConsentFormHandle) {
         val activity = current?.takeUnless { it.isFinishing || it.isDestroyed } ?: return
-        if (formActivity != null) return
+        loadedForm = null
         formActivity = activity
-        platform.showConsentFormIfRequired(activity) { failed ->
+        form.show(activity) { failed ->
             if (formActivity === activity) formActivity = null
             // A form that failed with its activity going shows again on the next one.
             if (!failed || !(activity.isFinishing || activity.isDestroyed)) formDone = true
