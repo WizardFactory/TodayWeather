@@ -75,7 +75,8 @@ object CordovaMigration {
         val push = push(parse("pushData2"), parse("pushData"), places, nowMillis, zone, report)
         val expand = (parse("expandShortChart") as? JsonPrimitive)?.booleanOrNull
         report["expandShortChart"] = if (expand != null) "migrated" else report["expandShortChart"] ?: "default"
-        val extras = EXTRA_KEYS.mapNotNull { k -> parse(k)?.let { k to it } }.toMap()
+        // `_setBackwardCompatibility`: a store with only the old `guideVersion` starts as if `startVersion` had it.
+        val extras = EXTRA_KEYS.mapNotNull { k -> (parse(k) ?: if (k == "startVersion") parse("guideVersion") else null)?.let { k to it } }.toMap()
         extras.keys.forEach { report[it] = "migrated" }
         return AppState(
             places = places, placeIndex = placeIndex, units = units, settings = settings, push = push,

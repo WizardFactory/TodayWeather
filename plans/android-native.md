@@ -282,3 +282,256 @@ Design (survey: `reports/sdlc/android-an-09/air-survey.md`, from `controller.air
 ### Checks
 
 JVM: `AirScopeTest` (32 visits against AirCtrl run under Node, 97 steps: stations, pollutants, the four standards, fallbacks, missing data, stale values, a daylight-saving day), `AirPageTest` (every captured element of the seven states, the label's position at the captured widths, template rules), `AirChartTest` (every tick, label, date and bar of five captured charts within 0.02 dp; D3's ordinal and `nice` rules), `GoldenCorpusDisplayTest` (V32: every standard's grades, colors, faces and gauge positions, now at the captured label widths), `WeatherSessionTest` (the apply events), `AirScreenshotTest` (40 blocks within recorded tolerances; sensitivity in `tolerances.json`), `AirTabTest` and `AirFitKoTest`/`AirFitEnTest` (font scale 1.3). Mutation checks: eleven changes to `AirScope`, `AirChart` and `AirPage` each fail the goldens; of nine screen changes the screenshots catch seven (half a dp of gauge text, and the empty label, white on the light card). Device: `run-production-weather.sh` with `ProductionAirTest` (Seoul's stations from production, the second station's name and value after its tap) on API 36 and API 24; both production tests pin Korean units, so a device in another region gives the same pages. CI: `check-sources.mjs` covers the air references; the forecast references, recaptured with the shared block cutter, are byte-identical.
+
+## AN-10 — start screen, current location and place search (#2889)
+
+Design. Sources: `controller.start.js`, `start.html`, `controller.searchctrl.js` (the town search and the result kinds), `controller.tabctrl.js` (`startPopup`, `updateCurrentPosition` and its retry variants), `service.util.js`, `service.weatherinfo.js`, `service.weatherutil.js`, `service.storage.js` (`_setBackwardCompatibility`), `service.push.js` (`updateCityInfo`), `client/test/location-permission.test.cjs`, V13, V17, #2871 and manual pages 1–2. Investigation and surveys: `reports/sdlc/android-an-10/`.
+
+- `core-domain` `start/`:
+  - `StartGate`: S01 shows while the stored `startVersion` is missing or below 1, read as JavaScript's `Number`; closing S01 stores 1.
+  - `CityShortcuts`: the 26 cities of `_makeFavoriteList` verbatim, 6/11/17/26 by the screen height (568/731/960).
+  - `PredictionName`: the full-text term that starts at the first match, else the typed word.
+  - `TownSearch`: S02's substring search on `first`/`second`/`third`, 10 results at a time, and the town's address and name.
+  - `LocationAccess`: the permission classes (granted, requestable, denied), S01's decision table, StartCtrl's O04 variants and TabCtrl's O03 position variants; `getIndexOfCity` for duplicates.
+- `core-storage`: the migration takes `guideVersion` as `startVersion` when only it exists; `PushRegistration.onCityChanged` (`updateCityInfo`: the records of one place updated, and posted when anything changed).
+- `core-data`:
+  - `GeocodeClient`: `/geocode/v000903/coord/{lat},{long}` and `/addr/{address}` with the weather requests' attempts and `Accept-Language`.
+  - `StartFlow`: S01's chip, search-result and current-position adds (weather by coordinates, duplicates, slot 0 named from the geocode, `favorite_change`, `location_permission`), ending in the add, an O09 alert or an O04 confirmation; a grant re-runs at once.
+  - `WeatherSession`: the current position's own lookup on each load of slot 0 (a new fix updates slot 0 and loads again; location off uses the saved location, or without one asks for high accuracy; failures open O03's position variants); `startPopup` (O02) with zero enabled places and its `autoSearch` value kept for the app open, A07 kept; the `locationOn` reload.
+  - `PushSync.updateCity`.
+- `app`:
+  - S01 (`StartScreen`): icon, search box with Cancel, chips, predictions with the "powered by Google" divider (bundled towns when the build has no Places key), 현재위치 날씨보기, the loading overlay; O01 on every entry, O04 and O09. Back leaves the app.
+  - `MainActivity`: S01 while the gate holds, then the shell on Hourly with the selected place reloaded; UMP and the Ads SDK start after S01, the banner hidden on it; entry links held until S01 closes. Over the tabs: O02 from a weather page opened, a weather or Air tab tapped (the shell's `onTabTap`) or a share without a location; O03's position variants with Search to the Locations tab.
+  - Platform: fused location (high accuracy; a fix up to 60 s old; up to 60 s), the platform provider without Google Play services; precise and approximate requested together; Settings openers and the Play-services high-accuracy dialog; Places SDK 6 (Places API (New), `(regions)` predictions, requests 300 ms after the last keystroke, the latest answer only) with `TW_PLACES_API_KEY_ANDROID`.
+  - Build: location permissions, `play-services-location`, Places, core library desugaring (Places 6 requires it; `MinSdkApiTest` keeps the `java.time` ban).
+- Differences (`tools/corpus/differences.md` B20–B26): approximate-only gives a position (Cordova: a denial); predictions wait 300 ms and only the latest answer shows; bundled towns on S01 without a Places key; entry links wait for S01 to close; only a refusal without the rationale is final (an expired one-time grant asks again; an interrupted request records nothing); O02's current-position answer always opens Hourly and loads; the current position's spinner turns while the load or the lookup runs.
+- Device tests of the tabs start past S01 (`StateRule` in androidTest); without an enabled place they answer O02 first.
+- Archify not applicable: an app-internal client flow on the legacy API, no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN10-US1 | New user sees the weather where they are | Fresh install, location on | Close O01; tap 현재위치 날씨보기; allow | S03 for the position, slot 0 named from the geocode | Position or geocode failure: O04 with the matching message; weather failure: O09 | AC1, AC2 |
+| AN10-US2 | New user denies location | Fresh install | Tap 현재위치 날씨보기; deny; OK; deny again | O04 "access denied" (Close, OK); OK asks again; after a permanent denial O04 adds the app-info hint and Settings | – | AC1 |
+| AN10-US3 | New user grants approximate location only | Android 12+ | Tap 현재위치 날씨보기; choose Approximate | S03 for the approximate position | – | AC1 |
+| AN10-US4 | New user with location services off | Location off | Tap 현재위치 날씨보기 | O04 "turn on location services" with Settings to the device location settings | – | AC1 |
+| AN10-US5 | New user picks a place by name | Location denied | Type a place; pick a prediction | S03 for that place | Geocode failure: nothing; weather failure or an existing place: O09 | AC2 |
+| AN10-US6 | New user taps a city shortcut | Fresh install | Tap 서울 | S03 for 서울 | Weather failure: O09 | AC1 |
+| AN10-US7 | Returning user of the current position | Slot 0 selected | Open the app elsewhere | S03 loads the saved place, then the new position | Location off with no saved location: the high-accuracy dialog; failures: O03 position variants | AC1 |
+| AN10-US8 | User left without places | No enabled place | Open S03 | O02: OK enables the current position or opens the Locations tab (A07 kept) | – | AC1 |
+
+### Acceptance (from #2889)
+
+- AC1: UI tests pass for location granted, denied once, denied permanently, approximate only and location services off.
+- AC2: on a fresh install the app reaches S03 for the emulator's position, and with location denied, for a searched place.
+- AC3: the screenshot comparison with manual pages 1–2 passes; delivery (README, plan, review PASS, CI, merge).
+
+### Checks
+
+- JVM: the `start/` domain tests; `PlaceListTest`, `PushRegistrationTest` and the migration test (core-storage); `GeocodeClientTest`, `StartFlowTest` (each permission state with in-test doubles), `CurrentPositionTest` (the slot-0 lookup, O02, `locationOn`) and `PushSyncTest` (core-data); `AndroidLocationAccessTest` (the platform status with an approximate grant, a final refusal, an expired one-time grant, an interrupted request; positions without Play services; the location switch); `StartScreenTest` (Robolectric UI: O01, chips, search, each permission state's popup, O09, back, the hand-off to S03; O02 and O03 over the tabs); `ShareTest` (O02 from share, links held while S01 shows); `StartScreenshotTest` against `tools/start-reference` captures of the Cordova build (manual pages 1–2).
+- Device: `ProductionStartTest` through `tools/emulator/run-production-start.sh`: a fresh install on the API 36 emulator with a geo fix reaches S03 through 현재위치 날씨보기, and with location denied through a Places search (production server, read-only).
+- Mutations: `reports/sdlc/android-an-10/probe/mutations.py`.
+
+## AN-12 — settings and menu hand-offs S07, S08, O10 (#2891)
+
+Design (sources: `units.html`, `setting-radio.html`, `controller.units.js`, `controller.setting.radio.js`, `controller.settingctrl.js` and the menu in `index.html`, `service.util.js`, `service.push.js` `updateUnits`; behavior checked on the Cordova debug build with `tools/settings-reference`, which drives it with real taps against a stand-in server and records every request). AN-10 is next in the task graph but waits for AK's place-search decision (AN-06), which blocks AN-10 only, so AN-12 comes first.
+
+- `core-domain` `settings/`: `SettingLists` (S07's rows, every S08 list's title and choices, the menu's values with `N/A`), `Handoffs` (the wind map, the store page of the app's package, the feedback mail with `encodeURIComponent`) and `About` (O10's text). `corpus/settings.json` runs the Cordova controllers with recorders.
+- `core-data`: `SettingsActions` does what `radioList.setValue` and `RadioCtrl.valueChanged` do: a changed unit is saved and the push list posted with it (`PushSync.updateUnits`; `PushRegistration.onUnitsChanged` repairs the list as `loadPushInfo` did and sends only with records and a token); a startup page, refresh interval or theme is saved, the refresh interval restarting the timer; then `WeatherSession.settingChanged` resets every place's load time and reloads the selected place (`resume`, skipped while the retry confirmation is open). Opening the refresh interval's list restarts the timer (B5). The push update reads the state through the store's writer, after the unit's save.
+- `app`: `SettingsScreen` (S07, S08) over the tab page and the tab bar in the theme's plain colors, with the menu's header and Ionic's item rows; `IonicAlert` for About (backdrop, 250 dp popup, the body on the WebView's `line-height: normal`, the title and button lines on Roboto's baseline); the menu rows (`ShellNavigation.menuOpen` hoisted so rows close the menu as `toggleLeft` does); `Handoff` sends the Cordova intents (InAppBrowser `_system`: `VIEW` with `Browser.EXTRA_APPLICATION_ID`; the WebView's `mailto:`: `VIEW` `BROWSABLE`). The feedback address is a private input (`TW_MAIL_TO`, from `client.config.js`); the store URL is the package's own page, the Cordova build's value (compared by hash). The units link of S03 and S05 opens S07.
+- Kept (AN-06): B5–B8 (`tools/corpus/differences.md`): the timer restart on opening, the reload after every choice, `N/A` for an unknown value, the unencoded mail subject. The analytics, ad privacy, policy and terms rows stay AN-15's, the warnings and nationwide rows AN-13's.
+- As built: the weather pages read the temperature unit and the theme as they apply, and S05 takes a new air standard as it is (`changeAirUnitEvent`), since the settings pages now change them under a visit. The photo theme's photo covers the header block from its top left (`background-size: cover` at the default position; AN-08 centered it), found by the page 31 comparison. A `FixedLine` text taller than its line overflows it instead of being squeezed (the popup's 18 dp title line with a Korean fallback font). S07 scrolls when larger text needs it (the Cordova page did not scroll; its fixed text size always fit). The settings rows and the popup use unhinted advances (`TextMotion.Animated`), which brought them closer to the WebView's text.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN12-US1 | User switches to Fahrenheit | Seoul saved, an alarm set | Menu, 단위설정, 온도단위, F; back twice | The menu closes; S07 lists the six units; S08 checks C, then F; the push list is posted with F and the weather loads in °F at once; S03 shows °F | Server fails: the retry confirmation; the unit stays saved and the push list was posted | AC1, AC3 |
+| AN12-US2 | User picks the start screen, refresh interval and theme | Weather shown | Menu, 시작 페이지 (or 업데이트 주기, 테마 설정), a value; back | The value is saved and shown in the menu; the weather reloads; a refresh interval restarts the timer; a theme recolors the pages at once | Opening 업데이트 주기 alone restarts the timer (B5) | AC1, AC3 |
+| AN12-US3 | User opens the units from a weather page | S03 or S05 shown | Tap 대기환경기준 | S07 opens over the tab; back returns to the tab as it was | – | AC1 |
+| AN12-US4 | User sends feedback or rates the app | Mail app, store | Menu, 의견보내기 (or 응원리뷰쓰기) | The menu closes; the mail app opens a mail to the feedback address with the version, UUID and user agent (or the store opens the app's page) | No app for it: nothing opens, the app stays | AC2 |
+| AN12-US5 | User checks the wind map | Region KR, a browser | Menu, 널스쿨 풍향 | The browser opens the wind map; the menu stays open | Other regions: no row | AC2 |
+| AN12-US6 | User reads the data sources | Any language | Menu, 정보; 확인 or back | The About popup over the menu in the app's language; 확인 or back closes it and the menu stays | – | AC2, AC3 |
+| AN12-US7 | Maintainer refreshes the settings references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/settings-reference/capture.sh`, `./gradlew test` | New references, requests and provenance; offline while the Cordova build is installed | Non-emulator serial: refused | AC3, AC4 |
+
+### Acceptance (from #2891)
+
+- AC1: unit tests cover settings persistence, the new weather request after a unit change and the push request, compared with the Cordova app's request.
+- AC2: on an emulator, each hand-off opens the browser, mail app or store with the Cordova app's target, and About opens in Korean and English.
+- AC3: screenshot comparison with manual pages 25–31 and 36 passes.
+- AC4: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM: `SettingListsTest` (core-domain: S07's rows for seven regions' defaults and rarer units in Korean and English, every list, the menu's values, the hand-off targets and About against `settings.json`), `PushRegistrationTest` (core-storage: the list after a unit change, with and without a token or list, against `push.json`), `SettingsActionsTest` (core-data: the save, push and load of all 24 choices against the Cordova traces, the weather request against the one the Cordova build sent, the timer when the list opens and on a choice, the retry confirmation), `SettingsTest` (app: the pages and menu rows, back, the S03 and S05 links, About in both languages, the hand-off intents), `SettingsScreenshotTest` (36 comparisons: S07 in each theme and in °F, every S08 list and the theme list in each theme, S03 in °F, dark and photo themes block by block, About in Korean and English; manual pages 25–31 and 36) `SettingsGeometryTest` (the rows, the check mark and the popup's parts against the captured rects within 0.5 dp) and `SettingsFitKoTest`/`SettingsFitEnTest` (font scale 1.3). Mutation checks: twelve changes to the lists, targets, actions and push update each fail the goldens; of eight screen changes the comparisons catch six, and the geometry test the other two (`checks/mutations-*.log`). Device: `run-settings-handoffs.sh` (`SettingsHandoffTest`, offline) in ko-KR and en-US: the browser (Chrome) and the mail app (Gmail) open with the Cordova intents on API 36, the store (Play Store) on an API 34 Play image; About in both languages.
+
+## AN-13 — nationwide weather, nationwide air and warnings S10–S12 (#2892)
+
+Design. Sources: `nation.html`, `nation-air.html`, `kma-special.html`, `controller.nation.js`, `controller.nation.air.js`, `controller.kma.special.js`, `getNationWeather` in `service.weatherutil.js`, `clickMenu` and the menu in `index.html`, and the `$ionicLoading` template in `app.js`. Behavior and layout were checked on the Cordova debug build with `tools/nation-reference`.
+
+- `core-data` `NationSource`:
+  - `getNationWeather` (`/v000903/nation/KR`, units query, three attempts 2 s apart, 20 s each);
+  - KmaSpecialCtrl's request (`/v000903/kma/special`, 3 s, one attempt);
+  - strict JSON as `JSON.parse` reads it.
+- `core-domain` `nation/`: `NationPages` (the labels of S10's three modes and S11's six pollutants from the AN-02 `Nationwide` rules), `WarningCards` (S12's cards) and `BoundHtml` (`ng-bind-html` after `$sanitize`).
+- `app` `ui/nation/`:
+  - `NationLoads` sends a page's request when it opens and keeps the answer while the page is open.
+  - `NationScreen` draws the pages over the tabs with the menu's header colors on #F5F5F5, with `$ionicLoading` and Android back blocked while S10 or S11 loads.
+  - The menu's three rows close the menu and open their page (`clickMenu`).
+  - Text follows Chrome:
+    - line boxes from `CssMetrics`, with the borrowed pixel on 16 px Korean lines;
+    - the h2 on Roboto's baseline in its 19.2 dp lines;
+    - characters Roboto has drawn in Roboto between Korean letters (`chromeRuns`);
+    - breaks between Korean syllables on every device (`chromeBreaks`; Samsung's Android keeps Korean words whole).
+- Labels are CSS shrink-to-fit at their fixed positions. The mode buttons have Chrome's pixel-snapped widths, and the strip's tabs are painted in DOM order.
+- Kept (AN-06): B9, back blocked while loading (`tools/corpus/differences.md`), and B10, Chrome's line breaking.
+- Differ: B11, S12's `imageUrl` is not drawn (only scraper-era documents have one). B12, an answer that is not a list shows no card.
+- AK 2026-11-09: the build is also checked on the attached phone (Galaxy S21+, Android 15), installed in place. That check found the Samsung line breaking (B10).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN13-US1 | User reads the current warnings | Region KR | Menu, 기상특보; scroll; back | The menu closes; each bulletin shows its name and time, its hazards and areas, the note for warnings and preliminary warnings, and its comment; back returns to the tab | Request fails or times out (3 s): no card | AC1, AC2, AC3 |
+| AN13-US2 | User compares the weather across the country | Region KR, TodayWeather | Menu, 전국날씨; 강수량; 풍향/풍속; back | A loading box, then 15 cities with sky icon and temperature; precipitation with its unit; wind direction and speed with its unit | Request fails: the names only | AC1, AC2, AC3 |
+| AN13-US3 | User compares fine dust by province | Region KR | Menu, 전국미세먼지; tap PM10 … SO2; swipe the strip; CO; back | 17 provinces with the pollutant's value on its grade color in the chosen air standard; the strip scrolls to CO | Request fails: names on translucent black | AC1, AC2, AC3 |
+| AN13-US4 | User leaves while the map loads | Slow network | Open 전국날씨; press back during loading | Back does nothing until the answer or the failure (Ionic), then works | – | AC1 |
+| AN13-US5 | User turns the phone while a page is open | A page shown | Rotate | The page keeps its answer, mode and tab; no new request | – | AC1 |
+| AN13-US6 | Maintainer refreshes the nationwide references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/nation-reference/capture.sh`, `./gradlew test` | New references, requests and provenance; offline while the Cordova build is installed | Recorded tolerances exceeded: explain or fix | AC3 |
+
+### Acceptance (from #2892)
+
+- AC1: unit tests cover the parsing of the nationwide and warning responses, including empty and failed responses.
+- AC2: on an emulator against production, nationwide weather in all three modes, nationwide air in all six tabs and the warnings render.
+- AC3: screenshot comparison with manual pages 32–35 passes.
+- AC4: delivery (README, review PASS, CI, merge).
+
+### Checks
+
+JVM:
+- `NationPagesTest` (core-domain): every label of the captured S10 and S11 states, both card sets, the note rule, missing fields, `ng-bind-html`, and empty and failed answers.
+- `NationSourceTest` (core-data): the URLs and headers against `nation-reference/ko-KR/requests.json`, the late answer's three attempts, the 3 s timeout against a server, and empty, failed, non-JSON and non-object answers.
+- `NationLoadsTest`.
+- `NationTest`: menu rows, requests per opening, back while loading, modes and tabs, a failed answer, saved-state restore.
+- `NationScreenshotTest`: 30 comparisons within `tolerances.json`.
+- `NationGeometryTest`: labels, buttons, tabs, cards and the loading box within 0.5 dp.
+
+Mutation checks are in `reports/sdlc/android-an-13/checks/mutations-*.log`.
+
+Device:
+- `ProductionNationTest` in `run-production-weather.sh` (API 36, ko-KR): three modes, six tabs, the warnings' cards against the answer.
+- The attached phone: the three pages from production, installed in place.
+
+CI: `check-sources.mjs` covers the nation references; the workflow paths include the three templates.
+
+## AN-15 — ads, analytics consent and crash reporting (#2894)
+
+Design. Sources: `service.twads.js`, `service.admobemi.js`, `service.monetization.js`, `service.util.js` (`Util.ga`), `controller.settingctrl.js` (L60–L99, `showAlert`), `controller.start.js`, `controller.tabctrl.js`, `getWeatherByGeoInfo`, the `app.js` run block, `index.html` L129–L139, the plugin variables in `client/package.json` and `config.xml`, the emi AdMob plugin's Android sources, `client/test/monetization.test.cjs` and `privacy-consent.test.cjs`, and verification-matrix V21 and V22. Investigation: `reports/sdlc/android-an-15/investigation.md`.
+
+- `core-domain` (plain Kotlin):
+  - `ads/BannerGate`: TwAds's `applyVisibility` as a decision (show, the time left before a recheck, the one exposure), and `RemoteBannerPolicy`, which reads the Remote Config pair atomically (`"true"`/`"false"`, digits up to 120).
+  - `analytics/AnalyticsSchema`: the events and fields of `Monetization.track`, the screen names and the added `measurement_version`.
+- `app` `ads/`:
+  - `AdsConsent`: UMP as the plugin runs it — update, the consent form when required, then the Ads SDK in the same session when ads may be requested (#2871), at once with a cached consent. On a UMP failure release builds show no ads; debug builds, which use Google's test units, start the SDK without UMP once unless consent is required (the Cordova test-unit builds).
+  - `TwAds`: the banner of an app open: Remote Config, the gate, the 5 s spacing between loads, `ad_lifecycle`, `ad_load_error` and `ad_policy_exposure`. The AdView belongs to the activity, so a configuration change recreates it (the orientation refresh).
+  - `BannerSlot`: the anchored adaptive banner for the window width without the side insets, under the tab bar and above the navigation bar while shown. The menu, the in-app popups and the pages end at its top edge, as they ended at the WebView's.
+- `app` `analytics/`:
+  - `ConsentStore`: the choice and the SDK state in two private preference files written with `commit()`. A failed write removes the choice, and a grant restores at start only if both records still hold it, as the plugin's persisted flag corroborated localStorage.
+  - `Analytics`: `setCollectionEnabled`, `track`, `screen`, the consent mode (analytics storage only on a grant) and `traffic_type` from the build type.
+  - `EarlyStartProvider` applies the stored choice before Firebase starts.
+  - `RemoteBannerConfig`: defaults, a 10 s fetch timeout and 3600 s minimum interval, the activated values first, then fetch-and-activate, bounded by 12 s.
+- Menu rows:
+  - 선택적 이용 통계 shows 동의함 or 꺼짐 and opens the Ionic popup (거부 / 철회, 동의). Back changes nothing, and a failed save shows `LOC_PRIVACY_SAVE_FAILED`.
+  - 광고 개인정보 선택 shows the UMP privacy options form when it is required, else `LOC_AD_PRIVACY_UNAVAILABLE`.
+  - 개인정보처리방침 and 이용약관 open `todayweather.ai/mobile/{privacy|terms}{'' | .ja | .en}.html` for the app's language in the system browser.
+  - The menu stays open.
+- Events: `weather_fetch` and `weather_load` from `WeatherRepository` and `WeatherSession`, `screen_view` with the Cordova route names on page and tab changes, and the ad events. `favorite_change` and `location_permission` come with AN-10 and AN-11, which add those actions. AN-10 also hides the banner while S01 shows and starts the ads after it, as TabCtrl did.
+- Firebase:
+  - Remote Config and Crashlytics come through the Firebase BOM, with the Crashlytics Gradle plugin when `google-services.json` exists. Crashlytics collects, independent of the analytics choice, as in the Cordova build.
+  - Automatic screen reporting is off (`config.xml`).
+- Private inputs: `TW_ADMOB_APP_ID_ANDROID` and `TW_ADMOB_BANNER_ANDROID` for release builds. Packaging a release refuses missing values or Google's sample IDs. Debug builds always use the sample app ID and the test banner unit.
+- Differences (`tools/corpus/differences.md`):
+  - B13: the policy pages follow the app's language. The Cordova build compared `navigator.language` (`ko-KR`) with `ko`, so it always opened the English pages.
+  - B14: the ad privacy row shows the cannot-open message when no form is required. The 1.1.1 plugin answered success and showed nothing.
+  - B15: a loaded banner waiting for its Remote Config delay reserves no empty strip.
+  - B16: `screen_class` stays `Cordova`.
+  - B17: Android back on the popup closes the popup only. cordova-android 15 delivered one back press as two `backbutton` events, so the Cordova build usually closed the menu too.
+- Archify not applicable: an app-internal flow with no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN15-US1 | User sees the app with its banner | Debug build, network | Open the app (first time: answer the consent form if one is required) | The Ads SDK starts in this session; a test banner loads and shows under the tab bar, above the navigation bar; the pages, menu and popups end above it | No fill or offline: no banner and no empty strip; UMP fails in a release build: no ads | AC1, AC2 |
+| AN15-US2 | Operator switches the banner off or delays it | Remote Config `tw_banner_enabled` false or `tw_banner_delay_seconds` 30 | Open the app (also offline after a fetch) | Off: no banner; delayed: the banner shows 30 s after the app opened; an invalid pair keeps the defaults | Fetch fails or takes over 12 s: the activated or default policy applies | AC1 |
+| AN15-US3 | User opts in to usage analytics | Fresh install | Menu, 선택적 이용 통계, 동의; change tabs | The row shows 동의함; analytics collects from now on with analytics storage granted and advertising denied; the next screens are sent | Saving fails: 꺼짐, collection off and `LOC_PRIVACY_SAVE_FAILED` | AC1, AC2 |
+| AN15-US4 | User withdraws | Opted in | Menu, 선택적 이용 통계, 거부 / 철회; restart the app | 꺼짐; no event from now on, also after the restart | Saving fails: collection stops, the old grant is removed, the message shows | AC1 |
+| AN15-US5 | User closes the dialog without choosing | Any choice | Open the dialog; press back | The dialog closes and the menu stays; the choice is unchanged | – | AC1 |
+| AN15-US6 | User reviews ad privacy, the policy and the terms | App open | Menu, 광고 개인정보 선택; 개인정보처리방침; 이용약관 | The UMP form where one is required, else the cannot-open message; the browser opens the page in the app's language | No browser: nothing opens | AC1, AC3 |
+| AN15-US7 | Cordova user updates | Cordova 1.1.1 with an analytics opt-in | Update; open the app twice | No analytics event until the user opts in again; ads behave as on a fresh start | – | AC2 |
+| AN15-US8 | Maintainer refreshes the privacy references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/privacy-reference/capture.sh`, `./gradlew test` | New references and provenance; offline while the Cordova build is installed | Recorded tolerances exceeded: explain or fix | AC3 |
+
+### Acceptance (from #2894)
+
+- AC1: unit tests cover the banner policy and the consent transitions: grant, withdrawal and a failed write (V21, V22).
+- AC2: a debug build loads test ads, and the Analytics debug log shows no analytics event before opt-in.
+- AC3: delivery (README, review PASS, CI, merge), with the analytics popup and the rows compared with the Cordova build (manual page 37).
+
+### Checks
+
+JVM:
+- `BannerGateTest`, `RemoteBannerPolicyTest` and `AnalyticsSchemaTest` (core-domain).
+- `WeatherTelemetryTest` (core-data): the outcomes and durations of `weather_fetch` and `weather_load`.
+- `AnalyticsTest` (app): grant, withdrawal, failed writes, compensation for an SDK failure, the start's corroboration, screens.
+- `TwAdsTest` (with Remote Config) and `AdsConsentTest`: the SDK start after consent and with a cached consent, the debug and release UMP failures, the delay, the kill switch, the one exposure, the spacing and the recreation.
+- `PrivacyMenuTest`: the row value, the dialog, back, the failure alert, the ad privacy form and message, the policy URLs per language, the screens reported, and the menu and popups ending at a banner's top.
+- `PrivacyScreenshotTest`: the popup and the rows against `privacy-reference` within recorded tolerances, and the popup's lines against the capture's line boxes; `PrivacyGeometryTest`; `PrivacyFitTest` (320×480 dp, font scale 1.3, a banner).
+
+Device:
+- `tools/emulator/run-ads-check.sh` (API 36):
+  - online, `AdsDeviceTest` waits until a test banner loads and shows, and the FA verbose log shows no "Logging event" without an opt-in;
+  - offline, an opt-in through the dialog logs `screen_view`, so the check cannot pass vacuously. The app is uninstalled before the network returns.
+- The upgrade test still finds no event after the update.
+- The attached phone: installed in place; the banner and the four rows, without opting in.
+
+CI: `check-sources.mjs` covers the privacy references; the workflow paths include the Cordova sources read here.
+
+## AN-16 — sharing, entry links and backup (#2895)
+
+Design. Sources: `doTabShare` and `_makeMessageForTodayWeather` in `controller.tabctrl.js`, `getWeatherEmoji`, `branchInit` in `service.branch.js`, `setCityIndex`, the `reloadEvent` handler, the socialsharing plugin's Android code, and the shipped 1.1.1 APK's manifest. Investigation: `reports/sdlc/android-an-16/investigation.md`.
+
+- `core-domain` `share/`:
+  - `ShareMessage`: the message of `_makeMessageForTodayWeather` with the city line and the Branch link per language. Values are joined as JavaScript does, and a missing `currentWeather` or `skyIcon` leaves the city line only (V20).
+  - `EntryLink`: the place index of `todayweather://N`, with the first scheme removed and JavaScript's `parseInt`; empty or NaN gives none.
+- `core-data` `WeatherSession.openPlace(index)`: `setCityIndex` (only within the list) then `reloadEvent 'deeplink'`, which loads at once unless the retry confirmation is open.
+- `app`:
+  - the share buttons of S03, S04 and S05 send the message through the system chooser (`ACTION_SEND`, `text/plain`, no title), as the plugin did; without a location they do nothing until AN-10 opens O02;
+  - `MainActivity` registers `todayweather` (`VIEW`, `DEFAULT`, `BROWSABLE`), and `TodayWeatherApp` hands a link from `EntryIntents` to the open app's session after the migration, on cold and warm starts. The link that Recents delivers again when it opens a finished task (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`) selects nothing.
+- Backup (`res/xml/backup_rules.xml` for API 24–30, `data_extraction_rules.xml` for API 31+):
+  - included: `files/app_state.json`, and the Cordova sources the migration reads (WebView Local Storage and the group suite), so a backup or device transfer from Cordova 1.1.1 restores and migrates;
+  - excluded: the weather cache, the analytics consent (off again), Firebase's token and installation (a new FCM token; PushSync replaces the restored token and posts the list, as after a 1.1.1 restore), the measurement, AdMob and UMP state (UMP asks again where required), and the default preference suite with UMP's IAB consent strings (review F2; the Cordova app's start moves its old units out of that suite into localStorage and the group suite).
+  - The policy is recorded in `android/README.md`.
+- Differences (`tools/corpus/differences.md`): B18, `todayweather://N` opens place N; 1.1.1 Android registered no scheme and opened nothing. B19, the backup policy above; 1.1.1 backed up everything.
+- Archify not applicable: no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN16-US1 | User shares the weather | A place with weather | Tap share on S03, S04 or S05; pick an app | The chooser shows the Cordova message: place, current temperature and emoji, high and low, summary, app name and the Branch link of the language | No weather yet: the city line only; no location: nothing (O02 with AN-10) | AC1 |
+| AN16-US2 | User opens a place from a link | Places saved | Open `todayweather://2` with the app closed, then with it open | Place 2 is selected and loads, on cold and warm starts, after the migration | Out of range: the selected place reloads; not a number or empty: nothing; the task opened again from Recents: nothing | AC1 |
+| AN16-US3 | User moves to a new phone | Places, alarms and an analytics opt-in | Back up; restore on another device | Places, settings and alarms come back; analytics is off; a new FCM token replaces the old one on the server; the weather loads afresh | – | AC2 |
+| AN16-US4 | Cordova user moves to a new phone that installs the native app | Cordova 1.1.1 with places | Back up; restore into the native app | The Cordova data restores and migrates | – | AC2 |
+
+### Acceptance (from #2895)
+
+- AC1: UI tests cover the share text and the routing of `todayweather://N`.
+- AC2: an emulator backup and restore follows the recorded policy.
+- AC3: delivery (README with the policy, review PASS, CI, merge).
+
+### Checks
+
+- JVM: `ShareMessageTest` and `EntryLinkTest` (core-domain), `WeatherSessionTest` for `openPlace`, `ShareTest` (app): the chooser intent from each tab and the links' queue, and `BackupRulesTest`: the rule files against the policy.
+- Device: `tools/backup/run-backup-test.sh` (offline): `EntryLinkDeviceTest` on cold and warm starts and for a link delivered again from Recents; with `bmgr` and the local transport, a native backup restored into the native app and a Cordova 1.1.1 backup restored into the native app, with `BackupRestoreTest` checking what came back.
+- Mutations: `reports/sdlc/android-an-16/probe/mutations.py` (one rule at a time; the named test class must fail).

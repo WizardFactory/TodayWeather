@@ -1,0 +1,3439 @@
+{
+ "config": {
+  "package": "todayWeather",
+  "mailTo": "feedback@example.com",
+  "androidStoreUrl": "market://details?id=net.wizardfactory.todayweather"
+ },
+ "ua": "Mozilla/5.0 (Linux; Android 16; sdk_gphone64_arm64 Build/BP41.250916.012; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.7390.122 Mobile Safari/537.36",
+ "version": "2.0.0",
+ "uuid": "device-uuid",
+ "cities": 3,
+ "units": [
+  {
+   "name": "KR",
+   "lang": "ko",
+   "region": "KR",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "풍속단위",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "기압단위",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR",
+     "name_text": "대기환경기준",
+     "value_text": "한국환경공단"
+    }
+   ]
+  },
+  {
+   "name": "KR",
+   "lang": "en",
+   "region": "KR",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "Wind unit",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "Pressure unit",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR",
+     "name_text": "Index Standard",
+     "value_text": "S.Korea"
+    }
+   ]
+  },
+  {
+   "name": "JP",
+   "lang": "ko",
+   "region": "JP",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "mmHg",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "풍속단위",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mmHg",
+     "name_text": "기압단위",
+     "value_text": "mmHg"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "대기환경기준",
+     "value_text": "미국"
+    }
+   ]
+  },
+  {
+   "name": "JP",
+   "lang": "en",
+   "region": "JP",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "mmHg",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "Wind unit",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mmHg",
+     "name_text": "Pressure unit",
+     "value_text": "mmHg"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "Index Standard",
+     "value_text": "USA"
+    }
+   ]
+  },
+  {
+   "name": "US",
+   "lang": "ko",
+   "region": "US",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "F",
+    "windSpeedUnit": "mph",
+    "pressureUnit": "inHg",
+    "distanceUnit": "mi",
+    "precipitationUnit": "in",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "F",
+     "name_text": "온도단위",
+     "value_text": "F"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "mph",
+     "name_text": "풍속단위",
+     "value_text": "mph"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "inHg",
+     "name_text": "기압단위",
+     "value_text": "inHg"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "miles",
+     "name_text": "거리",
+     "value_text": "miles"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "inches",
+     "name_text": "강수량",
+     "value_text": "inches"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "대기환경기준",
+     "value_text": "미국"
+    }
+   ]
+  },
+  {
+   "name": "US",
+   "lang": "en",
+   "region": "US",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "F",
+    "windSpeedUnit": "mph",
+    "pressureUnit": "inHg",
+    "distanceUnit": "mi",
+    "precipitationUnit": "in",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "F",
+     "name_text": "Temperature Unit",
+     "value_text": "F"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "mph",
+     "name_text": "Wind unit",
+     "value_text": "mph"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "inHg",
+     "name_text": "Pressure unit",
+     "value_text": "inHg"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "miles",
+     "name_text": "Distance unit",
+     "value_text": "miles"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "inches",
+     "name_text": "Precipitation",
+     "value_text": "inches"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "Index Standard",
+     "value_text": "USA"
+    }
+   ]
+  },
+  {
+   "name": "DE",
+   "lang": "ko",
+   "region": "DE",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "km/h",
+    "pressureUnit": "mb",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "km/h",
+     "name_text": "풍속단위",
+     "value_text": "km/h"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mbar",
+     "name_text": "기압단위",
+     "value_text": "mbar"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "대기환경기준",
+     "value_text": "미국"
+    }
+   ]
+  },
+  {
+   "name": "DE",
+   "lang": "en",
+   "region": "DE",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "km/h",
+    "pressureUnit": "mb",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "km/h",
+     "name_text": "Wind unit",
+     "value_text": "km/h"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mbar",
+     "name_text": "Pressure unit",
+     "value_text": "mbar"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "Index Standard",
+     "value_text": "USA"
+    }
+   ]
+  },
+  {
+   "name": "CN",
+   "lang": "ko",
+   "region": "CN",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "km/h",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "km/h",
+     "name_text": "풍속단위",
+     "value_text": "km/h"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "기압단위",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "대기환경기준",
+     "value_text": "미국"
+    }
+   ]
+  },
+  {
+   "name": "CN",
+   "lang": "en",
+   "region": "CN",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "km/h",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "km/h",
+     "name_text": "Wind unit",
+     "value_text": "km/h"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "Pressure unit",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "Index Standard",
+     "value_text": "USA"
+    }
+   ]
+  },
+  {
+   "name": "TW",
+   "lang": "ko",
+   "region": "TW",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "km/h",
+    "pressureUnit": "mmHg",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "km/h",
+     "name_text": "풍속단위",
+     "value_text": "km/h"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mmHg",
+     "name_text": "기압단위",
+     "value_text": "mmHg"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "대기환경기준",
+     "value_text": "미국"
+    }
+   ]
+  },
+  {
+   "name": "TW",
+   "lang": "en",
+   "region": "TW",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "km/h",
+    "pressureUnit": "mmHg",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "km/h",
+     "name_text": "Wind unit",
+     "value_text": "km/h"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mmHg",
+     "name_text": "Pressure unit",
+     "value_text": "mmHg"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "Index Standard",
+     "value_text": "USA"
+    }
+   ]
+  },
+  {
+   "name": "other",
+   "lang": "ko",
+   "region": "FR",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "풍속단위",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "기압단위",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "대기환경기준",
+     "value_text": "미국"
+    }
+   ]
+  },
+  {
+   "name": "other",
+   "lang": "en",
+   "region": "FR",
+   "stored": null,
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airnow"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "Wind unit",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "Pressure unit",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_US",
+     "name_text": "Index Standard",
+     "value_text": "USA"
+    }
+   ]
+  },
+  {
+   "name": "beaufort-who",
+   "lang": "ko",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "bft",
+    "pressureUnit": "mb",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea_who"
+   },
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "bft",
+    "pressureUnit": "mb",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea_who"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "beaufort",
+     "name_text": "풍속단위",
+     "value_text": "beaufort"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mbar",
+     "name_text": "기압단위",
+     "value_text": "mbar"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR_WHO",
+     "name_text": "대기환경기준",
+     "value_text": "WHO"
+    }
+   ]
+  },
+  {
+   "name": "beaufort-who",
+   "lang": "en",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "bft",
+    "pressureUnit": "mb",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea_who"
+   },
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "bft",
+    "pressureUnit": "mb",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea_who"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "beaufort",
+     "name_text": "Wind unit",
+     "value_text": "beaufort"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "mbar",
+     "name_text": "Pressure unit",
+     "value_text": "mbar"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR_WHO",
+     "name_text": "Index Standard",
+     "value_text": "S.Korea(WHO)"
+    }
+   ]
+  },
+  {
+   "name": "knots-aqicn",
+   "lang": "ko",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "kt",
+    "pressureUnit": "hPa",
+    "distanceUnit": "mi",
+    "precipitationUnit": "in",
+    "airUnit": "aqicn"
+   },
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "kt",
+    "pressureUnit": "hPa",
+    "distanceUnit": "mi",
+    "precipitationUnit": "in",
+    "airUnit": "aqicn"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "knotes",
+     "name_text": "풍속단위",
+     "value_text": "knotes"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "기압단위",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "miles",
+     "name_text": "거리",
+     "value_text": "miles"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "inches",
+     "name_text": "강수량",
+     "value_text": "inches"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_CN",
+     "name_text": "대기환경기준",
+     "value_text": "중국"
+    }
+   ]
+  },
+  {
+   "name": "knots-aqicn",
+   "lang": "en",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "kt",
+    "pressureUnit": "hPa",
+    "distanceUnit": "mi",
+    "precipitationUnit": "in",
+    "airUnit": "aqicn"
+   },
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "kt",
+    "pressureUnit": "hPa",
+    "distanceUnit": "mi",
+    "precipitationUnit": "in",
+    "airUnit": "aqicn"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "knotes",
+     "name_text": "Wind unit",
+     "value_text": "knotes"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "Pressure unit",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "miles",
+     "name_text": "Distance unit",
+     "value_text": "miles"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "inches",
+     "name_text": "Precipitation",
+     "value_text": "inches"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_CN",
+     "name_text": "Index Standard",
+     "value_text": "China"
+    }
+   ]
+  },
+  {
+   "name": "aircn",
+   "lang": "ko",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "aircn"
+   },
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "온도단위",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "풍속단위",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "기압단위",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR",
+     "name_text": "대기환경기준",
+     "value_text": "한국환경공단"
+    }
+   ]
+  },
+  {
+   "name": "aircn",
+   "lang": "en",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "aircn"
+   },
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "C",
+     "name_text": "Temperature Unit",
+     "value_text": "C"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "Wind unit",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "Pressure unit",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR",
+     "name_text": "Index Standard",
+     "value_text": "S.Korea"
+    }
+   ]
+  },
+  {
+   "name": "partial",
+   "lang": "ko",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "F"
+   },
+   "units": {
+    "temperatureUnit": "F",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "F",
+     "name_text": "온도단위",
+     "value_text": "F"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "풍속단위",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "기압단위",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "거리",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "강수량",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR",
+     "name_text": "대기환경기준",
+     "value_text": "한국환경공단"
+    }
+   ]
+  },
+  {
+   "name": "partial",
+   "lang": "en",
+   "region": "KR",
+   "stored": {
+    "temperatureUnit": "F"
+   },
+   "units": {
+    "temperatureUnit": "F",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "rows": [
+    {
+     "name": "temperatureUnit",
+     "nameKey": "LOC_TEMPERATURE_UNIT",
+     "valueKey": "F",
+     "name_text": "Temperature Unit",
+     "value_text": "F"
+    },
+    {
+     "name": "windSpeedUnit",
+     "nameKey": "LOC_WIND_SPEED_UNIT",
+     "valueKey": "m/s",
+     "name_text": "Wind unit",
+     "value_text": "m/s"
+    },
+    {
+     "name": "pressureUnit",
+     "nameKey": "LOC_PRESSURE_UNIT",
+     "valueKey": "hPa",
+     "name_text": "Pressure unit",
+     "value_text": "hPa"
+    },
+    {
+     "name": "distanceUnit",
+     "nameKey": "LOC_DISTANCE_UNIT",
+     "valueKey": "km",
+     "name_text": "Distance unit",
+     "value_text": "km"
+    },
+    {
+     "name": "precipitationUnit",
+     "nameKey": "LOC_PRECIPITATION",
+     "valueKey": "mm",
+     "name_text": "Precipitation",
+     "value_text": "mm"
+    },
+    {
+     "name": "airUnit",
+     "nameKey": "LOC_AIR_QUALITY_INDEX_UNIT",
+     "valueKey": "LOC_AIR_QUALITY_INDEX_KR",
+     "name_text": "Index Standard",
+     "value_text": "S.Korea"
+    }
+   ]
+  }
+ ],
+ "lists": [
+  {
+   "name": "temperatureUnit",
+   "opened": [
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_TEMPERATURE_UNIT",
+    "value": "C",
+    "items": [
+     {
+      "label": "C",
+      "value": "C",
+      "ko": "C"
+     },
+     {
+      "label": "F",
+      "value": "F",
+      "ko": "F"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_TEMPERATURE_UNIT",
+    "value": "C",
+    "items": [
+     {
+      "label": "C",
+      "value": "C",
+      "ko": "C"
+     },
+     {
+      "label": "F",
+      "value": "F",
+      "ko": "F"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "F",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "F",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "windSpeedUnit",
+   "opened": [
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_WIND_SPEED_UNIT",
+    "value": "m/s",
+    "items": [
+     {
+      "label": "mph",
+      "value": "mph",
+      "ko": "mph"
+     },
+     {
+      "label": "km/h",
+      "value": "km/h",
+      "ko": "km/h"
+     },
+     {
+      "label": "m/s",
+      "value": "m/s",
+      "ko": "m/s"
+     },
+     {
+      "label": "beaufort",
+      "value": "bft",
+      "ko": "beaufort"
+     },
+     {
+      "label": "knotes",
+      "value": "kt",
+      "ko": "knotes"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_WIND_SPEED_UNIT",
+    "value": "m/s",
+    "items": [
+     {
+      "label": "mph",
+      "value": "mph",
+      "ko": "mph"
+     },
+     {
+      "label": "km/h",
+      "value": "km/h",
+      "ko": "km/h"
+     },
+     {
+      "label": "m/s",
+      "value": "m/s",
+      "ko": "m/s"
+     },
+     {
+      "label": "beaufort",
+      "value": "bft",
+      "ko": "beaufort"
+     },
+     {
+      "label": "knotes",
+      "value": "kt",
+      "ko": "knotes"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "mph",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "mph",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "km/h",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "km/h",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "km/h",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "km/h",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "bft",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "bft",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "bft",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "bft",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "kt",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "kt",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "kt",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "kt",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "pressureUnit",
+   "opened": [
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_PRESSURE_UNIT",
+    "value": "hPa",
+    "items": [
+     {
+      "label": "mmHg",
+      "value": "mmHg",
+      "ko": "mmHg"
+     },
+     {
+      "label": "inHg",
+      "value": "inHg",
+      "ko": "inHg"
+     },
+     {
+      "label": "mbar",
+      "value": "mb",
+      "ko": "mbar"
+     },
+     {
+      "label": "hPa",
+      "value": "hPa",
+      "ko": "hPa"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_PRESSURE_UNIT",
+    "value": "hPa",
+    "items": [
+     {
+      "label": "mmHg",
+      "value": "mmHg",
+      "ko": "mmHg"
+     },
+     {
+      "label": "inHg",
+      "value": "inHg",
+      "ko": "inHg"
+     },
+     {
+      "label": "mbar",
+      "value": "mb",
+      "ko": "mbar"
+     },
+     {
+      "label": "hPa",
+      "value": "hPa",
+      "ko": "hPa"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "mmHg",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "mmHg",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "mmHg",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "mmHg",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "inHg",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "inHg",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "inHg",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "inHg",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "mb",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "mb",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "mb",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "mb",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "distanceUnit",
+   "opened": [
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_DISTANCE_UNIT",
+    "value": "km",
+    "items": [
+     {
+      "label": "km",
+      "value": "km",
+      "ko": "km"
+     },
+     {
+      "label": "miles",
+      "value": "mi",
+      "ko": "miles"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_DISTANCE_UNIT",
+    "value": "km",
+    "items": [
+     {
+      "label": "km",
+      "value": "km",
+      "ko": "km"
+     },
+     {
+      "label": "miles",
+      "value": "mi",
+      "ko": "miles"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "mi",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "mi",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "mi",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "mi",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "precipitationUnit",
+   "opened": [
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_PRECIPITATION",
+    "value": "mm",
+    "items": [
+     {
+      "label": "mm",
+      "value": "mm",
+      "ko": "mm"
+     },
+     {
+      "label": "inch",
+      "value": "in",
+      "ko": "inch"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_PRECIPITATION",
+    "value": "mm",
+    "items": [
+     {
+      "label": "mm",
+      "value": "mm",
+      "ko": "mm"
+     },
+     {
+      "label": "inch",
+      "value": "in",
+      "ko": "inch"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "in",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "in",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "in",
+        "airUnit": "airkorea"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "in",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "airUnit",
+   "opened": [
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_AIR_QUALITY_INDEX_UNIT",
+    "value": "airkorea",
+    "items": [
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_US",
+      "value": "airnow",
+      "ko": "미국"
+     },
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_CN",
+      "value": "aqicn",
+      "ko": "중국"
+     },
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_KR",
+      "value": "airkorea",
+      "ko": "한국환경공단"
+     },
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_KR_WHO",
+      "value": "airkorea_who",
+      "ko": "WHO"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_AIR_QUALITY_INDEX_UNIT",
+    "value": "airkorea",
+    "items": [
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_US",
+      "value": "airnow",
+      "ko": "USA"
+     },
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_CN",
+      "value": "aqicn",
+      "ko": "China"
+     },
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_KR",
+      "value": "airkorea",
+      "ko": "S.Korea"
+     },
+     {
+      "label": "LOC_AIR_QUALITY_INDEX_KR_WHO",
+      "value": "airkorea_who",
+      "ko": "S.Korea(WHO)"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "airnow",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow"
+       }
+      ],
+      [
+       "$broadcast",
+       "changeAirUnitEvent",
+       null
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airnow"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "aqicn",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "aqicn"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "aqicn"
+       }
+      ],
+      [
+       "$broadcast",
+       "changeAirUnitEvent",
+       null
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "aqicn"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "airkorea_who",
+     "trace": [
+      [
+       "TwStorage.set",
+       "units",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea_who"
+       }
+      ],
+      [
+       "Push.updateUnits",
+       {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea_who"
+       }
+      ],
+      [
+       "$broadcast",
+       "changeAirUnitEvent",
+       null
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea_who"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "startupPage",
+   "opened": [
+    [
+     "toggleLeft"
+    ],
+    [
+     "TwStorage.set",
+     "settingsInfo",
+     {
+      "startupPage": "0",
+      "refreshInterval": "0",
+      "theme": "light"
+     }
+    ],
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_STARTUP_PAGE",
+    "value": "0",
+    "items": [
+     {
+      "label": "LOC_HOURLY_FORECAST",
+      "value": "0",
+      "ko": "시간별날씨"
+     },
+     {
+      "label": "LOC_DAILY_FORECAST",
+      "value": "1",
+      "ko": "일별날씨"
+     },
+     {
+      "label": "LOC_SAVED_LOCATIONS",
+      "value": "2",
+      "ko": "즐겨찾기"
+     },
+     {
+      "label": "LOC_AIR_INFORMATION",
+      "value": "3",
+      "ko": "대기정보"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_STARTUP_PAGE",
+    "value": "0",
+    "items": [
+     {
+      "label": "LOC_HOURLY_FORECAST",
+      "value": "0",
+      "ko": "Hourly"
+     },
+     {
+      "label": "LOC_DAILY_FORECAST",
+      "value": "1",
+      "ko": "Daily"
+     },
+     {
+      "label": "LOC_SAVED_LOCATIONS",
+      "value": "2",
+      "ko": "Locations"
+     },
+     {
+      "label": "LOC_AIR_INFORMATION",
+      "value": "3",
+      "ko": "AQI"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "1",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "1",
+        "refreshInterval": "0",
+        "theme": "light"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "1",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "2",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "2",
+        "refreshInterval": "0",
+        "theme": "light"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "2",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "3",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "3",
+        "refreshInterval": "0",
+        "theme": "light"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "3",
+       "refreshInterval": "0",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "refreshInterval",
+   "opened": [
+    [
+     "toggleLeft"
+    ],
+    [
+     "TwStorage.set",
+     "settingsInfo",
+     {
+      "startupPage": "0",
+      "refreshInterval": "0",
+      "theme": "light"
+     }
+    ],
+    [
+     "$broadcast",
+     "reloadEvent",
+     "setRefreshInterval"
+    ],
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_REFRESH_INTERVAL",
+    "value": "0",
+    "items": [
+     {
+      "label": "LOC_MANUAL",
+      "value": "0",
+      "ko": "수동"
+     },
+     {
+      "label": "LOC_30_MINUTES",
+      "value": "30",
+      "ko": "30분"
+     },
+     {
+      "label": "LOC_1_HOUR",
+      "value": "60",
+      "ko": "1시간"
+     },
+     {
+      "label": "LOC_3_HOURS",
+      "value": "180",
+      "ko": "3시간"
+     },
+     {
+      "label": "LOC_6_HOURS",
+      "value": "360",
+      "ko": "6시간"
+     },
+     {
+      "label": "LOC_12_HOURS",
+      "value": "720",
+      "ko": "12시간"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_REFRESH_INTERVAL",
+    "value": "0",
+    "items": [
+     {
+      "label": "LOC_MANUAL",
+      "value": "0",
+      "ko": "Manual"
+     },
+     {
+      "label": "LOC_30_MINUTES",
+      "value": "30",
+      "ko": "30minutes"
+     },
+     {
+      "label": "LOC_1_HOUR",
+      "value": "60",
+      "ko": "1hour"
+     },
+     {
+      "label": "LOC_3_HOURS",
+      "value": "180",
+      "ko": "3hours"
+     },
+     {
+      "label": "LOC_6_HOURS",
+      "value": "360",
+      "ko": "6hours"
+     },
+     {
+      "label": "LOC_12_HOURS",
+      "value": "720",
+      "ko": "12hours"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "30",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "30",
+        "theme": "light"
+       }
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "setRefreshInterval"
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "30",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "60",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "60",
+        "theme": "light"
+       }
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "setRefreshInterval"
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "60",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "180",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "180",
+        "theme": "light"
+       }
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "setRefreshInterval"
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "180",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "360",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "360",
+        "theme": "light"
+       }
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "setRefreshInterval"
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "360",
+       "theme": "light"
+      }
+     }
+    },
+    {
+     "value": "720",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "720",
+        "theme": "light"
+       }
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "setRefreshInterval"
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "720",
+       "theme": "light"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "theme",
+   "opened": [
+    [
+     "toggleLeft"
+    ],
+    [
+     "TwStorage.set",
+     "settingsInfo",
+     {
+      "startupPage": "0",
+      "refreshInterval": "0",
+      "theme": "light"
+     }
+    ],
+    [
+     "$location.path",
+     "/setting-radio"
+    ]
+   ],
+   "page": {
+    "title": "LOC_THEME_SETTING",
+    "value": "light",
+    "items": [
+     {
+      "label": "LOC_WEATHER_PHOTO_THEME",
+      "value": "photo",
+      "ko": "날씨 사진 테마"
+     },
+     {
+      "label": "LOC_LIGHT_THEME",
+      "value": "light",
+      "ko": "밝은 테마"
+     },
+     {
+      "label": "LOC_DARK_THEME",
+      "value": "dark",
+      "ko": "어두운 테마"
+     },
+     {
+      "label": "LOC_OLD_THEME",
+      "value": "old",
+      "ko": "이전 테마"
+     }
+    ]
+   },
+   "en": {
+    "title": "LOC_THEME_SETTING",
+    "value": "light",
+    "items": [
+     {
+      "label": "LOC_WEATHER_PHOTO_THEME",
+      "value": "photo",
+      "ko": "Weather photo theme"
+     },
+     {
+      "label": "LOC_LIGHT_THEME",
+      "value": "light",
+      "ko": "Light theme"
+     },
+     {
+      "label": "LOC_DARK_THEME",
+      "value": "dark",
+      "ko": "Dark theme"
+     },
+     {
+      "label": "LOC_OLD_THEME",
+      "value": "old",
+      "ko": "Old theme"
+     }
+    ]
+   },
+   "choices": [
+    {
+     "value": "photo",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "0",
+        "theme": "photo"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "photo"
+      }
+     }
+    },
+    {
+     "value": "dark",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "0",
+        "theme": "dark"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "dark"
+      }
+     }
+    },
+    {
+     "value": "old",
+     "trace": [
+      [
+       "TwStorage.set",
+       "settingsInfo",
+       {
+        "startupPage": "0",
+        "refreshInterval": "0",
+        "theme": "old"
+       }
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       0
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       1
+      ],
+      [
+       "WeatherInfo.reloadCity",
+       2
+      ],
+      [
+       "$broadcast",
+       "reloadEvent",
+       "resume"
+      ]
+     ],
+     "stored": {
+      "units": {
+       "temperatureUnit": "C",
+       "windSpeedUnit": "m/s",
+       "pressureUnit": "hPa",
+       "distanceUnit": "km",
+       "precipitationUnit": "mm",
+       "airUnit": "airkorea"
+      },
+      "settingsInfo": {
+       "startupPage": "0",
+       "refreshInterval": "0",
+       "theme": "old"
+      }
+     }
+    }
+   ]
+  }
+ ],
+ "menuValues": {
+  "startupPage": [
+   {
+    "value": "0",
+    "key": "LOC_HOURLY_FORECAST"
+   },
+   {
+    "value": "1",
+    "key": "LOC_DAILY_FORECAST"
+   },
+   {
+    "value": "2",
+    "key": "LOC_SAVED_LOCATIONS"
+   },
+   {
+    "value": "3",
+    "key": "LOC_AIR_INFORMATION"
+   },
+   {
+    "value": "4",
+    "key": "LOC_WEATHER"
+   },
+   {
+    "value": "5",
+    "key": "N/A"
+   },
+   {
+    "value": "",
+    "key": "N/A"
+   }
+  ],
+  "refreshInterval": [
+   {
+    "value": "0",
+    "key": "LOC_MANUAL"
+   },
+   {
+    "value": "30",
+    "key": "LOC_30_MINUTES"
+   },
+   {
+    "value": "60",
+    "key": "LOC_1_HOUR"
+   },
+   {
+    "value": "180",
+    "key": "LOC_3_HOURS"
+   },
+   {
+    "value": "360",
+    "key": "LOC_6_HOURS"
+   },
+   {
+    "value": "720",
+    "key": "LOC_12_HOURS"
+   },
+   {
+    "value": "15",
+    "key": "N/A"
+   },
+   {
+    "value": "",
+    "key": "N/A"
+   }
+  ],
+  "theme": [
+   {
+    "value": "photo",
+    "key": "LOC_WEATHER_PHOTO_THEME"
+   },
+   {
+    "value": "light",
+    "key": "LOC_LIGHT_THEME"
+   },
+   {
+    "value": "dark",
+    "key": "LOC_DARK_THEME"
+   },
+   {
+    "value": "old",
+    "key": "LOC_OLD_THEME"
+   },
+   {
+    "value": "blue",
+    "key": "N/A"
+   },
+   {
+    "value": "",
+    "key": "N/A"
+   }
+  ]
+ },
+ "menu": [
+  {
+   "lang": "ko",
+   "row": "nullschool",
+   "trace": [
+    [
+     "InAppBrowser.open",
+     "https://earth.nullschool.net/#current/wind/surface/level/orthographic=-233.36,38.96,3000",
+     "_system"
+    ]
+   ],
+   "location": null
+  },
+  {
+   "lang": "ko",
+   "row": "sendMail",
+   "trace": [
+    [
+     "toggleLeft"
+    ]
+   ],
+   "location": "mailto:feedback@example.com?subject=의견보내기&body=%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AApp%20Version%20%3A%202.0.0%0AUUID%20%3A%20device-uuid%0AUA%20%3A%20Mozilla%2F5.0%20(Linux%3B%20Android%2016%3B%20sdk_gphone64_arm64%20Build%2FBP41.250916.012%3B%20wv)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Version%2F4.0%20Chrome%2F141.0.7390.122%20Mobile%20Safari%2F537.36%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A"
+  },
+  {
+   "lang": "ko",
+   "row": "openMarket",
+   "trace": [
+    [
+     "toggleLeft"
+    ],
+    [
+     "InAppBrowser.open",
+     "market://details?id=net.wizardfactory.todayweather",
+     "_system"
+    ]
+   ],
+   "location": null
+  },
+  {
+   "lang": "ko",
+   "row": "openInfo",
+   "trace": [
+    [
+     "$ionicPopup.alert",
+     {
+      "title": "오늘날씨",
+      "template": "기상정보 : 기상청<br>대기오염정보 : 환경부/한국환경공단<br>인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.",
+      "okText": "확인"
+     }
+    ]
+   ],
+   "location": null
+  },
+  {
+   "lang": "en",
+   "row": "nullschool",
+   "trace": [
+    [
+     "InAppBrowser.open",
+     "https://earth.nullschool.net/#current/wind/surface/level/orthographic=-233.36,38.96,3000",
+     "_system"
+    ]
+   ],
+   "location": null
+  },
+  {
+   "lang": "en",
+   "row": "sendMail",
+   "trace": [
+    [
+     "toggleLeft"
+    ]
+   ],
+   "location": "mailto:feedback@example.com?subject=Send feedback&body=%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AApp%20Version%20%3A%202.0.0%0AUUID%20%3A%20device-uuid%0AUA%20%3A%20Mozilla%2F5.0%20(Linux%3B%20Android%2016%3B%20sdk_gphone64_arm64%20Build%2FBP41.250916.012%3B%20wv)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Version%2F4.0%20Chrome%2F141.0.7390.122%20Mobile%20Safari%2F537.36%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A"
+  },
+  {
+   "lang": "en",
+   "row": "openMarket",
+   "trace": [
+    [
+     "toggleLeft"
+    ],
+    [
+     "InAppBrowser.open",
+     "market://details?id=net.wizardfactory.todayweather",
+     "_system"
+    ]
+   ],
+   "location": null
+  },
+  {
+   "lang": "en",
+   "row": "openInfo",
+   "trace": [
+    [
+     "$ionicPopup.alert",
+     {
+      "title": "TodayWeather",
+      "template": "Weather information : Korea Meteorological Administration<br>Air Quality Index : Korea Environment Corporation<br>Please note that this real-time data has not been checked and may contain errors.",
+      "okText": "OK"
+     }
+    ]
+   ],
+   "location": null
+  }
+ ]
+}

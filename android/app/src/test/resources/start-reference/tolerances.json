@@ -1,0 +1,37 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in start-reference/<lang>",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, most in the 17 bold shortcut labels (Latin, Hangul, Han, Devanagari, Thai and Arabic) and in the Korean notice. Geometry follows the WebView: the icon and the card at the capture's boxes, the shortcuts flowed at their labels' fractional widths with 4 dp around them (StartScreenshotTest boxes: within 0.7 dp in English, the Korean 현재위치 날씨보기 label 1.4 dp wider in Robolectric's font), the placeholder on the Latin font's baseline as Chrome draws a fallback font, and the notice is AN-12's Ionic popup with its body broken where Chrome broke it (the six Korean and eight English lines of access.json).",
+ "cases": {
+  "ko-KR/access": {
+   "strong": 0.00756,
+   "mean": 2.974,
+   "heightDifference": 0
+  },
+  "ko-KR/start": {
+   "strong": 0.01378,
+   "mean": 3.293,
+   "heightDifference": 0
+  },
+  "en-US/access": {
+   "strong": 0.00346,
+   "mean": 1.579,
+   "heightDifference": 0
+  },
+  "en-US/start": {
+   "strong": 0.01336,
+   "mean": 3.153,
+   "heightDifference": 0
+  }
+ }
+}

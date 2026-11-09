@@ -4,12 +4,20 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The photo feed loads again when a network comes back (the Cordova online event). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The current position (AN-10): precise and approximate, asked together; no GPS hardware needed, as the Cordova
+         build declared (GPS_REQUIRED false). -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
         android:name=".TodayWeatherApp"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@style/Theme.TodayWeather">
         <!-- Analytics defaults of the Cordova build (cordova-plugin-firebasex-analytics variables). -->
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
@@ -18,6 +26,17 @@
         <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <!-- Screen views are the app's own (Analytics.screen), as Ionic's routes were (config.xml). -->
+        <meta-data android:name="google_analytics_automatic_screen_reporting_enabled" android:value="false" />
+        <!-- Crash reports are collected regardless of the analytics choice, as in the Cordova build. -->
+        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="true" />
+
+        <!-- AdMob (AN-15): Google's sample app ID in debug builds, TW_ADMOB_APP_ID_ANDROID in release builds, and the
+             flags the Cordova build's AdMob plugin set. -->
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${admobAppId}" />
+        <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT" android:value="true" />
+        <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION" android:value="true" />
+        <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING" android:value="true" />
 
         <!-- initOrder above FirebaseInitProvider's 100: revokes analytics before Firebase starts. -->
         <provider
@@ -44,6 +63,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- todayweather://N, the place links of the TodayWeather widget (AN-16). 1.1.1 registered no scheme. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="todayweather" />
             </intent-filter>
         </activity>
     </application>
