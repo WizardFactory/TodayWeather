@@ -166,6 +166,149 @@ fn day_before(partition: &str) -> String {
         .map_or_else(|| partition.to_owned(), |p| format!("{:08}", p.date()))
 }
 
+/// The forecast-zone memory of a source and how to refresh it, cloneable into owned work
+/// (KMA-RESTART-BOUND: a request with a head start does not cancel a zone read it stops waiting
+/// for).
+struct ZoneMemory<T> {
+    reader: Reader<T>,
+    cache: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
+    held: Arc<std::sync::Mutex<Option<Arc<Zones>>>>,
+    observed: bool,
+}
+impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
+    /// Refresh the memory now: a read that ends installs its zones, also in `held`.
+    async fn refresh(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
+        let mut cache = self.cache.lock().await;
+        // Incremental: re-read the partitions from one day before the last folded acquisition
+        // (an acquisition's day partition is its fetch day). A new acquisition there that sorts
+        // before the last folded one (a late publication) cannot be appended: refold everything.
+        let incremental = cache
+            .as_ref()
+            .filter(|c| c.folded.elapsed() < ZONE_REFOLD)
+            .map(|c| day_before(&c.last.1));
+        if let (Some(from), Some(c)) = (incremental, cache.as_ref()) {
+            let fetched = match self.zone_lists(now, Some(&from), deadline).await {
+                Ok(fetched) => fetched,
+                // KMA-RESTART-BOUND: an unavailable read keeps the zones held; the next request
+                // reads again.
+                Err(e) if records::absent(&e) => return Ok(c.zones.clone()),
+                Err(e) => return Err(format!("forecast-zone read: {e}")),
+            };
+            let new: Vec<&Fetched> = fetched
+                .iter()
+                .filter(|f| f.fetched_at_ms as f64 <= now && !c.seen.contains(&identity(f)))
+                .collect();
+            if new.iter().all(|f| identity(f) > c.last) {
+                let mut zones = (*c.zones).clone();
+                let (mut seen, mut last) = (c.seen.clone(), c.last.clone());
+                for f in new {
+                    if let Some(list) = complete_list(&f.page_refs()) {
+                        zones.apply(&list, f.fetched_at_ms as f64);
+                    }
+                    let id = identity(f);
+                    seen.insert(id.clone());
+                    last = last.max(id);
+                }
+                let zones = Arc::new(zones);
+                *self.held.lock().unwrap_or_else(|e| e.into_inner()) = Some(zones.clone());
+                let folded = c.folded;
+                *cache = Some(ZoneCache {
+                    zones: zones.clone(),
+                    refreshed: std::time::Instant::now(),
+                    folded,
+                    seen,
+                    last,
+                });
+                return Ok(zones);
+            }
+        }
+        let fetched = match self.zone_lists(now, None, deadline).await {
+            Ok(fetched) => fetched,
+            // KMA-RESTART-BOUND: an unavailable read (on EC2 after a restart, today's partition
+            // restored past the catalog deadline) answers with the zones held, or else the zones
+            // of an empty store, without keeping them: the next request reads again.
+            Err(e) if records::absent(&e) => {
+                return Ok(match cache.as_ref() {
+                    Some(c) => c.zones.clone(),
+                    None => self.empty_store_zones(),
+                });
+            }
+            Err(e) => return Err(format!("forecast-zone read: {e}")),
+        };
+        let mut zones = Zones::default();
+        let mut seen = std::collections::HashSet::new();
+        let mut last = None;
+        let mut applied = false;
+        for f in fetched.iter().filter(|f| f.fetched_at_ms as f64 <= now) {
+            if let Some(list) = complete_list(&f.page_refs()) {
+                zones.apply(&list, f.fetched_at_ms as f64);
+                applied = true;
+            }
+            let id = identity(f);
+            seen.insert(id.clone());
+            last = Some(id);
+        }
+        let (true, Some(last)) = (applied, last) else {
+            // No list stored: legacy's empty collection (`findForecastZoneByName` finds nothing).
+            // The observed response uses the release's land zones until a list is stored, so its
+            // first answer can ask for mid temperatures.
+            return Ok(self.empty_store_zones());
+        };
+        let zones = Arc::new(zones);
+        *self.held.lock().unwrap_or_else(|e| e.into_inner()) = Some(zones.clone());
+        *cache = Some(ZoneCache {
+            zones: zones.clone(),
+            refreshed: std::time::Instant::now(),
+            folded: std::time::Instant::now(),
+            seen,
+            last,
+        });
+        Ok(zones)
+    }
+    /// The zones held, if any.
+    fn held_now(&self) -> Option<Arc<Zones>> {
+        self.held.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+    /// The zones of a store without a list: legacy's empty collection (`findForecastZoneByName`
+    /// finds nothing); the observed response uses the release's land zones, so its first answer
+    /// can ask for mid temperatures.
+    fn empty_store_zones(&self) -> Arc<Zones> {
+        if self.observed {
+            Zones::packaged()
+        } else {
+            Arc::new(Zones::default())
+        }
+    }
+    /// Every `forecast-zone` acquisition since [`HISTORY_START_MONTH`] (or from partition `from`),
+    /// in fold order (completion instant, partition).
+    async fn zone_lists(
+        &self,
+        now: f64,
+        from: Option<&str>,
+        deadline: Instant,
+    ) -> Result<Vec<Fetched>, crate::storage::Error> {
+        let key = ProviderKey::Named {
+            id: "forecast-zones".into(),
+        };
+        let months: Vec<u32> = history_months(now)
+            .into_iter()
+            .filter(|m| from.is_none_or(|f| format!("{m:06}").as_str() >= &f[..6]))
+            .collect();
+        let parts: Vec<String> = self
+            .reader
+            .partitions("data-go-kr", "forecast-zone", &key, &months, deadline)
+            .await?
+            .into_iter()
+            .filter(|p| from.is_none_or(|f| p.as_str() >= f))
+            .collect();
+        let mut fetched = self
+            .reader
+            .all("data-go-kr", "forecast-zone", &key, &parts, deadline)
+            .await?;
+        fetched.sort_by_key(identity);
+        Ok(fetched)
+    }
+}
 /// The S3 source. `T` is the process S3 transport behind the shared admission.
 pub struct S3Source<T> {
     reader: Reader<T>,
@@ -176,6 +319,10 @@ pub struct S3Source<T> {
     zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
     /// The zones of the last zone read, readable while a refresh holds `zones` (KMA-RESTART-BOUND).
     held_zones: Arc<std::sync::Mutex<Option<Arc<Zones>>>>,
+    /// The owned zone refresh a request with a head start joins (KMA-RESTART-BOUND).
+    zone_reads: crate::resolver::OwnedFlights<(), Result<Arc<Zones>, String>>,
+    /// The owned listings and partition reads of the observed requests (KMA-RESTART-BOUND).
+    restores: Arc<records::Restores>,
     observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback (shared with the image
     /// forecast production of the observed source).
@@ -335,6 +482,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             clock,
             zones: Arc::new(tokio::sync::Mutex::new(None)),
             held_zones: Arc::default(),
+            zone_reads: crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
+                running: 1,
+                entries: 1,
+                retain: std::time::Duration::from_secs(3),
+            })
+            .expect("static owned zone read bounds"),
+            restores: Arc::default(),
             forecast: None,
             raw_writer: None,
             observed_history: observed,
@@ -481,6 +635,42 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// omits stay, as legacy `$set` keeps them). Memory applies newer acquisitions every
     /// 10 minutes and refolds everything daily.
     pub async fn zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
+        self.start_zone_acquisition().await;
+        {
+            let cache = self.zones.lock().await;
+            if let Some(c) = cache.as_ref()
+                && c.refreshed.elapsed() < ZONE_REFRESH
+            {
+                return Ok(c.zones.clone());
+            }
+        }
+        self.refresh_zones(now, deadline).await
+    }
+    /// KMA-RESTART-BOUND: the zones for a request with a head start: the memory when fresh,
+    /// otherwise the owned refresh joined until `race_at`. None when it is not done by then: it
+    /// runs on and fills the memory (and the held zones) for later requests.
+    async fn zones_by(&self, now: f64, race_at: Instant) -> Option<Result<Arc<Zones>, String>> {
+        self.start_zone_acquisition().await;
+        if let Ok(cache) = self.zones.try_lock()
+            && let Some(c) = cache.as_ref()
+            && c.refreshed.elapsed() < ZONE_REFRESH
+        {
+            return Some(Ok(c.zones.clone()));
+        }
+        let memory = self.zone_memory();
+        match self
+            .zone_reads
+            .join((), race_at, ZONE_READ_FOR, move |deadline| async move {
+                memory.refresh(now, deadline).await
+            })
+            .await
+        {
+            crate::resolver::Waited::Ready(zones) => Some(zones),
+            _ => None,
+        }
+    }
+    /// The process's one forecast-zone acquisition, started without waiting for it.
+    async fn start_zone_acquisition(&self) {
         // One successful process refresh, without making the request wait. Failed attempts
         // remain demand-retryable under the existing five-minute admission; only a complete
         // readable published list invalidates memory and ends this process refresh.
@@ -493,7 +683,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             let owned_for = request.owned_for();
             let requested = self.zones_requested.clone();
             let attempts = self.attempts.clone();
-            let cache = self.zones.clone();
+            let memory = self.zone_memory();
             let _ = self
                 .owned
                 .join(
@@ -508,10 +698,28 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                                 let _ = crate::observability::spawn(async move {
                                     if let Ok(Some(records)) = acquire.acquire(request).await
                                         && let Some(fetched) = fetched_of(&records)
-                                        && complete_list(&fetched.page_refs()).is_some()
+                                        && let Some(list) = complete_list(&fetched.page_refs())
                                     {
-                                        let mut memory = cache.lock().await;
-                                        memory.take();
+                                        let mut cache = memory.cache.lock().await;
+                                        // KMA-RESTART-BOUND: the held zones take the list at
+                                        // once, folded over the memory (unless the memory
+                                        // already folded a list fetched later) or over the held
+                                        // zones; the memory is read again by the next request.
+                                        let at = fetched.fetched_at_ms;
+                                        let (base, newer) = match cache.take() {
+                                            Some(c) => (c.zones, at > c.last.0),
+                                            None => (memory.held_now().unwrap_or_default(), true),
+                                        };
+                                        let held = if newer {
+                                            let mut zones = (*base).clone();
+                                            zones.apply(&list, at as f64);
+                                            Arc::new(zones)
+                                        } else {
+                                            base
+                                        };
+                                        *memory.held.lock().unwrap_or_else(|e| e.into_inner()) =
+                                            Some(held);
+                                        drop(cache);
                                         requested.store(true, std::sync::atomic::Ordering::SeqCst);
                                     }
                                 })
@@ -523,153 +731,70 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 )
                 .await;
         }
-        {
-            let cache = self.zones.lock().await;
-            if let Some(c) = cache.as_ref()
-                && c.refreshed.elapsed() < ZONE_REFRESH
-            {
-                return Ok(c.zones.clone());
-            }
-        }
-        self.refresh_zones(now, deadline).await
     }
     /// Refresh the forecast-zone memory now (the 10-minute refresh of [`Self::zones`]).
     pub async fn refresh_zones(&self, now: f64, deadline: Instant) -> Result<Arc<Zones>, String> {
-        let mut cache = self.zones.lock().await;
-        // Incremental: re-read the partitions from one day before the last folded acquisition
-        // (an acquisition's day partition is its fetch day). A new acquisition there that sorts
-        // before the last folded one (a late publication) cannot be appended: refold everything.
-        let incremental = cache
-            .as_ref()
-            .filter(|c| c.folded.elapsed() < ZONE_REFOLD)
-            .map(|c| day_before(&c.last.1));
-        if let (Some(from), Some(c)) = (incremental, cache.as_ref()) {
-            let fetched = match self.zone_lists(now, Some(&from), deadline).await {
-                Ok(fetched) => fetched,
-                // KMA-RESTART-BOUND: an unavailable read keeps the zones held; the next request
-                // reads again.
-                Err(e) if records::absent(&e) => return Ok(c.zones.clone()),
-                Err(e) => return Err(format!("forecast-zone read: {e}")),
-            };
-            let new: Vec<&Fetched> = fetched
-                .iter()
-                .filter(|f| f.fetched_at_ms as f64 <= now && !c.seen.contains(&identity(f)))
-                .collect();
-            if new.iter().all(|f| identity(f) > c.last) {
-                let mut zones = (*c.zones).clone();
-                let (mut seen, mut last) = (c.seen.clone(), c.last.clone());
-                for f in new {
-                    if let Some(list) = complete_list(&f.page_refs()) {
-                        zones.apply(&list, f.fetched_at_ms as f64);
-                    }
-                    let id = identity(f);
-                    seen.insert(id.clone());
-                    last = last.max(id);
-                }
-                let zones = Arc::new(zones);
-                *self.held_zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(zones.clone());
-                let folded = c.folded;
-                *cache = Some(ZoneCache {
-                    zones: zones.clone(),
-                    refreshed: std::time::Instant::now(),
-                    folded,
-                    seen,
-                    last,
-                });
-                return Ok(zones);
-            }
-        }
-        let fetched = match self.zone_lists(now, None, deadline).await {
-            Ok(fetched) => fetched,
-            // KMA-RESTART-BOUND: an unavailable read (on EC2 after a restart, today's partition
-            // restored past the catalog deadline) answers with the zones held, or else the zones
-            // of an empty store, without keeping them: the next request reads again.
-            Err(e) if records::absent(&e) => {
-                return Ok(match cache.as_ref() {
-                    Some(c) => c.zones.clone(),
-                    None => self.empty_store_zones(),
-                });
-            }
-            Err(e) => return Err(format!("forecast-zone read: {e}")),
-        };
-        let mut zones = Zones::default();
-        let mut seen = std::collections::HashSet::new();
-        let mut last = None;
-        let mut applied = false;
-        for f in fetched.iter().filter(|f| f.fetched_at_ms as f64 <= now) {
-            if let Some(list) = complete_list(&f.page_refs()) {
-                zones.apply(&list, f.fetched_at_ms as f64);
-                applied = true;
-            }
-            let id = identity(f);
-            seen.insert(id.clone());
-            last = Some(id);
-        }
-        let (true, Some(last)) = (applied, last) else {
-            // No list stored: legacy's empty collection (`findForecastZoneByName` finds nothing).
-            // The observed response uses the release's land zones until a list is stored, so its
-            // first answer can ask for mid temperatures.
-            return Ok(self.empty_store_zones());
-        };
-        let zones = Arc::new(zones);
-        *self.held_zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(zones.clone());
-        *cache = Some(ZoneCache {
-            zones: zones.clone(),
-            refreshed: std::time::Instant::now(),
-            folded: std::time::Instant::now(),
-            seen,
-            last,
-        });
-        Ok(zones)
+        self.zone_memory().refresh(now, deadline).await
     }
-    /// KMA-RESTART-BOUND: when a request's stored grid, RSS and mid reads stop: at its bound when
-    /// it has a head start (the observed source; providers race the reads from the head start),
-    /// otherwise at its deadline.
-    fn stored_stop(&self, deadline: Instant, until: Instant, race_at: Instant) -> Instant {
-        if self.observed_history && race_at < until {
-            until
-        } else {
-            deadline
+    /// The zone memory as owned work can hold it.
+    fn zone_memory(&self) -> ZoneMemory<T> {
+        ZoneMemory {
+            reader: self.reader.clone(),
+            cache: self.zones.clone(),
+            held: self.held_zones.clone(),
+            observed: self.observed_history,
         }
     }
-    /// The zones of a store without a list: legacy's empty collection (`findForecastZoneByName`
-    /// finds nothing); the observed response uses the release's land zones, so its first answer
-    /// can ask for mid temperatures.
-    fn empty_store_zones(&self) -> Arc<Zones> {
-        if self.observed_history {
-            Zones::packaged()
-        } else {
-            Arc::new(Zones::default())
-        }
-    }
-    /// Every `forecast-zone` acquisition since [`HISTORY_START_MONTH`] (or from partition `from`),
-    /// in fold order (completion instant, partition).
-    async fn zone_lists(
+    /// KMA-RESTART-BOUND: the listing of one key for a request. With a head start (the observed
+    /// source; providers race the restore from it) it is owned work the request waits for until
+    /// its bound ([`records::Restores`]); otherwise it is read until `deadline`. None: unavailable
+    /// or not done (every publication absent).
+    async fn listed(
         &self,
-        now: f64,
-        from: Option<&str>,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        months: &[u32],
         deadline: Instant,
-    ) -> Result<Vec<Fetched>, crate::storage::Error> {
-        let key = ProviderKey::Named {
-            id: "forecast-zones".into(),
-        };
-        let months: Vec<u32> = history_months(now)
-            .into_iter()
-            .filter(|m| from.is_none_or(|f| format!("{m:06}").as_str() >= &f[..6]))
-            .collect();
-        let parts: Vec<String> = self
+        (until, race_at): (Instant, Instant),
+    ) -> Result<Option<Vec<String>>, crate::storage::Error> {
+        if self.observed_history && race_at < until {
+            return self
+                .restores
+                .partitions(&self.reader, source, kind, key, months, until)
+                .await;
+        }
+        match self
             .reader
-            .partitions("data-go-kr", "forecast-zone", &key, &months, deadline)
-            .await?
-            .into_iter()
-            .filter(|p| from.is_none_or(|f| p.as_str() >= f))
-            .collect();
-        let mut fetched = self
-            .reader
-            .all("data-go-kr", "forecast-zone", &key, &parts, deadline)
-            .await?;
-        fetched.sort_by_key(identity);
-        Ok(fetched)
+            .partitions(source, kind, key, months, deadline)
+            .await
+        {
+            Ok(partitions) => Ok(Some(partitions)),
+            Err(e) if records::absent(&e) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+    /// KMA-RESTART-BOUND: the stored read of `partitions` of one key for a request, owned and
+    /// waited for until its bound with a head start ([`records::Restores`]), otherwise read
+    /// until `deadline`.
+    async fn restored(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partitions: &[String],
+        deadline: Instant,
+        (until, race_at): (Instant, Instant),
+    ) -> Result<records::Partial, crate::storage::Error> {
+        if self.observed_history && race_at < until {
+            return self
+                .restores
+                .available(&self.reader, source, kind, key, partitions, until)
+                .await;
+        }
+        self.reader
+            .available(source, kind, key, partitions, deadline, deadline)
+            .await
     }
     /// The documents of one grid family at `now`. A missing latest publication is acquired
     /// (waiting at most 3 s); the earlier publications legacy's backfill keeps (current and
@@ -734,30 +859,33 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             };
         let months = records::months(from, now);
         let oldest = schedule::from_ms(from as i64).partition();
-        // KMA-RESTART-BOUND: the stored restore (listing and partition reads) of a request with a
-        // head start ends at its bound; what it has not read by then is absent for the request.
-        let stop = self.stored_stop(deadline, until, race_at);
+        // KMA-RESTART-BOUND: a request with a head start waits for its stored restore (listing
+        // and partition reads, owned work that runs on) until its bound; what it has not read by
+        // then comes from an earlier completed read or is absent for the request.
         // The listing: None when it is unavailable or late (every publication absent, as on an
         // empty store, and the read partial).
         let listing = {
             let key = &key;
             async move {
-                match tokio::time::timeout_at(
-                    stop,
-                    self.reader
-                        .partitions(sf.source(), sf.kind(), key, &months, deadline),
-                )
-                .await
+                match self
+                    .listed(
+                        sf.source(),
+                        sf.kind(),
+                        key,
+                        &months,
+                        deadline,
+                        (until, race_at),
+                    )
+                    .await
                 {
-                    Err(_) => Ok(None),
-                    Ok(Ok(parts)) => Ok(Some(
+                    Ok(None) => Ok(None),
+                    Ok(Some(parts)) => Ok(Some(
                         parts
                             .into_iter()
                             .filter(|p| *p >= oldest)
                             .collect::<Vec<String>>(),
                     )),
-                    Ok(Err(e)) if records::absent(&e) => Ok(None),
-                    Ok(Err(e)) => Err(format!("{} listing: {e}", sf.kind())),
+                    Err(e) => Err(format!("{} listing: {e}", sf.kind())),
                 }
             }
             .shared()
@@ -769,8 +897,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 match listing.await? {
                     None => Ok((records::Partial::default(), true)),
                     Some(wanted) => self
-                        .reader
-                        .available(sf.source(), sf.kind(), key, &wanted, deadline, stop)
+                        .restored(
+                            sf.source(),
+                            sf.kind(),
+                            key,
+                            &wanted,
+                            deadline,
+                            (until, race_at),
+                        )
                         .await
                         .map(|read| (read, false))
                         .map_err(|e| format!("{} read: {e}", sf.kind())),
@@ -1189,26 +1323,29 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         let months = records::months(from, now);
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
         let oldest = schedule::from_ms(from as i64).partition();
-        let stop = self.stored_stop(deadline, until, race_at);
         // KMA-RESTART-BOUND: the listing, None when it is unavailable or late (every publication
-        // absent), and the stored read; both end at `stop`.
+        // absent), and the stored read; with a head start both are owned restores the request
+        // waits for until its bound.
         let listing = async {
-            match tokio::time::timeout_at(
-                stop,
-                self.reader
-                    .partitions("kma-web", "town-rss", &key, &months, deadline),
-            )
-            .await
+            match self
+                .listed(
+                    "kma-web",
+                    "town-rss",
+                    &key,
+                    &months,
+                    deadline,
+                    (until, race_at),
+                )
+                .await
             {
-                Err(_) => Ok(None),
-                Ok(Ok(parts)) => Ok(Some(
+                Ok(None) => Ok(None),
+                Ok(Some(parts)) => Ok(Some(
                     parts
                         .into_iter()
                         .filter(|p| *p >= oldest)
                         .collect::<Vec<String>>(),
                 )),
-                Ok(Err(e)) if records::absent(&e) => Ok(None),
-                Ok(Err(e)) => Err(format!("town-rss listing: {e}")),
+                Err(e) => Err(format!("town-rss listing: {e}")),
             }
         }
         .shared();
@@ -1218,8 +1355,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 match listing.await? {
                     None => Ok(records::Partial::default()),
                     Some(wanted) => self
-                        .reader
-                        .available("kma-web", "town-rss", key, &wanted, deadline, stop)
+                        .restored(
+                            "kma-web",
+                            "town-rss",
+                            key,
+                            &wanted,
+                            deadline,
+                            (until, race_at),
+                        )
                         .await
                         .map_err(|e| format!("town-rss read: {e}")),
                 }
@@ -1381,22 +1524,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // No acquisition was ever saved: legacy has no document either.
             return Ok(Vec::new());
         }
-        let stop = self.stored_stop(deadline, until, race_at);
         // KMA-RESTART-BOUND: the listing, None when it is unavailable or late (every publication
-        // absent, as on an empty store); it ends at `stop`.
+        // absent, as on an empty store); with a head start an owned restore.
         let listing = async {
-            match tokio::time::timeout_at(
-                stop,
-                self.reader
-                    .partitions("data-go-kr", kind, &key, &history_months(now), deadline),
+            self.listed(
+                "data-go-kr",
+                kind,
+                &key,
+                &history_months(now),
+                deadline,
+                (until, race_at),
             )
             .await
-            {
-                Err(_) => Ok(None),
-                Ok(Ok(listed)) => Ok(Some(listed)),
-                Ok(Err(e)) if records::absent(&e) => Ok(None),
-                Ok(Err(e)) => Err(format!("{kind} listing: {e}")),
-            }
+            .map_err(|e| format!("{kind} listing: {e}"))
         };
         // A listing not back at the head start races the latest publication's provider, as on
         // an empty store, while the listing goes on until `stop`.
@@ -1428,13 +1568,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             }
         }
         for partition in listed.iter().rev() {
-            let read = self.reader.available(
+            let read = self.restored(
                 "data-go-kr",
                 kind,
                 &key,
                 std::slice::from_ref(partition),
                 deadline,
-                stop,
+                (until, race_at),
             );
             let latest_here = collected && *partition == latest_part;
             // KMA-RESTART-BOUND: the latest publication's stored read not done at the head start
@@ -1842,9 +1982,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         })
     }
     /// KMA-RESTART-BOUND: the forecast zones and the mid regions of a request. Under the observed
-    /// source a zone read not done at the head start leaves the mids to the zones held (or those
-    /// of an empty store), so their providers start then instead of after the read; the read goes
-    /// on until the request's bound and answers the snapshot's zones if it ends by then.
+    /// source a zone read not done at the head start leaves the answer to the zones held (or
+    /// those of an empty store), so the mid providers start then instead of after the read; the
+    /// read runs on as owned work and fills the memory for later requests.
     async fn zones_and_mids(
         &self,
         region: &str,
@@ -1853,30 +1993,24 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         deadline: Instant,
         (until, race_at): (Instant, Instant),
     ) -> Result<(Arc<Zones>, HashMap<(MidModel, String), Vec<Doc>>), String> {
-        let mut read = Box::pin(self.zones(now, deadline));
-        let early = if self.observed_history && race_at < until {
-            tokio::time::timeout_at(race_at, &mut read).await.ok()
+        // One list answers both the mids and the assembly (review round 2): a zone read not done
+        // at the head start leaves this answer to the zones held; its list fills the memory for
+        // later requests.
+        let zones = if self.observed_history && race_at < until {
+            match self.zones_by(now, race_at).await {
+                Some(zones) => zones?,
+                None => {
+                    crate::resolver::race::raced(crate::observability::Component::Domestic);
+                    self.held_zones()
+                }
+            }
         } else {
-            Some((&mut read).await)
+            self.zones(now, deadline).await?
         };
-        if let Some(zones) = early {
-            let zones = zones?;
-            let mids = self
-                .mids(region, city, &zones, now, deadline, (until, race_at))
-                .await?;
-            return Ok((zones, mids));
-        }
-        crate::resolver::race::raced(crate::observability::Component::Domestic);
-        let held = self.held_zones();
-        let (read, mids) = tokio::join!(
-            tokio::time::timeout_at(until, read),
-            self.mids(region, city, &held, now, deadline, (until, race_at))
-        );
-        let zones = match read {
-            Ok(zones) => zones?,
-            Err(_) => held,
-        };
-        Ok((zones, mids?))
+        let mids = self
+            .mids(region, city, &zones, now, deadline, (until, race_at))
+            .await?;
+        Ok((zones, mids))
     }
     /// The zones this process last read, or those of an empty store.
     fn held_zones(&self) -> Arc<Zones> {
@@ -1884,7 +2018,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .clone()
-            .unwrap_or_else(|| self.empty_store_zones())
+            .unwrap_or_else(|| self.zone_memory().empty_store_zones())
     }
     /// The mid regions the chain asks for (`getAllDataFromDb`, `getMid`), concurrently.
     async fn mids(
@@ -2276,6 +2410,8 @@ pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId>
         content_sha256: identity(f).2,
     })
 }
+/// How long an owned forecast-zone refresh runs at most (KMA-RESTART-BOUND).
+const ZONE_READ_FOR: std::time::Duration = std::time::Duration::from_secs(30);
 /// Retry bound for generic latest and backfill acquisitions. Latest Short uses
 /// its finite provision+2/+5/+10 slots, while keeping this memo for backfill.
 const LATEST_RETRY: std::time::Duration = std::time::Duration::from_secs(5 * 60);

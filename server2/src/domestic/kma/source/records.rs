@@ -583,11 +583,221 @@ pub struct Partial {
     pub excluded: usize,
     /// Partitions whose read was [`absent`]: their acquisitions are absent for this request.
     pub unread: Vec<String>,
+    /// Some partitions come from an earlier completed read ([`Restores`]), not this request's.
+    pub earlier: bool,
 }
 impl Partial {
-    /// Whether every listed group was read (S16 records only from such a read).
+    /// Whether every listed group was read by this request (S16 records only from such a read).
     pub fn complete(&self) -> bool {
-        self.excluded == 0 && self.unread.is_empty()
+        self.excluded == 0 && self.unread.is_empty() && !self.earlier
+    }
+}
+/// How long an owned listing runs at most.
+const LIST_FOR: std::time::Duration = std::time::Duration::from_secs(8);
+/// How long an owned partition read runs at most (over thirty partitions, eight at a time, each
+/// up to the catalog's 3 s deadline).
+const READ_FOR: std::time::Duration = std::time::Duration::from_secs(15);
+/// An owned read ends its lookups this long before its owner deadline, so it answers.
+const READ_MARGIN: std::time::Duration = std::time::Duration::from_millis(200);
+/// The completed partition reads kept for a later request: bytes, entries and age.
+const EARLIER_BYTES: usize = 64 * 1024 * 1024;
+const EARLIER_ENTRIES: usize = 8192;
+const EARLIER_AGE: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+/// KMA-RESTART-BOUND (review round 2): the stored restores a request of the observed source
+/// waits for until its bound only. Each listing and partition read runs as owned work, one per
+/// key, that outlives the request (joined by later requests, bounded by its own deadline), and
+/// its completed result is kept: a request whose own read is not done by its bound answers from
+/// the latest completed read of each partition (`Partial::earlier`) or leaves the partition
+/// absent. Nothing is cancelled at a request's bound.
+pub struct Restores {
+    lists: crate::resolver::OwnedFlights<String, Result<Vec<String>, Error>>,
+    reads: crate::resolver::OwnedFlights<String, Result<Partial, Error>>,
+    earlier: Arc<std::sync::Mutex<Earlier>>,
+}
+#[derive(Default)]
+struct Earlier {
+    lists: HashMap<String, (std::time::Instant, Vec<String>)>,
+    /// Per catalog: when read, its acquisitions and their bytes.
+    reads: HashMap<String, (std::time::Instant, Vec<Fetched>, usize)>,
+    bytes: usize,
+}
+impl Earlier {
+    fn list(&mut self, key: String, partitions: Vec<String>) {
+        if self.lists.len() >= EARLIER_ENTRIES && !self.lists.contains_key(&key) {
+            self.lists.clear();
+        }
+        self.lists
+            .insert(key, (std::time::Instant::now(), partitions));
+    }
+    fn read(&mut self, prefix: &str, wanted: &[String], read: &Partial) {
+        let now = std::time::Instant::now();
+        for partition in wanted.iter().filter(|p| !read.unread.contains(p)) {
+            let fetched: Vec<Fetched> = read
+                .fetched
+                .iter()
+                .filter(|f| f.partition == *partition)
+                .cloned()
+                .collect();
+            let bytes = fetched
+                .iter()
+                .flat_map(|f| f.pages.iter())
+                .map(|p| p.len())
+                .sum();
+            let key = format!("{prefix}{partition}");
+            if let Some((_, _, old)) = self.reads.insert(key, (now, fetched, bytes)) {
+                self.bytes -= old;
+            }
+            self.bytes += bytes;
+        }
+        while self.bytes > EARLIER_BYTES || self.reads.len() > EARLIER_ENTRIES {
+            let Some(oldest) = self
+                .reads
+                .iter()
+                .min_by_key(|(_, (at, _, _))| *at)
+                .map(|(k, _)| k.clone())
+            else {
+                break;
+            };
+            if let Some((_, _, old)) = self.reads.remove(&oldest) {
+                self.bytes -= old;
+            }
+        }
+    }
+}
+impl Default for Restores {
+    fn default() -> Self {
+        let config = crate::resolver::OwnedConfig {
+            running: 64,
+            entries: 4096,
+            retain: std::time::Duration::from_secs(3),
+        };
+        Self {
+            lists: crate::resolver::OwnedFlights::new(config.clone())
+                .expect("static owned restore bounds"),
+            reads: crate::resolver::OwnedFlights::new(config).expect("static owned restore bounds"),
+            earlier: Arc::default(),
+        }
+    }
+}
+impl Restores {
+    /// [`Reader::partitions`] as owned work the request waits for until `stop`: None when it is
+    /// not done by then (or the store is unavailable) and no earlier listing of the key is kept.
+    #[allow(clippy::too_many_arguments)] // One key's months plus the reader and the stop.
+    pub async fn partitions<T: IndexListing + Clone + Send + Sync + 'static>(
+        &self,
+        reader: &Reader<T>,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        months: &[u32],
+        stop: Instant,
+    ) -> Result<Option<Vec<String>>, Error> {
+        let flight = format!("{}{months:?}", Reader::<T>::prefix(source, kind, key)?);
+        let start = {
+            let (reader, source, kind, key, months) = (
+                reader.clone(),
+                source.to_owned(),
+                kind.to_owned(),
+                key.clone(),
+                months.to_vec(),
+            );
+            let (earlier, flight) = (self.earlier.clone(), flight.clone());
+            move |deadline: Instant| async move {
+                let listed = reader
+                    .partitions(&source, &kind, &key, &months, deadline)
+                    .await;
+                if let Ok(partitions) = &listed {
+                    earlier
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .list(flight, partitions.clone());
+                }
+                listed
+            }
+        };
+        match self.lists.join(flight.clone(), stop, LIST_FOR, start).await {
+            crate::resolver::Waited::Ready(Ok(partitions)) => return Ok(Some(partitions)),
+            crate::resolver::Waited::Ready(Err(e)) if !absent(&e) => return Err(e),
+            _ => {}
+        }
+        let earlier = self.earlier.lock().unwrap_or_else(|e| e.into_inner());
+        Ok(earlier
+            .lists
+            .get(&flight)
+            .filter(|(at, _)| at.elapsed() < EARLIER_AGE)
+            .map(|(_, partitions)| partitions.clone()))
+    }
+    /// [`Reader::available`] as owned work the request waits for until `stop`. Partitions it has
+    /// not read by then come from the latest completed read of each, when one is kept
+    /// (`Partial::earlier`), and are unread otherwise.
+    #[allow(clippy::too_many_arguments)] // One key's partitions plus the reader and the stop.
+    pub async fn available<T: IndexListing + Clone + Send + Sync + 'static>(
+        &self,
+        reader: &Reader<T>,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partitions: &[String],
+        stop: Instant,
+    ) -> Result<Partial, Error> {
+        let prefix = Reader::<T>::prefix(source, kind, key)?;
+        let flight = format!("{prefix}{}", partitions.join(","));
+        let start = {
+            let (reader, source, kind, key, partitions) = (
+                reader.clone(),
+                source.to_owned(),
+                kind.to_owned(),
+                key.clone(),
+                partitions.to_vec(),
+            );
+            let (earlier, prefix) = (self.earlier.clone(), prefix.clone());
+            move |deadline: Instant| async move {
+                let read = reader
+                    .available(
+                        &source,
+                        &kind,
+                        &key,
+                        &partitions,
+                        deadline,
+                        deadline.checked_sub(READ_MARGIN).unwrap_or(deadline),
+                    )
+                    .await;
+                if let Ok(read) = &read {
+                    earlier.lock().unwrap_or_else(|e| e.into_inner()).read(
+                        &prefix,
+                        &partitions,
+                        read,
+                    );
+                }
+                read
+            }
+        };
+        match self.reads.join(flight, stop, READ_FOR, start).await {
+            crate::resolver::Waited::Ready(read) => read,
+            _ => {
+                let earlier = self.earlier.lock().unwrap_or_else(|e| e.into_inner());
+                let mut read = Partial::default();
+                for partition in partitions {
+                    match earlier
+                        .reads
+                        .get(&format!("{prefix}{partition}"))
+                        .filter(|(at, _, _)| at.elapsed() < EARLIER_AGE)
+                    {
+                        Some((_, fetched, _)) => {
+                            read.fetched.extend(fetched.iter().cloned());
+                            read.earlier = true;
+                        }
+                        None => read.unread.push(partition.clone()),
+                    }
+                }
+                read.fetched.sort_by(|a, b| {
+                    a.fetched_at_ms
+                        .cmp(&b.fetched_at_ms)
+                        .then_with(|| a.partition.cmp(&b.partition))
+                });
+                Ok(read)
+            }
+        }
     }
 }
 /// KMA-RESTART-BOUND: whether a failed read leaves what it reads absent for the request instead

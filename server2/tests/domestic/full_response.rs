@@ -2397,7 +2397,73 @@ impl ForecastAcquire for Logged {
     }
 }
 /// A restarted process of the observed source reading through `counted`, whose forecast
-/// acquirer logs what it is asked; its answer to the Seoul town, and that log.
+/// acquirer logs what it is asked.
+struct Restarted {
+    backend: KmaBackend,
+    log: Arc<std::sync::Mutex<Vec<String>>>,
+}
+impl Restarted {
+    fn new(peer: &Peer, counted: &Counted) -> Self {
+        let store = Arc::new(
+            CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
+        );
+        let writer = Writer::new(store, Config::default()).unwrap();
+        let log = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let doubles = Doubles::new(peer);
+        let warning = Arc::new(
+            WarningStore::new(
+                counted.bulk(),
+                CatalogLimits::default(),
+                StoreConfig::default(),
+            )
+            .unwrap(),
+        );
+        let source = S3Source::new_observed_with_warning_store(
+            counted.clone(),
+            Arc::new(|| NOW),
+            doubles.pages.clone(),
+            Arc::new(Unreachable),
+            warning,
+        )
+        .unwrap()
+        .with_life(Some(doubles.life.clone()))
+        .with_forecast(Some(Arc::new(Logged {
+            inner: Forecasts {
+                writer,
+                calls: Arc::new(AtomicUsize::new(0)),
+            },
+            log: log.clone(),
+            started: Instant::now(),
+        })));
+        let service = Arc::new(Service::new(counted.clone(), doubles.office.clone()).unwrap());
+        let backend = KmaBackend::new(
+            Arc::new(source),
+            Arc::new(|| NOW),
+            AssemblyConfig::default(),
+        )
+        .with_narrative(Some(service));
+        Self { backend, log }
+    }
+    /// Its answer to the Seoul town, and what its forecast acquirer was asked meanwhile.
+    async fn answer(
+        &self,
+    ) -> (
+        Result<server2::domestic::kma::Outcome, GatewayError>,
+        Vec<String>,
+    ) {
+        let before = self.log.lock().unwrap().len();
+        let outcome = self
+            .backend
+            .outcome(
+                super::source_s3::request(),
+                Instant::now() + Duration::from_secs(8),
+            )
+            .await;
+        let asked = self.log.lock().unwrap()[before..].to_vec();
+        (outcome, asked)
+    }
+}
+/// The first answer of a [`Restarted`] process, and what its forecast acquirer was asked.
 async fn restarted_answer(
     peer: &Peer,
     counted: &Counted,
@@ -2405,51 +2471,7 @@ async fn restarted_answer(
     Result<server2::domestic::kma::Outcome, GatewayError>,
     Vec<String>,
 ) {
-    let store =
-        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
-    let writer = Writer::new(store, Config::default()).unwrap();
-    let log = Arc::new(std::sync::Mutex::new(Vec::new()));
-    let doubles = Doubles::new(peer);
-    let warning = Arc::new(
-        WarningStore::new(
-            counted.bulk(),
-            CatalogLimits::default(),
-            StoreConfig::default(),
-        )
-        .unwrap(),
-    );
-    let source = S3Source::new_observed_with_warning_store(
-        counted.clone(),
-        Arc::new(|| NOW),
-        doubles.pages.clone(),
-        Arc::new(Unreachable),
-        warning,
-    )
-    .unwrap()
-    .with_life(Some(doubles.life.clone()))
-    .with_forecast(Some(Arc::new(Logged {
-        inner: Forecasts {
-            writer,
-            calls: Arc::new(AtomicUsize::new(0)),
-        },
-        log: log.clone(),
-        started: Instant::now(),
-    })));
-    let service = Arc::new(Service::new(counted.clone(), doubles.office.clone()).unwrap());
-    let backend = KmaBackend::new(
-        Arc::new(source),
-        Arc::new(|| NOW),
-        AssemblyConfig::default(),
-    )
-    .with_narrative(Some(service));
-    let outcome = backend
-        .outcome(
-            super::source_s3::request(),
-            Instant::now() + Duration::from_secs(8),
-        )
-        .await;
-    let asked = log.lock().unwrap().clone();
-    (outcome, asked)
+    Restarted::new(peer, counted).answer().await
 }
 fn body_of(outcome: Result<server2::domestic::kma::Outcome, GatewayError>) -> serde_json::Value {
     match outcome {
@@ -2653,6 +2675,152 @@ async fn a_late_zone_read_leaves_the_mid_providers_their_time() {
     };
     let prompt = mid_data(false).await;
     assert_eq!(mid_data(true).await, prompt);
+}
+
+/// RB-store-deadline, round 2: in one process, a stored read of the current observations that
+/// takes 2.6 s per page ends after the first answer's bound. It is not cancelled: it runs on as
+/// owned work, and the second request (whose own acquisitions the five-minute memo blocks, as in
+/// a warm process) answers from its result, equal to the producing process's, without asking
+/// the provider again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_stored_read_answers_the_next_request_from_its_owned_restore() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let produced = produced_answer(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    counted.delay_gets(
+        "raw/v2/data-go-kr/ultra-srt-ncst/",
+        0,
+        Duration::from_millis(2600),
+    );
+    let process = Restarted::new(&peer, &counted);
+    let (first, _) = process.answer().await;
+    body_of(first);
+    // The first request's restore ends after its answer.
+    tokio::time::sleep(Duration::from_secs(4)).await;
+    let (second, asked) = process.answer().await;
+    assert!(
+        asked.iter().all(|a| !a.contains("UltraSrtNcst")),
+        "no provider call beyond the memo: {asked:?}"
+    );
+    assert_eq!(body_of(second), produced, "the producing process's answer");
+}
+
+/// A forecast-zone list fetched after the one a process acquires itself (newer in the fold), in
+/// which Seoul's and Gwacheon's land zones have swapped `regId`s (Seoul `11B10102`, as against
+/// `11B10101` in the release's land zones): the town's mid temperatures come from another
+/// region.
+async fn store_moved_seoul_zones(peer: &Peer) {
+    let mut page: serde_json::Value = serde_json::from_slice(&land_zone_page()).unwrap();
+    for item in page["response"]["body"]["items"]["item"]
+        .as_array_mut()
+        .unwrap()
+    {
+        if item["regName"] == "서울" && item["regSp"] == "C" {
+            item["regId"] = json!("11B10102");
+        } else if item["regId"] == "11B10102" {
+            item["regId"] = json!("11B10101");
+        }
+    }
+    let limits = CatalogLimits::default();
+    let key = ProviderKey::Named {
+        id: "forecast-zones".into(),
+    };
+    let p = publication(20260924, 0);
+    let record = server2::storage::RawRecord::new(
+        "data-go-kr",
+        "forecast-zone",
+        &key,
+        p.period(),
+        NOW as u64 - 30_000,
+        200,
+        "application/json",
+        None,
+        page.to_string().into_bytes().into(),
+        &limits.raw,
+    )
+    .unwrap();
+    let member = server2::storage::GroupMember {
+        envelope: record.envelope.clone(),
+        catalogs: vec![
+            server2::storage::CatalogId::for_record(&record.envelope.identity, &p.base_date())
+                .unwrap(),
+        ],
+    };
+    let declaration = server2::storage::GroupDeclaration::new(vec![member], &limits).unwrap();
+    CatalogStore::new(peer.transport_limited(2), limits)
+        .unwrap()
+        .publish(declaration, vec![record], deadline())
+        .await
+        .unwrap();
+}
+fn temperature_missing(body: &serde_json::Value) -> bool {
+    body["midData"]["dailyStatus"]["reasons"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|r| r == "temperature-unavailable")
+}
+
+/// RB-zone-mid-starvation, round 2: the stored zone list (Seoul under `11B10102`) arrives at
+/// 1.2 s, after the mids started at the head start with the release's land zones
+/// (`11B10101`). One answer uses one list for the mids and the assembly, so the temperatures it
+/// acquired are the ones it shows.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn one_zone_list_answers_both_the_mids_and_the_assembly() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    store_moved_seoul_zones(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/data-go-kr/forecast-zone/"]);
+    let opener = {
+        let gate = gate.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(1200)).await;
+            gate.open();
+        })
+    };
+    let (outcome, asked) = restarted_answer(&peer, &counted).await;
+    opener.await.unwrap();
+    assert!(gate.was_reached(), "the zone list was read");
+    let (temp, _) = asked_at(&asked, &["family: MidTa"]);
+    assert_eq!(temp, 1, "{asked:?}");
+    let body = body_of(outcome);
+    assert!(
+        !temperature_missing(&body),
+        "{}",
+        body["midData"]["dailyStatus"]
+    );
+}
+
+/// RB-zone-refill, round 2: every read of the stored zone list (Seoul under `11B10102`) takes
+/// 2.6 s, past the first answer's head start and bound. The read runs on as owned work and fills
+/// the process's zones, so the next request uses that list: it asks the temperatures of
+/// `11B10102` and shows them.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_zone_read_fills_the_zones_of_the_next_request() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    store_moved_seoul_zones(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    counted.delay_gets(
+        "raw/v2/data-go-kr/forecast-zone/",
+        0,
+        Duration::from_millis(2600),
+    );
+    let process = Restarted::new(&peer, &counted);
+    let (first, _) = process.answer().await;
+    body_of(first);
+    tokio::time::sleep(Duration::from_secs(4)).await;
+    let (second, asked) = process.answer().await;
+    let (moved, _) = asked_at(&asked, &["family: MidTa", "11B10102"]);
+    assert_eq!(moved, 1, "{asked:?}");
+    let body = body_of(second);
+    assert!(
+        !temperature_missing(&body),
+        "{}",
+        body["midData"]["dailyStatus"]
+    );
 }
 
 /// The fixed Seoul geocode of [`FixedGeo`], answered after 300 ms.
