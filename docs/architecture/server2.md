@@ -361,9 +361,10 @@ wakes and skips affected summaries immediately. A summary can still be skipped
 on wait/write admission or timeout, and a later request retries unexamined inputs.
 Legacy optional backfill
 remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA gets
-an 8 s handler budget for stored reads, and everything it waits for ends 2.5 s after the handler
-starts (2.7 s for air and life, 2.9 s for the narrative), while geocode retains its own 3 s
-cap. Other handlers keep their existing budgets. These are limits, not latency
+an 8 s budget for stored reads, and everything it waits for ends 2.5 s after the gateway accepted
+the request (2.7 s for air and life, 2.9 s for the narrative), while geocode retains its own 3 s
+cap and its time counts against those waits
+([restart bound](#restart-bound-no-501-the-allocator-and-the-accept-clock-2026-11-09)). Other handlers keep their existing budgets. These are limits, not latency
 measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
 
@@ -2376,8 +2377,9 @@ later had them. The restores ran behind each other and behind CPU work. AK chose
 a part S3 holds that a restarted process has not restored yet is not an allowed omission; only a
 slow provider's part may be left out.
 
-**Head start.** A stored restore has `HEAD_START`, 700 ms from the start of the KMA request
-(`resolver::race`, code, not a setting). A restore not done then is raced: the owned acquisitions
+**Head start.** A stored restore has `HEAD_START`, 700 ms from the accept of the request
+(`resolver::race`, code, not a setting; from the start of the KMA request before
+[KMA-RESTART-BOUND](#restart-bound-no-501-the-allocator-and-the-accept-clock-2026-11-09)). A restore not done then is raced: the owned acquisitions
 of what memory lacks start alongside it, as on an empty S3, and the answer takes whichever
 delivers by the request bound (2.5 s; air and life 2.7 s; the narrative 2.9 s). A restore done by
 then leaves the acquisitions to what S3 lacks, so it makes no provider call a running process
@@ -2392,8 +2394,11 @@ would not make. Each raced restore records one `operation.action` (stage `restor
 | Narrative | the office's stored read, started right after `prepare` beside the snapshot as owned work: a waiter that stops waiting neither cancels it nor sets the error gate | one fetch-and-publish of the office when the read has no answer at the head start (still running or failed), at most once per office and ten minutes. It shares one fetch per office with the three-minute refresh: whichever starts second joins the running one. The newest publication answers, whichever of the read, the race and the refresh ends last, also past the answer's 30 s TTL: an announcement older than one the office answered is not installed, and the next request reads S3 |
 | Warnings | the request's zone-state read, started with the request on the request lane | the warning cycle (every three minutes), whose offered state answers when it comes first, or when the read fails |
 
-Grid forecasts (SHRT/VSRT/ODAM, RSS, mid) are not raced: they are read per request, and absent
-publications are acquired at once ([S15b-4a](#s15b-4a-request-time-forecast-acquisition-2026-10-15)).
+Grid forecasts (SHRT/VSRT/ODAM, RSS, mid) are read per request, and absent publications are
+acquired at once ([S15b-4a](#s15b-4a-request-time-forecast-acquisition-2026-10-15)). Since
+[KMA-RESTART-BOUND](#restart-bound-no-501-the-allocator-and-the-accept-clock-2026-11-09) a grid
+family's or the RSS read not done at the head start, and the read of a mid model's latest
+publication, are raced too.
 
 **Fill (decision 3).** Of the 8-day hourly window only today and yesterday come from providers. A
 raced restore lists today's and yesterday's AWS hourly catalogs (control objects only) and
@@ -2499,6 +2504,65 @@ and counted (`dropped_writes`), and a removal is no longer awaited by the read t
 corrupt copy. The owner and root locks, the caps and the eviction are unchanged and still taken
 on that thread. The thread holds only a weak reference: dropping the cache ends it and discards
 queued work (the cache is disposable).
+
+### Restart bound: no 501, the allocator and the accept clock (2026-11-09)
+
+Seven EC2 restarts of the #2907 binary (2026-11-09, t3.small) answered the first request with 501
+three times and otherwise in 3.3 to 5.0 s. For 4 to 5 s after a restart both vCPUs were busy, 47 to
+70% of the perf samples in musl's `__unlock` (the static musl binary had no global allocator, so
+every allocation passed mallocng's one lock), and the request assembly took about 1 s instead of
+42 to 81 ms. In each 501 a stored read the request waits for passed the catalog's 3 s deadline and
+failed the snapshot: the day's forecast-zone list in all three (its catalog holds the same list
+once per process start, restored group after group), and in one restart also a chunk of six grid
+partitions. The 2.5 s wait counted from the KMA dispatch, after the geocode. AK chose on 2026-11-09
+to fix all three ([intent](../../intent/issue-2614-kma-restart-bound.md),
+[spec](../../specs/issue-2614-kma-restart-bound.md),
+[plan](../../plans/issue-2614-kma-restart-bound.md)).
+
+**Unavailable stored reads (NO-501).** A read that fails because the store is slow, busy or
+unreachable (`records::absent`: a timeout, a transport or admission failure, an error status)
+leaves its part absent for the request instead of failing the answer; a corrupt or invalid object
+still fails it, and the gateway answers 501 as before. `Reader::available` reads a family's
+partitions as `all_counted` does and names the partitions it could not read; their acquisitions
+are absent, and the read counts as partial for S16 (no summary is recorded from it).
+
+| Read | Unavailable | Raced at the head start |
+| --- | --- | --- |
+| Grid family (current, ultra-short, short) listing | every publication absent, as on an empty store: the needed ones are acquired at once | — |
+| Grid family partitions | the unread partitions absent: their needed publications are acquired when the read ends, if the bound has not passed; the legacy source does not backfill them | a read not done then: the listed publications the request needs (the latest, today's required ones and, for short, those of the rows shown as current), as on an empty store |
+| Town RSS | absent: the latest publication is requested | a read not done then: the latest publication |
+| Mid forecast, temperature, land (observed) | listing: absent, the latest requested for a collected region; a partition: absent, and the search ends (an older save is not the answer) | the read of the latest partition of a collected region: its latest publication |
+| Mid (legacy source) | the month absent, and the search ends | — |
+| Forecast-zone list | the zones held, otherwise those of an empty store (the release's land zones for the observed source), not kept: the next request reads again | — (each process start acquires the list once, unawaited) |
+
+A raced read that ends in time still answers with what it read, beside the acquisitions (each
+acquisition stores a second copy). The raced reads add, per restart and cell, at most the needed
+publications of each grid family (current up to 24, ultra-short up to 5, short up to 2
+`data.go.kr` units), one RSS page and three mid publications, each at most once per five minutes
+per process (`LATEST_RETRY`; the previous short publication three hours). A town outside the town
+list whose stored projection cannot be read still fails (unchanged), and so does a panic.
+
+**Allocator (ALLOCATOR).** `src/lib.rs` declares `mimalloc::MiMalloc` as the global allocator, so
+the binaries (`server2`, `server2-notice`, `server2-feasibility`), the examples and the tests all
+use it. Crate `mimalloc` 0.1.52 with `libmimalloc-sys` 0.1.49 (both MIT; mimalloc 3.3.2 by
+Microsoft, MIT, bundled as C source and compiled by the `cc` build dependency already in the tree;
+no other crate is added to the release build). The tests also link `libmimalloc-sys` with its
+`extended` feature (adds `cty`) to check that heap allocations lie in mimalloc's heap. The musl
+release artifact is built by CI's Linux job (`tools/ci.py`, `musl-tools` from
+`tools/prepare-ci.sh`); it cannot be built on the macOS development hosts. mimalloc keeps
+per-thread heaps and returns freed segments to the OS lazily, so the resident set can sit a few
+MiB above musl's for the same live data; the EC2 measurement records it.
+
+**Accept clock (ACCEPT-CLOCK).** The gateway takes the instant it accepted the request and passes it
+with its 9 s deadline; a native backend's budget counts from it (`deadline.min(accepted + budget)`),
+so the KMA deadline the observed source derives its instants from (the 700 ms head start, 2.5 s,
+2.7 s, 2.9 s) counts the geocode before the dispatch. A slow geocode leaves the KMA inputs less
+time instead of making the answer later. Direct `/kma/addr` routes have no geocode and keep their
+start.
+
+Not changed: the bounds, the 8 s stored-read budget, the catalog deadline and the assembly's
+CPU-permit wait (it ends at the request deadline). The forecast-zone catalog still gains one
+identical list per process start.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
