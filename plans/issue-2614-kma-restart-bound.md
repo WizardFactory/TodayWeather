@@ -9,6 +9,7 @@ Task declaration: `server2/config/tasks/KMA-RESTART-BOUND.json`. Stacked on #290
 5. Documents, declaration, fmt, clippy, placement gate and artifact policy; focused tests (the coordinator runs the full suite).
 6. MEASURE by the coordinator: EC2 restart comparison with the CI musl binary.
 7. Codex review of #2916 (Required): the observed grid, RSS and mid restores end at the request bound with their listings raced from the head start (RB-store-deadline, RB-listing-race), and a late zone read leaves the mids to the held or empty-store zones at the head start (RB-zone-mid-starvation); regression tests first, seen failing.
+8. Codex review round 2 (Required): the restores the request stops waiting for run on as owned work (`records::Restores`, the owned zone refresh) and later requests answer from their results; one zone list per answer; the process's acquired list installed in the held zones; regression tests first, seen failing.
 
 R2 (a shorter bound on the assembly's CPU permit) is not done: the permit wait already ends at the request deadline, and a shorter bound would have to drop required data or answer without the assembly; the allocator removes the measured cause of the slow assembly, and MEASURE shows whether more is needed.
 

@@ -2527,16 +2527,29 @@ partitions, at most eight lookups at once, and names the partitions it could not
 read by its stop instant; their acquisitions are absent, and the read counts as partial for S16 (no
 summary is recorded from it).
 
-Under the observed source the stored restore of a grid family, the town RSS and a mid model (the
-listing and the partition reads) ends at the request's bound (2.5 s from the accept), not at the
-8 s stored-read budget: providers race it from the head start, and a restore of many partitions
-each held to the catalog's 3 s deadline would otherwise wait batch after batch past the request
-deadline (Codex review of #2916, RB-store-deadline). A listing not back at the head start leaves
-every publication the request needs to its provider at once (RB-listing-race). A forecast-zone read
-not done at the head start leaves the mid regions to the zones this process last read (or those of
-an empty store), so the mid acquisitions start then; the zone read goes on until the bound and
-answers the snapshot's zones if it ends by then (RB-zone-mid-starvation). The legacy source keeps
-its deadline.
+Under the observed source a request waits for the stored restore of a grid family, the town RSS
+and a mid model (the listing and the partition reads) until its bound (2.5 s from the accept), not
+the 8 s stored-read budget: providers race it from the head start, and a restore of many
+partitions each held to the catalog's 3 s deadline would otherwise wait batch after batch past the
+request deadline (Codex review of #2916, RB-store-deadline). The restore is not cancelled at the
+bound (review round 2): each listing and partition read is owned work (`records::Restores`, one
+flight per key, joined by concurrent requests, its result answering joiners for 3 s; a listing
+runs at most 8 s, a read at most 15 s), and the process keeps the latest completed listing of each
+key and read of each partition (at most 64 MiB and 8,192 partitions, the oldest dropped; 30 minutes
+at most). A request whose own restore is not done by its bound answers from those (the read then
+counts as partial for S16), and leaves absent what none holds, so a slow store in a warm process,
+where the five-minute memo keeps the providers from being asked again, delays the data by one
+request instead of dropping it. A listing not back at the head start leaves every publication the
+request needs to its provider at once (RB-listing-race).
+
+The forecast-zone refresh of the observed request is owned work too (one flight, at most 30 s):
+the request joins it until the head start and otherwise answers with the zones this process last
+read, or those of an empty store, so the mid acquisitions start then (RB-zone-mid-starvation). One
+answer uses one list for its mid regions and its assembly; a refresh that ends later installs its
+list in the memory and the held zones for later requests (RB-zone-refill). The process's own
+forecast-zone acquisition installs its list in the held zones at once (folded over the memory
+unless the memory already holds a list fetched later) and clears the memory as before. The legacy
+source keeps its deadline and reads directly.
 
 | Read | Unavailable | Raced at the head start |
 | --- | --- | --- |
@@ -2545,7 +2558,7 @@ its deadline.
 | Town RSS | absent: the latest publication is requested | a listing or read not done then: the latest publication |
 | Mid forecast, temperature, land (observed) | listing: absent, the latest requested for a collected region; a partition: absent, and the search ends (an older save is not the answer) | a listing not done then, and the read of the latest partition of a collected region: its latest publication |
 | Mid (legacy source) | the month absent, and the search ends | — |
-| Forecast-zone list | the zones held, otherwise those of an empty store (the release's land zones for the observed source), not kept: the next request reads again | a read not done then: the mids use the zones held or an empty store's (the read goes on until the bound) |
+| Forecast-zone list | the zones held, otherwise those of an empty store (the release's land zones for the observed source), not kept: the next request reads again | a read not done then: the answer (mids and assembly) uses the zones held or an empty store's; the owned read fills the memory for later requests |
 
 A raced read that ends in time still answers with what it read, beside the acquisitions (each
 acquisition stores a second copy). The raced reads add, per restart and cell, at most the needed
