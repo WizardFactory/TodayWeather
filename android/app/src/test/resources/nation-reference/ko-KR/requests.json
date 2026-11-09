@@ -1,0 +1,313 @@
+{
+ "lang": "ko-KR",
+ "requests": [
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/start"
+  },
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/start"
+  },
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/tab/forecast"
+  },
+  {
+   "step": "open nation (late answer)",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "open nation (late answer)",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "open nation (late answer)",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "open nation-air",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation-air"
+  },
+  {
+   "step": "open warnings",
+   "method": "GET",
+   "url": "<server>/v000903/kma/special",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "json",
+   "timeout": 0,
+   "page": "#/kma-special"
+  },
+  {
+   "step": "failed and empty answers",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "failed and empty answers",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation-air"
+  },
+  {
+   "step": "failed and empty answers",
+   "method": "GET",
+   "url": "<server>/v000903/kma/special",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "json",
+   "timeout": 0,
+   "page": "#/kma-special"
+  },
+  {
+   "step": "failed and empty answers",
+   "method": "GET",
+   "url": "<server>/v000903/kma/special",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "json",
+   "timeout": 0,
+   "page": "#/kma-special"
+  },
+  {
+   "step": "theme dark",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "theme dark",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "theme dark",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "theme dark",
+   "method": "GET",
+   "url": "<server>/v000903/kma/special",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "json",
+   "timeout": 0,
+   "page": "#/kma-special"
+  },
+  {
+   "step": "theme old",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "theme old",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "theme old",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "theme old",
+   "method": "GET",
+   "url": "<server>/v000903/kma/special",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "json",
+   "timeout": 0,
+   "page": "#/kma-special"
+  },
+  {
+   "step": "theme light",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "theme light",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "wind speed km/h",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=km/h&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "wind speed km/h",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "wind speed km/h",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=km/h&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation"
+  },
+  {
+   "step": "air standard airnow",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=km/h&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airnow&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "air standard airnow",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "air standard airnow",
+   "method": "GET",
+   "url": "<server>/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=km/h&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airnow&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "responseType": "",
+   "timeout": 0,
+   "page": "#/nation-air"
+  }
+ ]
+}

@@ -90,6 +90,9 @@ const EXPAND_RETRY: Duration = Duration::from_secs(60);
 /// Acquisitions of one minute tried, newest first, when a newer one is not complete or does not
 /// parse.
 const MINUTE_CANDIDATES: usize = 3;
+/// A minute page this recent is held: it answers while the next one is acquired beside the
+/// request (KMA-MINUTE-PAGE). The readers look back 20 minutes.
+const MINUTE_HELD_MS: i64 = 20 * 60_000;
 /// Legacy minute collection cadence.
 const MINUTE_CADENCE: i64 = 2;
 /// S3 day partitions read again after this long (other processes may have published).
@@ -1270,27 +1273,35 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let not_before = latest.map(|l| schedule::from_ms(schedule::to_ms(l) + 60_000));
         let step = MINUTE_CADENCE * 60_000;
         let bucket = schedule::from_ms(now_ms.div_euclid(step) * step);
-        Some(
-            self.own(Acq::Minute(bucket), page_time(), until, move |this| {
-                Box::pin(async move {
-                    if !this.claim(&Flight::Minute, MINUTE_RETRY) {
-                        return;
-                    }
-                    let request = WebRequest::aws_minute(not_before);
-                    if let Some(records) = this
-                        .acquire_web(request, Instant::now() + page_time())
-                        .await
-                        && let Some((p, rows)) = parse_minute(&records)
-                    {
-                        let mut s = this.state();
-                        s.pages.minute.insert(p, rows);
-                        let floor = schedule::from_ms(schedule::to_ms(p) - MINUTE_KEEP_MS as i64);
-                        s.pages.minute.retain(|k, _| *k > floor);
-                        s.pages.dirty = true;
-                    }
-                })
-            }),
-        )
+        // A held page answers now: the KMA page takes about the observed bound to arrive (2.1 to
+        // 2.6 s on EC2), so waiting for it delays the answer and still misses it. The owned
+        // acquisition runs on its own and serves later requests. Without a held page the request
+        // waits as before.
+        let held = latest.is_some_and(|l| l > schedule::from_ms(now_ms - MINUTE_HELD_MS));
+        let acquisition = self.own(Acq::Minute(bucket), page_time(), until, move |this| {
+            Box::pin(async move {
+                if !this.claim(&Flight::Minute, MINUTE_RETRY) {
+                    return;
+                }
+                let request = WebRequest::aws_minute(not_before);
+                if let Some(records) = this
+                    .acquire_web(request, Instant::now() + page_time())
+                    .await
+                    && let Some((p, rows)) = parse_minute(&records)
+                {
+                    let mut s = this.state();
+                    s.pages.minute.insert(p, rows);
+                    let floor = schedule::from_ms(schedule::to_ms(p) - MINUTE_KEEP_MS as i64);
+                    s.pages.minute.retain(|k, _| *k > floor);
+                    s.pages.dirty = true;
+                }
+            })
+        });
+        if held {
+            crate::observability::spawn(acquisition);
+            return None;
+        }
+        Some(acquisition)
     }
     /// The hourly page of `hour` (the latest and previous hours; retried after 10 minutes).
     fn ensure_hourly(

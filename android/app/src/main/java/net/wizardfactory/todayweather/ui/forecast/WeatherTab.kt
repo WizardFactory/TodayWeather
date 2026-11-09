@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
@@ -87,8 +88,6 @@ class WeatherTabHost(
     val onNext: () -> Unit,
     /** Saves `expandShortChart`. */
     val onExpand: (Boolean) -> Unit,
-    /** The units page (AN-12). */
-    val onUnits: () -> Unit = {},
     /** The selected place's alarms (AN-14). */
     val onBell: () -> Unit = {},
     /** Sharing the weather (AN-16). */
@@ -109,13 +108,19 @@ object WeatherTabTags {
 
 /**
  * The Hourly or Daily tab (#2887): a visit of ForecastCtrl's scope, new each time the tab opens, that applies the
- * selected place's record whenever it changes (a swipe, a load, the cache), as `applyEvent` did; the page, its title
+ * selected place's record whenever it changes (a swipe, a load, the cache) and on each of TabCtrl's `applyEvent`s
+ * ([applies]: a load starting, the gate included, or a response applied), as ForecastCtrl did; the page, its title
  * with the current position's location glyph or the loading spinner, the bell and share buttons, and the pollen and
- * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`).
+ * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`) and the
+ * standard opens S07 ([onUnits], `goUnitsPage`). The visit reads the temperature unit and the theme as it applies, as
+ * ForecastCtrl did, so a change on the settings pages over it shows in the next apply. Opened with no enabled place, it
+ * asks how to start ([onNoPlace], `startPopup`). The title's spinner also turns while the current position is looked up
+ * ([locating]).
  */
 @Composable
 fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
-                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}): TabContent {
+                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
+                       locating: Boolean = false, onNoPlace: () -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -123,23 +128,31 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
         ForecastScope(type, metrics, state.units.temperatureUnit == "F", theme == Theme.PHOTO,
             YesterdayText(texts["LOC_SAME_AS_YESTERDAY"], texts["LOC_THAN_YESTERDAY"]), state.expandShortChart)
     }
+    // `Units.getUnit('temperatureUnit')` and `settingsInfo.theme` as ForecastCtrl reads them.
+    visit.fahrenheit = state.units.temperatureUnit == "F"
+    visit.photoTheme = theme == Theme.PHOTO
     val index = state.placeIndex
     val place = state.places.getOrNull(index)
     LaunchedEffect(place) { place?.let { host.readCache(it) } }
     val entry = place?.let { entries[WeatherRepository.key(it)] }
     val record = remember(place, entry) { place?.let { cityRecord(it, entry) } }
     val hasPush = remember(state.push, index) { hasPushInfo(state, index) }
-    val opened = remember(visit) { BooleanArray(1) }
-    // The apply is the visit's own state, so it runs while composing, before the page reads it.
-    val applied = remember(visit, record, hasPush) {
+    // Whether the visit has opened, and whether it found no enabled place when it did.
+    val opened = remember(visit) { BooleanArray(2) }
+    // The apply is the visit's own state, so it runs while composing, before the page reads it. A load starting applies
+    // the place as it is (`applyEvent` "loadWeatherData"), so a theme chosen on S08 shows the saved photo at once (#2915 F2).
+    // A photo the feed gave the place alone is `loadWeatherPhotosEvent`: the photo, without an apply (#2915 F4).
+    val weather = remember(record) { record?.let { JsonObject(it - "photo") } }
+    val applied = remember(visit, weather, hasPush, applies) {
         if (!opened[0]) {
             opened[0] = true
-            visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
+            opened[1] = !visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
         } else {
             visit.apply(record, hasPush)
         }
         Any()
     }
+    remember(visit, record?.get("photo")) { visit.photoLoaded(record) }
     val units = state.units
     val page = remember(applied, units, texts) {
         ForecastPage(visit, PageUnits(units.temperatureUnit, units.windSpeedUnit, units.pressureUnit, units.distanceUnit,
@@ -151,7 +164,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
             ?.let { HourlyChart.build(it, metrics, texts, units.precipitationUnit, units.windSpeedUnit) }
         val daily = chartPlace?.takeIf { type == ForecastType.MID && (it["dayChart"] as? kotlinx.serialization.json.JsonArray)?.isNotEmpty() == true }
             ?.let { DailyChart.build(it, metrics, texts, units.precipitationUnit) }
-        WeatherPageContent(type, page, metrics, hourly, daily)
+        WeatherPageContent(type, page, metrics, hourly, daily, visit.scrolls)
     }
     var expanded by remember(visit) { mutableStateOf(visit.expand) }
     val scroll = remember(visit) { ScrollState(0) }
@@ -160,11 +173,12 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     var source by remember(visit) { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val density = LocalDensity.current.density
-    val loadingSelected = place != null && WeatherRepository.key(place) in loading
+    LaunchedEffect(visit) { if (opened[1]) onNoPlace() }
+    val loadingSelected = place != null && (WeatherRepository.key(place) in loading || place.currentPosition && locating)
     val onAction: (PageAction) -> Unit = { action ->
         when (action) {
             is PageAction.AirInfo -> onAirInfo(action.code)
-            PageAction.Units -> host.onUnits()
+            PageAction.Units -> onUnits()
             is PageAction.AirForecastInfo -> if (action.source == "kaq" || action.source == "airkorea") source = action.source
             is PageAction.Pollen -> pollen = action.rows
             is PageAction.Url -> openUrl(context, action.url)
@@ -274,11 +288,12 @@ fun RetryDialog(onClose: () -> Unit, onRetry: () -> Unit) {
 const val RETRY_DIALOG = "weather-retry-dialog"
 
 /**
- * `<ion-spinner icon="bubbles">` in the title: nine dots around a circle, each fading in turn, in white (`.body-content
- * .bar p svg`), which the light theme's white bar hides (A08, kept).
+ * `<ion-spinner icon="bubbles">`: nine dots around a circle, each fading in turn. In the title it is white
+ * (`.body-content .bar p svg`), which the light theme's white bar hides (A08, kept); `$ionicLoading` draws it in
+ * [color] (`spinner-stable`).
  */
 @Composable
-internal fun Bubbles(modifier: Modifier) {
+internal fun Bubbles(modifier: Modifier, color: Color = Color.White) {
     val turn by rememberInfiniteTransition(label = "bubbles").animateFloat(0f, 1f,
         infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart), label = "turn")
     Canvas(modifier) {
@@ -286,7 +301,7 @@ internal fun Bubbles(modifier: Modifier) {
         for (i in 0 until 9) {
             val angle = 2 * PI * i / 9
             val phase = ((turn - i / 9f) % 1f + 1f) % 1f
-            drawCircle(Color.White, radius = r * 5 / 32 * (1 - phase), center = Offset(r + (r * 24 / 32 * cos(angle)).toFloat(), r + (r * 24 / 32 * sin(angle)).toFloat()))
+            drawCircle(color, radius = r * 5 / 32 * (1 - phase), center = Offset(r + (r * 24 / 32 * cos(angle)).toFloat(), r + (r * 24 / 32 * sin(angle)).toFloat()))
         }
     }
 }

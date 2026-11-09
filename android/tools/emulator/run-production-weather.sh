@@ -1,6 +1,9 @@
 #!/bin/sh
-# The weather pages against the production server: Seoul and London on Hourly and Daily (#2887 AC2,
-# ProductionWeatherTest), and Seoul's measuring stations on the Air tab (#2888 AC2, ProductionAirTest).
+# The weather pages against the production server:
+# - Seoul and London on Hourly and Daily (#2887 AC2, ProductionWeatherTest);
+# - Seoul's measuring stations on the Air tab (#2888 AC2, ProductionAirTest);
+# - on API 33 and later, the nationwide pages and the warnings with the app's language set to ko-KR (#2892 AC2,
+#   ProductionNationTest), as their menu rows show for region KR.
 #   ANDROID_SERIAL=emulator-5554 android/tools/emulator/run-production-weather.sh [out-dir]
 # Requires the debug and androidTest APKs built with the private server URL (TW_SERVER_URL in the environment or
 # android/private.properties; README "Private build inputs"). The emulator needs a network for this run: weather
@@ -26,4 +29,12 @@ RUNNER=$PKG.test/$PKG.TestRunner
 adb shell am instrument -w -e weather production -e class $PKG.ProductionWeatherTest,$PKG.ProductionAirTest $RUNNER | tee "$OUT/instrument.txt"
 adb pull "/sdcard/Android/data/$PKG/files/ac2/." "$OUT/" >/dev/null
 grep -q "^OK (2 tests)" "$OUT/instrument.txt"
+if [ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" -ge 33 ]; then
+    adb shell cmd locale set-app-locales $PKG --locales ko-KR
+    adb shell am instrument -w -e weather production -e class $PKG.ProductionNationTest $RUNNER | tee "$OUT/instrument-nation.txt"
+    adb pull "/sdcard/Android/data/$PKG/files/ac2/." "$OUT/" >/dev/null
+    grep -q "^OK (1 test)" "$OUT/instrument-nation.txt"
+else
+    echo "ProductionNationTest needs API 33 or later (per-app language); not run on this emulator"
+fi
 ls "$OUT"/*.png

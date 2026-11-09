@@ -149,6 +149,14 @@ class CordovaMigrationTest {
         assertEquals(7, r[2]["dayOfWeek"]!!.jsonArray.count { it.jsonPrimitive.content == "true" })
     }
 
+    /** `_setBackwardCompatibility`: only an old `guideVersion` stands for `startVersion`, so S01 stays closed (AN-10). */
+    @Test
+    fun anOldGuideVersionCountsAsStartVersion() {
+        assertEquals(JsonPrimitive(1), migrate(local = current - "startVersion" + ("guideVersion" to "1")).cordovaExtras["startVersion"])
+        assertEquals(JsonPrimitive(1), migrate(local = current + ("guideVersion" to "0")).cordovaExtras["startVersion"], "startVersion wins")
+        assertNull(migrate(local = current - "startVersion").cordovaExtras["startVersion"])
+    }
+
     @Test
     fun migrationIsDeterministic() {
         assertEquals(migrate(local = current, suite = current), migrate(local = current, suite = current))
