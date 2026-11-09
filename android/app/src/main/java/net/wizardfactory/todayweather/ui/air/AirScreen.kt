@@ -102,6 +102,10 @@ object AirTags {
     const val BANDS = "air-bands"
     const val CHART = "air-chart"
 
+    /** The info card and the station card, whichever block they are (the chart and daily cards come and go). */
+    const val INFO = "air-info"
+    const val STATIONS = "air-stations"
+
     /** Block [i] as the references number them: 0 the header, 1 the gauge, then each card. */
     fun block(i: Int) = when (i) {
         0 -> HEADER
@@ -164,11 +168,15 @@ fun AirScreen(
             }
         }
         page.info?.let { rows ->
-            Card(colors.page, null, Modifier.testTag(AirTags.block(block++)), null) { AirRows(rows, colors.page, onAction) }
+            val tag = AirTags.block(block++)
+            Column(Modifier.testTag(AirTags.INFO)) { Card(colors.page, null, Modifier.testTag(tag), null) { AirRows(rows, colors.page, onAction) } }
         }
         page.stations?.let { cells ->
-            Card(colors.page, page.stationsTitle, Modifier.testTag(AirTags.block(block++)), null) {
-                Cells(cells, colors, minWidth = 110.dp, tag = AirTags::station, onTap = onStation)
+            val tag = AirTags.block(block++)
+            Column(Modifier.testTag(AirTags.STATIONS)) {
+                Card(colors.page, page.stationsTitle, Modifier.testTag(tag), null) {
+                    Cells(cells, colors, minWidth = 110.dp, tag = AirTags::station, onTap = onStation)
+                }
             }
         }
     }

@@ -62,7 +62,8 @@ class ProductionAirTest {
         // The server sends AirKorea's nearest stations; without them (its Google fallback) there is one record and no name.
         assertTrue("Seoul has more than one station: ${stations.size} from ${stations.map { text(it, "source") }}", stations.size > 1)
 
-        rule.onNodeWithTag(AirTags.block(6)).performScrollTo()
+        // The station card's block number depends on the cards before it (production may send no daily forecast).
+        rule.onNodeWithTag(AirTags.STATIONS).performScrollTo()
         rule.waitForIdle()
         rule.onNodeWithTag(AirTags.station(0)).assertIsSelected()
         stations.indices.forEach { i ->
@@ -73,11 +74,11 @@ class ProductionAirTest {
         rule.waitForIdle()
         rule.onNodeWithTag(AirTags.station(1)).assertIsSelected()
         // The info card names the second station, and the gauge shows its overall index (`-` without one).
-        rule.onNode(hasText(text(last(1), "stationName")!!, substring = true) and hasAnyAncestor(hasTestTag(AirTags.block(5))),
+        rule.onNode(hasText(text(last(1), "stationName")!!, substring = true) and hasAnyAncestor(hasTestTag(AirTags.INFO)),
             useUnmergedTree = true).assertExists()
         rule.onNode(hasText(text(last(1), "aqiValue") ?: "-") and hasAnyAncestor(hasTestTag(AirTags.LABEL)), useUnmergedTree = true).assertExists()
         capture("air-seoul-station-2")
-        rule.onNodeWithTag(AirTags.block(6)).performScrollTo()
+        rule.onNodeWithTag(AirTags.STATIONS).performScrollTo()
         capture("air-seoul-station-2-stations")
     }
 

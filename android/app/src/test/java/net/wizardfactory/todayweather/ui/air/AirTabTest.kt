@@ -118,13 +118,13 @@ class AirTabTest {
         rule.onNodeWithText("측정소 (통합대기)", useUnmergedTree = true).assertExists()
         rule.onNodeWithTag(AirTags.station(0)).assertIsSelected()
         // performScrollTo scrolls only the closest scrolling parent (the cells' row): bring the card up first.
-        rule.onNodeWithTag(AirTags.block(6)).performScrollTo()
+        rule.onNodeWithTag(AirTags.STATIONS).performScrollTo()
         rule.onNodeWithTag(AirTags.station(1)).performClick()
         rule.waitForIdle()
         label("47").assertExists()
         rule.onNodeWithTag(AirTags.station(1)).assertIsSelected()
         rule.onNodeWithTag(AirTags.station(0)).assertIsNotSelected()
-        rule.onNode(hasText("한강대로", substring = true) and hasAnyAncestor(hasTestTag(AirTags.block(5))), useUnmergedTree = true).assertExists()
+        rule.onNode(hasText("한강대로", substring = true) and hasAnyAncestor(hasTestTag(AirTags.INFO)), useUnmergedTree = true).assertExists()
         // The page went to the top: the header shows again.
         rule.onNodeWithTag(AirTags.HEADER).assertIsDisplayed()
 
