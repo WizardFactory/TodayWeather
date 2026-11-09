@@ -370,7 +370,7 @@ impl fetch::ForecastAcquire for CountErrors {
 fn cycles(
     period: Duration,
     clock: Clock,
-    pool: OwnedFlights<String, Option<Fetched>>,
+    pool: OwnedFlights<String, bool>,
 ) -> (
     Arc<WarningCycles<NoIo>>,
     Arc<std::sync::atomic::AtomicUsize>,
@@ -458,7 +458,7 @@ async fn busy_shared_pool_waits_three_seconds_without_claiming_memo_or_calling_p
             move |_| async move {
                 let _ = entered.send(());
                 let _ = released.await;
-                None
+                false
             },
         )
         .await

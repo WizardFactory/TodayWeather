@@ -1,5 +1,5 @@
 //! Warning-only ownership, shared by assembly and the post-bind periodic driver.
-use super::{Attempts, Clock, Fetched, fetch};
+use super::{Attempts, Clock, fetch};
 use crate::{
     gateway::BoxFuture,
     history::IndexListing,
@@ -99,7 +99,7 @@ impl Lane {
 }
 
 pub(super) struct WarningCycles<T> {
-    owned: OwnedFlights<String, Option<Fetched>>,
+    owned: OwnedFlights<String, bool>,
     attempts: Arc<Attempts>,
     warnings: Arc<WarningService<T>>,
     clock: Clock,
@@ -110,7 +110,7 @@ pub(super) struct WarningCycles<T> {
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> WarningCycles<T> {
     pub(super) fn new(
-        owned: OwnedFlights<String, Option<Fetched>>,
+        owned: OwnedFlights<String, bool>,
         attempts: Arc<Attempts>,
         warnings: Arc<WarningService<T>>,
         clock: Clock,
@@ -157,7 +157,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Acquisition for WarningCyc
                             })
                             .await;
                         }
-                        None
+                        false
                     }
                 })
                 .await;

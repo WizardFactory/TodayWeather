@@ -338,10 +338,10 @@ pub struct S3Source<T> {
     observed_history: bool,
     /// Owned latest-publication, forecast-zone and warning acquisitions (S13d), keyed by
     /// dataset and publication.
-    owned: crate::resolver::OwnedFlights<String, Option<Fetched>>,
+    owned: crate::resolver::OwnedFlights<String, bool>,
     /// Owned backfill passes: their own pool, so a long pass never takes a slot a latest
     /// publication needs.
-    passes: crate::resolver::OwnedFlights<String, Option<Fetched>>,
+    passes: crate::resolver::OwnedFlights<String, bool>,
     /// Retry bounds of the acquisition keys (failures included).
     attempts: Arc<Attempts>,
     /// B3 latest Short slots; generic retries and historical backfill stay independent.
@@ -595,21 +595,23 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             return fetched_of(&records);
         }
         let owned_for = request.owned_for();
-        let start = publication_flight(acquire, admission, request);
-        let waited = self.owned.join(key.clone(), until, owned_for, start).await;
-        let mut kept = self.acquired.lock().unwrap_or_else(|e| e.into_inner());
-        match waited {
-            crate::resolver::Waited::Ready(Some(f)) => {
-                kept.put(key, vec![f.clone()], 0);
-                Some(f)
-            }
-            // KMA-RESTART-BOUND (review round 3): an acquisition this process made stays usable
-            // when its key is not acquired again (the retry memo, a consumed Short slot) and the
-            // stored read does not hold it yet (a restore still running).
-            _ => kept
-                .get(&key, ACQUIRED_AGE)
-                .and_then(|(fetched, _)| fetched.first().cloned()),
-        }
+        let start = publication_flight(
+            acquire,
+            admission,
+            request,
+            (self.acquired.clone(), key.clone()),
+        );
+        // The flight keeps what it acquired in the budgeted acquisition bodies and answers
+        // whether it did (KMA-RESTART-BOUND, review round 4): no body is held outside the budget.
+        let _ = self.owned.join(key.clone(), until, owned_for, start).await;
+        // KMA-RESTART-BOUND (review round 3): an acquisition this process made stays usable when
+        // its key is not acquired again (the retry memo, a consumed Short slot) and the stored
+        // read does not hold it yet (a restore still running).
+        self.acquired
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&key, ACQUIRED_AGE)
+            .and_then(|(fetched, _)| fetched.first().cloned())
     }
     /// S15b-3: request-time AirKorea acquisition (None: stored records only) and the shared
     /// air-provider chain of the fallback (None: the legacy no-provider answer).
@@ -741,7 +743,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                                 })
                                 .await;
                             }
-                            None
+                            false
                         }
                     },
                 )
@@ -918,7 +920,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         // request requires and, for the current observations, the hours around the same hour
         // yesterday (the answer's yesterday comparison).
         let needed: Vec<String> = {
-            let mut needed: Vec<Publication> = required::foreground(sf, now as i64);
+            // The newest required publication, then (current observations) yesterday's
+            // comparison hours, then today's other required publications (review round 4: at
+            // 23:xx today's 24 would otherwise keep yesterday's past the next request's wait).
+            let required = required::foreground(sf, now as i64);
+            let mut needed: Vec<Publication> = required.iter().take(1).copied().collect();
             if family == Family::Current
                 && let Some(latest) = sf.latest(now as i64)
             {
@@ -928,6 +934,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         .filter_map(|h| latest.add_hours(h)),
                 );
             }
+            needed.extend(required.into_iter().skip(1));
             needed.into_iter().map(Publication::partition).collect()
         };
         // The stored read and whether the listing was absent.
@@ -1290,7 +1297,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             latest.partition()
         );
         let attempts = self.attempts.clone();
-        let owned = self.owned.clone();
+        let (owned, kept) = (self.owned.clone(), self.acquired.clone());
         let claim = key.clone();
         let _ = self
             .passes
@@ -1302,7 +1309,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     let fresh = attempts.claim(&claim, BACKFILL_RETRY);
                     async move {
                         if !fresh {
-                            return None;
+                            return false;
                         }
                         for chunk in publications.chunks(BACKFILL_CONCURRENCY) {
                             let flights: Vec<_> = chunk
@@ -1319,13 +1326,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                                                 memo: LATEST_RETRY,
                                             },
                                             request.clone(),
+                                            (kept.clone(), key.clone()),
                                         ),
                                     )
                                 })
                                 .collect();
                             crate::history::join_all(flights).await;
                         }
-                        None
+                        false
                     }
                 },
             )
@@ -2560,19 +2568,27 @@ fn publication_flight(
     acquire: Arc<dyn fetch::ForecastAcquire>,
     admission: PublicationAdmission,
     request: fetch::ForecastRequest,
-) -> impl FnOnce(Instant) -> BoxFuture<'static, Option<Fetched>> {
+    (kept, key): (Arc<std::sync::Mutex<records::Bodies>>, String),
+) -> impl FnOnce(Instant) -> BoxFuture<'static, bool> {
     move |_| {
         let fresh = admission.claim();
         Box::pin(async move {
             if !fresh {
-                return None;
+                return false;
             }
-            crate::observability::spawn(acquire.acquire(request))
+            let Some(fetched) = crate::observability::spawn(acquire.acquire(request))
                 .await
-                .ok()?
                 .ok()
+                .and_then(Result::ok)
                 .flatten()
                 .and_then(|records| fetched_of(&records))
+            else {
+                return false;
+            };
+            kept.lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .put(key, vec![fetched], 0);
+            true
         })
     }
 }

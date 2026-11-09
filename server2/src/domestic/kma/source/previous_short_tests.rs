@@ -605,3 +605,46 @@ async fn listed_but_unusable_publications_are_requested_together() {
         "one acquisition each"
     );
 }
+
+/// RB-restore-memory (review round 4): an acquisition is kept only in the budgeted acquisition
+/// bodies. Once another acquisition evicts it there, its pages are freed although the owned
+/// flight that made it still answers joiners (the production three-second retention): the flight
+/// holds no body.
+#[tokio::test(start_paused = true)]
+async fn a_retained_acquisition_flight_holds_no_evicted_page() {
+    let now = kst(20261018, 2030);
+    let provider = Arc::new(Provider::new(now));
+    let mut s = fixture(provider, now);
+    s.owned = crate::resolver::OwnedFlights::new(crate::resolver::OwnedConfig {
+        retain: Duration::from_secs(3),
+        ..Default::default()
+    })
+    .unwrap();
+    s.acquired = Arc::new(Mutex::new(records::Bodies::new(usize::MAX, 1)));
+    let p = publication(20261018, 1700);
+    let request = grid_request(schedule::Family::Short, grid(), p).unwrap();
+    let acquired = s
+        .acquire(
+            "test/short".into(),
+            fetch::ForecastRequest::DataGoKr(request),
+            LATEST_RETRY,
+            Instant::now() + Duration::from_secs(5),
+        )
+        .await
+        .expect("acquired");
+    let page = Arc::downgrade(&acquired.pages[0]);
+    drop(acquired);
+    assert!(page.upgrade().is_some(), "kept");
+    // Another acquisition takes the only entry while the flight is retained.
+    s.acquired.lock().unwrap().put(
+        "other".into(),
+        vec![Fetched {
+            fetched_at_ms: 1,
+            partition: p.partition(),
+            pages: vec![Arc::from(&b"other"[..])],
+            raw_ids: Vec::new(),
+        }],
+        0,
+    );
+    assert!(page.upgrade().is_none(), "the evicted page is freed");
+}

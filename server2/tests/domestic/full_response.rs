@@ -2405,6 +2405,10 @@ struct Restarted {
 }
 impl Restarted {
     fn new(peer: &Peer, counted: &Counted) -> Self {
+        Self::at(peer, counted, NOW)
+    }
+    /// A restarted process whose clock reads `now`.
+    fn at(peer: &Peer, counted: &Counted, now: f64) -> Self {
         let store = Arc::new(
             CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap(),
         );
@@ -2421,7 +2425,7 @@ impl Restarted {
         );
         let source = S3Source::new_observed_with_warning_store(
             counted.clone(),
-            Arc::new(|| NOW),
+            Arc::new(move || now),
             doubles.pages.clone(),
             Arc::new(Unreachable),
             warning,
@@ -2438,8 +2442,12 @@ impl Restarted {
         })));
         let service = Arc::new(Service::new(counted.clone(), doubles.office.clone()).unwrap());
         let source = Arc::new(source);
-        let backend = KmaBackend::new(source.clone(), Arc::new(|| NOW), AssemblyConfig::default())
-            .with_narrative(Some(service));
+        let backend = KmaBackend::new(
+            source.clone(),
+            Arc::new(move || now),
+            AssemblyConfig::default(),
+        )
+        .with_narrative(Some(service));
         Self {
             backend,
             source,
@@ -2845,16 +2853,7 @@ async fn answers_during_a_long_restore_keep_the_fields() {
         })
         .collect();
     store_grid(&peer, F::UltraSrtNcst, &hours).await;
-    let today = |body: &serde_json::Value| {
-        let short: Vec<serde_json::Value> = body["short"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|r| r["date"] == "20260924")
-            .cloned()
-            .collect();
-        (body["current"].clone(), short)
-    };
+    let today = today_fields;
     let (prompt, _) = restarted_answer(&peer, &Counted::new(peer.transport_limited(4))).await;
     let prompt = today(&body_of(prompt));
     let counted = Counted::new(peer.transport_limited(4));
@@ -2875,6 +2874,78 @@ async fn answers_during_a_long_restore_keep_the_fields() {
         );
         assert_eq!(today(&body_of(answer)), prompt, "answer {later}");
     }
+}
+
+/// The current observations (with yesterday's comparison) and today's (2026-09-24) short rows
+/// of an answer.
+fn today_fields(body: &serde_json::Value) -> (serde_json::Value, Vec<serde_json::Value>) {
+    let short: Vec<serde_json::Value> = body["short"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|r| r["date"] == "20260924")
+        .cloned()
+        .collect();
+    (body["current"].clone(), short)
+}
+
+/// RB-store-deadline, round 4: the same long restore at 23:50, when today's required current
+/// publications are 24 and the yesterday comparison depends on the hours around 23:00 yesterday.
+/// The restore takes those right after the newest required publication, so the second answer, 4 s
+/// after the first, keeps yesterday's comparison of a process whose reads are prompt.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn answers_during_a_long_restore_at_the_end_of_the_day_keep_yesterday() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let at = kst_ms_of(20260924, 2350);
+    let hours: Vec<Publication> = (0..54)
+        .map(|back| {
+            let at =
+                server2::history::schedule::to_ms(publication(20260924, 2300)) - back * 3_600_000;
+            server2::history::schedule::from_ms(at)
+        })
+        .collect();
+    store_grid(&peer, F::UltraSrtNcst, &hours).await;
+    let prompt = Restarted::at(&peer, &Counted::new(peer.transport_limited(4)), at)
+        .answer()
+        .await
+        .0;
+    let prompt = today_fields(&body_of(prompt));
+    let counted = Counted::new(peer.transport_limited(4));
+    counted.delay_gets(
+        "raw/v2/data-go-kr/ultra-srt-ncst/",
+        0,
+        Duration::from_millis(2600),
+    );
+    let process = Restarted::at(&peer, &counted, at);
+    let (first, _) = process.answer().await;
+    body_of(first);
+    tokio::time::sleep(Duration::from_millis(4000)).await;
+    let (second, asked) = process.answer().await;
+    assert!(
+        asked.iter().all(|a| !a.contains("UltraSrtNcst")),
+        "no provider call beyond the memo: {asked:?}"
+    );
+    let second = today_fields(&body_of(second));
+    assert_eq!(
+        second.0["yesterday"], prompt.0["yesterday"],
+        "yesterday's comparison"
+    );
+    // The life indices (pollen, food poisoning) come from their own providers, which the prompt
+    // process's first answer did not wait for; the grid-derived fields are compared.
+    let grid = |(mut current, short): (serde_json::Value, Vec<serde_json::Value>)| {
+        current.as_object_mut().unwrap().retain(|k, _| {
+            !["flower", "fsn", "pollen"]
+                .iter()
+                .any(|life| k.starts_with(life))
+        });
+        (current, short)
+    };
+    assert_eq!(grid(second), grid(prompt));
+}
+/// KST `date` `time` as epoch milliseconds.
+fn kst_ms_of(date: u32, time: u16) -> f64 {
+    server2::history::schedule::to_ms(publication(date, time)) as f64
 }
 
 /// RB-s16-listing-provenance: a request whose listing comes from an earlier listing (its own LIST

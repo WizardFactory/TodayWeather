@@ -822,7 +822,8 @@ impl Restores {
                 .cloned()
                 .collect();
             rest.sort_by(|a, b| b.cmp(a));
-            ordered.dedup();
+            let mut seen = std::collections::HashSet::new();
+            ordered.retain(|p| seen.insert(p.clone()));
             ordered.extend(rest);
             let (reader, source, kind, key, partitions) = (
                 reader.clone(),
