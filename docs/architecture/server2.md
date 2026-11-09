@@ -2523,17 +2523,29 @@ to fix all three ([intent](../../intent/issue-2614-kma-restart-bound.md),
 unreachable (`records::absent`: a timeout, a transport or admission failure, an error status)
 leaves its part absent for the request instead of failing the answer; a corrupt or invalid object
 still fails it, and the gateway answers 501 as before. `Reader::available` reads a family's
-partitions as `all_counted` does and names the partitions it could not read; their acquisitions
-are absent, and the read counts as partial for S16 (no summary is recorded from it).
+partitions, at most eight lookups at once, and names the partitions it could not read or had not
+read by its stop instant; their acquisitions are absent, and the read counts as partial for S16 (no
+summary is recorded from it).
+
+Under the observed source the stored restore of a grid family, the town RSS and a mid model (the
+listing and the partition reads) ends at the request's bound (2.5 s from the accept), not at the
+8 s stored-read budget: providers race it from the head start, and a restore of many partitions
+each held to the catalog's 3 s deadline would otherwise wait batch after batch past the request
+deadline (Codex review of #2916, RB-store-deadline). A listing not back at the head start leaves
+every publication the request needs to its provider at once (RB-listing-race). A forecast-zone read
+not done at the head start leaves the mid regions to the zones this process last read (or those of
+an empty store), so the mid acquisitions start then; the zone read goes on until the bound and
+answers the snapshot's zones if it ends by then (RB-zone-mid-starvation). The legacy source keeps
+its deadline.
 
 | Read | Unavailable | Raced at the head start |
 | --- | --- | --- |
-| Grid family (current, ultra-short, short) listing | every publication absent, as on an empty store: the needed ones are acquired at once | — |
+| Grid family (current, ultra-short, short) listing | every publication absent, as on an empty store: the needed ones are acquired at once | a listing not back then: every publication the request needs |
 | Grid family partitions | the unread partitions absent: their needed publications are acquired when the read ends, if the bound has not passed; the legacy source does not backfill them | a read not done then: the listed publications the request needs (the latest, today's required ones and, for short, those of the rows shown as current), as on an empty store |
-| Town RSS | absent: the latest publication is requested | a read not done then: the latest publication |
-| Mid forecast, temperature, land (observed) | listing: absent, the latest requested for a collected region; a partition: absent, and the search ends (an older save is not the answer) | the read of the latest partition of a collected region: its latest publication |
+| Town RSS | absent: the latest publication is requested | a listing or read not done then: the latest publication |
+| Mid forecast, temperature, land (observed) | listing: absent, the latest requested for a collected region; a partition: absent, and the search ends (an older save is not the answer) | a listing not done then, and the read of the latest partition of a collected region: its latest publication |
 | Mid (legacy source) | the month absent, and the search ends | — |
-| Forecast-zone list | the zones held, otherwise those of an empty store (the release's land zones for the observed source), not kept: the next request reads again | — (each process start acquires the list once, unawaited) |
+| Forecast-zone list | the zones held, otherwise those of an empty store (the release's land zones for the observed source), not kept: the next request reads again | a read not done then: the mids use the zones held or an empty store's (the read goes on until the bound) |
 
 A raced read that ends in time still answers with what it read, beside the acquisitions (each
 acquisition stores a second copy). The raced reads add, per restart and cell, at most the needed
@@ -2560,8 +2572,8 @@ so the KMA deadline the observed source derives its instants from (the 700 ms he
 time instead of making the answer later. Direct `/kma/addr` routes have no geocode and keep their
 start.
 
-Not changed: the bounds, the 8 s stored-read budget, the catalog deadline and the assembly's
-CPU-permit wait (it ends at the request deadline). The forecast-zone catalog still gains one
+Not changed: the bounds, the 8 s stored-read budget of the other families, the catalog deadline
+and the assembly's CPU-permit wait (it ends at the request deadline). The forecast-zone catalog still gains one
 identical list per process start.
 
 ### S15b-2 s station registry seed (2026-10-15)

@@ -8,6 +8,7 @@ Task declaration: `server2/config/tasks/KMA-RESTART-BOUND.json`. Stacked on #290
 4. ALLOCATOR: mimalloc as `#[global_allocator]` in the library crate (every binary, example and test links it), a test that heap allocations come from mimalloc's heap (dev-dependency `libmimalloc-sys` with `extended`); `Cargo.lock` updated; CI's Linux job builds the musl release artifact (not buildable locally).
 5. Documents, declaration, fmt, clippy, placement gate and artifact policy; focused tests (the coordinator runs the full suite).
 6. MEASURE by the coordinator: EC2 restart comparison with the CI musl binary.
+7. Codex review of #2916 (Required): the observed grid, RSS and mid restores end at the request bound with their listings raced from the head start (RB-store-deadline, RB-listing-race), and a late zone read leaves the mids to the held or empty-store zones at the head start (RB-zone-mid-starvation); regression tests first, seen failing.
 
 R2 (a shorter bound on the assembly's CPU permit) is not done: the permit wait already ends at the request deadline, and a shorter bound would have to drop required data or answer without the assembly; the allocator removes the measured cause of the slow assembly, and MEASURE shows whether more is needed.
 
