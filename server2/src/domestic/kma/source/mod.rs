@@ -306,6 +306,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         } else {
             observations
         });
+        // A request reads the warning state on its own lane (the process store's offers and
+        // counters); the collector keeps the store it was given (KMA-RESTART-RACE).
+        let warnings = Arc::new(warnings.on_transport(transport.clone())?);
         Ok(Self {
             town_resolver: towns::Resolver::new(transport.clone(), None).with_clock({
                 let clock = clock.clone();
@@ -1248,6 +1251,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 observed_instant(deadline, OBSERVED_SECTION),
             )
         });
+        // KMA-RESTART-RACE: the stored restores' head start (the legacy source has none).
+        let race_at = |until: Instant| {
+            if self.observed_history {
+                observed_instant(deadline, crate::resolver::race::HEAD_START).min(until)
+            } else {
+                until
+            }
+        };
         let mut effective = request.clone();
         if super::middleware_of(&request.version, request.part.as_deref())
             .contains(&"getAllDataFromDb")
@@ -1293,6 +1304,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 || (until + std::time::Duration::from_millis(200)).min(deadline),
                 |o| o.1,
             );
+            let race_at = race_at(until);
             let absent_town = Doc::new();
             let lookup = self.town_resolver.resolve(
                 crate::geocode::town::Operation::Town,
@@ -1318,11 +1330,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         now,
                         section
                     ),
-                    self.life.load(now, section),
-                    async {
-                        self.warning_wait(until).await;
-                        self.warnings.zone_state(now as i64, section).await.ok()
-                    }
+                    self.life.load_by(now, race_at, section),
+                    self.special(now, until, section)
                 )
             };
             if observed.is_some() {
@@ -1403,10 +1412,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             || (until + std::time::Duration::from_millis(200)).min(deadline),
             |o| o.1,
         );
+        let race_at = race_at(until);
         // The station state is shared: the observed Short answer also needs it, with the newest
         // current document, to find the rows the client will show as current
         // (`shown::publications`).
-        let stations = self.observations.stations(now as i64, until).shared();
+        let stations = self
+            .observations
+            .stations_by(now as i64, race_at, until)
+            .shared();
         let (newest_sent, newest) = tokio::sync::oneshot::channel();
         let current_grid = async {
             match grid {
@@ -1423,7 +1436,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             }
         };
         let observations = async {
-            let folded = stations.clone().await;
+            // The ASOS history starts with the request (its station from the current fold or
+            // the default station list), beside the station collections.
+            let (folded, ()) = tokio::join!(stations.clone(), async {
+                if self.observed_history {
+                    self.observations
+                        .prefetch_history(&town, now, race_at, until)
+                        .await;
+                }
+            });
             let (history, asos) = self
                 .observations
                 .history_with_inputs(&town, folded.as_deref(), now, until)
@@ -1498,17 +1519,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 now,
                 section
             ),
-            // The legacy warning cycle runs every 3 minutes; a due cycle is waited for until
-            // `until` at most, and the warning state is read by `section` (its refresh continues
-            // as an owned task). A failed or late read is the legacy store error
-            // (`getSpecialInfo` skips the section).
-            async {
-                self.warning_wait(until).await;
-                self.warnings.zone_state(now as i64, section).await.ok()
-            },
+            // The warning state (see `special`).
+            self.special(now, until, section),
             // S15b-3b life inputs (their owned acquisitions start for every request that reaches
-            // this point).
-            self.life.load(now, section),
+            // this point), raced from the head start.
+            self.life.load_by(now, race_at, section),
         );
         let (zones, mids) = zones_and_mids?;
         let (current, current_ids, current_raw) = current?;
@@ -1636,6 +1651,37 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             }
         }
     }
+    /// The warning zone state of a request. The legacy warning cycle runs every 3 minutes; a due
+    /// cycle is waited for until `until` at most, and the state is read by `section` (its
+    /// refresh continues as an owned task). A failed or late read is the legacy store error
+    /// (`getSpecialInfo` skips the section).
+    ///
+    /// Under the observed source the read starts with the request, on the request lane, beside
+    /// the due cycle (KMA-RESTART-RACE): the answer takes the first state, the stored one or the
+    /// one the cycle offers.
+    async fn special(&self, now: f64, until: Instant, section: Instant) -> Option<Arc<ZoneState>> {
+        if !self.observed_history {
+            self.warning_wait(until).await;
+            return self.warnings.zone_state(now as i64, section).await.ok();
+        }
+        let read = self.warnings.zone_state(now as i64, section);
+        let cycle = self.warning_wait(until);
+        tokio::pin!(read, cycle);
+        tokio::select! {
+            state = &mut read => match state {
+                Ok(state) => Some(state),
+                // A failed read still takes a state the cycle offers by `until`.
+                Err(_) => {
+                    (&mut cycle).await;
+                    self.warnings.ready_state()
+                }
+            },
+            () = &mut cycle => match self.warnings.ready_state() {
+                Some(state) => Some(state),
+                None => read.await.ok(),
+            },
+        }
+    }
     /// Starts a due warning cycle and waits for it. Under the observed source the wait ends at
     /// the zone state it offers, so its publications do not hold the answer.
     async fn warning_wait(&self, until: Instant) {
@@ -1735,6 +1781,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> KmaSource for S3Source<T> 
         } else {
             deadline
         }
+    }
+    fn narrative_race(&self, deadline: Instant) -> Option<Instant> {
+        self.observed_history
+            .then(|| observed_instant(deadline, crate::resolver::race::HEAD_START))
     }
     fn prepare(
         &self,

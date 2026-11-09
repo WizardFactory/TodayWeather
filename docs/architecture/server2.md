@@ -802,7 +802,10 @@ states, including one built before the import and stored after it. A state that 
 whose bootstrap had not covered the lookback, costs the replay from the seed. The collector offers its zone state to requests through the store
 once fetched, before its publications, or after its first two steps when nothing needs a sync. A
 request stops waiting for the cycle at that offer and answers from memory, and the state stays
-current across the memory reset that ends a cycle. One raw LIST decides the days to
+current across the memory reset that ends a cycle. Under the observed source the request also
+reads the zone state from S3 at its start, on the request lane, beside the cycle, and answers
+with whichever state comes first
+([restart race](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)). One raw LIST decides the days to
 read: a day with no raw object costs nothing, and a complete orphan group has raw objects, so its
 day is read and repaired. Discovery reaches back to 1970, so no stored bulletin ages out. Seeds come from the
 offline `server2/tools/migration/` converter and an importer that uses the shared
@@ -2235,7 +2238,7 @@ below hold for failures too:
 | Dataset | When | Acquisitions |
 | --- | --- | --- |
 | AWS minute page (`nph-aws_txt_min`) | newest stored page older than 2 minutes; while a page of the last 20 minutes is held the request answers with it and does not wait (KMA-MINUTE-PAGE: the page took 2.1-2.6 s on EC2, at the observed 2.5 s bound) | at most one per 2 minutes, whatever the outcome: ≤ 30/h, ≤ 720/day (keyless) |
-| AWS hourly page (`…?YYYYMMDDHH00&0&MINDB_60M&0&m`) | the latest KST hour from minute 15 and the hour before; one owned backfill pass over the missing hours of the 8-day `getCityHourlyList` window, three at a time (legacy `getStnPastHourlyWeather`) | latest/previous: each ≤ 6/h until acquired; backfill: each hour at most once per 6 h (≤ 190 per 6 h in an outage, 190 once at a cold start) |
+| AWS hourly page (`…?YYYYMMDDHH00&0&MINDB_60M&0&m`) | the latest KST hour from minute 15 and the hour before; one owned backfill pass over the missing hours of the 8-day `getCityHourlyList` window, three at a time (legacy `getStnPastHourlyWeather`) | latest/previous: each ≤ 6/h until acquired; backfill: each hour at most once per 6 h (≤ 190 per 6 h in an outage, 190 once at a cold start). The observed source runs no backfill; a restart whose restore misses its head start fills only the hours of today and yesterday S3 does not list (≤ 46, each once per 6 h; [restart race](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)) |
 | City page (`currentweather.jsp?tm=`) | the latest hour; the page serves only its latest hour | ≤ 6/h while missing |
 | ASOS hourly/daily range (data.go.kr, per station) | one recovery run per mapped station at most once per hour (legacy lease and hourly job): the station's incomplete D-7..D-1 keys in contiguous ranges, as legacy `Recovery.run`; at most two stations' ranges in flight | cold 2 per station; then ≤ 2/day per mapped station, plus ≤ 1 run/h per station while ranges stay incomplete (≤ 8 pages per range) |
 
@@ -2336,7 +2339,9 @@ next fold or request without waiting for a new hourly page. The next fold reduce
 in full for the new set. `Flight::Load` ends after the products, today's
 and yesterday's comparisons, the seed and the four newest minute pages. `Flight::LoadRest`, which
 no request waits for, then compares the other days (each marked read and the pages dirty) and
-restores the rest of the minute window. Reloads every five minutes compare with the pages held.
+restores the rest of the minute window, on the bulk lane of the S3 admission. Reloads every five
+minutes compare with the pages held. A request no longer waits for `Flight::Load` past a 700 ms
+head start ([restart race](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)).
 
 **S16.** Answers, the station page input identities and the response-first durability set are
 unchanged: a page restored from a product carries the raw identity and digest of the stored page.
@@ -2359,6 +2364,107 @@ again, two processes' products, unsettled answers during the rest of the read, a
 S06-excluded group kept partial, a repaired group completing its day (and recording summaries), a
 station joining the city set after the products (also with failing and with slow full reads), an
 incomplete newest minute acquisition, and the disk cache exclusion.
+
+### S15b-2 restart race: providers when a restore is late (2026-11-07)
+
+The EC2 restart comparison of 2026-11-07 (master, #2866, and #2866 with #2872, three restarts
+each) found every first answer without yesterday's values, the past days and the history mapping,
+most without the current observations and some without UV or the narrative; the answer seconds
+later had them. The restores ran behind each other and behind CPU work. AK chose plan A on
+2026-11-07 ([intent](../../intent/issue-2614-kma-restart-race.md),
+[spec](../../specs/issue-2614-kma-restart-race.md), [plan](../../plans/issue-2614-kma-restart-race.md)):
+a part S3 holds that a restarted process has not restored yet is not an allowed omission; only a
+slow provider's part may be left out.
+
+**Head start.** A stored restore has `HEAD_START`, 700 ms from the start of the KMA request
+(`resolver::race`, code, not a setting). A restore not done then is raced: the owned acquisitions
+of what memory lacks start alongside it, as on an empty S3, and the answer takes whichever
+delivers by the request bound (2.5 s; air and life 2.7 s; the narrative 2.9 s). A restore done by
+then leaves the acquisitions to what S3 lacks, so it makes no provider call a running process
+would not make. Each raced restore records one `operation.action` (stage `restore`, `timeout`,
+`fallback`). The legacy source has no head start.
+
+| Family | Restore | Raced by |
+| --- | --- | --- |
+| Station pages | `Flight::Load`: the products, today and yesterday, the four newest minute pages | the minute page, the latest hourly and city page, the previous hourly page while a fetch now is still within two hours of its hour, and the fill below. Each acquisition (and the restore) is folded as it ends while the others are waited for, so a slow provider does not keep the pages that came before it from the first answer. A restored page never replaces a newer acquired one (newest fetch wins), and a replaced page stays accounted for S16 |
+| ASOS history | the station's S3 state, started with the request; its station comes from the current fold or, before any fold, from the default station list (the carried seed); the hourly and daily kinds are read together | the station's recovery run, started at the head start. A run before the read ends plans the whole window (one hourly and one daily range), and its ranges answer until the read merges them (replay in fetch order, `same_original`) |
+| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first, together and with at most four S3 reads in flight among them (wide reads below), and folds them for the requests, then the rest of the 14-day window | the UV, pollen and MFDS acquisitions decided from the fold at the head start. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
+| Narrative | the office's stored read, started right after `prepare` beside the snapshot as owned work: a waiter that stops waiting neither cancels it nor sets the error gate | one fetch-and-publish of the office when the read has no answer at the head start (still running or failed), at most once per office and ten minutes. It shares one fetch per office with the three-minute refresh: whichever starts second joins the running one. The newest publication answers, whichever of the read, the race and the refresh ends last, also past the answer's 30 s TTL: an announcement older than one the office answered is not installed, and the next request reads S3 |
+| Warnings | the request's zone-state read, started with the request on the request lane | the warning cycle (every three minutes), whose offered state answers when it comes first, or when the read fails |
+
+Grid forecasts (SHRT/VSRT/ODAM, RSS, mid) are not raced: they are read per request, and absent
+publications are acquired at once ([S15b-4a](#s15b-4a-request-time-forecast-acquisition-2026-10-15)).
+
+**Fill (decision 3).** Of the 8-day hourly window only today and yesterday come from providers. A
+raced restore lists today's and yesterday's AWS hourly catalogs (control objects only) and
+acquires the hours before the latest that neither the listing nor memory holds, in one owned
+pass, newest first, three at a time, each hour at most once per six hours. A listed or held hour
+is never fetched again: a later page would replace the ongoing one, whose rows stand for the ASOS
+hour. A day that cannot be listed is not filled. The days before yesterday come from S3 alone
+(day products or raw pages).
+
+**Lanes.** Reads and writes no request waits for use the bulk lane of the shared S3 admission (a
+third of its permits, KMA-RESTART-READS): the rest of the restart read (`Flight::LoadRest`), the
+full reads of reduced pages (`Flight::Expand`), the day product writes, the scheduled image
+production (image reads and product writes) and the KASI capture pass. Each of these owners reads
+through a second store on `IndexListing::bulk_view` (`BoundedS3::bulk`), with the limits of the
+store beside it. Reads a request waits for stay on the request lane, including the request's
+warning zone-state read: the source reads it through a view of the process warning store on its
+own transport (`WarningStore::on_transport`), which shares the store's zone offers and counters
+while the collector replays and publishes on the bulk lane.
+
+**Wide reads.** `CatalogStore::lookup` restores a catalog one S3 read at a time: on EC2 after the
+restarts, today's UV partition (three 4-page acquisitions) took 16 reads in a row. The life read's
+needed partitions use `CatalogStore::lookup_wide` instead, opt-in per call
+(`Reader::acquisitions_wide`); every other reader still uses `lookup`. It restores as `lookup`
+does (same checks, control byte budget, exclusions and result), except that a group's pages are
+read up to `width` at a time when the restore reaches the group and are met in page order: the
+first failure ends the group and drops the reads still in flight, and nothing is read ahead of the
+group being restored. It waits for one I/O admission of the store, as `lookup` does, and takes
+the others only if they are free at once, so no other reader's lookup queues behind it; its reads
+still pass the shared S3 admission (12 in flight per process) like any other read. The four reads
+are shared among the needed partitions (one partition read alone gets all four), so the station
+restore keeps the rest of the admission.
+
+**Provider calls a raced restart adds** (none when every restore beats the head start). Keyless:
+KMA web pages (the minute page, the latest hourly and city page and the previous hourly page, at
+most 4, and the absent hours of today and yesterday, at most 46) and MFDS (1). Grids, RSS, mid and
+AirKorea add none. Every acquisition stores a second copy beside the stored one, and today's day
+product is stored again when its pages changed (at most once per ten minutes).
+
+data.go.kr charges one unit per HTTP attempt of a page to its quota owner: one key and one API,
+each with its own allowance per KST day (`DataGoKrApi::daily_units`; 10,000 for each API below on
+the development account), so units of different APIs never add up to one limit. A page gets at
+most two attempts (`FundedExecutor`): the second after a retryable failure, or on the next key
+after a quota or authentication answer. Logical acquisitions and units per raced restart:
+
+| Quota owner (API) | Acquisitions | Pages each | Units, normal | Units, at most |
+| --- | --- | --- | --- | --- |
+| `AsosHourly` | one range per raced station (the window's 168 hours) | 1 (999 rows a page) | 1 per station | 2 per station |
+| `AsosDaily` | one range per raced station (7 days) | 1 | 1 per station | 2 per station |
+| `LivingWthrIdx` (UV V5) | the current three-hour slot, then each of up to four earlier slots while one answers no data (a failure stops) | all areas: 4 for the 3,851 areas seen on 2026-10-15, at most 8; a no-data answer is one page | 4, plus 1 per no-data slot before it | 2 × (4 + 8) = 24 |
+| `HealthWthrIdx` (pollen V3) | one per kind whose latest 06/18 KST issuance is missing (at most 3) | all areas in season (not measured, at most 8); 1 out of season (no data) | 3 out of season; 3 × its pages in season | 2 × 3 × 8 = 48 |
+| `VilageFcstMsg` (narrative) | the request's office when its read has no answer at the head start, at most once per office and ten minutes, and none while the three-minute refresh fetches that office (one shared fetch) | 1 | 1 per raced office | 2 on one key; over K configured keys, one unit on each key that answers quota or authentication and two on the key that fails retryably: K + 1 |
+
+A one-town restart (one raced station and office) normally adds 1 `AsosHourly`, 1 `AsosDaily`, 4
+`LivingWthrIdx`, 3 `HealthWthrIdx` out of season (three times the kind's pages in season) and 1
+`VilageFcstMsg` unit; each further raced station adds 1 `AsosHourly` and 1 `AsosDaily`. The last
+column bounds each owner when pages fail. These are bounds from the code, not measured quota use.
+
+**Failure paths.** A provider failure during the race leaves that part to the restore or to the
+next request (never 503 for late data). A restore failure after the race keeps the provider data.
+S16 completeness stays unsettled while the restores run (`Flight::Load`, the station's ASOS read,
+`Flight::LoadRest`).
+
+Verification (local, S06 loopback S3 peer, provider doubles; a test transport holds the reads of
+stored keys at a gate the test opens once the first answer is in, so a restore ends after the
+answer whatever the runner's speed, and records that a read was held; the 700 ms head start itself
+is checked on a paused clock): per family the
+raced first answer, one acquisition per dataset key and the settled answer equal to a process that
+read S3, the fill, the default station list, the needed-first life read, the owned narrative read,
+the zone-state read beside a cycle that never ends, the lanes (including a full bulk lane), and a
+whole first answer with every stored family slowed and with prompt reads; listed with their names
+in the [spec](../../specs/issue-2614-kma-restart-race.md). Not measured: the restart on EC2.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
@@ -3842,7 +3948,8 @@ Exact reverse coordinates retain the geocoder's memory-only contract.
 The KMA source and request-driven collector share WarningStore. The persisted S12
 feed hook is installed before the collector enters Arc; zone publication precedes
 feed publication. The store and the feed use the bulk lane of the shared S3 admission
-(KMA-RESTART-READS): together they hold at most a third of its permits. On 2026-11-07 the
+(KMA-RESTART-READS): together they hold at most a third of its permits. A request's own zone-state
+read goes through a request-lane view of the store that shares its zone offers (KMA-RESTART-RACE). On 2026-11-07 the
 first request after a restart started the collector, whose progress load, zone replay and
 publications made 859 S3 requests in 9 s while the request's observation reads waited past
 their bound. With the lane, request reads keep two thirds of the admission and the warning
@@ -3949,7 +4056,10 @@ regional prose. Both wire writers cap cache age before HEAD/304 handling.
 Runtime construction shares the native S3 admission and daily data.go.kr
 acquirer. Native KMA/town serving has a separate owned worker after listener
 bind, with a delayed first tick and180-second cadence. It is not the warning
-worker or an HTTP-triggered narrative acquisition. Existing S08 funding is per
+worker or an HTTP-triggered narrative acquisition. Since KMA-RESTART-RACE an observed KMA request
+starts its office's stored read beside the snapshot and races a read without an answer at the
+700 ms head start with one acquisition of that office
+([restart race](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)). Existing S08 funding is per
 VilageFcstMsg API/key/KST day; the documented development default is10000, with
 no actual operating quota measurement. Existing funded retries are preserved.
 Shutdown aborts and joins this worker within the process stop path.
@@ -3961,7 +4071,9 @@ uses a conditional-absent single-record catalog: the first committed body wins,
 and a losing raw orphan cannot replace it. Ordinary catalog union is unchanged.
 Bounded S3-only discovery/read reconstructs prose after memory loss. Ten office
 caches refresh within30seconds and check expiry on every return; a local
-publication invalidates its office cache. Missing/invalid/expired/unavailable
+publication (the refresh's, or a request race's, one fetch per office at a time) becomes its
+office's answer unless the office has answered a newer announcement, also after that answer
+expired. Missing/invalid/expired/unavailable
 optional data is omitted without a weather failure or legacy dependency.
 
 The [operator contract](../operations/server2-forecast-narrative.md),
@@ -4103,15 +4215,21 @@ sets an independent **1s monotonic retry-after**. Demand inside that gate omits
 the optional field without storage work; later demand can retry. Successful
 read or refresh publication clears the error gate immediately.
 
-This bounds repeated completed failures while retaining the original lock/read
-deadline and public attach cap min(remaining deadline,2s). One reader holds an
-office mutex. Each admitted Store read retains up to8indexpages for each of two
+Since KMA-RESTART-RACE (decision 6, 2026-11-07) a store read is owned work per office with its
+own 30 s deadline: a waiter that stops at its deadline neither cancels the read nor sets the gate,
+and the next request joins the running read or answers from its outcome. Only a completed fault
+of the owned read sets the gate.
+
+This bounds repeated completed failures while retaining the public attach cap min(remaining
+deadline,2s). One owned read per office runs at a time. Each admitted Store read retains up
+to8indexpages for each of two
 dates (at most16indexLISTpages), followed by existing catalog/raw limits. These
 are source bounds, not measured outage cost/quota/headroom. Cancellation without
 a completed error does not manufacture an error/absence entry. Recovery may wait
 for the short gate plus existing read/lock bounds; this replaces the initial
 prototype's unbounded immediate retries, rather than accepting their outage cost.
-No stale-on-error, read-path provider acquisition, timer, mode or schema change.
+No stale-on-error, timer, mode or schema change; the only read-path acquisition is the observed
+request's race of a read without an answer at its head start (KMA-RESTART-RACE).
 
 The [proposed flow](diagrams/server2-narrative-cache.html) and
 [editable source](diagrams/server2-narrative-cache.sequence.json) pin prototype

@@ -37,6 +37,11 @@ pub trait KmaSource: Send + Sync {
     fn narrative_by(&self, deadline: Instant) -> Instant {
         deadline
     }
+    /// KMA-RESTART-RACE: when the narrative's stored read loses its head start (None: the read
+    /// starts when the answer attaches the narrative).
+    fn narrative_race(&self, _deadline: Instant) -> Option<Instant> {
+        None
+    }
 }
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
 /// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
@@ -213,6 +218,13 @@ impl KmaBackend {
         };
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
+        }
+        // The narrative's stored read starts with the request, beside the snapshot.
+        if let (Some(reader), Some(race_at)) =
+            (&self.narrative, self.source.narrative_race(deadline))
+            && let Some(office) = request.region.as_deref().and_then(crate::narrative::office)
+        {
+            reader.prefetch(office, race_at);
         }
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,

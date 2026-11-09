@@ -80,7 +80,7 @@ pub(super) fn asos_body(items: Vec<serde_json::Value>) -> Vec<u8> {
                  "totalCount": items.len()}}}))
     .unwrap()
 }
-fn asos_hourly() -> Vec<u8> {
+pub(super) fn asos_hourly() -> Vec<u8> {
     let mut items = Vec::new();
     for d in 17..=23 {
         for h in 0..24 {
@@ -93,7 +93,7 @@ fn asos_hourly() -> Vec<u8> {
     }
     asos_body(items)
 }
-fn asos_daily() -> Vec<u8> {
+pub(super) fn asos_daily() -> Vec<u8> {
     asos_body(
         (17..=23)
             .map(|d| {
@@ -331,7 +331,7 @@ fn len(j: &OrderedJson) -> usize {
         _ => panic!("array"),
     }
 }
-fn town(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
+pub(super) fn town(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
     let towns = snapshot.towns().unwrap();
     let OrderedJson::Array(list) = towns else {
         panic!()
@@ -1113,7 +1113,10 @@ async fn same_hour_aws_and_city_restore_respects_fetched_order_and_field_presenc
 
 /// Counts S3 requests at the transport boundary by method and object class (`raw/v2/source/kind`,
 /// `index/v2/source/kind`, `index/v2/groups` descriptors, `list index/v2/source/kind`); every
-/// request passes through to the S06 loopback peer.
+/// request passes through to the S06 loopback peer. A bulk view ([`IndexListing::bulk_view`])
+/// shares the counts and also counts its requests as `bulk ...` (KMA-RESTART-RACE lanes).
+///
+/// [`IndexListing::bulk_view`]: server2::history::IndexListing::bulk_view
 /// Held GETs: the key prefix, how many pass first, the hold and how many were seen.
 type Delay = (String, usize, Duration, usize);
 #[derive(Clone)]
@@ -1124,6 +1127,15 @@ pub(super) struct Counted {
     delay: Arc<Mutex<Option<Delay>>>,
     /// GETs of keys under this prefix fail.
     fail: Arc<Mutex<Option<String>>>,
+    /// Requests of stored keys (or LIST prefixes) under a gate's prefixes wait until the test
+    /// opens it: a slow store. Keys written through this transport are not held (a new
+    /// acquisition's publication reads back what it wrote).
+    gates: Arc<Mutex<Vec<Gate>>>,
+    written: Arc<Mutex<std::collections::HashSet<String>>>,
+    /// The bulk lane's view.
+    bulk: bool,
+    /// Bulk-lane requests wait while this is false (a full bulk lane).
+    bulk_open: Arc<tokio::sync::watch::Sender<bool>>,
 }
 impl Counted {
     pub(super) fn new(inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>) -> Self {
@@ -1132,6 +1144,10 @@ impl Counted {
             counts: Arc::default(),
             delay: Arc::default(),
             fail: Arc::default(),
+            gates: Arc::default(),
+            written: Arc::default(),
+            bulk: false,
+            bulk_open: Arc::new(tokio::sync::watch::channel(true).0),
         }
     }
     /// Hold every GET of a key under `prefix` after its first `after` for `hold`.
@@ -1141,6 +1157,33 @@ impl Counted {
     /// Fail every GET of a key under `prefix` (None: none).
     pub(super) fn fail_gets(&self, prefix: Option<&str>) {
         *self.fail.lock().unwrap() = prefix.map(str::to_owned);
+    }
+    /// Hold every request of a stored key or LIST prefix under one of `prefixes` until the
+    /// returned gate opens (KMA-RESTART-RACE: a restore that ends where the test says, not at an
+    /// instant a slow runner can reach late).
+    pub(super) fn hold(&self, prefixes: &[&str]) -> Gate {
+        let gate = Gate {
+            prefixes: prefixes.iter().map(|p| (*p).to_owned()).collect(),
+            open: Arc::new(tokio::sync::watch::channel(false).0),
+            held: Arc::new(tokio::sync::watch::channel(0).0),
+        };
+        self.gates.lock().unwrap().push(gate.clone());
+        gate
+    }
+    /// The bulk lane's view: the same counts, its requests also counted as `bulk ...`.
+    pub(super) fn bulk(&self) -> Self {
+        Self {
+            inner: self.inner.bulk(),
+            bulk: true,
+            ..self.clone()
+        }
+    }
+    /// Hold every bulk-lane request until [`Self::open_bulk`] (a lane full of other work).
+    pub(super) fn close_bulk(&self) {
+        self.bulk_open.send_replace(false);
+    }
+    pub(super) fn open_bulk(&self) {
+        self.bulk_open.send_replace(true);
     }
     fn held(&self, key: &str) -> Option<Duration> {
         let mut delay = self.delay.lock().unwrap();
@@ -1165,19 +1208,58 @@ impl Counted {
             key.split('/').take(4).collect::<Vec<_>>().join("/")
         }
     }
+    /// Count one request, then wait for the bulk lane and (reads of stored keys) a slow store.
+    async fn admit(&self, method: &str, key: &str) {
+        self.count(method, key);
+        if self.bulk {
+            let mut open = self.bulk_open.subscribe();
+            let _ = open.wait_for(|open| *open).await;
+        }
+        if method == "PUT" {
+            self.written.lock().unwrap().insert(key.to_owned());
+            return;
+        }
+        if self.written.lock().unwrap().contains(key) {
+            return;
+        }
+        let gates: Vec<Gate> = self
+            .gates
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|g| g.prefixes.iter().any(|p| key.starts_with(p.as_str())))
+            .cloned()
+            .collect();
+        for gate in gates {
+            gate.pass().await;
+        }
+    }
     fn count(&self, method: &str, key: &str) {
         let class = Self::class(key);
         let mut counts = self.counts.lock().unwrap();
-        *counts.entry(format!("{method} {class}")).or_default() += 1;
+        let mut add = |what: String| {
+            if self.bulk {
+                *counts.entry(format!("bulk {what}")).or_default() += 1;
+            }
+            *counts.entry(what).or_default() += 1;
+        };
+        add(format!("{method} {class}"));
         // Raw records also by KST day (`raw/v2/source/kind/YYYY/MM/DD`).
         if key.starts_with("raw/") {
-            let day = key.split('/').take(7).collect::<Vec<_>>().join("/");
-            *counts.entry(format!("{method} {day}")).or_default() += 1;
+            add(format!(
+                "{method} {}",
+                key.split('/').take(7).collect::<Vec<_>>().join("/")
+            ));
         }
     }
-    /// Requests so far of `method` and `class` (for example `GET raw/v2/kma-web/aws-minute`).
+    /// Requests so far of `method` and `class` (for example `GET raw/v2/kma-web/aws-minute`);
+    /// `bulk GET ...` counts those of the bulk lane.
     pub(super) fn get(&self, what: &str) -> usize {
         self.counts.lock().unwrap().get(what).copied().unwrap_or(0)
+    }
+    /// Every count so far.
+    pub(super) fn counts(&self) -> HashMap<String, usize> {
+        self.counts.lock().unwrap().clone()
     }
 }
 impl server2::storage::ObjectTransport for Counted {
@@ -1185,11 +1267,11 @@ impl server2::storage::ObjectTransport for Counted {
         &self,
         record: &server2::storage::PreparedRecord,
     ) -> Result<u16, server2::storage::Error> {
-        self.count("PUT", &record.key);
+        self.admit("PUT", &record.key).await;
         self.inner.put(record).await
     }
     async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
-        self.count("HEAD", key);
+        self.admit("HEAD", key).await;
         self.inner.head(key).await
     }
     async fn get(
@@ -1197,7 +1279,7 @@ impl server2::storage::ObjectTransport for Counted {
         key: &str,
         max: usize,
     ) -> Result<server2::storage::Object, server2::storage::Error> {
-        self.count("GET", key);
+        self.admit("GET", key).await;
         if let Some(hold) = self.held(key) {
             tokio::time::sleep(hold).await;
         }
@@ -1213,7 +1295,7 @@ impl server2::storage::CatalogTransport for Counted {
         key: &str,
         max: usize,
     ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
-        self.count("GET", key);
+        self.admit("GET", key).await;
         self.inner.get_control(key, max).await
     }
     async fn put_control(
@@ -1222,7 +1304,7 @@ impl server2::storage::CatalogTransport for Counted {
         body: &[u8],
         condition: &server2::storage::WriteCondition,
     ) -> Result<u16, server2::storage::Error> {
-        self.count("PUT", key);
+        self.admit("PUT", key).await;
         self.inner.put_control(key, body, condition).await
     }
     async fn list_raw_document(
@@ -1232,6 +1314,7 @@ impl server2::storage::CatalogTransport for Counted {
         keys: usize,
         bytes: usize,
     ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.admit("LIST", prefix).await;
         self.inner
             .list_raw_document(prefix, token, keys, bytes)
             .await
@@ -1243,8 +1326,48 @@ impl server2::history::IndexListing for Counted {
         prefix: &str,
         token: Option<&str>,
     ) -> Result<server2::storage::ListPage, server2::storage::Error> {
-        self.count("LIST", prefix);
+        self.admit("LIST", prefix).await;
         self.inner.list_index(prefix, token).await
+    }
+    fn bulk_view(&self) -> Self {
+        self.bulk()
+    }
+}
+
+/// The raw objects of the station restore (`Flight::Load`): the station pages, the day products and
+/// the station seed. The town RSS, also `kma-web`, is read by every request and is not raced.
+pub(super) const STATION_RAW: [&str; 4] = [
+    "raw/v2/kma-web/aws-",
+    "raw/v2/kma-web/city-obs/",
+    "raw/v2/kma-web/station-pages/",
+    "raw/v2/kma-web/kma-stn-info/",
+];
+/// A test's gate in front of a slow store ([`Counted::hold`]): the reads it holds wait until the
+/// test opens it, so the order of a restore and an answer is the test's. Open it as soon as the
+/// answer it must follow is in: a read held past the 3 s S06 lookup deadline fails.
+#[derive(Clone)]
+pub(super) struct Gate {
+    prefixes: Vec<String>,
+    open: Arc<tokio::sync::watch::Sender<bool>>,
+    /// Reads that arrived while it was closed.
+    held: Arc<tokio::sync::watch::Sender<usize>>,
+}
+impl Gate {
+    async fn pass(&self) {
+        let mut open = self.open.subscribe();
+        if *open.borrow() {
+            return;
+        }
+        self.held.send_modify(|n| *n += 1);
+        let _ = open.wait_for(|open| *open).await;
+    }
+    /// Whether a read was held (the stored read started before the gate opened).
+    pub(super) fn was_reached(&self) -> bool {
+        *self.held.borrow() > 0
+    }
+    /// Let the held reads and every later one through.
+    pub(super) fn open(&self) {
+        self.open.send_replace(true);
     }
 }
 

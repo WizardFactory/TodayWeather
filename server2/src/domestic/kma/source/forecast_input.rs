@@ -93,6 +93,9 @@ struct State {
 }
 struct Shared<T> {
     reader: Reader<T>,
+    /// The scheduled production, which no request waits for, on the bulk lane
+    /// (KMA-RESTART-RACE).
+    bulk: Reader<T>,
     calibration: Calibration,
     refresh_every: Duration,
     reads: OwnedFlights<String, bool>,
@@ -306,8 +309,16 @@ async fn listed_acquisitions<T: IndexListing + Clone>(
 
 impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
     pub fn new(transport: T, store: Arc<CatalogStore<T>>, calibration: Calibration) -> Self {
+        let bulk = transport.bulk_view();
         Self {
             shared: Arc::new(Shared {
+                bulk: Reader {
+                    store: Arc::new(
+                        CatalogStore::new(bulk.clone(), store.limits().clone())
+                            .expect("the limits of a built store"),
+                    ),
+                    transport: bulk,
+                },
                 reader: Reader { transport, store },
                 calibration,
                 refresh_every: REFRESH,
@@ -472,8 +483,11 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         if last.is_none() {
             // The first production of this process starts from the stored product; an unreadable
             // one is made again.
-            let product = match newest_product(&self.shared, now, deadline).await? {
-                Some((id, member)) => read_product(&self.shared, &id, &member, deadline).await?,
+            let bulk = &self.shared.bulk;
+            let product = match newest_product(bulk, now, deadline).await? {
+                Some((id, member)) => {
+                    read_product(&self.shared, bulk, &id, &member, deadline).await?
+                }
                 None => None,
             };
             *last = Some(product.map_or_else(
@@ -552,7 +566,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             .cut
             .max(now);
         let listed = made_of(
-            listed(&self.shared, cut, deadline)
+            listed(&self.shared.bulk, cut, deadline)
                 .await?
                 .into_iter()
                 .map(|(key, _, _)| key)
@@ -573,6 +587,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
         }
         read(
             &self.shared,
+            &self.shared.bulk,
             now,
             stations.clone(),
             generation.load(Ordering::Acquire),
@@ -708,7 +723,8 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
                 until,
                 READ_FOR,
                 move |deadline| async move {
-                    read(&shared, now, stations, current, deadline)
+                    let reader = &shared.reader;
+                    read(&shared, reader, now, stations, current, deadline)
                         .await
                         .is_ok()
                 },
@@ -726,12 +742,11 @@ fn window(cut: f64) -> Vec<String> {
 /// The image acquisitions a fold at `cut` reads, from the day catalogs alone: those of the
 /// [`window`] completed by then, in completion order, with their catalog and a member envelope.
 async fn listed<T: IndexListing + Clone + 'static>(
-    shared: &Arc<Shared<T>>,
+    reader: &Reader<T>,
     cut: f64,
     deadline: Instant,
 ) -> Result<Vec<(AcquisitionKey, CatalogId, Envelope)>, String> {
-    let listed = shared
-        .reader
+    let listed = reader
         .partitions(
             image::SOURCE,
             image::KIND,
@@ -744,7 +759,7 @@ async fn listed<T: IndexListing + Clone + 'static>(
     let mut out = Vec::new();
     for day in window(cut).into_iter().filter(|d| listed.contains(d)) {
         let id = image_catalog(image::KIND, &day)?;
-        for (fetched, group, member) in listed_acquisitions(&shared.reader, &id, deadline).await? {
+        for (fetched, group, member) in listed_acquisitions(reader, &id, deadline).await? {
             if fetched as f64 <= cut {
                 out.push(((fetched, day.clone(), group), id.clone(), member));
             }
@@ -758,6 +773,7 @@ async fn listed<T: IndexListing + Clone + 'static>(
 /// a new station list), and refold.
 async fn read<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
+    reader: &Reader<T>,
     now: f64,
     stations: Arc<Stations>,
     generation: u64,
@@ -779,7 +795,7 @@ async fn read<T: IndexListing + Clone + 'static>(
         (state.cut.max(now), known)
     };
     let days = window(cut);
-    let listed = listed(shared, cut, deadline).await?;
+    let listed = listed(reader, cut, deadline).await?;
     let calibration = shared.calibration.clone();
     let cpu = shared.cpu.clone();
     let coords: Arc<Vec<(f64, f64)>> =
@@ -792,8 +808,7 @@ async fn read<T: IndexListing + Clone + 'static>(
         }
         // One acquisition per lookup (two images of about 5-6 MB), decoded before the next is
         // read: the raw bodies are released at once (review S15b3c-R8).
-        let page = shared
-            .reader
+        let page = reader
             .store
             .lookup_acquisition(&id, &member.identity, deadline)
             .await
@@ -883,14 +898,13 @@ async fn read<T: IndexListing + Clone + 'static>(
 /// The newest stored product record within the days whose rows can still be current, from
 /// the day catalogs alone: its catalog and member envelope (None: none is stored).
 async fn newest_product<T: IndexListing + Clone + 'static>(
-    shared: &Arc<Shared<T>>,
+    reader: &Reader<T>,
     now: f64,
     deadline: Instant,
 ) -> Result<Option<(CatalogId, Envelope)>, String> {
     let first = now - (DAYS - 1) as f64 * DAY_MS;
     let oldest = format!("{:08}", kst_date(first));
-    let days = shared
-        .reader
+    let days = reader
         .partitions(
             image::SOURCE,
             PRODUCT_KIND,
@@ -902,7 +916,7 @@ async fn newest_product<T: IndexListing + Clone + 'static>(
         .map_err(|e| format!("product listing: {e}"))?;
     for day in days.iter().rev().filter(|d| **d >= oldest) {
         let id = image_catalog(PRODUCT_KIND, day)?;
-        let newest = listed_acquisitions(&shared.reader, &id, deadline)
+        let newest = listed_acquisitions(reader, &id, deadline)
             .await?
             .into_iter()
             .max_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
@@ -923,12 +937,12 @@ fn record_of(member: &Envelope) -> (u64, String) {
 /// production stores a new one); a group still being published is an error, read again later.
 async fn read_product<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
+    reader: &Reader<T>,
     id: &CatalogId,
     member: &Envelope,
     deadline: Instant,
 ) -> Result<Option<Product>, String> {
-    let page = shared
-        .reader
+    let page = reader
         .store
         .lookup_acquisition(id, &member.identity, deadline)
         .await
@@ -959,7 +973,7 @@ async fn refresh_product<T: IndexListing + Clone + 'static>(
     now: f64,
     deadline: Instant,
 ) -> Result<(), String> {
-    let newest = newest_product(shared, now, deadline).await?;
+    let newest = newest_product(&shared.reader, now, deadline).await?;
     let record = newest.as_ref().map(|(_, member)| record_of(member));
     {
         let mut held = shared.product.lock().unwrap_or_else(|e| e.into_inner());
@@ -972,7 +986,7 @@ async fn refresh_product<T: IndexListing + Clone + 'static>(
         }
     }
     let product = match &newest {
-        Some((id, member)) => read_product(shared, id, member, deadline).await?,
+        Some((id, member)) => read_product(shared, &shared.reader, id, member, deadline).await?,
         None => None,
     }
     .unwrap_or(Product {
@@ -1071,8 +1085,9 @@ async fn store_product<T: IndexListing + Clone + 'static>(
     };
     let declaration =
         GroupDeclaration::new(vec![member], &limits).map_err(|e| format!("product group: {e}"))?;
+    // Only the scheduled production stores products: on the bulk lane.
     shared
-        .reader
+        .bulk
         .store
         .publish(declaration, vec![record], deadline)
         .await

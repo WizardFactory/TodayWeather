@@ -240,7 +240,7 @@
       "to": "s3",
       "y": 1713,
       "label": "Read and bounded repair",
-      "note": "Zone state, KASI and station pages restore from stored folds; a restore holds a request at most 500 ms."
+      "note": "Stored folds restore first; at 700 ms providers fill what is still missing. Other reads use the bulk lane."
     },
     {
       "id": "reacquire",

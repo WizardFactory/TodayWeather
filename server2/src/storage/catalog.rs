@@ -169,6 +169,8 @@ struct Context {
     controls: usize,
     output: usize,
     pins: BTreeMap<CatalogId, Option<Pinned>>,
+    /// Pages of one group read at once (a wide lookup; one otherwise).
+    width: usize,
 }
 impl Context {
     fn new() -> Self {
@@ -176,6 +178,7 @@ impl Context {
             controls: 0,
             output: 0,
             pins: BTreeMap::new(),
+            width: 1,
         }
     }
 }
@@ -197,6 +200,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
             cpu: Arc::new(Semaphore::new(limits.cpu)),
             limits,
         })
+    }
+    /// The limits this store was built with (a second store of the same bucket uses them too).
+    pub fn limits(&self) -> &CatalogLimits {
+        &self.limits
     }
     fn deadline(&self, deadline: Instant) -> Instant {
         deadline.min(Instant::now() + self.limits.deadline)
@@ -304,9 +311,57 @@ impl<T: CatalogTransport> CatalogStore<T> {
         c: &mut Context,
     ) -> Result<Vec<RawRecord>, Error> {
         let envelopes = self.envelopes(d).await?;
+        if c.width > 1 {
+            return self.group_records_wide(&envelopes, c).await;
+        }
         let mut records = Vec::new();
         for e in &envelopes {
             records.push(self.raw_checked(e, c).await?);
+        }
+        Ok(records)
+    }
+    /// [`Self::group_records`] of a wide lookup: up to `c.width` pages read at once and met in
+    /// page order with the same output accounting and checks, so the first failure ends the group
+    /// as in `lookup`. The reads still in flight are then dropped and no later page is started.
+    async fn group_records_wide(
+        &self,
+        envelopes: &[Envelope],
+        c: &mut Context,
+    ) -> Result<Vec<RawRecord>, Error> {
+        use futures_util::StreamExt;
+        // A page is read only if the output bound admits it after the pages before it.
+        let mut output = Some(c.output);
+        let mut admitted = Vec::with_capacity(envelopes.len());
+        for e in envelopes {
+            output = output
+                .and_then(|o| o.checked_add(e.raw_length))
+                .filter(|o| *o <= self.limits.output_bytes);
+            admitted.push(output.map(|_| e.identity.clone()));
+        }
+        let reads = futures_util::stream::iter(admitted)
+            .map(|id| async move {
+                match id {
+                    Some(id) => Some(self.raw.load(&id).await),
+                    None => None,
+                }
+            })
+            .buffered(c.width);
+        let mut reads = std::pin::pin!(reads);
+        let mut records = Vec::with_capacity(envelopes.len());
+        for e in envelopes {
+            c.output = c.output.checked_add(e.raw_length).ok_or(Error::Capacity)?;
+            if c.output > self.limits.output_bytes {
+                return Err(Error::Capacity);
+            }
+            // Admitted by the same sum, so read.
+            let Some(Some(read)) = reads.next().await else {
+                return Err(Error::Capacity);
+            };
+            let record = read?;
+            if &record.envelope != e {
+                return Err(Error::Corrupt("raw member envelope"));
+            }
+            records.push(record);
         }
         Ok(records)
     }
@@ -726,6 +781,45 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 timeout_at(self.deadline(deadline), async {
                     let _admission = self.admit().await?;
                     self.lookup_inner(id, &mut Context::new()).await
+                })
+                .await
+                .map_err(|_| Error::Timeout)?
+            },
+        )
+        .await
+    }
+    /// [`Self::lookup`] with up to `width` S3 reads in flight instead of one, opt-in per call for
+    /// a read a request waits on. The restore runs as in `lookup` (same checks, control byte
+    /// budget, exclusions and result), except that a group's pages are read up to `width` at a
+    /// time as it reaches the group. They are met in page order: the first failure ends the group
+    /// as in `lookup` and drops the reads still in flight (at most `width - 1` later pages were
+    /// requested), and nothing is read ahead of the group being restored.
+    ///
+    /// It waits for one of the store's I/O admissions, as `lookup` does, and takes up to
+    /// `width - 1` more only if they are free at once: it never waits for them, so no other
+    /// reader's lookup queues behind it. Its reads in flight never exceed its admissions, so the
+    /// raw reads stay within the raw store's.
+    pub async fn lookup_wide(
+        &self,
+        id: &CatalogId,
+        width: usize,
+        deadline: Instant,
+    ) -> Result<LookupOutcome, Error> {
+        let width = width.clamp(1, self.limits.io.min(self.limits.raw.io));
+        crate::observability::observe(
+            crate::observability::Component::S3,
+            crate::observability::Stage::Lookup,
+            async {
+                id.validate()?;
+                timeout_at(self.deadline(deadline), async {
+                    let _admission = self.admit().await?;
+                    let extra = (1..width).rev().find_map(|n| {
+                        let permits = self.io.clone().try_acquire_many_owned(n as u32).ok()?;
+                        Some((n, permits))
+                    });
+                    let mut c = Context::new();
+                    c.width = 1 + extra.as_ref().map_or(0, |(n, _)| *n);
+                    self.lookup_inner(id, &mut c).await
                 })
                 .await
                 .map_err(|_| Error::Timeout)?
