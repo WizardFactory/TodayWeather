@@ -5,7 +5,10 @@ import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.location.Location as PlatformLocation
 import android.os.Looper
+import android.os.SystemClock
+import java.time.Duration
 import androidx.activity.ComponentActivity
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.CoroutineScope
@@ -13,8 +16,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import net.wizardfactory.todayweather.core.domain.start.PermissionStatus
+import net.wizardfactory.todayweather.core.storage.Location
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,7 +32,9 @@ import org.robolectric.annotation.Config
 /**
  * The platform's location permission as the start page and the current position read it (#2889): precise or
  * approximate access is granted, the system's rationale makes a denial requestable, a refusal without one is final
- * (the plugin's "requested" flag), and [LocationSwitch] reports location services turning on.
+ * (the plugin's "requested" flag), and [LocationSwitch] reports location services turning on. Without Google Play
+ * services (Robolectric has none) positions come from the platform's provider: its last fix up to 60 s old, else the
+ * next one, none after 60 s.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -111,9 +119,66 @@ class AndroidLocationAccessTest {
         assertEquals(PermissionStatus.NOT_REQUESTED, answer.getCompleted())
     }
 
+    private val manager get() = app.getSystemService(LocationManager::class.java)
+
+    /** A fix of [provider] taken [ageMs] ago. */
+    private fun fix(provider: String, lat: Double, long: Double, ageMs: Long) = PlatformLocation(provider).apply {
+        latitude = lat
+        longitude = long
+        time = System.currentTimeMillis() - ageMs
+        elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos() - ageMs * 1_000_000
+    }
+
+    @Test
+    fun withoutPlayServicesTheProvidersLastFixCountsFor60Seconds() {
+        shadowOf(app).grantPermissions(fine, coarse)
+        shadowOf(manager).setProviderEnabled(LocationManager.GPS_PROVIDER, true)
+        val access = AndroidLocationAccess(app)
+        // 30 s old: at once.
+        shadowOf(manager).setLastKnownLocation(LocationManager.GPS_PROVIDER, fix(LocationManager.GPS_PROVIDER, 37.5, 127.0, 30_000))
+        val cached = scope.async { access.position() }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(Location(37.5, 127.0), cached.getCompleted())
+        // 61 s old: the next fix.
+        shadowOf(manager).setLastKnownLocation(LocationManager.GPS_PROVIDER, fix(LocationManager.GPS_PROVIDER, 37.6, 127.1, 61_000))
+        val next = scope.async { access.position() }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse("waits for a new fix", next.isCompleted)
+        shadowOf(manager).simulateLocation(fix(LocationManager.GPS_PROVIDER, 37.7, 127.2, 0))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(Location(37.7, 127.2), next.getCompleted())
+    }
+
+    @Test
+    fun noFixWithin60SecondsIsNone() {
+        shadowOf(app).grantPermissions(fine, coarse)
+        shadowOf(manager).setProviderEnabled(LocationManager.GPS_PROVIDER, true)
+        val none = scope.async { AndroidLocationAccess(app).position() }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(59))
+        assertFalse(none.isCompleted)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+        assertNull(none.getCompleted())
+    }
+
+    /** Approximate access uses the network provider, as GPS needs precise access; with neither provider on there is none. */
+    @Test
+    fun theProviderFollowsTheAccess() {
+        shadowOf(app).grantPermissions(coarse)
+        shadowOf(manager).setProviderEnabled(LocationManager.GPS_PROVIDER, true)
+        shadowOf(manager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+        shadowOf(manager).setLastKnownLocation(LocationManager.GPS_PROVIDER, fix(LocationManager.GPS_PROVIDER, 1.0, 2.0, 1_000))
+        shadowOf(manager).setLastKnownLocation(LocationManager.NETWORK_PROVIDER, fix(LocationManager.NETWORK_PROVIDER, 37.56, 126.98, 1_000))
+        val approximate = scope.async { AndroidLocationAccess(app).position() }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(Location(37.56, 126.98), approximate.getCompleted())
+        shadowOf(manager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, false)
+        val off = scope.async { AndroidLocationAccess(app).position() }
+        shadowOf(Looper.getMainLooper()).idle()
+        assertNull(off.getCompleted())
+    }
+
     @Test
     fun locationServicesTurningOnAreReported() {
-        val manager = app.getSystemService(LocationManager::class.java)
         shadowOf(manager).setLocationEnabled(false)
         var turnedOn = 0
         val switch = LocationSwitch(app) { turnedOn++ }

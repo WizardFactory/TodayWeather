@@ -10,7 +10,6 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.Uri
-import android.os.CancellationSignal
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
@@ -20,7 +19,9 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.location.LocationListenerCompat
 import androidx.core.location.LocationManagerCompat
+import androidx.core.location.LocationRequestCompat
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ResolvableApiException
@@ -157,7 +158,10 @@ class AndroidLocationAccess(private val context: Context) : LocationAccess {
         }
     }
 
-    /** Without Play services: the provider's last fix when it is at most 60 s old, else its next one. */
+    /**
+     * Without Play services: the provider's last fix when it is at most 60 s old, else its next one (one update; the
+     * platform's `getCurrentLocation` would give up after 30 s).
+     */
     @SuppressLint("MissingPermission")
     private suspend fun platform(): android.location.Location? {
         val provider = when {
@@ -168,11 +172,15 @@ class AndroidLocationAccess(private val context: Context) : LocationAccess {
         locationManager.getLastKnownLocation(provider)?.takeIf { (SystemClock.elapsedRealtimeNanos() - it.elapsedRealtimeNanos) / 1_000_000 <= MAX_AGE_MS }
             ?.let { return it }
         return suspendCancellableCoroutine { continuation ->
-            val signal = CancellationSignal()
-            LocationManagerCompat.getCurrentLocation(locationManager, provider, signal, ContextCompat.getMainExecutor(context)) { location ->
-                if (continuation.isActive) continuation.resume(location)
+            val listener = object : LocationListenerCompat {
+                override fun onLocationChanged(location: android.location.Location) {
+                    LocationManagerCompat.removeUpdates(locationManager, this)
+                    if (continuation.isActive) continuation.resume(location)
+                }
             }
-            continuation.invokeOnCancellation { signal.cancel() }
+            val request = LocationRequestCompat.Builder(1_000).setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY).setMaxUpdates(1).build()
+            LocationManagerCompat.requestLocationUpdates(locationManager, provider, request, ContextCompat.getMainExecutor(context), listener)
+            continuation.invokeOnCancellation { LocationManagerCompat.removeUpdates(locationManager, listener) }
         }
     }
 
