@@ -1,0 +1,70 @@
+package net.wizardfactory.todayweather
+
+import android.app.Application
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import androidx.test.runner.AndroidJUnitRunner
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.serialization.json.JsonElement
+import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.PushRequest
+
+/**
+ * Runs device tests with [TestTodayWeatherApp]: the push token comes from the `token` argument and push
+ * requests are recorded instead of sent, so no test reaches the production push server. With `weather`
+ * `production`, weather requests go to the build's server (TW_SERVER_URL). With `transport`
+ * `hold`, a recorded request never gets an answer (it stays in flight). With `migration` `hold`, the data
+ * migration of the process waits until a test releases it.
+ */
+class TestRunner : AndroidJUnitRunner() {
+    override fun onCreate(arguments: Bundle?) {
+        args = arguments ?: Bundle()
+        super.onCreate(arguments)
+    }
+
+    override fun newApplication(cl: ClassLoader, className: String, context: Context): Application =
+        super.newApplication(cl, TestTodayWeatherApp::class.java.name, context)
+
+    companion object {
+        @Volatile var args: Bundle = Bundle()
+    }
+}
+
+class TestTodayWeatherApp : TodayWeatherApp() {
+    val sent = java.util.Collections.synchronizedList(mutableListOf<PushRequest>())
+
+    private val migrationGate = CompletableDeferred<Unit>()
+
+    fun releaseMigration() {
+        migrationGate.complete(Unit)
+    }
+
+    override suspend fun migrate(): AppState {
+        if (TestRunner.args.getString("migration") == "hold") migrationGate.await()
+        return super.migrate()
+    }
+
+    /** Entry intents in the order they were handled, each with whether the migration had finished by then. */
+    val handled = java.util.Collections.synchronizedList(mutableListOf<Pair<Intent, Boolean>>())
+
+    override fun onEntryIntent(intent: Intent) {
+        handled += intent to migration.isCompleted
+    }
+
+    /**
+     * The production server only for a test that asks (`weather` `production`: the AN-08 render check, read-only weather
+     * requests); push requests are recorded either way.
+     */
+    override fun serverUrl() = if (TestRunner.args.getString("weather") == "production") BuildConfig.SERVER_URL else "https://push.test.invalid"
+    override fun weatherPhotosUrl() = "" // no photo feed request from device tests
+    override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
+    override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport {
+        sent += it
+        if (TestRunner.args.getString("transport") == "hold") kotlinx.coroutines.awaitCancellation()
+        200
+    }
+}
+
+/** Body helper for assertions. */
+fun PushRequest.records(): List<JsonElement> = (body as kotlinx.serialization.json.JsonArray).toList()

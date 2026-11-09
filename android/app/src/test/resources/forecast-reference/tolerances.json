@@ -1,0 +1,113 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova block height in device pixels (density 2), after leaving out the pixels a block hides under the tab bar"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in forecast-reference/<place>",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, Korean glyphs on whole device pixels and the 12 sp attribution's antialiasing (mean only). Line boxes follow the WebView's metrics (CssMetrics) and the text uses unhinted advances (TextMotion.Animated), so block heights match and text ends where the WebView's does.",
+ "sensitivity": "Measured 2026-11-08 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-08/checks/forecast-sensitivity.log): card titles 1 dp lower fail 3 comparisons, no grade colors 5, summary lines of 25 sp 4, a regular temperature weight 4, AQI glyph lines 1 dp shorter 3, day cells of 130 dp 2 and hinted text 10. The arrow after the links and 2 dp smaller detail icons pass the screenshots: ForecastPageTest checks the arrow run, and the icon size is not checked.",
+ "cases": {
+  "kma-seoul-daily-0": {
+   "strong": 0.00542,
+   "mean": 1.755,
+   "heightDifference": 0
+  },
+  "kma-seoul-daily-1": {
+   "strong": 0.00307,
+   "mean": 1.647,
+   "heightDifference": 0
+  },
+  "kma-seoul-daily-2": {
+   "strong": 4e-05,
+   "mean": 0.607,
+   "heightDifference": 0
+  },
+  "kma-seoul-daily-3": {
+   "strong": 0.0027,
+   "mean": 3.084,
+   "heightDifference": 0
+  },
+  "kma-seoul-hourly-0": {
+   "strong": 0.00542,
+   "mean": 1.755,
+   "heightDifference": 0
+  },
+  "kma-seoul-hourly-1": {
+   "strong": 0.00239,
+   "mean": 1.608,
+   "heightDifference": 0
+  },
+  "kma-seoul-hourly-2": {
+   "strong": 0.00437,
+   "mean": 1.454,
+   "heightDifference": 0
+  },
+  "kma-seoul-hourly-3": {
+   "strong": 0.00252,
+   "mean": 2.363,
+   "heightDifference": 0
+  },
+  "kma-seoul-hourly-4": {
+   "strong": 0.00471,
+   "mean": 3.75,
+   "heightDifference": 0
+  },
+  "vc-london-daily-0": {
+   "strong": 0.00624,
+   "mean": 2.0,
+   "heightDifference": 0
+  },
+  "vc-london-daily-1": {
+   "strong": 0.00352,
+   "mean": 1.66,
+   "heightDifference": 0
+  },
+  "vc-london-daily-2": {
+   "strong": 0.00399,
+   "mean": 3.17,
+   "heightDifference": 0
+  },
+  "vc-london-daily-3": {
+   "strong": 0.0,
+   "mean": 5.609,
+   "heightDifference": 0
+  },
+  "vc-london-hourly-0": {
+   "strong": 0.00624,
+   "mean": 2.0,
+   "heightDifference": 0
+  },
+  "vc-london-hourly-1": {
+   "strong": 0.00132,
+   "mean": 1.52,
+   "heightDifference": 0
+  },
+  "vc-london-hourly-2": {
+   "strong": 0.00434,
+   "mean": 2.231,
+   "heightDifference": 0
+  },
+  "vc-london-hourly-3": {
+   "strong": 0.0018,
+   "mean": 1.629,
+   "heightDifference": 0
+  },
+  "vc-london-hourly-4": {
+   "strong": 0.00448,
+   "mean": 3.714,
+   "heightDifference": 0
+  },
+  "vc-london-hourly-5": {
+   "strong": 0.0,
+   "mean": 5.609,
+   "heightDifference": 0
+  }
+ }
+}

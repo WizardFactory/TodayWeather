@@ -1,0 +1,22 @@
+#!/bin/sh
+# adb test double for test-cleanup.sh: records each call in $FAKE_ADB_LOG and answers per $FAKE_ADB_CASE.
+# Installs fail, so run-upgrade-test.sh exits right after taking the device offline and
+# run-production-weather.sh ($FAKE_ADB_ONLINE: the device has a network) right after its first install; each
+# then runs its cleanup.
+echo "$*" >> "$FAKE_ADB_LOG"
+case "$*" in
+    "get-state") echo device ;;
+    "shell dumpsys connectivity") if [ -n "${FAKE_ADB_ONLINE:-}" ]; then echo "Active default network: 100"; else echo "Active default network: none"; fi ;;
+    "install "*) exit 1 ;;
+    "uninstall "*) [ "$FAKE_ADB_CASE" = removed ] || exit 1 ;;
+    "shell pm list packages"*)
+        case "$FAKE_ADB_CASE" in
+            list-fails) exit 1 ;;
+            partial-then-fails) printf 'package:android\r\n'; exit 1 ;;
+            pm-error) echo "Error: Could not access the Package Manager.  Is the system running?" ;;
+            mixed-error) printf 'package:android\r\nError: Could not access the Package Manager.\r\n' ;;
+            still-installed) printf 'package:android\r\npackage:net.wizardfactory.todayweather.test\r\n' ;;
+            removed) printf 'package:android\r\npackage:com.android.settings\r\n' ;;
+        esac ;;
+esac
+exit 0

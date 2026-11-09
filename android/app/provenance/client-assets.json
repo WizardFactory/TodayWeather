@@ -1,6 +1,6 @@
 {
  "tool": "android/tools/import_client_assets.py",
- "license": "Same repository and license as client/ (TodayWeather, WizardFactory)",
+ "license": "Same repository and license as client/ (TodayWeather, WizardFactory), except res/font/material_icons.ttf: Material Icons, Apache License 2.0 (Google)",
  "renamed_string_keys": {
   "LOC_TODAYWEATHER-TODAY_THAN_YESTERDAY?": "LOC_TODAYWEATHER_TODAY_THAN_YESTERDAY_",
   "LOC_TODAY_THAN_YESTERDAY?": "LOC_TODAY_THAN_YESTERDAY_"
@@ -2409,6 +2409,62 @@
    "source_sha256": "6fa81ce55153cd2eeed87b3eb7728e36ffc3033d27a69e375c8a9a4620d5d44a",
    "output": "src/main/assets/img/weather_old/sun_snow_lightning.png",
    "output_sha256": "6fa81ce55153cd2eeed87b3eb7728e36ffc3033d27a69e375c8a9a4620d5d44a"
+  },
+  {
+   "source": "client/tw.resources/android-launcher-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "0219dad2ef5cc72f0d86f09014b9e954995fc8081e71ef39fa9f464b8f75280d",
+   "output": "src/main/res/drawable-nodpi/splash_icon.png",
+   "output_sha256": "0219dad2ef5cc72f0d86f09014b9e954995fc8081e71ef39fa9f464b8f75280d"
+  },
+  {
+   "source": "client/www/fonts/MaterialIcons-Regular.ttf",
+   "commit": "243f9cadb5874065df3e9e5a2dc0af33d2a1d532",
+   "source_sha256": "b7f4a3ab562048f28dd1fa691601bc43363a61d0f876d16d8316c52e4f32d696",
+   "output": "src/main/res/font/material_icons.ttf",
+   "output_sha256": "b7f4a3ab562048f28dd1fa691601bc43363a61d0f876d16d8316c52e4f32d696"
+  },
+  {
+   "source": "client/tw.resources/android/icon/drawable-hdpi-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "708f14ebc45bf8d5b4dbf51e031c943ba4d98b470d2a7ade1565d415362dd3d8",
+   "output": "src/main/res/mipmap-hdpi/ic_launcher.png",
+   "output_sha256": "708f14ebc45bf8d5b4dbf51e031c943ba4d98b470d2a7ade1565d415362dd3d8"
+  },
+  {
+   "source": "client/tw.resources/android/icon/drawable-ldpi-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "5dfa691e6a88455e65954de34446eb516083e417553ba8792c58df2f31539852",
+   "output": "src/main/res/mipmap-ldpi/ic_launcher.png",
+   "output_sha256": "5dfa691e6a88455e65954de34446eb516083e417553ba8792c58df2f31539852"
+  },
+  {
+   "source": "client/tw.resources/android/icon/drawable-mdpi-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "9614f27a4405bb58a26c27741c5d17379d5eb0e670316f6a0c2ee3ce8d491c42",
+   "output": "src/main/res/mipmap-mdpi/ic_launcher.png",
+   "output_sha256": "9614f27a4405bb58a26c27741c5d17379d5eb0e670316f6a0c2ee3ce8d491c42"
+  },
+  {
+   "source": "client/tw.resources/android/icon/drawable-xhdpi-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "a73f46059b0919bf548e1c6ae22ebb6c4c2ad90a781cb738c8d090bb22e632f4",
+   "output": "src/main/res/mipmap-xhdpi/ic_launcher.png",
+   "output_sha256": "a73f46059b0919bf548e1c6ae22ebb6c4c2ad90a781cb738c8d090bb22e632f4"
+  },
+  {
+   "source": "client/tw.resources/android/icon/drawable-xxhdpi-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "6e38fbc178b89e5374a5994c0b6ccf984179a4388ea5b988bc406a592937b581",
+   "output": "src/main/res/mipmap-xxhdpi/ic_launcher.png",
+   "output_sha256": "6e38fbc178b89e5374a5994c0b6ccf984179a4388ea5b988bc406a592937b581"
+  },
+  {
+   "source": "client/tw.resources/android/icon/drawable-xxxhdpi-icon.png",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "source_sha256": "efa30f113f8c96998ce9aaab7ecab60416198b2c09f040bce78b37b11435a85d",
+   "output": "src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+   "output_sha256": "efa30f113f8c96998ce9aaab7ecab60416198b2c09f040bce78b37b11435a85d"
   },
   {
    "source": "client/www/locales/de.json",

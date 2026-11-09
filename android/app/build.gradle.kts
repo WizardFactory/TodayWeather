@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -8,6 +10,14 @@ plugins {
 if (file("google-services.json").exists()) {
     apply(plugin = libs.plugins.google.services.get().pluginId)
 }
+
+// The legacy server URL and the weather photo feed URL are private inputs too (README.md): TW_SERVER_URL and
+// TW_WEATHER_PHOTOS_URL from the environment or android/private.properties. Empty: no requests to them.
+val privateProps = Properties().apply {
+    rootProject.file("private.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+val serverUrl: String = System.getenv("TW_SERVER_URL") ?: privateProps.getProperty("TW_SERVER_URL", "")
+val weatherPhotosUrl: String = System.getenv("TW_WEATHER_PHOTOS_URL") ?: privateProps.getProperty("TW_WEATHER_PHOTOS_URL", "")
 
 android {
     namespace = "net.wizardfactory.todayweather"
@@ -21,11 +31,16 @@ android {
         // AN-19 sets the release value above every active Play track.
         versionCode = 200000
         versionName = "2.0.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "net.wizardfactory.todayweather.TestRunner"
+        buildConfigField("String", "SERVER_URL", "\"" + serverUrl.trimEnd('/') + "\"")
+        buildConfigField("String", "WEATHER_PHOTOS_URL", "\"" + weatherPhotosUrl + "\"")
     }
 
-    // Device tests read the golden corpus generated for core-domain.
+    // Device tests read the golden corpus generated for core-domain and the chart references; the image
+    // comparison is shared by the JVM and device tests.
     sourceSets["androidTest"].assets.srcDir("../core-domain/src/test/resources")
+    sourceSets["test"].kotlin.srcDir("src/sharedTest/java")
+    sourceSets["androidTest"].kotlin.srcDir("src/sharedTest/java")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -34,9 +49,11 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
+        unitTests.isIncludeAndroidResources = true
         unitTests.all { it.systemProperty("tw.projectDir", project.projectDir.absolutePath) }
     }
 }
@@ -49,7 +66,11 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
+    implementation(libs.firebase.messaging)
+    implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.core.splashscreen)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -60,7 +81,15 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.org.json)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.test.espresso.core)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }

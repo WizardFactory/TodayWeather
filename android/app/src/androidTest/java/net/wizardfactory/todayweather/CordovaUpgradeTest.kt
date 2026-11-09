@@ -1,10 +1,12 @@
 package net.wizardfactory.todayweather
 
 import android.content.Context
+import android.content.Intent
 import android.util.Base64
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -21,6 +23,7 @@ import net.wizardfactory.todayweather.core.storage.UnitSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,6 +64,7 @@ class CordovaUpgradeTest {
         assertTrue(state.expandShortChart)
         assertEquals(s["deviceId"]!!.jsonPrimitive.content, DeviceIdentity.deviceId(context))
         assertTrue("read from localStorage", "cities=localStorage" in state.migration!!.source)
+        assertPushReRegistered(state, s["deviceId"]!!.jsonPrimitive.content)
         assertSourcesKept()
     }
 
@@ -73,10 +77,47 @@ class CordovaUpgradeTest {
         val again = runBlocking { CordovaMigrator(context, AppStateStore.get(context)).migrateIfNeeded() }
         assertEquals(first, again)
         assertTrue("app_state.json unchanged", before.contentEquals(file.readBytes()))
+        assertTrue("a process start without an app open registers nothing", (context.applicationContext as TestTodayWeatherApp).sent.isEmpty())
         // The SDK's persisted collection flag (set by the Cordova opt-in) is now off.
         val measurement = context.getSharedPreferences("com.google.android.gms.measurement.prefs", Context.MODE_PRIVATE)
         assertFalse(measurement.getBoolean("measurement_enabled_from_api", true))
         assertSourcesKept()
+    }
+
+    /**
+     * Gate G1, push part: when the app opens, the migrated alarms and alerts are registered once more with the
+     * same Device-Id, for an unchanged token (seeded `token-a`) and a changed one (`token-b`), through the
+     * recording transport of [TestTodayWeatherApp] (nothing is sent).
+     */
+    private fun assertPushReRegistered(state: net.wizardfactory.todayweather.core.storage.AppState, deviceId: String) {
+        val app = context.applicationContext as TestTodayWeatherApp
+        assertNull("the process start alone registers nothing", app.opened)
+        assertTrue(app.sent.isEmpty())
+        InstrumentationRegistry.getInstrumentation()
+            .startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val outcome = runBlocking { app.opened!!.await() }!!
+        val token = TestRunner.args.getString("token")!!
+        val seededToken = storage("pushData2").jsonObject["fcmToken"]!!.jsonPrimitive.content
+        val expectedMethods = if (token == seededToken) listOf("POST") else listOf("PUT", "POST")
+        assertEquals(expectedMethods, outcome.requests.map { it.method })
+        assertEquals(outcome.requests, app.sent.toList())
+        if (token != seededToken) {
+            assertEquals("/v000903/push", outcome.requests[0].path)
+            assertEquals(token, outcome.requests[0].body.jsonObject["newToken"]!!.jsonPrimitive.content)
+            assertEquals(seededToken, outcome.requests[0].body.jsonObject["oldToken"]!!.jsonPrimitive.content)
+        }
+        val post = outcome.requests.last()
+        assertEquals("/v000903/push-list", post.path)
+        outcome.requests.forEach { assertEquals(deviceId, it.headers["Device-Id"]) }
+        val keys = post.records().map { r -> r.jsonObject.let { listOf(it["cityIndex"], it["id"], it["category"]).toString() } }
+        assertEquals(state.push.records.size, keys.size)
+        assertEquals("each record once", keys.size, keys.toSet().size)
+        post.records().forEach {
+            assertEquals(token, it.jsonObject["fcmToken"]!!.jsonPrimitive.content)
+            assertEquals(deviceId, it.jsonObject["uuid"]!!.jsonPrimitive.content)
+        }
+        val stored = runBlocking { AppStateStore.get(context).data.first() }
+        assertEquals(token, stored.push.fcmToken)
     }
 
     private fun assertSourcesKept() {
