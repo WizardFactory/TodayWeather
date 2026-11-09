@@ -37,6 +37,13 @@ pub trait KmaSource: Send + Sync {
     fn narrative_by(&self, deadline: Instant) -> Instant {
         deadline
     }
+    /// The narrative is supplementary (AK 2026-11-06): it is read alongside the snapshot, from
+    /// the request's province, and the answer takes it only when it is ready once the answer is
+    /// assembled, never waiting for it. Otherwise it is read after the assembly and waited for
+    /// until [`Self::narrative_by`].
+    fn narrative_beside(&self) -> bool {
+        false
+    }
 }
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
 /// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
@@ -214,6 +221,21 @@ impl KmaBackend {
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
         }
+        // A supplementary narrative is read while the snapshot is built; the read continues on its
+        // own when the answer does not wait for it, so its cache serves later requests.
+        let beside = match (&self.narrative, self.source.narrative_beside()) {
+            (Some(reader), true) => request
+                .region
+                .as_deref()
+                .and_then(crate::narrative::office)
+                .map(|office| {
+                    let (reader, by) = (reader.clone(), self.source.narrative_by(deadline));
+                    let read =
+                        crate::observability::spawn(async move { reader.read(office, by).await });
+                    (office, read)
+                }),
+            _ => None,
+        };
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
             SourceAnswer::Forward(_) => return native_defect(),
@@ -256,8 +278,19 @@ impl KmaBackend {
                     .and_then(|p| crate::narrative::office(&p))
             })
             .flatten();
-            let by = self.source.narrative_by(deadline);
-            crate::narrative::attach(body, office, self.narrative.as_ref(), by).await;
+            if self.source.narrative_beside() {
+                // Only a read of the same office that already ended counts.
+                let read = match beside {
+                    Some((early, read)) if Some(early) == office && read.is_finished() => {
+                        read.await.ok().flatten()
+                    }
+                    _ => None,
+                };
+                crate::narrative::insert(body, office, read);
+            } else {
+                let by = self.source.narrative_by(deadline);
+                crate::narrative::attach(body, office, self.narrative.as_ref(), by).await;
+            }
             if let Some(name) = &requested_region {
                 keep_requested_region(body, name);
             }

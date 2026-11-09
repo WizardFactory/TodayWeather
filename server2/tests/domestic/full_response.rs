@@ -1167,6 +1167,96 @@ async fn a_narrative_that_never_ends_does_not_hold_the_response_past_the_bound()
     assert!(held < Duration::from_millis(3300), "{held:?}");
 }
 
+/// A narrative reader answering a fresh narrative for the asked office after `delay`.
+struct DelayedNarrative(Duration);
+impl server2::narrative::Read for DelayedNarrative {
+    fn read(
+        &self,
+        station: u16,
+        _deadline: Instant,
+    ) -> BoxFuture<'_, Option<server2::narrative::Narrative>> {
+        let delay = self.0;
+        Box::pin(async move {
+            tokio::time::sleep(delay).await;
+            let ms = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .ok()?
+                .as_millis() as i64;
+            let now = chrono::DateTime::from_timestamp_millis(ms)?
+                .with_timezone(&chrono::FixedOffset::east_opt(9 * 3600)?);
+            Some(server2::narrative::Narrative {
+                station_id: station,
+                region: "서울".into(),
+                announcement: now.to_rfc3339(),
+                expires_at: (now + chrono::Duration::hours(12)).to_rfc3339(),
+                text: "맑음".into(),
+                language: "ko",
+                source: "KMA",
+                text_format: "plain",
+            })
+        })
+    }
+}
+/// The gateway of a source whose required inputs come quickly, with `narrative`.
+fn narrated_gateway(peer: &Peer, narrative: Arc<dyn server2::narrative::Read>) -> Gateway {
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(3), CatalogLimits::default()).unwrap());
+    let writer = Writer::new(store, Config::default()).unwrap();
+    let source = build_source(peer, Arc::new(Providers::default()))
+        .with_forecast(Some(Arc::new(Forecasts {
+            writer: writer.clone(),
+            calls: Arc::new(AtomicUsize::new(0)),
+        })))
+        .with_raw_writer(writer);
+    let backends = BackendDispatcher::legacy("http://127.0.0.1:9").unwrap();
+    let backend = Arc::new(
+        KmaBackend::new(
+            Arc::new(source),
+            Arc::new(|| NOW),
+            AssemblyConfig::default(),
+        )
+        .with_narrative(Some(narrative)),
+    );
+    backend.register(&backends);
+    KmaBackend::select(&backends, BackendMode::Native).unwrap();
+    Gateway::new(Arc::new(FixedGeo), backends)
+        .with_weather_geocoder(Arc::new(FixedGeo), vec![Version::V000903])
+}
+
+/// AK 2026-11-06: the narrative is supplementary. It is read while the snapshot is built, so a
+/// quick read is in the answer, but a read still running when the answer is assembled does not
+/// hold it: the answer comes when the required inputs are in, without the narrative.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_narrative_is_read_beside_the_snapshot_and_never_waited_for() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let ready = narrated_gateway(&peer, Arc::new(DelayedNarrative(Duration::ZERO)));
+    let started = Instant::now();
+    let response = ready.handle(http_request()).await;
+    // The time to assemble an answer here, with the narrative at once.
+    let assembled = started.elapsed();
+    assert_eq!(response.status(), 200);
+    let body: serde_json::Value =
+        serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+    assert_eq!(body["forecastNarrative"]["text"], "맑음", "{body}");
+    let peer = Peer::persistent();
+    let slow = narrated_gateway(&peer, Arc::new(DelayedNarrative(Duration::from_secs(20))));
+    let started = Instant::now();
+    let response = slow.handle(http_request()).await;
+    let took = started.elapsed();
+    assert_eq!(response.status(), 200);
+    let body: serde_json::Value =
+        serde_json::from_slice(&to_bytes(response.into_body(), usize::MAX).await.unwrap()).unwrap();
+    assert!(body.get("forecastNarrative").is_none(), "{body}");
+    // Waiting for the narrative after the assembly would add up to 2 s (its bound is 2.9 s from
+    // the start of the request); this answer comes with the assembly.
+    assert!(
+        took < assembled + Duration::from_millis(1000),
+        "{took:?} against {assembled:?}"
+    );
+    assert!(took < Duration::from_millis(2900), "{took:?}");
+}
+
 /// What ran before the source used up part of the wait: here all but half a second of it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_wait_ends_at_one_instant_counted_from_the_start_of_the_request() {

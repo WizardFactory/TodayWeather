@@ -190,16 +190,38 @@ pub(crate) async fn attach_with_clock(
     deadline: Instant,
     clock: &(dyn Fn() -> i64 + Send + Sync),
 ) {
+    if !matches!(body, OrderedJson::Object(_)) {
+        return;
+    }
+    let read = match (station, reader) {
+        (Some(station), Some(reader)) => {
+            let deadline = deadline.min(Instant::now() + Duration::from_secs(2));
+            tokio::time::timeout_at(deadline, reader.read(station, deadline))
+                .await
+                .ok()
+                .flatten()
+        }
+        _ => None,
+    };
+    insert_with_clock(body, station, read, clock);
+}
+/// Put a narrative read already (`read`) into `body` for `station`, as [`attach`] does after
+/// its read.
+pub fn insert(body: &mut OrderedJson, station: Option<u16>, read: Option<Narrative>) {
+    insert_with_clock(body, station, read, &now_ms);
+}
+pub(crate) fn insert_with_clock(
+    body: &mut OrderedJson,
+    station: Option<u16>,
+    read: Option<Narrative>,
+    clock: &(dyn Fn() -> i64 + Send + Sync),
+) {
     let OrderedJson::Object(fields) = body else {
         return;
     };
     let key = "forecastNarrative".encode_utf16().collect::<Vec<_>>();
     fields.retain(|(k, _)| k != &key);
-    let (Some(station), Some(reader)) = (station, reader) else {
-        return;
-    };
-    let deadline = deadline.min(Instant::now() + Duration::from_secs(2));
-    if let Ok(Some(n)) = tokio::time::timeout_at(deadline, reader.read(station, deadline)).await
+    if let (Some(station), Some(n)) = (station, read)
         && n.station_id == station
         && n.fresh(clock())
         && let Ok(n) = OrderedJson::from_serde(&n)
