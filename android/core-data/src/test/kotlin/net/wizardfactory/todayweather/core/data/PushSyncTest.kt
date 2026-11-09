@@ -23,6 +23,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.AppStateSerializer
+import net.wizardfactory.todayweather.core.storage.Location
+import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.PushRegistration
 import net.wizardfactory.todayweather.core.storage.PushRequest
 import net.wizardfactory.todayweather.core.storage.PushState
@@ -92,6 +94,29 @@ class PushSyncTest {
         assertEquals("B", (transport.sent[1].body as kotlinx.serialization.json.JsonArray)[0].jsonObject["fcmToken"]!!.jsonPrimitive.content)
         assertEquals("B" to "C", transport.sent[2].tokens())
         assertEquals("C", store.data.first().push.fcmToken)
+    }
+
+    /** `updateCityInfo` after a place's update (AN-10): its records follow it and only they are posted; no change, no post. */
+    @Test
+    fun aMovedPlacePostsItsRecordsAndSavesThem() = runBlocking {
+        val store = store("A")
+        val moved = Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.558, 126.978), source = "KMA")
+        // A record of a KMA place has its town (a record without one stops `updateCityInfo`).
+        val town = Json.parseToJsonElement("""{"first":"서울특별시","second":"중구","third":"명동"}""")
+        runBlocking {
+            store.updateData { it.copy(places = listOf(Place.currentPositionPlaceholder(), moved),
+                push = it.push.copy(records = listOf(JsonObject(record + ("town" to town))))) }
+        }
+        val transport = HeldTransport()
+        transport.release.complete(Unit)
+        val sync = PushSync(store, transport) { ctx }
+        val outcome = sync.updateCity(1)!!
+        assertEquals(listOf("POST /v000903/push-list"), outcome.requests.map { "${it.method} ${it.path}" })
+        val posted = (outcome.requests.single().body as kotlinx.serialization.json.JsonArray).single().jsonObject
+        assertEquals("회현동", posted["name"]!!.jsonPrimitive.content)
+        assertEquals("회현동", store.data.first().push.records.single()["name"]!!.jsonPrimitive.content)
+        assertEquals(emptyList(), sync.updateCity(1)!!.requests, "unchanged now")
+        assertEquals(emptyList(), sync.updateCity(0)!!.requests, "no records of the current position")
     }
 
     @Test
