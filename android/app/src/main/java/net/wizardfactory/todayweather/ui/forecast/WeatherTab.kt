@@ -113,11 +113,14 @@ object WeatherTabTags {
  * with the current position's location glyph or the loading spinner, the bell and share buttons, and the pollen and
  * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`) and the
  * standard opens S07 ([onUnits], `goUnitsPage`). The visit reads the temperature unit and the theme as it applies, as
- * ForecastCtrl did, so a change on the settings pages over it shows in the next apply.
+ * ForecastCtrl did, so a change on the settings pages over it shows in the next apply. Opened with no enabled place, it
+ * asks how to start ([onNoPlace], `startPopup`). The title's spinner also turns while the current position is looked up
+ * ([locating]).
  */
 @Composable
 fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
-                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0): TabContent {
+                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
+                       locating: Boolean = false, onNoPlace: () -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -134,7 +137,8 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     val entry = place?.let { entries[WeatherRepository.key(it)] }
     val record = remember(place, entry) { place?.let { cityRecord(it, entry) } }
     val hasPush = remember(state.push, index) { hasPushInfo(state, index) }
-    val opened = remember(visit) { BooleanArray(1) }
+    // Whether the visit has opened, and whether it found no enabled place when it did.
+    val opened = remember(visit) { BooleanArray(2) }
     // The apply is the visit's own state, so it runs while composing, before the page reads it. A load starting applies
     // the place as it is (`applyEvent` "loadWeatherData"), so a theme chosen on S08 shows the saved photo at once (#2915 F2).
     // A photo the feed gave the place alone is `loadWeatherPhotosEvent`: the photo, without an apply (#2915 F4).
@@ -142,7 +146,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     val applied = remember(visit, weather, hasPush, applies) {
         if (!opened[0]) {
             opened[0] = true
-            visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
+            opened[1] = !visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
         } else {
             visit.apply(record, hasPush)
         }
@@ -169,7 +173,8 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     var source by remember(visit) { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val density = LocalDensity.current.density
-    val loadingSelected = place != null && WeatherRepository.key(place) in loading
+    LaunchedEffect(visit) { if (opened[1]) onNoPlace() }
+    val loadingSelected = place != null && (WeatherRepository.key(place) in loading || place.currentPosition && locating)
     val onAction: (PageAction) -> Unit = { action ->
         when (action) {
             is PageAction.AirInfo -> onAirInfo(action.code)

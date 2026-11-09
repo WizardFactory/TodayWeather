@@ -8,7 +8,9 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
 import net.wizardfactory.todayweather.core.domain.AddressFormat
 
 /** One request to the legacy push API; [path] is relative to the server URL. */
@@ -70,6 +72,47 @@ object PushRegistration {
         if (state.records.isEmpty() || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
         return Result(listOf(postList(state, ctx)), state)
     }
+
+    /**
+     * `Push.updateCityInfo(cityIndex)`, which `WeatherInfo.updateCity` calls after each update of a place: the records of
+     * [index] take the place's simple info ([CityInfo.simple]). When anything changed, the list is saved and only those
+     * records are posted (with a token; `_postPushList` stops without one). Without simple info, or for a record without
+     * a town when the place has one, the Cordova code throws and nothing is saved or sent.
+     */
+    fun onCityChanged(push: PushState, places: List<Place>, index: Int, ctx: Context): Result {
+        val unchanged = Result(emptyList(), push)
+        val info = places.getOrNull(index)?.let(CityInfo::simple) ?: return unchanged
+        var changed = false
+        val records = push.records.map { record ->
+            if ((record["cityIndex"] as? JsonPrimitive)?.intOrNull != index) return@map record
+            val out = record.toMutableMap()
+            // `for (var key in city)`: name and source always (an undefined value removes the key), then location and town.
+            for (key in listOf("name", "source")) {
+                val value = info[key]
+                if (out[key] != value) changed = true
+                if (value == null) out.remove(key) else out[key] = value
+            }
+            info["location"]?.let { location ->
+                val old = out["location"] as? JsonObject
+                if (old == null || number(old["lat"]) != number(location.jsonObject["lat"]) || number(old["long"]) != number(location.jsonObject["long"])) changed = true
+                out["location"] = location
+            }
+            info["town"]?.let { town ->
+                val old = out["town"] as? JsonObject ?: return unchanged
+                if (listOf("first", "second", "third").any { old[it] != town.jsonObject[it] }) changed = true
+                out["town"] = town
+            }
+            JsonObject(out)
+        }
+        if (!changed) return unchanged
+        val state = push.copy(records = records)
+        val list = records.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull == index }
+        if (state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
+            JsonArray(list.map { postObject(it, state, ctx) }))), state)
+    }
+
+    private fun number(value: JsonElement?): Double? = (value as? JsonPrimitive)?.doubleOrNull
 
     private fun jsonHeaders(ctx: Context, language: Boolean) = buildMap {
         put("Content-Type", "application/json")

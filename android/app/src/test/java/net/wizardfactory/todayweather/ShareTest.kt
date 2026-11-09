@@ -29,12 +29,15 @@ import net.wizardfactory.todayweather.core.data.cityRecord
 import net.wizardfactory.todayweather.core.domain.share.ShareMessage
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.closeStart
+import net.wizardfactory.todayweather.core.storage.startShows
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
+import net.wizardfactory.todayweather.ui.start.LocationPopupTags
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.After
@@ -81,7 +84,7 @@ class ShareTest {
             val loading by repository.loading.collectAsState()
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
-            val share = WeatherShare(context, memory::current) { repository.weather.value }
+            val share = WeatherShare(context, memory::current, { repository.weather.value }, session::openStartPopup)
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {},
                 onShare = share::share)
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {})
@@ -127,12 +130,15 @@ class ShareTest {
         assertTrue(text.startsWith("회현동\nCurrent ") && text.endsWith("\n\nTodayWeather https://twa.app.link/II1JstpVoM"), text)
     }
 
+    /** `doTabShare` without a location shares nothing and asks how to start (O02, AN-10). */
     @Test
-    fun aPlaceWithoutALocationSharesNothing() {
-        show(listOf(Place.currentPositionPlaceholder()))
+    fun aPlaceWithoutALocationOpensTheStartChoice() {
+        show(listOf(Place(currentPosition = true, disable = false)))
+        rule.onNodeWithTag(LocationPopupTags.START_CHOICE).assertDoesNotExist()
         rule.onNodeWithTag(WeatherTabTags.SHARE).performClick()
         rule.waitForIdle()
         assertNull(shared())
+        rule.onNodeWithTag(LocationPopupTags.START_CHOICE).assertExists()
     }
 
     @Test
@@ -169,6 +175,22 @@ class ShareTest {
         links.accept(Intent(Intent.ACTION_VIEW, Uri.parse("todayweather://1")))
         runCurrent()
         assertEquals(listOf(2.0, 1.0), opened, "later links at once")
+        delivery.cancel()
+    }
+
+    /** While the start page shows (AN-10), a link waits for it to close. */
+    @Test
+    fun aLinkWaitsForTheStartPage() = runTest {
+        val links = EntryLinks()
+        val state = MutableStateFlow<AppState?>(AppState())
+        val opened = mutableListOf<Double>()
+        val delivery = launch { links.deliver(state, ready = { !it.startShows }) { opened += it } }
+        links.accept(Intent(Intent.ACTION_VIEW, Uri.parse("todayweather://0")))
+        runCurrent()
+        assertEquals(emptyList(), opened, "a new install shows the start page")
+        state.value = AppState().closeStart()
+        runCurrent()
+        assertEquals(listOf(0.0), opened)
         delivery.cancel()
     }
 }

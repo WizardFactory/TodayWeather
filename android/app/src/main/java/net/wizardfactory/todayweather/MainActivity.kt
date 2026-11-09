@@ -41,9 +41,11 @@ import net.wizardfactory.todayweather.ads.BannerSlot
 import net.wizardfactory.todayweather.ads.TwAds
 import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.data.SettingsActions
+import net.wizardfactory.todayweather.core.data.StartFlow
 import net.wizardfactory.todayweather.core.data.Telemetry
 import net.wizardfactory.todayweather.core.data.WeatherEntry
 import net.wizardfactory.todayweather.core.data.WeatherSession
+import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
 import net.wizardfactory.todayweather.core.domain.settings.About
 import net.wizardfactory.todayweather.core.domain.settings.Handoffs
 import net.wizardfactory.todayweather.core.domain.settings.SettingLists
@@ -51,7 +53,11 @@ import net.wizardfactory.todayweather.core.domain.shell.AppLanguage
 import net.wizardfactory.todayweather.core.domain.shell.StartupPage
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
+import net.wizardfactory.todayweather.core.domain.start.RetryButton
 import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.startShows
+import net.wizardfactory.todayweather.location.AndroidLocationAccess
+import net.wizardfactory.todayweather.location.LocationSwitch
 import net.wizardfactory.todayweather.ui.air.rememberAirTab
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.RetryDialog
@@ -71,11 +77,16 @@ import net.wizardfactory.todayweather.ui.shell.ShellState
 import net.wizardfactory.todayweather.ui.shell.TabContent
 import net.wizardfactory.todayweather.ui.shell.TodayWeatherShell
 import net.wizardfactory.todayweather.ui.shell.rememberShellNavigation
+import net.wizardfactory.todayweather.ui.start.LocationRetryPopup
+import net.wizardfactory.todayweather.ui.start.StartChoicePopup
+import net.wizardfactory.todayweather.ui.start.StartPage
+import net.wizardfactory.todayweather.ui.start.StartScreen
 
 /**
  * The launcher activity. It keeps the Cordova component name (`net.wizardfactory.todayweather/.MainActivity`),
  * so home-screen shortcuts of the Cordova app open it. The splash screen stays until the Cordova data migration
- * has finished, and entry intents wait for it too.
+ * has finished, and entry intents wait for it too. While the startup gate holds, the start page S01 shows instead of
+ * the tabs (#2889); the tabs then open on Hourly.
  */
 class MainActivity : ComponentActivity() {
     private val app get() = application as TodayWeatherApp
@@ -94,18 +105,35 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         splash.setKeepOnScreenCondition { !app.migration.isCompleted }
         opened = ViewModelProvider(this)[OpenedModel::class.java]
+        app.location.attach(this)
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
         // The banner belongs to this activity: a configuration change loads a new one at the new width (V21).
         banner = AdMobBanner(this, BuildConfig.BANNER_AD_UNIT, app.analytics::track)
         opened.ads.attach(banner)
-        opened.consent.start(this)
+        // UMP and the Ads SDK start with the tabs, after the start page (TabCtrl's `TwAds.init`).
+        lifecycleScope.launch {
+            app.appState.state.first { it != null && !it.startShows }
+            opened.consent.start(this@MainActivity)
+        }
         val privacy = PrivacyActions(app.analytics.choice, app.analytics::setCollectionEnabled) { onUnavailable ->
             opened.consent.openPrivacyOptions(this, onUnavailable)
         }
         setContent {
             val state by app.appState.state.collectAsState()
+            // The start page closed in this app open: the tabs open on Hourly (`close()`).
+            var afterStart by rememberSaveable { mutableStateOf(false) }
             state?.let { s ->
+                if (s.startShows) {
+                    LaunchedEffect(Unit) {
+                        afterStart = true
+                        app.analytics.screen("start")
+                    }
+                    StartScreen(opened.start, app.places, { app.towns.await() }, onExit = ::finish,
+                        openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
+                        openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) })
+                    return@let
+                }
                 val entries by app.weather.weather.collectAsState()
                 val loading by app.weather.loading.collectAsState()
                 val retry by session.retry.collectAsState()
@@ -120,7 +148,7 @@ class MainActivity : ComponentActivity() {
                         onExpand = { expand -> app.appState.change { it.copy(expandShortChart = expand) } },
                         onLocationGlyph = ::switchToLocationSettings,
                         locationEnabled = ::isLocationEnabled,
-                        onShare = WeatherShare(this, app.appState::current) { app.weather.weather.value }::share,
+                        onShare = WeatherShare(this, app.appState::current, { app.weather.weather.value }, session::openStartPopup)::share,
                     )
                 }
                 val handoffs = remember(context) {
@@ -132,7 +160,9 @@ class MainActivity : ComponentActivity() {
                 val shown by opened.ads.shown.collectAsState()
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
                     handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (shown) ({ BannerSlot(banner) }) else null,
-                    onScreen = app.analytics::screen)
+                    onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
+                    openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
+                    openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) })
             }
         }
     }
@@ -151,6 +181,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        app.location.detach(this)
         opened.consent.stop(this)
         opened.ads.detach(banner)
         banner.destroy()
@@ -181,8 +212,9 @@ class MainActivity : ComponentActivity() {
  * - over the tabs, the settings pages, the menu's hand-offs and About popup (#2891), and the nationwide and warning
  *   pages (#2892);
  * - the menu's privacy rows, the banner under the tab bar and the routes reported to analytics (#2894);
- * - the retry confirmation.
- * The Locations tab comes with AN-10.
+ * - the retry confirmation, the current position's confirmation (O03 `forecast`) and, with no enabled place, the start
+ *   choice O02 that a weather page, a weather or Air tab tapped or a share opens (#2889).
+ * The Locations tab comes with AN-11.
  */
 @Composable
 fun AppContent(
@@ -202,9 +234,14 @@ fun AppContent(
     banner: (@Composable () -> Unit)? = null,
     /** The route shown, as the Cordova state names it (`$stateChangeSuccess`, `screen_view`). */
     onScreen: (String) -> Unit = {},
+    /** The tab to open on instead of the startup page: Hourly after the start page (`close()`). */
+    startTab: Tab? = null,
+    /** `switchToSettings()` and `switchToLocationSettings()` of the current position's confirmation. */
+    openAppSettings: () -> Unit = {},
+    openLocationSettings: () -> Unit = {},
 ) {
     val theme = Theme.of(state.settings.theme)
-    val navigation = rememberShellNavigation(StartupPage.tab(state.settings.startupPage))
+    val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
@@ -231,6 +268,16 @@ fun AppContent(
     var privacyAlert by rememberSaveable { mutableStateOf<Int?>(null) }
     val analyticsChoice by (privacy?.choice ?: remember { MutableStateFlow(false) }).collectAsState()
     val applies by session.applies.collectAsState()
+    val locating by session.locating.collectAsState()
+    val startPopup by session.startPopup.collectAsState()
+    val autoSearch by session.autoSearch.collectAsState()
+    val positionRetry by session.positionRetry.collectAsState()
+    fun openLocations() {
+        airCode = null
+        navigation.selected = Tab.LOCATIONS
+    }
+    // O02's answer: the current position on Hourly, or the Locations tab.
+    fun started(currentPosition: Boolean) = if (currentPosition) navigation.selected = Tab.HOURLY else openLocations()
     val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
     LaunchedEffect(screen) { onScreen(screen) }
     val texts = host.texts
@@ -292,6 +339,12 @@ fun AppContent(
         onExit = onExit,
         navigation = navigation,
         onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
+        // `doTabForecast`: with no enabled place a weather or Air tab asks how to start instead.
+        onTabTap = { tab ->
+            val none = tab != Tab.LOCATIONS && PlaceIndex.enabledCount(state.places.map { it.disable }) == 0
+            if (none) session.openStartPopup()
+            none
+        },
         overlay = {
             pages.lastOrNull()?.let { route ->
                 if (NationRoutes.known(route)) {
@@ -319,6 +372,30 @@ fun AppContent(
                     onBack = { analyticsPopup = false })
             }
             privacyAlert?.let { message -> IonicAlert("TodayWeather", listOf(stringResource(message)), stringResource(R.string.LOC_OK), onClose = { privacyAlert = null }) }
+            if (startPopup) {
+                StartChoicePopup(autoSearch, onChoose = session::chooseAutoSearch, onOk = { started(session.startChoice(ok = true)) },
+                    onBack = { started(session.startChoice(ok = false)) })
+            }
+            positionRetry?.let { confirm ->
+                LocationRetryPopup(confirm, onBack = session::closePositionRetry) { button ->
+                    when (button) {
+                        RetryButton.CLOSE -> session.closePositionRetry()
+                        RetryButton.SEARCH -> {
+                            session.searchInsteadOfPosition()
+                            openLocations()
+                        }
+                        RetryButton.APP_SETTINGS -> {
+                            session.closePositionRetry()
+                            openAppSettings()
+                        }
+                        RetryButton.LOCATION_SETTINGS -> {
+                            session.closePositionRetry()
+                            openLocationSettings()
+                        }
+                        RetryButton.RETRY -> session.confirmPositionRetry()
+                    }
+                }
+            }
         },
     ) { tab ->
         when (tab) {
@@ -326,10 +403,10 @@ fun AppContent(
                 // `goAirInfoPage(code)`: /tab/air?code=.
                 airCode = code
                 navigation.selected = Tab.AIR
-            }, onUnits = openUnits, applies = applies)
+            }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup)
             Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
                 onUnits = openUnits)
-            else -> TabContent() // AN-10
+            else -> TabContent() // AN-11
         }
     }
     if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
@@ -351,9 +428,21 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     }
 
     val photoLoader = PhotoLoader(app)
+    private val telemetry = Telemetry { name, params -> twApp.analytics.track(name, params) }
+
+    /** `window.updateCityInfo(index)`: a place's alarms follow its update, in the app's scope (`Push.updateCityInfo`). */
+    private val cityUpdated: (Int) -> Unit = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateCity(index) } }
 
     val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos,
-        telemetry = Telemetry { name, params -> twApp.analytics.track(name, params) })
+        telemetry = telemetry, location = twApp.location, cityUpdated = cityUpdated)
+
+    /** The start page's visit of this app open (S01, #2889). */
+    val start: StartPage by lazy {
+        StartPage(StartFlow(twApp.appState, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), viewModelScope)
+    }
+
+    /** `locationOn`: location services turned on while the app is open reload a selected current position. */
+    private val locationSwitch = LocationSwitch(app) { session.reload(WeatherSession.Sender.LOCATION_ON) }
 
     /** The banner of this app open (TabCtrl's `TwAds.init`) and its Remote Config policy. */
     val ads = TwAds(viewModelScope, RemoteBannerConfig(twApp.remoteConfigSource(), viewModelScope), twApp.analytics::track, SystemClock::elapsedRealtime)
@@ -370,13 +459,21 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     init {
         twApp.onOpened()
         twApp.analytics.onOpened()
-        // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`).
-        viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, session::openPlace) }
+        // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`), once the start page has closed.
+        viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, ready = { !it.startShows }, open = session::openPlace) }
         loadPhotos()
         connectivity.registerDefaultNetworkCallback(online)
+        locationSwitch.register()
         viewModelScope.launch {
             twApp.migration.await()
-            val state = twApp.appState.state.first { it != null }!!
+            var state = twApp.appState.state.first { it != null }!!
+            // The start page hides the banner while it shows, and its close shows it again (`setShowAds`); the tabs' loading
+            // starts after it (TabCtrl `init`).
+            if (state.startShows) {
+                ads.setShowAds(false)
+                state = twApp.appState.state.first { it != null && !it.startShows }!!
+                ads.setShowAds(true)
+            }
             // The cached weather first, as Cordova showed the saved cities while it loaded.
             state.places.getOrNull(state.placeIndex)?.let { twApp.weather.cached(it) }
             session.reload(WeatherSession.Sender.INIT)
@@ -389,6 +486,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         connectivity.unregisterNetworkCallback(online)
+        locationSwitch.unregister()
     }
 }
 

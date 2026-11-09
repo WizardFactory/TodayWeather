@@ -25,6 +25,7 @@ import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -37,7 +38,12 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ProductionAirTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    // Korean units (the airkorea standard), whatever the device's region; the place is saved before the app opens.
+    @get:Rule val chain: RuleChain = RuleChain.outerRule(StateRule {
+        it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1, units = UnitSettings.defaults("KR"))
+    }).around(rule)
 
     private val app get() = rule.activity.application as TestTodayWeatherApp
     private val seoul = Place(false, false, "서울", "대한민국 서울특별시 중구", "KR", Location(37.56, 126.98))
@@ -46,8 +52,6 @@ class ProductionAirTest {
     fun seoulShowsItsStationsAndAnotherStationShowsItsValues() {
         assumeTrue("needs -e weather production", TestRunner.args.getString("weather") == "production")
         rule.waitUntil(30_000) { app.appState.current() != null }
-        // Korean units (the airkorea standard), whatever the device's region.
-        rule.runOnUiThread { app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1, units = UnitSettings.defaults("KR")) } }
         rule.waitForIdle()
         // The first tap selects the Air tab; the next, past the 700 ms guard, loads Seoul at once (`reloadEvent` "tab").
         rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()

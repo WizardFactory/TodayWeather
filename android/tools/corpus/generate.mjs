@@ -735,6 +735,45 @@ function pushUnitsRequests(storedToken, list, newUnits) {
     return calls;
 }
 
+// Push.updateCityInfo after a place changed (WeatherInfo.updateCity, AN-10): the records of the place take its simple
+// info and, when anything changed, only those records are posted (with a token) and the list is saved. The service
+// starts with PUSH_CITIES (loadPushInfo repairs the current position's records), then the places become [after].
+function pushCityRequests(storedToken, list, after, index) {
+    process.env.TZ = 'Asia/Seoul';
+    let factory;
+    const timers = [];
+    const calls = [];
+    let saved = null;
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }})}, console: quiet, window: {},
+        clientConfig: {package: 'todayWeather', serverUrl: 'https://server'}, ionic: {Platform: {isAndroid: () => true, isIOS: () => false}},
+        setTimeout: (fn) => timers.push(fn), Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: list}};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set(k, v) { if (k === 'pushData2') saved = clone(v); }};
+    const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
+    const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const Units = {getAllUnits: () => clone(units)};
+    let cities = PUSH_CITIES;
+    const WeatherInfo = {getCityOfIndex: (i) => clone(cities[i])};
+    const Firebase = {init() {}, inited: true};
+    const push = factory($http, TwStorage, Util, loadWeatherUtil(units), WeatherInfo, Units, {$broadcast() {}}, Firebase);
+    push.init();
+    timers.splice(0).forEach((fn) => fn());
+    calls.length = 0;
+    const before = clone(push.pushData.pushList);
+    saved = null;
+    cities = after;
+    push.updateCityInfo(index);
+    delete process.env.TZ;
+    return {before, requests: calls, saved: saved && saved.pushList};
+}
+
+const MOVED = [{...PUSH_CITIES[0], name: '명동', address: '대한민국 서울특별시 중구 명동', location: {lat: 37.564, long: 126.986}}, ...PUSH_CITIES.slice(1)];
+const RESOURCED = [PUSH_CITIES[0], {...PUSH_CITIES[1], source: 'DSF'}, PUSH_CITIES[2]];
+
 function pushCases() {
     return {
         cities: PUSH_CITIES, pushList: PUSH_LIST, deviceId: 'device-uuid', language: 'ko-KR', appVersion: '1.1.1',
@@ -755,6 +794,11 @@ function pushCases() {
             ['no-list', 'token-a', [], {temperatureUnit: 'F'}],
         ].map(([name, storedToken, pushList, units]) => ({name, storedToken, pushList, units,
             requests: pushUnitsRequests(storedToken, pushList, units)})),
+        cityChanged: [
+            ['current-moved', 'token-a', MOVED, 0], ['current-unchanged', 'token-a', PUSH_CITIES, 0],
+            ['source-changed', 'token-a', RESOURCED, 1], ['moved-no-token', null, MOVED, 0], ['no-records', 'token-a', MOVED, 0, []],
+        ].map(([name, storedToken, cities, index, list = PUSH_LIST]) => ({name, storedToken, cities, index,
+            ...pushCityRequests(storedToken, list, cities, index)})),
     };
 }
 

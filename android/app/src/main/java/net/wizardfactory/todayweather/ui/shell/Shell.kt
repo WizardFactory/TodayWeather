@@ -184,6 +184,8 @@ fun TodayWeatherShell(
     navigation: ShellNavigation = rememberShellNavigation(state.startupTab),
     /** A tab the user selected on the tab bar. */
     onSelect: (Tab) -> Unit = {},
+    /** A tap on a tab before the shell handles it: true when the app took it (the start choice O02). */
+    onTabTap: (Tab) -> Boolean = { false },
     overlay: @Composable BoxScope.() -> Unit = {},
     popups: @Composable BoxScope.() -> Unit = {},
     content: @Composable (Tab) -> TabContent = { TabContent() },
@@ -214,7 +216,9 @@ fun TodayWeatherShell(
                             }
                             TabBar(selected, colors) { tab ->
                                 val now = System.currentTimeMillis()
-                                if (tab == selected) {
+                                if (onTabTap(tab)) {
+                                    // Taken before the tab changes or reloads.
+                                } else if (tab == selected) {
                                     // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
                                     if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
                                 } else {

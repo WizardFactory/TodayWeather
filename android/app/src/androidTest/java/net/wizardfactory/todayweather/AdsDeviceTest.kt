@@ -24,6 +24,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -38,13 +39,17 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class AdsDeviceTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    // Past the start page without a place: the weather pages ask how to start (O02), and the tests go on from Locations.
+    @get:Rule val chain: RuleChain = RuleChain.outerRule(StateRule()).around(rule)
 
     private val app get() = rule.activity.application as TestTodayWeatherApp
 
     @Test
     fun aTestBannerLoadsAndShowsWhileAnalyticsStaysOff() {
         assumeTrue("needs -e ads online", TestRunner.args.getString("ads") == "online")
+        rule.closeStartChoice()
         assertEquals("debug builds request Google's test unit", "ca-app-pub-3940256099942544/9214589741", BuildConfig.BANNER_AD_UNIT)
         rule.waitUntil(120_000) { rule.onAllNodes(hasTestTag(ShellTags.BANNER)).fetchSemanticsNodes().isNotEmpty() }
         rule.waitForIdle()
@@ -69,6 +74,7 @@ class AdsDeviceTest {
     @Test
     fun anOptInStartsCollection() {
         assumeTrue("needs -e ads optin", TestRunner.args.getString("ads") == "optin")
+        rule.closeStartChoice()
         rule.waitUntil(30_000) { app.appState.current() != null }
         assertFalse(app.analytics.choice.value)
         rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()

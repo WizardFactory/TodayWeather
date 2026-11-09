@@ -1,5 +1,5 @@
-// The Cordova sources that a set of references was captured from (chart, shell, forecast, air, settings, nation and
-// privacy references): each file of the APK's www with the matching client/www file, whether Git tracks it and its last
+// The Cordova sources that a set of references was captured from (chart, shell, forecast, air, settings, nation, privacy
+// and start references): each file of the APK's www with the matching client/www file, whether Git tracks it and its last
 // commit. Build outputs that Git ignores (gulp sass of client/scss, Bower) name the tracked input they come from,
 // which is recorded instead, so that check-sources.mjs works on a clean checkout.
 import {createHash} from 'node:crypto';
@@ -18,6 +18,7 @@ export const REFERENCE_SETS = [
     {name: 'settings', provenance: 'app/src/test/resources/settings-reference/provenance.json', tool: 'android/tools/settings-reference/capture.sh'},
     {name: 'nation', provenance: 'app/src/test/resources/nation-reference/provenance.json', tool: 'android/tools/nation-reference/capture.sh'},
     {name: 'privacy', provenance: 'app/src/test/resources/privacy-reference/provenance.json', tool: 'android/tools/privacy-reference/capture.sh'},
+    {name: 'start', provenance: 'app/src/test/resources/start-reference/provenance.json', tool: 'android/tools/start-reference/capture.sh'},
 ];
 
 /**

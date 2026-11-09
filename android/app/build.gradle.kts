@@ -28,6 +28,10 @@ val mailTo: String = System.getenv("TW_MAIL_TO") ?: privateProps.getProperty("TW
 val admobAppId: String = System.getenv("TW_ADMOB_APP_ID_ANDROID") ?: privateProps.getProperty("TW_ADMOB_APP_ID_ANDROID", "")
 val admobBanner: String = System.getenv("TW_ADMOB_BANNER_ANDROID") ?: privateProps.getProperty("TW_ADMOB_BANNER_ANDROID", "")
 val sampleAppId = "ca-app-pub-3940256099942544~3347511713"
+
+// Place search (AN-10): the Android-restricted key of Places API (New), TW_PLACES_API_KEY_ANDROID (private input, as
+// above). Without it S01 searches the bundled towns.
+val placesKey: String = System.getenv("TW_PLACES_API_KEY_ANDROID") ?: privateProps.getProperty("TW_PLACES_API_KEY_ANDROID", "")
 val testBanner = "ca-app-pub-3940256099942544/9214589741"
 
 android {
@@ -46,6 +50,7 @@ android {
         buildConfigField("String", "SERVER_URL", "\"" + serverUrl.trimEnd('/') + "\"")
         buildConfigField("String", "WEATHER_PHOTOS_URL", "\"" + weatherPhotosUrl + "\"")
         buildConfigField("String", "MAIL_TO", "\"" + mailTo + "\"")
+        buildConfigField("String", "PLACES_API_KEY", "\"" + placesKey + "\"")
     }
 
     // Device tests read the golden corpus generated for core-domain and the chart references; the image
@@ -70,6 +75,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Places 5+ requires Java 8+ library support; the app's own code still avoids java.time (MinSdkApiTest).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -105,6 +112,9 @@ dependencies {
     implementation(libs.firebase.crashlytics)
     implementation(libs.play.services.ads)
     implementation(libs.user.messaging.platform)
+    implementation(libs.play.services.location)
+    implementation(libs.places)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime)

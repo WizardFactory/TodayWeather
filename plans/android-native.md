@@ -283,6 +283,56 @@ Design (survey: `reports/sdlc/android-an-09/air-survey.md`, from `controller.air
 
 JVM: `AirScopeTest` (32 visits against AirCtrl run under Node, 97 steps: stations, pollutants, the four standards, fallbacks, missing data, stale values, a daylight-saving day), `AirPageTest` (every captured element of the seven states, the label's position at the captured widths, template rules), `AirChartTest` (every tick, label, date and bar of five captured charts within 0.02 dp; D3's ordinal and `nice` rules), `GoldenCorpusDisplayTest` (V32: every standard's grades, colors, faces and gauge positions, now at the captured label widths), `WeatherSessionTest` (the apply events), `AirScreenshotTest` (40 blocks within recorded tolerances; sensitivity in `tolerances.json`), `AirTabTest` and `AirFitKoTest`/`AirFitEnTest` (font scale 1.3). Mutation checks: eleven changes to `AirScope`, `AirChart` and `AirPage` each fail the goldens; of nine screen changes the screenshots catch seven (half a dp of gauge text, and the empty label, white on the light card). Device: `run-production-weather.sh` with `ProductionAirTest` (Seoul's stations from production, the second station's name and value after its tap) on API 36 and API 24; both production tests pin Korean units, so a device in another region gives the same pages. CI: `check-sources.mjs` covers the air references; the forecast references, recaptured with the shared block cutter, are byte-identical.
 
+## AN-10 — start screen, current location and place search (#2889)
+
+Design. Sources: `controller.start.js`, `start.html`, `controller.searchctrl.js` (the town search and the result kinds), `controller.tabctrl.js` (`startPopup`, `updateCurrentPosition` and its retry variants), `service.util.js`, `service.weatherinfo.js`, `service.weatherutil.js`, `service.storage.js` (`_setBackwardCompatibility`), `service.push.js` (`updateCityInfo`), `client/test/location-permission.test.cjs`, V13, V17, #2871 and manual pages 1–2. Investigation and surveys: `reports/sdlc/android-an-10/`.
+
+- `core-domain` `start/`:
+  - `StartGate`: S01 shows while the stored `startVersion` is missing or below 1, read as JavaScript's `Number`; closing S01 stores 1.
+  - `CityShortcuts`: the 26 cities of `_makeFavoriteList` verbatim, 6/11/17/26 by the screen height (568/731/960).
+  - `PredictionName`: the full-text term that starts at the first match, else the typed word.
+  - `TownSearch`: S02's substring search on `first`/`second`/`third`, 10 results at a time, and the town's address and name.
+  - `LocationAccess`: the permission classes (granted, requestable, denied), S01's decision table, StartCtrl's O04 variants and TabCtrl's O03 position variants; `getIndexOfCity` for duplicates.
+- `core-storage`: the migration takes `guideVersion` as `startVersion` when only it exists; `PushRegistration.onCityChanged` (`updateCityInfo`: the records of one place updated, and posted when anything changed).
+- `core-data`:
+  - `GeocodeClient`: `/geocode/v000903/coord/{lat},{long}` and `/addr/{address}` with the weather requests' attempts and `Accept-Language`.
+  - `StartFlow`: S01's chip, search-result and current-position adds (weather by coordinates, duplicates, slot 0 named from the geocode, `favorite_change`, `location_permission`), ending in the add, an O09 alert or an O04 confirmation; a grant re-runs at once.
+  - `WeatherSession`: the current position's own lookup on each load of slot 0 (a new fix updates slot 0 and loads again; location off uses the saved location, or without one asks for high accuracy; failures open O03's position variants); `startPopup` (O02) with zero enabled places and its `autoSearch` value kept for the app open, A07 kept; the `locationOn` reload.
+  - `PushSync.updateCity`.
+- `app`:
+  - S01 (`StartScreen`): icon, search box with Cancel, chips, predictions with the "powered by Google" divider (bundled towns when the build has no Places key), 현재위치 날씨보기, the loading overlay; O01 on every entry, O04 and O09. Back leaves the app.
+  - `MainActivity`: S01 while the gate holds, then the shell on Hourly with the selected place reloaded; UMP and the Ads SDK start after S01, the banner hidden on it; entry links held until S01 closes. Over the tabs: O02 from a weather page opened, a weather or Air tab tapped (the shell's `onTabTap`) or a share without a location; O03's position variants with Search to the Locations tab.
+  - Platform: fused location (high accuracy; a fix up to 60 s old; up to 60 s), the platform provider without Google Play services; precise and approximate requested together; Settings openers and the Play-services high-accuracy dialog; Places SDK 6 (Places API (New), `(regions)` predictions, requests 300 ms after the last keystroke, the latest answer only) with `TW_PLACES_API_KEY_ANDROID`.
+  - Build: location permissions, `play-services-location`, Places, core library desugaring (Places 6 requires it; `MinSdkApiTest` keeps the `java.time` ban).
+- Differences (`tools/corpus/differences.md` B20–B26): approximate-only gives a position (Cordova: a denial); predictions wait 300 ms and only the latest answer shows; bundled towns on S01 without a Places key; entry links wait for S01 to close; only a refusal without the rationale is final (an expired one-time grant asks again; an interrupted request records nothing); O02's current-position answer always opens Hourly and loads; the current position's spinner turns while the load or the lookup runs.
+- Device tests of the tabs start past S01 (`StateRule` in androidTest); without an enabled place they answer O02 first.
+- Archify not applicable: an app-internal client flow on the legacy API, no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN10-US1 | New user sees the weather where they are | Fresh install, location on | Close O01; tap 현재위치 날씨보기; allow | S03 for the position, slot 0 named from the geocode | Position or geocode failure: O04 with the matching message; weather failure: O09 | AC1, AC2 |
+| AN10-US2 | New user denies location | Fresh install | Tap 현재위치 날씨보기; deny; OK; deny again | O04 "access denied" (Close, OK); OK asks again; after a permanent denial O04 adds the app-info hint and Settings | – | AC1 |
+| AN10-US3 | New user grants approximate location only | Android 12+ | Tap 현재위치 날씨보기; choose Approximate | S03 for the approximate position | – | AC1 |
+| AN10-US4 | New user with location services off | Location off | Tap 현재위치 날씨보기 | O04 "turn on location services" with Settings to the device location settings | – | AC1 |
+| AN10-US5 | New user picks a place by name | Location denied | Type a place; pick a prediction | S03 for that place | Geocode failure: nothing; weather failure or an existing place: O09 | AC2 |
+| AN10-US6 | New user taps a city shortcut | Fresh install | Tap 서울 | S03 for 서울 | Weather failure: O09 | AC1 |
+| AN10-US7 | Returning user of the current position | Slot 0 selected | Open the app elsewhere | S03 loads the saved place, then the new position | Location off with no saved location: the high-accuracy dialog; failures: O03 position variants | AC1 |
+| AN10-US8 | User left without places | No enabled place | Open S03 | O02: OK enables the current position or opens the Locations tab (A07 kept) | – | AC1 |
+
+### Acceptance (from #2889)
+
+- AC1: UI tests pass for location granted, denied once, denied permanently, approximate only and location services off.
+- AC2: on a fresh install the app reaches S03 for the emulator's position, and with location denied, for a searched place.
+- AC3: the screenshot comparison with manual pages 1–2 passes; delivery (README, plan, review PASS, CI, merge).
+
+### Checks
+
+- JVM: the `start/` domain tests; `PlaceListTest`, `PushRegistrationTest` and the migration test (core-storage); `GeocodeClientTest`, `StartFlowTest` (each permission state with in-test doubles), `CurrentPositionTest` (the slot-0 lookup, O02, `locationOn`) and `PushSyncTest` (core-data); `AndroidLocationAccessTest` (the platform status with an approximate grant, a final refusal, an expired one-time grant, an interrupted request; positions without Play services; the location switch); `StartScreenTest` (Robolectric UI: O01, chips, search, each permission state's popup, O09, back, the hand-off to S03; O02 and O03 over the tabs); `ShareTest` (O02 from share, links held while S01 shows); `StartScreenshotTest` against `tools/start-reference` captures of the Cordova build (manual pages 1–2).
+- Device: `ProductionStartTest` through `tools/emulator/run-production-start.sh`: a fresh install on the API 36 emulator with a geo fix reaches S03 through 현재위치 날씨보기, and with location denied through a Places search (production server, read-only).
+- Mutations: `reports/sdlc/android-an-10/probe/mutations.py`.
+
 ## AN-12 — settings and menu hand-offs S07, S08, O10 (#2891)
 
 Design (sources: `units.html`, `setting-radio.html`, `controller.units.js`, `controller.setting.radio.js`, `controller.settingctrl.js` and the menu in `index.html`, `service.util.js`, `service.push.js` `updateUnits`; behavior checked on the Cordova debug build with `tools/settings-reference`, which drives it with real taps against a stand-in server and records every request). AN-10 is next in the task graph but waits for AK's place-search decision (AN-06), which blocks AN-10 only, so AN-12 comes first.
