@@ -2557,7 +2557,10 @@ but cannot acquire again (the five-minute memo or a consumed Short slot) while t
 does not hold it yet gets the kept acquisition. The owned acquisition flights (latest, backfill
 and warning cycles) put what they acquire into those bodies and answer only whether they did
 (review round 4), so neither a running nor a retained acquisition flight holds a page outside the
-budget. The budgets cover the pages these caches own; pages an answer in progress, the station
+budget. A request registers as a waiter of its key before it joins the flight, and the flight hands
+its acquisition to the registered waiters as well (review round 5), so a successful acquisition
+reaches them even when the bodies evict it at once; that hand-off is released when the last waiter
+of the key has taken it. The budgets cover the pages these caches own; pages an answer in progress, the station
 state or the response-first writer's RAM copies hold are outside them.
 
 The forecast-zone refresh of the observed request is owned work too (one flight, at most 30 s):

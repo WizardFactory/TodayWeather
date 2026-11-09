@@ -12,6 +12,7 @@ Task declaration: `server2/config/tasks/KMA-RESTART-BOUND.json`. Stacked on #290
 8. Codex review round 2 (Required): the restores the request stops waiting for run on as owned work (`records::Restores`, the owned zone refresh) and later requests answer from their results; one zone list per answer; the process's acquired list installed in the held zones; regression tests first, seen failing.
 9. Codex review round 3 (Required): owned reads keep each partition as it completes, the needed ones first; the process's acquisitions stay usable under a byte budget; an earlier listing suppresses S16; restored bodies live only in the budgeted `Bodies` (flights name partitions); regression tests first, seen failing.
 10. Codex review round 4: the yesterday-comparison partitions right after the newest required publication; acquisition flights hold only whether they acquired (bodies in the budgeted acquisition cache); regression tests first, seen failing.
+11. Codex review round 5 (Recommended, adopted): flights hand their acquisition to registered waiters independently of the cache's eviction; the warning-flight expiry test on a paused clock.
 
 R2 (a shorter bound on the assembly's CPU permit) is not done: the permit wait already ends at the request deadline, and a shorter bound would have to drop required data or answer without the assembly; the allocator removes the measured cause of the slow assembly, and MEASURE shows whether more is needed.
 
