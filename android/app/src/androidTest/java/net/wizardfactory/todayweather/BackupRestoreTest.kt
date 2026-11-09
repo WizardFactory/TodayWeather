@@ -32,12 +32,13 @@ import org.junit.runner.RunWith
  * Backup and restore against the recorded policy (#2895 AC2; README "Backup and device transfer"), run by
  * tools/backup/run-backup-test.sh with `backup`:
  * - `seed`: places, the selected one, units, settings, an alarm, an FCM token, an analytics opt-in, a weather cache
- *   file and a Firebase file;
+ *   file, a Firebase file and UMP's consent strings in the default preference suite;
  * - `native`, after `bmgr backupnow`, a reinstall and `bmgr restore`: the state came back; the analytics choice, the
- *   weather cache and the Firebase file did not; the open app replaces the restored token with its own on the server
- *   and posts the alarm list with it;
+ *   weather cache, the Firebase file and the consent strings did not; the open app replaces the restored token with its
+ *   own on the server and posts the alarm list with it;
  * - `cordova`, after a Cordova 1.1.1 backup restored into this build: the Cordova data migrates (`seeded`), and the
- *   Cordova files outside the policy stayed behind.
+ *   Cordova files outside the policy and the consent strings the script put in the Cordova app's default preference
+ *   suite stayed behind.
  */
 @RunWith(AndroidJUnit4::class)
 class BackupRestoreTest {
@@ -56,6 +57,15 @@ class BackupRestoreTest {
     private val cache get() = File(context.filesDir, "weather/seed.json")
     private fun firebase() = context.getSharedPreferences("com.google.android.gms.appid", Context.MODE_PRIVATE)
 
+    /** The default preference suite, where UMP keeps the IAB consent strings. */
+    private fun defaults() = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
+
+    private fun assertNoConsentStrings() {
+        for (key in listOf("IABTCF_TCString", "IABGPP_HDR_GppString", "IABTCF_gdprApplies")) {
+            assertFalse("UMP's $key stays behind", defaults().contains(key))
+        }
+    }
+
     @Test
     fun seed() {
         assumeTrue("needs -e backup seed", step == "seed")
@@ -69,6 +79,8 @@ class BackupRestoreTest {
         cache.parentFile!!.mkdirs()
         cache.writeText("{}")
         assertTrue(firebase().edit().putString("seed", "old device").commit())
+        assertTrue(defaults().edit().putString("IABTCF_TCString", "old-device").putString("IABGPP_HDR_GppString", "old-device")
+            .putInt("IABTCF_gdprApplies", 1).commit())
     }
 
     @Test
@@ -86,6 +98,7 @@ class BackupRestoreTest {
         assertFalse(app.analytics.choice.value)
         assertFalse("the weather cache stays behind", cache.exists())
         assertNull("Firebase's files stay behind", firebase().getString("seed", null))
+        assertNoConsentStrings()
         // The open app registers its own token: the server replaces the restored one and gets the list (AN-04).
         app.sent.clear()
         val outcome = runBlocking { app.onOpened().await() }!!
@@ -110,5 +123,6 @@ class BackupRestoreTest {
         for (left in TestRunner.args.getString("absent")!!.split(',').filter { it.isNotEmpty() }) {
             assertFalse("$left stays behind", File(context.applicationInfo.dataDir, left).exists())
         }
+        assertNoConsentStrings()
     }
 }

@@ -108,6 +108,13 @@ cordova_restore() {
     adb shell am start -n $PKG/.MainActivity >/dev/null
     node "$HERE/../upgrade/seed-cordova.mjs" "$ANDROID_SERIAL" > "$OUT/seeded$1.json"
     adb shell am force-stop $PKG
+    # UMP's consent strings in the default preference suite, as an online install has them: they must stay behind.
+    printf '%s\n' "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>" '<map>' \
+        '    <string name="IABTCF_TCString">old-device</string>' '    <string name="IABGPP_HDR_GppString">old-device</string>' \
+        '    <int name="IABTCF_gdprApplies" value="1" />' '</map>' |
+        adb shell "run-as $PKG sh -c 'cat > shared_prefs/${PKG}_preferences.xml'"
+    adb shell run-as $PKG cat "shared_prefs/${PKG}_preferences.xml" | grep -q IABTCF_TCString ||
+        { echo "cannot write the Cordova app's consent strings" >&2; exit 1; }
     adb shell run-as $PKG ls -R . > "$OUT/cordova-files$1.txt"
     # Files of the Cordova app the policy leaves out and the restored native app does not make while the test runs.
     ABSENT=""

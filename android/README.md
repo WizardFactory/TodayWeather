@@ -208,12 +208,13 @@ Sharing (O16), `todayweather://` links and device transfer (#2895), from TabCtrl
 - **Backup and device transfer:** the policy, in `res/xml/data_extraction_rules.xml` (API 31+, cloud backup and device transfer) and `res/xml/backup_rules.xml` (API 24–30).
   - Backed up:
     - `files/app_state.json`: places, the selected place, units, settings, alarms and their push records;
-    - the Cordova storage the migration reads (`app_webview/Default/Local Storage/`, `app_webview/Local Storage/` and the two preference suites), so a backup or transfer taken from Cordova 1.1.1 restores into this app and migrates.
+    - the Cordova storage the migration reads (`app_webview/Default/Local Storage/`, `app_webview/Local Storage/` and the suite `group.net.wizardfactory.todayweather`), so a backup or transfer taken from Cordova 1.1.1 restores into this app and migrates.
   - Not backed up (B19; 1.1.1 backed up everything):
     - the weather cache, which loads again;
     - the analytics choice: off again, until the user opts in;
     - Firebase's token and installation: the new device gets a new FCM token, and the first open replaces the restored token on the server and posts the list (AN-04), as 1.1.1 did after a restore;
-    - the measurement, AdMob and UMP state: UMP asks again where consent is required.
+    - the measurement, AdMob and UMP state: UMP asks again where consent is required;
+    - the default preference suite `net.wizardfactory.todayweather_preferences`, where UMP keeps the IAB consent strings (`IABTCF_*`, `IABGPP_*`). The Cordova app kept only old units there, and its start moves them into localStorage and the group suite (`TwStorage.init`), so a 1.1.1 backup has them there. The migration still reads the suite on an in-place upgrade.
   - Location is the system's permission; the app asks for it when it needs the current position (AN-10).
 
 Tests:
@@ -224,8 +225,8 @@ Tests:
 
 The emulator check is `tools/backup/run-backup-test.sh <cordova-debug.apk>` (#2895 AC2), offline:
 1. `EntryLinkDeviceTest` opens `todayweather://2` with `am start` in a stopped app (cold) and `todayweather://1` in the open app (warm). A link delivered again as Recents delivers it selects nothing, and the same link without that flag then selects its place.
-2. A native backup (`bmgr`, local transport) restored after a reinstall: `BackupRestoreTest` checks what came back (places, units, settings, an alarm), what stayed behind, and that the open app replaces the token and posts the list.
-3. A Cordova 1.1.1 backup restored into this build: the Cordova data migrates and its other files stay behind.
+2. A native backup (`bmgr`, local transport) restored after a reinstall: `BackupRestoreTest` checks what came back (places, units, settings, an alarm), what stayed behind (also UMP's consent strings), and that the open app replaces the token and posts the list.
+3. A Cordova 1.1.1 backup restored into this build: the Cordova data migrates; its other files and the consent strings the script writes into its default suite stay behind.
 On API 31 and later, steps 2 and 3 run again as device transfers: the local transport's `is_device_transfer` parameter makes Android apply the `device-transfer` section. On API 24 to 30 both kinds use `backup_rules.xml`; the check runs on API 24 and API 36. The script sets the backup transport and its parameters for the run and puts them back on every exit.
 
 ## Data migration from the Cordova app

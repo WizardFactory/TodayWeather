@@ -18,6 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import net.wizardfactory.todayweather.core.data.HttpGet
 import net.wizardfactory.todayweather.core.data.StateAccess
 import net.wizardfactory.todayweather.core.data.WeatherRepository
@@ -145,5 +148,27 @@ class ShareTest {
         assertTrue(links.accept(fromRecents), "a task opened again from Recents gets its first link again, which selects nothing")
         assertEquals(2.0, links.indexes.tryReceive().getOrNull())
         assertNull(links.indexes.tryReceive().getOrNull())
+    }
+
+    /**
+     * A cold start's link arrives with the migration's end, which can be before the saved state is read (the state is
+     * null until then): the link waits for the state instead of being dropped.
+     */
+    @Test
+    fun aLinkWaitsForTheSavedState() = runTest {
+        val links = EntryLinks()
+        val state = MutableStateFlow<AppState?>(null)
+        val opened = mutableListOf<Double>()
+        val delivery = launch { links.deliver(state) { opened += it } }
+        links.accept(Intent(Intent.ACTION_VIEW, Uri.parse("todayweather://2")))
+        runCurrent()
+        assertEquals(emptyList(), opened, "nothing before the saved state")
+        state.value = AppState()
+        runCurrent()
+        assertEquals(listOf(2.0), opened)
+        links.accept(Intent(Intent.ACTION_VIEW, Uri.parse("todayweather://1")))
+        runCurrent()
+        assertEquals(listOf(2.0, 1.0), opened, "later links at once")
+        delivery.cancel()
     }
 }

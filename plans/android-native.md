@@ -459,8 +459,8 @@ Design. Sources: `doTabShare` and `_makeMessageForTodayWeather` in `controller.t
   - the share buttons of S03, S04 and S05 send the message through the system chooser (`ACTION_SEND`, `text/plain`, no title), as the plugin did; without a location they do nothing until AN-10 opens O02;
   - `MainActivity` registers `todayweather` (`VIEW`, `DEFAULT`, `BROWSABLE`), and `TodayWeatherApp` hands a link from `EntryIntents` to the open app's session after the migration, on cold and warm starts. The link that Recents delivers again when it opens a finished task (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`) selects nothing.
 - Backup (`res/xml/backup_rules.xml` for API 24–30, `data_extraction_rules.xml` for API 31+):
-  - included: `files/app_state.json`, and the Cordova sources the migration reads (WebView Local Storage and the two preference suites), so a backup or device transfer from Cordova 1.1.1 restores and migrates;
-  - excluded: the weather cache, the analytics consent (off again), Firebase's token and installation (a new FCM token; PushSync replaces the restored token and posts the list, as after a 1.1.1 restore), and the measurement, AdMob and UMP state (UMP asks again where required).
+  - included: `files/app_state.json`, and the Cordova sources the migration reads (WebView Local Storage and the group suite), so a backup or device transfer from Cordova 1.1.1 restores and migrates;
+  - excluded: the weather cache, the analytics consent (off again), Firebase's token and installation (a new FCM token; PushSync replaces the restored token and posts the list, as after a 1.1.1 restore), the measurement, AdMob and UMP state (UMP asks again where required), and the default preference suite with UMP's IAB consent strings (review F2; the Cordova app's start moves its old units out of that suite into localStorage and the group suite).
   - The policy is recorded in `android/README.md`.
 - Differences (`tools/corpus/differences.md`): B18, `todayweather://N` opens place N; 1.1.1 Android registered no scheme and opened nothing. B19, the backup policy above; 1.1.1 backed up everything.
 - Archify not applicable: no service structure change.

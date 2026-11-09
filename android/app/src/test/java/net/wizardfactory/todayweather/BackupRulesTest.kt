@@ -10,12 +10,13 @@ import org.w3c.dom.Element
 /**
  * The backup policy (#2895; README "Backup and device transfer"): cloud backup, device transfer and the API 24–30 rules
  * include the same files, which are the app state and the Cordova sources of the migration, and exclude nothing else
- * explicitly (everything not included stays behind). The manifest points at both files.
+ * explicitly (everything not included stays behind, also the default preference suite with UMP's consent strings). The
+ * manifest points at both files.
  */
 class BackupRulesTest {
     private val res = File(System.getProperty("tw.projectDir")!!, "src/main/res/xml")
     private val policy = listOf("file:app_state.json", "root:app_webview/Default/Local Storage/", "root:app_webview/Local Storage/",
-        "sharedpref:group.net.wizardfactory.todayweather.xml", "sharedpref:net.wizardfactory.todayweather_preferences.xml")
+        "sharedpref:group.net.wizardfactory.todayweather.xml")
 
     private fun rules(file: String, section: String?): List<String> {
         val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(res, file))

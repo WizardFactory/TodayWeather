@@ -371,7 +371,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         twApp.onOpened()
         twApp.analytics.onOpened()
         // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`).
-        viewModelScope.launch { for (index in twApp.entryLinks.indexes) session.openPlace(index) }
+        viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, session::openPlace) }
         loadPhotos()
         connectivity.registerDefaultNetworkCallback(online)
         viewModelScope.launch {

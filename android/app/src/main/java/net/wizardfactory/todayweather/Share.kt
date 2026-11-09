@@ -3,6 +3,8 @@ package net.wizardfactory.todayweather
 import android.content.Context
 import android.content.Intent
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import net.wizardfactory.todayweather.core.data.WeatherEntry
 import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.cityRecord
@@ -51,5 +53,14 @@ class EntryLinks {
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return true
         intent.dataString?.let(EntryLink::placeIndex)?.let { indexes.trySend(it) }
         return true
+    }
+
+    /**
+     * Hands each queued place index to [open] once the saved state is there ([state] is null until it has been read
+     * after the migration): a cold start's link arrives with the migration's end, which can come first.
+     */
+    suspend fun deliver(state: StateFlow<AppState?>, open: (Double) -> Unit) {
+        state.first { it != null }
+        for (index in indexes) open(index)
     }
 }
