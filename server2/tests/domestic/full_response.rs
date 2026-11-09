@@ -2721,6 +2721,10 @@ async fn a_late_stored_read_answers_the_next_request_from_its_owned_restore() {
 /// `11B10101` in the release's land zones): the town's mid temperatures come from another
 /// region.
 async fn store_moved_seoul_zones(peer: &Peer) {
+    store_moved_seoul_zones_at(peer, NOW - 30_000.).await;
+}
+/// [`store_moved_seoul_zones`] fetched at `fetched_at`: another group of the day's partition.
+async fn store_moved_seoul_zones_at(peer: &Peer, fetched_at: f64) {
     let mut page: serde_json::Value = serde_json::from_slice(&land_zone_page()).unwrap();
     for item in page["response"]["body"]["items"]["item"]
         .as_array_mut()
@@ -2742,7 +2746,7 @@ async fn store_moved_seoul_zones(peer: &Peer) {
         "forecast-zone",
         &key,
         p.period(),
-        NOW as u64 - 30_000,
+        fetched_at as u64,
         200,
         "application/json",
         None,
@@ -2803,14 +2807,18 @@ async fn one_zone_list_answers_both_the_mids_and_the_assembly() {
     );
 }
 
-/// RB-zone-refill, round 2: every read of the stored zone list (Seoul under `11B10102`) takes
-/// 2.6 s, past the first answer's head start and bound. The read runs on as owned work and fills
-/// the process's zones, so the next request uses that list: it asks the temperatures of
+/// RB-zone-refill, round 2: the day's zone partition holds the stored list (Seoul under
+/// `11B10102`) twice, as every process start stores it again, and every read of a list takes
+/// 2.6 s, so the partition's read takes over 5 s: past the first answer's bound and past the
+/// catalog's 3 s operation deadline (round 7: the owned refresh read it within that deadline and
+/// never ended). The read runs on as owned work and fills the process's zones, so the next
+/// request, sent once the read's GETs are over, uses that list: it asks the temperatures of
 /// `11B10102` and shows them.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_zone_read_fills_the_zones_of_the_next_request() {
     let _peers = S3_PEERS.lock().await;
     let peer = Peer::persistent();
+    store_moved_seoul_zones_at(&peer, NOW - 40_000.).await;
     store_moved_seoul_zones(&peer).await;
     let counted = Counted::new(peer.transport_limited(4));
     counted.delay_gets(
@@ -2819,9 +2827,19 @@ async fn a_slow_zone_read_fills_the_zones_of_the_next_request() {
         Duration::from_millis(2600),
     );
     let process = Restarted::new(&peer, &counted);
-    let (first, _) = process.answer().await;
+    let (first, asked) = process.answer().await;
     body_of(first);
-    tokio::time::sleep(Duration::from_secs(4)).await;
+    let (moved, _) = asked_at(&asked, &["family: MidTa", "11B10102"]);
+    assert_eq!(
+        moved, 0,
+        "the first answer has the release's zones: {asked:?}"
+    );
+    counted
+        .gets_over(
+            "raw/v2/data-go-kr/forecast-zone",
+            Duration::from_millis(500),
+        )
+        .await;
     let (second, asked) = process.answer().await;
     let (moved, _) = asked_at(&asked, &["family: MidTa", "11B10102"]);
     assert_eq!(moved, 1, "{asked:?}");

@@ -1199,9 +1199,38 @@ impl Counted {
     pub(super) fn get(&self, what: &str) -> usize {
         self.counts.lock().unwrap().get(what).copied().unwrap_or(0)
     }
+    /// Wait until every object GET of `class` (for example `raw/v2/data-go-kr/forecast-zone`)
+    /// that started has returned and none has started for `quiet`: the reads of a restore that
+    /// runs on after its request are over.
+    pub(super) async fn gets_over(&self, class: &str, quiet: Duration) {
+        let state = || {
+            (
+                self.get(&format!("GET {class}")),
+                self.get(&format!("DONE {class}")),
+            )
+        };
+        let mut last = state();
+        let mut since = tokio::time::Instant::now();
+        loop {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            let now = state();
+            if now != last {
+                (last, since) = (now, tokio::time::Instant::now());
+            } else if now.0 > 0 && now.0 == now.1 && since.elapsed() >= quiet {
+                return;
+            }
+        }
+    }
     /// Every count so far.
     pub(super) fn counts(&self) -> HashMap<String, usize> {
         self.counts.lock().unwrap().clone()
+    }
+}
+/// Counts an object GET as over (`DONE ...`) when dropped.
+struct Over<'a>(&'a Counted, &'a str);
+impl Drop for Over<'_> {
+    fn drop(&mut self) {
+        self.0.count("DONE", self.1);
     }
 }
 impl server2::storage::ObjectTransport for Counted {
@@ -1222,6 +1251,8 @@ impl server2::storage::ObjectTransport for Counted {
         max: usize,
     ) -> Result<server2::storage::Object, server2::storage::Error> {
         self.admit("GET", key).await;
+        // Counted as over when it returns or is dropped (a read cancelled at its deadline).
+        let _over = Over(self, key);
         if let Some(hold) = self.held(key) {
             tokio::time::sleep(hold).await;
         }

@@ -227,6 +227,45 @@ impl<T: IndexListing + Clone> Reader<T> {
             .map(|(group, (fetched, e))| (fetched, group, e))
             .collect())
     }
+    /// The groups one catalog lists: (completion instant, every member envelope in page order),
+    /// from the catalog control object alone; empty when the catalog does not exist.
+    pub async fn listed_groups(
+        &self,
+        id: &CatalogId,
+        deadline: Instant,
+    ) -> Result<Vec<(u64, Vec<Envelope>)>, Error> {
+        let limits = CatalogLimits::default();
+        let object = match tokio::time::timeout_at(
+            deadline,
+            self.transport.get_control(&id.key(), limits.control_bytes),
+        )
+        .await
+        {
+            Err(_) => return Err(Error::Timeout),
+            Ok(Err(Error::NotFound)) => return Ok(Vec::new()),
+            Ok(Err(e)) => return Err(e),
+            Ok(Ok(object)) => object,
+        };
+        let catalog = Catalog::from_bytes(&object.body, id, &limits)?;
+        let mut groups: BTreeMap<String, (u64, Vec<Envelope>)> = BTreeMap::new();
+        for e in catalog.entries {
+            let group = match &e.fetch_group {
+                Some(g) => g.descriptor_key()?,
+                None => e.identity.raw_sha256.clone(),
+            };
+            let fetched = e.identity.fetched_at_ms;
+            let entry = groups.entry(group).or_insert((fetched, Vec::new()));
+            entry.0 = entry.0.max(fetched);
+            entry.1.push(e);
+        }
+        Ok(groups
+            .into_values()
+            .map(|(fetched, mut members)| {
+                members.sort_by_key(|e| e.pagination.as_ref().map_or(1, |p| p.page));
+                (fetched, members)
+            })
+            .collect())
+    }
     /// The hash a key's partitions are listed under.
     pub fn key_hash(key: &ProviderKey) -> Result<String, Error> {
         Ok(sha256(&key.canonical_bytes()?))

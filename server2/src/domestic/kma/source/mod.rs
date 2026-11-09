@@ -301,10 +301,51 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
             .into_iter()
             .filter(|p| from.is_none_or(|f| p.as_str() >= f))
             .collect();
-        let mut fetched = self
-            .reader
-            .all("data-go-kr", "forecast-zone", &key, &parts, deadline)
-            .await?;
+        // KMA-RESTART-BOUND (review round 7): each group in its own catalog read, so a day
+        // partition holding many lists (one per process start) is not one read bound by the
+        // catalog's 3 s operation deadline, which a slow store made the owned refresh miss on
+        // every attempt; a list stored again with the same pages is read once.
+        let mut fetched = Vec::new();
+        let mut read: HashMap<Vec<String>, Vec<Arc<[u8]>>> = HashMap::new();
+        for partition in &parts {
+            let id = records::catalog("data-go-kr", "forecast-zone", &key, partition)?;
+            for (completion, members) in self.reader.listed_groups(&id, deadline).await? {
+                let Some(first) = members.first() else {
+                    continue;
+                };
+                let content: Vec<String> = members
+                    .iter()
+                    .map(|e| e.identity.raw_sha256.clone())
+                    .collect();
+                let pages = match read.get(&content) {
+                    Some(pages) => pages.clone(),
+                    None => {
+                        // An incomplete or excluded group is left out, as a whole read leaves it.
+                        let Some(acquisition) = self
+                            .reader
+                            .members(&id, std::slice::from_ref(&first.identity), deadline)
+                            .await?
+                            .and_then(|acquisitions| acquisitions.into_iter().next())
+                        else {
+                            continue;
+                        };
+                        let pages: Vec<Arc<[u8]>> =
+                            acquisition.iter().map(|r| r.bytes.clone()).collect();
+                        read.insert(content, pages.clone());
+                        pages
+                    }
+                };
+                fetched.push(Fetched {
+                    fetched_at_ms: completion,
+                    partition: partition.clone(),
+                    pages,
+                    raw_ids: members
+                        .iter()
+                        .map(|e| e.identity.object_key())
+                        .collect::<Result<_, _>>()?,
+                });
+            }
+        }
         fetched.sort_by_key(identity);
         Ok(fetched)
     }
