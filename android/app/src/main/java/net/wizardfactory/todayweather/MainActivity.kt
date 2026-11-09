@@ -13,6 +13,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,6 +50,9 @@ import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
+import net.wizardfactory.todayweather.ui.nation.NationLoads
+import net.wizardfactory.todayweather.ui.nation.NationRoutes
+import net.wizardfactory.todayweather.ui.nation.NationScreen
 import net.wizardfactory.todayweather.ui.settings.SettingsRoutes
 import net.wizardfactory.todayweather.ui.settings.SettingsScreen
 import net.wizardfactory.todayweather.ui.shell.IonicAlert
@@ -105,7 +110,7 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
                     })
                 }
-                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings, handoffs = handoffs)
+                AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings, handoffs = handoffs, nation = opened.nation)
             }
         }
     }
@@ -136,9 +141,12 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * The app's screens over the saved [state]: the shell with the weather tabs (#2887), the Air tab (#2888), the settings
- * pages over the tabs and the menu's hand-offs and About popup (#2891), and the retry confirmation. The Locations tab and
- * the menu's other pages come with their sub-issues (AN-10, AN-13, AN-15).
+ * The app's screens over the saved [state]:
+ * - the shell with the weather tabs (#2887) and the Air tab (#2888);
+ * - over the tabs, the settings pages, the menu's hand-offs and About popup (#2891), and the nationwide and warning
+ *   pages (#2892);
+ * - the retry confirmation.
+ * The Locations tab and the menu's other rows come with their sub-issues (AN-10, AN-15).
  */
 @Composable
 fun AppContent(
@@ -152,18 +160,30 @@ fun AppContent(
     onExit: () -> Unit,
     settings: SettingsActions? = null,
     handoffs: MenuHandoffs = MenuHandoffs(),
+    nation: NationLoads? = null,
 ) {
     val theme = Theme.of(state.settings.theme)
     val navigation = rememberShellNavigation(StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
-    // The settings pages open over the tabs (SettingsRoutes), last on top; a saved route this version does not have is
-    // dropped. About is a popup over the menu (O10).
+    // The settings pages (SettingsRoutes) and the nationwide and warning pages (NationRoutes) open over the tabs, last on
+    // top; a saved route this version does not have is dropped. About is a popup over the menu (O10).
+    val known = { route: String -> SettingsRoutes.known(route) || NationRoutes.known(route) }
     var saved by rememberSaveable { mutableStateOf(listOf<String>()) }
-    val pages = saved.filter(SettingsRoutes::known)
-    fun open(route: String) { saved = saved.filter(SettingsRoutes::known) + route }
-    fun back() { saved = saved.filter(SettingsRoutes::known).dropLast(1) }
+    val pages = saved.filter(known)
+    fun open(route: String) { saved = saved.filter(known) + route }
+    fun back() {
+        pages.lastOrNull()?.takeIf(NationRoutes::known)?.let { nation?.close(it) }
+        saved = saved.filter(known).dropLast(1)
+    }
+    // A nationwide or warning page sends its request when it opens (`clickMenu`: close the menu, then the page).
+    fun openNation(route: String) {
+        navigation.menuOpen = false
+        nation?.open(route)
+        open(route)
+    }
+    val nationPages by (nation?.pages ?: remember { MutableStateFlow(emptyMap()) }).collectAsState()
     var about by rememberSaveable { mutableStateOf(false) }
     val applies by session.applies.collectAsState()
     val texts = host.texts
@@ -211,7 +231,10 @@ fun AppContent(
                     handoffs.openSystem(Handoffs.STORE)
                 }
                 MenuRow.ABOUT -> about = true
-                else -> {} // AN-13 and AN-15
+                MenuRow.SPECIAL_WEATHER -> openNation(NationRoutes.WARNINGS)
+                MenuRow.NATIONAL_WEATHER -> openNation(NationRoutes.NATION)
+                MenuRow.NATIONAL_AIR -> openNation(NationRoutes.NATION_AIR)
+                else -> {} // AN-15
             }
         },
         onExit = onExit,
@@ -219,9 +242,15 @@ fun AppContent(
         onSelect = { tab -> if (tab == Tab.LOCATIONS) airCode = null },
         overlay = {
             pages.lastOrNull()?.let { route ->
-                SettingsScreen(route, state, theme, texts, onBack = ::back,
-                    onUnit = { name -> open(SettingsRoutes.list(name)) },
-                    onChoose = { name, value -> settings?.choose(name, value) })
+                if (NationRoutes.known(route)) {
+                    // A page restored after the process ended has not sent its request in this one.
+                    LaunchedEffect(route) { nation?.ensure(route) }
+                    NationScreen(route, nationPages[route], theme, AppLocale.region(), state.units, texts, onBack = ::back)
+                } else {
+                    SettingsScreen(route, state, theme, texts, onBack = ::back,
+                        onUnit = { name -> open(SettingsRoutes.list(name)) },
+                        onChoose = { name, value -> settings?.choose(name, value) })
+                }
             }
         },
     ) { tab ->
@@ -261,6 +290,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     /** The settings pages' changes; a unit change posts the push list again in the app's scope (`Push.updateUnits`). */
     val settings = SettingsActions(twApp.appState, session) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateUnits() } }
+
+    /** The open nationwide and warning pages' requests, kept across configuration changes while a page is open. */
+    val nation = NationLoads(twApp.nation, viewModelScope, { twApp.appState.current()?.units }, ::languages)
 
     init {
         twApp.onOpened()

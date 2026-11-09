@@ -61,7 +61,7 @@ The hourly and daily forecast charts (gate G2, AN-05) are ported from the Cordov
 The frame every screen shares (`app` `ui/shell/`, rules in `core-domain` `shell/`), from the Cordova templates, controllers and SCSS:
 
 - **Tabs and header:** the bottom tab bar (Locations, Hourly, Daily, Air; the selected weather or air tab shows the refresh glyph and a tap asks for a refresh, a second tap within 700 ms does nothing) and the header bar with the menu button, the title and the page's buttons. Sizes follow Ionic: a 44 dp header and a 49 dp tab bar with half-pixel hairlines, items up to 150 dp centered on wide windows, icon buttons at 0.87 opacity, the title centered clear of the wider group of buttons. Text sits on the baseline of a line in its own font, as in Chrome, also when Noto Sans CJK draws Korean.
-- **Side menu (S06):** full screen, sliding in over 200 ms, rows in Cordova order with the Korea-only rows for region KR, the analytics, ad privacy, policy and terms rows as blocks; AN-12, AN-13 and AN-15 connect the rows.
+- **Side menu (S06):** full screen, sliding in over 200 ms, rows in Cordova order with the Korea-only rows for region KR (전국날씨 also needs the TodayWeather product, which this app is), the analytics, ad privacy, policy and terms rows as blocks; AN-12, AN-13 and AN-15 connect the rows.
 - **Back:** closes the menu, then a dialog; on a main tab it asks 종료하시겠습니까?.
 - **Themes:** light, dark, photo and old with the colors of the Cordova SCSS per tab (the old theme colors Hourly and Daily; the photo theme's Hourly and Daily headers are clear with outlined text over the photo) and the icon and image folders of `theme.js`. The photo feed (`TW_WEATHER_PHOTOS_URL`, a private input) loads like `loadWeatherPhotos`: when the app opens and when a network comes back, attempts 2 s apart while none has answered (up to three, 20 s each; the first answer cancels the others), once per process after a success (`WeatherPhotoFeed`, core-data); `WeatherPhotos` groups and chooses photos as `findWeatherPhoto`, checked against `corpus/photos.json` from the Cordova code. AN-08 shows the photo.
 - **Languages and text size:** the first system language picks one of the six catalogs as angular-translate does; the region (last part of the first language tag with one, default KR) shows the Korea-only rows. Text follows the system font scale (AN-06) while glyphs and the bars' fixed lines keep their size; the tab bar and menu rows grow, a tab label too long for its item wraps onto a second line (balanced, hyphenated), and a menu value that no longer fits beside its label moves under it.
@@ -124,6 +124,44 @@ cd android
 TW_MAIL_TO=<feedback address> ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 ANDROID_SERIAL=emulator-5554 tools/emulator/run-settings-handoffs.sh [out-dir] [store]
 ```
+
+## Nationwide pages and warnings (AN-13)
+
+The menu's 기상특보 (S12), 전국날씨 (S10) and 전국미세먼지 (S11) (#2892), from `kma-special.html`, `nation.html` and `nation-air.html` with KmaSpecialCtrl, NationCtrl and NationAirCtrl:
+
+- **Requests (`core-data` `NationSource`):**
+  - S10 and S11 share `getNationWeather`: `/v000903/nation/KR` with the units query and the device's `Accept-Language`. Up to three attempts 2 s apart, 20 s each; the first to settle decides.
+  - S12 sends one `/v000903/kma/special` with `$http`'s 3 s timeout and no retry.
+  - Each page sends its request every time it opens (the Cordova states have `cache: false`). The answer stays while the page is open, across configuration changes (`NationLoads`).
+  - A failure leaves S10 and S11 with the names only and S12 empty. A body that is not JSON is no answer, as `JSON.parse` finds: kotlinx alone would read a bare word.
+- **Pages (`core-domain` `nation/`):**
+  - `NationPages` gives each map label its name, icon and values in the mode or pollutant chosen, from the AN-02 `Nationwide` rules.
+  - `WarningCards` gives each card its heading (`name announcement`), situations (bold hazard and level, then `timeStr location` lines), the note heading for numeric type 1 or 2, and the comment through `ng-bind-html` (`BoundHtml`).
+  - In `BoundHtml`, `<br>` breaks lines, other tags go with `script` and `style` content, and white space collapses. Entities are decoded, numeric ones as the HTML parser reads them: U+FFFD outside Unicode, and windows-1252 for 0x80–0x9F.
+- **Screens (`app` `ui/nation/`):** `NationScreen` draws the pages over the tabs, like the settings pages, with the theme's plain header and #F5F5F5 in every theme.
+  - S10: the three outline mode buttons, at Chrome's pixel-snapped widths, with an ellipsis for text that does not fit. The map is 330×485 dp with 20 sp labels on `line-height: normal` lines. A label is CSS shrink-to-fit, so 울산's 북북서 wraps at the map's edge.
+  - S11: the 480 dp strip of tabs, which scrolls sideways on narrow windows, and the labels in the grade colors of the chosen air standard.
+  - S12: the cards with Chrome's line boxes:
+    - the h2's 19.2 dp lines on Roboto's baseline;
+    - the image's line, when blocks follow it;
+    - Korean lines of 23 dp with Chrome's borrowed pixel;
+    - empty lines of 19 dp.
+  - Text is broken as Chrome breaks it, between Korean syllables too (`chromeBreaks`; Samsung's Android otherwise keeps Korean words whole). Characters Roboto has stay in Roboto between Korean letters (`chromeRuns`).
+  - While S10 or S11 loads, `$ionicLoading` shows (backdrop, 68×72 dp box, the bubbles spinner), and Android back does nothing until it ends, as in Ionic.
+  - Larger text: the labels grow at their fixed positions and may overlap, as the map leaves no room. A label that would reach past the window's right edge moves left to stay whole. The h2's lines grow with the text (`line-height: 1.2`).
+- **Not drawn:** S12's `imageUrl`. Only scraper-era documents have it, and the collector since 5a38aad4 omits it; the production answer in the corpus has none.
+
+Tests:
+- `NationPagesTest` (core-domain): every label of the captured pages, the cards in Korean and English, the note rule, `ng-bind-html` and the empty and failed answers.
+- `NationSourceTest` (core-data): the URLs the Cordova build sent, the retries of a late answer, the 3 s timeout, and empty, failed and non-JSON answers.
+- `NationLoadsTest`.
+- `NationTest`: the menu rows, back while loading, modes and tabs, a failed answer, restoring the saved state.
+- `NationScreenshotTest`: 30 comparisons with `tools/nation-reference` (manual pages 32–35, the other modes and tabs, the loading, empty and failed states, dark and old themes, km/h and AirNow, English).
+- `NationGeometryTest`: labels, buttons, tabs, cards and the loading box within 0.5 dp.
+- `NationFitKoTest` and `NationFitEnTest`: font scale 1.3 on a phone, a small window and a tablet.
+- `ChromeTextTest`: the break opportunities, lines and runs.
+
+The production test is `ProductionNationTest` (`tools/emulator/run-production-weather.sh` on API 33 or later, with the app's language set to ko-KR so the rows show).
 
 ## Data migration from the Cordova app
 
