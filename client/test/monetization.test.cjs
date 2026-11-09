@@ -417,7 +417,8 @@ test('native banner load failure reports only a bounded numeric error code', () 
         removeEventListener(n, fn) { listeners.get(n)?.delete(fn); }
     };
     const cordova = {plugins: {emiAdmobPlugin: {initialize() {}, metaData() {}}}};
-    const console = {log() {}, info(x) { logs.push(x); }, warn(x) { logs.push(x); }};
+    // iOS forwards console.log, not console.info, to the device console (#2871 real-device check).
+    const console = {log(x) { logs.push(x); }, info() {}, warn() {}};
     vm.runInNewContext(read('www/js/service.admobemi.js'), {
         angular: {module() { return {factory(n, fn) { factory = fn; }}; }}, document, window: {cordova}, cordova,
         ionic: {Platform: {isIOS: () => false}}, console, setTimeout() {}, clientConfig: {releaseAds: true}
