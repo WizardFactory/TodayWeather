@@ -1986,8 +1986,9 @@ long the range has grown. An acquisition is dated by its last page.
 - **Mid** in the observed response reads the newest publication first and stops at the first
   document: each save replaces the whole document. `S3Source::new` keeps legacy's last completed
   acquisition of the newest month, so an old publication completing last still wins there.
-- **Forecast zones** fold every list since 2026-01 in completion order. A 10-minute refresh appends
-  newer lists. A late list completed earlier triggers a refold, and a daily refold catches the rest.
+- **Forecast zones** come from the newest complete stored list, checked again every 10 minutes
+  ([newest list](#forecast-zone-newest-list-2026-11-10)). Until 2026-11-10 they folded every list
+  since 2026-01.
 The snapshot lists the matched town as `towns()`; the chain uses the list only for `_findTown`,
 which finds that town first in the full list too. Under the observed source the handler first maps
 the geocoder's `강원특별자치도`, `전북특별자치도` and `전남광주통합특별시` to the listed `강원도`, `전라북도`,
@@ -1999,9 +2000,10 @@ its mid forecast, air, life and warnings.
 **Reference data from the repository.** `part.csv`, `base.csv`, `region.csv` and
 `kma_forecast_land_zones.csv` are byte-identical copies with provenance. The town list follows
 `initTownDataToMongo` then `updateTownDataToMongo` (4,652 documents; grids by a `coordinate2xy`
-port). `region_code` is `getRegIdByTown`. Forecast zones fold every complete S13b `forecast-zone`
-acquisition with the legacy `getFromKma` rules (`_parsePage`, `normalizeZone`, upsert with `$unset`,
-retirement); `forecast_zone` is `findForecastZoneByName` over active zones.
+port). `region_code` is `getRegIdByTown`. Forecast zones apply the newest complete S13b
+`forecast-zone` list to an empty collection with the legacy `getFromKma` rules (`_parsePage`,
+`normalizeZone`, upsert); `forecast_zone` is `findForecastZoneByName` over active zones. Since
+2026-11-10 this matches legacy's answers, not its documents (AK decision 1).
 
 **Legacy documents from raw records.** In fetch order, the source applies the legacy collector to
 each captured acquisition:
@@ -2038,13 +2040,14 @@ Verification (local, test peers only):
 - A pinned Node 16.20.2 oracle with Mongoose 5.1.2 and an in-memory collection double
   ([provenance](../../server2/tests/domestic/fixtures/SOURCE-PROVENANCE.md)) runs the legacy
   scripts, organizers, savers and readers on synthetic inputs.
-- The rebuilt towns, 400 grid points, region table and cases, five zone scenarios, grid outcomes and
-  documents for four scenarios, two RSS scenarios and six mid answers match byte for byte.
+- The rebuilt towns, 400 grid points, region table and cases, grid outcomes and documents for four
+  scenarios, two RSS scenarios and six mid answers match byte for byte. The five zone scenarios
+  match at answer level since 2026-11-10: every query's `regId`s and count, and `collected`.
 - The same scenarios published to the S06 S3 test peer and read back with empty memory equal the
   oracle as well (grid, RSS, mid, zones).
 - An S3 snapshot test returns the same documents and forwards each missing input with its reason.
-- Focused tests pin completion-time dating, retired-zone documents, the last saved mid document
-  across months and zone fields inherited from older lists.
+- Focused tests pin completion-time dating, retired-zone documents and the last saved mid document
+  across months.
 - The release `kma_smoke.py` passes.
 
 Live provider shapes and timing, the cold-cell latency (S15b-4) and production quotas are unverified.
@@ -2544,6 +2547,69 @@ the day's forecast-zone partition still gained one identical list per start. The
 selection, the `rn1` gap one first answer showed and client validation on EC2 are separate steps
 of the same restart goal.
 
+### Forecast-zone newest list (2026-11-10)
+
+After a restart the forecast-zone read folded every list stored since 2026-01, a day's lists
+inside one 3 s catalog operation, twice per start, and every process start acquired the list and
+stored it again, identical or not. On EC2 the day's partition held 12 to 15 identical lists
+after test restarts, and 2 first answers of #2907 were 501. A request uses only the active zones of the
+newest list. AK decided on 2026-11-10 ([intent](../../intent/issue-2614-kma-zone-newest.md),
+[spec](../../specs/issue-2614-kma-zone-newest.md), [plan](../../plans/issue-2614-kma-zone-newest.md)):
+(1) the zones are the newest complete stored list, answer-level fidelity instead of the
+document-level fold; (2) the list is acquired when the newest stored one is more than 24 h old,
+not on every start; (3) the behaviour during an S3 outage is unchanged.
+
+**Selection.** Candidates come from catalog control objects only. `Reader::partitions` lists the
+key's day partitions since 2026-01 (one paginated LIST, a page per 1,000 days), and
+`Reader::listed_groups` reads one day's catalog: every group's completion (its last page's
+arrival) and its members' raw hashes in page order. A group's order key is the fold's: the
+completion, the partition, then the SHA-256 of its page hashes in page order. Days are tried
+newest first. Within a day, groups are restored in descending key, one at a time, with
+`Reader::members` (the catalog again, the descriptor and the pages) until one is eligible: complete
+(S06), a list `getFromKma` would have written (`complete_list`) and completed by the request's
+instant. The restored pages must give the key the catalog gave, or the read fails. The first day
+with an eligible list is the anchor. The day before it is then checked for a list that completed
+later, since a list requested before midnight keeps the day of its request: only its groups whose
+key is above the anchor's are restored, and the first eligible one answers instead of the anchor. Older days cannot hold a later list: a list's pages arrive within the provider budget of
+200 s (10 pages, two attempts of 10 s) of their requests. The zones are `Zones::apply` of that one
+list on an empty collection.
+
+**Failures.** A group that is not complete, or not a list, gives way to the next newest. With no
+eligible list, the observed source answers the release's land zones and the legacy source an empty
+collection, both without identity. A corrupt member, an unreadable catalog or a failed LIST is the
+read's error, as before (decision 3).
+
+**Memory.** Memory holds the zones, the identity (order key) of their list and the time of the
+last successful check of S3. A request reads memory while that check is under 10 minutes old and
+otherwise checks S3 under the zones lock; requests that wait for the lock use its result. A check
+installs its list only when its identity is newer than memory's, and moves the check time also
+when it finds the same list again or none. The daily refold and the incremental refresh are gone.
+
+**Acquisition.** When the newest identity memory holds completed more than 24 h before the
+request, or none is stored, the request starts the owned `forecast-zones` acquisition and does not
+wait for it; a failure is retried under the existing five-minute admission. The acquired complete
+list is installed under the zones lock when its identity is newer, so a slower, older result never
+replaces a newer one. A long-running process acquires again 24 h after its newest list, and a
+restart with a fresh stored list acquires nothing. A list installed when ready in RAM
+(response-first) is not yet durable: if its publication fails, the process still answers from it
+and the next start, which reads S3, acquires again.
+
+**Cost.** A cold read costs ceil(D/1,000) LIST pages for D stored days, one catalog GET per day
+examined (the anchor and the day before it when nothing newer is incomplete) and, for each tried
+group, its catalog again, its descriptor and its pages (one page in every observed list). With
+50 or 100 identical lists in older days the test reads 1 LIST, 3 catalogs, 1 descriptor and 1 page
+(the fold read 1, 11, 53 and 53 with 50). The cost does not grow with the identical lists of older
+days; one day's catalog keeps its size limit. The identical lists already stored stay in S3,
+unread; nothing is deleted.
+
+**Documents.** Memory no longer keeps retired zones or fields only an older list set.
+`findForecastZoneByName` and `collected` read only `regId`, `regName`, `regSp` and retirement, so
+every legacy oracle query gives the same `regId`s and count, and `collected` the same regions.
+
+Verification (local; an in-memory store on a paused clock with an injected wall clock, and the S3
+HTTP peer for the oracle): the tests are listed in the
+[spec](../../specs/issue-2614-kma-zone-newest.md). Not measured: a restart on EC2.
+
 ### S15b-2 s station registry seed (2026-10-15)
 
 AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with
@@ -2863,7 +2929,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | Previous short publication (`getVilageFcst`, observed response only; [#2614](#2614-kma-answer-parity-current-row-sentinels-and-yesterday)) | From HH+2:10 to HH+2:59, when the latest starts after the current three-hour slot HH; also when a lagging observation shows the slot before the clock's as current and the latest starts after it. Only when it is not in S3 for the cell | 3 hours: one attempt per cell and publication |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
-| Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
+| Forecast-zone list (`getFcstZoneCd`) | The newest list memory knows completed more than 24 h ago, or none is stored; the request does not wait, and the list is installed when it is newer ([newest list](#forecast-zone-newest-list-2026-11-10)) | 5 minutes after an admitted attempt |
 | Warning cycle (`WarningCollector.gather`, S12) | Once per 3 minutes, legacy's cadence; never two at once | 3 minutes |
 
 Retry keys are bounded at 65,536. Expired keys are pruned when the map doubles. Beyond the bound,
@@ -4281,6 +4347,11 @@ B3 parent as the existing interface; they do not attest a live execution.
 [Local verification](../operations/server2-native-verification.md#d1-forecast-zone-failure-recovery)
 uses owned peers and a real five-minute retry interval. The slice is stacked
 on B3 and is not an integrated release or D2 capacity qualification.
+
+[KMA-ZONE-NEWEST](#forecast-zone-newest-list-2026-11-10) (2026-11-10) replaces the success latch,
+the incremental refresh, the daily refold and the field merge: the newest stored list answers, and
+it is acquired again when it is more than 24 h old. The five-minute admission, the owned flight
+and the kept last good list remain. The flow and diagram above describe D1 at its pinned revision.
 
 ### #2819 narrative read cache recovery
 

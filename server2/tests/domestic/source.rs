@@ -5,7 +5,7 @@ use server2::domestic::kma::MidModel;
 use server2::domestic::kma::source::{
     Coord, Doc, Family, Fetched, Organized, Slot, Val, Zones, collect, complete_list, find_town,
     grid_documents, grid_of, items, mid_documents, region_code, region_table, rss_documents,
-    special_zone_docs, towns, zone_documents,
+    special_zone_docs, towns,
 };
 use server2::gateway::OrderedJson;
 use server2::warnings::zones::{Entry, ZoneState};
@@ -145,13 +145,56 @@ pub fn zone_docs(zones: &Zones) -> OrderedJson {
     docs_json(&docs)
 }
 
-#[test]
-fn forecast_zones_match_legacy_get_from_kma() {
+/// ORACLE (KMA-ZONE-NEWEST): `zones` answers every legacy query of `run` with the same zones (their
+/// `regId`s and number) and judges the same mid temperature regions collected as legacy's
+/// collection. The documents themselves differ by design (AK 2026-11-10): the newest list alone,
+/// applied to an empty collection, keeps neither retired zones nor fields only an older list set.
+pub fn same_zone_answers(run: &OrderedJson, zones: &Zones, what: &str) {
+    use server2::domestic::kma::source::{collected, land_zone_ids};
+    let reg_ids = |docs: &[OrderedJson]| -> Vec<String> {
+        docs.iter().map(|d| text(at(d, &["regId"]))).collect()
+    };
+    for q in items_of(at(run, &["queries"])) {
+        let args: Vec<String> = items_of(at(q, &["args"])).iter().map(text).collect();
+        let found: Vec<OrderedJson> = zones
+            .find_by_name(&args[0], &args[1])
+            .iter()
+            .map(Doc::json)
+            .collect();
+        let expected = items_of(at(q, &["result"]));
+        assert_eq!(found.len(), expected.len(), "{what} {args:?}: result count");
+        assert_eq!(
+            reg_ids(&found),
+            reg_ids(expected),
+            "{what} {args:?}: regIds"
+        );
+    }
+    let legacy = items_of(at(run, &["docs"]));
+    for land in land_zone_ids() {
+        let active = legacy.iter().any(|d| {
+            text(at(d, &["regId"])) == *land
+                && text(at(d, &["regSp"])) == "C"
+                && d.get("retired") != Some(&OrderedJson::Bool(true))
+        });
+        assert_eq!(
+            collected(MidModel::Temp, land, zones),
+            active,
+            "{what} {land}: collected"
+        );
+    }
+}
+
+/// ORACLE: each legacy `getFromKma` run, its acquisitions stored a minute apart and read back
+/// through the forecast-zone selector, gives legacy's answers ([`same_zone_answers`]).
+#[tokio::test(start_paused = true)]
+async fn forecast_zones_match_legacy_get_from_kma() {
+    use super::zone_select::{Bucket, kst, publish, source, store};
     for run in items_of(at(oracle(), &["zones", "runs"])) {
         let id = text(at(run, &["id"]));
         let acquisitions = items_of(at(run, &["acquisitions"]));
         let steps = items_of(at(run, &["steps"]));
-        let mut list = Vec::new();
+        let bucket = Bucket::default();
+        let store = store(&bucket);
         for (i, (a, step)) in acquisitions.iter().zip(steps).enumerate() {
             let p = pages(a);
             let refs: Vec<&[u8]> = p.iter().map(Vec::as_slice).collect();
@@ -161,22 +204,16 @@ fn forecast_zones_match_legacy_get_from_kma() {
                 failed,
                 "{id} acquisition {i}"
             );
-            list.push(fetched(1_000. + i as f64, "20260924", p));
+            let fetched_at = kst(20261014, 90000) + i as f64 * 60_000.;
+            let timed: Vec<(f64, Vec<u8>)> = p.into_iter().map(|b| (fetched_at, b)).collect();
+            publish(&store, 20261014, &timed).await;
         }
-        let zones = zone_documents(&list, 1e15).unwrap_or_default();
-        same(
-            &zone_docs(&zones),
-            at(run, &["docs"]),
-            &format!("{id} docs"),
-        );
-        for q in items_of(at(run, &["queries"])) {
-            let args: Vec<String> = items_of(at(q, &["args"])).iter().map(text).collect();
-            same(
-                &docs_json(&zones.find_by_name(&args[0], &args[1])),
-                at(q, &["result"]),
-                &format!("{id} {args:?}"),
-            );
-        }
+        let now = kst(20261014, 120000);
+        let zones = source(&bucket, now)
+            .zones(now, super::source_s3::deadline())
+            .await
+            .unwrap();
+        same_zone_answers(run, &zones, &id);
     }
 }
 
