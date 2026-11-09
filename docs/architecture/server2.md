@@ -2574,20 +2574,26 @@ limit. A running worker compares the days again before it ends, and a worker tha
 pass ended is followed by a new one. The pass waits for that comparison; no request waits for the
 pass. The store does not wait for a fold of the filled pages, because a product is made of the
 pages held. A day not yet read without failure, or a process that has not folded yet, keeps the
-flush until the day can be stored. An unchanged day spends the flush, and so does a failed store,
-after which the ten-minute limit applies again. Each pass adds at most one product PUT per filled
-day. The per-day rules, the made-of comparison and the bookkeeping after a store are those of
-every product.
+flush until the day can be stored. The read that makes such a day storable asks the worker for it,
+also when the read changed no page (a fold would not). An unchanged day spends the flush, and so
+does a failed store, after which the ten-minute limit applies again. Each pass adds at most one
+product PUT per filled day. The per-day rules, the made-of comparison and the bookkeeping after a
+store are those of every product.
 
 **Today and yesterday first.** The restart read lists the catalogs and reads the products of today
 and yesterday, compares them with the catalogs and folds them. Meanwhile it reads the older days'
 catalogs and products with the remaining lookups (eight in all). It reads the minute pages after
 both. The fold waits only for a fold already running, and the load does not wait for the fold.
 `Flight::Load` stays in flight until it ends, and `Flight::LoadRest` follows as before, so an answer
-from the early fold is never complete (S16). Today's and yesterday's products are checked against
-the city set of the seed, the held pages and their own products, before the older days' city pages
-are read. If only an older day's city page names a city station, the read of the grown city set
-(`Flight::Expand`) reads today's reduced pages in full.
+from the early fold is never complete (S16). Whichever of the two groups of products is applied
+first decides the city set (seed, held pages and products) the other is checked against. While only
+an older day's city page names a city station, today's and yesterday's products, usually applied
+first, are folded for the smaller set: once the older days' products arrive, the read of the grown
+city set (`Flight::Expand`) reads those 35 AWS pages in full again on the bulk lane after the first
+answer, and their products are stored again, for the smaller set when they had the whole set. When
+the older days' products come first, today's and yesterday's products made for the smaller set are
+refused and those days are read raw before the answer, as before. Before this change a restart
+applied every product before its first fold, so this cost stopped after one restart.
 
 **Residual lag.** The store at the end of a pass bounds the product's lag to the pages acquired
 after the last pass or product store. It does not keep every product current. Each case below
@@ -2607,10 +2613,12 @@ chunk restores were not added (AK, 2026-11-10); they will be reconsidered only i
 acceptance shows that the lag remains.
 
 Verification (local, S06 loopback S3 peer, provider doubles; the order is set by gates and injected
-request instants) is listed in the [spec](../../specs/issue-2614-kma-station-flush.md). Red on the
-unchanged code: the next restart restored 4 pages one by one, the worker's only product of the day
-lacked the filled hours, and the first answers had 0 of 35 rain rows of today and yesterday. Not
-measured: the restart on EC2.
+request instants; the time contracts and the read that makes a flushed day storable on a paused
+clock over an in-memory S3) is listed in the [spec](../../specs/issue-2614-kma-station-flush.md).
+Red before each change: the next restart restored 4 pages one by one, the worker's only product of
+the day lacked the filled hours, the first answers at the end of their 2.5 s wait had 0 of 35 rain
+rows of today and yesterday, and a flush kept by a failed day read stayed unstored after the next
+read. Not measured: the restart on EC2.
 
 ### S15b-2 s station registry seed (2026-10-15)
 

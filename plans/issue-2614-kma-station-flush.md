@@ -7,6 +7,7 @@ Task declaration: `server2/config/tasks/KMA-STATION-FLUSH.json`. Follows PR-A of
 3. V2: the restart read lists, compares and folds today's and yesterday's pages beside the older days' catalog and product reads (which keep the remaining lookups). The fold waits only for a fold already running. The minute pages follow both, and the load stays in flight until it ends (S16).
 4. Update the architecture document: product writes, restart read order, and the residual lag with its costs.
 5. Local commits with fmt, clippy, the artifact policy and the placement gate. A PR, CI, cross-provider review and the EC2 acceptance (C) are separate steps; AK decides on the merge.
+6. Code review 1 (Codex), with Red first: a read that makes a day with a kept flush storable has the product worker compare it (SF-flush-read-recovery). The early fold's time contract moves to paused-clock tests over an in-memory S3, and the loopback tests keep order and final results (SF-real-clock-deadlines). A test covers a city station that only an older day names (SF-older-city-set-test).
 
 ## Scenarios
 
