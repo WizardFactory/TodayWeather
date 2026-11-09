@@ -67,6 +67,15 @@ class NationLoadsTest {
     }
 
     @Test
+    fun aCommentWithAnEntityOutsideUnicodeShowsItsCard() = runTest {
+        // Review F1: such an entity threw while the cards were built, out of the page's load.
+        val loads = loads(special = { """[{"name": "기상정보", "announcement": "2026-11-07T07:20:00.000Z", "type": 3, "comment": "a &#1114112; b"}]""" })
+        loads.open(NationRoutes.WARNINGS)
+        advanceUntilIdle()
+        assertEquals(listOf("a \uFFFD b"), (loads.pages.value[NationRoutes.WARNINGS] as NationPageState.Warnings).cards.single().comment)
+    }
+
+    @Test
     fun anAnswerAfterThePageClosedIsDropped() = runTest {
         val answer = CompletableDeferred<String>()
         val loads = loads(nation = { answer.await() })

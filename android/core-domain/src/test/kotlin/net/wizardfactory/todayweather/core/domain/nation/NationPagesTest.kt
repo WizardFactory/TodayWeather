@@ -147,6 +147,16 @@ class NationPagesTest {
     }
 
     @Test
+    fun numericEntitiesDecodeAsTheHtmlParserDoes() {
+        fun lines(html: String) = BoundHtml.lines(JsonPrimitive(html))
+        // Outside Unicode, zero, a surrogate and an overflowing number become U+FFFD (review F1: they threw).
+        assertEquals(listOf("a \uFFFD b \uFFFD c \uFFFD d \uFFFD e \uFFFD"), lines("a &#1114112; b &#x110000; c &#0; d &#xD800; e &#99999999999;"))
+        // 0x80-0x9F follow windows-1252 where it has a character, as the HTML parser's table does.
+        assertEquals(listOf("\u20AC \u201A \u0178 \u0081"), lines("&#128; &#x82; &#159; &#129;"))
+        assertEquals(listOf("\uAC00 \uD83D\uDE00"), lines("&#xAC00; &#128512;"))
+    }
+
+    @Test
     fun boundHtmlIsWhatSanitizeLeaves() {
         fun lines(html: String) = BoundHtml.lines(JsonPrimitive(html))
         assertEquals(listOf("a", "b"), lines("a<br>b"))

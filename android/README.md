@@ -137,7 +137,7 @@ The menu's 기상특보 (S12), 전국날씨 (S10) and 전국미세먼지 (S11) (
 - **Pages (`core-domain` `nation/`):**
   - `NationPages` gives each map label its name, icon and values in the mode or pollutant chosen, from the AN-02 `Nationwide` rules.
   - `WarningCards` gives each card its heading (`name announcement`), situations (bold hazard and level, then `timeStr location` lines), the note heading for numeric type 1 or 2, and the comment through `ng-bind-html` (`BoundHtml`).
-  - In `BoundHtml`, `<br>` breaks lines, other tags go with `script` and `style` content, entities are decoded, and white space collapses.
+  - In `BoundHtml`, `<br>` breaks lines, other tags go with `script` and `style` content, and white space collapses. Entities are decoded, numeric ones as the HTML parser reads them: U+FFFD outside Unicode, and windows-1252 for 0x80–0x9F.
 - **Screens (`app` `ui/nation/`):** `NationScreen` draws the pages over the tabs, like the settings pages, with the theme's plain header and #F5F5F5 in every theme.
   - S10: the three outline mode buttons, at Chrome's pixel-snapped widths, with an ellipsis for text that does not fit. The map is 330×485 dp with 20 sp labels on `line-height: normal` lines. A label is CSS shrink-to-fit, so 울산's 북북서 wraps at the map's edge.
   - S11: the 480 dp strip of tabs, which scrolls sideways on narrow windows, and the labels in the grade colors of the chosen air standard.

@@ -128,9 +128,9 @@ object WarningCards {
 
 /**
  * `ng-bind-html`: the comment through `$sanitize`, as lines. `<br>` ends a line; other tags go, keeping their text,
- * except `script` and `style`, whose content goes too; comments go; entities become their characters. White space
- * collapses as in HTML: each run becomes one space, none at the start or end of a line. A final `<br>` makes no
- * empty line; two in a row make one.
+ * except `script` and `style`, whose content goes too; comments go; entities become their characters, numeric ones as
+ * the HTML parser reads them. White space collapses as in HTML: each run becomes one space, none at the start or end
+ * of a line. A final `<br>` makes no empty line; two in a row make one.
  */
 object BoundHtml {
     private val BR = Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE)
@@ -149,12 +149,30 @@ object BoundHtml {
         return if (parts.size > 1 && parts.last().isEmpty()) parts.dropLast(1) else parts
     }
 
+    /** The HTML parser's table for numeric references 0x80-0x9F (windows-1252 where it has a character). */
+    private val C1 = mapOf(0x80 to 0x20AC, 0x82 to 0x201A, 0x83 to 0x0192, 0x84 to 0x201E, 0x85 to 0x2026, 0x86 to 0x2020, 0x87 to 0x2021,
+        0x88 to 0x02C6, 0x89 to 0x2030, 0x8A to 0x0160, 0x8B to 0x2039, 0x8C to 0x0152, 0x8E to 0x017D, 0x91 to 0x2018, 0x92 to 0x2019,
+        0x93 to 0x201C, 0x94 to 0x201D, 0x95 to 0x2022, 0x96 to 0x2013, 0x97 to 0x2014, 0x98 to 0x02DC, 0x99 to 0x2122, 0x9A to 0x0161,
+        0x9B to 0x203A, 0x9C to 0x0153, 0x9E to 0x017E, 0x9F to 0x0178)
+
     private fun decode(text: String): String = ENTITY.replace(text) { m ->
         val e = m.groupValues[1]
         when {
-            e.startsWith("#x") || e.startsWith("#X") -> e.substring(2).toIntOrNull(16)?.let { String(Character.toChars(it)) }
-            e.startsWith("#") -> e.substring(1).toIntOrNull()?.let { String(Character.toChars(it)) }
+            e.startsWith("#x") || e.startsWith("#X") -> codePoint(e.substring(2).toLongOrNull(16))
+            e.startsWith("#") -> codePoint(e.substring(1).toLongOrNull())
             else -> NAMED[e]
         } ?: m.value
+    }
+
+    /**
+     * A numeric reference as the HTML parser reads it: U+FFFD for 0, a surrogate, a value past U+10FFFF or one too long
+     * to read, and the windows-1252 character for 0x80-0x9F where it has one.
+     */
+    private fun codePoint(n: Long?): String {
+        val c = when {
+            n == null || n == 0L || n > 0x10FFFF || n in 0xD800L..0xDFFFL -> 0xFFFD
+            else -> C1[n.toInt()] ?: n.toInt()
+        }
+        return String(Character.toChars(c))
     }
 }

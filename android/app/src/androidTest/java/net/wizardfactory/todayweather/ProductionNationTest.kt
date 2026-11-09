@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
@@ -23,6 +25,9 @@ import net.wizardfactory.todayweather.core.domain.Nationwide
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.UnitSettings
+import net.wizardfactory.todayweather.ui.nation.NationLoads
+import net.wizardfactory.todayweather.ui.nation.NationPageState
+import net.wizardfactory.todayweather.ui.nation.NationRoutes
 import net.wizardfactory.todayweather.ui.nation.NationTags
 import net.wizardfactory.todayweather.ui.shell.MenuRow
 import net.wizardfactory.todayweather.ui.shell.ShellTags
@@ -38,7 +43,8 @@ import org.junit.runner.RunWith
  * `weather` `production` and the app's language set to ko-KR (the rows show for region KR):
  * - 전국날씨: in each of its three modes, most cities show values;
  * - 전국미세먼지: in each of its six tabs, most provinces show a value;
- * - 기상특보: the page shows a card for each bulletin of the same answer read again here.
+ * - 기상특보: each card shows the heading of the answer the page loaded, and a second read of the endpoint here is a list
+ *   of as many bulletins.
  * Each state is captured to the app's files (ac2/). The requests are read-only GETs; push requests are recorded by the
  * test app, not sent.
  */
@@ -77,14 +83,23 @@ class ProductionNationTest {
         }
         back()
 
-        // The same answer read here: a list, whose bulletins are the page's cards.
-        val answer = runBlocking { NationSource(BuildConfig.SERVER_URL).special(listOf("ko-KR")) }
-        val bulletins = ((answer as? PageLoad.Loaded)?.value as? JsonArray)?.size
-        assertTrue("the warnings answer is a list: $answer", bulletins != null)
+        // The page's own answer: each of its cards shows the bulletin's heading (its first line).
         open(MenuRow.SPECIAL_WEATHER)
-        rule.waitUntil(10_000) { rule.onAllNodesWithTag(NationTags.card(0)).fetchSemanticsNodes().isNotEmpty() || bulletins == 0 }
+        var opened: NationLoads? = null
+        rule.runOnUiThread { opened = ViewModelProvider(rule.activity)[OpenedModel::class.java].nation }
+        val loads = opened!!
+        rule.waitUntil(10_000) { loads.pages.value[NationRoutes.WARNINGS] is NationPageState.Warnings }
+        rule.waitForIdle()
+        val cards = (loads.pages.value[NationRoutes.WARNINGS] as NationPageState.Warnings).cards
         capture("warnings")
-        assertEquals(bulletins, (0 until 10).count { rule.onAllNodesWithTag(NationTags.card(it)).fetchSemanticsNodes().isNotEmpty() })
+        cards.forEachIndexed { i, card ->
+            rule.onNode(hasText(card.heading.take(8), substring = true) and hasAnyAncestor(hasTestTag(NationTags.card(i))), useUnmergedTree = true)
+                .assertExists()
+        }
+        assertEquals(cards.size, (0 until 20).count { rule.onAllNodesWithTag(NationTags.card(it)).fetchSemanticsNodes().isNotEmpty() })
+        // A second read of the endpoint: a list of as many bulletins (unless one is published in between).
+        val answer = runBlocking { NationSource(BuildConfig.SERVER_URL).special(listOf("ko-KR")) }
+        assertEquals("the warnings answer: $answer", cards.size, ((answer as? PageLoad.Loaded)?.value as? JsonArray)?.size)
         back()
     }
 
