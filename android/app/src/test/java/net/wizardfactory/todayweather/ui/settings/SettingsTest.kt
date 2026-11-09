@@ -17,6 +17,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import java.io.File
 import java.net.URLDecoder
 import kotlinx.coroutines.CoroutineScope
@@ -221,6 +223,52 @@ class SettingsTest {
         rule.waitForIdle()
         assertEquals("photo", memory.current().settings.theme)
         rule.waitUntil(10_000) { rule.onAllNodesWithTag(ForecastTags.PHOTO, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    /** The scroll of the chart in block 1 of the shown weather page, in px. */
+    private fun chartScroll(): Float = rule.onNode(
+        androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.HorizontalScrollAxisRange) and
+            hasAnyAncestor(hasTestTag(ForecastTags.block(1))), useUnmergedTree = true,
+    ).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.HorizontalScrollAxisRange].value()
+
+    private fun swipeChart() {
+        rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft(startX = right - 10f, endX = left + 10f, durationMillis = 300) }
+        rule.waitForIdle()
+    }
+
+    /**
+     * #2915 F3: ForecastCtrl sets both charts' `scrollLeft` to today's position after every complete apply, the same data
+     * too: a theme chosen on S08 starts a load, whose apply brings a chart the user moved back, even when the reload fails
+     * (Hourly) and when it answers with the same data (Daily).
+     */
+    @Test
+    fun aReapplyBringsTheChartsBackToToday() {
+        show()
+        val hourly = chartScroll()
+        swipeChart()
+        assertTrue("the hourly chart moved: $hourly", chartScroll() != hourly)
+        failing = true
+        menu(MenuRow.THEME)
+        rule.onNodeWithTag(SettingsTags.row(2)).performClick()
+        rule.waitForIdle()
+        back()
+        rule.onAllNodes(hasText(string(R.string.LOC_CLOSE)), useUnmergedTree = true).fetchSemanticsNodes().takeIf { it.isNotEmpty() }?.let {
+            rule.onNode(hasText(string(R.string.LOC_CLOSE))).performClick()
+            rule.waitForIdle()
+        }
+        assertEquals("the failed reload's apply brought it back", hourly, chartScroll(), 0.5f)
+
+        failing = false
+        rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
+        rule.waitForIdle()
+        val daily = chartScroll()
+        swipeChart()
+        assertTrue("the daily chart moved: $daily", chartScroll() != daily)
+        menu(MenuRow.THEME)
+        rule.onNodeWithTag(SettingsTags.row(1)).performClick()
+        rule.waitForIdle()
+        back()
+        assertEquals("the same data applied again brought it back", daily, chartScroll(), 0.5f)
     }
 
     @Test

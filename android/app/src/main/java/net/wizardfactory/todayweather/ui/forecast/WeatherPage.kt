@@ -84,6 +84,7 @@ import net.wizardfactory.todayweather.core.domain.forecast.WeatherRow
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.ui.chart.DailyChartView
 import net.wizardfactory.todayweather.ui.chart.HourlyChartView
+import net.wizardfactory.todayweather.ui.chart.rememberOpeningScroll
 import net.wizardfactory.todayweather.ui.chart.rememberChartImages
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.FixedLine
@@ -116,6 +117,8 @@ class WeatherPageContent(
     val metrics: ChartMetrics,
     val hourly: HourlyChart?,
     val daily: DailyChart?,
+    /** The visit's complete applies ([ForecastScope.scrolls]): each brings the charts back to today's position. */
+    val scrolls: Int = 0,
 )
 
 /**
@@ -150,9 +153,13 @@ fun WeatherPage(
             Box(Modifier.testTag(ForecastTags.block(1))) {
                 Zoomed {
                     if (!daily && page.showChart && content.hourly != null) {
-                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart)
+                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart,
+                            scrollState = rememberOpeningScroll(content.hourly, content.hourly.openingOffset, content.scrolls))
                     }
-                    if (daily && content.daily != null) DailyChartView(content.daily, colors = colors.chart)
+                    if (daily && content.daily != null) {
+                        DailyChartView(content.daily, colors = colors.chart,
+                            scrollState = rememberOpeningScroll(content.daily, content.daily.openingOffset, content.scrolls))
+                    }
                 }
             }
             Spacer(Modifier.height(10.dp))

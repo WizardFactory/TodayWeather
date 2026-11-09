@@ -156,7 +156,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
             ?.let { HourlyChart.build(it, metrics, texts, units.precipitationUnit, units.windSpeedUnit) }
         val daily = chartPlace?.takeIf { type == ForecastType.MID && (it["dayChart"] as? kotlinx.serialization.json.JsonArray)?.isNotEmpty() == true }
             ?.let { DailyChart.build(it, metrics, texts, units.precipitationUnit) }
-        WeatherPageContent(type, page, metrics, hourly, daily)
+        WeatherPageContent(type, page, metrics, hourly, daily, visit.scrolls)
     }
     var expanded by remember(visit) { mutableStateOf(visit.expand) }
     val scroll = remember(visit) { ScrollState(0) }

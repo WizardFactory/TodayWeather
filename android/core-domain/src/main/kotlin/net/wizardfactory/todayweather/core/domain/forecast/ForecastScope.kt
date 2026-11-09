@@ -71,6 +71,9 @@ class ForecastScope(
      */
     var chartPlace: JsonObject? = null; private set
 
+    /** Complete applies so far: each sets the charts' `scrollLeft` back to today's position (#2915 F3). */
+    var scrolls: Int = 0; private set
+
     /** `init`: false when no place is enabled (Cordova opens the start popup instead). */
     fun open(city: JsonObject?, enabledCount: Int, hasPush: Boolean): Boolean {
         if (enabledCount == 0) return false
@@ -163,6 +166,8 @@ class ForecastScope(
             dayChart?.let { put("dayChart", it) }
             cw?.let { put("currentWeather", it) }
         })
+        // A complete apply scrolls both charts to today's position 300 ms later (`getTodayPosition`), the same data too.
+        scrolls++
     }
 
     /** `getTemp(temp)`: "" without a value, rounded in °F, otherwise the value as it came. */
