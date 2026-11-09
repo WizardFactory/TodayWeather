@@ -2572,6 +2572,14 @@ forecast-zone acquisition installs its list in the held zones at once (folded ov
 unless the memory already holds a list fetched later) and clears the memory as before. The legacy
 source keeps its deadline and reads directly.
 
+A refresh reads each group of a day's forecast-zone partition in its own catalog read (the
+catalog's control object lists the groups, then `lookup_members` reads one group), and a list
+stored again with the same pages is read once (review round 7). The whole partition used to be one
+catalog lookup under the catalog's 3 s operation deadline: with one list per process start a slow
+store made every refresh of the day miss that deadline however long the owned work could run, so
+the memory was never filled (a test of two stored lists at 2.6 s per read failed every time
+once the process's own list was in the catalog too).
+
 | Read | Unavailable | Raced at the head start |
 | --- | --- | --- |
 | Grid family (current, ultra-short, short) listing | every publication absent, as on an empty store: the needed ones are acquired at once | a listing not back then: every publication the request needs |

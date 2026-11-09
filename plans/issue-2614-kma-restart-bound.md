@@ -13,6 +13,7 @@ Task declaration: `server2/config/tasks/KMA-RESTART-BOUND.json`. Stacked on #290
 9. Codex review round 3 (Required): owned reads keep each partition as it completes, the needed ones first; the process's acquisitions stay usable under a byte budget; an earlier listing suppresses S16; restored bodies live only in the budgeted `Bodies` (flights name partitions); regression tests first, seen failing.
 10. Codex review round 4: the yesterday-comparison partitions right after the newest required publication; acquisition flights hold only whether they acquired (bodies in the budgeted acquisition cache); regression tests first, seen failing.
 11. Codex review round 5 (Recommended, adopted): flights hand their acquisition to registered waiters independently of the cache's eviction; the warning-flight expiry test on a paused clock.
+12. Round 7 (full-suite failure on fb9ab02b): the zone refresh reads each group of the day's partition in its own catalog read (identical lists once); the zone-refill test made deterministic on observable GET completion.
 
 R2 (a shorter bound on the assembly's CPU permit) is not done: the permit wait already ends at the request deadline, and a shorter bound would have to drop required data or answer without the assembly; the allocator removes the measured cause of the slow assembly, and MEASURE shows whether more is needed.
 
