@@ -486,10 +486,28 @@ impl<T: IndexListing + Clone> Reader<T> {
         });
         Ok((out, excluded))
     }
+    /// [`Self::acquisitions_counted`] of the `i`-th partition of [`Self::available`].
+    async fn indexed(
+        &self,
+        i: usize,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> (usize, Result<(Vec<Fetched>, usize), Error>) {
+        (
+            i,
+            self.acquisitions_counted(source, kind, key, partition, deadline)
+                .await,
+        )
+    }
     /// [`Self::all_counted`] for a read a request waits on (KMA-RESTART-BOUND): a partition whose
-    /// read fails because the store is slow, busy or unreachable ([`absent`]) is left out and
-    /// named in [`Partial::unread`], so the request treats it as absent instead of failing. A
-    /// defect (a corrupt or invalid object) is still an error.
+    /// read fails because the store is slow, busy or unreachable ([`absent`]), or has not ended
+    /// by `stop`, is left out and named in [`Partial::unread`], so the request treats it as absent
+    /// instead of failing or waiting on. At most [`LOOKUPS`] lookups run at once. A defect (a
+    /// corrupt or invalid object) is still an error.
+    #[allow(clippy::too_many_arguments)] // One key's partitions plus the deadline and the stop.
     pub async fn available(
         &self,
         source: &str,
@@ -497,27 +515,57 @@ impl<T: IndexListing + Clone> Reader<T> {
         key: &ProviderKey,
         partitions: &[String],
         deadline: Instant,
+        stop: Instant,
     ) -> Result<Partial, Error> {
+        use futures_util::StreamExt;
         let mut read = Partial::default();
-        for chunk in partitions.chunks(LOOKUPS) {
-            let reads = crate::history::join_all(
-                chunk
-                    .iter()
-                    .map(|p| self.acquisitions_counted(source, kind, key, p, deadline))
-                    .collect(),
-            )
-            .await;
-            for (partition, r) in chunk.iter().zip(reads) {
-                match r {
-                    Ok((f, e)) => {
-                        read.fetched.extend(f);
-                        read.excluded += e;
+        let mut ended = vec![false; partitions.len()];
+        let mut defect = None;
+        {
+            let mut running = futures_util::stream::FuturesUnordered::new();
+            let mut next = 0;
+            let collect = async {
+                loop {
+                    while running.len() < LOOKUPS && next < partitions.len() {
+                        running.push(self.indexed(
+                            next,
+                            source,
+                            kind,
+                            key,
+                            &partitions[next],
+                            deadline,
+                        ));
+                        next += 1;
                     }
-                    Err(e) if absent(&e) => read.unread.push(partition.clone()),
-                    Err(e) => return Err(e),
+                    let Some((i, r)) = running.next().await else {
+                        return;
+                    };
+                    ended[i] = true;
+                    match r {
+                        Ok((f, e)) => {
+                            read.fetched.extend(f);
+                            read.excluded += e;
+                        }
+                        Err(e) if absent(&e) => read.unread.push(partitions[i].clone()),
+                        Err(e) => {
+                            defect = Some(e);
+                            return;
+                        }
+                    }
                 }
-            }
+            };
+            let _ = tokio::time::timeout_at(stop, collect).await;
         }
+        if let Some(e) = defect {
+            return Err(e);
+        }
+        read.unread.extend(
+            partitions
+                .iter()
+                .zip(&ended)
+                .filter(|(_, ended)| !**ended)
+                .map(|(p, _)| p.clone()),
+        );
         read.fetched.sort_by(|a, b| {
             a.fetched_at_ms
                 .cmp(&b.fetched_at_ms)

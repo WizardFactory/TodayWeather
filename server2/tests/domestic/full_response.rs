@@ -2377,15 +2377,19 @@ async fn a_fast_restart_asks_no_provider() {
     assert_eq!(body, produced, "the producing process's answer");
 }
 
-/// A forecast acquirer that logs every request it is asked (`{request:?}`) before forwarding it
-/// to [`Forecasts`].
+/// A forecast acquirer that logs every request it is asked (`{request:?} @ {ms} ms`, the time
+/// since `started`) before forwarding it to [`Forecasts`].
 struct Logged {
     inner: Forecasts,
     log: Arc<std::sync::Mutex<Vec<String>>>,
+    started: Instant,
 }
 impl ForecastAcquire for Logged {
     fn acquire(&self, request: ForecastRequest) -> BoxFuture<'static, Result<Published, String>> {
-        self.log.lock().unwrap().push(format!("{request:?}"));
+        self.log.lock().unwrap().push(format!(
+            "{request:?} @ {} ms",
+            self.started.elapsed().as_millis()
+        ));
         self.inner.acquire(request)
     }
     fn cached(&self, request: &ForecastRequest) -> Published {
@@ -2429,6 +2433,7 @@ async fn restarted_answer(
             calls: Arc::new(AtomicUsize::new(0)),
         },
         log: log.clone(),
+        started: Instant::now(),
     })));
     let service = Arc::new(Service::new(counted.clone(), doubles.office.clone()).unwrap());
     let backend = KmaBackend::new(
@@ -2459,7 +2464,8 @@ fn body_of(outcome: Result<server2::domestic::kma::Outcome, GatewayError>) -> se
 /// past the catalog's 3 s deadline, as on EC2 on 2026-11-09 (today's partition held one list per
 /// process start, each restored and decoded one after another on a busy CPU). The request answers
 /// with the zones of an empty store (the release's land zones), so the mid forecast is still
-/// found, instead of failing the answer.
+/// found, instead of failing the answer; it takes those zones at the head start and gives the
+/// read up at its bound, before the catalog deadline (RB-zone-mid-starvation).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_zone_read_past_the_catalog_deadline_answers_with_the_empty_store_zones() {
     let _peers = S3_PEERS.lock().await;
@@ -2472,7 +2478,7 @@ async fn a_zone_read_past_the_catalog_deadline_answers_with_the_empty_store_zone
     let took = started.elapsed();
     gate.open();
     assert!(gate.was_reached(), "the zone list was read");
-    assert!(took >= Duration::from_secs(3), "{took:?}");
+    assert!(took < Duration::from_secs(3), "{took:?}");
     let body = body_of(outcome);
     assert_eq!(body["midData"], produced["midData"]);
     assert_eq!(body["short"], produced["short"]);
@@ -2495,7 +2501,7 @@ async fn a_grid_read_past_the_catalog_deadline_answers_from_the_provider() {
     assert!(gate.was_reached(), "the current grid was read");
     let latest = asked
         .iter()
-        .filter(|a| a.contains("UltraSrtNcst") && a.contains("1000"))
+        .filter(|a| a.contains("UltraSrtNcst") && a.contains("time: 1000 }"))
         .count();
     assert_eq!(latest, 1, "the latest publication, once: {asked:?}");
     assert_eq!(body_of(outcome), produced, "the producing process's answer");
@@ -2524,6 +2530,129 @@ async fn rss_and_mid_reads_past_the_catalog_deadline_answer_from_the_providers()
         assert_eq!(n, 1, "{family}: {asked:?}");
     }
     assert_eq!(body_of(outcome), produced, "the producing process's answer");
+}
+
+/// When the logged request matching every one of `parts` was asked (its `@ {ms} ms`), and how
+/// many such requests there were.
+fn asked_at(asked: &[String], parts: &[&str]) -> (usize, Option<Duration>) {
+    let found: Vec<&String> = asked
+        .iter()
+        .filter(|a| parts.iter().all(|p| a.contains(p)))
+        .collect();
+    let at = found.first().map(|a| {
+        let ms = a.rsplit(" @ ").next().unwrap().trim_end_matches(" ms");
+        Duration::from_millis(ms.parse().unwrap())
+    });
+    (found.len(), at)
+}
+
+/// RB-store-deadline: twenty more hourly current observations of the 54 h window are stored
+/// (over thirty partitions, read eight at a time), and every one of their reads ends at the
+/// catalog's 3 s deadline. The read is raced at the head start and the request stops waiting for
+/// it at its bound: the answer comes within the bound with the provider's publications, equal to
+/// the producing process's, instead of waiting batch after batch past the request deadline.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn many_grid_partitions_past_the_catalog_deadline_answer_from_the_provider() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let produced = produced_answer(&peer).await;
+    let earlier: Vec<Publication> = (0..20).map(|h| publication(20260923, h * 100)).collect();
+    store_grid(&peer, F::UltraSrtNcst, &earlier).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&["raw/v2/data-go-kr/ultra-srt-ncst/"]);
+    let started = Instant::now();
+    let (outcome, asked) = restarted_answer(&peer, &counted).await;
+    let took = started.elapsed();
+    gate.open();
+    assert!(gate.was_reached(), "the current grid was read");
+    assert!(took < Duration::from_millis(3500), "{took:?}");
+    let (latest, _) = asked_at(&asked, &["UltraSrtNcst", "time: 1000 }"]);
+    assert_eq!(latest, 1, "the latest publication, once: {asked:?}");
+    assert_eq!(body_of(outcome), produced, "the producing process's answer");
+}
+
+/// RB-listing-race: the listings (and catalogs) of the current grid, the town RSS and the mid
+/// forecasts never answer. The providers of the publications the request needs start at the
+/// 700 ms head start without the listings, the listings are given up at the bound, and the answer
+/// equals the producing process's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn late_listings_start_the_providers_at_the_head_start() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let produced = produced_answer(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let gate = counted.hold(&[
+        "index/v2/data-go-kr/ultra-srt-ncst/",
+        "index/v2/kma-web/town-rss/",
+        "index/v2/data-go-kr/mid-",
+    ]);
+    let started = Instant::now();
+    let (outcome, asked) = restarted_answer(&peer, &counted).await;
+    let took = started.elapsed();
+    gate.open();
+    assert!(gate.was_reached(), "the listings were asked");
+    assert!(took < Duration::from_millis(3500), "{took:?}");
+    for parts in [
+        &["UltraSrtNcst", "time: 1000 }"][..],
+        &["Rss("][..],
+        &["family: MidFcst"][..],
+        &["family: MidLandFcst"][..],
+        &["family: MidTa"][..],
+    ] {
+        let (n, at) = asked_at(&asked, parts);
+        assert_eq!(n, 1, "{parts:?}: {asked:?}");
+        let at = at.unwrap();
+        assert!(
+            at >= Duration::from_millis(650) && at < Duration::from_millis(1500),
+            "{parts:?} asked at the head start: {at:?}"
+        );
+    }
+    assert_eq!(body_of(outcome), produced, "the producing process's answer");
+}
+
+/// RB-zone-mid-starvation: only the forecast-zone list is stored, and its read ends at the
+/// catalog deadline. At the head start the request takes the zones of an empty store and starts
+/// the mid acquisitions, so the first answer has the mid forecast, land forecast and temperatures,
+/// as a process whose zone read is prompt answers.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_late_zone_read_leaves_the_mid_providers_their_time() {
+    let _peers = S3_PEERS.lock().await;
+    let mid_data = |held: bool| async move {
+        let peer = Peer::persistent();
+        let store = CatalogStore::new(peer.transport_limited(2), CatalogLimits::default()).unwrap();
+        let p = publication(20260924, 0);
+        let zones = acquisition(
+            "data-go-kr",
+            "forecast-zone",
+            &ProviderKey::Named {
+                id: "forecast-zones".into(),
+            },
+            p,
+            &p.base_date(),
+            land_zone_page(),
+            "application/json",
+        );
+        store
+            .publish(zones.declaration, zones.records, deadline())
+            .await
+            .unwrap();
+        let counted = Counted::new(peer.transport_limited(4));
+        let gate = counted.hold(if held {
+            &["raw/v2/data-go-kr/forecast-zone/"][..]
+        } else {
+            &[][..]
+        });
+        let (outcome, asked) = restarted_answer(&peer, &counted).await;
+        gate.open();
+        assert_eq!(gate.was_reached(), held);
+        for family in ["family: MidFcst", "family: MidLandFcst", "family: MidTa"] {
+            let (n, _) = asked_at(&asked, &[family]);
+            assert_eq!(n, 1, "{family}: {asked:?}");
+        }
+        body_of(outcome)["midData"].clone()
+    };
+    let prompt = mid_data(false).await;
+    assert_eq!(mid_data(true).await, prompt);
 }
 
 /// The fixed Seoul geocode of [`FixedGeo`], answered after 300 ms.

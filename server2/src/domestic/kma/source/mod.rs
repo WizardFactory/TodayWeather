@@ -174,6 +174,8 @@ pub struct S3Source<T> {
     warnings: Arc<WarningService<T>>,
     clock: Clock,
     zones: Arc<tokio::sync::Mutex<Option<ZoneCache>>>,
+    /// The zones of the last zone read, readable while a refresh holds `zones` (KMA-RESTART-BOUND).
+    held_zones: Arc<std::sync::Mutex<Option<Arc<Zones>>>>,
     observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback (shared with the image
     /// forecast production of the observed source).
@@ -332,6 +334,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             )),
             clock,
             zones: Arc::new(tokio::sync::Mutex::new(None)),
+            held_zones: Arc::default(),
             forecast: None,
             raw_writer: None,
             observed_history: observed,
@@ -564,6 +567,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     last = last.max(id);
                 }
                 let zones = Arc::new(zones);
+                *self.held_zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(zones.clone());
                 let folded = c.folded;
                 *cache = Some(ZoneCache {
                     zones: zones.clone(),
@@ -608,6 +612,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             return Ok(self.empty_store_zones());
         };
         let zones = Arc::new(zones);
+        *self.held_zones.lock().unwrap_or_else(|e| e.into_inner()) = Some(zones.clone());
         *cache = Some(ZoneCache {
             zones: zones.clone(),
             refreshed: std::time::Instant::now(),
@@ -616,6 +621,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             last,
         });
         Ok(zones)
+    }
+    /// KMA-RESTART-BOUND: when a request's stored grid, RSS and mid reads stop: at its bound when
+    /// it has a head start (the observed source; providers race the reads from the head start),
+    /// otherwise at its deadline.
+    fn stored_stop(&self, deadline: Instant, until: Instant, race_at: Instant) -> Instant {
+        if self.observed_history && race_at < until {
+            until
+        } else {
+            deadline
+        }
     }
     /// The zones of a store without a list: legacy's empty collection (`findForecastZoneByName`
     /// finds nothing); the observed response uses the release's land zones, so its first answer
@@ -718,24 +733,50 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 lookback_ms(family)
             };
         let months = records::months(from, now);
-        // KMA-RESTART-BOUND: an unavailable listing leaves every publication absent, as on an
-        // empty store (the request acquires what it needs), and the read partial.
-        let (parts, unlisted) = match self
-            .reader
-            .partitions(sf.source(), sf.kind(), &key, &months, deadline)
-            .await
-        {
-            Ok(parts) => (parts, false),
-            Err(e) if records::absent(&e) => (Vec::new(), true),
-            Err(e) => return Err(format!("{} listing: {e}", sf.kind())),
-        };
         let oldest = schedule::from_ms(from as i64).partition();
-        let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
-        let read = || async {
-            self.reader
-                .available(sf.source(), sf.kind(), &key, &wanted, deadline)
+        // KMA-RESTART-BOUND: the stored restore (listing and partition reads) of a request with a
+        // head start ends at its bound; what it has not read by then is absent for the request.
+        let stop = self.stored_stop(deadline, until, race_at);
+        // The listing: None when it is unavailable or late (every publication absent, as on an
+        // empty store, and the read partial).
+        let listing = {
+            let key = &key;
+            async move {
+                match tokio::time::timeout_at(
+                    stop,
+                    self.reader
+                        .partitions(sf.source(), sf.kind(), key, &months, deadline),
+                )
                 .await
-                .map_err(|e| format!("{} read: {e}", sf.kind()))
+                {
+                    Err(_) => Ok(None),
+                    Ok(Ok(parts)) => Ok(Some(
+                        parts
+                            .into_iter()
+                            .filter(|p| *p >= oldest)
+                            .collect::<Vec<String>>(),
+                    )),
+                    Ok(Err(e)) if records::absent(&e) => Ok(None),
+                    Ok(Err(e)) => Err(format!("{} listing: {e}", sf.kind())),
+                }
+            }
+            .shared()
+        };
+        // The stored read and whether the listing was absent.
+        let stored = {
+            let (listing, key) = (listing.clone(), &key);
+            async move {
+                match listing.await? {
+                    None => Ok((records::Partial::default(), true)),
+                    Some(wanted) => self
+                        .reader
+                        .available(sf.source(), sf.kind(), key, &wanted, deadline, stop)
+                        .await
+                        .map(|read| (read, false))
+                        .map_err(|e| format!("{} read: {e}", sf.kind())),
+                }
+            }
+            .shared()
         };
         // A stored acquisition legacy would not keep (an invalid forecast, a current observation
         // with a recovery sentinel) leaves its publication missing, so it stays eligible for the
@@ -748,18 +789,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     && usable(family, coord, f)
             })
         };
-        let (mut fetched, complete, own) = if self.observed_history {
+        let (mut fetched, complete, unlisted, own) = if self.observed_history {
             let (newest, shown) = match link {
                 Link::Newest(newest) => (Some(newest), None),
                 Link::Shown(shown) => (None, Some(shown)),
                 Link::None => (None, None),
             };
-            let stored = read().shared();
             let latest = sf.latest(now as i64);
             let required_now = required::foreground(sf, now as i64);
-            // What the listing shows absent is requested at once, so stored history does not
-            // delay the provider.
-            let absent = |p: &Publication| !wanted.iter().any(|w| *w == p.partition());
             // KMA-RESTART-BOUND: a stored read not done at the head start is raced: the listed
             // publications the request needs are acquired as on an empty store, so a read that
             // ends late or fails (on EC2 after a restart, past the catalog deadline) leaves them
@@ -792,7 +829,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     }
                     // A publication whose partition was unread is missing too.
                     match stored.await {
-                        Ok(read) => listed
+                        Ok((read, _)) => listed
                             .into_iter()
                             .filter(|p| missing(&read.fetched, p))
                             .collect(),
@@ -800,13 +837,39 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     }
                 }
             };
+            // What the listing shows absent is requested at once, so stored history does not
+            // delay the provider; a listing not back at the head start leaves every publication
+            // to the providers (KMA-RESTART-BOUND). The rest are the listed ones.
+            let decided = |publications: Vec<Publication>| {
+                let (listing, raced) = (listing.clone(), raced.clone());
+                async move {
+                    let listed = if race_at < until {
+                        tokio::time::timeout_at(race_at, listing).await.ok()
+                    } else {
+                        Some(listing.await)
+                    };
+                    match listed {
+                        None => {
+                            // Records the race.
+                            raced.await;
+                            (publications, Vec::new())
+                        }
+                        Some(Ok(None)) => (publications, Vec::new()),
+                        Some(Ok(Some(wanted))) => publications
+                            .into_iter()
+                            .partition(|p| !wanted.iter().any(|w| *w == p.partition())),
+                        // A defect: the stored read fails the answer.
+                        Some(Err(_)) => (Vec::new(), Vec::new()),
+                    }
+                }
+            };
             // Earlier publications: the absent ones and the unusable listed ones, under the one
             // wait.
             let acquired = |publications: Vec<Publication>| {
-                let (first, listed): (Vec<_>, Vec<_>) =
-                    publications.into_iter().partition(|p| absent(p));
-                let again = unusable(listed);
+                let decided = decided(publications);
                 async move {
+                    let (first, listed) = decided.await;
+                    let again = unusable(listed);
                     tokio::join!(self.foreground_grid(sf, grid, &first, until), async {
                         self.foreground_grid(sf, grid, &again.await, until).await
                     })
@@ -815,17 +878,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             let latest_part = async {
                 let parts = match latest {
                     None => (None, None),
-                    Some(latest) if absent(&latest) => {
-                        (self.latest_grid(sf, grid, latest, now, until).await, None)
-                    }
                     Some(latest) => {
-                        let again = !unusable(vec![latest]).await.is_empty();
-                        let acquired = if again {
-                            self.latest_grid(sf, grid, latest, now, until).await
+                        let (first, listed) = decided(vec![latest]).await;
+                        if !first.is_empty() {
+                            (self.latest_grid(sf, grid, latest, now, until).await, None)
+                        } else if !unusable(listed).await.is_empty() {
+                            (None, self.latest_grid(sf, grid, latest, now, until).await)
                         } else {
-                            None
-                        };
-                        (None, acquired)
+                            (None, None)
+                        }
                     }
                 };
                 // The newest document once the stored read and the latest publication settled,
@@ -834,7 +895,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     let mut known = stored
                         .clone()
                         .await
-                        .map(|read| read.fetched)
+                        .map(|(read, _)| read.fetched)
                         .unwrap_or_default();
                     known.extend(parts.0.iter().chain(&parts.1).cloned());
                     let as_of = (self.clock)().max(now);
@@ -866,7 +927,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 (earlier_first, earlier_again),
                 (shown_first, shown_again),
             ) = tokio::join!(stored.clone(), latest_part, acquired(earlier), shown_part);
-            let read = stored?;
+            let (read, unlisted) = stored?;
             let complete = read.complete();
             let mut fetched = read.fetched;
             // The fold order is the stored acquisitions, the ones of absent publications, then
@@ -880,9 +941,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     .chain(earlier_again)
                     .chain(shown_again),
             );
-            (fetched, complete, None)
+            (fetched, complete, unlisted, None)
         } else {
-            let read = read().await?;
+            let (read, unlisted) = stored.await?;
             let complete = read.complete();
             // A publication whose read was unavailable is not proved missing.
             let proved = read.unread.is_empty() && !unlisted;
@@ -913,7 +974,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     self.backfill(sf, grid, latest, backfill).await;
                 }
             }
-            (fetched, complete, own)
+            (fetched, complete, unlisted, own)
         };
         if self.observed_history {
             records::deduplicate(&mut fetched);
@@ -1126,19 +1187,45 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 RSS_LOOKBACK_MS
             };
         let months = records::months(from, now);
-        // KMA-RESTART-BOUND: an unavailable listing leaves every publication absent.
-        let parts = match self
-            .reader
-            .partitions("kma-web", "town-rss", &key, &months, deadline)
-            .await
-        {
-            Ok(parts) => parts,
-            Err(e) if records::absent(&e) => Vec::new(),
-            Err(e) => return Err(format!("town-rss listing: {e}")),
-        };
         let latest = publication::rss_latest(now as i64).ok_or("clock")?;
         let oldest = schedule::from_ms(from as i64).partition();
-        let wanted: Vec<String> = parts.into_iter().filter(|p| *p >= oldest).collect();
+        let stop = self.stored_stop(deadline, until, race_at);
+        // KMA-RESTART-BOUND: the listing, None when it is unavailable or late (every publication
+        // absent), and the stored read; both end at `stop`.
+        let listing = async {
+            match tokio::time::timeout_at(
+                stop,
+                self.reader
+                    .partitions("kma-web", "town-rss", &key, &months, deadline),
+            )
+            .await
+            {
+                Err(_) => Ok(None),
+                Ok(Ok(parts)) => Ok(Some(
+                    parts
+                        .into_iter()
+                        .filter(|p| *p >= oldest)
+                        .collect::<Vec<String>>(),
+                )),
+                Ok(Err(e)) if records::absent(&e) => Ok(None),
+                Ok(Err(e)) => Err(format!("town-rss listing: {e}")),
+            }
+        }
+        .shared();
+        let stored = {
+            let (listing, key) = (listing.clone(), &key);
+            async move {
+                match listing.await? {
+                    None => Ok(records::Partial::default()),
+                    Some(wanted) => self
+                        .reader
+                        .available("kma-web", "town-rss", key, &wanted, deadline, stop)
+                        .await
+                        .map_err(|e| format!("town-rss read: {e}")),
+                }
+            }
+            .shared()
+        };
         let request_latest = || async {
             let request = crate::domestic::family::WebRequest::town_rss(grid.nx(), grid.ny())
                 .and_then(|r| r.not_before(latest))
@@ -1151,20 +1238,32 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             )
             .await
         };
-        // Observed: what the listing shows absent is requested while the stored reads run.
-        let absent_first = self.observed_history && !wanted.contains(&latest.partition());
-        let read = self
-            .reader
-            .available("kma-web", "town-rss", &key, &wanted, deadline)
-            .shared();
-        let (read, requested) = tokio::join!(read.clone(), async {
-            if absent_first {
-                return request_latest().await;
+        // Observed: what the listing shows absent is requested while the stored read runs; a
+        // listing or read not done at the head start races the latest publication's provider
+        // (KMA-RESTART-BOUND). The second value is whether the latest was asked.
+        let (read, (requested, asked)) = tokio::join!(stored.clone(), async {
+            if !self.observed_history {
+                return (None, false);
             }
-            // KMA-RESTART-BOUND: a stored read not done at the head start races the latest
-            // publication's provider.
-            if self.observed_history && race_at < until {
-                let mut read = read.clone();
+            let listed = if race_at < until {
+                tokio::time::timeout_at(race_at, listing.clone()).await.ok()
+            } else {
+                Some(listing.clone().await)
+            };
+            let absent = match listed {
+                None => {
+                    crate::resolver::race::raced(crate::observability::Component::Domestic);
+                    true
+                }
+                Some(Ok(None)) => true,
+                Some(Ok(Some(wanted))) => !wanted.contains(&latest.partition()),
+                Some(Err(_)) => return (None, false),
+            };
+            if absent {
+                return (request_latest().await, true);
+            }
+            if race_at < until {
+                let mut read = stored.clone();
                 if crate::resolver::race::restored_by(
                     &mut read,
                     race_at,
@@ -1173,16 +1272,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .await
                 .is_none()
                 {
-                    return request_latest().await;
+                    return (request_latest().await, true);
                 }
             }
-            None
+            (None, false)
         });
         // An unread partition is absent: its latest publication is requested below.
-        let mut fetched = read.map_err(|e| format!("town-rss read: {e}"))?.fetched;
+        let mut fetched = read?.fetched;
         if let Some(f) = requested {
             fetched.push(visible(f, now));
-        } else if !absent_first
+        } else if !asked
             && !present(&fetched, &latest.partition(), now)
             && let Some(f) = request_latest().await
         {
@@ -1256,7 +1355,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 {
                     Ok(parts) => self
                         .reader
-                        .available("data-go-kr", kind, &key, &parts, deadline)
+                        .available("data-go-kr", kind, &key, &parts, deadline, deadline)
                         .await
                         .map_err(|e| format!("{kind} read: {e}"))?,
                     Err(e) if records::absent(&e) => records::Partial {
@@ -1282,23 +1381,47 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             // No acquisition was ever saved: legacy has no document either.
             return Ok(Vec::new());
         }
-        // KMA-RESTART-BOUND: an unavailable listing leaves every publication absent (the latest
-        // is requested below, as on an empty store).
-        let listed = match self
-            .reader
-            .partitions("data-go-kr", kind, &key, &history_months(now), deadline)
+        let stop = self.stored_stop(deadline, until, race_at);
+        // KMA-RESTART-BOUND: the listing, None when it is unavailable or late (every publication
+        // absent, as on an empty store); it ends at `stop`.
+        let listing = async {
+            match tokio::time::timeout_at(
+                stop,
+                self.reader
+                    .partitions("data-go-kr", kind, &key, &history_months(now), deadline),
+            )
             .await
-        {
-            Ok(listed) => listed,
-            Err(e) if records::absent(&e) => Vec::new(),
-            Err(e) => return Err(format!("{kind} listing: {e}")),
+            {
+                Err(_) => Ok(None),
+                Ok(Ok(listed)) => Ok(Some(listed)),
+                Ok(Err(e)) if records::absent(&e) => Ok(None),
+                Ok(Err(e)) => Err(format!("{kind} listing: {e}")),
+            }
         };
+        // A listing not back at the head start races the latest publication's provider, as on
+        // an empty store, while the listing goes on until `stop`.
+        let (listed, raced) = if collected && race_at < until {
+            let listing = listing.shared();
+            match tokio::time::timeout_at(race_at, listing.clone()).await {
+                Ok(listed) => (listed?, None),
+                Err(_) => {
+                    crate::resolver::race::raced(crate::observability::Component::Domestic);
+                    let (listed, f) = tokio::join!(listing, request_latest());
+                    (listed?, Some(f))
+                }
+            }
+        } else {
+            (listing.await?, None)
+        };
+        let listed = listed.unwrap_or_default();
         // Each save replaces the whole document, so the newest publication that organizes is the
         // answer: start there and stop at the first document.
-        if collected
-            && !listed.contains(&latest_part)
-            && let Some(f) = request_latest().await
-        {
+        let early = match raced {
+            Some(f) => f,
+            None if collected && !listed.contains(&latest_part) => request_latest().await,
+            None => None,
+        };
+        if let Some(f) = early {
             let found = mid_documents(model, reg_id, &[visible(f, now)], now);
             if !found.is_empty() {
                 return Ok(found);
@@ -1311,6 +1434,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 &key,
                 std::slice::from_ref(partition),
                 deadline,
+                stop,
             );
             let latest_here = collected && *partition == latest_part;
             // KMA-RESTART-BOUND: the latest publication's stored read not done at the head start
@@ -1432,13 +1556,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 until,
                 now.max(0.) as u64,
             );
-            let mid = async {
-                let zones = self.zones(now, deadline).await?;
-                let mids = self
-                    .mids(&region, &city, &zones, now, deadline, (until, race_at))
-                    .await?;
-                Ok::<_, String>((zones, mids))
-            };
+            let mid = self.zones_and_mids(&region, &city, now, deadline, (until, race_at));
             let optional = async {
                 tokio::join!(
                     self.air.load(
@@ -1588,11 +1706,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             if let Some(loaded) = preloaded_mids {
                 return Ok::<_, String>(loaded);
             }
-            let zones = self.zones(now, deadline).await?;
-            let mids = self
-                .mids(&region, &city, &zones, now, deadline, (until, race_at))
-                .await?;
-            Ok::<_, String>((zones, mids))
+            self.zones_and_mids(&region, &city, now, deadline, (until, race_at))
+                .await
         };
         let (
             zones_and_mids,
@@ -1725,6 +1840,51 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             air,
             life,
         })
+    }
+    /// KMA-RESTART-BOUND: the forecast zones and the mid regions of a request. Under the observed
+    /// source a zone read not done at the head start leaves the mids to the zones held (or those
+    /// of an empty store), so their providers start then instead of after the read; the read goes
+    /// on until the request's bound and answers the snapshot's zones if it ends by then.
+    async fn zones_and_mids(
+        &self,
+        region: &str,
+        city: &str,
+        now: f64,
+        deadline: Instant,
+        (until, race_at): (Instant, Instant),
+    ) -> Result<(Arc<Zones>, HashMap<(MidModel, String), Vec<Doc>>), String> {
+        let mut read = Box::pin(self.zones(now, deadline));
+        let early = if self.observed_history && race_at < until {
+            tokio::time::timeout_at(race_at, &mut read).await.ok()
+        } else {
+            Some((&mut read).await)
+        };
+        if let Some(zones) = early {
+            let zones = zones?;
+            let mids = self
+                .mids(region, city, &zones, now, deadline, (until, race_at))
+                .await?;
+            return Ok((zones, mids));
+        }
+        crate::resolver::race::raced(crate::observability::Component::Domestic);
+        let held = self.held_zones();
+        let (read, mids) = tokio::join!(
+            tokio::time::timeout_at(until, read),
+            self.mids(region, city, &held, now, deadline, (until, race_at))
+        );
+        let zones = match read {
+            Ok(zones) => zones?,
+            Err(_) => held,
+        };
+        Ok((zones, mids?))
+    }
+    /// The zones this process last read, or those of an empty store.
+    fn held_zones(&self) -> Arc<Zones> {
+        self.held_zones
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+            .unwrap_or_else(|| self.empty_store_zones())
     }
     /// The mid regions the chain asks for (`getAllDataFromDb`, `getMid`), concurrently.
     async fn mids(
