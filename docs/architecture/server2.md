@@ -361,9 +361,10 @@ wakes and skips affected summaries immediately. A summary can still be skipped
 on wait/write admission or timeout, and a later request retries unexamined inputs.
 Legacy optional backfill
 remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA gets
-an 8 s handler budget for stored reads, and everything it waits for ends 2.5 s after the handler
-starts (2.7 s for air and life, 2.9 s for the narrative), while geocode retains its own 3 s
-cap. Other handlers keep their existing budgets. These are limits, not latency
+an 8 s budget for stored reads, and everything it waits for ends 2.5 s after the gateway
+accepted the request (2.7 s for air and life, 2.9 s for the narrative). Geocode retains its own
+3 s cap and, since the [accept clock](#restart-allocator-and-the-accept-clock-2026-11-10), counts
+toward those waits. Other handlers keep their existing budgets. These are limits, not latency
 measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
 
@@ -2376,8 +2377,9 @@ later had them. The restores ran behind each other and behind CPU work. AK chose
 a part S3 holds that a restarted process has not restored yet is not an allowed omission; only a
 slow provider's part may be left out.
 
-**Head start.** A stored restore has `HEAD_START`, 700 ms from the start of the KMA request
-(`resolver::race`, code, not a setting). A restore not done then is raced: the owned acquisitions
+**Head start.** A stored restore has `HEAD_START`, 700 ms from the gateway's accept of the
+request ([accept clock](#restart-allocator-and-the-accept-clock-2026-11-10); `resolver::race`,
+code, not a setting). A restore not done then is raced: the owned acquisitions
 of what memory lacks start alongside it, as on an empty S3, and the answer takes whichever
 delivers by the request bound (2.5 s; air and life 2.7 s; the narrative 2.9 s). A restore done by
 then leaves the acquisitions to what S3 lacks, so it makes no provider call a running process
@@ -2499,6 +2501,48 @@ and counted (`dropped_writes`), and a removal is no longer awaited by the read t
 corrupt copy. The owner and root locks, the caps and the eviction are unchanged and still taken
 on that thread. The thread holds only a weak reference: dropping the cache ends it and discards
 queued work (the cache is disposable).
+
+### Restart allocator and the accept clock (2026-11-10)
+
+The EC2 restart comparisons of #2900 and #2907 answered every first request after a restart in
+more than 3 s, and some with a 501. Both vCPUs of the t3.small were saturated and 47 to 70% of the
+CPU samples were in musl's malloc lock. On 2026-11-10 AK chose to measure the cheapest hypothesis
+first: two commits of #2916 on top of #2907
+([intent](../../intent/issue-2614-kma-restart-alloc.md),
+[spec](../../specs/issue-2614-kma-restart-alloc.md),
+[plan](../../plans/issue-2614-kma-restart-alloc.md)).
+
+**Allocator.** The release binary is static musl, whose malloc (mallocng) takes one process-wide
+lock for every allocation and free. `src/lib.rs` declares mimalloc (`mimalloc` 0.1.52 with
+`libmimalloc-sys` 0.1.49, mimalloc 3.3.2; MIT) as the global allocator, so every binary, example
+and test of the crate allocates from its per-thread heaps. Its defaults are kept: no option bounds
+its memory. On the t3.small it costs about 110 MB of peak RSS (median of the first 60 s after a
+restart: 300 MB against 192 MB) on a 2 GiB host; the restart acceptance checks the memory over a
+longer window. A test checks that heap allocations lie in mimalloc's heap (dev-dependency
+`libmimalloc-sys` with `extended`).
+
+**Accept clock.** The gateway takes the instant it accepted a request (`Gateway::respond`) and
+passes it with the deadline. A native backend's attempt ends at the earlier of the deadline and
+the accept plus the backend's budget (`gateway::backend`). The observed KMA source derives its
+700 ms head start and its 2.5, 2.7 and 2.9 s waits from that deadline, so they count from the
+accept and include the geocode before the dispatch, which had added 121 to 215 ms to every first
+answer on EC2. A direct caller of `KmaBackend::outcome` keeps its bound from the call.
+
+**Measured** on EC2 on 2026-11-10 (t3.small, one bucket filled for 55 minutes by master, 14
+restarts in ABBA order; local evidence `reports/kma-ec2-20261110a/summary.json`, not tracked):
+
+| | #2907 (43d02167, musl malloc) | This change (aa7e2e9d) |
+| --- | --- | --- |
+| First answer, accept to response | 3,327 to 5,640 ms, 7 of 7 over 3 s | 2,550 to 2,616 ms, none over 3 s |
+| 501 | 2 of 7 (at 12 and 13 stored zone lists of the day) | 0 of 7 (up to 15) |
+| First-answer assembly, median | 643 ms | 65 ms |
+| Malloc-lock share of the CPU samples | 54 to 55% | 0% |
+| Peak RSS in the first 60 s, median | 192 MB | 300 MB |
+
+The 501 path is unchanged: these restarts avoided it because the stored reads became fast, while
+the day's forecast-zone partition still gained one identical list per start. The forecast-zone
+selection, the `rn1` gap one first answer showed and client validation on EC2 are separate steps
+of the same restart goal.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
@@ -2829,7 +2873,7 @@ new acquisitions are skipped and S3 answers as stored.
 station observations and the S15b-3 AirKorea and life acquisitions. The shared bound is
 `REQUEST_WAIT` (3 s), and it ends 500 ms before the request deadline. The warning-state read and
 the air and life reads stop 300 ms before the deadline. The gateway's native attempt
-ends at most 3 s after the request starts (`gateway::backend`), so the reads that remain and the
+ends at most 3 s after the gateway accepted the request (`gateway::backend`), so the reads that remain and the
 assembly still fit. The mid regions start as soon as the zone list is read. The grids, RSS, warning
 cycle, air and life inputs run concurrently.
 

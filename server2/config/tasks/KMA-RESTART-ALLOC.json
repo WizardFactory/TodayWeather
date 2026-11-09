@@ -1,7 +1,7 @@
 {
   "task": "KMA-RESTART-ALLOC",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
-  "scope": "Measurement candidate for step 0 of the restart re-examination (AK 2026-11-10): #2907 plus only two commits of #2916, mimalloc as the global allocator and the observed KMA waits counted from the request's accept, to measure on EC2 how much of the first-answer overrun the allocator removes. No other restart machinery. No deployment or production mutation.",
+  "scope": "PR-A of the restart re-examination (AK 2026-11-10, design section 11): #2907 plus only two commits of #2916, mimalloc as the global allocator and the observed KMA waits counted from the request's accept, measured on EC2 against #2907, with their intent, spec, plan and architecture notes. No other restart machinery. No deployment or production mutation.",
   "server2_paths": [
     "server2/Cargo.lock",
     "server2/Cargo.toml",
@@ -14,5 +14,31 @@
     "server2/tests/domestic/full_response.rs",
     "server2/tests/domestic/life_s3.rs"
   ],
-  "outside": []
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-restart-alloc.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-restart-alloc.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-restart-alloc.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The global allocator, its RSS cost and the accept clock; the wait and head-start statements count from the accept."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The observed request's wait counts from the gateway's accept, the geocode included."
+    }
+  ]
 }
