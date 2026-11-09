@@ -8,7 +8,7 @@
     "column_fit": "spread",
     "viewBox": [
       1080,
-      660
+      676
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
@@ -32,11 +32,11 @@
       "id": "nation",
       "type": "backend",
       "label": "Nation",
-      "sublabel": "one 3 s deadline",
+      "sublabel": "8 s city answers",
       "sources": [
         {
           "path": "server2/src/nation/mod.rs",
-          "line": 78
+          "line": 107
         }
       ]
     },
@@ -48,7 +48,7 @@
       "sources": [
         {
           "path": "server2/src/nation/mod.rs",
-          "line": 87
+          "line": 114
         },
         {
           "path": "server2/src/api/mod.rs",
@@ -112,17 +112,17 @@
   "segments": [
     {
       "from": 150,
-      "to": 296,
-      "label": "Native request: one absolute deadline"
+      "to": 312,
+      "label": "Native request: 3 s air, 8 s cities"
     },
     {
-      "from": 310,
-      "to": 424,
+      "from": 326,
+      "to": 440,
       "label": "Available rows and bounded response"
     },
     {
-      "from": 436,
-      "to": 550,
+      "from": 452,
+      "to": 566,
       "label": "Owned acquisition outlives the request"
     }
   ],
@@ -142,13 +142,13 @@
       "y": 198,
       "label": "start 15 native assemblies",
       "variant": "default",
-      "note": "Header-only locale; uppercase V defaults v000901"
+      "note": "Header locale; V000903 → v000901"
     },
     {
       "id": "national",
       "from": "nation",
       "to": "air",
-      "y": 226,
+      "y": 242,
       "label": "read province air",
       "variant": "default"
     },
@@ -156,7 +156,7 @@
       "id": "raw-read",
       "from": "air",
       "to": "s3",
-      "y": 254,
+      "y": 270,
       "label": "read raw datasets",
       "variant": "default"
     },
@@ -164,7 +164,7 @@
       "id": "raw-return",
       "from": "s3",
       "to": "air",
-      "y": 282,
+      "y": 298,
       "label": "stored observations",
       "variant": "return"
     },
@@ -172,7 +172,7 @@
       "id": "acquire",
       "from": "air",
       "to": "provider",
-      "y": 320,
+      "y": 336,
       "label": "missing: join owned acquisition",
       "variant": "dashed",
       "note": "National publication shared with town requests"
@@ -181,7 +181,7 @@
       "id": "city-return",
       "from": "cities",
       "to": "nation",
-      "y": 348,
+      "y": 364,
       "label": "available child replies",
       "variant": "return"
     },
@@ -189,7 +189,7 @@
       "id": "air-return",
       "from": "air",
       "to": "nation",
-      "y": 376,
+      "y": 392,
       "label": "available air + safe status",
       "variant": "return"
     },
@@ -197,7 +197,7 @@
       "id": "reply",
       "from": "nation",
       "to": "client",
-      "y": 410,
+      "y": 426,
       "label": "200 JSON; actual child failure: 500",
       "variant": "return"
     },
@@ -205,7 +205,7 @@
       "id": "provider-result",
       "from": "provider",
       "to": "air",
-      "y": 450,
+      "y": 466,
       "label": "late response completes",
       "variant": "return"
     },
@@ -213,7 +213,7 @@
       "id": "publish",
       "from": "air",
       "to": "s3",
-      "y": 482,
+      "y": 498,
       "label": "publish complete raw group",
       "variant": "dashed"
     },
@@ -221,7 +221,7 @@
       "id": "publication",
       "from": "s3",
       "to": "air",
-      "y": 514,
+      "y": 530,
       "label": "confirmed; next request uses it",
       "variant": "return"
     }
@@ -240,7 +240,7 @@
       "dot": "amber",
       "title": "Deadline and ownership",
       "items": [
-        "All branches share one three-second request budget.",
+        "Air and the narrative get three seconds; cities keep their own input budget and may queue for the CPU until eight seconds.",
         "Only prepared rows are returned; acquisition continues after deadline or disconnect."
       ]
     },

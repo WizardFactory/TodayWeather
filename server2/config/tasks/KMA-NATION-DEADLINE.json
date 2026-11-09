@@ -1,0 +1,51 @@
+{
+  "task": "KMA-NATION-DEADLINE",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Nation composition: air and every input keep the three-second budget; the fifteen city answers, queued for the KMA CPU admission, get an eight-second deadline (legacy 9 s per child). No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-NATION-DEADLINE.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/nation/mod.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/nation_city.rs",
+    "server2/tests/nation.rs",
+    "server2/tests/nation/deadline.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-nation-deadline.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-nation-deadline.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-nation-deadline.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The nation deadline (S17c)."
+    },
+    {
+      "path": "docs/operations/server2-nation.md",
+      "category": "documentation",
+      "reason": "The nation client behavior (input budget and city deadline)."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.json",
+      "category": "documentation",
+      "reason": "Archify source of the nation sequence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
+    }
+  ]
+}

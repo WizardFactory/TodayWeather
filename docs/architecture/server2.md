@@ -2195,7 +2195,14 @@ bound (30 s per call) and serves the next request; joined requests share it. Dat
 for is visible to it although it completed after the request instant. While a request arrived in the
 last 24 hours, a process capture checks every 10 minutes and acquires the current nationwide hour
 once if it is not stored, so the 24-hour station rows have no hourly gaps (legacy collected every
-10 minutes regardless of demand); that is at most 24 nationwide calls a day.
+10 minutes regardless of demand); that is at most 24 nationwide calls a day. Once the hour is
+stored, each check reads the hour's stored datasets (about 335 KB each, every one this hour; the
+cost grows with them) and acquires the hour again while the newest has a station one hour behind
+(KMA-AIR-REFRESH): AirKorea updates some stations after the hour's dataset is out, and on EC2 on 2026-11-07 two stations stayed an hour behind for 50 minutes. Stations
+further behind are out of service and never count; once every live station is current the hour is
+complete and the checks stop reading it. Per process that is one acquisition when the hour is
+missing and at most one per check while a station lags: at most seven logical acquisitions an hour,
+each with its pages and one retry, on the same AirKorea key allowance as the dust forecasts.
 
 Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-PROVENANCE.md)) records the legacy
@@ -3585,8 +3592,15 @@ S3 and answering natively with the Express envelope (JSON with a weak ETag, the 
 
 The `kma` and `kma-v000901` entries also claim the used direct nation routes
 `/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
-fifteen native KMA assemblies using legacy version rules, concurrently with one absolute
-three-second deadline; it never calls legacy or opens a separate provider source.
+fifteen native KMA assemblies using legacy version rules, concurrently; it never calls legacy or
+opens a separate provider source. Air and the national narrative keep a three-second budget
+(`NATION_INPUTS`). Each city keeps its source's own request budget for its inputs (the observed
+source waits about 2.9 s for acquisitions and gives stored reads up to 8 s); the city answers,
+whose assemblies queue for the KMA CPU admission, have one absolute eight-second deadline
+(`NATION_DEADLINE`, KMA-NATION-DEADLINE; legacy gave each child request 9 s). The direct route has
+no outer deadline of its own. With the earlier three-second composition deadline the queued
+assemblies were cut in 6 of 13 steady compositions on EC2 (2026-11-07) and answered the legacy
+error page.
 The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
 Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
 When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
