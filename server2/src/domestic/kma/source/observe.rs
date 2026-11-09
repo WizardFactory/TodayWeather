@@ -275,6 +275,10 @@ struct State {
     product_attempts: HashMap<u32, std::time::Instant>,
     /// A fold recomputed the hourly part since the products were last compared.
     product_due: bool,
+    /// KMA-STATION-FLUSH V1: days a fill pass ended with new pages for. Their product is stored
+    /// past [`PRODUCT_EVERY`] (only when what the day is made of changed); an intent waits until
+    /// the day can be stored (read without failure, after a fold).
+    flush: BTreeSet<u32>,
     /// When this process last read each reduced AWS hourly page in full again.
     expand_attempts: HashMap<Publication, std::time::Instant>,
 }
@@ -579,8 +583,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// Read the hourly/city pages of the 8-day window and the latest minute pages from S3 (at
     /// start and every [`RELOAD`]). The load ends once the request can answer: every day's
     /// stored product (the parsed pages of that day), the pages of today and yesterday the
-    /// products lack, the seed and the newest minute pages. [`Flight::LoadRest`] then restores the
-    /// other days' missing pages and the rest of the minute window; no request waits for it.
+    /// products lack, the seed and the newest minute pages. Today's and yesterday's pages are
+    /// folded as soon as they are held, before the older days' products and the minute pages
+    /// (KMA-STATION-FLUSH V2); the load stays in flight (S16) until it ends. [`Flight::LoadRest`]
+    /// then restores the other days' missing pages and the rest of the minute window; no request
+    /// waits for it.
     fn load(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
         let stale = {
             let s = self.state();
@@ -641,23 +648,47 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 })
                 .collect()
         };
-        use futures_util::StreamExt;
-        let mut reads: Vec<DayRead> = futures_util::stream::iter(due)
-            .map(|(day, want)| self.list_day(day, want, deadline))
-            .buffered(super::records::LOOKUPS)
-            .collect()
-            .await;
-        self.apply_products(&mut reads);
-        // Today and yesterday are compared now; the other days after the answer.
+        // Today and yesterday are compared now; the other days after the answer. KMA-STATION-FLUSH
+        // V2: today's and yesterday's catalogs and products are read, compared and folded without
+        // waiting for the older days' catalogs and products (read meanwhile, from the lookups
+        // left) or the minute pages (read after both).
         let yesterday = today.add_hours(-24).map_or(today.date(), Publication::date);
-        let (now, rest): (Vec<DayRead>, Vec<DayRead>) =
-            reads.drain(..).partition(|r| r.day >= yesterday);
-        crate::history::join_all(
-            now.into_iter()
-                .map(|r| self.complete_day(&self.reader, r, deadline))
-                .collect(),
-        )
-        .await;
+        let (recent, older): (Vec<_>, Vec<_>) =
+            due.into_iter().partition(|(day, _)| *day >= yesterday);
+        let lookups = super::records::LOOKUPS.saturating_sub(recent.len()).max(1);
+        use futures_util::StreamExt;
+        let ((), rest) = tokio::join!(
+            async {
+                if recent.is_empty() {
+                    return;
+                }
+                let mut reads = crate::history::join_all(
+                    recent
+                        .into_iter()
+                        .map(|(day, want)| self.list_day(day, want, deadline))
+                        .collect(),
+                )
+                .await;
+                self.apply_products(&mut reads);
+                crate::history::join_all(
+                    reads
+                        .into_iter()
+                        .map(|r| self.complete_day(&self.reader, r, deadline))
+                        .collect(),
+                )
+                .await;
+                self.fold_held(now_ms).await;
+            },
+            async {
+                let mut reads: Vec<DayRead> = futures_util::stream::iter(older)
+                    .map(|(day, want)| self.list_day(day, want, deadline))
+                    .buffered(lookups)
+                    .collect()
+                    .await;
+                self.apply_products(&mut reads);
+                reads
+            },
+        );
         let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
         let later = minutes.split_off(minutes.len().min(MINUTE_FIRST));
         self.restore_minutes(&self.reader, minutes, floor, deadline)
@@ -675,6 +706,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.known.retain(|d, _| *d >= oldest);
             s.products.retain(|d, _| *d >= oldest);
             s.product_attempts.retain(|d, _| *d >= oldest);
+            s.flush.retain(|d| *d >= oldest);
         }
         // No request waits for the rest: it reads on the bulk lane.
         if !rest.is_empty() || !later.is_empty() {
@@ -1311,12 +1343,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             }),
         )
     }
-    async fn hourly_page(&self, hour: Publication) {
+    /// Acquire the AWS hourly page of `hour` unless one is held; true when the acquired page is
+    /// held.
+    async fn hourly_page(&self, hour: Publication) -> bool {
         if self.state().pages.hourly.contains_key(&hour) {
-            return;
+            return false;
         }
         let Ok(request) = WebRequest::aws_hourly(hour) else {
-            return;
+            return false;
         };
         if let Some(records) = self
             .acquire_web(request, Instant::now() + page_time())
@@ -1328,8 +1362,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             if hold(&mut s.pages, "aws-hourly", page, None) {
                 s.pages.dirty = true;
                 s.pages.hourly_dirty = true;
+                return true;
             }
         }
+        false
     }
     fn ensure_city(
         self: &Arc<Self>,
@@ -1366,7 +1402,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// nor memory holds, in one owned pass newest first, three at a time, each hour at most once
     /// per [`BACKFILL_RETRY`]. A held or listed hour is never fetched again (a later page would
     /// replace an ongoing one), and the days before yesterday come from S3 alone. A day whose
-    /// catalog cannot be listed is not filled (absence is not proven).
+    /// catalog cannot be listed is not filled (absence is not proven). At the end of the pass the
+    /// products of the days it held new pages for are stored ([`Self::flush_products`]).
     fn fill_window(
         self: &Arc<Self>,
         now_ms: i64,
@@ -1410,6 +1447,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     wanted.sort_by(|a, b| b.cmp(a));
                     // An hour is claimed only when its acquisition starts, as a backfill pass.
                     let mut pending = wanted.into_iter();
+                    let mut filled = BTreeSet::new();
                     loop {
                         let chunk: Vec<Publication> = pending
                             .by_ref()
@@ -1419,10 +1457,22 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                         if chunk.is_empty() {
                             break;
                         }
-                        crate::history::join_all(
+                        let held = crate::history::join_all(
                             chunk.iter().map(|h| this.hourly_page(*h)).collect(),
                         )
                         .await;
+                        filled.extend(
+                            chunk
+                                .iter()
+                                .zip(held)
+                                .filter(|(_, held)| *held)
+                                .map(|(h, _)| h.date()),
+                        );
+                    }
+                    // KMA-STATION-FLUSH V1: the products of the days the pass held new pages for
+                    // are stored now, not when PRODUCT_EVERY next allows.
+                    if !filled.is_empty() {
+                        this.flush_products(filled, now_ms).await;
                     }
                 })
             },
@@ -1537,6 +1587,16 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         self.start(Flight::Fold, Duration::ZERO, move |this| {
             Box::pin(async move { this.fold(now_ms).await })
         })
+    }
+    /// KMA-STATION-FLUSH V2: fold the pages held now (today's and yesterday's of a load) without
+    /// waiting for the rest of the load or for a part of the request to end. A fold already
+    /// running may have taken its pages before these were held: it ends first. The new fold is
+    /// not waited for; the request takes it when it answers.
+    async fn fold_held(self: &Arc<Self>, now_ms: i64) {
+        if let Some(mut running) = self.flight(&Flight::Fold) {
+            let _ = running.wait_for(|done| *done).await;
+        }
+        let _ = self.fold_if_dirty(now_ms);
     }
     async fn fold(self: Arc<Self>, now_ms: i64) {
         let (inputs, minute, cached) = {
@@ -1801,12 +1861,26 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     // ---- day products ----
 
     /// Compare the day products with the pages held (after a fold recomputed the hourly part) and
-    /// store the changed ones; no request waits for it.
-    fn want_products(self: &Arc<Self>, now_ms: i64) {
+    /// store the changed ones; no request waits for it. Returns the single product worker: a
+    /// running one compares again before it ends.
+    fn want_products(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
         self.state().product_due = true;
-        let _ = self.start(Flight::Product, Duration::ZERO, move |this| {
+        self.start(Flight::Product, Duration::ZERO, move |this| {
             Box::pin(async move { this.write_products(now_ms).await })
-        });
+        })
+    }
+    /// KMA-STATION-FLUSH V1 (DR-V-flush-ownership): a fill pass that ended with new pages for
+    /// `days` has their products stored now, past [`PRODUCT_EVERY`] (only when what a day is made
+    /// of changed). The intent is the single product worker's to honour: a running worker compares
+    /// the days before it ends, and when it ended as the intent arrived (the comparison still due)
+    /// the next one does. The pass waits for that comparison; no request waits for the pass.
+    async fn flush_products(self: &Arc<Self>, days: BTreeSet<u32>, now_ms: i64) {
+        self.state().flush.extend(days);
+        while let Some(mut worker) = self.want_products(now_ms) {
+            if worker.wait_for(|done| *done).await.is_err() || !self.state().product_due {
+                break;
+            }
+        }
     }
     async fn write_products(self: Arc<Self>, now_ms: i64) {
         loop {
@@ -2499,7 +2573,8 @@ fn stale_pages(s: &State) -> Vec<(Publication, String)> {
 /// The day products to store at `now_ms` (each attempt is recorded): per day whose every hour
 /// is in the window, that was read without failure and holds pages, the held pages unless the
 /// last product this process read or stored for it is made of the same, at most once per
-/// [`PRODUCT_EVERY`].
+/// [`PRODUCT_EVERY`] or, for a day a fill pass ended with new pages for, at once (the intent is
+/// spent by the attempt or by an unchanged day).
 fn product_candidates(s: &mut State, now_ms: i64) -> Vec<(DayProduct, MadeOf)> {
     let Some(cities) = s.hourly_fold.as_ref().map(|f| f.cities.clone()) else {
         return Vec::new();
@@ -2555,11 +2630,12 @@ fn product_candidates(s: &mut State, now_ms: i64) -> Vec<(DayProduct, MadeOf)> {
             &city_ids,
             &excluded,
         );
-        if s.products.get(&day) == Some(&made_of)
-            || s.product_attempts
-                .get(&day)
-                .is_some_and(|at| at.elapsed() < PRODUCT_EVERY)
-        {
+        let flushed = s.flush.remove(&day);
+        let gated = s
+            .product_attempts
+            .get(&day)
+            .is_some_and(|at| at.elapsed() < PRODUCT_EVERY);
+        if s.products.get(&day) == Some(&made_of) || (gated && !flushed) {
             continue;
         }
         s.product_attempts.insert(day, std::time::Instant::now());
@@ -3108,5 +3184,77 @@ where
         deadline: Instant,
     ) -> BoxFuture<'_, Result<Acquired, DomesticError>> {
         Box::pin(async move { self.today().await?.acquire_asos(&request, deadline).await })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 2026-09-24 10:50 KST.
+    const NOW_MS: i64 = 1_790_214_600_000;
+    const DAY: u32 = 20260924;
+
+    /// A process that read `DAY`, folded, holds one of its AWS pages and stored the day's product,
+    /// made of another page, within the last ten minutes.
+    fn stored_recently() -> State {
+        let mut s = State::default();
+        let hour = Publication::new(DAY, 500).unwrap();
+        s.pages.hourly.insert(hour, Arc::new(Vec::new()));
+        s.pages.ids.insert(
+            ("aws-hourly", hour),
+            (1., "a".repeat(64), "raw/a".to_owned()),
+        );
+        s.pages.days.insert(DAY, std::time::Instant::now());
+        s.hourly_fold = Some(HourlyFold {
+            registry: Arc::default(),
+            hourly: Arc::default(),
+            national: Arc::default(),
+            unresolved: Vec::new(),
+            pages: Arc::default(),
+            cities: Arc::default(),
+        });
+        let none = BTreeSet::new();
+        s.products
+            .insert(DAY, MadeOf::new(["raw/b"].into_iter(), &none, &none));
+        s.product_attempts.insert(DAY, std::time::Instant::now());
+        s
+    }
+
+    /// FLUSH (DR-V-flush-ownership): the end of a fill pass bypasses only the ten-minute gate,
+    /// once: a day whose made-of is unchanged is not stored (the intent is spent), and a day whose
+    /// read failed, or a process that has not folded, stores nothing until it can (the intent
+    /// waits).
+    #[test]
+    fn the_intent_of_a_fill_pass_bypasses_only_the_ten_minute_gate() {
+        let days =
+            |due: &[(DayProduct, MadeOf)]| due.iter().map(|(p, _)| p.day).collect::<Vec<_>>();
+        let mut s = stored_recently();
+        assert!(product_candidates(&mut s, NOW_MS).is_empty(), "the gate");
+        s.flush.insert(DAY);
+        let due = product_candidates(&mut s, NOW_MS);
+        assert_eq!(days(&due), [DAY]);
+        assert!(s.flush.is_empty(), "spent");
+        assert!(product_candidates(&mut s, NOW_MS).is_empty(), "once");
+        // Unchanged.
+        let mut s = stored_recently();
+        s.products.insert(DAY, due[0].1.clone());
+        s.flush.insert(DAY);
+        assert!(product_candidates(&mut s, NOW_MS).is_empty());
+        assert!(s.flush.is_empty(), "nothing to store");
+        // A failed read.
+        let mut s = stored_recently();
+        s.pages.unreadable.insert(DAY);
+        s.flush.insert(DAY);
+        assert!(product_candidates(&mut s, NOW_MS).is_empty());
+        assert!(s.flush.contains(&DAY), "waits for a complete read");
+        s.pages.unreadable.remove(&DAY);
+        assert_eq!(days(&product_candidates(&mut s, NOW_MS)), [DAY]);
+        // No fold yet.
+        let mut s = stored_recently();
+        s.hourly_fold = None;
+        s.flush.insert(DAY);
+        assert!(product_candidates(&mut s, NOW_MS).is_empty());
+        assert!(s.flush.contains(&DAY), "waits for the fold");
     }
 }
