@@ -26,16 +26,23 @@ class AirSeries(val data: List<JsonElement?>, val maxValue: Double?)
  * The scope of AirCtrl (controller.air.js) for one visit of S05 (/tab/air, `cache: false`): [open] is `init` with the
  * pollutant of the link, [apply] `_applyWeatherData` for the selected place's record, [setCode] and [setStation] the
  * taps on a detail or station cell, and [applyEvent] TabCtrl's `applyEvent` (a swipe or a load), which returns to the
- * first station. [airUnit] is the air standard (TabCtrl's `setAirUnit`); [zone] the device's time zone, in which a
- * missing chart slot is dated (java.util time, available on API 24).
+ * first station. [airUnit] is the air standard (TabCtrl's `setAirUnit`), which a change on S08 replaces while the
+ * visit goes on (`changeAirUnitEvent`); [zone] the device's time zone, in which a missing chart slot is dated (java.util
+ * time, available on API 24).
  *
  * `_applyWeatherData` runs in one `try`: at the first value it cannot read it stops, and everything it has not
  * reached keeps what an earlier place set, as on the Cordova page. A Kotlin null stands for an unset value
  * (undefined) and [JsonNull] for null, as in [Js].
  */
-class AirScope(val metrics: ChartMetrics, val airUnit: String?, private val zone: TimeZone = TimeZone.getDefault()) {
+class AirScope(val metrics: ChartMetrics, airUnit: String?, private val zone: TimeZone = TimeZone.getDefault()) {
+    var airUnit: String? = airUnit
+        set(value) {
+            field = value
+            standard = AirQuality.standard(value)
+        }
+
     /** TabCtrl's `aqiStandard` and `aqiMaxValue`; null for an unknown standard. */
-    val standard: AirStandard? = AirQuality.standard(airUnit)
+    var standard: AirStandard? = AirQuality.standard(airUnit); private set
 
     /** The selected pollutant (`aqiCode`); null when the fallback of a missing value found none. */
     var aqiCode: String? = null; private set

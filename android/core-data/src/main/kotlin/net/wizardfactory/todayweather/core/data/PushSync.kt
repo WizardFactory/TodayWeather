@@ -1,6 +1,7 @@
 package net.wizardfactory.todayweather.core.data
 
 import androidx.datastore.core.DataStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -35,6 +36,45 @@ class PushSync(
         val state = store.data.first()
         val ctx = context(state) ?: return null
         send(state, PushRegistration.onTokenRefresh(state.push, state.places, token, ctx))
+    }
+
+    /**
+     * A unit changed on S08 (`Push.updateUnits`): the list again with the new units. The state is read through the
+     * store's writer, after the writes asked for before this one, so the unit just chosen is in it. When the store
+     * cannot be written (a full disk) nothing is sent and nothing fails: the next start posts the list again with the
+     * units then saved (#2915 F1).
+     */
+    suspend fun updateUnits(): Outcome? = lock.withLock {
+        val state = try {
+            store.updateData { it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return@withLock null
+        }
+        val ctx = context(state) ?: return@withLock null
+        send(state, PushRegistration.onUnitsChanged(state.push, state.places, ctx))
+    }
+
+    /**
+     * `Push.updateCityInfo(index)` after a place's update (`WeatherInfo.updateCity`, AN-10): its records follow the
+     * place; when anything changed they are posted (with a token) and the list is saved. The state is read through the
+     * store's writer, after the place's own write.
+     */
+    suspend fun updateCity(index: Int): Outcome? = lock.withLock {
+        val state = try {
+            store.updateData { it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return@withLock null
+        }
+        val ctx = context(state) ?: return@withLock null
+        val result = PushRegistration.onCityChanged(state.push, state.places, index, ctx)
+        if (result.state == state.push) return@withLock Outcome(emptyList(), emptyList())
+        val statuses = result.requests.map { transport.send(it) }
+        store.updateData { it.copy(push = it.push.copy(records = result.state.records)) }
+        Outcome(result.requests, statuses)
     }
 
     private suspend fun send(state: AppState, result: PushRegistration.Result): Outcome {

@@ -1,0 +1,47 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in privacy-reference/<lang>",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, larger for the Korean popup's ten lines and bold buttons than for the About popup. Geometry follows the WebView: the popup is AN-12's Ionic popup (250 dp, 49 dp head, the body on `line-height: normal` lines of 20 dp, buttons of 112.5 by 45 dp 5 dp apart at 0.87 opacity, a label too long for its button wrapping there as Chrome wraps the English 'Decline / withdraw'), its body broken where Chrome breaks it (chromeLines: the ten Korean and twelve English lines match the capture's line boxes in analytics-popup.json), and the menu is AN-07's.",
+ "cases": {
+  "en-US/analytics-popup": {
+   "strong": 0.00309,
+   "mean": 1.623,
+   "heightDifference": 0
+  },
+  "en-US/menu-allowed": {
+   "strong": 0.00594,
+   "mean": 1.733,
+   "heightDifference": 0
+  },
+  "en-US/menu-off": {
+   "strong": 0.00508,
+   "mean": 1.629,
+   "heightDifference": 0
+  },
+  "ko-KR/analytics-popup": {
+   "strong": 0.01323,
+   "mean": 4.665,
+   "heightDifference": 0
+  },
+  "ko-KR/menu-allowed": {
+   "strong": 0.00883,
+   "mean": 2.273,
+   "heightDifference": 0
+  },
+  "ko-KR/menu-off": {
+   "strong": 0.00931,
+   "mean": 2.291,
+   "heightDifference": 0
+  }
+ }
+}

@@ -12,6 +12,7 @@ import net.wizardfactory.todayweather.ui.shell.ShellFit
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.Assert.assertEquals
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -24,13 +25,17 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ShellFitDeviceTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    // Past the start page without a place: the weather pages ask how to start (O02), and the tests go on from Locations.
+    @get:Rule val chain: RuleChain = RuleChain.outerRule(StateRule()).around(rule)
 
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val automation = instrumentation.uiAutomation
 
     @Test
     fun theShellFitsWhileTheWindowChanges() {
+        rule.closeStartChoice()
         val dir = File(instrumentation.targetContext.filesDir, "shell-fit").apply { deleteRecursively(); mkdirs() }
         val (width, height) = Regex("""Physical size: (\d+)x(\d+)""").find(shell("wm size"))!!.destructured.toList().map { it.toInt() }
         val states = shell("cmd device_state print-states")

@@ -1,0 +1,256 @@
+{
+ "lang": "ko-KR",
+ "after": {
+  "page": "#/tab/forecast",
+  "settings": {
+   "startupPage": "0",
+   "refreshInterval": "0",
+   "theme": "light"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "popups": 0,
+  "menu": true,
+  "body": "light-theme"
+ },
+ "requests": [
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<photo-feed>",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/start"
+  },
+  {
+   "step": "setup",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/start"
+  },
+  {
+   "step": "choose temperatureUnit F",
+   "method": "POST",
+   "url": "<server>/v000902/push-list",
+   "headers": {
+    "Content-Type": "application/json",
+    "Accept-Language": "ko-KR",
+    "Device-Id": "<device-id>",
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": [
+    {
+     "type": "android",
+     "cityIndex": 1,
+     "id": 1,
+     "category": "alarm",
+     "enable": true,
+     "name": "회현동",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     },
+     "source": "KMA",
+     "units": {
+      "temperatureUnit": "F",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea",
+      "airForecastSource": "kaq"
+     },
+     "timezoneOffset": 540,
+     "package": "todayWeather",
+     "uuid": "<device-id>",
+     "appVersion": "1.1.1",
+     "fcmToken": "capture-token",
+     "pushTime": 82800,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose temperatureUnit F",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=F&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose temperatureUnit C",
+   "method": "POST",
+   "url": "<server>/v000902/push-list",
+   "headers": {
+    "Content-Type": "application/json",
+    "Accept-Language": "ko-KR",
+    "Device-Id": "<device-id>",
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": [
+    {
+     "type": "android",
+     "cityIndex": 1,
+     "id": 1,
+     "category": "alarm",
+     "enable": true,
+     "name": "회현동",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     },
+     "source": "KMA",
+     "units": {
+      "temperatureUnit": "C",
+      "windSpeedUnit": "m/s",
+      "pressureUnit": "hPa",
+      "distanceUnit": "km",
+      "precipitationUnit": "mm",
+      "airUnit": "airkorea",
+      "airForecastSource": "kaq"
+     },
+     "timezoneOffset": 540,
+     "package": "todayWeather",
+     "uuid": "<device-id>",
+     "appVersion": "1.1.1",
+     "fcmToken": "capture-token",
+     "pushTime": 82800,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose temperatureUnit C",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose startupPage 1",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose startupPage 0",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose refreshInterval 1",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose refreshInterval 0",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose theme dark",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose theme photo",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose theme old",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  },
+  {
+   "step": "choose theme light",
+   "method": "GET",
+   "url": "<server>/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "headers": {
+    "Accept": "application/json, text/plain, */*"
+   },
+   "body": null,
+   "page": "#/setting-radio"
+  }
+ ]
+}
