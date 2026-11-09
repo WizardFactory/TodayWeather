@@ -22,7 +22,9 @@
     "server2/src/storage/store.rs",
     "server2/src/storage/transport.rs",
     "server2/src/world/air_transport.rs",
-    "server2/src/world/transport.rs"
+    "server2/src/world/transport.rs",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
   ],
   "outside": [
     {
@@ -44,6 +46,11 @@
       "path": "docs/architecture/server2.md",
       "category": "documentation",
       "reason": "Threads and the disk-cache path."
+    },
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Shared infrastructure wiring exception: the foundation job's time limit rises from 45 to 60 minutes; with this stack its tests and release builds passed 45 minutes (runs on 7897d48f, 85f100d8 and e39aba2f were cancelled while compiling the release build after every test passed). No logic moves out of server2/. The placement gate pins the reviewed wiring; its expected foundation budget and its test move to 60 with it."
     }
   ]
 }
