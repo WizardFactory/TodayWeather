@@ -1204,14 +1204,18 @@ impl Counted {
     /// runs on after its request are over.
     pub(super) async fn gets_over(&self, class: &str, quiet: Duration) {
         let state = || {
-            (
-                self.get(&format!("GET {class}")),
-                self.get(&format!("DONE {class}")),
-            )
+            let counts = self.counts.lock().unwrap();
+            let of = |what: String| counts.get(&what).copied().unwrap_or(0);
+            (of(format!("GET {class}")), of(format!("DONE {class}")))
         };
         let mut last = state();
         let mut since = tokio::time::Instant::now();
+        let fail_at = since + Duration::from_secs(60);
         loop {
+            assert!(
+                tokio::time::Instant::now() < fail_at,
+                "the GETs of {class} are not over: {last:?}"
+            );
             tokio::time::sleep(Duration::from_millis(50)).await;
             let now = state();
             if now != last {
@@ -1250,9 +1254,10 @@ impl server2::storage::ObjectTransport for Counted {
         key: &str,
         max: usize,
     ) -> Result<server2::storage::Object, server2::storage::Error> {
-        self.admit("GET", key).await;
-        // Counted as over when it returns or is dropped (a read cancelled at its deadline).
+        // Counted as over when it returns or is dropped (a read cancelled at its deadline, also
+        // while it waits for admission); installed in the same poll that counts it as started.
         let _over = Over(self, key);
+        self.admit("GET", key).await;
         if let Some(hold) = self.held(key) {
             tokio::time::sleep(hold).await;
         }

@@ -2725,6 +2725,10 @@ async fn store_moved_seoul_zones(peer: &Peer) {
 }
 /// [`store_moved_seoul_zones`] fetched at `fetched_at`: another group of the day's partition.
 async fn store_moved_seoul_zones_at(peer: &Peer, fetched_at: f64) {
+    store_zone_list(peer, moved_seoul_page(), fetched_at).await;
+}
+/// The forecast-zone list with Seoul's and Gwacheon's `regId`s swapped.
+fn moved_seoul_page() -> Vec<u8> {
     let mut page: serde_json::Value = serde_json::from_slice(&land_zone_page()).unwrap();
     for item in page["response"]["body"]["items"]["item"]
         .as_array_mut()
@@ -2736,6 +2740,11 @@ async fn store_moved_seoul_zones_at(peer: &Peer, fetched_at: f64) {
             item["regId"] = json!("11B10101");
         }
     }
+    page.to_string().into_bytes()
+}
+/// Publish the forecast-zone list `page` fetched at `fetched_at` as one group of the day's
+/// partition; the key of its group descriptor.
+async fn store_zone_list(peer: &Peer, page: Vec<u8>, fetched_at: f64) -> String {
     let limits = CatalogLimits::default();
     let key = ProviderKey::Named {
         id: "forecast-zones".into(),
@@ -2750,7 +2759,7 @@ async fn store_moved_seoul_zones_at(peer: &Peer, fetched_at: f64) {
         200,
         "application/json",
         None,
-        page.to_string().into_bytes().into(),
+        page.into(),
         &limits.raw,
     )
     .unwrap();
@@ -2762,11 +2771,77 @@ async fn store_moved_seoul_zones_at(peer: &Peer, fetched_at: f64) {
         ],
     };
     let declaration = server2::storage::GroupDeclaration::new(vec![member], &limits).unwrap();
+    let descriptor = declaration
+        .reference(&limits)
+        .unwrap()
+        .descriptor_key()
+        .unwrap();
     CatalogStore::new(peer.transport_limited(2), limits)
         .unwrap()
         .publish(declaration, vec![record], deadline())
         .await
         .unwrap();
+    descriptor
+}
+/// Apply the S06 peer's fault `mode` (`forget`, `corrupt`) to the object `key`.
+async fn peer_fault(peer: &Peer, mode: &str, key: &str) {
+    let response = reqwest::Client::new()
+        .post(format!(
+            "{}__catalog?mode={mode}&key={key}",
+            peer.endpoint()
+        ))
+        .header("X-Server2-Test-Key", "server2-local")
+        .send()
+        .await
+        .unwrap();
+    assert!(response.status().is_success(), "{}", response.status());
+}
+/// The `regId`s of the test town's land zone in `zones`.
+fn seoul_land_zone(zones: &server2::domestic::kma::source::Zones) -> Vec<String> {
+    zones
+        .find_by_name("서울특별시", "종로구")
+        .iter()
+        .filter_map(|d| {
+            d.get("regId")
+                .and_then(server2::domestic::kma::source::Val::as_str)
+                .map(str::to_owned)
+        })
+        .collect()
+}
+
+/// RB-zone-group-eligibility: the day's partition holds list X, then a valid list Y, then a group
+/// C with X's pages whose descriptor is missing (an incomplete group). The refresh validates every
+/// group, also one whose pages it already read, so C stays out and Y answers.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_incomplete_zone_group_with_known_pages_does_not_override_a_valid_list() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    store_zone_list(&peer, land_zone_page(), NOW - 50_000.).await;
+    store_moved_seoul_zones_at(&peer, NOW - 40_000.).await;
+    let incomplete = store_zone_list(&peer, land_zone_page(), NOW - 30_000.).await;
+    peer_fault(&peer, "forget", &incomplete).await;
+    let process = Restarted::new(&peer, &Counted::new(peer.transport_limited(4)));
+    let zones = process.source.refresh_zones(NOW, deadline()).await.unwrap();
+    assert_eq!(
+        seoul_land_zone(&zones),
+        ["11B10102"],
+        "Y, not the incomplete C"
+    );
+}
+
+/// RB-zone-group-eligibility: a group with an earlier list's pages and a corrupt descriptor is
+/// still a defect of the refresh (as the whole-partition read surfaced it), not a copy of the
+/// list.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_corrupt_duplicate_zone_group_is_a_defect() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    store_zone_list(&peer, land_zone_page(), NOW - 50_000.).await;
+    let corrupt = store_zone_list(&peer, land_zone_page(), NOW - 30_000.).await;
+    peer_fault(&peer, "corrupt", &corrupt).await;
+    let process = Restarted::new(&peer, &Counted::new(peer.transport_limited(4)));
+    let refreshed = process.source.refresh_zones(NOW, deadline()).await;
+    assert!(refreshed.is_err(), "{refreshed:?}");
 }
 fn temperature_missing(body: &serde_json::Value) -> bool {
     body["midData"]["dailyStatus"]["reasons"]

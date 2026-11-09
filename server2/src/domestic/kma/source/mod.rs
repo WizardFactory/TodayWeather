@@ -187,7 +187,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
             .filter(|c| c.folded.elapsed() < ZONE_REFOLD)
             .map(|c| day_before(&c.last.1));
         if let (Some(from), Some(c)) = (incremental, cache.as_ref()) {
-            let fetched = match self.zone_lists(now, Some(&from), deadline).await {
+            let fetched = match Box::pin(self.zone_lists(now, Some(&from), deadline)).await {
                 Ok(fetched) => fetched,
                 // KMA-RESTART-BOUND: an unavailable read keeps the zones held; the next request
                 // reads again.
@@ -222,7 +222,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
                 return Ok(zones);
             }
         }
-        let fetched = match self.zone_lists(now, None, deadline).await {
+        // Boxed: the zone read is part of every legacy snapshot future (test threads' stacks).
+        let fetched = match Box::pin(self.zone_lists(now, None, deadline)).await {
             Ok(fetched) => fetched,
             // KMA-RESTART-BOUND: an unavailable read (on EC2 after a restart, today's partition
             // restored past the catalog deadline) answers with the zones held, or else the zones
@@ -304,44 +305,30 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> ZoneMemory<T> {
         // KMA-RESTART-BOUND (review round 7): each group in its own catalog read, so a day
         // partition holding many lists (one per process start) is not one read bound by the
         // catalog's 3 s operation deadline, which a slow store made the owned refresh miss on
-        // every attempt; a list stored again with the same pages is read once.
+        // every attempt. Every group is checked by S06 (descriptor, members, completeness): an
+        // incomplete or excluded group is left out as a whole read leaves it, and a defect fails.
         let mut fetched = Vec::new();
-        let mut read: HashMap<Vec<String>, Vec<Arc<[u8]>>> = HashMap::new();
         for partition in &parts {
             let id = records::catalog("data-go-kr", "forecast-zone", &key, partition)?;
             for (completion, members) in self.reader.listed_groups(&id, deadline).await? {
                 let Some(first) = members.first() else {
                     continue;
                 };
-                let content: Vec<String> = members
-                    .iter()
-                    .map(|e| e.identity.raw_sha256.clone())
-                    .collect();
-                let pages = match read.get(&content) {
-                    Some(pages) => pages.clone(),
-                    None => {
-                        // An incomplete or excluded group is left out, as a whole read leaves it.
-                        let Some(acquisition) = self
-                            .reader
-                            .members(&id, std::slice::from_ref(&first.identity), deadline)
-                            .await?
-                            .and_then(|acquisitions| acquisitions.into_iter().next())
-                        else {
-                            continue;
-                        };
-                        let pages: Vec<Arc<[u8]>> =
-                            acquisition.iter().map(|r| r.bytes.clone()).collect();
-                        read.insert(content, pages.clone());
-                        pages
-                    }
+                let Some(acquisition) = self
+                    .reader
+                    .members(&id, std::slice::from_ref(&first.identity), deadline)
+                    .await?
+                    .and_then(|acquisitions| acquisitions.into_iter().next())
+                else {
+                    continue;
                 };
                 fetched.push(Fetched {
                     fetched_at_ms: completion,
                     partition: partition.clone(),
-                    pages,
-                    raw_ids: members
+                    pages: acquisition.iter().map(|r| r.bytes.clone()).collect(),
+                    raw_ids: acquisition
                         .iter()
-                        .map(|e| e.identity.object_key())
+                        .map(|r| r.envelope.identity.object_key())
                         .collect::<Result<_, _>>()?,
                 });
             }
