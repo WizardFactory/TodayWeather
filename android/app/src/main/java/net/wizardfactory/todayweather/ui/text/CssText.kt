@@ -12,6 +12,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.isSpecified
 import kotlin.math.max
@@ -38,17 +40,29 @@ internal object CssMetrics {
     fun heightDp(text: String, style: TextStyle, density: Density): Double =
         line(AnnotatedString(text), style, style, density).let { (it.ascent + it.descent) / density.density.toDouble() }
 
-    /** The line of [text] in [style], its spans' sizes and fonts included, with the block's [strut]. */
-    fun line(text: AnnotatedString, style: TextStyle, strut: TextStyle, density: Density): Line {
+    /**
+     * The line of [text] in [style], its spans' sizes and fonts included, with the block's [strut]. With [borrow] a
+     * descent that rounds down takes a pixel from the font's ascent, as Chrome's `FontMetrics::AscentDescentWithHacks`
+     * does with subpixel positioning: measured on S05's gauge, whose 15 px Latin lines have their baseline 13.5 dp under
+     * the top (27 + 8 px). The weather pages' rows keep the plain rounding they were measured with.
+     */
+    fun line(text: AnnotatedString, style: TextStyle, strut: TextStyle, density: Density, borrow: Boolean = false): Line {
         var ascent = 0
         var descent = 0
-        fun add(sizePx: Float, cjk: Boolean) {
-            ascent = max(ascent, (sizePx * ROBOTO_ASCENT).roundToInt())
-            descent = max(descent, (sizePx * ROBOTO_DESCENT).roundToInt())
-            if (cjk) {
-                ascent = max(ascent, (sizePx * CJK_ASCENT).roundToInt())
-                descent = max(descent, (sizePx * CJK_DESCENT).roundToInt())
+        fun font(sizePx: Float, ascentRatio: Double, descentRatio: Double) {
+            val exact = sizePx * descentRatio
+            var a = (sizePx * ascentRatio).roundToInt()
+            var d = exact.roundToInt()
+            if (borrow && d < exact && a >= 1) {
+                a--
+                d++
             }
+            ascent = max(ascent, a)
+            descent = max(descent, d)
+        }
+        fun add(sizePx: Float, cjk: Boolean) {
+            font(sizePx, ROBOTO_ASCENT, ROBOTO_DESCENT)
+            if (cjk) font(sizePx, CJK_ASCENT, CJK_DESCENT)
         }
         with(density) {
             add(strut.fontSize.toPx(), false)
@@ -83,14 +97,15 @@ internal object CssMetrics {
 @Composable
 internal fun CssText(
     text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier, strut: TextStyle = style, maxLines: Int = Int.MAX_VALUE,
-    align: TextAlign? = null,
+    align: TextAlign? = null, borrow: Boolean = false, overflow: TextOverflow = TextOverflow.Clip,
 ) {
     val density = LocalDensity.current
-    val box = remember(text, style, strut, density) { CssMetrics.line(text, style, strut, density) }
+    val box = remember(text, style, strut, density, borrow) { CssMetrics.line(text, style, strut, density, borrow) }
     Text(text, modifier.layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
+        // The text keeps its own height, which may exceed the CSS line it reports (a row sized to its CSS lines).
+        val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
         val first = placeable[FirstBaseline]
         val last = placeable[LastBaseline]
         layout(placeable.width, box.ascent + (last - first) + box.descent) { placeable.place(0, box.ascent - first) }
-    }, style = if (align != null) style.copy(textAlign = align) else style, maxLines = maxLines, softWrap = maxLines != 1)
+    }, style = if (align != null) style.copy(textAlign = align) else style, maxLines = maxLines, softWrap = maxLines != 1, overflow = overflow)
 }

@@ -87,8 +87,6 @@ class WeatherTabHost(
     val onNext: () -> Unit,
     /** Saves `expandShortChart`. */
     val onExpand: (Boolean) -> Unit,
-    /** S05 for a pollutant (AN-09). */
-    val onAirInfo: (String) -> Unit = {},
     /** The units page (AN-12). */
     val onUnits: () -> Unit = {},
     /** The selected place's alarms (AN-14). */
@@ -113,11 +111,11 @@ object WeatherTabTags {
  * The Hourly or Daily tab (#2887): a visit of ForecastCtrl's scope, new each time the tab opens, that applies the
  * selected place's record whenever it changes (a swipe, a load, the cache), as `applyEvent` did; the page, its title
  * with the current position's location glyph or the loading spinner, the bell and share buttons, and the pollen and
- * forecast-source popups.
+ * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`).
  */
 @Composable
 fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
-                       host: WeatherTabHost): TabContent {
+                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -130,10 +128,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     LaunchedEffect(place) { place?.let { host.readCache(it) } }
     val entry = place?.let { entries[WeatherRepository.key(it)] }
     val record = remember(place, entry) { place?.let { cityRecord(it, entry) } }
-    val hasPush = remember(state.push, index) {
-        // `Push.hasPushInfo(cityIndex)`: an enabled alarm of the place.
-        state.push.records.any { r -> (r["cityIndex"] as? JsonPrimitive)?.intOrNull == index && r["enable"].let { it is JsonPrimitive && it.content == "true" } }
-    }
+    val hasPush = remember(state.push, index) { hasPushInfo(state, index) }
     val opened = remember(visit) { BooleanArray(1) }
     // The apply is the visit's own state, so it runs while composing, before the page reads it.
     val applied = remember(visit, record, hasPush) {
@@ -168,7 +163,7 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     val loadingSelected = place != null && WeatherRepository.key(place) in loading
     val onAction: (PageAction) -> Unit = { action ->
         when (action) {
-            is PageAction.AirInfo -> host.onAirInfo(action.code)
+            is PageAction.AirInfo -> onAirInfo(action.code)
             PageAction.Units -> host.onUnits()
             is PageAction.AirForecastInfo -> if (action.source == "kaq" || action.source == "airkorea") source = action.source
             is PageAction.Pollen -> pollen = action.rows
@@ -210,6 +205,10 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     )
 }
 
+/** `Push.hasPushInfo(cityIndex)`: an enabled alarm of the place at [index]. */
+internal fun hasPushInfo(state: AppState, index: Int): Boolean =
+    state.push.records.any { r -> (r["cityIndex"] as? JsonPrimitive)?.intOrNull == index && r["enable"].let { it is JsonPrimitive && it.content == "true" } }
+
 /**
  * `[photo-url]`: the picture for [url] once it has loaded (with the veil), `img/bg.png` when it fails (without);
  * no URL keeps what was shown.
@@ -247,7 +246,7 @@ private fun PollenDialog(rows: List<PollenRow>, texts: ChartTexts, onClose: () -
 
 /** `popUpAirForecastInfo`: what the air forecast source is, with a close button. */
 @Composable
-private fun SourceDialog(source: String, texts: ChartTexts, onClose: () -> Unit) {
+internal fun SourceDialog(source: String, texts: ChartTexts, onClose: () -> Unit) {
     AlertDialog(
         onDismissRequest = onClose,
         text = { Text(texts[if (source == "kaq") "LOC_KAQ_DESCRIPTION" else "LOC_AIRKOREA_DESCRIPTION"]) },
@@ -279,7 +278,7 @@ const val RETRY_DIALOG = "weather-retry-dialog"
  * .bar p svg`), which the light theme's white bar hides (A08, kept).
  */
 @Composable
-private fun Bubbles(modifier: Modifier) {
+internal fun Bubbles(modifier: Modifier) {
     val turn by rememberInfiniteTransition(label = "bubbles").animateFloat(0f, 1f,
         infiniteRepeatable(tween(1000, easing = LinearEasing), RepeatMode.Restart), label = "turn")
     Canvas(modifier) {
@@ -316,5 +315,5 @@ private fun openUrl(context: Context, url: String) {
 }
 
 /** Material Icons `location_on` and `location_off` (tab-forecast.html, `isLocationEnabled()`). */
-private const val LOCATION_ON = ""
-private const val LOCATION_OFF = ""
+internal const val LOCATION_ON = ""
+internal const val LOCATION_OFF = ""

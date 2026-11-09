@@ -15,8 +15,9 @@ data class AirStandard(val grades: List<AirGrade>, val maxValue: Map<String, Dou
 
 /**
  * Air quality display rules of the Cordova app: `WeatherUtil.aqiStandard`, TabCtrl's `setAirUnit`,
- * `grade2Color`, `airkoreaGrade2Color`, `getSentimentIcon`, and AirCtrl's gauge label, pollutant list
- * and forecasts. Grades themselves come from the server.
+ * `grade2Color`, `airkoreaGrade2Color`, `getSentimentIcon`, and AirCtrl's gauge label and pollutant list.
+ * Grades themselves come from the server. [dustForecast] and [hourlyForecast] port AirCtrl helpers that no
+ * template calls (S05 uses the pollutant's own series, `AirScope`); the corpus pins them.
  */
 object AirQuality {
     val POLLUTANTS = listOf("aqi", "pm25", "pm10", "o3", "no2", "co", "so2")

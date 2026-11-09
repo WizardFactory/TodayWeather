@@ -146,6 +146,30 @@ class WeatherSessionTest {
         assertEquals("회현동", t.state.value.places[0].name, "the later answer was saved")
     }
 
+    /** S05's station reset (#2888): `applyEvent` at each load start, the gate included, and after each applied response. */
+    @Test
+    fun applyEventsComeWithEachLoadStartAndEachAppliedResponse() = runTest {
+        var fail = false
+        val t = setup(http = { url, _ -> if (fail) throw HttpStatusException(500) else if ("51.51" in url) londonBody else seoulBody })
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        assertEquals(2, t.session.applies.value, "the load's start and its response")
+        t.session.reload(WeatherSession.Sender.RESUME)
+        t.session.reload(WeatherSession.Sender.REFRESH_INTERVAL)
+        runCurrent()
+        assertEquals(2, t.session.applies.value, "a resume within the gate and a new interval fire none")
+        t.session.next()
+        runCurrent()
+        assertEquals(4, t.session.applies.value, "a swipe to London: its load and response")
+        t.session.previous()
+        runCurrent()
+        assertEquals(5, t.session.applies.value, "back to the current position: the gate stops the load, the event still comes")
+        fail = true
+        t.session.reload(WeatherSession.Sender.TAB)
+        runCurrent()
+        assertEquals(6, t.session.applies.value, "a failed load fires only its start")
+    }
+
     @Test
     fun theRefreshTimerRestartsWithEveryLoad() = runTest {
         val t = setup(interval = "30")
