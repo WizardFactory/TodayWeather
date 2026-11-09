@@ -1,5 +1,6 @@
 //! HTTP foundation and immutable raw storage; no provider or weather-route cutover.
 pub mod cache;
+pub mod dns;
 pub mod dotenv;
 pub mod listener;
 pub mod narrative;

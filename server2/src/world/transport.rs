@@ -65,7 +65,7 @@ pub struct HttpVcTransport {
 }
 impl HttpVcTransport {
     pub fn new() -> Result<Self, VcTransportError> {
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .http1_max_headers(64)
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())

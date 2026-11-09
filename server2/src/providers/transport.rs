@@ -165,7 +165,7 @@ impl HttpProviderTransport {
         {
             return Err(ProviderTransportError::Invalid);
         }
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .http1_max_headers(32)
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())

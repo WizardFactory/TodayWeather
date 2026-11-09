@@ -66,7 +66,7 @@ impl InstanceRole {
         if root != METADATA_ROOT && !loopback_root(root) {
             return Err(Error::Invalid("instance metadata root"));
         }
-        let client = Client::builder()
+        let client = crate::dns::client()
             .http1_max_headers(32)
             .redirect(Policy::none())
             .retry(reqwest::retry::never())

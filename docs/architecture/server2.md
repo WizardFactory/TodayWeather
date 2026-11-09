@@ -2466,6 +2466,40 @@ the zone-state read beside a cycle that never ends, the lanes (including a full 
 whole first answer with every stored family slowed and with prompt reads; listed with their names
 in the [spec](../../specs/issue-2614-kma-restart-race.md). Not measured: the restart on EC2.
 
+### Restart CPU: name resolution and the disk cache off the blocking pool (2026-11-08)
+
+The EC2 restart comparisons of #2900 found the four blocking threads of the runtime (beside two
+workers, `src/lib.rs`) saturated after a restart: page parsing and folds queued behind restore
+decoding, disk-cache loads and writes, and DNS lookups. AK chose on 2026-11-08 to take DNS and the
+disk cache off the blocking pool first and measure again
+([intent](../../intent/issue-2614-kma-restart-cpu.md),
+[spec](../../specs/issue-2614-kma-restart-cpu.md),
+[plan](../../plans/issue-2614-kma-restart-cpu.md)).
+
+**Name resolution.** Every outbound HTTP client of the service starts from `dns::client()`, whose
+resolver is hickory's async one (`hickory-resolver` 0.26, the version reqwest 0.13 integrates)
+instead of reqwest's default getaddrinfo on the blocking pool. It reads the system configuration
+(`/etc/resolv.conf` and the hosts file) when a client first resolves a name, asks for A first and
+for AAAA only when the name has no A, as getaddrinfo (AI_ADDRCONFIG) does on the IPv4-only hosts
+the service runs on: IPv4 comes first, and a name the hosts file maps to IPv4 answers from it
+without waiting for DNS (asked together, the AAAA query to an unanswering server held the IPv4
+answer past the S3 connect limit). Without a readable configuration lookups fail; no public
+resolver stands in.
+TLS, timeouts and the disabled proxies are unchanged, and IP-literal URLs (IMDS, the S3 test
+peers) resolve nothing. The legacy HTTP hop connects to a loopback IP literal only. The smoke and
+measurement tools under `examples/` keep reqwest's default resolver.
+
+**Disk cache.** The verified raw disk cache ([S15b-4c](#verified-disposable-raw-disk-cache-s15b-4c))
+runs its loads, fills and removals on its own thread (`disk-cache`, started with its first job),
+no longer on the blocking pool. Loads go first, at most 8 queued, each waiting only for the loads
+ahead of it; a load that arrives while a fill or removal runs misses and the caller reads S3, so
+request work never waits on a disk write. At most 2 fills or removals are pending (reserved,
+queued or running), the bound the shared 2-operation gate gave before; a further one is dropped
+and counted (`dropped_writes`), and a removal is no longer awaited by the read that found the
+corrupt copy. The owner and root locks, the caps and the eviction are unchanged and still taken
+on that thread. The thread holds only a weak reference: dropping the cache ends it and discards
+queued work (the cache is disposable).
+
 ### S15b-2 s station registry seed (2026-10-15)
 
 AK authorized a one-time read-only export of the legacy `kmastninfos` on 2026-10-15. It ran with
