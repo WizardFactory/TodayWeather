@@ -40,6 +40,7 @@ pub struct CompleteSet {
     acquisitions: Vec<CompleteAcquisition>,
     dependencies: Vec<DependencyToken>,
     excluded: usize,
+    excluded_members: Vec<RecordId>,
 }
 impl CompleteSet {
     pub fn coverage(&self) -> RevisionCoverage {
@@ -53,6 +54,10 @@ impl CompleteSet {
     }
     pub fn excluded_groups(&self) -> usize {
         self.excluded
+    }
+    /// A listed member of each group S06 excluded.
+    pub fn excluded_members(&self) -> &[RecordId] {
+        &self.excluded_members
     }
     /// Parse each complete acquisition's ordered pages in memory. No result is persisted.
     pub fn fold<F>(
@@ -469,10 +474,28 @@ impl<T: CatalogTransport> CatalogStore<T> {
         member: &RecordId,
         deadline: Instant,
     ) -> Result<PageOutcome, Error> {
+        self.lookup_members(id, std::slice::from_ref(member), deadline)
+            .await
+    }
+    /// The acquisitions of the named members of one catalog, in member order (a group named
+    /// twice is read once): one catalog read, then only the named members' groups. Incomplete
+    /// when a member is not listed or its group is not complete. Never a proof of complete
+    /// revision coverage.
+    pub async fn lookup_members(
+        &self,
+        id: &CatalogId,
+        members: &[RecordId],
+        deadline: Instant,
+    ) -> Result<PageOutcome, Error> {
         id.validate()?;
-        member.validate()?;
-        if !id.matches(member) {
-            return Err(Error::Invalid("targeted member namespace"));
+        if members.is_empty() || members.len() > self.limits.entries {
+            return Err(Error::Invalid("targeted member count"));
+        }
+        for member in members {
+            member.validate()?;
+            if !id.matches(member) {
+                return Err(Error::Invalid("targeted member namespace"));
+            }
         }
         timeout_at(self.deadline(deadline), async {
             let _admission = self.admit().await?;
@@ -481,21 +504,29 @@ impl<T: CatalogTransport> CatalogStore<T> {
             let Some(Some(p)) = c.pins.get(id) else {
                 return Ok(PageOutcome::Incomplete);
             };
-            let Some(e) = p
-                .catalog
-                .entries
-                .iter()
-                .find(|e| &e.identity == member)
-                .cloned()
-            else {
-                return Ok(PageOutcome::Incomplete);
-            };
-            let Some(a) = self.acquisition(id, &e, &mut c).await? else {
-                return Ok(PageOutcome::Incomplete);
-            };
+            let mut entries = Vec::with_capacity(members.len());
+            for member in members {
+                let Some(e) = p.catalog.entries.iter().find(|e| &e.identity == member) else {
+                    return Ok(PageOutcome::Incomplete);
+                };
+                entries.push(e.clone());
+            }
+            let mut groups = BTreeSet::new();
+            let mut acquisitions = Vec::with_capacity(entries.len());
+            for e in entries {
+                if let Some(r) = &e.fetch_group
+                    && !groups.insert(r.group_sha256.clone())
+                {
+                    continue;
+                }
+                let Some(a) = self.acquisition(id, &e, &mut c).await? else {
+                    return Ok(PageOutcome::Incomplete);
+                };
+                acquisitions.push(a);
+            }
             Ok(PageOutcome::Ready(CompletePage {
                 coverage: RevisionCoverage::Targeted,
-                acquisitions: vec![a],
+                acquisitions,
                 dependencies: Self::dependencies(&c),
                 excluded: 0,
                 next: None,
@@ -641,6 +672,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         let mut groups = BTreeSet::new();
         let mut acquisitions = Vec::new();
         let mut excluded = 0;
+        let mut excluded_members = Vec::new();
         for e in entries {
             if let Some(r) = &e.fetch_group
                 && !groups.insert(r.group_sha256.clone())
@@ -649,7 +681,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
             }
             match self.acquisition(id, &e, c).await? {
                 Some(a) => acquisitions.push(a),
-                None => excluded += 1,
+                None => {
+                    excluded += 1;
+                    excluded_members.push(e.identity.clone());
+                }
             }
         }
         let acquisitions = self
@@ -679,6 +714,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             acquisitions,
             dependencies,
             excluded,
+            excluded_members,
         }))
     }
     pub async fn lookup(&self, id: &CatalogId, deadline: Instant) -> Result<LookupOutcome, Error> {
@@ -1004,6 +1040,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
                         }],
                         dependencies: Self::dependencies(&context),
                         excluded: 0,
+                        excluded_members: Vec::new(),
                     })
                 })
                 .await;

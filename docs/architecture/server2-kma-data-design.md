@@ -419,6 +419,7 @@ representations/v1/{source}/{kind}/{key_hash}/{day}/{manifest_sha256}.json
 raw/v2/kma-warning/zone-state/{YYYY}/{MM}/{DD}/...
 raw/v2/data-go-kr/kasi-fold/{YYYY}/{MM}/{DD}/...
 raw/v2/airkorea-image/airkorea-forecast-hourly/{YYYY}/{MM}/{DD}/...
+raw/v2/kma-web/station-pages/{YYYY}/{MM}/{DD}/...
 
 # Deferred discovery experiments; not initial serving dependencies:
 index/v3/{source}/{kind}/{key_hash}/day/{YYYYMMDD}.json
@@ -505,7 +506,11 @@ capture pass. These hold provider items or legacy-shaped state, not assembled we
 process falls back to the original objects when no usable fold exists. The AirKorea image hourly
 forecast is the one fold requests read without that fallback: `airkorea-forecast-hourly`, the
 legacy `ArpltnHourlyForecast` rows decoded from every stored image acquisition, is made by the
-process timer (below), and no request decodes the GIFs. The observed response also
+process timer (below), and no request decodes the GIFs. The station page product
+(`station-pages`, one per KST day) holds the parsed AWS hourly and city pages any folding process
+keeps; a restarted process reads it, compares it with the day catalogs and restores only the
+pages it lacks, falling back to the raw pages when it cannot be used
+([restart read](server2.md#s15b-2-restart-read-and-station-page-products-2026-11-07)). The observed response also
 uses the release's land zones (`data/kma_forecast_land_zones.csv`) until a forecast-zone list is
 stored, so its first answer can request mid temperatures. Measurements are in the
 [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#result-of-the-change).

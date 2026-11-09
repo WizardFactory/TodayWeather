@@ -14,8 +14,12 @@ mod late_publication;
 mod life;
 #[path = "domestic/life_s3.rs"]
 mod life_s3;
+#[path = "domestic/nation_city.rs"]
+mod nation_city;
 #[path = "domestic/observe.rs"]
 mod observe;
+#[path = "domestic/observe_product.rs"]
+mod observe_product;
 #[path = "domestic/observed_history.rs"]
 mod observed_history;
 #[path = "domestic/parity.rs"]

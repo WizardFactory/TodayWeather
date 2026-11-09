@@ -1,5 +1,7 @@
 #[path = "nation/averages.rs"]
 mod averages;
+#[path = "nation/deadline.rs"]
+mod deadline;
 #[path = "nation/parity.rs"]
 mod parity;
 #[path = "nation/reasons.rs"]

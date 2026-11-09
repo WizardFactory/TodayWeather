@@ -1,0 +1,68 @@
+{
+  "task": "KMA-RESTART-OBSERVE",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Observed KMA path: a restarted process restores station observations without restoring every stored page. Targeted member reads and one listing of the minute catalog; a per-day product of the parsed station pages written by any process that folds, read at restart and compared with the day catalogs, with the remaining days restored after the first answer. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-RESTART-OBSERVE.json",
+    "server2/src/cache/disk.rs",
+    "server2/src/domestic/kma/source/forecast_input.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/domestic/kma/source/observe_product.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/storage/catalog.rs",
+    "server2/src/storage/codec.rs",
+    "server2/src/storage/response_first.rs",
+    "server2/tests/cache.rs",
+    "server2/tests/domestic.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/observe.rs",
+    "server2/tests/domestic/observe_product.rs",
+    "server2/tests/domestic/summary_s3.rs",
+    "server2/tests/response_first.rs",
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tests/storage/codec.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-restart-observe.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-restart-observe.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-restart-observe.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The observation restart read, the station page product and its S16 note."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The station page product among the server-written folds."
+    },
+    {
+      "path": "docs/operations/server2-infrastructure.md",
+      "category": "documentation",
+      "reason": "The station page product is not cached on disk."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Archify source: station pages restore from a stored fold."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
+    }
+  ]
+}
