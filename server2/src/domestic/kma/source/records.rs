@@ -594,32 +594,116 @@ impl Partial {
 }
 /// How long an owned listing runs at most.
 const LIST_FOR: std::time::Duration = std::time::Duration::from_secs(8);
-/// How long an owned partition read runs at most (over thirty partitions, eight at a time, each
-/// up to the catalog's 3 s deadline).
-const READ_FOR: std::time::Duration = std::time::Duration::from_secs(15);
+/// How long an owned partition read runs at most: a dense 54-hour window (54 partitions, eight
+/// at a time, each up to the catalog's 3 s deadline) fits.
+const READ_FOR: std::time::Duration = std::time::Duration::from_secs(30);
 /// An owned read ends its lookups this long before its owner deadline, so it answers.
 const READ_MARGIN: std::time::Duration = std::time::Duration::from_millis(200);
 /// The completed partition reads kept for a later request: bytes, entries and age.
 const EARLIER_BYTES: usize = 64 * 1024 * 1024;
 const EARLIER_ENTRIES: usize = 8192;
 const EARLIER_AGE: std::time::Duration = std::time::Duration::from_secs(30 * 60);
-/// KMA-RESTART-BOUND (review round 2): the stored restores a request of the observed source
-/// waits for until its bound only. Each listing and partition read runs as owned work, one per
-/// key, that outlives the request (joined by later requests, bounded by its own deadline), and
-/// its completed result is kept: a request whose own read is not done by its bound answers from
-/// the latest completed read of each partition (`Partial::earlier`) or leaves the partition
-/// absent. Nothing is cancelled at a request's bound.
+/// Acquisition bodies held in memory under one byte budget (KMA-RESTART-BOUND): per key, when
+/// they were kept, the acquisitions, a count (the S06 exclusions of a partition read) and their
+/// page bytes. Past the budget or the entry cap the oldest entries leave first; a page is freed
+/// when no entry and no answer holds it.
+pub struct Bodies {
+    map: HashMap<String, Body>,
+    bytes: usize,
+    budget: usize,
+    entries: usize,
+}
+struct Body {
+    at: std::time::Instant,
+    fetched: Vec<Fetched>,
+    excluded: usize,
+    bytes: usize,
+}
+impl Bodies {
+    pub fn new(budget: usize, entries: usize) -> Self {
+        Self {
+            map: HashMap::new(),
+            bytes: 0,
+            budget,
+            entries: entries.max(1),
+        }
+    }
+    /// Keep `fetched` under `key` (replacing what it held), then evict past the budget.
+    pub fn put(&mut self, key: String, fetched: Vec<Fetched>, excluded: usize) {
+        let bytes = fetched
+            .iter()
+            .flat_map(|f| f.pages.iter())
+            .map(|p| p.len())
+            .sum();
+        let body = Body {
+            at: std::time::Instant::now(),
+            fetched,
+            excluded,
+            bytes,
+        };
+        if let Some(old) = self.map.insert(key, body) {
+            self.bytes -= old.bytes;
+        }
+        self.bytes += bytes;
+        while self.bytes > self.budget || self.map.len() > self.entries {
+            let Some(oldest) = self
+                .map
+                .iter()
+                .min_by_key(|(_, b)| b.at)
+                .map(|(k, _)| k.clone())
+            else {
+                break;
+            };
+            if let Some(old) = self.map.remove(&oldest) {
+                self.bytes -= old.bytes;
+            }
+        }
+    }
+    /// The acquisitions under `key` and their count, if kept for less than `age`.
+    pub fn get(&self, key: &str, age: std::time::Duration) -> Option<(&[Fetched], usize)> {
+        self.map
+            .get(key)
+            .filter(|b| b.at.elapsed() < age)
+            .map(|b| (&b.fetched[..], b.excluded))
+    }
+    /// The page bytes held.
+    #[cfg(test)]
+    fn bytes(&self) -> usize {
+        self.bytes
+    }
+}
+/// KMA-RESTART-BOUND (review rounds 2 and 3): the stored restores a request of the observed
+/// source waits for until its bound only. Each listing and partition read runs as owned work, one
+/// per key, that outlives the request (joined by later requests, bounded by its own deadline). A
+/// read restores the newest partitions first and keeps each partition's acquisitions in the
+/// budgeted [`Bodies`] as soon as it completes; the flight's own result names partitions only, so
+/// no body is held outside the budget. A request whose own read is not done by its bound answers
+/// from the kept partitions (`Partial::earlier`) and leaves the others absent; one whose listing
+/// is not done answers from the kept listing (marked as earlier, so S16 records nothing). Nothing
+/// is cancelled at a request's bound.
 pub struct Restores {
     lists: crate::resolver::OwnedFlights<String, Result<Vec<String>, Error>>,
-    reads: crate::resolver::OwnedFlights<String, Result<Partial, Error>>,
+    reads: crate::resolver::OwnedFlights<String, Result<Restored, Error>>,
     earlier: Arc<std::sync::Mutex<Earlier>>,
 }
-#[derive(Default)]
+/// What an owned read restored: partition names only (the bodies are in [`Bodies`]).
+#[derive(Debug, Clone, Default)]
+pub struct Restored {
+    read: Vec<String>,
+    unread: Vec<String>,
+}
 struct Earlier {
     lists: HashMap<String, (std::time::Instant, Vec<String>)>,
-    /// Per catalog: when read, its acquisitions and their bytes.
-    reads: HashMap<String, (std::time::Instant, Vec<Fetched>, usize)>,
-    bytes: usize,
+    /// Per catalog (`{prefix}{partition}`): its completed acquisitions and S06 exclusions.
+    reads: Bodies,
+}
+impl Default for Earlier {
+    fn default() -> Self {
+        Self {
+            lists: HashMap::new(),
+            reads: Bodies::new(EARLIER_BYTES, EARLIER_ENTRIES),
+        }
+    }
 }
 impl Earlier {
     fn list(&mut self, key: String, partitions: Vec<String>) {
@@ -628,40 +712,6 @@ impl Earlier {
         }
         self.lists
             .insert(key, (std::time::Instant::now(), partitions));
-    }
-    fn read(&mut self, prefix: &str, wanted: &[String], read: &Partial) {
-        let now = std::time::Instant::now();
-        for partition in wanted.iter().filter(|p| !read.unread.contains(p)) {
-            let fetched: Vec<Fetched> = read
-                .fetched
-                .iter()
-                .filter(|f| f.partition == *partition)
-                .cloned()
-                .collect();
-            let bytes = fetched
-                .iter()
-                .flat_map(|f| f.pages.iter())
-                .map(|p| p.len())
-                .sum();
-            let key = format!("{prefix}{partition}");
-            if let Some((_, _, old)) = self.reads.insert(key, (now, fetched, bytes)) {
-                self.bytes -= old;
-            }
-            self.bytes += bytes;
-        }
-        while self.bytes > EARLIER_BYTES || self.reads.len() > EARLIER_ENTRIES {
-            let Some(oldest) = self
-                .reads
-                .iter()
-                .min_by_key(|(_, (at, _, _))| *at)
-                .map(|(k, _)| k.clone())
-            else {
-                break;
-            };
-            if let Some((_, _, old)) = self.reads.remove(&oldest) {
-                self.bytes -= old;
-            }
-        }
     }
 }
 impl Default for Restores {
@@ -679,9 +729,16 @@ impl Default for Restores {
         }
     }
 }
+/// A listing for a request: the partitions, and whether they come from an earlier listing.
+#[derive(Debug, Clone)]
+pub struct Listed {
+    pub partitions: Vec<String>,
+    pub earlier: bool,
+}
 impl Restores {
-    /// [`Reader::partitions`] as owned work the request waits for until `stop`: None when it is
-    /// not done by then (or the store is unavailable) and no earlier listing of the key is kept.
+    /// [`Reader::partitions`] as owned work the request waits for until `stop`. When it is not
+    /// done by then (or the store is unavailable), the latest kept listing of the key, marked
+    /// earlier; None without one.
     #[allow(clippy::too_many_arguments)] // One key's months plus the reader and the stop.
     pub async fn partitions<T: IndexListing + Clone + Send + Sync + 'static>(
         &self,
@@ -691,7 +748,7 @@ impl Restores {
         key: &ProviderKey,
         months: &[u32],
         stop: Instant,
-    ) -> Result<Option<Vec<String>>, Error> {
+    ) -> Result<Option<Listed>, Error> {
         let flight = format!("{}{months:?}", Reader::<T>::prefix(source, kind, key)?);
         let start = {
             let (reader, source, kind, key, months) = (
@@ -716,7 +773,12 @@ impl Restores {
             }
         };
         match self.lists.join(flight.clone(), stop, LIST_FOR, start).await {
-            crate::resolver::Waited::Ready(Ok(partitions)) => return Ok(Some(partitions)),
+            crate::resolver::Waited::Ready(Ok(partitions)) => {
+                return Ok(Some(Listed {
+                    partitions,
+                    earlier: false,
+                }));
+            }
             crate::resolver::Waited::Ready(Err(e)) if !absent(&e) => return Err(e),
             _ => {}
         }
@@ -725,12 +787,16 @@ impl Restores {
             .lists
             .get(&flight)
             .filter(|(at, _)| at.elapsed() < EARLIER_AGE)
-            .map(|(_, partitions)| partitions.clone()))
+            .map(|(_, partitions)| Listed {
+                partitions: partitions.clone(),
+                earlier: true,
+            }))
     }
-    /// [`Reader::available`] as owned work the request waits for until `stop`. Partitions it has
-    /// not read by then come from the latest completed read of each, when one is kept
-    /// (`Partial::earlier`), and are unread otherwise.
-    #[allow(clippy::too_many_arguments)] // One key's partitions plus the reader and the stop.
+    /// [`Reader::available`] as owned work the request waits for until `stop`, restoring the
+    /// partitions in `first` (those the answer needs) before the rest. Partitions the owned read
+    /// has not completed by then come from the latest kept read of each (`Partial::earlier`), and
+    /// are unread without one.
+    #[allow(clippy::too_many_arguments)] // One key's partitions plus the reader, order and stop.
     pub async fn available<T: IndexListing + Clone + Send + Sync + 'static>(
         &self,
         reader: &Reader<T>,
@@ -738,68 +804,152 @@ impl Restores {
         kind: &str,
         key: &ProviderKey,
         partitions: &[String],
+        first: &[String],
         stop: Instant,
     ) -> Result<Partial, Error> {
         let prefix = Reader::<T>::prefix(source, kind, key)?;
         let flight = format!("{prefix}{}", partitions.join(","));
         let start = {
+            // The needed partitions first, then the rest newest first.
+            let mut ordered: Vec<String> = first
+                .iter()
+                .filter(|p| partitions.contains(p))
+                .cloned()
+                .collect();
+            let mut rest: Vec<String> = partitions
+                .iter()
+                .filter(|p| !first.contains(p))
+                .cloned()
+                .collect();
+            rest.sort_by(|a, b| b.cmp(a));
+            ordered.dedup();
+            ordered.extend(rest);
             let (reader, source, kind, key, partitions) = (
                 reader.clone(),
                 source.to_owned(),
                 kind.to_owned(),
                 key.clone(),
-                partitions.to_vec(),
+                ordered,
             );
             let (earlier, prefix) = (self.earlier.clone(), prefix.clone());
             move |deadline: Instant| async move {
-                let read = reader
-                    .available(
-                        &source,
-                        &kind,
-                        &key,
-                        &partitions,
-                        deadline,
-                        deadline.checked_sub(READ_MARGIN).unwrap_or(deadline),
-                    )
-                    .await;
-                if let Ok(read) = &read {
-                    earlier.lock().unwrap_or_else(|e| e.into_inner()).read(
-                        &prefix,
-                        &partitions,
-                        read,
-                    );
-                }
-                read
+                restore(
+                    &reader,
+                    (&source, &kind, &key),
+                    partitions,
+                    deadline,
+                    &earlier,
+                    &prefix,
+                )
+                .await
             }
         };
-        match self.reads.join(flight, stop, READ_FOR, start).await {
-            crate::resolver::Waited::Ready(read) => read,
-            _ => {
-                let earlier = self.earlier.lock().unwrap_or_else(|e| e.into_inner());
-                let mut read = Partial::default();
-                for partition in partitions {
-                    match earlier
+        let done = match self.reads.join(flight, stop, READ_FOR, start).await {
+            crate::resolver::Waited::Ready(Ok(done)) => Some(done),
+            crate::resolver::Waited::Ready(Err(e)) => return Err(e),
+            _ => None,
+        };
+        let earlier = self.earlier.lock().unwrap_or_else(|e| e.into_inner());
+        let mut read = Partial::default();
+        for partition in partitions {
+            let fresh = done.as_ref().is_some_and(|d| d.read.contains(partition));
+            let unread = done.as_ref().is_some_and(|d| d.unread.contains(partition));
+            let kept = (!unread)
+                .then(|| {
+                    earlier
                         .reads
-                        .get(&format!("{prefix}{partition}"))
-                        .filter(|(at, _, _)| at.elapsed() < EARLIER_AGE)
-                    {
-                        Some((_, fetched, _)) => {
-                            read.fetched.extend(fetched.iter().cloned());
-                            read.earlier = true;
-                        }
-                        None => read.unread.push(partition.clone()),
+                        .get(&format!("{prefix}{partition}"), EARLIER_AGE)
+                })
+                .flatten();
+            match kept {
+                Some((fetched, excluded)) => {
+                    read.fetched.extend(fetched.iter().cloned());
+                    if fresh {
+                        read.excluded += excluded;
+                    } else {
+                        read.earlier = true;
                     }
                 }
-                read.fetched.sort_by(|a, b| {
-                    a.fetched_at_ms
-                        .cmp(&b.fetched_at_ms)
-                        .then_with(|| a.partition.cmp(&b.partition))
-                });
-                Ok(read)
+                None => read.unread.push(partition.clone()),
             }
         }
+        read.fetched.sort_by(|a, b| {
+            a.fetched_at_ms
+                .cmp(&b.fetched_at_ms)
+                .then_with(|| a.partition.cmp(&b.partition))
+        });
+        Ok(read)
     }
 }
+/// The owned read of [`Restores::available`]: the partitions in their order, at most
+/// [`LOOKUPS`] at once, each kept in the budgeted bodies as soon as it completes; partitions not
+/// read by the owner deadline (less [`READ_MARGIN`]) are unread. A defect (a corrupt or invalid
+/// object) is an error.
+async fn restore<T: IndexListing + Clone>(
+    reader: &Reader<T>,
+    (source, kind, key): (&str, &str, &ProviderKey),
+    partitions: Vec<String>,
+    deadline: Instant,
+    earlier: &std::sync::Mutex<Earlier>,
+    prefix: &str,
+) -> Result<Restored, Error> {
+    use futures_util::StreamExt;
+    let mut done = Restored::default();
+    let mut ended = vec![false; partitions.len()];
+    let mut defect = None;
+    {
+        let mut running = futures_util::stream::FuturesUnordered::new();
+        let mut next = 0;
+        let collect = async {
+            loop {
+                while running.len() < LOOKUPS && next < partitions.len() {
+                    running.push(reader.indexed(
+                        next,
+                        source,
+                        kind,
+                        key,
+                        &partitions[next],
+                        deadline,
+                    ));
+                    next += 1;
+                }
+                let Some((i, r)) = running.next().await else {
+                    return;
+                };
+                ended[i] = true;
+                match r {
+                    Ok((fetched, excluded)) => {
+                        earlier.lock().unwrap_or_else(|e| e.into_inner()).reads.put(
+                            format!("{prefix}{}", partitions[i]),
+                            fetched,
+                            excluded,
+                        );
+                        done.read.push(partitions[i].clone());
+                    }
+                    Err(e) if absent(&e) => done.unread.push(partitions[i].clone()),
+                    Err(e) => {
+                        defect = Some(e);
+                        return;
+                    }
+                }
+            }
+        };
+        let stop = deadline.checked_sub(READ_MARGIN).unwrap_or(deadline);
+        let _ = tokio::time::timeout_at(stop, collect).await;
+    }
+    if let Some(e) = defect {
+        return Err(e);
+    }
+    done.unread.extend(
+        partitions
+            .iter()
+            .zip(&ended)
+            .filter(|(_, ended)| !**ended)
+            .map(|(p, _)| p.clone()),
+    );
+    Ok(done)
+}
+
 /// KMA-RESTART-BOUND: whether a failed read leaves what it reads absent for the request instead
 /// of failing the answer. True when the store was slow, busy or unreachable: its deadline passed
 /// (on EC2 after a restart, a catalog read on a saturated CPU passed the catalog's 3 s deadline),
@@ -877,6 +1027,29 @@ mod tests {
             2,
             "same digest/time in another full RawId must remain distinct"
         );
+    }
+    /// KMA-RESTART-BOUND (RB-restore-memory): kept bodies stay within their byte budget, the
+    /// oldest leave first, and a page that leaves is freed (no other owner holds it).
+    #[test]
+    fn evicted_bodies_are_freed() {
+        let page = |n: u8| -> Arc<[u8]> { Arc::from(vec![n; 1000]) };
+        let fetched = |p: Arc<[u8]>| Fetched {
+            fetched_at_ms: 1,
+            partition: "20260924-1000".into(),
+            pages: vec![p],
+            raw_ids: Vec::new(),
+        };
+        let mut bodies = Bodies::new(2500, 100);
+        let first = page(1);
+        let weak = Arc::downgrade(&first);
+        bodies.put("a".into(), vec![fetched(first)], 0);
+        bodies.put("b".into(), vec![fetched(page(2))], 0);
+        assert!(weak.upgrade().is_some(), "kept within the budget");
+        bodies.put("c".into(), vec![fetched(page(3))], 0);
+        assert!(bodies.bytes() <= 2500, "{}", bodies.bytes());
+        assert!(bodies.get("a", std::time::Duration::MAX).is_none());
+        assert!(weak.upgrade().is_none(), "the evicted page is freed");
+        assert!(bodies.get("c", std::time::Duration::MAX).is_some());
     }
     /// KMA-RESTART-BOUND: a slow, busy or unreachable store leaves the read absent; a defect in
     /// what it holds does not.

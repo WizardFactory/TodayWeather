@@ -15,7 +15,8 @@
     "server2/src/lib.rs",
     "server2/src/resolver/race.rs",
     "server2/tests/domestic/full_response.rs",
-    "server2/tests/domestic/life_s3.rs"
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/observe.rs"
   ],
   "outside": [
     {

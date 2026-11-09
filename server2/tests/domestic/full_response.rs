@@ -2400,6 +2400,7 @@ impl ForecastAcquire for Logged {
 /// acquirer logs what it is asked.
 struct Restarted {
     backend: KmaBackend,
+    source: Arc<S3Source<Counted>>,
     log: Arc<std::sync::Mutex<Vec<String>>>,
 }
 impl Restarted {
@@ -2436,13 +2437,14 @@ impl Restarted {
             started: Instant::now(),
         })));
         let service = Arc::new(Service::new(counted.clone(), doubles.office.clone()).unwrap());
-        let backend = KmaBackend::new(
-            Arc::new(source),
-            Arc::new(|| NOW),
-            AssemblyConfig::default(),
-        )
-        .with_narrative(Some(service));
-        Self { backend, log }
+        let source = Arc::new(source);
+        let backend = KmaBackend::new(source.clone(), Arc::new(|| NOW), AssemblyConfig::default())
+            .with_narrative(Some(service));
+        Self {
+            backend,
+            source,
+            log,
+        }
     }
     /// Its answer to the Seoul town, and what its forecast acquirer was asked meanwhile.
     async fn answer(
@@ -2821,6 +2823,92 @@ async fn a_slow_zone_read_fills_the_zones_of_the_next_request() {
         "{}",
         body["midData"]["dailyStatus"]
     );
+}
+
+/// RB-store-deadline, round 3: every hour of the 54-hour current-observation window is stored
+/// (54 partitions) and every page read takes 2.6 s, so the whole restore takes about 18 s. The
+/// restore keeps each partition as it completes, the ones the answer needs (today's and the same
+/// hour yesterday) first, and the provider results of the first request stay usable while the
+/// memo keeps them from being asked again: answers during the restore keep today's current
+/// observations (with yesterday's comparison) and short rows of a process whose reads are
+/// prompt.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn answers_during_a_long_restore_keep_the_fields() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    produced_answer(&peer).await;
+    let hours: Vec<Publication> = (0..54)
+        .map(|back| {
+            let at =
+                server2::history::schedule::to_ms(publication(20260924, 1000)) - back * 3_600_000;
+            server2::history::schedule::from_ms(at)
+        })
+        .collect();
+    store_grid(&peer, F::UltraSrtNcst, &hours).await;
+    let today = |body: &serde_json::Value| {
+        let short: Vec<serde_json::Value> = body["short"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|r| r["date"] == "20260924")
+            .cloned()
+            .collect();
+        (body["current"].clone(), short)
+    };
+    let (prompt, _) = restarted_answer(&peer, &Counted::new(peer.transport_limited(4))).await;
+    let prompt = today(&body_of(prompt));
+    let counted = Counted::new(peer.transport_limited(4));
+    counted.delay_gets(
+        "raw/v2/data-go-kr/ultra-srt-ncst/",
+        0,
+        Duration::from_millis(2600),
+    );
+    let process = Restarted::new(&peer, &counted);
+    let (first, _) = process.answer().await;
+    body_of(first);
+    for later in 1..=2 {
+        tokio::time::sleep(Duration::from_millis(4000)).await;
+        let (answer, asked) = process.answer().await;
+        assert!(
+            asked.iter().all(|a| !a.contains("UltraSrtNcst")),
+            "no provider call beyond the memo: {asked:?}"
+        );
+        assert_eq!(today(&body_of(answer)), prompt, "answer {later}");
+    }
+}
+
+/// RB-s16-listing-provenance: a request whose listing comes from an earlier listing (its own LIST
+/// fails) does not record S16 summaries, even when every partition it lists is read again: the
+/// listing may lack a partition published since.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn an_earlier_listing_records_no_summary() {
+    use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    produced_answer(&peer).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let process = Restarted::new(&peer, &counted);
+    let summary = |answer: SourceAnswer| match answer {
+        SourceAnswer::Snapshot(store) => store.summary_inputs().is_some(),
+        _ => panic!("no snapshot"),
+    };
+    let snapshot = || {
+        process.source.snapshot(
+            &super::source_s3::request(),
+            Instant::now() + Duration::from_secs(8),
+        )
+    };
+    assert!(summary(snapshot().await), "a complete read records");
+    // Past the retention of the first flights, the next listing fails.
+    tokio::time::sleep(Duration::from_millis(3500)).await;
+    counted.fail_lists(Some("index/v2/data-go-kr/ultra-srt-ncst/"));
+    let lists = counted.get("LIST index/v2/data-go-kr/ultra-srt-ncst");
+    let second = snapshot().await;
+    assert!(
+        counted.get("LIST index/v2/data-go-kr/ultra-srt-ncst") > lists,
+        "the listing was asked"
+    );
+    assert!(!summary(second), "an earlier listing records nothing");
 }
 
 /// The fixed Seoul geocode of [`FixedGeo`], answered after 300 ms.

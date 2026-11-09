@@ -323,6 +323,9 @@ pub struct S3Source<T> {
     zone_reads: crate::resolver::OwnedFlights<(), Result<Arc<Zones>, String>>,
     /// The owned listings and partition reads of the observed requests (KMA-RESTART-BOUND).
     restores: Arc<records::Restores>,
+    /// This process's acquisitions, kept under a byte budget for a request that cannot acquire
+    /// the key again while the stored read does not hold it (KMA-RESTART-BOUND).
+    acquired: Arc<std::sync::Mutex<records::Bodies>>,
     observations: Arc<observe::Observations<T>>,
     /// S15b-3: AirKorea national datasets and the air-provider fallback (shared with the image
     /// forecast production of the observed source).
@@ -489,6 +492,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
             .expect("static owned zone read bounds"),
             restores: Arc::default(),
+            acquired: Arc::new(std::sync::Mutex::new(records::Bodies::new(
+                ACQUIRED_BYTES,
+                ACQUIRED_ENTRIES,
+            ))),
             forecast: None,
             raw_writer: None,
             observed_history: observed,
@@ -589,10 +596,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         }
         let owned_for = request.owned_for();
         let start = publication_flight(acquire, admission, request);
-        let waited = self.owned.join(key, until, owned_for, start).await;
+        let waited = self.owned.join(key.clone(), until, owned_for, start).await;
+        let mut kept = self.acquired.lock().unwrap_or_else(|e| e.into_inner());
         match waited {
-            crate::resolver::Waited::Ready(f) => f,
-            _ => None,
+            crate::resolver::Waited::Ready(Some(f)) => {
+                kept.put(key, vec![f.clone()], 0);
+                Some(f)
+            }
+            // KMA-RESTART-BOUND (review round 3): an acquisition this process made stays usable
+            // when its key is not acquired again (the retry memo, a consumed Short slot) and the
+            // stored read does not hold it yet (a restore still running).
+            _ => kept
+                .get(&key, ACQUIRED_AGE)
+                .and_then(|(fetched, _)| fetched.first().cloned()),
         }
     }
     /// S15b-3: request-time AirKorea acquisition (None: stored records only) and the shared
@@ -757,7 +773,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         months: &[u32],
         deadline: Instant,
         (until, race_at): (Instant, Instant),
-    ) -> Result<Option<Vec<String>>, crate::storage::Error> {
+    ) -> Result<Option<records::Listed>, crate::storage::Error> {
         if self.observed_history && race_at < until {
             return self
                 .restores
@@ -769,27 +785,31 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .partitions(source, kind, key, months, deadline)
             .await
         {
-            Ok(partitions) => Ok(Some(partitions)),
+            Ok(partitions) => Ok(Some(records::Listed {
+                partitions,
+                earlier: false,
+            })),
             Err(e) if records::absent(&e) => Ok(None),
             Err(e) => Err(e),
         }
     }
     /// KMA-RESTART-BOUND: the stored read of `partitions` of one key for a request, owned and
-    /// waited for until its bound with a head start ([`records::Restores`]), otherwise read
-    /// until `deadline`.
+    /// waited for until its bound with a head start ([`records::Restores`], the partitions in
+    /// `first` restored before the rest), otherwise read until `deadline`.
+    #[allow(clippy::too_many_arguments)] // One key's partitions plus their order and the bounds.
     async fn restored(
         &self,
         source: &str,
         kind: &str,
         key: &ProviderKey,
-        partitions: &[String],
+        (partitions, first): (&[String], &[String]),
         deadline: Instant,
         (until, race_at): (Instant, Instant),
     ) -> Result<records::Partial, crate::storage::Error> {
         if self.observed_history && race_at < until {
             return self
                 .restores
-                .available(&self.reader, source, kind, key, partitions, until)
+                .available(&self.reader, source, kind, key, partitions, first, until)
                 .await;
         }
         self.reader
@@ -879,34 +899,57 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                     .await
                 {
                     Ok(None) => Ok(None),
-                    Ok(Some(parts)) => Ok(Some(
-                        parts
+                    // An earlier listing may lack a partition published since: S16 records
+                    // nothing from it (RB-s16-listing-provenance).
+                    Ok(Some(listed)) => Ok(Some((
+                        listed
+                            .partitions
                             .into_iter()
                             .filter(|p| *p >= oldest)
                             .collect::<Vec<String>>(),
-                    )),
+                        listed.earlier,
+                    ))),
                     Err(e) => Err(format!("{} listing: {e}", sf.kind())),
                 }
             }
             .shared()
         };
+        // The partitions the answer needs, restored first (review round 3): the publications the
+        // request requires and, for the current observations, the hours around the same hour
+        // yesterday (the answer's yesterday comparison).
+        let needed: Vec<String> = {
+            let mut needed: Vec<Publication> = required::foreground(sf, now as i64);
+            if family == Family::Current
+                && let Some(latest) = sf.latest(now as i64)
+            {
+                needed.extend(
+                    [-24, -25, -23]
+                        .into_iter()
+                        .filter_map(|h| latest.add_hours(h)),
+                );
+            }
+            needed.into_iter().map(Publication::partition).collect()
+        };
         // The stored read and whether the listing was absent.
         let stored = {
-            let (listing, key) = (listing.clone(), &key);
+            let (listing, key, needed) = (listing.clone(), &key, &needed);
             async move {
                 match listing.await? {
                     None => Ok((records::Partial::default(), true)),
-                    Some(wanted) => self
+                    Some((wanted, earlier)) => self
                         .restored(
                             sf.source(),
                             sf.kind(),
                             key,
-                            &wanted,
+                            (&wanted, needed),
                             deadline,
                             (until, race_at),
                         )
                         .await
-                        .map(|read| (read, false))
+                        .map(|mut read| {
+                            read.earlier |= earlier;
+                            (read, false)
+                        })
                         .map_err(|e| format!("{} read: {e}", sf.kind())),
                 }
             }
@@ -989,7 +1032,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                             (publications, Vec::new())
                         }
                         Some(Ok(None)) => (publications, Vec::new()),
-                        Some(Ok(Some(wanted))) => publications
+                        Some(Ok(Some((wanted, _)))) => publications
                             .into_iter()
                             .partition(|p| !wanted.iter().any(|w| *w == p.partition())),
                         // A defect: the stored read fails the answer.
@@ -1339,8 +1382,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .await
             {
                 Ok(None) => Ok(None),
-                Ok(Some(parts)) => Ok(Some(
-                    parts
+                Ok(Some(listed)) => Ok(Some(
+                    listed
+                        .partitions
                         .into_iter()
                         .filter(|p| *p >= oldest)
                         .collect::<Vec<String>>(),
@@ -1359,7 +1403,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                             "kma-web",
                             "town-rss",
                             key,
-                            &wanted,
+                            (&wanted, &[]),
                             deadline,
                             (until, race_at),
                         )
@@ -1553,7 +1597,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         } else {
             (listing.await?, None)
         };
-        let listed = listed.unwrap_or_default();
+        let listed = listed.map(|l| l.partitions).unwrap_or_default();
         // Each save replaces the whole document, so the newest publication that organizes is the
         // answer: start there and stop at the first document.
         let early = match raced {
@@ -1572,7 +1616,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 "data-go-kr",
                 kind,
                 &key,
-                std::slice::from_ref(partition),
+                (std::slice::from_ref(partition), &[]),
                 deadline,
                 (until, race_at),
             );
@@ -2410,6 +2454,11 @@ pub fn grid_input_id(family: Family, kind: &str, f: &Fetched) -> Option<InputId>
         content_sha256: identity(f).2,
     })
 }
+/// This process's acquisitions kept for a request that cannot acquire them again: bytes,
+/// entries and age (the longest retry bound, the previous Short publication's).
+const ACQUIRED_BYTES: usize = 32 * 1024 * 1024;
+const ACQUIRED_ENTRIES: usize = 4096;
+const ACQUIRED_AGE: std::time::Duration = PREVIOUS_SHORT_RETRY;
 /// How long an owned forecast-zone refresh runs at most (KMA-RESTART-BOUND).
 const ZONE_READ_FOR: std::time::Duration = std::time::Duration::from_secs(30);
 /// Retry bound for generic latest and backfill acquisitions. Latest Short uses

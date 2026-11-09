@@ -1062,6 +1062,8 @@ pub(super) struct Counted {
     delay: Arc<Mutex<Option<Delay>>>,
     /// GETs of keys under this prefix fail.
     fail: Arc<Mutex<Option<String>>>,
+    /// LISTs of prefixes under this prefix fail.
+    fail_lists: Arc<Mutex<Option<String>>>,
     /// Requests of stored keys (or LIST prefixes) under a gate's prefixes wait until the test
     /// opens it: a slow store. Keys written through this transport are not held (a new
     /// acquisition's publication reads back what it wrote).
@@ -1079,6 +1081,7 @@ impl Counted {
             counts: Arc::default(),
             delay: Arc::default(),
             fail: Arc::default(),
+            fail_lists: Arc::default(),
             gates: Arc::default(),
             written: Arc::default(),
             bulk: false,
@@ -1090,6 +1093,10 @@ impl Counted {
         *self.delay.lock().unwrap() = Some((prefix.to_owned(), after, hold, 0));
     }
     /// Fail every GET of a key under `prefix` (None: none).
+    /// Fail every LIST of a prefix under `prefix` (None: none) with a transport error.
+    pub(super) fn fail_lists(&self, prefix: Option<&str>) {
+        *self.fail_lists.lock().unwrap() = prefix.map(str::to_owned);
+    }
     pub(super) fn fail_gets(&self, prefix: Option<&str>) {
         *self.fail.lock().unwrap() = prefix.map(str::to_owned);
     }
@@ -1262,6 +1269,15 @@ impl server2::history::IndexListing for Counted {
         token: Option<&str>,
     ) -> Result<server2::storage::ListPage, server2::storage::Error> {
         self.admit("LIST", prefix).await;
+        if self
+            .fail_lists
+            .lock()
+            .unwrap()
+            .as_deref()
+            .is_some_and(|f| prefix.starts_with(f))
+        {
+            return Err(server2::storage::Error::Transport);
+        }
         self.inner.list_index(prefix, token).await
     }
     fn bulk_view(&self) -> Self {
