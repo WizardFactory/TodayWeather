@@ -50,12 +50,26 @@ class ImportedClientAssetsTest {
         }
         val imported = File(appDir, "src/main/assets/img").walkTopDown().filter { it.isFile }.toList() +
             File(appDir, "src/main/assets/data/towns.json") +
-            File(appDir, "src/main/res").listFiles()!!.map { File(it, "client_strings.xml") }.filter { it.isFile }
-        assertEquals(342 + 1 + 6, imported.size)
+            File(appDir, "src/main/res").listFiles()!!.map { File(it, "client_strings.xml") }.filter { it.isFile } +
+            File(appDir, "src/main/res/font/material_icons.ttf") +
+            File(appDir, "src/main/res").listFiles()!!.map { File(it, "ic_launcher.png") }.filter { it.isFile } +
+            File(appDir, "src/main/res/drawable-nodpi/splash_icon.png")
+        assertEquals(342 + 1 + 6 + 1 + 6 + 1, imported.size)
         for (file in imported) {
             val rel = file.relativeTo(appDir).invariantSeparatorsPath
             assertEquals("hash of $rel", recorded[rel], sha256(file))
         }
         assertEquals(imported.size, recorded.size)
+    }
+
+    /** The Ionicons font copied from the Cordova build (tools/import_cordova_fonts.py). */
+    @Test
+    fun cordovaFontsMatchTheirProvenance() {
+        val files = JSONObject(File(appDir, "provenance/cordova-fonts.json").readText()).getJSONArray("files")
+        assertEquals(1, files.length())
+        val entry = files.getJSONObject(0)
+        assertEquals("res/font/ionicons.ttf".let { "src/main/$it" }, entry.getString("output"))
+        assertEquals(entry.getString("output_sha256"), sha256(File(appDir, entry.getString("output"))))
+        assertTrue(entry.getString("license").startsWith("MIT"))
     }
 }

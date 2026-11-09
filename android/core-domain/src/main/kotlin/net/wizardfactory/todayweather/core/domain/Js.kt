@@ -101,6 +101,38 @@ internal object Js {
     fun toFixedNumber(d: Double, digits: Int): Double =
         if (d.isNaN() || d.isInfinite()) d else BigDecimal(d).setScale(digits, RoundingMode.HALF_UP).toDouble()
 
+    /** `x.toFixed(digits)`: the exact binary value rounded half up, "-" for negative values (also "-0"). */
+    fun toFixed(d: Double, digits: Int): String = when {
+        d.isNaN() || d.isInfinite() || kotlin.math.abs(d) >= 1e21 -> numberToString(d)
+        else -> (if (d < 0) "-" else "") + BigDecimal(kotlin.math.abs(d)).setScale(digits, RoundingMode.HALF_UP).toPlainString()
+    }
+
+    /** AngularJS `{{value}}` (`$interpolate`'s stringify): "" for undefined and null, numbers as JavaScript prints them. */
+    fun display(value: JsonElement?): String = when (value) {
+        null, JsonNull -> ""
+        is JsonPrimitive -> if (value.isString) value.content else string(value)
+        else -> value.toString()
+    }
+
+    /** ToPrimitive for the relational operators: a string, or a number for everything else. */
+    private fun primitive(value: JsonElement?): Any = when (value) {
+        null -> Double.NaN
+        JsonNull -> 0.0
+        is JsonPrimitive -> if (value.isString) value.content else number(value)
+        is JsonArray -> value.joinToString(",") { if (it == JsonNull) "" else string(it) }
+        is JsonObject -> "[object Object]"
+    }
+
+    /** `a >= b` of two values: strings by UTF-16 code units, anything else as numbers (NaN is never greater or equal). */
+    fun greaterOrEqual(a: JsonElement?, b: JsonElement?): Boolean {
+        val x = primitive(a)
+        val y = primitive(b)
+        if (x is String && y is String) return x >= y
+        val nx = if (x is String) stringToNumber(x) else x as Double
+        val ny = if (y is String) stringToNumber(y) else y as Double
+        return !nx.isNaN() && !ny.isNaN() && nx >= ny
+    }
+
     /** A number literal as JSON, integral values without a fraction. */
     fun json(d: Double): JsonPrimitive =
         if (d == floor(d) && !d.isInfinite() && kotlin.math.abs(d) < 9e15) JsonPrimitive(d.toLong()) else JsonPrimitive(d)

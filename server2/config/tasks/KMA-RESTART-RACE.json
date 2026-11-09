@@ -28,7 +28,8 @@
     "server2/tests/narrative/cache.rs",
     "server2/tests/resolver.rs",
     "server2/tests/resolver/race.rs",
-    "server2/tests/storage/catalog_wire.rs"
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tools/ci.py"
   ],
   "outside": [
     {

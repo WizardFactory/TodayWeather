@@ -56,7 +56,7 @@ class GoldenCorpusDisplayTest {
         }
         for ((args, expected) in cases(air["labelPosition"]!!)) {
             val x = AirQuality.labelPosition(AirQuality.standard(s(args[0])), s(args[1])!!, args[3].jsonPrimitive.int,
-                args[4].jsonPrimitive.double, args[2].jsonPrimitive.double)
+                args[4].jsonPrimitive.double, args[2].jsonPrimitive.double, args.getOrNull(5)?.jsonPrimitive?.double ?: 52.0)
             assertEquals(expected.jsonPrimitive.double, x, 1e-9, "labelPosition $args")
         }
         for ((args, expected) in cases(air["airCodeUnit"]!!)) assertEquals(s(expected), AirQuality.codeUnit(s(args[0])!!))

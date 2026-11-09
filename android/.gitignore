@@ -8,6 +8,7 @@ captures/
 # Private inputs (see README.md)
 app/google-services.json
 keystore.properties
+private.properties
 *.jks
 *.keystore
 

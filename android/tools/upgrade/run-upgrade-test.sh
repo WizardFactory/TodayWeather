@@ -1,32 +1,27 @@
 #!/bin/sh
 # Emulator upgrade test (gate G1 of #2877, state part): Cordova 1.1.1 debug APK -> native debug APK.
-#   ANDROID_SERIAL=emulator-5554 android/tools/upgrade/run-upgrade-test.sh <cordova-debug.apk> [out-dir]
-# The emulator stays offline while the Cordova app runs, so it has no FCM token and writes nothing to
-# the production push server. Requires the native debug and androidTest APKs (./gradlew assembleDebug
+#   ANDROID_SERIAL=emulator-5554 android/tools/upgrade/run-upgrade-test.sh <cordova-debug.apk> [out-dir] [token]
+# token: the FCM token the native app gets; the seed stores token-a, so token-a is the unchanged case
+# and token-b (default) the changed one.
+# The emulator stays offline while the Cordova app or the native app is installed, so neither gets an
+# FCM token or writes to the production push server (tools/emulator/offline.sh: on every exit both
+# packages are uninstalled before the network comes back, and the network stays off if that cannot be
+# confirmed). Requires the native debug and androidTest APKs (./gradlew assembleDebug
 # assembleDebugAndroidTest) signed with the same debug key as the Cordova APK.
 set -eu
-case "${ANDROID_SERIAL:-}" in emulator-*) ;; *) echo "Set ANDROID_SERIAL to an emulator" >&2; exit 2 ;; esac
+HERE=$(cd "$(dirname "$0")" && pwd)
+. "$HERE/../emulator/offline.sh"
+emulator_guard
 CORDOVA_APK=$1
 OUT=${2:-/tmp/tw-upgrade}
-HERE=$(cd "$(dirname "$0")" && pwd)
+TOKEN=${3:-token-b}
 APP=$HERE/../../app/build/outputs/apk
-PKG=net.wizardfactory.todayweather
 mkdir -p "$OUT"
+trap offline_cleanup EXIT
+trap 'exit 130' INT TERM
 
-# Offline before the Cordova app starts: airplane mode through `cmd connectivity` (API 29+) or the
-# setting and broadcast (older images need `adb root`), plus Wi-Fi and data off. Abort if a default
-# network is still active.
-adb shell cmd connectivity airplane-mode enable >/dev/null 2>&1 || {
-    adb root >/dev/null 2>&1 || true; adb wait-for-device
-    adb shell settings put global airplane_mode_on 1
-    adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true >/dev/null
-}
-adb shell svc wifi disable || true
-adb shell svc data disable || true
-sleep 3
-if ! adb shell dumpsys connectivity | grep -q "Active default network: none"; then
-    echo "The emulator still has a network; refusing to start the Cordova app" >&2; exit 3
-fi
+# Offline before the Cordova app starts.
+go_offline
 adb uninstall $PKG.test >/dev/null 2>&1 || true
 adb uninstall $PKG >/dev/null 2>&1 || true
 
@@ -53,22 +48,35 @@ adb logcat -c
 adb install -r "$APP/debug/app-debug.apk"
 adb install -r "$APP/androidTest/debug/app-debug-androidTest.apk"
 SEEDED=$(base64 < "$OUT/seeded.json" | tr -d '\n')
-RUNNER=$PKG.test/androidx.test.runner.AndroidJUnitRunner
-adb shell am instrument -w -e seeded "$SEEDED" -e class $PKG.CordovaUpgradeTest#firstStartMigratesTheCordovaState $RUNNER | tee "$OUT/first-start.txt"
+RUNNER=$PKG.test/$PKG.TestRunner
+adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.CordovaUpgradeTest#firstStartMigratesTheCordovaState $RUNNER | tee "$OUT/first-start.txt"
 adb shell am force-stop $PKG
-adb shell am instrument -w -e seeded "$SEEDED" -e class $PKG.CordovaUpgradeTest#afterRestartNothingChangesAndAnalyticsStaysOff $RUNNER | tee "$OUT/after-restart.txt"
+adb shell am instrument -w -e seeded "$SEEDED" -e token "$TOKEN" -e class $PKG.CordovaUpgradeTest#afterRestartNothingChangesAndAnalyticsStaysOff $RUNNER | tee "$OUT/after-restart.txt"
+# A token delivered without an app open; the process ends while its PUT is in flight, and the next
+# process completes the stored work (PushTokenWorkTest).
+adb shell am instrument -w -e previous "$TOKEN" -e transport hold -e class $PKG.PushTokenWorkTest#tokenWorkIsInterruptedWithItsRequestInFlight $RUNNER | tee "$OUT/token-work-interrupted.txt"
+adb shell am instrument -w -e previous "$TOKEN" -e class $PKG.PushTokenWorkTest#tokenWorkCompletesAfterTheProcessEnded $RUNNER | tee "$OUT/token-work-completed.txt"
+# Entry intents that arrive while the migration runs are handled after it (EntryIntentTest, #2886 AC4).
+adb shell am instrument -w -e migration hold -e class $PKG.EntryIntentTest $RUNNER | tee "$OUT/entry-intents.txt"
+# The home-screen shortcut of the Cordova app: the launcher's intent for the same component opens the native
+# activity. Opened outside the instrumentation, the app finds no network (offline) for its start registration.
+adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $PKG | tail -1 > "$OUT/launcher.txt"
+adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n $PKG/.MainActivity | tee "$OUT/shortcut.txt"
+sleep 2
+adb shell dumpsys activity activities | grep -E "topResumedActivity|mResumedActivity" > "$OUT/shortcut-resumed.txt" || true
+adb exec-out screencap -p > "$OUT/shortcut.png"
+adb shell am force-stop $PKG
 adb logcat -d > "$OUT/logcat.txt"
 adb exec-out run-as $PKG cat shared_prefs/com.google.android.gms.measurement.prefs.xml > "$OUT/measurement-after.xml" || true
 
-adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || {
-    adb shell settings put global airplane_mode_on 0
-    adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state false >/dev/null
-}
-adb shell svc wifi enable || true
-adb shell svc data enable || true
-
 grep -q "^OK (1 test)" "$OUT/first-start.txt"
 grep -q "^OK (1 test)" "$OUT/after-restart.txt"
+grep -q "^OK (1 test)" "$OUT/token-work-interrupted.txt"
+grep -q "^OK (1 test)" "$OUT/token-work-completed.txt"
+grep -q "^OK (1 test)" "$OUT/entry-intents.txt"
+grep -qx "$PKG/.MainActivity" "$OUT/launcher.txt"
+grep -q "^Status: ok" "$OUT/shortcut.txt"
+grep -q "$PKG/.MainActivity" "$OUT/shortcut-resumed.txt"
 EVENTS=$(grep -c "Logging event" "$OUT/logcat.txt" || true)
 echo "analytics events logged after the update: $EVENTS"
 test "$EVENTS" -eq 0
