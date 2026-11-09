@@ -1,0 +1,32 @@
+{
+  "task": "KMA-AIR-REFRESH",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "AirKorea capture: acquire the current nationwide hour again every 10 minutes while a station is an hour behind. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-AIR-REFRESH.json",
+    "server2/src/domestic/kma/source/air_input.rs",
+    "server2/tests/domestic/air_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-air-refresh.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-air-refresh.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-air-refresh.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The AirKorea capture rule."
+    }
+  ]
+}
