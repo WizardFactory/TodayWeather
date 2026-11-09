@@ -374,3 +374,75 @@ Device:
 - The attached phone: the three pages from production, installed in place.
 
 CI: `check-sources.mjs` covers the nation references; the workflow paths include the three templates.
+
+## AN-15 — ads, analytics consent and crash reporting (#2894)
+
+Design. Sources: `service.twads.js`, `service.admobemi.js`, `service.monetization.js`, `service.util.js` (`Util.ga`), `controller.settingctrl.js` (L60–L99, `showAlert`), `controller.start.js`, `controller.tabctrl.js`, `getWeatherByGeoInfo`, the `app.js` run block, `index.html` L129–L139, the plugin variables in `client/package.json` and `config.xml`, the emi AdMob plugin's Android sources, `client/test/monetization.test.cjs` and `privacy-consent.test.cjs`, and verification-matrix V21 and V22. Investigation: `reports/sdlc/android-an-15/investigation.md`.
+
+- `core-domain` (plain Kotlin):
+  - `ads/BannerGate`: TwAds's `applyVisibility` as a decision (show, the time left before a recheck, the one exposure), and `RemoteBannerPolicy`, which reads the Remote Config pair atomically (`"true"`/`"false"`, digits up to 120).
+  - `analytics/AnalyticsSchema`: the events and fields of `Monetization.track`, the screen names and the added `measurement_version`.
+- `app` `ads/`:
+  - `AdsConsent`: UMP as the plugin runs it — update, the consent form when required, then the Ads SDK in the same session when ads may be requested (#2871), at once with a cached consent. On a UMP failure release builds show no ads; debug builds, which use Google's test units, start the SDK without UMP once unless consent is required (the Cordova test-unit builds).
+  - `TwAds`: the banner of an app open: Remote Config, the gate, the 5 s spacing between loads, `ad_lifecycle`, `ad_load_error` and `ad_policy_exposure`. The AdView belongs to the activity, so a configuration change recreates it (the orientation refresh).
+  - `BannerSlot`: the anchored adaptive banner for the window width without the side insets, under the tab bar and above the navigation bar while shown. The menu, the in-app popups and the pages end at its top edge, as they ended at the WebView's.
+- `app` `analytics/`:
+  - `ConsentStore`: the choice and the SDK state in two private preference files written with `commit()`. A failed write removes the choice, and a grant restores at start only if both records still hold it, as the plugin's persisted flag corroborated localStorage.
+  - `Analytics`: `setCollectionEnabled`, `track`, `screen`, the consent mode (analytics storage only on a grant) and `traffic_type` from the build type.
+  - `EarlyStartProvider` applies the stored choice before Firebase starts.
+  - `RemoteBannerConfig`: defaults, a 10 s fetch timeout and 3600 s minimum interval, the activated values first, then fetch-and-activate, bounded by 12 s.
+- Menu rows:
+  - 선택적 이용 통계 shows 동의함 or 꺼짐 and opens the Ionic popup (거부 / 철회, 동의). Back changes nothing, and a failed save shows `LOC_PRIVACY_SAVE_FAILED`.
+  - 광고 개인정보 선택 shows the UMP privacy options form when it is required, else `LOC_AD_PRIVACY_UNAVAILABLE`.
+  - 개인정보처리방침 and 이용약관 open `todayweather.ai/mobile/{privacy|terms}{'' | .ja | .en}.html` for the app's language in the system browser.
+  - The menu stays open.
+- Events: `weather_fetch` and `weather_load` from `WeatherRepository` and `WeatherSession`, `screen_view` with the Cordova route names on page and tab changes, and the ad events. `favorite_change` and `location_permission` come with AN-10 and AN-11, which add those actions. AN-10 also hides the banner while S01 shows and starts the ads after it, as TabCtrl did.
+- Firebase:
+  - Remote Config and Crashlytics come through the Firebase BOM, with the Crashlytics Gradle plugin when `google-services.json` exists. Crashlytics collects, independent of the analytics choice, as in the Cordova build.
+  - Automatic screen reporting is off (`config.xml`).
+- Private inputs: `TW_ADMOB_APP_ID_ANDROID` and `TW_ADMOB_BANNER_ANDROID` for release builds. Packaging a release refuses missing values or Google's sample IDs. Debug builds always use the sample app ID and the test banner unit.
+- Differences (`tools/corpus/differences.md`):
+  - B13: the policy pages follow the app's language. The Cordova build compared `navigator.language` (`ko-KR`) with `ko`, so it always opened the English pages.
+  - B14: the ad privacy row shows the cannot-open message when no form is required. The 1.1.1 plugin answered success and showed nothing.
+  - B15: a loaded banner waiting for its Remote Config delay reserves no empty strip.
+  - B16: `screen_class` stays `Cordova`.
+  - B17: Android back on the popup closes the popup only. cordova-android 15 delivered one back press as two `backbutton` events, so the Cordova build usually closed the menu too.
+- Archify not applicable: an app-internal flow with no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN15-US1 | User sees the app with its banner | Debug build, network | Open the app (first time: answer the consent form if one is required) | The Ads SDK starts in this session; a test banner loads and shows under the tab bar, above the navigation bar; the pages, menu and popups end above it | No fill or offline: no banner and no empty strip; UMP fails in a release build: no ads | AC1, AC2 |
+| AN15-US2 | Operator switches the banner off or delays it | Remote Config `tw_banner_enabled` false or `tw_banner_delay_seconds` 30 | Open the app (also offline after a fetch) | Off: no banner; delayed: the banner shows 30 s after the app opened; an invalid pair keeps the defaults | Fetch fails or takes over 12 s: the activated or default policy applies | AC1 |
+| AN15-US3 | User opts in to usage analytics | Fresh install | Menu, 선택적 이용 통계, 동의; change tabs | The row shows 동의함; analytics collects from now on with analytics storage granted and advertising denied; the next screens are sent | Saving fails: 꺼짐, collection off and `LOC_PRIVACY_SAVE_FAILED` | AC1, AC2 |
+| AN15-US4 | User withdraws | Opted in | Menu, 선택적 이용 통계, 거부 / 철회; restart the app | 꺼짐; no event from now on, also after the restart | Saving fails: collection stops, the old grant is removed, the message shows | AC1 |
+| AN15-US5 | User closes the dialog without choosing | Any choice | Open the dialog; press back | The dialog closes and the menu stays; the choice is unchanged | – | AC1 |
+| AN15-US6 | User reviews ad privacy, the policy and the terms | App open | Menu, 광고 개인정보 선택; 개인정보처리방침; 이용약관 | The UMP form where one is required, else the cannot-open message; the browser opens the page in the app's language | No browser: nothing opens | AC1, AC3 |
+| AN15-US7 | Cordova user updates | Cordova 1.1.1 with an analytics opt-in | Update; open the app twice | No analytics event until the user opts in again; ads behave as on a fresh start | – | AC2 |
+| AN15-US8 | Maintainer refreshes the privacy references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/privacy-reference/capture.sh`, `./gradlew test` | New references and provenance; offline while the Cordova build is installed | Recorded tolerances exceeded: explain or fix | AC3 |
+
+### Acceptance (from #2894)
+
+- AC1: unit tests cover the banner policy and the consent transitions: grant, withdrawal and a failed write (V21, V22).
+- AC2: a debug build loads test ads, and the Analytics debug log shows no analytics event before opt-in.
+- AC3: delivery (README, review PASS, CI, merge), with the analytics popup and the rows compared with the Cordova build (manual page 37).
+
+### Checks
+
+JVM:
+- `BannerGateTest`, `RemoteBannerPolicyTest` and `AnalyticsSchemaTest` (core-domain).
+- `WeatherTelemetryTest` (core-data): the outcomes and durations of `weather_fetch` and `weather_load`.
+- `AnalyticsTest` (app): grant, withdrawal, failed writes, compensation for an SDK failure, the start's corroboration, screens.
+- `TwAdsTest` (with Remote Config) and `AdsConsentTest`: the SDK start after consent and with a cached consent, the debug and release UMP failures, the delay, the kill switch, the one exposure, the spacing and the recreation.
+- `PrivacyMenuTest`: the row value, the dialog, back, the failure alert, the ad privacy form and message, the policy URLs per language, the screens reported, and the menu and popups ending at a banner's top.
+- `PrivacyScreenshotTest`: the popup and the rows against `privacy-reference` within recorded tolerances, and the popup's lines against the capture's line boxes; `PrivacyGeometryTest`; `PrivacyFitTest` (320×480 dp, font scale 1.3, a banner).
+
+Device:
+- `tools/emulator/run-ads-check.sh` (API 36):
+  - online, `AdsDeviceTest` waits until a test banner loads and shows, and the FA verbose log shows no "Logging event" without an opt-in;
+  - offline, an opt-in through the dialog logs `screen_view`, so the check cannot pass vacuously. The app is uninstalled before the network returns.
+- The upgrade test still finds no event after the update.
+- The attached phone: installed in place; the banner and the four rows, without opting in.
+
+CI: `check-sources.mjs` covers the privacy references; the workflow paths include the Cordova sources read here.

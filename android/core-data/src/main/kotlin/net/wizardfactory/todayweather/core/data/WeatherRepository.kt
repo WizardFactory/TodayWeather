@@ -37,8 +37,11 @@ sealed interface LoadResult {
     /** A later request for the same place was sent; its answer counts. */
     data object Superseded : LoadResult
 
-    /** No weather: the place has neither coordinates nor address, the request failed, or the body did not convert. */
-    data class Failed(val error: Throwable?) : LoadResult
+    /**
+     * No weather: the place has neither coordinates nor address, the request failed, or the body did not convert.
+     * [network]: the request failed (an error with a status for `updateWeatherData`).
+     */
+    data class Failed(val error: Throwable?, val network: Boolean = false) : LoadResult
 }
 
 /**
@@ -57,6 +60,8 @@ class WeatherRepository(
     private val clock: () -> Long = System::currentTimeMillis,
     /** Where the file cache is read and written. */
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    /** `weather_fetch`, as `getWeatherByGeoInfo` reports each request. */
+    private val telemetry: Telemetry = Telemetry.NONE,
 ) {
     private val entries = MutableStateFlow<Map<String, WeatherEntry>>(emptyMap())
     private val running = MutableStateFlow<Set<String>>(emptySet())
@@ -99,7 +104,11 @@ class WeatherRepository(
      */
     suspend fun load(place: Place, units: UnitSettings, languages: List<String>, force: Boolean): LoadResult {
         if (place.disable || (!force && !canLoad(place))) return LoadResult.Skipped
-        val url = WeatherRequests.url(baseUrl, place, units) ?: return LoadResult.Failed(IllegalArgumentException("no location or address"))
+        val started = clock()
+        val url = WeatherRequests.url(baseUrl, place, units) ?: run {
+            fetched("invalid_input", started)
+            return LoadResult.Failed(IllegalArgumentException("no location or address"))
+        }
         val key = key(place)
         val request = synchronized(this) { (++requests).also { latestRequest[key] = it } }
         running.update { it + key }
@@ -109,10 +118,14 @@ class WeatherRepository(
         } finally {
             synchronized(this) { if (latestRequest[key] == request) running.update { it - key } }
         }
+        // `$http` parses the body as `JSON.parse` does (the server answers with a JSON content type) and rejects it when it
+        // cannot.
+        val parsed = body.mapCatching { NationSource.strictJson(it) }
+        fetched(if (parsed.isFailure) "network_error" else "success", started)
         // An answer to a request a later one replaced counts for nothing, a failure included.
         if (!latest(key, request)) return LoadResult.Superseded
-        val converted = body.mapCatching { WeatherConverter.convert(Json.parseToJsonElement(it)) }
-        val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull())
+        val converted = parsed.mapCatching { WeatherConverter.convert(it) }
+        val city = converted.getOrNull() ?: return LoadResult.Failed(converted.exceptionOrNull() ?: body.exceptionOrNull(), network = body.isFailure)
         // One answer at a time is stored, and only while it is the latest of its place, so a slower write of an
         // older answer cannot follow a newer one in memory or in the cache.
         return commits.withLock {
@@ -134,6 +147,8 @@ class WeatherRepository(
     }
 
     private fun latest(key: String, request: Long) = synchronized(this) { latestRequest[key] == request }
+
+    private fun fetched(outcome: String, started: Long) = telemetry.track("weather_fetch", mapOf("outcome" to outcome, "duration_ms" to clock() - started))
 
     private suspend fun readCache(key: String): WeatherEntry? = withContext(io) {
         val file = cacheFile(key) ?: return@withContext null

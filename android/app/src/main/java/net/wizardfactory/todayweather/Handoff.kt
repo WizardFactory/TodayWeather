@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Browser
 import android.webkit.WebSettings
+import kotlinx.coroutines.flow.StateFlow
 import net.wizardfactory.todayweather.core.domain.settings.Handoffs
 import net.wizardfactory.todayweather.core.storage.DeviceIdentity
 
@@ -15,6 +16,15 @@ class MenuHandoffs(
     val openSystem: (String) -> Unit = {},
     /** 의견보내기 (`Util.sendMail`). */
     val sendFeedback: () -> Unit = {},
+)
+
+/** The menu's privacy rows (#2894): the usage analytics choice and its change, and the ad privacy form. */
+class PrivacyActions(
+    val choice: StateFlow<Boolean>,
+    /** The popup's choice; false when it could not be fully applied (`LOC_PRIVACY_SAVE_FAILED`). */
+    val setAnalytics: (Boolean) -> Boolean,
+    /** 광고 개인정보 선택; the argument runs when no form can open (`LOC_AD_PRIVACY_UNAVAILABLE`). */
+    val openAdPrivacy: (onUnavailable: () -> Unit) -> Unit,
 )
 
 /** The intents the Cordova build sent for the menu's hand-offs, sent from [activity] (no new task). */

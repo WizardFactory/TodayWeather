@@ -34,6 +34,9 @@ class WeatherSession(
     private val photos: () -> WeatherPhotos?,
     /** Loads the photo feed (`loadWeatherPhotos`), which a weather update without it asks for. */
     private val loadPhotos: () -> Unit = {},
+    /** `weather_load`, as `updateWeatherData` reports each load. */
+    private val telemetry: Telemetry = Telemetry.NONE,
+    private val clock: () -> Long = System::currentTimeMillis,
     private val random: () -> Double = Math::random,
 ) {
     /** Who asks for a reload (`reloadEvent` senders). */
@@ -151,7 +154,16 @@ class WeatherSession(
         if (!repository.canLoad(place)) return
         val units = s.units
         scope.launch {
-            when (val result = repository.load(place, units, languages(), force = false)) {
+            val started = clock()
+            val result = repository.load(place, units, languages(), force = false)
+            // An answer a later request replaced applies nowhere, so it is no load.
+            val outcome = when (result) {
+                is LoadResult.Loaded -> "success"
+                is LoadResult.Failed -> if (result.network) "network_error" else "invalid_response"
+                LoadResult.Skipped, LoadResult.Superseded -> null
+            }
+            outcome?.let { telemetry.track("weather_load", mapOf("outcome" to it, "duration_ms" to clock() - started)) }
+            when (result) {
                 is LoadResult.Loaded -> save(result)
                 is LoadResult.Failed -> retryShown.value = true
                 LoadResult.Skipped, LoadResult.Superseded -> {}
