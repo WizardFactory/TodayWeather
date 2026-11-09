@@ -90,9 +90,13 @@ struct Header {
 fn failed() -> io::Error {
     io::Error::other("disposable cache unavailable")
 }
+/// Provider raw records; the products processes make from them (the AirKorea hourly forecast,
+/// the KMA station page products) are read from S3.
 fn eligible(id: &RecordId) -> bool {
     id.validate().is_ok()
-        && (matches!(id.source.as_str(), "data-go-kr" | "kma-web" | "vc")
+        && (matches!(id.source.as_str(), "data-go-kr" | "vc")
+            || (id.source == "kma-web"
+                && id.kind != crate::domestic::kma::source::observe_product::KIND)
             || (id.source == "airkorea-image" && id.kind == "airkorea-forecast-image"))
 }
 fn token(name: &str) -> bool {

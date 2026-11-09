@@ -1,0 +1,17 @@
+{
+  "task": "KMA-RESPONSE-FIRST-WAITERS",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Response-first writer: count a creating or joining caller as a waiter before its acquisition can finish, and settle who waits together with the Ready announcement under the lock entries are created and joined under, so a response's own raw is never released as NoWaiters and published before the response body ends. A publisher checkpoint is the tests' seam (no setting). No deployment or production change.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-RESPONSE-FIRST-WAITERS.json",
+    "server2/src/storage/response_first.rs",
+    "server2/tests/response_first.rs"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Response-first writer paragraph: waiters are counted with the Ready announcement."
+    }
+  ]
+}

@@ -408,3 +408,81 @@ test('adapter defers queued native loads past the silent minimum interval and ca
     load(); adapter.destroyBannerView(()=>{}); advance(5000);
     assert.equal(loads.length,3); assert.equal(failed,1);
 });
+
+test('native banner load failure reports only a bounded numeric error code', () => {
+    let factory;
+    const listeners = new Map(), tracked = [], logs = [];
+    const document = {
+        addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
+        removeEventListener(n, fn) { listeners.get(n)?.delete(fn); }
+    };
+    const cordova = {plugins: {emiAdmobPlugin: {initialize() {}, metaData() {}}}};
+    const console = {log() {}, info(x) { logs.push(x); }, warn(x) { logs.push(x); }};
+    vm.runInNewContext(read('www/js/service.admobemi.js'), {
+        angular: {module() { return {factory(n, fn) { factory = fn; }}; }}, document, window: {cordova}, cordova,
+        ionic: {Platform: {isIOS: () => false}}, console, setTimeout() {}, clientConfig: {releaseAds: true}
+    });
+    const mon = harness(); mon.m.init();
+    factory({ga: {trackException() {}}}, mon.m).init({bannerAdUnit: 'fixture'}, () => {}, () => {});
+    const fire = data => { for (const fn of [...listeners.get('on.banner.failed.load')]) fn(Object.assign({type: 'on.banner.failed.load'}, data)); };
+    // cordova.fireDocumentEvent copies the native JSON fields onto the event (Android: code/message/domain/cause).
+    fire({code: 3, message: 'No fill ca-app-pub-0000000000000000/0000000000', domain: 'com.google.android.gms.ads', cause: 'null'});
+    fire({0: 'R', 1: 'e'}); // iOS falls back to the localized description string when JSON encoding fails.
+    fire({code: 'secret'}); fire({code: 1e6}); fire({code: -1}); fire({code: 2.5});
+    const errors = mon.events.filter(e => e.name === 'ad_load_error');
+    assert.deepEqual(errors.map(e => e.params.error_code), [3]);
+    assert.equal(errors[0].params.ad_format, 'banner');
+    assert.equal(mon.events.filter(e => e.name === 'ad_lifecycle' && e.params.action === 'failed').length, 6);
+    const logged = logs.join('\n');
+    assert.match(logged, /"error_code":3/);
+    assert.equal(logs.filter(l => /"error_code":"unavailable"/.test(l)).length, 5);
+    assert.doesNotMatch(JSON.stringify(mon.events) + logged, /ca-app-pub|No fill|com\.google|secret/);
+});
+
+// emi-indo-cordova-plugin-admob 3.0.4 Android: initialize() calls back success immediately, then UMP updates
+// asynchronously and fires on.consent.status.*; the SDK starts only if a cached status allows ads at initialize.
+function consentDevice({ios = false, updateMs = 1500} = {}) {
+    let factory, now = 0, cached = false, sdkStarts = 0, initializeCalls = 0;
+    const listeners = new Map(), timers = [];
+    const document = {
+        addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
+        removeEventListener(n, fn) { listeners.get(n)?.delete(fn); }
+    };
+    const fire = (n, data) => { for (const fn of [...(listeners.get(n) || [])]) fn(Object.assign({type: n}, data)); };
+    const later = (ms, fn) => timers.push({at: now + ms, fn});
+    const emi = {
+        metaData() {},
+        initialize(options, success) {
+            initializeCalls++;
+            if (cached && sdkStarts === 0) { sdkStarts++; later(100, () => fire('on.sdkInitialization', {})); }
+            later(updateMs, () => {
+                cached = true; fire('on.consent.info.update'); fire('on.consent.status.not_required');
+                if (ios) { success(); }
+            });
+            if (!ios) { success(); }
+        }
+    };
+    const cordova = {plugins: {emiAdmobPlugin: emi}};
+    vm.runInNewContext(read('www/js/service.admobemi.js'), {
+        angular: {module() { return {factory(n, fn) { factory = fn; }}; }}, document, window: {cordova}, cordova,
+        ionic: {Platform: {isIOS: () => ios, isAndroid: () => !ios}},
+        console: {log() {}, info() {}, warn() {}}, setTimeout: (fn, ms) => later(ms, fn), clientConfig: {releaseAds: true}
+    });
+    let ready = 0;
+    factory({ga: {trackException() {}}}, {track() {}}).init({bannerAdUnit: 'fixture'}, () => ready++, () => {});
+    const run = until => { for (;;) { timers.sort((a, b) => a.at - b.at); const t = timers[0]; if (!t || t.at > until) break; timers.shift(); now = t.at; t.fn(); } };
+    return {run, state: () => ({ready, sdkStarts, initializeCalls})};
+}
+
+test('first launch starts the Ads SDK once UMP reports its result, on Android and iOS', () => {
+    for (const ios of [false, true]) {
+        for (const updateMs of [300, 1500, 4000]) {
+            const d = consentDevice({ios, updateMs});
+            d.run(30000);
+            const {ready, sdkStarts, initializeCalls} = d.state();
+            assert.equal(sdkStarts, 1, `${ios ? 'iOS' : 'Android'} update ${updateMs} ms: SDK never started`);
+            assert.equal(ready, 1);
+            assert.ok(initializeCalls <= 3, `bounded re-initialization, got ${initializeCalls}`);
+        }
+    }
+});

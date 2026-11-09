@@ -342,7 +342,12 @@ instance headroom remains unqualified. Normal retries retain the same original
 bytes (9 s attempts, backoff capped at 30 s). Deterministic invalid input parks
 until shutdown; corrupt stored/control reads remain eligible for retry.
 Body end/error/drop releases publication; a 10 s dormancy cap, no-waiter detection
-and shutdown also release it. The hook proves server body termination, not remote
+and shutdown also release it. A caller is a waiter from the moment it creates or joins an
+acquisition, and the waiters are counted together with the Ready announcement, under the lock
+callers create and join entries under. A waiter that takes the batch and returns at once, one not
+yet polled again when a fast provider is done, or a response that joins after the creator was
+cancelled but before Ready therefore never makes its response's raw look unwaited: on a loaded
+runner such an order published a group before the body ended (CI run 42379684133, 2026-11-07). The hook proves server body termination, not remote
 receipt. Quiesce rejects queued misses and a 34 s shutdown drain counts abandoned
 served originals. No durable copy means exact crash recovery can be impossible.
 
@@ -1708,7 +1713,7 @@ The table records the S10c state.
 | --- | --- | --- |
 | Routing | `SERVER2_NATIVE_FAMILIES` = comma list of `geocode`, `dsf`, `kma` (S15; reads `SERVER2_S3_*` since S15b-1), `kma-v000901`, `kma-v000902` (S17a), `town` (S17b) | Unset: every family on legacy; an unlisted family reads none of its native settings. Unknown or repeated entries fail startup. |
 | World versions | `SERVER2_WORLD_VERSIONS` | `v000901,v000902,v000903` |
-| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets. The importers use the same settings. |
+| S3 (shared) | `SERVER2_S3_REGION`, `SERVER2_S3_ENDPOINT`, `SERVER2_S3_BUCKET`, `SERVER2_S3_ACCESS_KEY_ID`, `SERVER2_S3_SECRET_ACCESS_KEY` | `ap-northeast-2`; `https://s3.<region>.amazonaws.com/`; bucket and static credentials required when any family is native. One 12-request admission for weather, air and budgets; warning work holds at most a third of it through the bulk lane (KMA-RESTART-READS). The importers use the same settings. |
 | Geocoder keys/endpoints | `GEOCODER_KAKAO_KEYS`, `GEOCODER_GOOGLE_KEY`, `GEOCODER_KAKAO_BASE_URL`, `GEOCODER_GOOGLE_BASE_URL` | Existing legacy names; `https://dapi.kakao.com`, `https://maps.googleapis.com`; the Google fingerprint rule applies to the production endpoint, as in legacy. |
 | Geocoder quotas | `SERVER2_GEOCODER_KAKAO_DAILY_UNITS` (per key), `SERVER2_GEOCODER_GOOGLE_DAILY_UNITS` | Required with that provider's key. One S08 window per key and UTC day, owner = domain-separated SHA-256 of the key. |
 | World weather | `VC_SECRET_KEY`, `SERVER2_WORLD_VC_DAILY_UNITS`, `SERVER2_WORLD_VC_QUOTA_ID`, `SERVER2_WORLD_VC_URL` | URL defaults to the legacy Timeline root `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/`. |
@@ -2187,7 +2192,14 @@ bound (30 s per call) and serves the next request; joined requests share it. Dat
 for is visible to it although it completed after the request instant. While a request arrived in the
 last 24 hours, a process capture checks every 10 minutes and acquires the current nationwide hour
 once if it is not stored, so the 24-hour station rows have no hourly gaps (legacy collected every
-10 minutes regardless of demand); that is at most 24 nationwide calls a day.
+10 minutes regardless of demand); that is at most 24 nationwide calls a day. Once the hour is
+stored, each check reads the hour's stored datasets (about 335 KB each, every one this hour; the
+cost grows with them) and acquires the hour again while the newest has a station one hour behind
+(KMA-AIR-REFRESH): AirKorea updates some stations after the hour's dataset is out, and on EC2 on 2026-11-07 two stations stayed an hour behind for 50 minutes. Stations
+further behind are out of service and never count; once every live station is current the hour is
+complete and the checks stop reading it. Per process that is one acquisition when the hour is
+missing and at most one per check while a station lags: at most seven logical acquisitions an hour,
+each with its pages and one retry, on the same AirKorea key allowance as the dust forecasts.
 
 Verification (local; test peers only): a pinned Node 16.20.2 + Mongoose 5.1.2 oracle
 ([provenance](../../server2/tests/domestic/fixtures/AIR-PROVENANCE.md)) records the legacy
@@ -2264,6 +2276,89 @@ rows of hours with no city page, `rnsHit`/`rnsCount` updates (legacy runs `_upda
 from `/gather` against the retired `KmaStnMinute`; the rules are ported but not wired, an open
 decision), and the deployed `ASOS_HISTORY_STATIONS` allowlist (every registry city station is a
 candidate).
+
+### S15b-2 restart read and station page products (2026-11-07)
+
+The EC2 restart comparison of #2866 showed the first request after a restart without minute
+observations or past days: the load restored every stored hourly and city page of the window one
+day after another, parsed each again (about 1.0 to 1.4 s per day on a t3.small), and read the
+minute pages last through latest-first pages that read the descriptor of every minute group of the
+day. AK chose the day product design on 2026-11-07 ([intent](../../intent/issue-2614-kma-restart-observe.md),
+[spec](../../specs/issue-2614-kma-restart-observe.md), [plan](../../plans/issue-2614-kma-restart-observe.md)).
+
+**Targeted reads.** `CatalogStore::lookup_members` reads one catalog and then only the named
+members' groups (one descriptor and one raw body each); `lookup_acquisition` is its one-member
+case, and `ordered_candidates`/`lookup_page` are unchanged for the other cursor readers.
+`Reader::listed_acquisitions` lists a catalog's acquisitions from the control object alone and is
+shared with the image forecast. The minute catalogs of the readers' 40 minutes are listed once; of
+each minute the newest acquisition (completion, then raw digest) is restored, and when it is not
+complete or does not parse the next one of that minute (at most three per minute), at most four
+members per read.
+
+**Day product.** One product per KST day D: source `kma-web`, kind `station-pages`, the AWS page
+key, partition `YYYYMMDD`, period D/0000, fetched at its making instant, published as a one-member
+group. It is gzip JSON of the parsed inputs of the hourly fold, not its output: `schema`,
+`parseRevision` (bumped when page parsing or the reduction to registry facts changes), `made`,
+`day`, `excluded`, `knownIds`, `excludedIds`, `cityIds`, a `facts` table and `pages`. Per kind and hour of D it holds the
+newest page as the process keeps it (`kind`, `hour`, `fetchedAt`, `sha256`, `rawId`, `rows`).
+AWS rows equal to their registry facts are indices into `facts`; city rows are whole. `cityIds` is
+the city set the reduced rows are whole for (the intersection of the sets the day's pages were
+reduced with). Every listed group of the day is accounted for: its pages, `knownIds` (the raw
+identities of the other groups found complete, such as superseded acquisitions) and `excludedIds`
+(a member of each group S06 excluded; `excluded` is their number). Values keep every
+stored value (undefined, dates, negative zero, NaN) and key order. A reader refuses a product that
+expands past 16 MiB.
+
+Any process that folds writes products: after a fold that recomputed the hourly part a
+`Flight::Product` (never awaited by a request) stores the day whose made-of (sorted page raw
+identities, `cityIds`, excluded identities, `parseRevision`) differs from the last product this process read or stored.
+Only days read without failure whose every hour is in the window are stored, each at most once per
+ten minutes per process. Products are not cached on disk.
+
+**Restart read.** In parallel: the product, AWS hourly and city partition LISTs, the seed and the
+minute catalogs. Then for the due days, newest first and eight at a time, the day's page and
+product catalogs are listed (control objects only) and, the first time a process reads the day,
+its newest product (completion, then digest) is read and decoded. A product whose `cityIds` does
+not cover the current city set (seed and city pages) is not used. Product pages the catalogs do not
+list are dropped (S3 is truth). A day is then compared: every listed group that is neither held nor
+known complete (the excluded ones again, and those published since) is restored, four per catalog
+read; a complete one becomes known, an incomplete one excluded. Of each kind and hour the newest
+complete new page (latest fetch; of one instant the smaller digest, the page a read of every
+acquisition keeps) that is newer than the held one is parsed and held. An unreadable product, an
+older schema or parse revision, a grown city set, no product, or a new newest page that does not
+parse gives the day's raw read as before, which records every complete group as known and every
+excluded one. When a fold's city set has grown past the set an AWS page was reduced for (a city
+page restored after the products, or acquired since, names another station), `Flight::Expand`
+reads those pages in full again by their raw identity, four per catalog read, and keeps each read
+as it completes; no request waits for it. A page whose read was started waits a minute before it
+is tried again; pages not reached before the read's 30 s limit, and due retries, are started by the
+next fold or request without waiting for a new hourly page. The next fold reduces the pages read
+in full for the new set. `Flight::Load` ends after the products, today's
+and yesterday's comparisons, the seed and the four newest minute pages. `Flight::LoadRest`, which
+no request waits for, then compares the other days (each marked read and the pages dirty) and
+restores the rest of the minute window. Reloads every five minutes compare with the pages held.
+
+**S16.** Answers, the station page input identities and the response-first durability set are
+unchanged: a page restored from a product carries the raw identity and digest of the stored page.
+A day is partial while one of its listed groups is excluded, as a raw read with excluded groups is.
+Excluded groups are checked again at every read of the day (a restart, and each reload), so a
+repaired group completes the day and its product is stored again without it. A group published
+after a product, older than its pages, is unaccounted for and checked like any new group, so a
+restart from products counts a day complete exactly when a raw read would, given that a complete
+raw object is never deleted. `settled()` counts `LoadRest`, `Product`, `Expand` and a due product
+comparison as busy, and is false while a held AWS page is reduced for a city set that does not
+cover the last fold's (its past rows of a city station would be missing).
+Right after the first deployment the window's oldest day has no product (some of its hours were
+already out of the window) and is read from its raw pages after the first answer.
+
+Verification (local, S06 loopback S3 peer, no provider): targeted member GET counts, a restart over
+200 stored minute groups, the value codec round trip, a restart with unreachable providers answering
+168 past hourly pages and minute rows on its first request without raw page GETs, a later page
+restored alone and equal to a cold raw read, unusable products replaced by the raw pages and stored
+again, two processes' products, unsettled answers during the rest of the read, a day with an
+S06-excluded group kept partial, a repaired group completing its day (and recording summaries), a
+station joining the city set after the products (also with failing and with slow full reads), an
+incomplete newest minute acquisition, and the disk cache exclusion.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
@@ -2581,6 +2676,7 @@ a current observation must carry no recovery sentinel (`t1h` -50 or `reh` -1 is 
 | --- | --- | --- |
 | Latest grid publication (`getUltraSrtNcst`, `getUltraSrtFcst` at HH30, `getVilageFcst`) | Not in S3 for the cell | 5 minutes |
 | Grid backfill (earlier publications: 23 current, 23 ultra-short, 7 short; S14 `schedule`) | Missing publications, in one owned pass per cell, family and latest publication (3 acquisitions in flight, 8 passes in their own pool); the request does not wait | Each pass at most hourly. Each publication shares the latest acquisition's flight and 5-minute retry bound. |
+| Previous short publication (`getVilageFcst`, observed response only; [#2614](#2614-kma-answer-parity-current-row-sentinels-and-yesterday)) | From HH+2:10 to HH+2:59, when the latest starts after the current three-hour slot HH; also when a lagging observation shows the slot before the clock's as current and the latest starts after it. Only when it is not in S3 for the cell | 3 hours: one attempt per cell and publication |
 | Latest short RSS (`wid/queryDFS.jsp`) | Not in S3 for the cell | 5 minutes |
 | Latest mid publications (`getMidFcst`, `getMidLandFcst`, `getMidTa` at the 06/18 `tmFc`) | A region legacy collects lacks the latest publication | 5 minutes |
 | Forecast-zone list (`getFcstZoneCd`) | Until one complete readable process refresh; success replaces memory, failure remains demand-retryable (#2819 D1) | 5 minutes after an admitted attempt; stop after success |
@@ -3034,6 +3130,13 @@ S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `
 is not listed now reads as empty. Before, the absent catalog's lookup answered "incomplete", so a
 day without city pages never loaded its hourly pages from S3 and was read again on every load.
 
+Since the [restart read](#s15b-2-restart-read-and-station-page-products-2026-11-07) (2026-11-07) a
+station-page day can be read from its day product and the day catalogs instead of every raw page.
+The input identities are the same, a product carries the S06 exclusions of the read it was made
+from, and a station fold is not complete while the rest of a restart read or a product comparison
+is still running.
+The first answer after a start therefore records no summary; a later request does.
+
 **Last-year lookup** (`summary::Lookup::last_year`, not wired to a route). The same date a year
 earlier (Feb 29 → Feb 28), then ±1..±3, earlier first. At each date: the town's grid summary, then
 the station's ASOS summary (when missing, one data.go.kr daily range `[base-3, base+3]` through the
@@ -3383,8 +3486,15 @@ S3 and answering natively with the Express envelope (JSON with a weak ETag, the 
 
 The `kma` and `kma-v000901` entries also claim the used direct nation routes
 `/v000903/nation/:nation` and `/v000901/nation/:nation`. The nation backend calls
-fifteen native KMA assemblies using legacy version rules, concurrently with one absolute
-three-second deadline; it never calls legacy or opens a separate provider source.
+fifteen native KMA assemblies using legacy version rules, concurrently; it never calls legacy or
+opens a separate provider source. Air and the national narrative keep a three-second budget
+(`NATION_INPUTS`). Each city keeps its source's own request budget for its inputs (the observed
+source waits about 2.9 s for acquisitions and gives stored reads up to 8 s); the city answers,
+whose assemblies queue for the KMA CPU admission, have one absolute eight-second deadline
+(`NATION_DEADLINE`, KMA-NATION-DEADLINE; legacy gave each child request 9 s). The direct route has
+no outer deadline of its own. With the earlier three-second composition deadline the queued
+assemblies were cut in 6 of 13 steady compositions on EC2 (2026-11-07) and answered the legacy
+error page.
 The child replies retain legacy city order after removing `airInfo`/`airInfoList`.
 Nation children share the same `KmaBackend` and S16 recorder as direct weather requests.
 When a complete snapshot produces compatible captured `getPastMid` rows, the shared backend
@@ -3731,7 +3841,12 @@ Exact reverse coordinates retain the geocoder's memory-only contract.
 
 The KMA source and request-driven collector share WarningStore. The persisted S12
 feed hook is installed before the collector enters Arc; zone publication precedes
-feed publication. There is no startup collection. Notice serving constructs no
+feed publication. The store and the feed use the bulk lane of the shared S3 admission
+(KMA-RESTART-READS): together they hold at most a third of its permits. On 2026-11-07 the
+first request after a restart started the collector, whose progress load, zone replay and
+publications made 859 S3 requests in 9 s while the request's observation reads waited past
+their bound. With the lane, request reads keep two thirds of the admission and the warning
+work finishes later. There is no startup collection. Notice serving constructs no
 Translator; publication/translation stays in the CLI. Push starts its existing
 registration writer only, with success after durable S3 journal publication.
 
@@ -3899,6 +4014,64 @@ in that specific smoke and covered separately by source/history regressions.
 The [proposed contract](diagrams/server2-late-publication.html) and
 [editable source](diagrams/server2-late-publication.sequence.json) preserve their
 pre-implementation base identity; they are not execution or readiness evidence.
+
+### #2614 KMA answer parity: current row, sentinels and yesterday
+
+AK defined client validation on 2026-11-07: a server2 answer gives the client all the data the
+client receives today, except parts left out because their provider is slow; legacy omission
+rules are last-resort safeguards. An EC2 parity run that day (server2 from an empty bucket against
+the production API, five places, 18:31–19:29 KST) found these defects independent of what S3 holds
+([intent](../../intent/issue-2614-kma-response-parity.md),
+[acceptance](../../specs/issue-2614-kma-response-parity.md)). Under ASOS-primary:
+
+- **Current row.** A three-hour row is past once its interval has passed (label + 3 h ≤ now). The
+  current-time row (label ≤ now < label + 3 h) keeps the forecast of the newest publication
+  covering it, with observed fields merged over it as legacy `_mergeShortWithCurrent` does, so its
+  `pop`, `wav`, `s06` and `r06`, and today's `tmn`/`tmx` where legacy keeps them, reach the client
+  again (`short::past_slot`). So does the row the client shows as current: `currentIndex` follows
+  the observation's time, so a lagging observation (a grid nowcast before HH:40 at a slot
+  boundary, or a late live reading) marks a row already past by the clock. The wipe applies
+  `convertUnits`'s rule to the same inputs, which are final by then (`short::shown_current`,
+  `present::marked_current`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
+  keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
+  rain or snow text beside a measured amount.
+- **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
+  also requires the previous publication, the newest covering slot HH (`required::foreground`).
+  When the observation lags, the row shown as current is the slot before the clock's, and the
+  source requires the publication covering it as well: `shown::publications` applies
+  `present::marked_current` to the current observation as the chain will build it. The station's
+  time decides it as soon as the station state is in (`shown::station_time`); without a station
+  reading, the newest current document does, once the current answer's stored read and latest
+  publication have settled. Neither waits for today's earlier current acquisitions (review
+  RP-lagging-current-publication); when the latest observation is unavailable, the newest stored
+  one decides, and an earlier one still being acquired is not waited for. Each of these
+  publications is read when listed, otherwise acquired as owned single-flight work under the
+  request's wait, with a three-hour retry bound per cell and publication. Each publication the request needs starts as
+  soon as that is known, whatever else is still being acquired: an absent one at once, a listed
+  one when the stored read proves it unusable. A slow acquisition, of the latest or of another
+  absent publication, therefore cannot leave the others no time (review
+  RP-previous-acquisition-starvation). They are always inside the 54 h read window.
+  This adds at most one `getVilageFcst` acquisition (one or two pages of 999 rows) per cell and
+  publication, at most 8 a day, and only when that publication was not stored while it was the
+  latest: a cell first requested in such a window, or after a failed or unusable acquisition. A
+  failure leaves the row with legacy's values for a missing publication.
+- **Sentinels.** A missing probability is 0 on every row (legacy `adjustShort`, so the app never
+  prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
+  ASOS fills without a grid observation (a row of legacy's validation template) carries wind
+  components −100, the value legacy's three-hour summary skips, instead of the template's −1.
+- **Yesterday.** Under ASOS-primary only, the comparison adds one branch that legacy lacks
+  (`compare_sources`; legacy mode keeps legacy's `can_compare`, which the kma-rich paired replay
+  of frozen legacy inputs checks): the live reading of station X in
+  the current hour (`KMA_STATION_LIVE`) and X's ASOS hour exactly 24 h earlier (`KMA_ASOS`) are one
+  thermometer, so `current.yesterday.t1h` is sent. Other stations, hours and sources keep the
+  safeguard, a stored grid yesterday row keeps its precedence, and `comparisonAvailable: true`
+  still short-circuits. In the run every pair was such a pair.
+
+`adjustShort` later drops trailing rows without a temperature; that moves the mark only when the
+current slot and every later row have none, so the wipe's rule matches `convertUnits` otherwise.
+Past-slot forecast values, ASOS precipitation rules and fetching older publications for past rows
+wait for AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`,
+`present`, `required` and `previous_short_tests` (library).
 
 ### #2819 D1 forecast-zone recovery
 

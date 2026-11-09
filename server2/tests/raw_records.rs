@@ -1,3 +1,5 @@
+#[path = "storage/bulk_lane.rs"]
+mod bulk_lane;
 #[path = "storage/codec.rs"]
 mod codec;
 #[path = "storage/credentials.rs"]

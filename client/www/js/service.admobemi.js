@@ -102,9 +102,19 @@ angular.module('service.admobemi', [])
                 console.info({component: 'admob', operation: 'initialize', result: 'ready'});
                 success();
             });
-            document.addEventListener('on.banner.failed.load', function (data) {
-                console.log('on banner failed load');
+            document.addEventListener('on.banner.failed.load', function (event) {
                 lifecycle('failed');
+                // Keep only the SDK's numeric error code (no fill, network, invalid request...); the native
+                // message can contain ad unit IDs. Stringify so the WebView console shows it in logcat/Xcode.
+                var code = event && event.code;
+                if (typeof code !== 'number' || Math.floor(code) !== code || code < 0 || code > 999) {
+                    code = undefined;
+                }
+                console.info(JSON.stringify({component: 'admob', operation: 'banner_load', cause: 'load_failed',
+                    error_code: code === undefined ? 'unavailable' : code, result: 'failed'}));
+                if (code !== undefined) {
+                    Monetization.track('ad_load_error', {ad_format: 'banner', error_code: code});
+                }
             });
 
             var options = {
@@ -115,7 +125,7 @@ angular.module('service.admobemi', [])
 
             /**
              * The plugin starts the Ads SDK only when UMP already allows ads at the moment initialize runs. On a
-             * first launch the consent result arrives later (Android success events, the iOS callback after the
+             * first launch the consent result arrives later (Android status events, the iOS callback after the
              * form), so the SDK stays off until the next launch. Once the consent flow has finished, initialize
              * again: consent is cached by then, and the plugin starts the SDK only if UMP allows ads.
              */
@@ -158,8 +168,11 @@ angular.module('service.admobemi', [])
                 onConsentError(data);
             });
 
-            // iOS calls back when UMP finished (SDK started, or the consent form was answered).
-            plugin().initialize(options, startAfterConsent, onConsentError);
+            // iOS calls back when UMP finished (SDK started, or the consent form was answered). Android calls back
+            // at once, before the consent update, so a retry from that callback would run before consent is cached
+            // and use up the only retry: the first session then never starts the SDK (#2871). Android waits for
+            // the consent status events above instead.
+            plugin().initialize(options, ionic.Platform.isIOS() ? startAfterConsent : function () {}, onConsentError);
         };
 
         return obj;

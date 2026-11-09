@@ -1354,6 +1354,41 @@ pub fn convert_0h_to_24h(cx: &mut Cx) -> Flow {
     }
     Flow::Next
 }
+/// A three-hour row whose whole interval has passed (`label + 3 h <= now`). The current-time row
+/// (`label <= now < label + 3 h`) is not past: under ASOS-primary it keeps the forecast of the
+/// newest publication covering it, with the observed fields merged over it as legacy
+/// `_mergeShortWithCurrent` does (AK 2026-11-07 client validation).
+fn past_slot(row: &V, now: f64) -> bool {
+    policy::slot(row).is_some_and(|key| policy::instant(&s(&key)) + 3. * time::HOUR <= now)
+}
+/// The rows `convertUnits` will mark `currentIndex`, the row the client shows as current: it
+/// follows the observation's time, so a lagging observation marks a row past by the clock, and
+/// that row keeps its forecast too. The rule is `present::marked_current` over the same inputs,
+/// final here: `getCurrent` and `getKmaStnMinuteWeather` set the current's date, time and station
+/// minute, `convert0Hto24H` the rows' times, and no later step writes them or reorders the rows.
+/// `adjustShort` only drops trailing rows without a temperature, which moves the mark only when
+/// the current slot and every later row have none. Without a current object, or when the rule
+/// throws there, `convertUnits` marks nothing earlier than the clock-current row either.
+fn shown_current(cx: &Cx, rows: &[V]) -> Vec<bool> {
+    let current = cx.r("current");
+    if !current.truthy() {
+        return vec![false; rows.len()];
+    }
+    catch(|| {
+        let current_date = super::present::current_date_obj(&current);
+        rows.iter()
+            .enumerate()
+            .map(|(i, row)| {
+                super::present::marked_current(
+                    &super::present::row_date_obj(row),
+                    rows.get(i + 1),
+                    &current_date,
+                )
+            })
+            .collect()
+    })
+    .unwrap_or_else(|_| vec![false; rows.len()])
+}
 /// `_mergeShortWithCurrent(shortList, currentList)`.
 fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
     let (req_date, _) = cx.time_value(9.);
@@ -1403,12 +1438,22 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
             slots.entry((d.to_string(), tm.to_string())).or_insert(t);
         }
     }
-    for item in short.items() {
-        let historical =
-            primary && policy::slot(&item).is_some_and(|key| policy::instant(&s(&key)) <= cx.now);
+    let rows = short.items();
+    let shown = if primary {
+        shown_current(cx, &rows)
+    } else {
+        vec![false; rows.len()]
+    };
+    for (index, item) in rows.into_iter().enumerate() {
+        let historical = primary && past_slot(&item, cx.now) && !shown[index];
         if historical {
             // No past SHRT/RSS fallback. Unsupported historical forecast-only fields
             // remain explicit sentinels; measured rain below carries its true 3h interval.
+            // The forecast totals kept beside the amounts go too, so that finalization and the
+            // rain/snow texts see the cleared amount rather than the forecast (#2614 parity).
+            for field in ["r06", "s06"] {
+                precip::keep(&item, field, None);
+            }
             for (field, missing) in [
                 ("pop", -1.),
                 ("pty", -1.),
@@ -1656,10 +1701,10 @@ pub fn adjust_short(cx: &mut Cx) -> Flow {
     let days = Arr::new();
     let n50 = V::Num(-50.);
     for row in list.items() {
+        // "과거 short가 없는 경우 -1로 client로 넘어가는 것을 방지함": legacy sends every missing
+        // probability as 0, ASOS-filled past rows included, so the app never prints "-1%".
         if row.get("pop").nullish() || loose_eq(&row.get("pop"), &V::Num(-1.)) {
-            let past_observed = policy::observations_primary(&cx.req)
-                && policy::slot(&row).is_some_and(|key| policy::instant(&s(&key)) <= cx.now);
-            row.set("pop", if past_observed { -1. } else { 0. });
+            row.set("pop", 0.);
         }
         let day = day_summary(&days, &row.get("date"));
         if day.get("taMax").is_undef() {

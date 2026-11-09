@@ -19,6 +19,7 @@
 //! the next request. Nothing runs without a request.
 use super::asos::{AsosFetched, AsosStore};
 use super::doc::{Doc, Val};
+use super::observe_product::{self as product, DayProduct, MadeOf, StoredPage};
 use super::pages::{merge_aws_city, parse_aws, parse_city};
 use super::records::Reader;
 use super::representative::{self, Verdict};
@@ -31,7 +32,7 @@ use crate::domestic::publication::Publication;
 use crate::domestic::{Acquired, DomesticError};
 use crate::gateway::{BoxFuture, OrderedJson};
 use crate::history::{IndexListing, schedule};
-use crate::storage::{CatalogStore, ProviderKey, RawRecord};
+use crate::storage::{CatalogId, CatalogStore, ProviderKey, RawRecord};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -78,6 +79,17 @@ const ONGOING_MS: f64 = 2. * 3_600_000.;
 const MEMO_KEEP: Duration = Duration::from_secs(7 * 3600);
 /// Minute pages kept in memory (the readers look back 20 minutes).
 const MINUTE_KEEP_MS: f64 = 40. * 60_000.;
+/// Minute pages restored before the load ends (the newest; the rest follow in
+/// [`Flight::LoadRest`]), and the most members of one targeted read.
+const MINUTE_FIRST: usize = 4;
+/// A day's product is stored at most once per this interval by one process.
+const PRODUCT_EVERY: Duration = Duration::from_secs(600);
+/// A reduced AWS hourly page whose full read was tried is read again after this long (an S3
+/// read, retried as a failed ASOS S3 read is).
+const EXPAND_RETRY: Duration = Duration::from_secs(60);
+/// Acquisitions of one minute tried, newest first, when a newer one is not complete or does not
+/// parse.
+const MINUTE_CANDIDATES: usize = 3;
 /// A minute page this recent is held: it answers while the next one is acquired beside the
 /// request (KMA-MINUTE-PAGE). The readers look back 20 minutes.
 const MINUTE_HELD_MS: i64 = 20 * 60_000;
@@ -173,6 +185,12 @@ fn page_ids(ids: &PageIds) -> Arc<Vec<PageId>> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Flight {
     Load,
+    /// The rest of a load after the answer: the other days' missing pages and minute pages.
+    LoadRest,
+    /// Store the day products whose pages changed.
+    Product,
+    /// Read AWS hourly pages in full again whose reduction misses a city station.
+    Expand,
     Fold,
     Geocode,
     Minute,
@@ -204,8 +222,19 @@ struct Pages {
     ids: PageIds,
     minute: BTreeMap<Publication, Arc<Vec<Doc>>>,
     days: HashMap<u32, std::time::Instant>,
-    /// Days whose latest S3 read failed (S16 completeness; a later success clears them).
+    /// Days whose latest S3 read failed or was partial (S16 completeness; a later complete read
+    /// clears them).
     failed_days: std::collections::BTreeSet<u32>,
+    /// Days whose latest S3 read failed (no product is stored for them).
+    unreadable: BTreeSet<u32>,
+    /// Raw identities of the listed groups of each read day found complete beyond the held
+    /// pages (superseded ones; S16 accounts for every listed group).
+    known: BTreeMap<u32, BTreeSet<String>>,
+    /// Raw identities of a member of each listed group of a read day S06 excluded (S16; checked
+    /// again at every read of the day).
+    excluded: BTreeMap<u32, BTreeSet<String>>,
+    /// AWS hourly pages kept reduced to registry facts outside this city set.
+    reduced: BTreeMap<Publication, Arc<BTreeSet<String>>>,
     minute_read: Option<std::time::Instant>,
     /// Pages changed since the last fold.
     dirty: bool,
@@ -237,6 +266,14 @@ struct State {
     registry_id: Option<(String, f64)>,
     /// The hourly part of the last fold (registry, hourly rows, national rows).
     hourly_fold: Option<HourlyFold>,
+    /// What the last product of each day this process read or stored is made of.
+    products: HashMap<u32, MadeOf>,
+    /// When this process last tried to store each day's product.
+    product_attempts: HashMap<u32, std::time::Instant>,
+    /// A fold recomputed the hourly part since the products were last compared.
+    product_due: bool,
+    /// When this process last read each reduced AWS hourly page in full again.
+    expand_attempts: HashMap<Publication, std::time::Instant>,
 }
 #[derive(Clone)]
 struct HourlyFold {
@@ -245,6 +282,8 @@ struct HourlyFold {
     national: Arc<HashMap<String, Vec<(f64, Doc)>>>,
     unresolved: Vec<String>,
     pages: Arc<Vec<PageId>>,
+    /// The city set the hourly rows were kept in full for.
+    cities: Arc<BTreeSet<String>>,
 }
 
 pub struct Observations<T> {
@@ -461,6 +500,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(rx) = self.fold_if_dirty(now_ms) {
             Self::wait(vec![rx], until).await;
         }
+        // A product comparison a finishing one missed, and a due full read of reduced pages.
+        if self.state().product_due && self.flight(&Flight::Product).is_none() {
+            self.want_products(now_ms);
+        }
+        self.expand_due();
         // Before the first fold the carried seed alone is the registry (no pages yet).
         Some(self.state().folded.clone().unwrap_or_else(seed_only))
     }
@@ -474,8 +518,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 rx.clone()
             })
     }
-    /// Read hourly/city day partitions of the 8-day window and the latest minute pages from S3
-    /// (at start and every [`RELOAD`]).
+    /// Read the hourly/city pages of the 8-day window and the latest minute pages from S3 (at
+    /// start and every [`RELOAD`]). The load ends once the request can answer: every day's
+    /// stored product (the parsed pages of that day), the pages of today and yesterday the
+    /// products lack, the seed and the newest minute pages. [`Flight::LoadRest`] then restores the
+    /// other days' missing pages and the rest of the minute window; no request waits for it.
     fn load(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
         let stale = {
             let s = self.state();
@@ -492,180 +539,607 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let deadline = Instant::now() + READ_DEADLINE;
         let first = schedule::from_ms(now_ms - HOURLY_WINDOW_HOURS * 3_600_000 - 3_600_000);
         let today = schedule::from_ms(now_ms);
-        let mut days = Vec::new();
-        let mut d = Publication::new(first.date(), 0);
-        while let Some(day) = d {
-            if day.date() > today.date() {
-                break;
-            }
-            days.push(day.date());
-            d = day.add_hours(24);
-        }
-        // Published day catalogs of both page kinds (S16): a day whose catalog is not listed has
-        // nothing published and reads as empty, as S14/S15b listings treat absent catalogs. A
-        // failed listing keeps every day to its catalog lookup.
+        let days = window_days(now_ms);
+        // Published day catalogs of both page kinds and of the products (S16): a day whose catalog
+        // is not listed has nothing published and reads as empty, as S14/S15b listings treat
+        // absent catalogs. A failed listing keeps every day to its catalog read.
         let months = super::records::months(schedule::to_ms(first) as f64, now_ms as f64);
         let (aws_k, city_k) = (aws_key(), city_key());
-        let (listed_hourly, listed_city) = tokio::join!(
+        let (listed_products, listed_hourly, listed_city, seed, mut minutes) = tokio::join!(
+            self.reader
+                .partitions("kma-web", product::KIND, &aws_k, &months, deadline),
             self.reader
                 .partitions("kma-web", "aws-hourly", &aws_k, &months, deadline),
             self.reader
                 .partitions("kma-web", "city-obs", &city_k, &months, deadline),
+            self.read_seed(now_ms, deadline),
+            self.minute_entries(now_ms, deadline),
         );
+        self.apply_seed(seed);
         let listed = |l: &Result<Vec<String>, crate::storage::Error>, p: &str| {
             l.as_ref().map_or(true, |l| l.iter().any(|x| x == p))
         };
-        for day in days {
-            let fresh = {
-                let s = self.state();
-                s.pages.days.get(&day).is_some_and(|at| {
-                    day < today.date() && at.elapsed() < Duration::from_secs(86_400)
-                        || at.elapsed() < RELOAD
+        // Due days newest first: their catalogs and products, LOOKUPS at a time.
+        let due: Vec<(u32, [bool; 3])> = {
+            let s = self.state();
+            days.iter()
+                .rev()
+                .filter(|day| {
+                    !s.pages.days.get(day).is_some_and(|at| {
+                        **day < today.date() && at.elapsed() < Duration::from_secs(86_400)
+                            || at.elapsed() < RELOAD
+                    })
                 })
-            };
-            if fresh {
-                continue;
-            }
-            let partition = format!("{day:08}");
-            let (aws, city_k) = (aws_key(), city_key());
-            let (want_hourly, want_city) = (
-                listed(&listed_hourly, &partition),
-                listed(&listed_city, &partition),
-            );
-            let (hourly, city) = tokio::join!(
-                async {
-                    if want_hourly {
-                        self.reader
-                            .raw_counted("kma-web", "aws-hourly", &aws, &partition, deadline)
-                            .await
-                    } else {
-                        Ok((Vec::new(), 0))
-                    }
-                },
-                async {
-                    if want_city {
-                        self.reader
-                            .raw_counted("kma-web", "city-obs", &city_k, &partition, deadline)
-                            .await
-                    } else {
-                        Ok((Vec::new(), 0))
-                    }
-                },
-            );
-            let (Ok((hourly, hourly_excluded)), Ok((city, city_excluded))) = (hourly, city) else {
-                self.state().pages.failed_days.insert(day);
-                continue;
-            };
-            // S16: a group S06 excluded makes the day's read partial.
-            let partial = hourly_excluded + city_excluded > 0;
-            let parsed = crate::observability::spawn_blocking(move || {
-                (
-                    hourly
-                        .iter()
-                        .filter_map(|a| parse_hourly(a))
-                        .collect::<Vec<_>>(),
-                    city.iter()
-                        .filter_map(|a| parse_city_record(a))
-                        .collect::<Vec<_>>(),
-                )
-            })
-            .await
-            .unwrap_or_default();
+                .map(|day| {
+                    let p = format!("{day:08}");
+                    (
+                        *day,
+                        [
+                            listed(&listed_hourly, &p),
+                            listed(&listed_city, &p),
+                            listed(&listed_products, &p),
+                        ],
+                    )
+                })
+                .collect()
+        };
+        use futures_util::StreamExt;
+        let mut reads: Vec<DayRead> = futures_util::stream::iter(due)
+            .map(|(day, want)| self.list_day(day, want, deadline))
+            .buffered(super::records::LOOKUPS)
+            .collect()
+            .await;
+        self.apply_products(&mut reads);
+        // Today and yesterday are compared now; the other days after the answer.
+        let yesterday = today.add_hours(-24).map_or(today.date(), Publication::date);
+        let (now, rest): (Vec<DayRead>, Vec<DayRead>) =
+            reads.drain(..).partition(|r| r.day >= yesterday);
+        crate::history::join_all(
+            now.into_iter()
+                .map(|r| self.complete_day(r, deadline))
+                .collect(),
+        )
+        .await;
+        let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
+        let later = minutes.split_off(minutes.len().min(MINUTE_FIRST));
+        self.restore_minutes(minutes, floor, deadline).await;
+        {
             let mut s = self.state();
-            for (p, rows, at, sha, raw_id) in parsed.0 {
-                if s.pages
-                    .hourly_at
-                    .get(&p)
-                    .is_none_or(|previous| *previous < at)
-                {
-                    s.pages.hourly.insert(p, rows);
-                    s.pages.hourly_at.insert(p, at);
-                    s.pages.ids.insert(("aws-hourly", p), (at, sha, raw_id));
-                }
-            }
-            for (p, rows, at, sha, raw_id) in parsed.1 {
-                if s.pages
-                    .ids
-                    .get(&("city-obs", p))
-                    .is_none_or(|(previous, _, _)| *previous < at)
-                {
-                    s.pages.city.insert(p, rows);
-                    s.pages.ids.insert(("city-obs", p), (at, sha, raw_id));
-                }
-            }
-            s.pages.days.insert(day, std::time::Instant::now());
-            if partial {
-                s.pages.failed_days.insert(day);
-            } else {
-                s.pages.failed_days.remove(&day);
-            }
+            s.pages.minute.retain(|k, _| *k > floor);
+            s.pages.minute_read = Some(std::time::Instant::now());
+            s.pages.dirty = true;
+            let oldest = first.date();
+            s.pages.days.retain(|d, _| *d >= oldest);
+            s.pages.failed_days.retain(|d| *d >= oldest);
+            s.pages.unreadable.retain(|d| *d >= oldest);
+            s.pages.excluded.retain(|d, _| *d >= oldest);
+            s.pages.known.retain(|d, _| *d >= oldest);
+            s.products.retain(|d, _| *d >= oldest);
+            s.product_attempts.retain(|d, _| *d >= oldest);
+        }
+        if !rest.is_empty() || !later.is_empty() {
+            let _ = self.start(Flight::LoadRest, Duration::ZERO, move |this| {
+                Box::pin(async move {
+                    for day in rest {
+                        this.complete_day(day, Instant::now() + READ_DEADLINE).await;
+                    }
+                    this.restore_minutes(later, floor, Instant::now() + READ_DEADLINE)
+                        .await;
+                })
+            });
+        }
+    }
+    /// Use the seed read (S16: a failed read leaves the registry unproven; the previous seed stays
+    /// in use).
+    fn apply_seed(&self, seed: Result<(Option<Vec<Doc>>, bool), ()>) {
+        let mut s = self.state();
+        s.seed_failed = !matches!(seed, Ok((_, false)));
+        if let Ok((Some(seed), _)) = seed
+            && s.seed
+                .as_ref()
+                .is_none_or(|old| old.len() != seed.len() || **old != *seed)
+        {
+            s.seed = Some(Arc::new(seed));
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
         }
-        {
-            let mut s = self.state();
-            s.pages.days.retain(|d, _| *d >= first.date());
-            s.pages.failed_days.retain(|d| *d >= first.date());
+    }
+    /// List one day's page catalogs (control objects only) and, the first time this process
+    /// reads the day, read and decode its newest product.
+    async fn list_day(&self, day: u32, want: [bool; 3], deadline: Instant) -> DayRead {
+        let partition = format!("{day:08}");
+        let known = self.state().pages.days.contains_key(&day);
+        let list = |kind: &'static str, key: ProviderKey, wanted: bool| {
+            let partition = partition.clone();
+            async move {
+                if !wanted {
+                    return Ok(None);
+                }
+                let id = super::records::catalog("kma-web", kind, &key, &partition)?;
+                let entries = self.reader.listed_acquisitions(&id, deadline).await?;
+                Ok::<_, crate::storage::Error>(Some((id, entries)))
+            }
+        };
+        let (hourly, city, products) = tokio::join!(
+            list("aws-hourly", aws_key(), want[0]),
+            list("city-obs", city_key(), want[1]),
+            list(product::KIND, aws_key(), want[2] && !known),
+        );
+        let listed = match (hourly, city) {
+            (Ok(hourly), Ok(city)) => {
+                let mut pages = Vec::new();
+                for (kind, listed) in [("aws-hourly", hourly), ("city-obs", city)] {
+                    let Some((id, entries)) = listed else {
+                        continue;
+                    };
+                    for (_, _, e) in entries {
+                        if let Some(page) = ListedPage::new(kind, &id, e) {
+                            pages.push(page);
+                        }
+                    }
+                }
+                Some(pages)
+            }
+            _ => None,
+        };
+        let newest = match (&listed, products) {
+            (Some(_), Ok(Some((id, entries)))) => entries
+                .into_iter()
+                .max_by(|a, b| {
+                    (a.0, &a.2.identity.raw_sha256).cmp(&(b.0, &b.2.identity.raw_sha256))
+                })
+                .map(|(_, _, e)| (id, e.identity)),
+            _ => None,
+        };
+        let product = match newest {
+            Some((id, member)) => self.read_product(&id, member, day, deadline).await,
+            None => None,
+        };
+        DayRead {
+            day,
+            listed,
+            product,
+            base: None,
         }
-        // The newest registry seed, if one was imported.
-        let seed = self.read_seed(now_ms, deadline).await;
-        // S16: a failed seed read leaves the registry unproven (the previous seed stays in use).
-        self.state().seed_failed = !matches!(seed, Ok((_, false)));
-        if let Ok((Some(seed), _)) = seed {
-            let mut s = self.state();
-            if s.seed
-                .as_ref()
-                .is_none_or(|old| old.len() != seed.len() || **old != *seed)
-            {
-                s.seed = Some(Arc::new(seed));
-                s.pages.dirty = true;
-                s.pages.hourly_dirty = true;
+    }
+    /// One stored product of `day`, decoded; None when it cannot be read or is not a product of
+    /// this schema and parse revision.
+    async fn read_product(
+        &self,
+        id: &CatalogId,
+        member: crate::storage::RecordId,
+        day: u32,
+        deadline: Instant,
+    ) -> Option<DayProduct> {
+        let read = self
+            .reader
+            .members(id, std::slice::from_ref(&member), deadline)
+            .await
+            .ok()
+            .flatten()?;
+        let bytes = read.first()?.first()?.bytes.clone();
+        crate::observability::spawn_blocking(move || DayProduct::decode(&bytes, day))
+            .await
+            .ok()
+            .flatten()
+    }
+    /// Hold the pages of each read product that its day catalogs list (S3 is truth), unless the
+    /// product's city set does not cover the current one (its reduced rows may lack a city
+    /// station's fields): such a day reads its raw pages. A held product's day is then compared
+    /// with its catalogs; a day this process read before is compared with what it holds.
+    fn apply_products(&self, reads: &mut [DayRead]) {
+        let mut s = self.state();
+        let cities = {
+            let seed = s
+                .seed
+                .clone()
+                .unwrap_or_else(|| Arc::new(super::seed::embedded().docs.clone()));
+            let held = s.pages.city.values().map(|rows| &**rows);
+            let stored = reads
+                .iter()
+                .filter_map(|r| r.product.as_ref())
+                .flat_map(|p| p.pages.iter())
+                .filter(|page| page.kind == "city-obs")
+                .map(|page| &*page.rows);
+            city_ids(Some(&seed), held.chain(stored))
+        };
+        for r in reads.iter_mut() {
+            if s.pages.days.contains_key(&r.day) {
+                r.base = Some(Accounted {
+                    known: s.pages.known.get(&r.day).cloned().unwrap_or_default(),
+                    excluded: s.pages.excluded.get(&r.day).cloned().unwrap_or_default(),
+                });
+                continue;
+            }
+            let (Some(listed), Some(stored)) = (&r.listed, r.product.take()) else {
+                continue;
+            };
+            if !stored.city_ids.is_superset(&cities) {
+                continue;
+            }
+            s.products.insert(r.day, stored.made_of());
+            let reduced = Arc::new(stored.city_ids.clone());
+            let mut stored = stored;
+            for page in std::mem::take(&mut stored.pages) {
+                if !listed.iter().any(|l| l.raw_id == page.raw_id) {
+                    continue;
+                }
+                let reduced = (page.kind == "aws-hourly").then(|| reduced.clone());
+                let held = (
+                    page.hour,
+                    page.rows,
+                    page.fetched_at_ms,
+                    page.sha256,
+                    page.raw_id,
+                );
+                hold(&mut s.pages, page.kind, held, reduced);
+            }
+            r.base = Some(Accounted {
+                known: stored.known,
+                excluded: stored.excluded,
+            });
+            s.pages.dirty = true;
+            s.pages.hourly_dirty = true;
+        }
+    }
+    /// Bring one day up to its catalogs. With pages held for it (a product, or an earlier read),
+    /// only the listed groups not accounted for are restored: the excluded ones again and the new
+    /// ones, and a new page newer than the held one of its kind and hour is parsed and held.
+    /// Otherwise, or when such a page does not parse, every page of the day is read as before
+    /// (the newest complete page of each hour).
+    async fn complete_day(&self, r: DayRead, deadline: Instant) {
+        let DayRead {
+            day, listed, base, ..
+        } = r;
+        let Some(listed) = listed else {
+            self.day_failed(day);
+            return;
+        };
+        if let Some(base) = base {
+            match self.compare_day(day, &listed, base, deadline).await {
+                Ok(Some((changed, accounted))) => return self.day_read(day, accounted, changed),
+                Ok(None) => {}
+                Err(()) => return self.day_failed(day),
             }
         }
-        // Minute pages of the last 40 minutes, newest first.
+        self.raw_day(day, &listed, deadline).await;
+    }
+    /// [`Self::complete_day`] with pages held. Ok(None): a new newest page does not parse.
+    async fn compare_day(
+        &self,
+        day: u32,
+        listed: &[ListedPage],
+        base: Accounted,
+        deadline: Instant,
+    ) -> Result<Option<(bool, Accounted)>, ()> {
+        let Accounted { mut known, .. } = base;
+        let unknown: Vec<&ListedPage> = {
+            let s = self.state();
+            let held: BTreeSet<&str> = s
+                .pages
+                .ids
+                .iter()
+                .filter(|((_, hour), _)| hour.date() == day)
+                .map(|(_, (_, _, raw_id))| raw_id.as_str())
+                .collect();
+            listed
+                .iter()
+                .filter(|p| !held.contains(p.raw_id.as_str()) && !known.contains(&p.raw_id))
+                .collect()
+        };
+        let wanted: Vec<(CatalogId, crate::storage::RecordId)> = unknown
+            .iter()
+            .map(|p| (p.catalog.clone(), p.member.clone()))
+            .collect();
+        let read = self.restore(&wanted, deadline).await?;
+        let mut excluded = BTreeSet::new();
+        let mut complete: Vec<(&ListedPage, Vec<RawRecord>)> = Vec::new();
+        for (page, records) in unknown.into_iter().zip(read) {
+            match records {
+                Some(records) => {
+                    known.insert(page.raw_id.clone());
+                    complete.push((page, records));
+                }
+                None => {
+                    excluded.insert(page.raw_id.clone());
+                }
+            }
+        }
+        // Of each kind and hour the newest complete new page, when newer than the held one.
+        let mut newest: BTreeMap<(&'static str, Publication), (&ListedPage, Vec<RawRecord>)> =
+            BTreeMap::new();
+        for (page, records) in complete {
+            match newest.get(&(page.kind, page.hour)) {
+                Some((other, _))
+                    if !newer(page.at, &page.sha256, Some((other.at, &other.sha256))) => {}
+                _ => {
+                    newest.insert((page.kind, page.hour), (page, records));
+                }
+            }
+        }
+        let found: Vec<(&'static str, Vec<RawRecord>)> = {
+            let s = self.state();
+            newest
+                .into_values()
+                .filter(|(page, _)| {
+                    newer(
+                        page.at,
+                        &page.sha256,
+                        s.pages
+                            .ids
+                            .get(&(page.kind, page.hour))
+                            .map(|(at, sha, _)| (*at, sha.as_str())),
+                    )
+                })
+                .map(|(page, records)| (page.kind, records))
+                .collect()
+        };
+        let parsed = crate::observability::spawn_blocking(move || {
+            found
+                .iter()
+                .map(|(kind, records)| {
+                    let parsed = if *kind == "aws-hourly" {
+                        parse_hourly(records)
+                    } else {
+                        parse_city_record(records)
+                    };
+                    parsed.map(|page| (*kind, page))
+                })
+                .collect::<Option<Vec<_>>>()
+        })
+        .await
+        .ok()
+        .flatten();
+        let Some(parsed) = parsed else {
+            return Ok(None);
+        };
+        let mut s = self.state();
+        let mut changed = false;
+        for (kind, page) in parsed {
+            changed |= hold(&mut s.pages, kind, page, None);
+        }
+        // Pages a newer one replaced stay accounted for.
+        known.extend(s.pages.known.get(&day).into_iter().flatten().cloned());
+        Ok(Some((changed, Accounted { known, excluded })))
+    }
+    /// Restore `wanted` (catalog and member), a few members per catalog read (each read is bounded
+    /// by the S06 lookup deadline): the records of each, or None when its group is not complete.
+    /// Err: a read failed.
+    async fn restore(
+        &self,
+        wanted: &[(CatalogId, crate::storage::RecordId)],
+        deadline: Instant,
+    ) -> Result<Vec<Option<Vec<RawRecord>>>, ()> {
+        let mut out: Vec<Option<Vec<RawRecord>>> = vec![None; wanted.len()];
+        let mut at = 0;
+        while at < wanted.len() {
+            let catalog = &wanted[at].0;
+            let mut end = at + 1;
+            while end < wanted.len() && end - at < MINUTE_FIRST && wanted[end].0 == *catalog {
+                end += 1;
+            }
+            let members: Vec<_> = wanted[at..end].iter().map(|(_, m)| m.clone()).collect();
+            match self.reader.members(catalog, &members, deadline).await {
+                Ok(Some(read)) if read.len() == members.len() => {
+                    for (slot, records) in out[at..end].iter_mut().zip(read) {
+                        *slot = Some(records);
+                    }
+                }
+                Ok(_) if members.len() == 1 => {}
+                Ok(_) => {
+                    // One of them is not complete: each alone.
+                    for (slot, member) in out[at..end].iter_mut().zip(&members) {
+                        *slot = self
+                            .reader
+                            .members(catalog, std::slice::from_ref(member), deadline)
+                            .await
+                            .map_err(|_| ())?
+                            .and_then(|mut read| read.pop());
+                    }
+                }
+                Err(_) => return Err(()),
+            }
+            at = end;
+        }
+        Ok(out)
+    }
+    /// Read every page of one day (each complete acquisition is restored and parsed).
+    async fn raw_day(&self, day: u32, listed: &[ListedPage], deadline: Instant) {
+        let partition = format!("{day:08}");
+        let (aws, city_k) = (aws_key(), city_key());
+        let (want_hourly, want_city) = (
+            listed.iter().any(|p| p.kind == "aws-hourly"),
+            listed.iter().any(|p| p.kind == "city-obs"),
+        );
+        let (hourly, city) = tokio::join!(
+            async {
+                if want_hourly {
+                    self.reader
+                        .raw_excluded("kma-web", "aws-hourly", &aws, &partition, deadline)
+                        .await
+                } else {
+                    Ok((Vec::new(), Vec::new()))
+                }
+            },
+            async {
+                if want_city {
+                    self.reader
+                        .raw_excluded("kma-web", "city-obs", &city_k, &partition, deadline)
+                        .await
+                } else {
+                    Ok((Vec::new(), Vec::new()))
+                }
+            },
+        );
+        let (Ok((hourly, hourly_excluded)), Ok((city, city_excluded))) = (hourly, city) else {
+            return self.day_failed(day);
+        };
+        // S16: every listed group is complete (known) or excluded.
+        let key = |r: &RawRecord| r.envelope.identity.object_key().ok();
+        let accounted = Accounted {
+            known: hourly
+                .iter()
+                .chain(&city)
+                .filter_map(|a| a.first().and_then(key))
+                .collect(),
+            excluded: hourly_excluded
+                .iter()
+                .chain(&city_excluded)
+                .filter_map(|id| id.object_key().ok())
+                .collect(),
+        };
+        let parsed = crate::observability::spawn_blocking(move || {
+            (
+                hourly
+                    .iter()
+                    .filter_map(|a| parse_hourly(a))
+                    .collect::<Vec<_>>(),
+                city.iter()
+                    .filter_map(|a| parse_city_record(a))
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .await
+        .unwrap_or_default();
+        {
+            let mut s = self.state();
+            for page in parsed.0 {
+                hold(&mut s.pages, "aws-hourly", page, None);
+            }
+            for page in parsed.1 {
+                hold(&mut s.pages, "city-obs", page, None);
+            }
+        }
+        // S16: a group S06 excluded makes the day's read partial.
+        self.day_read(day, accounted, true);
+    }
+    /// A day read completely: its listed groups found complete and those S06 excluded (S16).
+    fn day_read(&self, day: u32, accounted: Accounted, changed: bool) {
+        let mut s = self.state();
+        s.pages.days.insert(day, std::time::Instant::now());
+        s.pages.unreadable.remove(&day);
+        let partial = !accounted.excluded.is_empty();
+        s.pages.known.insert(day, accounted.known);
+        s.pages.excluded.insert(day, accounted.excluded);
+        if partial {
+            s.pages.failed_days.insert(day);
+        } else {
+            s.pages.failed_days.remove(&day);
+        }
+        if changed {
+            s.pages.dirty = true;
+            s.pages.hourly_dirty = true;
+        }
+    }
+    /// A day whose catalogs or pages could not be read (S16; nothing is stored for it).
+    fn day_failed(&self, day: u32) {
+        let mut s = self.state();
+        s.pages.unreadable.insert(day);
+        s.pages.failed_days.insert(day);
+    }
+    /// The minute pages of the readers' reach that this process does not hold, newest first by
+    /// completion: the day catalogs are listed (control objects only, no record is read). Of each
+    /// minute up to [`MINUTE_CANDIDATES`] acquisitions are kept, newest first (the order a
+    /// latest-first read meets them). A catalog that cannot be listed adds nothing (the next reload
+    /// lists it again).
+    async fn minute_entries(&self, now_ms: i64, deadline: Instant) -> Vec<Vec<MinuteEntry>> {
         let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
+        let today = schedule::from_ms(now_ms);
         let mut partitions = vec![format!("{:08}", today.date())];
         if floor.date() != today.date() {
             partitions.push(format!("{:08}", floor.date()));
         }
-        let mut found = Vec::new();
+        let held: BTreeSet<Publication> = self.state().pages.minute.keys().copied().collect();
+        let mut minutes: BTreeMap<Publication, Vec<MinuteEntry>> = BTreeMap::new();
         for partition in partitions {
-            let read = self
-                .reader
-                .latest_raw(
-                    "kma-web",
-                    "aws-minute",
-                    &aws_key(),
-                    &partition,
-                    4,
-                    |read| {
-                        read.last()
-                            .and_then(|a| a.first())
-                            .and_then(record_publication)
-                            .is_some_and(|p| p < floor)
-                    },
-                    deadline,
-                )
-                .await;
-            if let Ok(read) = read {
-                found.extend(read);
+            let Ok(id) = super::records::catalog("kma-web", "aws-minute", &aws_key(), &partition)
+            else {
+                continue;
+            };
+            let Ok(listed) = self.reader.listed_acquisitions(&id, deadline).await else {
+                continue;
+            };
+            for (completed, _, e) in listed {
+                let Some(p) = Publication::new(
+                    e.identity.period.local_date,
+                    e.identity.period.slot.parse().unwrap_or(u16::MAX),
+                ) else {
+                    continue;
+                };
+                if p <= floor || held.contains(&p) {
+                    continue;
+                }
+                minutes.entry(p).or_default().push(MinuteEntry {
+                    catalog: id.clone(),
+                    member: e.identity,
+                    completed,
+                });
             }
         }
-        let parsed = crate::observability::spawn_blocking(move || {
-            found
+        let mut out: Vec<Vec<MinuteEntry>> = minutes
+            .into_values()
+            .map(|mut candidates| {
+                candidates.sort_by(|a, b| b.order().cmp(&a.order()));
+                candidates.truncate(MINUTE_CANDIDATES);
+                candidates
+            })
+            .collect();
+        out.sort_by(|a, b| b[0].order().cmp(&a[0].order()));
+        out
+    }
+    /// Restore the minutes (candidates newest first) and keep the pages after `floor` that this
+    /// process does not hold: the newest acquisition of each, and for a minute whose acquisition
+    /// is not complete or does not parse, the next one.
+    async fn restore_minutes(
+        &self,
+        minutes: Vec<Vec<MinuteEntry>>,
+        floor: Publication,
+        deadline: Instant,
+    ) {
+        let mut pending: Vec<std::vec::IntoIter<MinuteEntry>> =
+            minutes.into_iter().map(Vec::into_iter).collect();
+        let mut done = vec![false; pending.len()];
+        let mut kept = Vec::new();
+        for _ in 0..MINUTE_CANDIDATES {
+            let round: Vec<(usize, MinuteEntry)> = pending
+                .iter_mut()
+                .enumerate()
+                .filter(|(i, _)| !done[*i])
+                .filter_map(|(i, c)| c.next().map(|e| (i, e)))
+                .collect();
+            if round.is_empty() {
+                break;
+            }
+            let wanted: Vec<_> = round
                 .iter()
-                .filter_map(|a| parse_minute(a))
-                .filter(|(p, _)| *p > floor)
-                .collect::<Vec<_>>()
-        })
-        .await
-        .unwrap_or_default();
+                .map(|(_, e)| (e.catalog.clone(), e.member.clone()))
+                .collect();
+            let Ok(read) = self.restore(&wanted, deadline).await else {
+                break;
+            };
+            let parsed = crate::observability::spawn_blocking(move || {
+                read.iter()
+                    .map(|a| a.as_deref().and_then(parse_minute))
+                    .collect::<Vec<_>>()
+            })
+            .await
+            .unwrap_or_default();
+            for ((i, _), page) in round.iter().zip(parsed) {
+                if let Some((p, rows)) = page {
+                    done[*i] = true;
+                    if p > floor {
+                        kept.push((p, rows));
+                    }
+                }
+            }
+        }
+        if kept.is_empty() {
+            return;
+        }
         let mut s = self.state();
-        for (p, rows) in parsed {
+        for (p, rows) in kept {
             s.pages.minute.entry(p).or_insert(rows);
         }
-        s.pages.minute.retain(|k, _| *k > floor);
-        s.pages.minute_read = Some(std::time::Instant::now());
         s.pages.dirty = true;
     }
     /// The newest imported seed that parses and was exported after the carried one: partitions
@@ -786,6 +1260,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             let mut s = self.state();
             s.pages.hourly.insert(p, rows);
             s.pages.hourly_at.insert(p, at);
+            s.pages.reduced.remove(&p);
             s.pages.ids.insert(("aws-hourly", p), (at, sha, raw_id));
             s.pages.dirty = true;
             s.pages.hourly_dirty = true;
@@ -928,6 +1403,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.pages.hourly_at.retain(|h, _| *h >= first);
             s.pages.city.retain(|h, _| *h >= first);
             s.pages.ids.retain(|(_, h), _| *h >= first);
+            s.pages.reduced.retain(|h, _| *h >= first);
+            s.expand_attempts.retain(|h, _| *h >= first);
             // Minute pages older than the readers' reach, however they arrived (S3 or local).
             let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
             s.pages.minute.retain(|k, _| *k > floor);
@@ -956,6 +1433,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             (Some(cached), _) => cached,
             (None, Some((seed, hourly, hourly_at, city, geo, pages))) => {
                 let fold_pages = pages.clone();
+                let held = hourly.clone();
                 let Ok((mut fold, reduced)) = crate::observability::spawn_blocking(move || {
                     fold_hourly(
                         seed.as_deref().map(Vec::as_slice),
@@ -972,13 +1450,24 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 };
                 fold.pages = pages;
                 let mut s = self.state();
-                // Non-city stations' hourly rows are kept as registry facts only.
+                // Non-city stations' hourly rows are kept as registry facts only (unless a newer
+                // page replaced the folded one meanwhile).
                 for (h, rows) in reduced {
-                    if s.pages.hourly.contains_key(&h) {
+                    let same = s
+                        .pages
+                        .hourly
+                        .get(&h)
+                        .zip(held.get(&h))
+                        .is_some_and(|(now, folded)| Arc::ptr_eq(now, folded));
+                    if same {
                         s.pages.hourly.insert(h, rows);
+                        s.pages.reduced.insert(h, fold.cities.clone());
                     }
                 }
                 s.hourly_fold = Some(fold.clone());
+                drop(s);
+                self.expand_due();
+                self.want_products(now_ms);
                 fold
             }
             (None, None) => return,
@@ -1063,6 +1552,174 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 s.pages.hourly_dirty = true;
             })
         });
+    }
+
+    // ---- reduced pages ----
+
+    /// Pages reduced for a smaller city set than the last fold's lack a city station's rows (a
+    /// station joined the set since): read the due ones in full again, unless a read runs. Called
+    /// after every fold and request, so a retry does not wait for a new hourly page.
+    fn expand_due(self: &Arc<Self>) {
+        if self.flight(&Flight::Expand).is_some() {
+            return;
+        }
+        let due: Vec<(Publication, String)> = {
+            let s = self.state();
+            stale_pages(&s)
+                .into_iter()
+                .filter(|(h, _)| {
+                    s.expand_attempts
+                        .get(h)
+                        .is_none_or(|at| at.elapsed() >= EXPAND_RETRY)
+                })
+                .collect()
+        };
+        if due.is_empty() {
+            return;
+        }
+        let _ = self.start(Flight::Expand, Duration::ZERO, move |this| {
+            Box::pin(async move { this.read_full(due).await })
+        });
+    }
+    /// Read the AWS hourly `pages` (hour and raw identity) in full again, a few at a time, and hold
+    /// the whole rows of each read while still the held page. A read is kept as it completes; the
+    /// pages not started before the deadline stay due (only started pages wait for
+    /// [`EXPAND_RETRY`]).
+    async fn read_full(&self, mut pages: Vec<(Publication, String)>) {
+        let deadline = Instant::now() + READ_DEADLINE;
+        pages.sort();
+        let mut batches: Vec<Vec<(Publication, CatalogId, crate::storage::RecordId)>> = Vec::new();
+        for (hour, raw_id) in pages {
+            let (Ok(member), Ok(catalog)) = (
+                crate::storage::RecordId::from_object_key(&raw_id),
+                super::records::catalog("kma-web", "aws-hourly", &aws_key(), &hour.base_date()),
+            ) else {
+                // Not a readable identity: tried again after the retry interval.
+                self.state()
+                    .expand_attempts
+                    .insert(hour, std::time::Instant::now());
+                continue;
+            };
+            match batches.last_mut() {
+                Some(batch) if batch.len() < MINUTE_FIRST && batch[0].1 == catalog => {
+                    batch.push((hour, catalog, member))
+                }
+                _ => batches.push(vec![(hour, catalog, member)]),
+            }
+        }
+        for batch in batches {
+            if Instant::now() >= deadline {
+                break;
+            }
+            {
+                let mut s = self.state();
+                for (hour, _, _) in &batch {
+                    s.expand_attempts.insert(*hour, std::time::Instant::now());
+                }
+            }
+            let wanted: Vec<_> = batch
+                .into_iter()
+                .map(|(_, catalog, member)| (catalog, member))
+                .collect();
+            let Ok(read) = self.restore(&wanted, deadline).await else {
+                continue;
+            };
+            let parsed = crate::observability::spawn_blocking(move || {
+                read.iter()
+                    .filter_map(|a| a.as_deref().and_then(parse_hourly))
+                    .collect::<Vec<_>>()
+            })
+            .await
+            .unwrap_or_default();
+            let mut s = self.state();
+            let mut changed = false;
+            for (p, rows, _, _, raw_id) in parsed {
+                let same = s
+                    .pages
+                    .ids
+                    .get(&("aws-hourly", p))
+                    .is_some_and(|(_, _, held)| *held == raw_id);
+                if same {
+                    s.pages.hourly.insert(p, rows);
+                    s.pages.reduced.remove(&p);
+                    changed = true;
+                }
+            }
+            if changed {
+                s.pages.dirty = true;
+                s.pages.hourly_dirty = true;
+            }
+        }
+    }
+
+    // ---- day products ----
+
+    /// Compare the day products with the pages held (after a fold recomputed the hourly part) and
+    /// store the changed ones; no request waits for it.
+    fn want_products(self: &Arc<Self>, now_ms: i64) {
+        self.state().product_due = true;
+        let _ = self.start(Flight::Product, Duration::ZERO, move |this| {
+            Box::pin(async move { this.write_products(now_ms).await })
+        });
+    }
+    async fn write_products(self: Arc<Self>, now_ms: i64) {
+        loop {
+            let due = {
+                let mut s = self.state();
+                s.product_due = false;
+                product_candidates(&mut s, now_ms)
+            };
+            for (stored, made_of) in due {
+                let day = stored.day;
+                if self.store_product(stored).await.is_ok() {
+                    self.state().products.insert(day, made_of);
+                }
+            }
+            if !self.state().product_due {
+                break;
+            }
+        }
+    }
+    /// Store one day product (one record, one group, the day's product catalog).
+    async fn store_product(&self, stored: DayProduct) -> Result<(), ()> {
+        let (day, made) = (stored.day, stored.made);
+        let bytes = crate::observability::spawn_blocking(move || stored.encode(facts))
+            .await
+            .map_err(|_| ())?
+            .map_err(|_| ())?;
+        let limits = crate::storage::CatalogLimits::default();
+        let record = RawRecord::new(
+            "kma-web",
+            product::KIND,
+            &aws_key(),
+            Publication::new(day, 0).ok_or(())?.period(),
+            made as u64,
+            200,
+            "application/gzip",
+            Some(crate::storage::Pagination {
+                page: 1,
+                pages: 1,
+                complete: true,
+            }),
+            bytes.into(),
+            &limits.raw,
+        )
+        .map_err(|_| ())?;
+        let member = crate::storage::GroupMember {
+            envelope: record.envelope.clone(),
+            catalogs: vec![
+                CatalogId::for_record(&record.envelope.identity, &format!("{day:08}"))
+                    .map_err(|_| ())?,
+            ],
+        };
+        let declaration =
+            crate::storage::GroupDeclaration::new(vec![member], &limits).map_err(|_| ())?;
+        self.reader
+            .store
+            .publish(declaration, vec![record], Instant::now() + READ_DEADLINE)
+            .await
+            .map(|_| ())
+            .map_err(|_| ())
     }
 
     // ---- ASOS history ----
@@ -1436,13 +2093,21 @@ pub struct AsosView {
 impl<T> Observations<T> {
     /// Whether `folded` is the current fold of a complete read at `now_ms`: every day of the
     /// 8-day page window was read from S3 and its latest read did not fail, the minute pages were
-    /// read, no newer page is waiting for a fold, and no S3 load, fold or geocoding is in flight.
+    /// read, no newer page is waiting for a fold, and no S3 load (nor its rest), fold, geocoding
+    /// or product comparison is in flight or due.
     pub fn settled(&self, now_ms: i64, folded: &Arc<Folded>) -> bool {
         let busy = {
             let flights = self.flights.lock().unwrap_or_else(|e| e.into_inner());
-            [Flight::Load, Flight::Fold, Flight::Geocode]
-                .iter()
-                .any(|f| flights.contains_key(f))
+            [
+                Flight::Load,
+                Flight::LoadRest,
+                Flight::Fold,
+                Flight::Geocode,
+                Flight::Product,
+                Flight::Expand,
+            ]
+            .iter()
+            .any(|f| flights.contains_key(f))
         };
         if busy {
             return false;
@@ -1451,26 +2116,17 @@ impl<T> Observations<T> {
         // The snapshot's fold must be the current one: a newer fold or newer pages are inputs
         // the snapshot did not use.
         if s.pages.dirty
+            || s.product_due
+            || !stale_pages(&s).is_empty()
             || s.seed_failed
             || s.pages.minute_read.is_none()
             || !s.folded.as_ref().is_some_and(|f| Arc::ptr_eq(f, folded))
         {
             return false;
         }
-        let first = schedule::from_ms(now_ms - HOURLY_WINDOW_HOURS * 3_600_000 - 3_600_000);
-        let today = schedule::from_ms(now_ms).date();
-        let mut d = Publication::new(first.date(), 0);
-        while let Some(day) = d {
-            if day.date() > today {
-                break;
-            }
-            if !s.pages.days.contains_key(&day.date()) || s.pages.failed_days.contains(&day.date())
-            {
-                return false;
-            }
-            d = day.add_hours(24);
-        }
-        true
+        window_days(now_ms)
+            .iter()
+            .all(|day| s.pages.days.contains_key(day) && !s.pages.failed_days.contains(day))
     }
 }
 /// Keep the acquisitions whose range reaches the window (older ones cannot change it).
@@ -1522,6 +2178,18 @@ fn object(pairs: Vec<(&str, OrderedJson)>) -> OrderedJson {
             .collect(),
     )
 }
+/// A listed minute acquisition to restore.
+struct MinuteEntry {
+    catalog: CatalogId,
+    member: crate::storage::RecordId,
+    completed: u64,
+}
+impl MinuteEntry {
+    /// Latest-first catalog order: completion, then the raw digest.
+    fn order(&self) -> (u64, &str) {
+        (self.completed, &self.member.raw_sha256)
+    }
+}
 type ParsedPage = (Publication, Arc<Vec<Doc>>, f64, String, String);
 fn parse_hourly(records: &[RawRecord]) -> Option<ParsedPage> {
     let r = records.first()?;
@@ -1563,12 +2231,117 @@ impl StationGeo for Table<'_> {
 type Page = Arc<Vec<Doc>>;
 /// Registry facts of a station row (the fields `_saveStnInfo` reads).
 const FACTS: [&str; 5] = ["stnId", "stnName", "addr", "altitude", "isCityWeather"];
-fn facts(row: &Doc) -> Doc {
+pub(super) fn facts(row: &Doc) -> Doc {
     let mut out = Doc::new();
     for k in FACTS {
         if let Some(v) = row.get(k) {
             out.set(k, v.clone());
         }
+    }
+    out
+}
+/// The held AWS hourly pages (hour and raw identity) reduced for a city set that does not cover
+/// the last fold's.
+fn stale_pages(s: &State) -> Vec<(Publication, String)> {
+    let Some(fold) = &s.hourly_fold else {
+        return Vec::new();
+    };
+    s.pages
+        .reduced
+        .iter()
+        .filter(|(_, set)| !set.is_superset(&fold.cities))
+        .filter_map(|(h, _)| {
+            let (_, _, raw_id) = s.pages.ids.get(&("aws-hourly", *h))?;
+            Some((*h, raw_id.clone()))
+        })
+        .collect()
+}
+/// The day products to store at `now_ms` (each attempt is recorded): per day whose every hour
+/// is in the window, that was read without failure and holds pages, the held pages unless the
+/// last product this process read or stored for it is made of the same, at most once per
+/// [`PRODUCT_EVERY`].
+fn product_candidates(s: &mut State, now_ms: i64) -> Vec<(DayProduct, MadeOf)> {
+    let Some(cities) = s.hourly_fold.as_ref().map(|f| f.cities.clone()) else {
+        return Vec::new();
+    };
+    let first = latest_hourly(now_ms)
+        .add_hours(-HOURLY_WINDOW_HOURS)
+        .unwrap_or_else(|| latest_hourly(now_ms));
+    let made = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0., |d| d.as_millis() as f64);
+    let mut by_day: BTreeMap<u32, Vec<StoredPage>> = BTreeMap::new();
+    for ((kind, hour), (at, sha, raw_id)) in &s.pages.ids {
+        let rows = if *kind == "aws-hourly" {
+            s.pages.hourly.get(hour)
+        } else {
+            s.pages.city.get(hour)
+        };
+        let Some(rows) = rows else {
+            continue;
+        };
+        by_day.entry(hour.date()).or_default().push(StoredPage {
+            kind,
+            hour: *hour,
+            fetched_at_ms: *at,
+            sha256: sha.clone(),
+            raw_id: raw_id.clone(),
+            rows: rows.clone(),
+        });
+    }
+    let mut out = Vec::new();
+    for (day, pages) in by_day {
+        if Publication::new(day, 0).is_none_or(|start| start < first)
+            || !s.pages.days.contains_key(&day)
+            || s.pages.unreadable.contains(&day)
+        {
+            continue;
+        }
+        // The rows of a reduced page are whole for its city set only.
+        let city_ids = pages
+            .iter()
+            .filter(|p| p.kind == "aws-hourly")
+            .filter_map(|p| s.pages.reduced.get(&p.hour))
+            .fold(None::<BTreeSet<String>>, |all, set| {
+                Some(match all {
+                    None => (**set).clone(),
+                    Some(all) => all.intersection(set).cloned().collect(),
+                })
+            })
+            .unwrap_or_else(|| (*cities).clone());
+        let excluded = s.pages.excluded.get(&day).cloned().unwrap_or_default();
+        let made_of = MadeOf::new(
+            pages.iter().map(|p| p.raw_id.as_str()),
+            &city_ids,
+            &excluded,
+        );
+        if s.products.get(&day) == Some(&made_of)
+            || s.product_attempts
+                .get(&day)
+                .is_some_and(|at| at.elapsed() < PRODUCT_EVERY)
+        {
+            continue;
+        }
+        s.product_attempts.insert(day, std::time::Instant::now());
+        out.push((
+            DayProduct {
+                made,
+                day,
+                known: s
+                    .pages
+                    .known
+                    .get(&day)
+                    .into_iter()
+                    .flatten()
+                    .filter(|id| !pages.iter().any(|p| p.raw_id == **id))
+                    .cloned()
+                    .collect(),
+                excluded,
+                city_ids,
+                pages,
+            },
+            made_of,
+        ));
     }
     out
 }
@@ -1585,16 +2358,7 @@ fn fold_hourly(
     geo: &HashMap<String, (f64, f64)>,
     page_ids: &[PageId],
 ) -> (HourlyFold, Vec<(Publication, Page)>) {
-    let city_ids: BTreeSet<String> = city
-        .values()
-        .flat_map(|rows| rows.iter())
-        .filter_map(|r| r.get("stnId").and_then(Val::as_str).map(str::to_owned))
-        .chain(seed.unwrap_or_default().iter().filter_map(|d| {
-            (d.get("isCityWeather") == Some(&Val::Bool(true)))
-                .then(|| d.get("stnId").and_then(Val::as_str).map(str::to_owned))
-                .flatten()
-        }))
-        .collect();
+    let city_ids = city_ids(seed, city.values().map(|rows| &**rows));
     let city_id = |r: &Doc| {
         r.get("stnId")
             .and_then(Val::as_str)
@@ -1678,9 +2442,116 @@ fn fold_hourly(
             national: Arc::new(national),
             unresolved: unresolved.into_iter().collect(),
             pages: Arc::new(Vec::new()),
+            cities: Arc::new(city_ids),
         },
         reduced,
     )
+}
+/// The city stations: those of the city pages and the seed's `isCityWeather` stations.
+fn city_ids<'a>(
+    seed: Option<&[Doc]>,
+    city: impl Iterator<Item = &'a Vec<Doc>>,
+) -> BTreeSet<String> {
+    city.flat_map(|rows| rows.iter())
+        .filter_map(|r| r.get("stnId").and_then(Val::as_str).map(str::to_owned))
+        .chain(seed.unwrap_or_default().iter().filter_map(|d| {
+            (d.get("isCityWeather") == Some(&Val::Bool(true)))
+                .then(|| d.get("stnId").and_then(Val::as_str).map(str::to_owned))
+                .flatten()
+        }))
+        .collect()
+}
+/// Whether a page fetched at `at` with raw digest `sha` replaces `held`: a later fetch, or of one
+/// instant the smaller digest (the page a read of every acquisition in catalog order keeps).
+fn newer(at: f64, sha: &str, held: Option<(f64, &str)>) -> bool {
+    held.is_none_or(|(held_at, held_sha)| at > held_at || (at == held_at && sha < held_sha))
+}
+/// Hold a page of `kind` unless the held one is newer ([`newer`]); `reduced`: the city set an
+/// AWS page's rows are kept in full for. True when held.
+fn hold(
+    pages: &mut Pages,
+    kind: &'static str,
+    (p, rows, at, sha, raw_id): ParsedPage,
+    reduced: Option<Arc<BTreeSet<String>>>,
+) -> bool {
+    let current = pages
+        .ids
+        .get(&(kind, p))
+        .map(|(at, sha, _)| (*at, sha.as_str()));
+    if !newer(at, &sha, current) {
+        return false;
+    }
+    if let Some((_, _, replaced)) = pages.ids.get(&(kind, p)) {
+        pages
+            .known
+            .entry(p.date())
+            .or_default()
+            .insert(replaced.clone());
+    }
+    if kind == "aws-hourly" {
+        pages.hourly.insert(p, rows);
+        pages.hourly_at.insert(p, at);
+        match reduced {
+            Some(cities) => pages.reduced.insert(p, cities),
+            None => pages.reduced.remove(&p),
+        };
+    } else {
+        pages.city.insert(p, rows);
+    }
+    pages.ids.insert((kind, p), (at, sha, raw_id));
+    true
+}
+/// The KST days of the 8-day page window and the hour before it, oldest first.
+fn window_days(now_ms: i64) -> Vec<u32> {
+    let first = schedule::from_ms(now_ms - HOURLY_WINDOW_HOURS * 3_600_000 - 3_600_000);
+    let today = schedule::from_ms(now_ms).date();
+    let mut days = Vec::new();
+    let mut d = Publication::new(first.date(), 0);
+    while let Some(day) = d {
+        if day.date() > today {
+            break;
+        }
+        days.push(day.date());
+        d = day.add_hours(24);
+    }
+    days
+}
+/// One day read: its listed pages (None: a catalog could not be listed), its stored product, and
+/// the S06 exclusions of the pages held for it (None: none held, the raw pages are read).
+struct DayRead {
+    day: u32,
+    listed: Option<Vec<ListedPage>>,
+    product: Option<DayProduct>,
+    base: Option<Accounted>,
+}
+/// The listed groups of a day beyond its held pages: found complete, and S06 excluded.
+struct Accounted {
+    known: BTreeSet<String>,
+    excluded: BTreeSet<String>,
+}
+/// A page a day catalog lists.
+struct ListedPage {
+    kind: &'static str,
+    hour: Publication,
+    at: f64,
+    sha256: String,
+    raw_id: String,
+    member: crate::storage::RecordId,
+    catalog: CatalogId,
+}
+impl ListedPage {
+    fn new(kind: &'static str, catalog: &CatalogId, e: crate::storage::Envelope) -> Option<Self> {
+        let period = &e.identity.period;
+        Some(Self {
+            kind,
+            hour: Publication::new(period.local_date, period.slot.parse().ok()?)?,
+            at: e.identity.fetched_at_ms as f64,
+            sha256: e.identity.raw_sha256.clone(),
+            raw_id: e.identity.object_key().ok()?,
+            member: e.identity,
+            catalog: catalog.clone(),
+        })
+    }
 }
 
 /// The collections before any page: the carried seed's registry.
