@@ -2533,14 +2533,26 @@ the 8 s stored-read budget: providers race it from the head start, and a restore
 partitions each held to the catalog's 3 s deadline would otherwise wait batch after batch past the
 request deadline (Codex review of #2916, RB-store-deadline). The restore is not cancelled at the
 bound (review round 2): each listing and partition read is owned work (`records::Restores`, one
-flight per key, joined by concurrent requests, its result answering joiners for 3 s; a listing
-runs at most 8 s, a read at most 15 s), and the process keeps the latest completed listing of each
-key and read of each partition (at most 64 MiB and 8,192 partitions, the oldest dropped; 30 minutes
-at most). A request whose own restore is not done by its bound answers from those (the read then
-counts as partial for S16), and leaves absent what none holds, so a slow store in a warm process,
-where the five-minute memo keeps the providers from being asked again, delays the data by one
-request instead of dropping it. A listing not back at the head start leaves every publication the
+flight per key, joined by concurrent requests; a listing runs at most 8 s, a read at most 30 s, so
+a dense 54-hour window of 54 partitions fits). A read restores the partitions the answer needs
+first (the required publications and, for the current observations, the hours around the same
+hour yesterday), then the rest newest first, and keeps each partition's acquisitions as soon as it
+completes (review round 3). The kept bodies (`records::Bodies`: at most 64 MiB and 8,192
+partitions, the oldest dropped, 30 minutes at most) are the only owner of restored pages besides
+the answers using them: a flight's own result names partitions only, so retained or running
+flights hold no body outside the budget, and an evicted page is freed (RB-restore-memory). A
+request whose own restore is not done by its bound answers from the kept partitions (the read then
+counts as partial for S16) and leaves absent what none holds, so a slow store in a warm process,
+where the five-minute memo keeps the providers from being asked again, does not drop the data the
+restore has reached. A request whose own listing is not back (or fails) uses the kept listing of
+the key, marked as earlier: it may lack a partition published since, so S16 records nothing from
+it (RB-s16-listing-provenance). A listing not back at the head start leaves every publication the
 request needs to its provider at once (RB-listing-race).
+
+This process's own acquisitions are kept too (at most 32 MiB and 4,096 keys, three hours at most,
+under the same `Bodies` budget rules): a request that asks for a publication the process acquired
+but cannot acquire again (the five-minute memo or a consumed Short slot) while the stored read
+does not hold it yet gets the kept acquisition.
 
 The forecast-zone refresh of the observed request is owned work too (one flight, at most 30 s):
 the request joins it until the head start and otherwise answers with the zones this process last
