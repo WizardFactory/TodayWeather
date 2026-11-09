@@ -5,7 +5,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -43,8 +42,8 @@ import org.junit.runner.RunWith
  * `weather` `production` and the app's language set to ko-KR (the rows show for region KR):
  * - 전국날씨: in each of its three modes, most cities show values;
  * - 전국미세먼지: in each of its six tabs, most provinces show a value;
- * - 기상특보: each card shows the heading of the answer the page loaded, and a second read of the endpoint here is a list
- *   of as many bulletins.
+ * - 기상특보: each card shows the whole heading (name and announcement time) of the answer the page loaded, and a
+ *   second read of the endpoint here is a list of as many bulletins.
  * Each state is captured to the app's files (ac2/). The requests are read-only GETs; push requests are recorded by the
  * test app, not sent.
  */
@@ -83,7 +82,8 @@ class ProductionNationTest {
         }
         back()
 
-        // The page's own answer: each of its cards shows the bulletin's heading (its first line).
+        // The page's own answer: each of its cards shows the bulletin's whole heading, name and announcement time, on
+        // its first lines.
         open(MenuRow.SPECIAL_WEATHER)
         var opened: NationLoads? = null
         rule.runOnUiThread { opened = ViewModelProvider(rule.activity)[OpenedModel::class.java].nation }
@@ -93,8 +93,11 @@ class ProductionNationTest {
         val cards = (loads.pages.value[NationRoutes.WARNINGS] as NationPageState.Warnings).cards
         capture("warnings")
         cards.forEachIndexed { i, card ->
-            rule.onNode(hasText(card.heading.take(8), substring = true) and hasAnyAncestor(hasTestTag(NationTags.card(i))), useUnmergedTree = true)
-                .assertExists()
+            val heading = card.heading.filterNot(Char::isWhitespace)
+            val texts = rule.onAllNodes(hasAnyAncestor(hasTestTag(NationTags.card(i))) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text),
+                useUnmergedTree = true).fetchSemanticsNodes().map { n -> n.config[SemanticsProperties.Text].joinToString("") { it.text }.filterNot(Char::isWhitespace) }
+            val shown = buildString { for (t in texts) if (length < heading.length) append(t) }
+            assertEquals("card $i", heading, shown)
         }
         assertEquals(cards.size, (0 until 20).count { rule.onAllNodesWithTag(NationTags.card(it)).fetchSemanticsNodes().isNotEmpty() })
         // A second read of the endpoint: a list of as many bulletins (unless one is published in between).
