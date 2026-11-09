@@ -39,6 +39,16 @@
       "path": "docs/architecture/server2-kma-data-design.md",
       "category": "documentation",
       "reason": "The observed request's wait counts from the gateway's accept, the geocode included."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Archify source: the request wait counts from the accept."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
     }
   ]
 }
