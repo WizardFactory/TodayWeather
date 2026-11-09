@@ -107,7 +107,8 @@ object WeatherTabTags {
 
 /**
  * The Hourly or Daily tab (#2887): a visit of ForecastCtrl's scope, new each time the tab opens, that applies the
- * selected place's record whenever it changes (a swipe, a load, the cache), as `applyEvent` did; the page, its title
+ * selected place's record whenever it changes (a swipe, a load, the cache) and on each of TabCtrl's `applyEvent`s
+ * ([applies]: a load starting, the gate included, or a response applied), as ForecastCtrl did; the page, its title
  * with the current position's location glyph or the loading spinner, the bell and share buttons, and the pollen and
  * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`) and the
  * standard opens S07 ([onUnits], `goUnitsPage`). The visit reads the temperature unit and the theme as it applies, as
@@ -115,7 +116,7 @@ object WeatherTabTags {
  */
 @Composable
 fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
-                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}): TabContent {
+                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -133,8 +134,9 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     val record = remember(place, entry) { place?.let { cityRecord(it, entry) } }
     val hasPush = remember(state.push, index) { hasPushInfo(state, index) }
     val opened = remember(visit) { BooleanArray(1) }
-    // The apply is the visit's own state, so it runs while composing, before the page reads it.
-    val applied = remember(visit, record, hasPush) {
+    // The apply is the visit's own state, so it runs while composing, before the page reads it. A load starting applies
+    // the place as it is (`applyEvent` "loadWeatherData"), so a theme chosen on S08 shows the saved photo at once (#2915 F2).
+    val applied = remember(visit, record, hasPush, applies) {
         if (!opened[0]) {
             opened[0] = true
             visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)

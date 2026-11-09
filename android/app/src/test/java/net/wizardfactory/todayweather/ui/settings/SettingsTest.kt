@@ -96,13 +96,22 @@ class SettingsTest {
 
     @After fun stop() = scope.cancel()
 
-    /** The app on Seoul (the current position off) opening on [startupPage]; the server answers in the requested unit. */
-    private fun show(startupPage: String = "0") {
+    private var failing = false
+
+    /**
+     * The app on Seoul (the current position off) opening on [startupPage], with the photo [feed]; the server answers in
+     * the requested unit, or fails once [failing] is set.
+     */
+    private fun show(startupPage: String = "0", feed: net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos? = null) {
         memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1,
             units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage)))
         val repository = WeatherRepository("https://server.test.invalid", null,
-            HttpGet { url, _ -> requests += url; if ("temperatureUnit=F" in url) seoulF else seoulC }, io = Dispatchers.Unconfined)
-        val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
+            HttpGet { url, _ ->
+                requests += url
+                if (failing) throw net.wizardfactory.todayweather.core.data.HttpStatusException(500)
+                if ("temperatureUnit=F" in url) seoulF else seoulC
+            }, io = Dispatchers.Unconfined)
+        val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { feed })
         val settings = SettingsActions(memory, session) { pushes += memory.current().units }
         val handoffs = MenuHandoffs(openSystem = { opened += it }, sendFeedback = { feedback++ })
         rule.setContent {
@@ -193,6 +202,25 @@ class SettingsTest {
         rule.onNodeWithTag(SettingsTags.row(5)).performScrollTo().performClick()
         rule.waitForIdle()
         assertEquals("720", memory.current().settings.refreshInterval)
+    }
+
+    /**
+     * #2915 F2: TabCtrl's `applyEvent` at the start of a load applies the place as it is, so the photo theme chosen on S08
+     * shows the place's photo (here its fallback: the photo's address refuses the connection at once) even when the
+     * reload fails. The feed gives the place its photo with the first load, in the light theme.
+     */
+    @Test
+    fun thePhotoThemeShowsTheSavedPhotoWhenTheReloadFails() {
+        show(feed = net.wizardfactory.todayweather.core.domain.shell.WeatherPhotos.parse(kotlinx.serialization.json.Json.parseToJsonElement(
+            """[{"tags": ["moon", "bigcloud"], "twUrls": {"regular": "http://127.0.0.1:9/moon.jpg"}}]""")))
+        assertEquals("http://127.0.0.1:9/moon.jpg", memory.current().places[1].photo)
+        rule.onAllNodesWithTag(ForecastTags.PHOTO).assertCountEquals(0)
+        failing = true
+        menu(MenuRow.THEME)
+        rule.onNodeWithTag(SettingsTags.row(0)).performClick()
+        rule.waitForIdle()
+        assertEquals("photo", memory.current().settings.theme)
+        rule.waitUntil(10_000) { rule.onAllNodesWithTag(ForecastTags.PHOTO, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test

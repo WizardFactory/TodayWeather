@@ -230,7 +230,7 @@ fun AppContent(
                 // `goAirInfoPage(code)`: /tab/air?code=.
                 airCode = code
                 navigation.selected = Tab.AIR
-            }, onUnits = openUnits)
+            }, onUnits = openUnits, applies = applies)
             Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
                 onUnits = openUnits)
             else -> TabContent() // AN-10

@@ -102,6 +102,8 @@ object ForecastTags {
     const val NEXT = "forecast-next"
     const val SUMMARY_AIR = "forecast-summary-air"
     const val ATTRIBUTION = "forecast-attribution"
+    /** The photo theme's photo box (`[photo-url]`), when it has a picture. */
+    const val PHOTO = "forecast-photo"
     const val POLLEN = "forecast-pollen"
     /** Block [i] of the page as the references number them: 1 the chart, then the cards and the attribution. */
     fun block(i: Int) = if (i == 0) HEADER else "forecast-block-$i"
@@ -188,7 +190,7 @@ private fun HeaderBlock(
         .testTag(ForecastTags.HEADER)) {
         // Percentages of the block's width, as in CSS.
         val width = maxWidth
-        if (photo != null) PhotoBox(photo, gradient, Modifier.matchParentSize())
+        if (photo != null) PhotoBox(photo, gradient, Modifier.matchParentSize().testTag(ForecastTags.PHOTO))
         Row(
             Modifier.fillMaxWidth().heightIn(min = metrics.headerHeight.dp).padding(top = 44.dp, bottom = colors.headerBottom),
             verticalAlignment = Alignment.CenterVertically,
