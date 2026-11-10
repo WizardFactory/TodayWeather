@@ -11,12 +11,12 @@ The menu's privacy rows are compared with the Cordova debug build itself. The re
 | `provenance.json` | Cordova APK (hash, version, the sources inside it with the matching `client/` files and their last commits), the stylesheet's tracked input, the emulator and the SHA-256 of every reference file |
 | `tolerances.json` | Screenshot tolerance of each comparison, the metric and the reasons (maintained with the tests; a capture keeps it) |
 
-The display is 384×832 dp at density 2. The place is the AN-02 corpus fixture `kma-seoul` (회현동). Every step is a real tap on the screen (`adb input tap` at the element's center) or the Android back key, in the order a user goes: the menu, 선택적 이용 통계, back, 동의, 거부 / 철회, 개인정보처리방침, 이용약관, 광고 개인정보 선택, then the About popup and back. The system browser is recorded instead of opened (`cordova.InAppBrowser.open`), and the AdMob plugin's privacy form call records which callback it answered.
+The WebView is 384×762 dp at density 2, the size the tests render: `capture.sh` sets the display's height so that the room between the status and navigation bars is 762 dp (384×832 dp under the 46 dp status bar of the first capture, 384×810 dp under the 24 dp one the capture emulator showed on 2026-11-10), and `capture.mjs` stops on any other WebView size. The place is the AN-02 corpus fixture `kma-seoul` (회현동). Every step is a real tap on the screen (`adb input tap` at the element's center) or the Android back key, in the order a user goes: the menu, 선택적 이용 통계, back, 동의, 거부 / 철회, 개인정보처리방침, 이용약관, 광고 개인정보 선택, then the About popup and back. The system browser is recorded instead of opened (`cordova.InAppBrowser.open`), and the AdMob plugin's privacy form call records which callback it answered.
 
 What the captures show (in `actions.json`):
 - `Util.language` is `ko-KR` in Korean, so both rows open the `.en` pages (B13 in `tools/corpus/differences.md`);
 - the ad privacy form answers success and shows nothing where no form is required (B14);
-- one Android back key closes the popup and, in the Korean run, the menu too (B17).
+- one Android back key closes the popup and, depending on a race, the menu too (B17): each capture records which happened.
 
 ## Tests
 

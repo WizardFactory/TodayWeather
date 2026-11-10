@@ -179,6 +179,7 @@ await dt.evaluate(`window.twPrivacy = (function () {
 const origin = screenshots.webViewOrigin();
 const dpr = await dt.evaluate('devicePixelRatio');
 const view = await dt.evaluate('({width: innerWidth, height: innerHeight})');
+if (view.width !== 384 || view.height !== 762) throw new Error(`the WebView is ${view.width}x${view.height}, not the tests' 384x762`);
 fs.mkdirSync(OUT, {recursive: true});
 
 /** A real tap at the center of the rect [x, y, w, h] (CSS px) the expression gives, then a wait. */

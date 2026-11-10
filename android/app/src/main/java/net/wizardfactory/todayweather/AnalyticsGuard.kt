@@ -33,12 +33,14 @@ object AnalyticsGuard {
 }
 
 /**
- * Runs before the other content providers of the app, so before Firebase initializes: collection off, then the native
- * choice (`platformReady`: `Monetization.init`), so an opt-in made in this app collects again from the start.
+ * Runs before the other content providers of the app, so before Firebase initializes: collection off, a withdrawal made in
+ * a fallback Cordova build that claimed the state ([HandBackConsent]), then the native choice (`platformReady`:
+ * `Monetization.init`), so an opt-in made in this app collects again from the start.
  */
 class EarlyStartProvider : ContentProvider() {
     override fun onCreate(): Boolean {
         AnalyticsGuard.beforeFirebase(context!!)
+        HandBackConsent.beforeStart(context!!)
         (context!!.applicationContext as TodayWeatherApp).analytics.start()
         return true
     }

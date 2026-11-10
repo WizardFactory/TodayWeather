@@ -1,5 +1,5 @@
 angular.module('service.storage', [])
-    .factory('TwStorage', function($rootScope, $q, Util) {
+    .factory('TwStorage', function($rootScope, $q, Util, Monetization) {
         var obj = {};
         var suiteName;
         var oldSuiteName = 'net.wizardfactory.todayweather_preferences'; // only android
@@ -12,6 +12,119 @@ angular.module('service.storage', [])
         }
         else {
             console.error('unknown package:'+clientConfig.package);
+        }
+
+        // The rollback hand-back (AN-17, #2896): after a native release is rolled back to this build (a higher
+        // versionCode), the native app has left the state the user had there in the suite under this marker
+        // ({schema, generation, writer, complete, keys}). A newer complete native hand-back replaces the stale WebView
+        // values, removals included, before the restore or mirror below; this build then claims the state
+        // (writer 'cordova', generation + 1), so a later native start migrates what changes here. While the marker or
+        // a key cannot be read, localStorage refuses the texts, or the claim is not stored, the start waits (the splash
+        // stays until a view enters) and tries again with growing delays: nothing of the stale state is shown, posted
+        // or edited, and nothing mixes into the suite. The promise resolves whether the stored analytics choice can be trusted: not
+        // under a marker this build cannot use, which may hold a newer choice.
+        var handBackKey = '_twHandBack';
+        var handBackApplied = 'twHandBackApplied';
+        var handBackKeys = ['cities', 'cityIndex', 'cityList', 'units', 'settingsInfo', 'pushData2', 'pushData',
+            'expandShortChart', 'startVersion', 'appVersion', 'disableUpdateInfo', 'twAnalyticsConsentV1'];
+
+        function _readHandBack(value) {
+            var marker = value;
+            if (typeof value === 'string') {
+                try { marker = JSON.parse(value); } catch (e) { return null; }
+            }
+            if (!marker || marker.schema !== 1 || typeof marker.generation !== 'number' || marker.complete !== true ||
+                (marker.writer !== 'native' && marker.writer !== 'cordova') || !Array.isArray(marker.keys)) {
+                return null;
+            }
+            return marker;
+        }
+
+        function _handBack() {
+            var deferred = $q.defer();
+            var delay = 1000;
+
+            function retry(reason, next) {
+                console.log('[_handBack] ' + reason + '; trying again in ' + delay + ' ms');
+                Util.ga.trackEvent('storage', 'error', 'handBack');
+                setTimeout(next || attempt, delay);
+                delay = Math.min(delay * 2, 30000);
+            }
+
+            function attempt() {
+                var applied = Number(localStorage.getItem(handBackApplied)) || 0;
+
+                // The claim lets a later native start adopt what changes here: under a native marker the start goes on
+                // ([done]) only once the suite reports it stored. A commit that fails leaves the claim in the suite's
+                // memory while its file keeps the native marker, so the same claim is stored again until it is, instead
+                // of being read back.
+                function claim(generation, done) {
+                    var text = JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
+                        writer: 'cordova', complete: true, keys: handBackKeys});
+                    function store() {
+                        suitePrefs.store(function () {
+                            if (done) { done(); }
+                        }, function () {
+                            if (done) { retry('the claim not stored', store); }
+                        }, handBackKey, text);
+                    }
+                    store();
+                }
+                function resolveTrusted() { deferred.resolve(true); }
+
+                suitePrefs.fetch(function (value) {
+                    var marker = _readHandBack(value);
+                    if (value == undefined || value === '') {
+                        claim(0);
+                        deferred.resolve(true);
+                        return;
+                    }
+                    // An unreadable or unknown marker, or this build's own claim: the WebView state stays and is not claimed.
+                    if (!marker || marker.writer !== 'native') {
+                        deferred.resolve(!!marker);
+                        return;
+                    }
+                    if (marker.generation <= applied) {
+                        claim(marker.generation, resolveTrusted);
+                        return;
+                    }
+                    var keys = handBackKeys.filter(function (key) { return marker.keys.indexOf(key) >= 0; });
+                    var texts = {}, count = keys.length, failed = false;
+                    function finish() {
+                        if (failed) {
+                            retry('a key unreadable');
+                            return;
+                        }
+                        try {
+                            // Every owned key goes first, so the texts take the room of the stale ones.
+                            keys.forEach(function (key) { localStorage.removeItem(key); });
+                            keys.forEach(function (key) {
+                                if (texts[key] != undefined && texts[key] !== '') { localStorage.setItem(key, texts[key]); }
+                            });
+                            localStorage.setItem(handBackApplied, String(marker.generation));
+                        } catch (e) {
+                            retry('not applied: ' + e);
+                            return;
+                        }
+                        claim(marker.generation, resolveTrusted);
+                    }
+                    if (count === 0) { finish(); return; }
+                    keys.forEach(function (key) {
+                        suitePrefs.fetch(function (text) {
+                            texts[key] = text == undefined || typeof text === 'string' ? text : JSON.stringify(text);
+                            if (--count === 0) { finish(); }
+                        }, function (err) {
+                            failed = true;
+                            if (--count === 0) { finish(); }
+                        }, key);
+                    });
+                }, function (err) {
+                    retry('the marker unreadable');
+                }, handBackKey);
+            }
+
+            attempt();
+            return deferred.promise;
         }
 
         function _hasAppPreferences() {
@@ -210,6 +323,18 @@ angular.module('service.storage', [])
             if (_hasAppPreferences()) {
                 suitePrefs = plugins.appPreferences.suite(suiteName);
 
+                _handBack().then(function (trusted) {
+                    // The analytics choice is final in localStorage now (the restore below does not touch it).
+                    Monetization.storageReady(trusted);
+                    _restoreOrMirror();
+                });
+            } else {
+                Monetization.storageReady(true);
+                that.setForwardCompatibility();
+                deferred.resolve();
+            }
+
+            function _restoreOrMirror() {
                 // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update.
                 // A new web origin (file:// → app://localhost or https://localhost) also starts empty; test the
                 // city keys, not length, so an unrelated early write cannot skip the restore.
@@ -235,9 +360,6 @@ angular.module('service.storage', [])
                         deferred.resolve();
                     });
                 }
-            } else {
-                that.setForwardCompatibility();
-                deferred.resolve();
             }
 
             return deferred.promise;

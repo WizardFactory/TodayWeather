@@ -102,8 +102,14 @@ open class TodayWeatherApp : Application() {
     /** The weather photo feed of the photo theme, loaded once per process (AN-08 chooses each place's photo). */
     val photos: WeatherPhotoFeed by lazy { WeatherPhotoFeed(weatherPhotosUrl(), appScope) }
 
-    /** The saved state as the screens see it, once the migration has finished; the only writer of the store after it. */
-    val appState: AppStateHolder by lazy { AppStateHolder(AppStateStore.get(this), appScope, migration) }
+    /**
+     * The saved state as the screens see it, once the migration has finished; the only writer of the store after it.
+     * Every saved state is handed back to the Cordova suite for a fallback build (AN-17).
+     */
+    val appState: AppStateHolder by lazy { AppStateHolder(AppStateStore.get(this), appScope, migration, onSaved = handBack::write) }
+
+    /** The rollback hand-back ([HandBackWriter]); each write of the analytics choice hands the last saved state back again. */
+    val handBack: HandBackWriter by lazy { HandBackWriter.of(this) }
 
     /** Each place's weather, cached in files so a cold start shows the last weather while it loads (#2887). */
     val weather: WeatherRepository by lazy {
@@ -149,5 +155,7 @@ open class TodayWeatherApp : Application() {
         super.onCreate()
         migration.start()
         NotificationChannels.ensure(this)
+        // At once, on the writer's thread: the start keeps a grant only while the suite says so (HandBackConsent).
+        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { it() }
     }
 }

@@ -28,7 +28,7 @@ const provenance = {
     cordovaApk: {sha256: sha256(fs.readFileSync(apk)), ...apkVersion(apk), sources},
     inputs,
     emulator: {fingerprint: adb('shell', 'getprop', 'ro.build.fingerprint'), sdk: adb('shell', 'getprop', 'ro.build.version.sdk')},
-    display: '384x832 dp at density 2 (wm size 768x1664, wm density 320)',
+    display: `WebView 384x762 dp at density 2 (${adb('shell', 'wm', 'size').split('\n').pop().trim()}, wm density 320)`,
     language: 'per-app locale ko-KR, then en-US',
     images: 'cut from the screen (screencap): the whole WebView with the analytics popup over the menu, and with the menu ' +
         'after the opt-in',

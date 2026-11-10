@@ -155,4 +155,6 @@ data class MigrationInfo(
     val migratedAtMillis: Long,
     /** What happened to each Cordova key: `migrated`, `default`, `malformed`, `legacy`, `absent`. */
     val keys: Map<String, String>,
+    /** The generation of the fallback Cordova build's claim this migration adopted ([CordovaHandBack]); null without one. */
+    val handBackGeneration: Int? = null,
 )

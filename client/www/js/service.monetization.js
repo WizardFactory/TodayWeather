@@ -31,11 +31,42 @@ angular.module('service.monetization', [])
                 return true;
             } catch (e) { log('analytics', 'bridge_error'); return false; }
         }
-        var consentKey = 'twAnalyticsConsentV1', choice = false;
+        // A stored choice applies once TwStorage.init has read the native app's hand-back too (AN-17): until then the
+        // WebView can still hold a grant the user withdrew in the native app.
+        var consentKey = 'twAnalyticsConsentV1', choice = false, storageReady = false;
         try { choice = $window.localStorage.getItem(consentKey) === 'true'; }
         catch (e) { log('collection', 'storage_unavailable'); }
         obj.getCollectionChoice = function() { return choice; };
         var collectionBusy = false, nextCollection;
+        // The choice in the suite too (AN-17): after a rollback to this build and a return to the native app, that app
+        // keeps its own grant only while the suite says "true", so a withdrawal made here holds there. The plugin runs
+        // each call on a thread pool, so the writes go one at a time in the order of the choices. A choice not kept here
+        // is written as a withdrawal; a write that fails is tried once as a withdrawal, so no older grant stays there,
+        // and reported. Only stores: the plugin never answers the removal of a key it does not hold.
+        var mirrors = [], mirroring = false;
+        function mirrorChoice(value, done) {
+            mirrors.push({value: value, done: done || function() {}});
+            if (!mirroring) { nextMirror(); }
+        }
+        function nextMirror() {
+            var job = mirrors.shift(), suite;
+            if (!job) { mirroring = false; return; }
+            mirroring = true;
+            function finish(ok) { job.done(ok); nextMirror(); }
+            try {
+                var prefs = $window.plugins && $window.plugins.appPreferences;
+                if (prefs && typeof clientConfig !== 'undefined' && clientConfig.package) {
+                    suite = prefs.suite('group.net.wizardfactory.' + clientConfig.package.toLowerCase());
+                }
+            } catch (e) {}
+            if (!suite) { finish(true); return; }
+            function withdraw() {
+                try { suite.store(function() { finish(false); }, function() { finish(false); }, consentKey, 'false'); }
+                catch (e) { finish(false); }
+            }
+            try { suite.store(function() { finish(true); }, withdraw, consentKey, job.value === true ? 'true' : 'false'); }
+            catch (e) { withdraw(); }
+        }
         function persistChoice(value) {
             try {
                 $window.localStorage.setItem(consentKey, String(value));
@@ -101,9 +132,8 @@ angular.module('service.monetization', [])
             nextCollection = {value: value, callback: callback, revision: ++collectionRevision};
             drainCollection();
         }
-        obj.init = function() {
-            if (initialized || !$window.FirebasexAnalytics) { return; }
-            initialized = true;
+        // The stored choice applied: off, or a grant the plugin's persisted flag corroborates.
+        function applyStored() {
             if (!choice) { pendingScreen = undefined; applyCollection(false); return; }
             // Native preference corroborates WebView storage after a failed durable withdrawal.
             // The installed plugin persists this flag on both platforms (Android returns 1/0).
@@ -111,18 +141,37 @@ angular.module('service.monetization', [])
             function restore(value) {
                 if (revision !== collectionRevision) { return; }
                 choice = value === true || value === 1;
-                if (!choice) { pendingScreen = undefined; persistChoice(false); }
+                if (!choice) { pendingScreen = undefined; persistChoice(false); mirrorChoice(false); }
                 applyCollection(choice);
             }
             try { sdk.isAnalyticsCollectionEnabled(restore, function() { restore(false); }); }
             catch (e) { restore(false); }
+        }
+        obj.init = function() {
+            if (initialized || !$window.FirebasexAnalytics) { return; }
+            initialized = true;
+            if (storageReady) { applyStored(); }
+        };
+        // TwStorage.init is done, a hand-back included: the choice is read again and applies once init has run. When the
+        // native app may hold a newer choice this build could not read ([trusted] false), a stored grant does not apply
+        // in this session; a choice made in it does.
+        obj.storageReady = function(trusted) {
+            if (storageReady) { return; }
+            storageReady = true;
+            try { choice = trusted === true && $window.localStorage.getItem(consentKey) === 'true'; }
+            catch (e) { choice = false; }
+            if (!choice) { pendingScreen = undefined; }
+            if (initialized) { applyStored(); }
         };
         obj.setCollectionEnabled = function(value, callback) {
             if (typeof value !== 'boolean') { return; }
             enabled = false; pendingScreen = undefined;
-            var saved = persistChoice(value);
+            var saved = persistChoice(value), pending = 2, ok = saved;
             choice = saved ? value : false;
-            applyCollection(choice, function(ok) { if (callback) { callback(saved && ok); } });
+            // Answered once the suite's copy and the SDK both took the choice.
+            function done(result) { ok = ok && result; if (--pending === 0 && callback) { callback(ok); } }
+            mirrorChoice(saved ? value : undefined, done);
+            applyCollection(choice, done);
         };
         obj.track = function(name, params) {
             if (!Object.prototype.hasOwnProperty.call(schema, name)) { return false; }

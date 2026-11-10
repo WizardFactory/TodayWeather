@@ -20,8 +20,20 @@ trap 'exit 130' INT TERM
 
 go_offline
 rm -rf "$OUT/ko-KR" "$OUT/en-US" "$OUT/provenance.json"
-adb shell wm size 768x1664
 adb shell wm density 320
+# The WebView must be 384x762 dp, the size the native tests render: the room between the status and navigation bars is
+# 1524 px. The references were first captured on 768x1664 under a 46 dp status bar; the capture emulator's was 24 dp
+# on 2026-11-10, so the height follows the bars (SystemUI needs a moment after each change).
+bar() { adb shell dumpsys window | sed -n "s/.*type=$1 frame=\\[0,\\([0-9]*\\)\\]\\[[0-9]*,\\([0-9]*\\)\\].*/\\$2/p" | head -1; }
+height=1664
+for attempt in 1 2 3; do
+    adb shell wm size 768x$height
+    sleep 3
+    room=$(( $(bar navigationBars 1) - $(bar statusBars 2) ))
+    [ "$room" -eq 1524 ] && break
+    height=$((height + 1524 - room))
+done
+[ "$room" -eq 1524 ] || { echo "cannot give the WebView 1524 px between the bars ($room)" >&2; exit 1; }
 for lang in ko-KR en-US; do
     adb uninstall $PKG >/dev/null 2>&1 || true
     adb install "$CORDOVA_APK" >/dev/null
