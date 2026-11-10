@@ -1,7 +1,7 @@
 {
  "tool": "android/tools/privacy-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "12a9805fcc1f166cb00fcf759d3049411b2cea4e1504e4bd2608c268f19573b0",
+  "sha256": "e90ac9f2b19522233beb33af0026923417798338b887314f5714ef79f1750553",
   "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
@@ -23,11 +23,11 @@
    },
    {
     "file": "client/www/js/service.monetization.js",
-    "apkSha256": "5efe59ec4a58b12919c66f94328eb05697b9cd39a2e6a7865f65cf039c5f8691",
+    "apkSha256": "239fa7b10b109c726b8ea1410376fa0a8e5b99d1ea728dafcc48588bb4a44b7d",
     "tracked": true,
-    "clientSha256": "5efe59ec4a58b12919c66f94328eb05697b9cd39a2e6a7865f65cf039c5f8691",
+    "clientSha256": "239fa7b10b109c726b8ea1410376fa0a8e5b99d1ea728dafcc48588bb4a44b7d",
     "matchesClient": true,
-    "lastCommit": "3190a0c0647ba071902c3dee5c9b0f5a5133cf4c"
+    "lastCommit": "b1a8a01a16d02582e1ab1c88cbd035d7b345292d"
    },
    {
     "file": "client/www/js/service.admobemi.js",
@@ -106,7 +106,7 @@
  "files": [
   {
    "file": "en-US/actions.json",
-   "sha256": "52ae790fc1c4cea47e4932f9a11847d3738e462e934605929ff6f70f4657f481"
+   "sha256": "2a680807ccca295f510ebe58d5b4f8e98cbffcf4af154b58e3543874e7943391"
   },
   {
    "file": "en-US/analytics-popup.json",
@@ -114,7 +114,7 @@
   },
   {
    "file": "en-US/analytics-popup.png",
-   "sha256": "12e99218bbfded8e6e735cffbb9b8c7913d7f760e3260fb9769a586e4c0d9fcc"
+   "sha256": "026704d4bc5ac05323382eb4150a950994bfb84005f4d0952afb22707a942e36"
   },
   {
    "file": "en-US/menu-allowed.json",
@@ -130,11 +130,11 @@
   },
   {
    "file": "en-US/menu-off.png",
-   "sha256": "bf52da83c479d8bbe4fbac4bb7d7d99c07c37d46e8ee2681f12c51aceb8714db"
+   "sha256": "57c1faa400e4e063e3b8bd6080b02854fbeece54c519ea7216a11c7c6037cf0d"
   },
   {
    "file": "ko-KR/actions.json",
-   "sha256": "64cd47db2f890112d9bf219af612477245a1eb9aa16166154c64eb643caedb2b"
+   "sha256": "1050410b11a6f0b18ad07061e1eae7a8f5634dbcbac736ec2c94fe1bbcbb96c8"
   },
   {
    "file": "ko-KR/analytics-popup.json",
@@ -150,7 +150,7 @@
   },
   {
    "file": "ko-KR/menu-allowed.png",
-   "sha256": "422e294fa29625781c39130a8a72df598f65c74cd53361feb8299aa48974d8e6"
+   "sha256": "bcd0962d7056d7e61f5f640e694140a444db861b2caae3fb8594c9246ba821c4"
   },
   {
    "file": "ko-KR/menu-off.json",
