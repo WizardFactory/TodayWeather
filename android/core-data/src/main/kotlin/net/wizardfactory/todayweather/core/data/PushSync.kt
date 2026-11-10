@@ -77,6 +77,25 @@ class PushSync(
         Outcome(result.requests, statuses)
     }
 
+    /**
+     * `Push.removePushListByCityIndex(index)` (AN-11): the place's records are dropped and saved, then `DELETE /push` is
+     * sent once and its answer ignored; nothing without a token or a registration ID.
+     */
+    suspend fun removeCity(index: Int): Outcome? = lock.withLock {
+        val state = try {
+            store.updateData { it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return@withLock null
+        }
+        val ctx = context(state) ?: return@withLock null
+        val result = PushRegistration.onCityRemoved(state.push, index, ctx)
+        if (result.requests.isEmpty()) return@withLock Outcome(emptyList(), emptyList())
+        store.updateData { it.copy(push = PushRegistration.onCityRemoved(it.push, index, ctx).state) }
+        Outcome(result.requests, result.requests.map { transport.send(it) })
+    }
+
     private suspend fun send(state: AppState, result: PushRegistration.Result): Outcome {
         val statuses = result.requests.map { transport.send(it) }
         if (result.state.fcmToken != state.push.fcmToken) {

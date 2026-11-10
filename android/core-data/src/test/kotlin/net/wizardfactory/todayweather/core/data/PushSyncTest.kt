@@ -19,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import net.wizardfactory.todayweather.core.storage.AppState
@@ -117,6 +118,22 @@ class PushSyncTest {
         assertEquals("회현동", store.data.first().push.records.single()["name"]!!.jsonPrimitive.content)
         assertEquals(emptyList(), sync.updateCity(1)!!.requests, "unchanged now")
         assertEquals(emptyList(), sync.updateCity(0)!!.requests, "no records of the current position")
+    }
+
+    /** S02's delete (AN-11): the place's records go and `DELETE /push` is sent once. */
+    @Test
+    fun aRemovedPlaceDropsItsRecordsAndDeletesThem() = runBlocking {
+        val store = store("A")
+        val other = record + ("cityIndex" to JsonPrimitive(2))
+        runBlocking { store.updateData { it.copy(push = it.push.copy(records = listOf(JsonObject(record), JsonObject(other)))) } }
+        val transport = HeldTransport()
+        transport.release.complete(Unit)
+        val sync = PushSync(store, transport) { ctx }
+        val index = (record["cityIndex"] as JsonPrimitive).content.toInt()
+        val outcome = sync.removeCity(index)!!
+        assertEquals(listOf("DELETE /v000903/push"), outcome.requests.map { "${it.method} ${it.path}" })
+        assertEquals(listOf(JsonObject(other)), store.data.first().push.records, "A24: the other place's record keeps its index")
+        assertEquals(1, transport.sent.size)
     }
 
     @Test

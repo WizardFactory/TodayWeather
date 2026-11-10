@@ -46,6 +46,27 @@ class PlaceListTest {
         assertEquals(1, PlaceList.disableCurrent(withSeoul.copy(placeIndex = 1), false).placeIndex)
     }
 
+    /** `removeCity` (AN-11): the selection resets only when it equals the new count, to the first enabled place. */
+    @Test
+    fun aRemovedPlaceKeepsTheSelectedNumberUnlessItWasTheLast() {
+        val a = seoul.copy(name = "A", address = "a")
+        val b = seoul.copy(name = "B", address = "b")
+        val c = seoul.copy(name = "C", address = "c")
+        val four = AppState(places = listOf(placeholder, a, b, c), placeIndex = 3)
+        // The selected last place: the first enabled one, not the previous one.
+        assertEquals(1, PlaceList.remove(four, 3).placeIndex)
+        // An earlier place: the same number, now the next place.
+        val earlier = PlaceList.remove(four.copy(placeIndex = 2), 1)
+        assertEquals(listOf(placeholder, b, c), earlier.places)
+        assertEquals(2, earlier.placeIndex)
+        assertEquals(1, PlaceList.remove(four.copy(placeIndex = 1), 3).placeIndex)
+        // The last favorite with slot 0 off: no enabled place, the index stays (out of range).
+        assertEquals(1, PlaceList.remove(AppState(places = listOf(placeholder, a), placeIndex = 1), 1).placeIndex)
+        // With slot 0 on, the first enabled place is slot 0.
+        assertEquals(0, PlaceList.remove(four.copy(places = listOf(placeholder.copy(disable = false), a, b, c)), 3).placeIndex)
+        assertEquals(four, PlaceList.remove(four, 9))
+    }
+
     @Test
     fun theStartPageShowsUntilItCloses() {
         assertTrue(fresh.startShows)

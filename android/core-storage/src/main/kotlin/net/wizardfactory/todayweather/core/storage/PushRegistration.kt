@@ -79,6 +79,23 @@ object PushRegistration {
      * records are posted (with a token; `_postPushList` stops without one). Without simple info, or for a record without
      * a town when the place has one, the Cordova code throws and nothing is saved or sent.
      */
+    /**
+     * `Push.removePushListByCityIndex(index)` after S02 deletes a place or turns the current position off (AN-11):
+     * `DELETE /push` with the token, else the registration ID, and the index; the place's records are dropped and no
+     * other record is renumbered (A24, kept). Without a token or a registration ID nothing is sent or removed.
+     */
+    fun onCityRemoved(push: PushState, index: Int, ctx: Context): Result {
+        val credential = when {
+            !push.fcmToken.isNullOrEmpty() -> "fcmToken" to push.fcmToken
+            !push.registrationId.isNullOrEmpty() -> "registrationId" to push.registrationId
+            else -> return Result(emptyList(), push)
+        }
+        val request = PushRequest("DELETE", "${ctx.versionPath}/push", jsonHeaders(ctx, language = false),
+            JsonObject(mapOf("cityIndex" to JsonPrimitive(index), credential.first to JsonPrimitive(credential.second))))
+        val records = push.records.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull != index }
+        return Result(listOf(request), push.copy(records = records))
+    }
+
     fun onCityChanged(push: PushState, places: List<Place>, index: Int, ctx: Context): Result {
         val unchanged = Result(emptyList(), push)
         val info = places.getOrNull(index)?.let(CityInfo::simple) ?: return unchanged
