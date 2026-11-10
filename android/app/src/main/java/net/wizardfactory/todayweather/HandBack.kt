@@ -65,16 +65,20 @@ class HandBackWriter(private val suite: SharedPreferences, private val consent: 
 }
 
 /**
- * The consent after a rollback and a return (AN-17): when a fallback Cordova build claimed the state, a choice it left
- * other than a grant withdraws this app's choice before it applies ([EarlyStartProvider]), so analytics stays off after
- * a withdrawal made there. A grant made there is not carried over, as the first migration carries none.
+ * The consent after a rollback and a return (AN-17): this app's grant stands at the start only while the suite's choice,
+ * which every hand-back writes and a fallback Cordova build mirrors from its own choices, says `"true"`. So a withdrawal
+ * made there holds, also when that build could not read the hand-back and so did not claim the state, and a failed
+ * mirror there (which removes the choice) withdraws. Before anything was handed over, the grant stands; a grant made
+ * there is not carried over, as the first migration carries none. Runs before the choice applies ([EarlyStartProvider]);
+ * each write of the choice is handed back at once ([HandBackWriter.watchConsent]), so a grant here is in the suite first.
  */
 object HandBackConsent {
     fun beforeStart(context: Context) {
+        val store = ConsentStore(context)
+        if (store.storedChoice() != "true") return
         val suite = context.getSharedPreferences(CordovaMigration.SUITE, Context.MODE_PRIVATE)
-        val marker = runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()
-        if (!CordovaHandBack.claimedByCordova(marker)) return
+        if (CordovaHandBack.parse(runCatching { suite.getString(CordovaHandBack.MARKER, null) }.getOrNull()) == null) return
         if (runCatching { suite.getString(CordovaHandBack.CONSENT, null) }.getOrNull() == "true") return
-        ConsentStore(context).write(false)
+        store.write(false)
     }
 }

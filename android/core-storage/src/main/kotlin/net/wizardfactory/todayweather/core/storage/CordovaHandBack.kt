@@ -22,7 +22,7 @@ import kotlinx.serialization.json.put
  * each of [KEYS] holds the text the Cordova app itself writes (`TwStorage.set`'s JSON; the consent as `Monetization`
  * stores it), or is absent when the state has none, so a deleted place or alarm cannot come back. `generation` grows by
  * one at each hand-over; the fallback build claims the state with `writer: cordova`, after which the native start
- * migrates its storage again ([claimedByCordova], [MigrationRunner]).
+ * migrates its storage again ([cordovaClaim], [MigrationRunner]).
  */
 object CordovaHandBack {
     /** The marker's suite key: the leading `_` keeps it out of the migration's suite read and Cordova's restore list. */
@@ -143,8 +143,4 @@ object CordovaHandBack {
     /** The fallback build's complete schema-1 claim in [text], or null. */
     fun cordovaClaim(text: String?): Marker? =
         parse(text)?.takeIf { it.schema == SCHEMA && it.complete && it.writer == CORDOVA }
-
-    /** Whether the stored marker [text] is the fallback build's complete schema-1 claim of the state. */
-    fun claimedByCordova(text: String?): Boolean = cordovaClaim(text) != null
-
 }

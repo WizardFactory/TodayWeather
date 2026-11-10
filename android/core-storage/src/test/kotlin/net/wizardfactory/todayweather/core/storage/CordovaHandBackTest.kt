@@ -6,7 +6,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -135,12 +134,12 @@ class CordovaHandBackTest {
     fun onlyAClaimByTheFallbackBuildMakesTheNativeAppMigrateAgain() {
         fun claim(schema: Int = 1, writer: String = "cordova", complete: Boolean = true) =
             """{"schema":$schema,"generation":6,"writer":"$writer","complete":$complete,"keys":[]}"""
-        assertTrue(CordovaHandBack.claimedByCordova(claim()))
-        assertFalse(CordovaHandBack.claimedByCordova(claim(writer = "native")))
-        assertFalse(CordovaHandBack.claimedByCordova(claim(complete = false)), "partial: the stored state stays")
-        assertFalse(CordovaHandBack.claimedByCordova(claim(schema = 2)), "a schema this build does not know")
-        assertFalse(CordovaHandBack.claimedByCordova(null))
-        assertFalse(CordovaHandBack.claimedByCordova("not json"))
+        assertEquals(6, CordovaHandBack.cordovaClaim(claim())?.generation)
+        assertNull(CordovaHandBack.cordovaClaim(claim(writer = "native")))
+        assertNull(CordovaHandBack.cordovaClaim(claim(complete = false)), "partial: the stored state stays")
+        assertNull(CordovaHandBack.cordovaClaim(claim(schema = 2)), "a schema this build does not know")
+        assertNull(CordovaHandBack.cordovaClaim(null))
+        assertNull(CordovaHandBack.cordovaClaim("not json"))
     }
 
     @Test

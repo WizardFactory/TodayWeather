@@ -124,26 +124,39 @@ class HandBackTest {
     }
 
     @Test
-    fun aWithdrawalInTheFallbackBuildHoldsAtTheNextStart() {
+    fun aGrantStandsAtTheStartOnlyWhileTheSuiteSaysTrue() {
         val consent = ConsentStore(context)
+        val choices = context.getSharedPreferences(ConsentStore.CHOICE_FILE, Context.MODE_PRIVATE)
         fun grant() { consent.write(true); consent.recordCollection(true) }
-        fun claim() = """{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"""
+        fun start(marker: String?, choice: String?) {
+            val edit = suite.edit()
+            if (marker != null) edit.putString(CordovaHandBack.MARKER, marker) else edit.remove(CordovaHandBack.MARKER)
+            if (choice != null) edit.putString(CordovaHandBack.CONSENT, choice) else edit.remove(CordovaHandBack.CONSENT)
+            edit.commit()
+            HandBackConsent.beforeStart(context)
+        }
+        val claim = """{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"""
+        val own = CordovaHandBack.marker(5, CordovaHandBack.NATIVE)
         grant()
-        suite.edit().putString(CordovaHandBack.MARKER, claim()).putString(CordovaHandBack.CONSENT, "false").commit()
-        HandBackConsent.beforeStart(context)
+        start(null, null)
+        assertTrue("nothing handed over yet: an earlier grant stands", consent.startChoice())
+        start(own, "true")
+        assertTrue("its own hand-back", consent.startChoice())
+        start(claim, "true")
+        assertTrue("a fallback build that kept the grant", consent.startChoice())
+        start(claim, "false")
         assertFalse("withdrawn in the fallback build", consent.startChoice())
         grant()
-        suite.edit().putString(CordovaHandBack.CONSENT, "true").commit()
-        HandBackConsent.beforeStart(context)
-        assertTrue("a grant there is not needed to keep this one", consent.startChoice())
-        suite.edit().putString(CordovaHandBack.MARKER, CordovaHandBack.marker(5, CordovaHandBack.NATIVE)).putString(CordovaHandBack.CONSENT, "false").commit()
-        HandBackConsent.beforeStart(context)
-        assertTrue("the native app's own hand-back: its choice stands", consent.startChoice())
-        suite.edit().putString(CordovaHandBack.MARKER, claim()).remove(CordovaHandBack.CONSENT).commit()
-        HandBackConsent.beforeStart(context)
-        assertFalse("no choice in the fallback build: off", consent.startChoice())
-        suite.edit().putString(CordovaHandBack.MARKER, claim()).putString(CordovaHandBack.CONSENT, "true").commit()
-        HandBackConsent.beforeStart(context)
+        start(own, "false")
+        assertFalse("withdrawn there while that build could not read the hand-back (so did not claim it)", consent.startChoice())
+        grant()
+        start(claim, null)
+        assertFalse("no choice there (a mirror that failed removes it): off", consent.startChoice())
+        choices.edit().remove(ConsentStore.KEY).commit()
+        start(claim, "false")
+        assertNull("no grant here: nothing is written", consent.storedChoice())
+        consent.write(false)
+        start(claim, "true")
         assertFalse("a grant there is not carried over", consent.startChoice())
     }
 }

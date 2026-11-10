@@ -18,11 +18,15 @@ angular.module('service.storage', [])
         // versionCode), the native app has left the state the user had there in the suite under this marker
         // ({schema, generation, writer, complete, keys}). A newer complete native hand-back replaces the stale WebView
         // values, removals included, before the restore or mirror below; this build then claims the state
-        // (writer 'cordova', generation + 1), so a later native start migrates what changes here.
+        // (writer 'cordova', generation + 1), so a later native start migrates what changes here. One this start cannot
+        // read or apply whole stays in the suite for the next start.
         var handBackKey = '_twHandBack';
         var handBackApplied = 'twHandBackApplied';
         var handBackKeys = ['cities', 'cityIndex', 'cityList', 'units', 'settingsInfo', 'pushData2', 'pushData',
             'expandShortChart', 'startVersion', 'appVersion', 'disableUpdateInfo', 'twAnalyticsConsentV1'];
+        // False after a start that could not read or apply a native hand-back whole: until the next start tries again,
+        // this build writes nothing into the suite, so its texts never mix with the hand-back under the native marker.
+        var suiteWritable = true;
 
         function _readHandBack(value) {
             var marker = value;
@@ -65,19 +69,32 @@ angular.module('service.storage', [])
                 var keys = handBackKeys.filter(function (key) { return marker.keys.indexOf(key) >= 0; });
                 var texts = {}, count = keys.length, failed = false;
                 function finish() {
-                    // Not applied: this build keeps its WebView state and claims it, as its mirror and its later writes
-                    // replace suite keys, which must not pass for the native hand-back at a later start.
                     if (failed) {
                         console.log('[_handBack] unreadable, not applied');
-                        claim(marker.generation);
+                        suiteWritable = false;
                         deferred.resolve();
                         return;
                     }
-                    keys.forEach(function (key) {
-                        if (texts[key] == undefined || texts[key] === '') { localStorage.removeItem(key); }
-                        else { localStorage.setItem(key, texts[key]); }
-                    });
-                    localStorage.setItem(handBackApplied, String(marker.generation));
+                    // All keys or none: a write that throws (a full store) puts back the keys written before it.
+                    var before = {};
+                    keys.concat(handBackApplied).forEach(function (key) { before[key] = localStorage.getItem(key); });
+                    try {
+                        keys.forEach(function (key) {
+                            if (texts[key] == undefined || texts[key] === '') { localStorage.removeItem(key); }
+                            else { localStorage.setItem(key, texts[key]); }
+                        });
+                        localStorage.setItem(handBackApplied, String(marker.generation));
+                    } catch (e) {
+                        console.log('[_handBack] not applied: ' + e);
+                        Object.keys(before).forEach(function (key) {
+                            try {
+                                if (before[key] === null) { localStorage.removeItem(key); } else { localStorage.setItem(key, before[key]); }
+                            } catch (ignored) {}
+                        });
+                        suiteWritable = false;
+                        deferred.resolve();
+                        return;
+                    }
                     claim(marker.generation);
                     deferred.resolve();
                 }
@@ -94,6 +111,7 @@ angular.module('service.storage', [])
                 });
             }, function (err) {
                 Util.ga.trackEvent('storage', 'error', 'handBack');
+                suiteWritable = false;
                 deferred.resolve();
             }, handBackKey);
 
@@ -160,7 +178,7 @@ angular.module('service.storage', [])
                         else {
                             localStorage.setItem(key, value);
 
-                            if (ionic.Platform.isAndroid()) {
+                            if (ionic.Platform.isAndroid() && suiteWritable) {
                                 suitePrefs.store(null, null, key, value);
                                 oldSuitePrefs.remove(null, null, key);
                             }
@@ -186,6 +204,9 @@ angular.module('service.storage', [])
         // localStorage에 저장된 data를 appPreference로 update
         function _localStorage2appPref() {
             var keys = ['cities', 'cityIndex', 'pushData', 'startVersion', 'settingsInfo'];
+            if (!suiteWritable) {
+                return;
+            }
 
             keys.forEach(function (key){
                 var value = localStorage.getItem(key);
@@ -261,7 +282,7 @@ angular.module('service.storage', [])
         obj.set = function (name, value) {
             var data = JSON.stringify(value);
 
-            if (_hasAppPreferences()) {
+            if (_hasAppPreferences() && suiteWritable) {
                 suitePrefs.store(function (data) {
                     //callback("OK");
                 }, function(err) {

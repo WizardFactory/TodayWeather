@@ -39,23 +39,42 @@ angular.module('service.monetization', [])
         obj.getCollectionChoice = function() { return choice; };
         var collectionBusy = false, nextCollection;
         // The choice in the suite too (AN-17): after a rollback to this build and a return to the native app, that app
-        // reads a choice made here from the suite; a withdrawal made here then holds there.
-        function mirrorChoice(value) {
+        // keeps its own grant only while the suite says "true", so a withdrawal made here holds there. The plugin runs
+        // each call on a thread pool, so the writes go one at a time in the order of the choices; one that fails removes
+        // the key, so no older grant stays there, and reports the failure.
+        var mirrors = [], mirroring = false;
+        function mirrorChoice(value, done) {
+            mirrors.push({value: value, done: done || function() {}});
+            if (!mirroring) { nextMirror(); }
+        }
+        function nextMirror() {
+            var job = mirrors.shift(), suite;
+            if (!job) { mirroring = false; return; }
+            mirroring = true;
+            function finish(ok) { job.done(ok); nextMirror(); }
             try {
                 var prefs = $window.plugins && $window.plugins.appPreferences;
-                if (!prefs || typeof clientConfig === 'undefined' || !clientConfig.package) { return; }
-                var suite = prefs.suite('group.net.wizardfactory.' + clientConfig.package.toLowerCase());
-                if (value === undefined) { suite.remove(null, null, consentKey); } else { suite.store(null, null, consentKey, String(value)); }
+                if (prefs && typeof clientConfig !== 'undefined' && clientConfig.package) {
+                    suite = prefs.suite('group.net.wizardfactory.' + clientConfig.package.toLowerCase());
+                }
             } catch (e) {}
+            if (!suite) { finish(true); return; }
+            function removeIt() {
+                try { suite.remove(function() { finish(false); }, function() { finish(false); }, consentKey); }
+                catch (e) { finish(false); }
+            }
+            try {
+                if (job.value === undefined) { suite.remove(function() { finish(true); }, function() { finish(false); }, consentKey); }
+                else { suite.store(function() { finish(true); }, removeIt, consentKey, String(job.value)); }
+            } catch (e) { removeIt(); }
         }
         function persistChoice(value) {
             try {
                 $window.localStorage.setItem(consentKey, String(value));
-                if ($window.localStorage.getItem(consentKey) === String(value)) { mirrorChoice(value); return true; }
+                if ($window.localStorage.getItem(consentKey) === String(value)) { return true; }
             } catch (e) {}
             // Invalidating an old grant is essential when writing a withdrawal fails.
             try { $window.localStorage.removeItem(consentKey); } catch (e) {}
-            mirrorChoice(undefined);
             log('collection', 'storage_write_failed');
             return false;
         }
@@ -123,7 +142,7 @@ angular.module('service.monetization', [])
             function restore(value) {
                 if (revision !== collectionRevision) { return; }
                 choice = value === true || value === 1;
-                if (!choice) { pendingScreen = undefined; persistChoice(false); }
+                if (!choice) { pendingScreen = undefined; mirrorChoice(persistChoice(false) ? false : undefined); }
                 applyCollection(choice);
             }
             try { sdk.isAnalyticsCollectionEnabled(restore, function() { restore(false); }); }
@@ -145,9 +164,12 @@ angular.module('service.monetization', [])
         obj.setCollectionEnabled = function(value, callback) {
             if (typeof value !== 'boolean') { return; }
             enabled = false; pendingScreen = undefined;
-            var saved = persistChoice(value);
+            var saved = persistChoice(value), pending = 2, ok = saved;
             choice = saved ? value : false;
-            applyCollection(choice, function(ok) { if (callback) { callback(saved && ok); } });
+            // Answered once the suite's copy and the SDK both took the choice.
+            function done(result) { ok = ok && result; if (--pending === 0 && callback) { callback(ok); } }
+            mirrorChoice(saved ? value : undefined, done);
+            applyCollection(choice, done);
         };
         obj.track = function(name, params) {
             if (!Object.prototype.hasOwnProperty.call(schema, name)) { return false; }

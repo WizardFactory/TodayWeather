@@ -16,7 +16,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import net.wizardfactory.todayweather.ads.AdsPlatform
 import net.wizardfactory.todayweather.ads.GoogleAdsPlatform
 import net.wizardfactory.todayweather.analytics.Analytics
@@ -156,6 +155,7 @@ open class TodayWeatherApp : Application() {
         super.onCreate()
         migration.start()
         NotificationChannels.ensure(this)
-        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { appScope.launch(Dispatchers.IO) { it() } }
+        // At once, on the writer's thread: the start keeps a grant only while the suite says so (HandBackConsent).
+        handBack.watchConsent(getSharedPreferences(ConsentStore.CHOICE_FILE, MODE_PRIVATE)) { it() }
     }
 }
