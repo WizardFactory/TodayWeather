@@ -2,6 +2,14 @@ package net.wizardfactory.todayweather.ui.shell
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -64,8 +72,11 @@ object PopupTags {
     const val BUTTON = "ionic-popup-button"
 }
 
-/** A button of an Ionic popup: `button-positive` (blue, white text) or `button-default` (light gray, dark text). */
-class PopupButton(val text: String, val positive: Boolean = false, val onTap: () -> Unit)
+/**
+ * A button of an Ionic popup: `button-positive` (blue, white text), `button-dark` (#444, white text, [dark]) or
+ * `button-default` (light gray, dark text).
+ */
+class PopupButton(val text: String, val positive: Boolean = false, val dark: Boolean = false, val onTap: () -> Unit)
 
 /**
  * An Ionic alert (`$ionicPopup.alert`, the About popup O10 and the alerts of `showAlert`): an [IonicPopup] with the
@@ -92,9 +103,10 @@ fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, o
         // buttons keep their height.
         val popupWidth = min(maxWidth, 250.dp)
         Column(Modifier.width(250.dp).heightIn(max = maxHeight * 0.9f).background(Color(0xE6FFFFFF)).testTag(PopupTags.POPUP)) {
-            // .popup-head: the title on an 18 dp line with 15 dp above and below and 10 dp at the sides, a 1 dp line under it.
-            FixedLine(18.dp, Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 15.dp)) {
-                LineText(title, line(15.sp, TextUnit.Unspecified, Color.Black, FontWeight.Medium).copy(textMotion = TextMotion.Animated))
+            // .popup-head: the title on an 18 dp line with 15 dp above and below and 10 dp at the sides, a 1 dp line under it;
+            // without a title (`$ionicPopup.alert` with a template only) the empty head keeps its padding.
+            FixedLine(if (title.isEmpty()) 0.dp else 18.dp, Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 15.dp)) {
+                if (title.isNotEmpty()) LineText(title, line(15.sp, TextUnit.Unspecified, Color.Black, FontWeight.Medium).copy(textMotion = TextMotion.Animated))
             }
             Box(Modifier.fillMaxWidth().padding(top = 15.dp).height(1.dp).background(Color(0xFFEEEEEE)))
             // .popup-body: 10 dp around the text, on lines of `line-height: normal` as the WebView spaces them, broken
@@ -122,10 +134,10 @@ fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, o
                 buttons.forEachIndexed { i, b ->
                     if (i > 0) Spacer(Modifier.width(5.dp))
                     Box(Modifier.weight(1f).fillMaxHeight().heightIn(min = 45.dp).alpha(0.87f).clip(RoundedCornerShape(2.dp))
-                        .background(if (b.positive) Color(0xFF387EF5) else Color(0xFFF8F8F8))
+                        .background(if (b.positive) Color(0xFF387EF5) else if (b.dark) Color(0xFF444444) else Color(0xFFF8F8F8))
                         .border(1.dp, Color.Transparent, RoundedCornerShape(2.dp)).clickable(onClick = b.onTap).testTag(PopupTags.BUTTON)
                         .padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
-                        val label = line(15.sp, TextUnit.Unspecified, if (b.positive) Color.White else Color(0xFF444444), FontWeight.Bold)
+                        val label = line(15.sp, TextUnit.Unspecified, if (b.positive || b.dark) Color.White else Color(0xFF444444), FontWeight.Bold)
                         val fits = remember(b.text, density, labelWidth) { measurer.measure(b.text, label).size.width <= labelWidth }
                         if (fits) {
                             FixedLine(20.dp) { LineText(b.text, label) }
@@ -147,4 +159,17 @@ internal fun popupBodyStyle() = line(14.sp, TextUnit.Unspecified, Color.Black).c
 internal fun popupLines(measurer: TextMeasurer, lines: List<String>, density: Density): List<String> {
     val width = with(density) { 230.dp.roundToPx() }
     return lines.flatMap { if (it.isEmpty()) listOf(it) else chromeLines(measurer, it, popupBodyStyle(), width) }
+}
+
+/**
+ * `.toggle.toggle-search` (S02's current position, S09's alert): a 48 by 30 dp box with a 38 by 14 dp track (8 dp corners,
+ * gray, blue when on) and a 20 dp white handle.
+ */
+@Composable
+internal fun IonicToggle(on: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.size(48.dp, 30.dp).semantics { toggleableState = ToggleableState(on) }.clickable(role = Role.Switch) { onChange(!on) }) {
+        Box(Modifier.offset(5.dp, 5.5.dp).size(38.dp, 14.dp).clip(RoundedCornerShape(8.dp))
+            .background(if (on) Color(0xFF387EF5) else Color(0xCC9E9E9E)))
+        Box(Modifier.offset(if (on) 23.dp else 5.dp, 2.5.dp).size(20.dp).shadow(2.dp, CircleShape).background(Color.White, CircleShape))
+    }
 }

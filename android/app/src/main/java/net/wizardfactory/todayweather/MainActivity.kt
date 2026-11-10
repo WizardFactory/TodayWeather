@@ -1,5 +1,20 @@
 package net.wizardfactory.todayweather
 
+import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import net.wizardfactory.todayweather.core.domain.alarms.ForegroundMessage
+import net.wizardfactory.todayweather.core.data.AlarmPage
+import net.wizardfactory.todayweather.core.data.answerAlertIntro
+import net.wizardfactory.todayweather.notify.PushMessage
+import net.wizardfactory.todayweather.ui.alarms.AlarmsScreen
+import net.wizardfactory.todayweather.ui.alarms.AlarmsHost
+import net.wizardfactory.todayweather.ui.alarms.AlarmRoutes
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -113,6 +128,7 @@ class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition { !app.migration.isCompleted }
         opened = ViewModelProvider(this)[OpenedModel::class.java]
         app.location.attach(this)
+        app.notifications.attach(this)
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
         // The banner belongs to this activity: a configuration change loads a new one at the new width (V21).
@@ -169,7 +185,8 @@ class MainActivity : ComponentActivity() {
                     handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (shown) ({ BannerSlot(banner) }) else null,
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
                     openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
-                    openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places)
+                    openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places,
+                    alarms = opened.alarms, messages = app.foreground.messages, alertIntro = opened.alertIntro)
             }
         }
     }
@@ -179,16 +196,19 @@ class MainActivity : ComponentActivity() {
         // Cordova's `resume`: each return to the foreground reloads the selected place if the gate allows.
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
         resumedBefore = true
+        app.foreground.resumed = true
         banner.resume()
     }
 
     override fun onPause() {
+        app.foreground.resumed = false
         banner.pause()
         super.onPause()
     }
 
     override fun onDestroy() {
         app.location.detach(this)
+        app.notifications.detach()
         opened.consent.stop(this)
         opened.ads.detach(banner)
         banner.destroy()
@@ -221,7 +241,8 @@ class MainActivity : ComponentActivity() {
  * - the menu's privacy rows, the banner under the tab bar and the routes reported to analytics (#2894);
  * - the retry confirmation, the current position's confirmation (O03 `forecast`) and, with no enabled place, the start
  *   choice O02 that a weather page, a weather or Air tab tapped or a share opens (#2889).
- * - the saved places S02 in the Locations tab (#2890).
+ * - the saved places S02 in the Locations tab (#2890);
+ * - S09 from the bells, the weather-alert introduction O06 and messages while the app shows (O07) (#2893).
  */
 @Composable
 fun AppContent(
@@ -248,6 +269,12 @@ fun AppContent(
     openLocationSettings: () -> Unit = {},
     /** The saved places S02 (#2890): its search and a visit's page; none, an empty Locations tab. */
     places: PlacesHost? = null,
+    /** S09's visits from the bells (#2893); none, bells that do nothing. */
+    alarms: AlarmsHost? = null,
+    /** Messages while the app shows, as O07 (#2893). */
+    messages: Flow<PushMessage>? = null,
+    /** O06 for alarms of the legacy `pushData` (#2893). */
+    alertIntro: AlertIntro? = null,
 ) {
     val theme = Theme.of(state.settings.theme)
     val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
@@ -256,13 +283,16 @@ fun AppContent(
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
     // The settings pages (SettingsRoutes) and the nationwide and warning pages (NationRoutes) open over the tabs, last on
     // top; a saved route this version does not have is dropped. About is a popup over the menu (O10).
-    val known = { route: String -> SettingsRoutes.known(route) || NationRoutes.known(route) }
+    val known = { route: String -> SettingsRoutes.known(route) || NationRoutes.known(route) || (alarms != null && AlarmRoutes.known(route)) }
     var saved by rememberSaveable { mutableStateOf(listOf<String>()) }
     val pages = saved.filter(known)
     fun open(route: String) { saved = saved.filter(known) + route }
+    // Each return from the pages over the tabs starts the tabs' views anew (`cache: false`): S02 reads its bells again.
+    var returns by rememberSaveable { mutableIntStateOf(0) }
     fun back() {
         pages.lastOrNull()?.takeIf(NationRoutes::known)?.let { nation?.close(it) }
         saved = saved.filter(known).dropLast(1)
+        if (saved.none(known)) returns++
     }
     // A nationwide or warning page sends its request when it opens (`clickMenu`: close the menu, then the page).
     fun openNation(route: String) {
@@ -289,10 +319,32 @@ fun AppContent(
     fun started(currentPosition: Boolean) = if (currentPosition) navigation.selected = Tab.HOURLY else openLocations()
     // A visit of S02 while the Locations tab shows (`cache: false`): new each time it opens.
     val placesPage = if (navigation.selected == Tab.LOCATIONS && places != null) {
-        val scope = rememberCoroutineScope()
-        remember { places.newPage(scope) }
+        key(returns) {
+            val scope = rememberCoroutineScope()
+            remember { places.newPage(scope) }
+        }
     } else {
         null
+    }
+    // The bells open S09: the weather header's for the selected place (`goPushPage`), S02's for its row.
+    val selectedIndex by rememberUpdatedState(state.placeIndex)
+    val bellHost = remember(host, alarms) {
+        if (alarms == null) host else WeatherTabHost(host.texts, host.photos, host.readCache, host.onPrevious, host.onNext, host.onExpand,
+            onBell = { open(AlarmRoutes.of(selectedIndex)) }, onShare = host.onShare, onLocationGlyph = host.onLocationGlyph,
+            locationEnabled = host.locationEnabled)
+    }
+    // O07: one message at a time while the tabs show (Ionic's popups wait in a queue).
+    val foregroundMessages = remember { mutableStateListOf<PushMessage>() }
+    if (messages != null) LaunchedEffect(messages) { messages.collect { foregroundMessages += it } }
+    // O06: 500 ms after the open, over the tabs, once per app open while the introduction is due.
+    var intro by remember { mutableStateOf(false) }
+    if (alertIntro != null && state.push.needsAlertIntro) {
+        LaunchedEffect(Unit) {
+            if (alertIntro.due()) {
+                delay(500)
+                intro = true
+            }
+        }
     }
     // `goPage()`: the startup page's tab with `reloadEvent 'search'`.
     fun openFromPlaces(index: Int?) {
@@ -368,7 +420,9 @@ fun AppContent(
         },
         overlay = {
             pages.lastOrNull()?.let { route ->
-                if (NationRoutes.known(route)) {
+                if (AlarmRoutes.known(route)) {
+                    AlarmsScreen(route, returns, theme, alarms!!, onBack = ::back, openAppSettings = openAppSettings)
+                } else if (NationRoutes.known(route)) {
                     // A page restored after the process ended has not sent its request in this one.
                     LaunchedEffect(route) { nation?.ensure(route) }
                     NationScreen(route, nationPages[route], theme, AppLocale.region(), state.units, texts, onBack = ::back)
@@ -381,6 +435,24 @@ fun AppContent(
         },
         popups = {
             if (about) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = { about = false }) }
+            if (intro && alertIntro != null) {
+                // `showAlertInfoEvent`: Close keeps the migrated alerts off, OK turns them on; back answers nothing (A22).
+                fun answer(enable: Boolean?) {
+                    intro = false
+                    if (enable != null) alertIntro.answer(enable)
+                }
+                IonicPopup(stringResource(R.string.LOC_WEATHER_ALERT), stringResource(R.string.LOC_ADDED_BAD_WEATHER_ALERT_FUNCTION).split('\n', limit = 2),
+                    listOf(PopupButton(stringResource(R.string.LOC_CLOSE)) { answer(false) }, PopupButton(stringResource(R.string.LOC_OK), dark = true) { answer(true) }),
+                    onBack = { answer(null) })
+            }
+            foregroundMessages.firstOrNull()?.let { message ->
+                // `notificationEvent`: the title and body as HTML, a break between them; OK closes it.
+                val lines = ForegroundMessage.template(message.title, message.body).split("<br>")
+                    .map { AnnotatedString.fromHtml(it).text }
+                IonicPopup(stringResource(R.string.LOC_WEATHER), lines, listOf(PopupButton(stringResource(R.string.LOC_OK), dark = true) {
+                    foregroundMessages.removeAt(0)
+                }), onBack = { foregroundMessages.removeAt(0) })
+            }
             if (analyticsPopup) {
                 // `chooseAnalytics`: back closes it without a choice.
                 fun choose(value: Boolean) {
@@ -433,15 +505,19 @@ fun AppContent(
         },
     ) { tab ->
         when (tab) {
-            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, host, onAirInfo = { code ->
+            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, bellHost, onAirInfo = { code ->
                 // `goAirInfoPage(code)`: /tab/air?code=.
                 airCode = code
                 navigation.selected = Tab.AIR
             }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup)
-            Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
+            Tab.AIR -> rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
                 onUnits = openUnits)
             else -> placesPage?.let { page ->
-                rememberPlacesTab(state, entries, theme, page, places!!, onSelect = ::openFromPlaces, onAdded = { openFromPlaces(null) })
+                // A new visit gets a new tab: its state and its opening run again.
+                key(page) {
+                    rememberPlacesTab(state, entries, theme, page, places!!, onSelect = ::openFromPlaces, onAdded = { openFromPlaces(null) },
+                        onAlarm = { i -> if (alarms != null) open(AlarmRoutes.of(i)) })
+                }
             } ?: TabContent()
         }
     }
@@ -479,6 +555,21 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
             removeAlarms = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.removeCity(index) } }, cityUpdated = cityUpdated, telemetry = telemetry)
     }
 
+    /** S09's visits (#2893); a save changes the state at once and posts in the app's scope (`_postPushList` was not awaited). */
+    val alarms = AlarmsHost { scope, openSettings ->
+        AlarmPage(twApp.appState, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
+            openSettings = openSettings, scope = scope)
+    }
+
+    /** O06 of this app open: shown once (`showAlertInfoEvent` after the start); OK's post goes in the app's scope. */
+    val alertIntro = object : AlertIntro {
+        private var shown = false
+        override fun due(): Boolean = !shown.also { shown = true }
+        override fun answer(enable: Boolean) {
+            answerAlertIntro(twApp.appState, enable) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.postList() } }
+        }
+    }
+
     /** The start page's visit of this app open (S01, #2889). */
     val start: StartPage by lazy {
         StartPage(StartFlow(twApp.appState, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), viewModelScope)
@@ -504,6 +595,10 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         twApp.analytics.onOpened()
         // `todayweather://N`: the place is selected and loads (`branchInit`, `reloadEvent 'deeplink'`), once the start page has closed.
         viewModelScope.launch { twApp.entryLinks.deliver(twApp.appState.state, ready = { !it.startShows }, open = session::openPlace) }
+        // A notification tap: the place is selected and loads (`reloadEvent 'push'`), once the start page has closed.
+        viewModelScope.launch {
+            twApp.notificationTaps.deliver(twApp.appState.state, ready = { !it.startShows }) { session.openPlace(it, WeatherSession.Sender.PUSH) }
+        }
         loadPhotos()
         connectivity.registerDefaultNetworkCallback(online)
         locationSwitch.register()
@@ -535,6 +630,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
 /** The Cordova state name of a page over the tabs (`screen_view`). */
 private fun screenName(route: String): String = when {
+    AlarmRoutes.known(route) -> AlarmRoutes.SCREEN
     route == SettingsRoutes.UNITS -> "units"
     SettingsRoutes.known(route) -> "setting-radio"
     else -> route // the nationwide and warning pages are named as their states
@@ -542,3 +638,9 @@ private fun screenName(route: String): String = when {
 
 /** The device's languages for `Accept-Language`, as the WebView sent them. */
 private fun languages(): List<String> = LocaleListCompat.getAdjustedDefault().toLanguageTags().split(",").filter { it.isNotEmpty() }
+
+/** O06 of an app open: [due] once, then its answer (OK enables the migrated alerts). */
+interface AlertIntro {
+    fun due(): Boolean
+    fun answer(enable: Boolean)
+}

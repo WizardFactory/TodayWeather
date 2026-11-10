@@ -8,6 +8,8 @@
          build declared (GPS_REQUIRED false). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- S09 asks for it on Android 13+ (AN-14), as firebasex declared it. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
@@ -37,6 +39,9 @@
         <meta-data android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT" android:value="true" />
         <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION" android:value="true" />
         <meta-data android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING" android:value="true" />
+        <!-- The Cordova build's channel and color for the notifications FCM posts (firebasex 2.0.3, AN-14). -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="fcm_default_channel" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_accent" />
 
         <!-- initOrder above FirebaseInitProvider's 100: revokes analytics before Firebase starts. -->
         <provider
@@ -52,6 +57,17 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- The tap targets of notifications the Cordova build posted itself; they open MainActivity (AN-14). -->
+        <activity
+            android:name="org.apache.cordova.firebasex.OnNotificationReceiverActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <receiver
+            android:name="org.apache.cordova.firebasex.OnNotificationOpenReceiver"
+            android:exported="false" />
 
         <!-- The Cordova launcher component name, so existing home-screen shortcuts open this activity. -->
         <activity
