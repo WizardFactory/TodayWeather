@@ -96,6 +96,35 @@ object PushRegistration {
         return Result(listOf(request), push.copy(records = records))
     }
 
+    /**
+     * `Push.updatePushListByCityIndex(list, index)`, the S09 save (AN-14): the records of [index] are replaced by [list]
+     * (appended after the others, which keep `loadPushInfo`'s repair as the Cordova list in memory did), and only [list]
+     * is posted (`POST /push-list`; nothing without a token, `_postPushList`). Without a [ctx] (no server) the records are
+     * replaced and nothing is sent.
+     */
+    fun onPlaceSaved(push: PushState, places: List<Place>, list: List<JsonObject>, index: Int, ctx: Context?): Result {
+        val records = push.records.map { repair(it, places) }.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull != index } + list
+        val state = push.copy(records = records)
+        if (ctx == null || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
+            JsonArray(list.map { postObject(it, state, ctx) }))), state)
+    }
+
+    /**
+     * `Push.enableAlertForOldAlarm(enable)`, the answer to O06 (AN-14): OK ([enable]) turns every alert on and posts the
+     * whole list (with a token); Close changes nothing. Either answer saves the list, which ends the introduction
+     * ([PushState.needsAlertIntro]); Android back answers nothing.
+     */
+    fun onAlertIntro(push: PushState, places: List<Place>, enable: Boolean, ctx: Context?): Result {
+        var state = push.copy(records = push.records.map { repair(it, places) }, needsAlertIntro = false)
+        if (!enable) return Result(emptyList(), state)
+        state = state.copy(records = state.records.map {
+            if ((it["category"] as? JsonPrimitive)?.content == "alert") JsonObject(it + ("enable" to JsonPrimitive(true))) else it
+        })
+        if (ctx == null || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(postList(state, ctx)), state)
+    }
+
     fun onCityChanged(push: PushState, places: List<Place>, index: Int, ctx: Context): Result {
         val unchanged = Result(emptyList(), push)
         val info = places.getOrNull(index)?.let(CityInfo::simple) ?: return unchanged

@@ -841,6 +841,283 @@ function pushCases() {
     };
 }
 
+// S09 (AN-14, #2893): PushCtrl over the real Push service for one place, run with doubles for the hour bar (the
+// ionRangeSlider options and their onChange), the time picker (the options PushCtrl opens it with; a step answers its
+// callback), $ionicPopup (each popup's title, template and buttons; a step answers the last one), $translate (each key
+// is its own text, so the cases name keys and Cordova's English literals) and history (goBack). A case is the page's
+// opening and a list of steps; after each step it records the rows, the add row, the weekdays, the switch, what opened
+// (popup, picker), the requests sent, the list saved, whether the page went back and the permission calls.
+function alarmPage({storedToken = 'token-a', list = PUSH_LIST, cities = PUSH_CITIES, selected = 1, fav, permission = true, inited = true,
+                       zone = 'Asia/Seoul', steps = []}) {
+    process.env.TZ = zone;
+    let factory, controller;
+    const timers = [];
+    let calls = [];
+    let saved = null;
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }, controller: (_, fn) => { controller = fn; }})}, console: quiet,
+        window: {}, clientConfig: {package: 'todayWeather', serverUrl: 'https://server'},
+        ionic: {Platform: {isAndroid: () => true, isIOS: () => false}}, setTimeout: (fn) => timers.push(fn), Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: list}};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set(k, v) { if (k === 'pushData2') saved = clone(v.pushList); }};
+    const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
+    const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const Units = {getAllUnits: () => clone(units)};
+    const weatherUtil = loadWeatherUtil(units);
+    let cityIndex = selected;
+    const WeatherInfo = {
+        getCityOfIndex: (i) => (i >= 0 && i < cities.length ? clone(cities[i]) : null), getCityIndex: () => cityIndex,
+        setCityIndex(i) { if (i >= 0 && i < cities.length) cityIndex = i; },
+    };
+    let permissionCalls = [];
+    const Firebase = {init() {}, inited, hasPermission(cb) { permissionCalls.push('has'); cb({isEnabled: permission}); },
+        grantPermission(cb) { permissionCalls.push('grant'); cb(permission); }};
+    const push = factory($http, TwStorage, Util, weatherUtil, WeatherInfo, Units, {$broadcast() {}}, Firebase);
+    push.init();
+    timers.splice(0).forEach((fn) => fn());
+    calls = [];
+    saved = null;
+
+    let slider = null, picker = null, opened = [], back = 0;
+    // The context's setTimeout runs with the step: O11's Settings switches through it.
+    const settingsOpened = [];
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'controller.push.js'), 'utf8'), {...context, $: () => ({ionRangeSlider(o) { slider = o; }}),
+        cordova: {plugins: {diagnostic: {switchToSettings(ok) { settingsOpened.push('app'); if (ok) ok(); }}}}});
+    const popups = [];
+    const thenable = (value) => ({then(ok) { ok(value); return {finally(fn) { fn(); }}; }});
+    const $translate = (keys) => thenable(Object.fromEntries(keys.map((k) => [k, k])));
+    const popup = (kind) => (o) => {
+        const p = {kind, title: o.title ?? null, template: o.template ?? null, buttons: (o.buttons || []).map((b) => ({text: b.text, type: b.type ?? null})),
+            answer: null};
+        popups.push(p);
+        opened.push({kind, title: p.title, template: p.template, buttons: p.buttons});
+        return {then(cb) { p.answer = cb; return {finally(fn) { p.done = fn; }}; }};
+    };
+    const $ionicPopup = {show: popup('show'), alert: popup('alert')};
+    const ionicTimePicker = {openTimePicker(o) {
+        picker = o;
+        opened.push({kind: 'picker', inputTime: o.inputTime, setLabel: o.setLabel, cancelLabel: o.cancelLabel, closeLabel: o.closeLabel});
+    }};
+    const $scope = {};
+    controller.call(null, $scope, fav === undefined ? {} : {fav: String(fav)}, WeatherInfo, weatherUtil, Units, Util,
+        {goBack() { back++; }}, push, $translate, ionicTimePicker, $ionicPopup);
+
+    const snapshot = (step) => {
+        const rows = ($scope.alarmList || []).map((a, i) => ({index: i, id: a.id, enable: a.enable, text: $scope.secs2dateStr(a.time)}));
+        const out = {step, title: $scope.address, rows, canAdd: $scope.canMakeNewAlarm(), days: clone($scope.dayOfWeek),
+            alertOn: $scope.alert.enable, opened, requests: calls, saved, back, permission: permissionCalls, selected: cityIndex};
+        opened = []; calls = []; saved = null; back = 0; permissionCalls = [];
+        return out;
+    };
+    const open = {slider: slider && {from: slider.from, to: slider.to, min: slider.min, max: slider.max, step: slider.step,
+        type: slider.type, grid: slider.grid, hide_min_max: slider.hide_min_max}, ...snapshot(null)};
+    const after = steps.map((step) => {
+        if (step.op === 'day') $scope.toggleEnableDay(step.day);
+        else if (step.op === 'alert') { $scope.alert.enable = step.enable; $scope.onToggleEnableAlert(); }
+        else if (step.op === 'hours') slider.onChange({from: step.from, to: step.to});
+        else if (step.op === 'picker') $scope.onOpenTimePicker(step.index);
+        else if (step.op === 'set') picker.callback(step.secs);
+        else if (step.op === 'delete') picker.callback(0);
+        else if (step.op === 'close') picker.callback();
+        else if (step.op === 'cancel') $scope.onClose();
+        else if (step.op === 'save') $scope.onOkay();
+        else if (step.op === 'answer') { const p = popups[popups.length - 1]; p.answer && p.answer(step.value); p.done && p.done(); }
+        else if (step.op === 'permission') permission = step.enabled;
+        else throw new Error(`unknown step ${step.op}`);
+        timers.splice(0).forEach((fn) => fn());
+        return snapshot(step);
+    });
+    delete process.env.TZ;
+    return {open, after, settingsOpened};
+}
+
+const EVENING = [{cityIndex: 1, id: 1, startTime: '2026-11-07T23:00:00.000Z', endTime: '2026-11-08T12:00:00.000Z', enable: false, category: 'alert',
+    name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    ...[[2, '2026-11-06T21:05:00.000Z', true], [3, '2026-11-07T03:30:00.000Z', true], [4, '2026-11-07T09:00:00.000Z', false],
+        [5, '2026-11-06T22:00:00.000Z', true], [6, '2026-11-07T00:15:00.000Z', true], [7, '2026-11-07T11:45:00.000Z', true]]
+        .map(([id, time, enable]) => ({cityIndex: 1, id, time, dayOfWeek: [true, false, false, false, false, false, true], enable,
+            category: 'alarm', name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}}))];
+// An alert whose window was saved on a month's last day as 07–24: the end is the next month's 1st, 00:00 (A23).
+const MONTH_END = [{...PUSH_LIST[1], startTime: '2026-10-30T22:00:00.000Z', endTime: '2026-10-31T15:00:00.000Z'}];
+const ALL_DAY = [{...PUSH_LIST[1], startTime: '2026-11-06T15:00:00.000Z', endTime: '2026-11-07T15:00:00.000Z'}];
+const EQUAL = [{...PUSH_LIST[1], startTime: '2026-11-07T00:00:00.000Z', endTime: '2026-11-07T00:00:00.000Z'}];
+
+function alarmPageCases() {
+    const save = [{op: 'save'}];
+    return [
+        // A place without records: the defaults (counted as edits), then Save registers them.
+        ['first-save', {list: [], steps: save}],
+        ['first-cancel-then-save', {list: [], steps: [{op: 'cancel'}, {op: 'answer', value: 'save'}]}],
+        ['first-cancel-then-close', {list: [], steps: [{op: 'cancel'}, {op: 'answer', value: 'close'}]}],
+        ['first-cancel-then-back', {list: [], steps: [{op: 'cancel'}, {op: 'answer', value: undefined}]}],
+        // Existing records: nothing changed, nothing sent.
+        ['unchanged-save', {steps: save}],
+        ['unchanged-cancel', {steps: [{op: 'cancel'}]}],
+        // Picker on a row: Set, Delete, Close; on the add row: Set, Delete.
+        ['set-row', {steps: [{op: 'picker', index: 0}, {op: 'set', secs: 21 * 3600 + 15 * 60}, ...save]}],
+        ['delete-row', {steps: [{op: 'picker', index: 0}, {op: 'delete'}, ...save]}],
+        ['close-row', {steps: [{op: 'picker', index: 0}, {op: 'close'}, ...save]}],
+        ['add-row', {steps: [{op: 'picker', index: 1}, {op: 'set', secs: 9 * 3600 + 35 * 60}, ...save]}],
+        ['add-row-delete', {steps: [{op: 'picker', index: 1}, {op: 'delete'}, {op: 'cancel'}]}],
+        // The switch, the bar and the weekdays.
+        ['alert-off', {steps: [{op: 'alert', enable: false}, ...save]}],
+        ['hours', {steps: [{op: 'hours', from: 0, to: 24}, ...save]}],
+        ['equal-hours', {steps: [{op: 'hours', from: 9, to: 9}, ...save]}],
+        ['equal-hours-alert-off', {steps: [{op: 'alert', enable: false}, {op: 'hours', from: 9, to: 9}, ...save]}],
+        ['equal-stored', {list: EQUAL, steps: save}],
+        ['days', {steps: [{op: 'day', day: 0}, {op: 'day', day: 1}, ...save]}],
+        // Five enabled alarms hide the add row; a disabled one keeps its id; the slot-0 place; month-end and 0–24 windows.
+        ['five-enabled', {list: EVENING, steps: [{op: 'picker', index: 3}, {op: 'set', secs: 6 * 3600}, ...save]}],
+        ['current-position', {selected: 2, fav: 0, steps: save}],
+        ['current-position-disabled', {selected: 2, fav: 0, cities: [{...PUSH_CITIES[0], disable: true}, ...PUSH_CITIES.slice(1)], steps: save}],
+        ['from-favorites', {selected: 2, fav: 1, steps: save}],
+        ['month-end', {list: MONTH_END, steps: [{op: 'day', day: 3}, ...save]}],
+        ['all-day', {list: ALL_DAY, steps: [{op: 'day', day: 3}, ...save]}],
+        // Permission off: O11 on entry, Save refused with O11; Settings opens the app's page. No Firebase: no prompt, Save stores.
+        ['permission-off', {permission: false, list: [], steps: [{op: 'answer', value: 'settings'}, ...save, {op: 'answer', value: 'close'},
+            {op: 'permission', enabled: true}, ...save]}],
+        ['no-firebase', {inited: false, list: [], steps: save}],
+        ['no-token', {storedToken: null, list: [], steps: save}],
+    ].map(([name, opts]) => ({name, ...opts, list: opts.list ?? PUSH_LIST, storedToken: opts.storedToken === undefined ? 'token-a' : opts.storedToken,
+        cities: opts.cities ?? PUSH_CITIES, ...alarmPage(opts)}));
+}
+
+// ionic-timepicker (the WizardFactory fork bundled with the app; tw.ios keeps the same source tracked) with the app's
+// configuration: what the picker shows for an input time, after its arrows, and what Set returns.
+function pickerCases() {
+    let Provider;
+    const context = {angular: {module: () => ({provider: (_, fn) => { Provider = fn; return {}; }}), extend: Object.assign}, Date: FixedDate};
+    vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js'), 'utf8'), context);
+    const provider = new Provider();
+    provider.configTimePicker({format: 12, step: 5, buttons: 3});
+    let shown;
+    const $get = provider.$get[provider.$get.length - 1];
+    const service = $get({$new: () => ({})}, {show(o) { shown = o; return {}; }});
+    const ops = {up: 'increaseHours', down: 'decreaseHours', minUp: 'increaseMinutes', minDown: 'decreaseMinutes', meridian: 'changeMeridian'};
+    return [0, 5 * 60, 8 * 3600, 11 * 3600 + 55 * 60, 12 * 3600, 12 * 3600 + 30 * 60, 13 * 3600 + 5 * 60, 23 * 3600 + 55 * 60, 7 * 3600 + 47 * 60]
+        .flatMap((inputTime) => [[], ['up'], ['down'], ['minUp'], ['minDown'], ['meridian'], ['up', 'up', 'up', 'up', 'minUp', 'minUp', 'minUp']]
+            .map((steps) => {
+                let result = 'none';
+                service.openTimePicker({inputTime, callback: (v) => { result = v; }, setLabel: 'Set', cancelLabel: 'Delete', closeLabel: 'Close'});
+                const scope = shown.scope;
+                const opening = {hours: scope.time.hours, minutes: scope.time.minutes, meridian: scope.time.meridian};
+                steps.forEach((s) => scope[ops[s]]());
+                const shownTime = {hours: String(scope.time.hours), minutes: String(scope.time.minutes), meridian: scope.time.meridian};
+                shown.buttons[0].onTap();
+                const set = result;
+                shown.buttons[1].onTap();
+                const deleted = result;
+                shown.buttons[2].onTap();
+                return {inputTime, steps, opening, shown: shownTime, set, deleted, closed: result === undefined ? null : result,
+                    buttons: shown.buttons.map((b) => ({text: b.text, type: b.type}))};
+            }));
+}
+
+// The notification callback of Push.init for taps and foreground messages, with firebasex's tap normalized as
+// service.firebase.js does (tap: !!tap): what selects a place and what broadcasts.
+function tapCases() {
+    process.env.TZ = 'Asia/Seoul';
+    let factory;
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }})}, console: quiet, window: {},
+        clientConfig: {package: 'todayWeather', serverUrl: 'https://server'}, ionic: {Platform: {isAndroid: () => true, isIOS: () => false}},
+        setTimeout() {}, Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    let notify;
+    const events = [];
+    const WeatherInfo = {getCityOfIndex: (i) => clone(PUSH_CITIES[i]), setCityIndex(i) { events.push(['setCityIndex', i]); }};
+    const Firebase = {init(_, n) { notify = n; }, inited: true};
+    const push = factory(() => ({success() { return this; }, error() { return this; }}), {get: () => null, set() {}},
+        {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'}, loadWeatherUtil({}),
+        WeatherInfo, {getAllUnits: () => ({})}, {$broadcast(name, data) { events.push([name, clone(data ?? null)]); }}, Firebase);
+    push.init();
+    const out = [
+        {tap: 'background', cityIndex: '1'}, {tap: 'foreground', cityIndex: '2'}, {tap: 'background', cityIndex: '0'},
+        {tap: 'background', cityIndex: '7'}, {tap: 'background', cityIndex: '-1'}, {tap: 'background', cityIndex: ' 2'},
+        {tap: 'background', cityIndex: '2abc'}, {tap: 'background', cityIndex: 'abc'}, {tap: 'background', cityIndex: ''},
+        {tap: 'background', cityIndex: '1.9'}, {tap: 'background', cityIndex: '0x1'}, {tap: 'background'},
+        {title: '명동 맑음 3˚', body: '내일 아침 -1˚, 낮 9˚'}, {body: 'only a body'}, {title: 'only a title'}, {},
+    ].map((payload) => {
+        events.length = 0;
+        const result = clone(payload);
+        result.tap = !!result.tap;
+        notify(undefined, result);
+        return {payload, events: clone(events)};
+    });
+    delete process.env.TZ;
+    return out;
+}
+
+// Push.updatePushListByCityIndex (the S09 save) and Push.enableAlertForOldAlarm (O06) over the stored list.
+function pushSavedRequests(storedToken, list, newList, index) {
+    process.env.TZ = 'Asia/Seoul';
+    let factory;
+    const timers = [];
+    const calls = [];
+    let saved = null;
+    const context = {
+        angular: {module: () => ({factory: (_, fn) => { factory = fn; }})}, console: quiet, window: {},
+        clientConfig: {package: 'todayWeather', serverUrl: 'https://server'}, ionic: {Platform: {isAndroid: () => true, isIOS: () => false}},
+        setTimeout: (fn) => timers.push(fn), Date: FixedDate,
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(JS, 'service.push.js'), 'utf8'), context);
+    const $http = (cfg) => { calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data})); return {success() { return this; }, error() { return this; }}; };
+    const stored = {pushData2: {registrationId: null, type: 'android', category: '', fcmToken: storedToken, pushList: list}};
+    const TwStorage = {get: (k) => clone(stored[k] ?? null), set(k, v) { if (k === 'pushData2') saved = clone(v); }};
+    const Util = {ga: {trackEvent() {}, trackException() {}}, uuid: 'device-uuid', language: 'ko-KR', version: '1.1.1'};
+    const units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm', airUnit: 'airkorea'};
+    const WeatherInfo = {getCityOfIndex: (i) => clone(PUSH_CITIES[i])};
+    const push = factory($http, TwStorage, Util, loadWeatherUtil(units), WeatherInfo, {getAllUnits: () => clone(units)}, {$broadcast() {}},
+        {init() {}, inited: true});
+    push.init();
+    timers.splice(0).forEach((fn) => fn());
+    calls.length = 0;
+    saved = null;
+    if (newList === 'intro-ok') push.enableAlertForOldAlarm(true);
+    else if (newList === 'intro-close') push.enableAlertForOldAlarm(false);
+    // PushCtrl passes Dates (secs2date and the loaded records rehydrated by category).
+    else push.updatePushListByCityIndex(clone(newList).map((r) => (r.category === 'alert'
+        ? {...r, startTime: new FixedDate(r.startTime), endTime: new FixedDate(r.endTime)} : {...r, time: new FixedDate(r.time)})), index);
+    delete process.env.TZ;
+    return {requests: calls, saved: saved && saved.pushList};
+}
+
+const SAVED_PLACE = [
+    {cityIndex: 1, id: 1, startTime: '2026-11-06T22:00:00.000Z', endTime: '2026-11-07T13:00:00.000Z', enable: true, category: 'alert',
+        name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 1, id: 2, time: '2026-11-07T12:15:00.000Z', dayOfWeek: [false, true, true, true, true, true, false], enable: true,
+        category: 'alarm', name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 1, id: 3, time: '2026-11-06T11:20:00.000Z', dayOfWeek: [false, true, true, true, true, true, false], enable: false,
+        category: 'alarm', name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+];
+const LEGACY_CONVERTED = [
+    {cityIndex: 1, id: 1, startTime: '2026-11-06T22:00:00.000Z', endTime: '2026-11-07T13:00:00.000Z', enable: false, category: 'alert',
+        name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, town: {first: '서울특별시', second: '중구', third: '명동'}},
+    {cityIndex: 1, time: '2026-11-06T22:40:00.000Z', name: '명동', source: 'KMA', location: {lat: 37.56, long: 126.98}, category: 'alarm', id: 2,
+        enable: true, dayOfWeek: [true, true, true, true, true, true, true]},
+];
+
+function pushSavedCases() {
+    return {
+        placeSaved: [
+            ['replace-place', 'token-a', PUSH_LIST, SAVED_PLACE, 1], ['new-place', 'token-a', PUSH_LIST.filter((r) => r.cityIndex !== 1), SAVED_PLACE, 1],
+            ['current-position', 'token-a', PUSH_LIST, SAVED_PLACE.map((r) => ({...r, cityIndex: 0})), 0],
+            ['all-day-alert', 'token-a', [], [{...SAVED_PLACE[0], startTime: '2026-11-06T15:00:00.000Z', endTime: '2026-11-07T15:00:00.000Z'}], 1],
+            ['no-token', null, PUSH_LIST, SAVED_PLACE, 1],
+        ].map(([name, storedToken, pushList, list, index]) => ({name, storedToken, pushList, list, index,
+            ...pushSavedRequests(storedToken, pushList, list, index)})),
+        alertIntro: [
+            ['ok', 'token-a', LEGACY_CONVERTED, 'intro-ok'], ['close', 'token-a', LEGACY_CONVERTED, 'intro-close'],
+            ['ok-no-token', null, LEGACY_CONVERTED, 'intro-ok'],
+        ].map(([name, storedToken, pushList, answer]) => ({name, storedToken, pushList, answer,
+            ...pushSavedRequests(storedToken, pushList, answer, null)})),
+    };
+}
+
 // WeatherUtil.loadWeatherPhotos with a $http that answers with synthetic feeds (the feed URL is a private build
 // input; the body is a JSON array, docs/rewrite/client-data-contracts.md), then findWeatherPhoto for every
 // weather image name with Math.random fixed. Kotlin: WeatherPhotos.
@@ -1375,13 +1652,16 @@ write('forecast.json', {visits: forecastCases(util), helpers: forecastHelperCase
 {
     const file = path.join(ROOT, 'android/core-storage/src/test/resources/corpus/push.json');
     fs.mkdirSync(path.dirname(file), {recursive: true});
-    fs.writeFileSync(file, JSON.stringify(pushCases(), null, 1) + '\n');
+    fs.writeFileSync(file, JSON.stringify({...pushCases(), ...pushSavedCases()}, null, 1) + '\n');
 }
+write('alarms.json', {cities: PUSH_CITIES, pushList: PUSH_LIST, now: FixedDate.now(), zone: 'Asia/Seoul', pages: alarmPageCases(),
+    picker: pickerCases(), taps: tapCases()});
 
 const sources = ['service.weatherutil.js', 'service.weatherinfo.js', 'controller.forecastctrl.js', 'controller.tabctrl.js',
     'controller.air.js', 'controller.nation.js', 'controller.nation.air.js', 'controller.kma.special.js', 'service.push.js',
-    'controller.units.js', 'controller.setting.radio.js', 'controller.settingctrl.js', 'service.util.js']
-    .map((f) => `client/www/js/${f}`).concat(['client/www/locales/ko.json', 'client/www/locales/en.json']);
+    'controller.units.js', 'controller.setting.radio.js', 'controller.settingctrl.js', 'service.util.js', 'controller.push.js']
+    .map((f) => `client/www/js/${f}`).concat(['client/www/locales/ko.json', 'client/www/locales/en.json',
+        'tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js']);
 write('source.json', {
     generator: 'android/tools/corpus/generate.mjs',
     sources: sources.map((p) => ({

@@ -5,6 +5,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.JsonObject
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.PushRegistration
 import net.wizardfactory.todayweather.core.storage.PushRequest
@@ -95,6 +96,34 @@ class PushSync(
         if (result.requests.isEmpty()) return@withLock Outcome(emptyList(), emptyList())
         if (!save { it.copy(push = PushRegistration.onCityRemoved(it.push, index, ctx).state) }) return@withLock null
         Outcome(result.requests, result.requests.map { transport.send(it) })
+    }
+
+    /**
+     * The S09 save (`Push.updatePushListByCityIndex`, AN-14): the records of [index] are replaced by [list] and saved, then
+     * only [list] is posted once, its answer ignored (with a token and a server). The Cordova service posted and saved
+     * without waiting for either; here the records are written first, and when the store cannot be written nothing is
+     * sent and nothing fails, as for the other writes (#2915, #2925).
+     */
+    suspend fun savePlace(index: Int, list: List<JsonObject>): Outcome? = lock.withLock {
+        var result: PushRegistration.Result? = null
+        val saved = save { state ->
+            PushRegistration.onPlaceSaved(state.push, state.places, list, index, context(state)).also { result = it }.let { state.copy(push = it.state) }
+        }
+        val r = result?.takeIf { saved } ?: return@withLock null
+        Outcome(r.requests, r.requests.map { transport.send(it) })
+    }
+
+    /**
+     * The answer to O06 (`Push.enableAlertForOldAlarm`, AN-14): OK turns every alert on, saves and posts the whole list
+     * (with a token and a server); Close saves. Either ends the introduction; nothing is sent when the store cannot be written.
+     */
+    suspend fun answerAlertIntro(enable: Boolean): Outcome? = lock.withLock {
+        var result: PushRegistration.Result? = null
+        val saved = save { state ->
+            PushRegistration.onAlertIntro(state.push, state.places, enable, context(state)).also { result = it }.let { state.copy(push = it.state) }
+        }
+        val r = result?.takeIf { saved } ?: return@withLock null
+        Outcome(r.requests, r.requests.map { transport.send(it) })
     }
 
     /** Writes [update]; false when the store cannot be written. */

@@ -81,6 +81,9 @@ class WeatherSession(
         /** An entry link selected a place (`todayweather://N`, AN-16). */
         DEEPLINK,
 
+        /** A notification tap selected a place (`reloadEvent 'push'`, AN-14); loads at once. */
+        PUSH,
+
         /** O02 chose the current position (`startPopup`); loads at once. */
         START_POPUP,
 
@@ -144,14 +147,14 @@ class WeatherSession(
     }
 
     /**
-     * `branchInit` for `todayweather://N` (A20): `setCityIndex` selects [index] when it is within the places, then
-     * `reloadEvent 'deeplink'` loads the selected place at once, unless the retry confirmation is open. The page shown
-     * stays.
+     * `branchInit` for `todayweather://N` (A20) and a notification tap (`_notificationCallback`, AN-14): `setCityIndex`
+     * selects [index] when it is within the places, then `reloadEvent` ([sender]) loads the selected place at once, unless
+     * the retry confirmation is open. The page shown stays.
      */
-    fun openPlace(index: Double) {
+    fun openPlace(index: Double, sender: Sender = Sender.DEEPLINK) {
         val s = state.current() ?: return
         if (index >= 0 && index < s.places.size) state.change { it.copy(placeIndex = index.toInt()) }
-        reload(Sender.DEEPLINK)
+        reload(sender)
     }
 
     /**

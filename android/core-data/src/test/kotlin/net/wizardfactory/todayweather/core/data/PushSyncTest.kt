@@ -157,8 +157,51 @@ class PushSyncTest {
         transport.release.complete(Unit)
         val sync = PushSync(FullStore(state), transport) { ctx }
         assertEquals(null, sync.removeCity(1))
+        // AN-14: neither an S09 save nor an O06 answer is sent when it cannot be stored.
+        assertEquals(null, sync.savePlace(1, listOf(JsonObject(record + ("enable" to JsonPrimitive(false))))))
+        assertEquals(null, PushSync(FullStore(state.copy(push = state.push.copy(needsAlertIntro = true))), transport) { ctx }.answerAlertIntro(true))
         assertEquals(emptyList(), transport.sent)
         assertEquals(listOf("POST /v000903/push-list"), sync.updateCity(1)!!.requests.map { "${it.method} ${it.path}" })
+    }
+
+    /** The S09 save (AN-14): the place's records replaced and stored, then only its list posted once. */
+    @Test
+    fun aSavedPlaceIsStoredThenItsListPosted() = runBlocking {
+        val store = store("A")
+        val other = JsonObject(record + ("cityIndex" to JsonPrimitive(2)))
+        runBlocking {
+            store.updateData { it.copy(places = listOf(Place.currentPositionPlaceholder(), Place(false, false, "명동", "대한민국 서울특별시 중구 명동", "KR",
+                Location(37.56, 126.98), source = "KMA"), Place(false, false, "London", null, "GB", Location(51.51, -0.13), source = "VC")),
+                push = it.push.copy(records = listOf(JsonObject(record), other))) }
+        }
+        val transport = HeldTransport()
+        transport.release.complete(Unit)
+        val sync = PushSync(store, transport) { ctx }
+        val list = listOf(JsonObject(record + ("enable" to JsonPrimitive(false))))
+        val outcome = sync.savePlace(1, list)!!
+        assertEquals(listOf("POST /v000903/push-list"), outcome.requests.map { "${it.method} ${it.path}" })
+        assertEquals(1, (outcome.requests.single().body as kotlinx.serialization.json.JsonArray).size, "only the place's list")
+        assertEquals(listOf(other) + list, store.data.first().push.records)
+        assertEquals(1, transport.sent.size)
+    }
+
+    /** O06 (AN-14): OK turns the alerts on, ends the introduction and posts the list; Close only ends it. */
+    @Test
+    fun theAlertIntroductionIsAnsweredOnce() = runBlocking {
+        val store = store("A")
+        val alert = Json.parseToJsonElement("""{"cityIndex":1,"id":1,"startTime":"2026-11-06T22:00:00.000Z","endTime":"2026-11-07T13:00:00.000Z",
+            "enable":false,"category":"alert","name":"명동","source":"KMA","location":{"lat":37.56,"long":126.98}}""").jsonObject
+        runBlocking { store.updateData { it.copy(push = it.push.copy(records = listOf(alert, JsonObject(record)), needsAlertIntro = true)) } }
+        val transport = HeldTransport()
+        transport.release.complete(Unit)
+        val sync = PushSync(store, transport) { ctx }
+        assertEquals(emptyList(), sync.answerAlertIntro(false)!!.requests)
+        assertEquals(false, store.data.first().push.needsAlertIntro)
+        assertEquals(JsonPrimitive(false), store.data.first().push.records[0]["enable"])
+        runBlocking { store.updateData { it.copy(push = it.push.copy(needsAlertIntro = true)) } }
+        assertEquals(listOf("POST /v000903/push-list"), sync.answerAlertIntro(true)!!.requests.map { "${it.method} ${it.path}" })
+        assertEquals(JsonPrimitive(true), store.data.first().push.records[0]["enable"])
+        assertEquals(false, store.data.first().push.needsAlertIntro)
     }
 
     @Test
