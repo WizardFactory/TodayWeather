@@ -105,12 +105,13 @@ angular.module('service.admobemi', [])
             document.addEventListener('on.banner.failed.load', function (event) {
                 lifecycle('failed');
                 // Keep only the SDK's numeric error code (no fill, network, invalid request...); the native
-                // message can contain ad unit IDs. Stringify so the WebView console shows it in logcat/Xcode.
+                // message can contain ad unit IDs. Stringify and use console.log: iOS forwards console.log, not
+                // console.info, to the device console.
                 var code = event && event.code;
                 if (typeof code !== 'number' || Math.floor(code) !== code || code < 0 || code > 999) {
                     code = undefined;
                 }
-                console.info(JSON.stringify({component: 'admob', operation: 'banner_load', cause: 'load_failed',
+                console.log(JSON.stringify({component: 'admob', operation: 'banner_load', cause: 'load_failed',
                     error_code: code === undefined ? 'unavailable' : code, result: 'failed'}));
                 if (code !== undefined) {
                     Monetization.track('ad_load_error', {ad_format: 'banner', error_code: code});
