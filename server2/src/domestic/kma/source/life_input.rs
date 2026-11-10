@@ -19,6 +19,13 @@
 //! publication is counted, and its records stay over the fold until a committed read has applied
 //! the stored group.
 //!
+//! KMA-LIFE-FIRST-READ: while the process's first owned life read runs, no request starts a UV or
+//! pollen acquisition, raced or not; the request waits for the read to its bound and answers from
+//! the fold it holds then. The read's owned task holds a guard (`FirstReadEnd`) that ends this
+//! when the read ends, however it ends (at the latest at its owner deadline, `READ_FOR` after it
+//! started); a waiter that stops waiting does not. From then on requests decide as before, and a
+//! later read that misses the head start is raced as before. MFDS and KASI are unchanged.
+//!
 //! Freshness (owned acquisitions, S13d `OwnedFlights`, 10-minute retry per dataset key): a
 //! request whose UV fold lacks the current three-hour slot, whose pollen fold lacks the latest
 //! 06/18 KST issuance, or whose MFDS fold lacks the current 08:20/12:20/17:20 KST slot starts the
@@ -286,6 +293,10 @@ struct Shared<T> {
     /// Wall-clock ms when the last own publication completed: a fold whose cut is earlier does
     /// not contain it, whatever count it read.
     published_at: AtomicI64,
+    /// KMA-LIFE-FIRST-READ: the process's first owned life read has started, and it has ended. Both
+    /// only become true; NEEDED-FIRST keeps `LifeState::refreshed`.
+    first_read_started: AtomicBool,
+    first_read_ended: Arc<AtomicBool>,
     kasi_started: AtomicBool,
     /// First KASI pass after the first request, then every `kasi_every`.
     kasi_first: Duration,
@@ -294,6 +305,15 @@ struct Shared<T> {
     cpu: Arc<tokio::sync::Semaphore>,
     /// The wall clock (S15b-3d).
     clock: Arc<dyn Clock>,
+}
+/// KMA-LIFE-FIRST-READ D1: held by the process's first owned life read and dropped with it, however
+/// it ends (completed, failed, dropped at its owner deadline, cancelled or panicked). From then on
+/// requests decide their UV and pollen acquisitions as before.
+struct FirstReadEnd(Arc<AtomicBool>);
+impl Drop for FirstReadEnd {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::Release);
+    }
 }
 /// Inputs shared by every request of the process.
 pub struct LifeInputs<T> {
@@ -345,6 +365,8 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                 demand_ms: AtomicI64::new(0),
                 published: std::sync::atomic::AtomicU64::new(0),
                 published_at: AtomicI64::new(0),
+                first_read_started: AtomicBool::new(false),
+                first_read_ended: Arc::new(AtomicBool::new(false)),
                 kasi_started: AtomicBool::new(false),
                 kasi_first,
                 kasi_every,
@@ -386,7 +408,8 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     }
     /// [`Self::load`] with the stored reads' head start (KMA-RESTART-RACE): the acquisitions are
     /// decided at `race_at` from what the folds hold then, so a read still running is raced by
-    /// the acquisitions of what it would have brought; both are waited for until the end.
+    /// the acquisitions of what it would have brought; both are waited for until the end. UV and
+    /// pollen race only once the process's first life read has ended (KMA-LIFE-FIRST-READ).
     pub async fn load_by(&self, now: f64, race_at: Instant, deadline: Instant) -> LifeAnswers {
         let until = deadline - Duration::from_millis(200);
         let race_at = race_at.min(until);
@@ -443,7 +466,10 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
         )
         .await;
         let mut flights = Vec::new();
-        if let Some(acquire) = self.shared.acquire.clone() {
+        // KMA-LIFE-FIRST-READ D2: while the process's first owned life read runs, no UV or pollen
+        // acquisition starts, raced or not; a raced request waits for the read below.
+        let first_read_ended = self.shared.first_read_ended.load(Ordering::Acquire);
+        if let Some(acquire) = self.shared.acquire.clone().filter(|_| first_read_ended) {
             let folded = self.life_fold(now);
             // UV (legacy `taskUltrvV5`): the current three-hour slot, then each earlier
             // candidate while a slot answers no data; no data stays retryable.
@@ -525,7 +551,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
     }
     /// Join the owned S3 read of the life index (cut `now`) until `until`. The fold is read at
     /// most every MEMO (acquisitions of other hosts appear within it) unless an own acquisition
-    /// published since its last read.
+    /// published since its last read. The process's first owned read holds [`FirstReadEnd`].
     async fn read_life(&self, now: f64, until: Instant) {
         {
             let state = self.shared.life.lock().unwrap_or_else(|e| e.into_inner());
@@ -545,7 +571,16 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                 self.read_key("life", now),
                 until,
                 READ_FOR,
-                move |deadline| async move { read_life(&shared, now, deadline).await.is_ok() },
+                // Called only for an owned read that starts (never for a joiner or a Busy join):
+                // the first one moves the guard into its work, which the owned task owns.
+                move |deadline| {
+                    let end = (!shared.first_read_started.swap(true, Ordering::AcqRel))
+                        .then(|| FirstReadEnd(shared.first_read_ended.clone()));
+                    async move {
+                        let _end = end;
+                        read_life(&shared, now, deadline).await.is_ok()
+                    }
+                },
             )
             .await;
     }
@@ -1609,6 +1644,9 @@ fn apply_kasi<T>(shared: &Arc<Shared<T>>, area: &str, fetched: &[Fetched], first
 #[cfg(test)]
 #[path = "life_distinct_tests.rs"]
 mod distinct_tests;
+#[cfg(test)]
+#[path = "life_first_read_tests.rs"]
+mod first_read_tests;
 #[cfg(test)]
 mod tests {
     use super::read_key;

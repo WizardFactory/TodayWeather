@@ -29,9 +29,10 @@ struct Calls {
 }
 /// An isolated in-memory S3: raw objects, conditional control objects, the catalog index and
 /// budget objects, with its requests counted. It does no I/O; a control key can stall once (virtual
-/// time) or be gone while it is still listed, and a LIST prefix can wait at a gate the test opens.
+/// time) or be gone while it is still listed, and a LIST prefix can wait at a gate the test opens
+/// (or closes: the LIST waiting there panics).
 #[derive(Clone, Default)]
-struct Memory(Arc<Mutex<Objects>>);
+pub(super) struct Memory(Arc<Mutex<Objects>>);
 #[derive(Default)]
 struct Objects {
     raw: BTreeMap<String, Object>,
@@ -63,20 +64,20 @@ impl Memory {
             .count()
     }
     /// The next GET of control object `key` takes `delay` more.
-    fn stall_next(&self, key: &str, delay: Duration) {
+    pub(super) fn stall_next(&self, key: &str, delay: Duration) {
         self.0.lock().unwrap().stall = Some((key.to_owned(), delay));
     }
-    /// LISTs under `prefix` wait until the returned gate gets permits.
-    fn hold(&self, prefix: &str) -> Arc<tokio::sync::Semaphore> {
+    /// LISTs under `prefix` wait until the returned gate gets permits; closing it makes them panic.
+    pub(super) fn hold(&self, prefix: &str) -> Arc<tokio::sync::Semaphore> {
         let gate = Arc::new(tokio::sync::Semaphore::new(0));
         self.0.lock().unwrap().hold = Some((prefix.to_owned(), gate.clone()));
         gate
     }
     /// GETs of control object `key` find nothing while LISTs still name it.
-    fn hide(&self, key: &str) {
+    pub(super) fn hide(&self, key: &str) {
         self.0.lock().unwrap().hidden.insert(key.to_owned());
     }
-    fn reached(&self) -> bool {
+    pub(super) fn reached(&self) -> bool {
         self.0.lock().unwrap().reached
     }
     /// Lose an object (raw or control).
@@ -202,7 +203,8 @@ impl IndexListing for Memory {
             }
         };
         if let Some(gate) = gate {
-            let _open = gate.acquire().await;
+            let open = gate.acquire().await;
+            assert!(open.is_ok(), "a LIST of {prefix} at a closed gate");
         }
         let objects = self.0.lock().unwrap();
         Ok(ListPage {
@@ -245,7 +247,7 @@ impl BudgetTransport for Memory {
 }
 
 /// The wall clock of a test: `base` (ms) plus the virtual time since it was made.
-struct Wall {
+pub(super) struct Wall {
     base: i64,
     start: Instant,
 }
@@ -255,16 +257,16 @@ impl Clock for Wall {
     }
 }
 impl Wall {
-    fn now(&self) -> f64 {
+    pub(super) fn now(&self) -> f64 {
         self.now_ms().unwrap() as f64
     }
 }
 /// The instant (ms) of a KST date and `HHMM`.
-fn kst(date: u32, time: u16) -> u64 {
+pub(super) fn kst(date: u32, time: u16) -> u64 {
     crate::history::schedule::to_ms(Publication::new(date, time).unwrap()) as u64
 }
 /// A wall clock starting at a KST date and `HHMM`.
-fn wall_at(date: u32, time: u16) -> Arc<Wall> {
+pub(super) fn wall_at(date: u32, time: u16) -> Arc<Wall> {
     Arc::new(Wall {
         base: kst(date, time) as i64,
         start: Instant::now(),
@@ -274,12 +276,12 @@ fn far() -> Instant {
     Instant::now() + Duration::from_secs(60)
 }
 /// Keeps the KASI capture out of a test.
-const HOLD: Duration = Duration::from_secs(3600);
+pub(super) const HOLD: Duration = Duration::from_secs(3600);
 const SECOND: u64 = 1000;
 const MINUTE: u64 = 60 * SECOND;
 
 /// The test's life-index areas.
-const TEST_AREAS: [&str; 4] = ["1100000000", "1111051500", "2611051000", "4113500000"];
+pub(super) const TEST_AREAS: [&str; 4] = ["1100000000", "1111051500", "2611051000", "4113500000"];
 fn area(a: &str) -> f64 {
     a.parse().unwrap()
 }
@@ -292,7 +294,7 @@ fn page_body(items: Vec<Value>, n: usize, total: usize) -> Vec<u8> {
     .unwrap()
 }
 /// The provider's no-data answer.
-fn no_data() -> Vec<u8> {
+pub(super) fn no_data() -> Vec<u8> {
     serde_json::to_vec(
         &json!({"response": {"header": {"resultCode": "03", "resultMsg": "NO_DATA"}}}),
     )
@@ -300,7 +302,7 @@ fn no_data() -> Vec<u8> {
 }
 /// Page `n` of `pages` of a UV answer issued at `issued` (`YYYYMMDDHH`): the areas of that page, with
 /// the values of variant `v`.
-fn uv_page(issued: &str, v: usize, n: usize, pages: usize) -> Vec<u8> {
+pub(super) fn uv_page(issued: &str, v: usize, n: usize, pages: usize) -> Vec<u8> {
     let items = TEST_AREAS
         .iter()
         .enumerate()
@@ -316,11 +318,11 @@ fn uv_page(issued: &str, v: usize, n: usize, pages: usize) -> Vec<u8> {
     page_body(items, n, TEST_AREAS.len())
 }
 /// A UV acquisition of `pages` pages.
-fn uv(issued: &str, v: usize, pages: usize) -> Vec<Vec<u8>> {
+pub(super) fn uv(issued: &str, v: usize, pages: usize) -> Vec<Vec<u8>> {
     (1..=pages).map(|n| uv_page(issued, v, n, pages)).collect()
 }
 /// A one-page pollen answer issued at `issued`, with the grades of variant `v` and a day+3.
-fn pollen(issued: &str, v: usize) -> Vec<Vec<u8>> {
+pub(super) fn pollen(issued: &str, v: usize) -> Vec<Vec<u8>> {
     let items = TEST_AREAS
         .iter()
         .map(|a| {
@@ -378,7 +380,7 @@ async fn store_group(
     (declaration, records)
 }
 /// [`store_group`] completing at `at`, its pages fetched one second apart.
-async fn store_at(
+pub(super) async fn store_at(
     store: &CatalogStore<Memory>,
     kind: &str,
     p: Publication,
@@ -399,10 +401,10 @@ fn descriptor_key(declaration: &GroupDeclaration) -> String {
 fn raw_key(record: &RawRecord) -> String {
     record.envelope.identity.object_key().unwrap()
 }
-fn publication(date: u32, time: u16) -> Publication {
+pub(super) fn publication(date: u32, time: u16) -> Publication {
     Publication::new(date, time).unwrap()
 }
-fn reader(mem: &Memory, store: &Arc<CatalogStore<Memory>>) -> Reader<Memory> {
+pub(super) fn reader(mem: &Memory, store: &Arc<CatalogStore<Memory>>) -> Reader<Memory> {
     Reader {
         transport: mem.clone(),
         store: store.clone(),
@@ -490,7 +492,7 @@ fn assert_fold(inputs: &LifeInputs<Memory>, expected: &(LifeIndex, Applied, Last
     assert_eq!(state.last, expected.2, "{what}: last applied");
 }
 /// The issuances (`lastUpdateDate`) of an area's UV rows in a fold.
-fn uv_issued(fold: &LifeIndex, a: &str) -> Vec<String> {
+pub(super) fn uv_issued(fold: &LifeIndex, a: &str) -> Vec<String> {
     serde_json::from_slice::<Value>(&fold.by_area(area(a)).to_bytes())
         .unwrap()
         .as_array()
@@ -1035,19 +1037,19 @@ async fn a_later_acquisition_whose_own_objects_are_lost_is_applied_with_the_read
 
 /// What the provider double answers one call: a body after a delay, or never.
 #[derive(Clone)]
-enum Answer {
+pub(super) enum Answer {
     After(Duration, Vec<u8>),
     Never,
 }
 type Answers = Box<dyn Fn(&str, &str) -> Answer + Send + Sync>;
 /// The life provider double: answers by operation and query `time`, and records each call
 /// (operation, `time`, virtual instant).
-struct Provider {
+pub(super) struct Provider {
     answer: Answers,
     calls: Mutex<Vec<(String, String, Instant)>>,
 }
 impl Provider {
-    fn new(answer: impl Fn(&str, &str) -> Answer + Send + Sync + 'static) -> Self {
+    pub(super) fn new(answer: impl Fn(&str, &str) -> Answer + Send + Sync + 'static) -> Self {
         Self {
             answer: Box::new(answer),
             calls: Mutex::new(Vec::new()),
@@ -1087,9 +1089,9 @@ impl ProviderTransport for Provider {
         }
     }
 }
-type TestLive = LiveLife<Provider, HttpPublicTransport, Memory, Memory>;
+pub(super) type TestLive = LiveLife<Provider, HttpPublicTransport, Memory, Memory>;
 /// The life acquirer of the KMA source over the provider double and the in-memory S3.
-fn live(
+pub(super) fn live(
     mem: &Memory,
     store: &Arc<CatalogStore<Memory>>,
     provider: Provider,
@@ -1119,7 +1121,7 @@ fn live(
 }
 /// The acquirer of the life inputs in a test: UV and pollen through `live`; MFDS and KASI answer
 /// nothing, so no other provider is reached.
-struct IndexOnly(Arc<TestLive>);
+pub(super) struct IndexOnly(pub(super) Arc<TestLive>);
 impl LifeAcquire for IndexOnly {
     fn acquire(
         &self,
@@ -1167,8 +1169,9 @@ async fn an_identical_acquisition_is_not_published_and_answers_at_once() {
         (HOLD, HOLD),
         wall.clone(),
     );
-    // The process read S3 before another host stored today's 12:00 UV.
-    read_life(&inputs.shared, wall.now(), far()).await.unwrap();
+    // The process read S3 (its first owned read) before another host stored today's 12:00 UV.
+    inputs.read_life(wall.now(), far()).await;
+    assert!(inputs.shared.life.lock().unwrap().refreshed.is_some());
     let twin_at = kst(20261110, 1210);
     store_at(
         &store,
@@ -1297,7 +1300,7 @@ async fn a_refresh_without_the_stored_group_keeps_the_identical_acquisition() {
 }
 
 /// The catalog of a UV publication.
-fn uv_catalog(p: Publication) -> CatalogId {
+pub(super) fn uv_catalog(p: Publication) -> CatalogId {
     super::super::records::catalog(DATA_GO_KR, "uv-idx-v5", &all_areas(), &p.partition()).unwrap()
 }
 /// The owned UV acquisition of a slot.
