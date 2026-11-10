@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import net.wizardfactory.todayweather.core.domain.alarms.ForegroundMessage
 import net.wizardfactory.todayweather.core.data.AlarmPage
+import net.wizardfactory.todayweather.core.data.answerAlertIntro
 import net.wizardfactory.todayweather.notify.PushMessage
 import net.wizardfactory.todayweather.ui.alarms.AlarmsScreen
 import net.wizardfactory.todayweather.ui.alarms.AlarmsHost
@@ -554,18 +555,18 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
             removeAlarms = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.removeCity(index) } }, cityUpdated = cityUpdated, telemetry = telemetry)
     }
 
-    /** S09's visits (#2893); a save posts in the app's scope (`updatePushListByCityIndex` was not awaited either). */
+    /** S09's visits (#2893); a save changes the state at once and posts in the app's scope (`_postPushList` was not awaited). */
     val alarms = AlarmsHost { scope, openSettings ->
-        AlarmPage(twApp.appState, twApp.notifications, save = { index, list -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.savePlace(index, list) } },
+        AlarmPage(twApp.appState, twApp.notifications, post = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.postPlace(index) } },
             openSettings = openSettings, scope = scope)
     }
 
-    /** O06 of this app open: shown once (`showAlertInfoEvent` after the start), answered in the app's scope. */
+    /** O06 of this app open: shown once (`showAlertInfoEvent` after the start); OK's post goes in the app's scope. */
     val alertIntro = object : AlertIntro {
         private var shown = false
         override fun due(): Boolean = !shown.also { shown = true }
         override fun answer(enable: Boolean) {
-            twApp.appScope.launch(Dispatchers.IO) { twApp.push.answerAlertIntro(enable) }
+            answerAlertIntro(twApp.appState, enable) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.postList() } }
         }
     }
 

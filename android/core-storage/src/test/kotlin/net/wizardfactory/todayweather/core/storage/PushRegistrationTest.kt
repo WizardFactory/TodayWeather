@@ -189,6 +189,13 @@ class PushRegistrationTest {
                 assertEquals(e["data"], a.body, "$name body")
             }
             assertEquals(case["saved"]!!.jsonArray.map { it.jsonObject }, result.state.records, "$name: the saved list")
+            // The posts after the page's change (review F1) send the same from the stored list.
+            val after = if ("answer" in case) {
+                if (case["answer"]!!.jsonPrimitive.content == "intro-ok") PushRegistration.listPost(result.state, ctx) else emptyList()
+            } else {
+                PushRegistration.placePost(result.state, case["index"]!!.jsonPrimitive.content.toInt(), ctx)
+            }
+            assertEquals(result.requests, after, "$name: the post from the stored list")
         }
         // Without a server nothing is sent, and the records are replaced all the same.
         val offline = PushRegistration.onPlaceSaved(PushState(fcmToken = "t"), places, listOf(corpus["pushList"]!!.jsonArray[1].jsonObject), 1, null)

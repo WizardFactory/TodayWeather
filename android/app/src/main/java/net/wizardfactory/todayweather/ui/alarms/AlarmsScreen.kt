@@ -35,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -355,30 +356,34 @@ private fun BottomButton(text: String, color: Color, modifier: Modifier, onClick
  * The hour bar (ion.rangeSlider 2.2.0, double, 0–24 by 1 with a grid, its flat skin): the gray line with rounded ends,
  * the red bar between the handles, the two handles (2 dp red lines), the hours over them in red labels (one label
  * "from — to" when they meet), and the grid of 21 marks with 0, 6, 12, 18 and 24 under it. A touch moves the nearer
- * handle in whole hours, the start never past the end ([onChange]).
+ * handle in whole hours, the start never past the end ([onChange]). The gesture is not keyed on the hours, so its own
+ * changes do not restart it during a drag (review F4); a touch reads the hours shown when it starts.
  */
 @Composable
 private fun HourBar(from: Double, to: Double, onChange: (Double, Double) -> Unit) {
+    val hours by rememberUpdatedState(from to to)
+    val change by rememberUpdatedState(onChange)
     val measurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 10.sp, color = Color.White, platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false))
     val gridStyle = TextStyle(fontSize = 9.sp, color = Color(0xFF999999), platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false))
     val density = LocalDensity.current
     Canvas(Modifier.fillMaxWidth().height(60.dp).testTag(AlarmsTags.BAR).semantics { contentDescription = "${fmt(from)} — ${fmt(to)}" }
-        .pointerInput(from, to) {
+        .pointerInput(Unit) {
             val handle = 16.dp.toPx()
             fun value(x: Float) = ((x - handle / 2) / (size.width - handle) * 24).roundToInt().coerceIn(0, 24).toDouble()
             awaitEachGesture {
                 val down = awaitFirstDown()
                 val v = value(down.position.x)
+                val (start, end) = hours
                 // The nearer handle; on a tie the one in the touch's direction (the start below it, else the end).
-                val moveFrom = abs(v - from) < abs(v - to) || (abs(v - from) == abs(v - to) && v < from)
-                var last = from to to
+                val moveFrom = abs(v - start) < abs(v - end) || (abs(v - start) == abs(v - end) && v < start)
+                var last = start to end
                 fun apply(x: Float) {
                     val nv = value(x)
                     val next = if (moveFrom) nv.coerceAtMost(last.second) to last.second else last.first to nv.coerceAtLeast(last.first)
                     if (next != last) {
                         last = next
-                        onChange(next.first, next.second)
+                        change(next.first, next.second)
                     }
                 }
                 apply(down.position.x)

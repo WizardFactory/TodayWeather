@@ -76,10 +76,9 @@ class AlarmPageTest {
         val requests = mutableListOf<PushRequest>()
         val settingsOpened = mutableListOf<String>()
         var saved = false
-        val page = AlarmPage(memory, access, save = { index, list ->
-            val r = PushRegistration.onPlaceSaved(memory.value.push, memory.value.places, list, index, ctx)
-            memory.value = memory.value.copy(push = r.state)
-            requests += r.requests
+        // The save changed the state; its post sends the place's list as stored (`placePost`).
+        val page = AlarmPage(memory, access, post = { index ->
+            requests += PushRegistration.placePost(memory.value.push, index, ctx)
             saved = true
         }, openSettings = { settingsOpened += "app" }, scope = backgroundScope, clock = { now }, zone = { zone })
         page.open(c["fav"]?.jsonPrimitive?.int)
@@ -174,7 +173,7 @@ class AlarmPageTest {
             Location(37.567, 126.978))), placeIndex = 1, units = UnitSettings.defaults("KR")))
         val access = Access(available = true, on = true)
         var saves = 0
-        val page = AlarmPage(memory, access, save = { _, _ -> saves++ }, openSettings = {}, scope = backgroundScope, clock = { now }, zone = { zone })
+        val page = AlarmPage(memory, access, post = { saves++ }, openSettings = {}, scope = backgroundScope, clock = { now }, zone = { zone })
         page.open(1)
         runCurrent()
         // The defaults are edits, yet back leaves at once without O12 and saves nothing (D34).

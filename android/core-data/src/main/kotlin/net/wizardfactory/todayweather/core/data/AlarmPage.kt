@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
 import net.wizardfactory.todayweather.core.domain.AddressFormat
 import net.wizardfactory.todayweather.core.domain.alarms.TimePicker
 import net.wizardfactory.todayweather.core.storage.AlarmSettings
@@ -43,8 +42,10 @@ sealed class AlarmPopup(val title: String?, val body: String?, val buttons: List
 /**
  * S09 for one visit (PushCtrl, `controller.push.js`, AN-14 #2893). [open] selects the place of `fav` (`setCityIndex`,
  * except slot 0 while it is disabled), loads its [AlarmSettings] and, while the push plugin runs, asks for the
- * notification permission and shows O11 when it stays off. [save] receives the list of a changed page; it runs past the
- * page (`updatePushListByCityIndex` was not awaited either). [closed] turns true when the page goes back.
+ * notification permission and shows O11 when it stays off. A save of a changed page replaces the place's records as a
+ * change of the state, shown at once and saved in order, before the page goes back (`updatePushListByCityIndex` changed
+ * the list in memory and storage first), so S02's next visit sees it; [post] then posts the place's list in its turn
+ * (`_postPushList` was not awaited). [closed] turns true when the page goes back.
  *
  * Kept from Cordova (AN-06): Android back leaves without O12 (D34); O12's back closes the page like Close; the equal-hours
  * check ignores the switch; the defaults count as edits; Save without an edit only goes back, permission permitting.
@@ -52,7 +53,8 @@ sealed class AlarmPopup(val title: String?, val body: String?, val buttons: List
 class AlarmPage(
     private val state: StateAccess,
     private val notifications: NotificationAccess,
-    private val save: (index: Int, list: List<JsonObject>) -> Unit,
+    /** Posts the saved list of the place at an index, after the registrations before it ([PushSync.postPlace]). */
+    private val post: (index: Int) -> Unit,
     private val openSettings: () -> Unit,
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -145,7 +147,9 @@ class AlarmPage(
     }
 
     private fun persist(s: AlarmSettings) {
-        s.toSave(clock(), zone())?.let { save(s.cityIndex, it) }
+        val list = s.toSave(clock(), zone()) ?: return
+        state.change { it.copy(push = PushRegistration.onPlaceSaved(it.push, it.places, list, s.cityIndex, null).state) }
+        post(s.cityIndex)
     }
 
     /** O11: Settings opens the app's page; either button closes it. */
@@ -179,4 +183,14 @@ class AlarmPage(
             else -> _popup.value = null
         }
     }
+}
+
+/**
+ * The answer to O06 (`Push.enableAlertForOldAlarm`, AN-14) as a change of the state, shown at once and saved in order:
+ * OK turns every alert on, and either answer ends the introduction. OK's post of the whole list ([post],
+ * [PushSync.postList]) follows after the registrations before it.
+ */
+fun answerAlertIntro(state: StateAccess, enable: Boolean, post: () -> Unit) {
+    state.change { it.copy(push = PushRegistration.onAlertIntro(it.push, it.places, enable, null).state) }
+    if (enable) post()
 }

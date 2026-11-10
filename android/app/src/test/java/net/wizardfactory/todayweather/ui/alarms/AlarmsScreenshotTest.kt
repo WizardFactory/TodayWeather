@@ -138,7 +138,7 @@ class AlarmsScreenshotTest {
         val http = HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }
         val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
-        val alarms = AlarmsHost { s, openSettings -> AlarmPage(memory, access, save = { _, _ -> }, openSettings = openSettings, scope = s) }
+        val alarms = AlarmsHost { s, openSettings -> AlarmPage(memory, access, post = {}, openSettings = openSettings, scope = s) }
         val alertIntro = object : AlertIntro {
             override fun due() = intro
             override fun answer(enable: Boolean) {}

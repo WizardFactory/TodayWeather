@@ -111,6 +111,22 @@ object PushRegistration {
     }
 
     /**
+     * The post of [index]'s list after an S09 save (`_postPushList`, AN-14): its records as stored, where [onPlaceSaved]
+     * appended them, so the request equals the one [onPlaceSaved] builds for the list it stored. Nothing without records
+     * (the place was removed since), a token or a [ctx].
+     */
+    fun placePost(push: PushState, index: Int, ctx: Context?): List<PushRequest> {
+        val list = push.records.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull == index }
+        if (ctx == null || list.isEmpty() || push.fcmToken.isNullOrEmpty()) return emptyList()
+        return listOf(PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
+            JsonArray(list.map { postObject(it, push, ctx) })))
+    }
+
+    /** The post of the whole list after O06's OK (AN-14): the records as stored; nothing without a token or a [ctx]. */
+    fun listPost(push: PushState, ctx: Context?): List<PushRequest> =
+        if (ctx == null || push.fcmToken.isNullOrEmpty()) emptyList() else listOf(postList(push, ctx))
+
+    /**
      * `Push.enableAlertForOldAlarm(enable)`, the answer to O06 (AN-14): OK ([enable]) turns every alert on and posts the
      * whole list (with a token); Close changes nothing. Either answer saves the list, which ends the introduction
      * ([PushState.needsAlertIntro]); Android back answers nothing.
