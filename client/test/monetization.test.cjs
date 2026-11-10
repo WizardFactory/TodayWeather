@@ -30,7 +30,10 @@ function harness({enabled = true, absent = false, config, debug = false} = {}) {
         angular: {module() { return {factory(name, fn) { factory = fn; }}; }},
         clientConfig: {debug, releaseAds: !debug}, window
     });
-    return {m: factory(window), events, logs, timers, window};
+    // TwStorage.init reports the stored choice final (AN-17) before platformReady here, as on a start without a hand-back.
+    const m = factory(window);
+    m.storageReady();
+    return {m, events, logs, timers, window};
 }
 
 function remote(values, {offline = false, pending = false} = {}) {

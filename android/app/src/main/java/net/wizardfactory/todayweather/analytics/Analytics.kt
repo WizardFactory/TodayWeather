@@ -70,6 +70,9 @@ class ConsentStore(private val choices: SharedPreferences, private val collectio
         return false
     }
 
+    /** The stored choice as written (`"true"`, `"false"` or none), for the hand-back (AN-17). */
+    fun storedChoice(): String? = runCatching { choices.getString(KEY, null) }.getOrNull()
+
     /** The collection state after the SDK calls (the flag the plugin persisted). */
     fun recordCollection(enabled: Boolean): Boolean = collection.edit().putBoolean(ENABLED, enabled).commit()
 
