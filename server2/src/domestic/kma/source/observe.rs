@@ -683,7 +683,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 // A flush that waited for one of these reads is compared now, whether or not
                 // the read changed a page.
                 if flushed.contains(&true) {
-                    let _ = self.want_products(now_ms);
+                    self.want_products(now_ms);
                 }
                 self.fold_held(now_ms).await;
             },
@@ -727,7 +727,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                             .await;
                     }
                     if flushed {
-                        let _ = this.want_products(now_ms);
+                        this.want_products(now_ms);
                     }
                     this.restore_minutes(&this.bulk, later, floor, Instant::now() + READ_DEADLINE)
                         .await;
@@ -1503,7 +1503,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     // KMA-STATION-FLUSH V1: the products of the days the pass held new pages for
                     // are stored now, not when PRODUCT_EVERY next allows.
                     if !filled.is_empty() {
-                        this.flush_products(filled, now_ms).await;
+                        this.flush_products(filled, now_ms);
                     }
                 })
             },
@@ -1891,27 +1891,45 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
 
     // ---- day products ----
 
-    /// Compare the day products with the pages held (after a fold recomputed the hourly part) and
-    /// store the changed ones; no request waits for it. Returns the single product worker: a
-    /// running one compares again before it ends.
-    fn want_products(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
+    /// Compare the day products with the pages held and store the changed ones (after a fold
+    /// recomputed the hourly part, a fill pass ended, or a read made a flushed day storable); no
+    /// request or read waits for it. The comparison is made by the single product worker without
+    /// a later request (SF-flush-read-recovery): a running worker compares again before it ends,
+    /// because it reads `product_due` under the state lock before it ends. A worker that has made
+    /// its last comparison ends without one, and its flight is removed before its end is sent:
+    /// the follow-up waits for that end and, while the comparison is still due, starts the next
+    /// worker, whose first comparison comes after this call.
+    fn want_products(self: &Arc<Self>, now_ms: i64) {
         self.state().product_due = true;
+        let Some(mut worker) = self.product_worker(now_ms) else {
+            return;
+        };
+        let this = self.clone();
+        crate::observability::spawn(async move {
+            loop {
+                if worker.wait_for(|done| *done).await.is_err() || !this.state().product_due {
+                    return;
+                }
+                let Some(next) = this.product_worker(now_ms) else {
+                    return;
+                };
+                worker = next;
+            }
+        });
+    }
+    /// The single product worker: the running one, or a new one.
+    fn product_worker(self: &Arc<Self>, now_ms: i64) -> Option<watch::Receiver<bool>> {
         self.start(Flight::Product, Duration::ZERO, move |this| {
             Box::pin(async move { this.write_products(now_ms).await })
         })
     }
     /// KMA-STATION-FLUSH V1 (DR-V-flush-ownership): a fill pass that ended with new pages for
     /// `days` has their products stored now, past [`PRODUCT_EVERY`] (only when what a day is made
-    /// of changed). The intent is the single product worker's to honour: a running worker compares
-    /// the days before it ends, and when it ended as the intent arrived (the comparison still due)
-    /// the next one does. The pass waits for that comparison; no request waits for the pass.
-    async fn flush_products(self: &Arc<Self>, days: BTreeSet<u32>, now_ms: i64) {
+    /// of changed), by the single product worker ([`Self::want_products`]). No request waits for
+    /// the comparison.
+    fn flush_products(self: &Arc<Self>, days: BTreeSet<u32>, now_ms: i64) {
         self.state().flush.extend(days);
-        while let Some(mut worker) = self.want_products(now_ms) {
-            if worker.wait_for(|done| *done).await.is_err() || !self.state().product_due {
-                break;
-            }
-        }
+        self.want_products(now_ms);
     }
     async fn write_products(self: Arc<Self>, now_ms: i64) {
         loop {

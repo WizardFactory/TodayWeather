@@ -18,12 +18,14 @@ const YESTERDAY: u32 = 20260923;
 const TODAY_PRODUCTS: &str = "raw/v2/kma-web/station-pages/2026/09/24/";
 
 /// An isolated in-memory S3: raw objects, conditional control objects and the catalog index. Raw
-/// reads under a held prefix wait until the test releases them (a slow store), and control reads
-/// under the failing prefix fail (a transient catalog failure).
+/// reads and writes under a held prefix wait until the test releases them (a slow store), and
+/// control reads under the failing prefix fail (a transient catalog failure).
 #[derive(Clone)]
 struct Memory {
     objects: Arc<Mutex<Objects>>,
     held: Arc<watch::Sender<Vec<String>>>,
+    /// Raw reads and writes that arrived under a held prefix.
+    reached: Arc<watch::Sender<usize>>,
     failing: Arc<Mutex<Option<String>>>,
 }
 #[derive(Default)]
@@ -37,15 +39,29 @@ impl Memory {
         Self {
             objects: Arc::default(),
             held: Arc::new(watch::channel(Vec::new()).0),
+            reached: Arc::new(watch::channel(0).0),
             failing: Arc::default(),
         }
     }
-    /// Hold the raw reads under `prefix` until [`Self::release`].
+    /// Hold the raw reads and writes under `prefix` until [`Self::release`].
     fn hold(&self, prefix: &str) {
         self.held.send_modify(|held| held.push(prefix.to_owned()));
     }
     fn release(&self) {
         self.held.send_replace(Vec::new());
+    }
+    /// Wait until a raw read or write is held.
+    async fn reached(&self) {
+        let _ = self.reached.subscribe().wait_for(|n| *n > 0).await;
+    }
+    /// Pass `key` once no held prefix covers it.
+    async fn pass(&self, key: &str) {
+        let covered = |held: &Vec<String>| held.iter().any(|p| key.starts_with(p.as_str()));
+        let mut held = self.held.subscribe();
+        if covered(&held.borrow_and_update()) {
+            self.reached.send_modify(|n| *n += 1);
+        }
+        let _ = held.wait_for(|held| !covered(held)).await;
     }
     /// Fail the control reads under `prefix` (None: none).
     fn fail(&self, prefix: Option<String>) {
@@ -59,6 +75,7 @@ impl Memory {
 }
 impl ObjectTransport for Memory {
     async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
+        self.pass(&record.key).await;
         let mut objects = self.objects.lock().unwrap();
         if objects.raw.contains_key(&record.key) {
             return Ok(412);
@@ -80,10 +97,7 @@ impl ObjectTransport for Memory {
         })
     }
     async fn get(&self, key: &str, _: usize) -> Result<Object, Error> {
-        let mut held = self.held.subscribe();
-        let _ = held
-            .wait_for(|held| !held.iter().any(|p| key.starts_with(p.as_str())))
-            .await;
+        self.pass(key).await;
         let objects = self.objects.lock().unwrap();
         objects.raw.get(key).cloned().ok_or(Error::NotFound)
     }
@@ -319,8 +333,11 @@ async fn request(obs: &Arc<Observations<Memory>>) -> Arc<Folded> {
         .await
         .unwrap()
 }
-/// Wait until no read, fold, geocoding, product comparison or full read is in flight.
+/// Wait until no read, fold, geocoding, product comparison or full read is in flight and no
+/// product comparison is due. A comparison due with no worker is given a few turns of the other
+/// tasks to start one, then left due (the caller's assertions see it).
 async fn idle(obs: &Arc<Observations<Memory>>) {
+    let mut turns = 0;
     loop {
         let running: Vec<_> = [
             Flight::Load,
@@ -334,12 +351,52 @@ async fn idle(obs: &Arc<Observations<Memory>>) {
         .filter_map(|f| obs.flight(f))
         .collect();
         if running.is_empty() {
-            return;
+            if !obs.state().product_due || turns == 100 {
+                return;
+            }
+            turns += 1;
+            tokio::task::yield_now().await;
+            continue;
         }
         for mut done in running {
             let _ = done.wait_for(|done| *done).await;
         }
     }
+}
+/// A process that read the 05:00 pages of `days` and stored their products; its provider answers
+/// the 06:00 pages of those days.
+async fn read_once(memory: &Memory, days: &[u32]) -> Arc<Observations<Memory>> {
+    for day in days {
+        let hour = p(*day, 500);
+        let at = schedule::to_ms(hour) as u64 + 15 * 60_000;
+        publish(
+            memory,
+            page_record("aws-hourly", hour, at, aws_page(hour, false)),
+        )
+        .await;
+    }
+    let obs = process(memory, days.iter().map(|day| p(*day, 600)).collect());
+    let _ = request(&obs).await;
+    idle(&obs).await;
+    obs
+}
+/// A reload whose read of today's AWS catalog fails: today is unreadable.
+async fn fail_today(obs: &Arc<Observations<Memory>>, memory: &Memory) {
+    let catalog = super::super::records::catalog("kma-web", "aws-hourly", &aws_key(), "20260924")
+        .unwrap()
+        .key();
+    memory.fail(Some(catalog));
+    reload_due(obs);
+    let _ = request(obs).await;
+    idle(obs).await;
+    assert!(obs.state().pages.unreadable.contains(&TODAY));
+    memory.fail(None);
+}
+/// The fill pass of a raced restore: it acquires the absent 06:00 pages.
+async fn fill(obs: &Arc<Observations<Memory>>) {
+    let asked = vec![p(TODAY, 1000), p(TODAY, 900)];
+    obs.fill_window(NOW_MS, asked, Instant::now() + Duration::from_secs(60))
+        .await;
 }
 /// Make the next request reload, with today due again: the instants of the last read move back
 /// past [`RELOAD`].
@@ -361,35 +418,14 @@ fn reload_due(obs: &Arc<Observations<Memory>>) {
 #[tokio::test(start_paused = true)]
 async fn a_flush_kept_by_a_failed_day_read_is_stored_after_the_next_read() {
     let memory = Memory::new();
-    let early = page_record(
-        "aws-hourly",
-        p(TODAY, 500),
-        NOW_MS as u64 - 3_600_000,
-        aws_page(p(TODAY, 500), false),
-    );
-    publish(&memory, early).await;
-    let obs = process(&memory, vec![p(TODAY, 600)]);
-    let _ = request(&obs).await;
-    idle(&obs).await;
+    let obs = read_once(&memory, &[TODAY]).await;
     assert_eq!(
         memory.stored(TODAY_PRODUCTS),
         1,
         "the day's product of 05:00"
     );
-    // A reload whose read of today's AWS catalog fails.
-    let catalog = super::super::records::catalog("kma-web", "aws-hourly", &aws_key(), "20260924")
-        .unwrap()
-        .key();
-    memory.fail(Some(catalog));
-    reload_due(&obs);
-    let _ = request(&obs).await;
-    idle(&obs).await;
-    assert!(obs.state().pages.unreadable.contains(&TODAY));
-    memory.fail(None);
-    // A raced restore's fill pass acquires 06:00; the worker keeps its flush.
-    let asked = vec![p(TODAY, 1000), p(TODAY, 900)];
-    obs.fill_window(NOW_MS, asked, Instant::now() + Duration::from_secs(60))
-        .await;
+    fail_today(&obs, &memory).await;
+    fill(&obs).await;
     assert!(obs.state().pages.hourly.contains_key(&p(TODAY, 600)));
     // A request folds the page; the worker is asked again, in vain.
     let _ = request(&obs).await;
@@ -408,6 +444,87 @@ async fn a_flush_kept_by_a_failed_day_read_is_stored_after_the_next_read() {
         memory.stored(TODAY_PRODUCTS),
         2,
         "the day's product with the filled page"
+    );
+    assert!(obs.state().flush.is_empty(), "spent");
+}
+
+/// SF-flush-read-recovery (code review 2): the read that makes a flushed day storable asks for the
+/// comparison while the product worker is finishing: the worker has made its last comparison, but
+/// its flight is still registered, so the request joins it. Once that flight ends, with no further
+/// request, the day's product is stored exactly once.
+///
+/// In the real worker that interval has no await (its last check, its return and the removal of
+/// its flight run in one poll), so no test reaches it there without a hook in the product code.
+/// The test holds the interval's state instead: a registered product flight whose worker does not
+/// compare again, ended as `start` ends a flight (the flight removed, then its end sent).
+#[tokio::test(start_paused = true)]
+async fn a_read_that_joins_a_finishing_product_worker_has_the_day_stored_once() {
+    let memory = Memory::new();
+    let obs = read_once(&memory, &[TODAY]).await;
+    fail_today(&obs, &memory).await;
+    fill(&obs).await;
+    let _ = request(&obs).await;
+    idle(&obs).await;
+    assert!(
+        obs.state().flush.contains(&TODAY),
+        "kept for the day's read"
+    );
+    // The finishing worker: its last comparison made, its flight still registered.
+    let (ended, finishing) = watch::channel(false);
+    obs.flights.lock().unwrap().insert(
+        Flight::Product,
+        (finishing, crate::observability::current()),
+    );
+    // The reload makes the day readable during the request; its comparison joins that worker.
+    reload_due(&obs);
+    let _ = request(&obs).await;
+    assert!(!obs.state().pages.unreadable.contains(&TODAY));
+    assert!(obs.state().product_due, "the comparison is due");
+    assert_eq!(memory.stored(TODAY_PRODUCTS), 1);
+    // The worker's flight ends; no request follows.
+    obs.flights.lock().unwrap().remove(&Flight::Product);
+    ended.send_replace(true);
+    idle(&obs).await;
+    assert_eq!(
+        memory.stored(TODAY_PRODUCTS),
+        2,
+        "the day's product with the filled page, once"
+    );
+    assert!(obs.state().flush.is_empty(), "spent");
+    assert!(!obs.state().product_due);
+}
+
+/// SF-flush-read-recovery (code review 2): the read that makes today storable arrives while the
+/// product worker waits in the store of yesterday's product (its raw PUT held), which the end of
+/// the same fill pass asked for. Once the PUT is released, with no further request, each day's
+/// product is stored exactly once.
+#[tokio::test(start_paused = true)]
+async fn a_read_during_a_product_store_has_the_day_stored_once() {
+    let memory = Memory::new();
+    let obs = read_once(&memory, &[YESTERDAY, TODAY]).await;
+    let yesterday = "raw/v2/kma-web/station-pages/2026/09/23/";
+    assert_eq!(
+        (memory.stored(yesterday), memory.stored(TODAY_PRODUCTS)),
+        (1, 1)
+    );
+    fail_today(&obs, &memory).await;
+    memory.hold(yesterday);
+    let pass = {
+        let obs = obs.clone();
+        tokio::spawn(async move { fill(&obs).await })
+    };
+    memory.reached().await;
+    // The reload makes today readable while the worker stores yesterday.
+    reload_due(&obs);
+    let _ = request(&obs).await;
+    assert!(!obs.state().pages.unreadable.contains(&TODAY));
+    memory.release();
+    pass.await.unwrap();
+    idle(&obs).await;
+    assert_eq!(
+        (memory.stored(yesterday), memory.stored(TODAY_PRODUCTS)),
+        (2, 2),
+        "each day's product with its filled page, once"
     );
     assert!(obs.state().flush.is_empty(), "spent");
 }
