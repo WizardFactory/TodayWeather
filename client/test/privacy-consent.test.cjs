@@ -33,7 +33,7 @@ function harness(store = new Map(), options = {}) {
         angular: {module() { return {factory(n,fn) { factory=fn; }}; }},window, clientConfig: {releaseAds: true}
     });
     // TwStorage.init reports the stored choice final (AN-17) before platformReady here, as on a start without a hand-back.
-    const m=factory(window); m.storageReady();
+    const m=factory(window); m.storageReady(true);
     return {m,window,calls,events,logs,store,native,consentCallbacks,completeEnable:()=>late()};
 }
 test('fresh install and malformed consent never collect or replay earlier events', () => {

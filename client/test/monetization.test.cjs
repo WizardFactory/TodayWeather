@@ -32,7 +32,7 @@ function harness({enabled = true, absent = false, config, debug = false} = {}) {
     });
     // TwStorage.init reports the stored choice final (AN-17) before platformReady here, as on a start without a hand-back.
     const m = factory(window);
-    m.storageReady();
+    m.storageReady(true);
     return {m, events, logs, timers, window};
 }
 

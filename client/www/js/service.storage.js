@@ -19,7 +19,8 @@ angular.module('service.storage', [])
         // ({schema, generation, writer, complete, keys}). A newer complete native hand-back replaces the stale WebView
         // values, removals included, before the restore or mirror below; this build then claims the state
         // (writer 'cordova', generation + 1), so a later native start migrates what changes here. One this start cannot
-        // read or apply whole stays in the suite for the next start.
+        // read or apply whole stays in the suite for the next start. The promise resolves whether the stored analytics
+        // choice can be trusted: not while a hand-back this build cannot use may hold a newer one.
         var handBackKey = '_twHandBack';
         var handBackApplied = 'twHandBackApplied';
         var handBackKeys = ['cities', 'cityIndex', 'cityList', 'units', 'settingsInfo', 'pushData2', 'pushData',
@@ -53,17 +54,17 @@ angular.module('service.storage', [])
                 var marker = _readHandBack(value);
                 if (value == undefined || value === '') {
                     claim(0);
-                    deferred.resolve();
+                    deferred.resolve(true);
                     return;
                 }
                 // An unreadable or unknown marker, or this build's own claim: the WebView state stays and is not claimed.
                 if (!marker || marker.writer !== 'native') {
-                    deferred.resolve();
+                    deferred.resolve(!!marker);
                     return;
                 }
                 if (marker.generation <= applied) {
                     claim(marker.generation);
-                    deferred.resolve();
+                    deferred.resolve(true);
                     return;
                 }
                 var keys = handBackKeys.filter(function (key) { return marker.keys.indexOf(key) >= 0; });
@@ -72,7 +73,7 @@ angular.module('service.storage', [])
                     if (failed) {
                         console.log('[_handBack] unreadable, not applied');
                         suiteWritable = false;
-                        deferred.resolve();
+                        deferred.resolve(false);
                         return;
                     }
                     // All keys or none: a write that throws (a full store) puts back the keys written before it.
@@ -92,11 +93,11 @@ angular.module('service.storage', [])
                             } catch (ignored) {}
                         });
                         suiteWritable = false;
-                        deferred.resolve();
+                        deferred.resolve(false);
                         return;
                     }
                     claim(marker.generation);
-                    deferred.resolve();
+                    deferred.resolve(true);
                 }
                 if (count === 0) { finish(); return; }
                 keys.forEach(function (key) {
@@ -112,7 +113,7 @@ angular.module('service.storage', [])
             }, function (err) {
                 Util.ga.trackEvent('storage', 'error', 'handBack');
                 suiteWritable = false;
-                deferred.resolve();
+                deferred.resolve(false);
             }, handBackKey);
 
             return deferred.promise;
@@ -317,13 +318,13 @@ angular.module('service.storage', [])
             if (_hasAppPreferences()) {
                 suitePrefs = plugins.appPreferences.suite(suiteName);
 
-                _handBack().then(function () {
+                _handBack().then(function (trusted) {
                     // The analytics choice is final in localStorage now (the restore below does not touch it).
-                    Monetization.storageReady();
+                    Monetization.storageReady(trusted);
                     _restoreOrMirror();
                 });
             } else {
-                Monetization.storageReady();
+                Monetization.storageReady(true);
                 that.setForwardCompatibility();
                 deferred.resolve();
             }
@@ -333,6 +334,12 @@ angular.module('service.storage', [])
                 // A new web origin (file:// → app://localhost or https://localhost) also starts empty; test the
                 // city keys, not length, so an unrelated early write cannot skip the restore.
                 if (localStorage.getItem('cityList') === null && localStorage.getItem('cities') === null) {
+                    // The suite holds a hand-back this start could not apply: no part of it is restored now.
+                    if (!suiteWritable) {
+                        that.setForwardCompatibility();
+                        deferred.resolve();
+                        return;
+                    }
                     _appPref2localStorage().finally(function () {
                         that.setForwardCompatibility();
                         deferred.resolve();

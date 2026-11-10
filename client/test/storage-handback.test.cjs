@@ -64,8 +64,9 @@ async function start({suite = {}, local = {}, failing, full} = {}) {
     });
     const rootScope = {};
     const Util = {ga: {trackEvent() {}, trackException() {}}};
-    // TwStorage tells Monetization when the stored choice is final; the call records the choice it can read then.
-    const Monetization = {storageReady() { calls.push('storageReady:' + localStorage.getItem('twAnalyticsConsentV1')); }};
+    // TwStorage tells Monetization when the stored choice is final and whether it can be trusted; the call records both
+    // and the choice it can read then.
+    const Monetization = {storageReady(trusted) { calls.push(`storageReady:${trusted}:${localStorage.getItem('twAnalyticsConsentV1')}`); }};
     const storage = factory(rootScope, q(), Util, Monetization);
     await Promise.race([storage.init(), new Promise((_, no) => setTimeout(() => no(new Error('init did not settle')), 500))]);
     await new Promise(r => setTimeout(r, 0));
@@ -92,7 +93,7 @@ test('a newer native hand-back replaces the stale WebView state, removals includ
     assert.equal(localStorage.getItem('pushData'), null, 'legacy alarms of a deleted place do not come back');
     assert.equal(localStorage.getItem('disableUpdateInfo'), null, 'a key the native state lacks is removed');
     assert.equal(localStorage.getItem('twHandBackApplied'), '3');
-    assert.deepEqual(calls.filter(c => c.startsWith('storageReady')), ['storageReady:false'], 'Monetization reads the handed-back consent');
+    assert.deepEqual(calls.filter(c => c.startsWith('storageReady')), ['storageReady:true:false'], 'Monetization reads the handed-back consent');
     const claim = JSON.parse(values.get('_twHandBack'));
     assert.deepEqual([claim.schema, claim.generation, claim.writer, claim.complete], [1, 4, 'cordova', true]);
     // The existing mirror then copies the (now native) WebView values back into the suite.
@@ -110,16 +111,17 @@ test('a hand-back already applied, a claim, or no marker leaves the WebView stat
     assert.equal(none.localStorage.getItem('cityIndex'), '2');
     assert.deepEqual(JSON.parse(none.values.get('_twHandBack')), {schema: 1, generation: 1, writer: 'cordova', complete: true, keys: KEYS});
     for (const run of [applied, claimed, none]) {
-        assert.deepEqual(run.calls.filter(c => c.startsWith('storageReady')), ['storageReady:true'], 'the stored choice applies as before');
+        assert.deepEqual(run.calls.filter(c => c.startsWith('storageReady')), ['storageReady:true:true'], 'the stored choice applies as before');
     }
 });
 
 test('an incomplete, unknown or unreadable marker is ignored', async () => {
     for (const bad of [marker(3, 'native', {complete: false}), marker(3, 'native', {schema: 2}), '{broken', marker(3, 'other'),
         JSON.stringify({schema: 1, writer: 'native', complete: true, keys: KEYS})]) {
-        const {localStorage} = await start({suite: Object.assign({_twHandBack: bad}, nativeState), local: staleWebView});
+        const {localStorage, calls} = await start({suite: Object.assign({_twHandBack: bad}, nativeState), local: staleWebView});
         assert.equal(localStorage.getItem('cityIndex'), '2', bad);
         assert.equal(localStorage.getItem('pushData'), staleWebView.pushData, bad);
+        assert.deepEqual(calls.filter(c => c.startsWith('storageReady')), ['storageReady:false:true'], 'a hand-back it cannot use: the WebView choice is not trusted');
     }
 });
 
@@ -135,7 +137,7 @@ async function untilALaterStart(failure) {
     first.storage.set('expandShortChart', true);
     await new Promise(r => setTimeout(r, 0));
     assert.deepEqual([...handed.entries()], [...before.entries()], 'the suite holds the hand-back unchanged');
-    assert.deepEqual(first.calls.filter(c => c.startsWith('storageReady')), ['storageReady:true']);
+    assert.deepEqual(first.calls.filter(c => c.startsWith('storageReady')), ['storageReady:false:true'], 'the WebView choice is not trusted');
     const later = await start({suite: handed, local: first.localStorage.map});
     assert.equal(later.localStorage.getItem('cities'), nativeState.cities, 'a later start applies it');
     assert.equal(later.localStorage.getItem('pushData'), null);
@@ -150,6 +152,66 @@ test('a key the build cannot read: the hand-back waits for a later start', () =>
 test('a localStorage write that fails while applying: the keys go back and the hand-back waits', async () => {
     const local = new Map(Object.entries(staleWebView));
     await untilALaterStart({full: 'units', local});
+});
+
+test('an emptied WebView store and a hand-back that fails to apply: nothing restored in part, and init settles', async () => {
+    const handed = new Map(Object.entries(Object.assign({_twHandBack: marker(3)}, nativeState)));
+    const before = new Map(handed);
+    const first = await start({suite: handed, local: {}, full: 'units'});
+    assert.deepEqual([...first.localStorage.map.keys()].filter(k => k !== 'settingsInfo'), [], 'no key of the hand-back restored');
+    assert.deepEqual([...handed.entries()], [...before.entries()]);
+    const later = await start({suite: handed, local: first.localStorage.map});
+    assert.equal(later.localStorage.getItem('cities'), nativeState.cities);
+});
+
+// TwStorage with the real Monetization: after a native withdrawal, a start that cannot use the hand-back never turns
+// collection on from the WebView's stale grant, whatever platformReady's order (the plugin's own flag is still on).
+async function collectionAfter(options, platformFirst) {
+    let storageFactory, monetizationFactory;
+    const values = new Map(Object.entries(Object.assign({_twHandBack: marker(3)}, nativeState, options.suite || {})));
+    const localStorage = storageOf(staleWebView, options.full);
+    const legacy = suiteOf(new Map());
+    const suitePrefs = suiteOf(values, options.failing);
+    const plugins = {appPreferences: {suite(name) { return name === 'net.wizardfactory.todayweather_preferences' ? legacy : suitePrefs; }}};
+    const applied = [], events = [];
+    const window = {
+        console: {info() {}, warn() {}}, setTimeout() { return 1; }, clearTimeout() {}, localStorage, plugins,
+        FirebasexAnalytics: {
+            setAnalyticsConsentMode(c, done) { done(); },
+            isAnalyticsCollectionEnabled(done) { done(1); },
+            setAnalyticsCollectionEnabled(value, done) { applied.push(value); done(); },
+            logEvent(n, p, done) { events.push(n); done(); }
+        }
+    };
+    vm.runInNewContext(read('www/js/service.monetization.js'), {
+        angular: {module() { return {factory(name, fn) { monetizationFactory = fn; }}; }}, clientConfig: {debug: true, package: 'todayWeather'}, window
+    });
+    const m = monetizationFactory(window);
+    vm.runInNewContext(read('www/js/service.storage.js'), {
+        angular: {module() { return {factory(name, fn) { storageFactory = fn; }}; }},
+        clientConfig: {package: 'todayWeather'}, console: {info() {}, log() {}, error() {}},
+        window: {plugins}, plugins, localStorage, ionic: {Platform: {isAndroid: () => true}}, JSON, Number, String
+    });
+    const storage = storageFactory({}, q(), {ga: {trackEvent() {}, trackException() {}}}, m);
+    if (platformFirst) m.init();
+    await Promise.race([storage.init(), new Promise((_, no) => setTimeout(() => no(new Error('init did not settle')), 500))]);
+    await new Promise(r => setTimeout(r, 0));
+    if (!platformFirst) m.init();
+    m.screen('start');
+    return {applied, events, choice: m.getCollectionChoice()};
+}
+
+test('a native withdrawal holds in every start that cannot use the hand-back', async () => {
+    const failures = {'unreadable marker': {failing: '_twHandBack'}, 'unreadable key': {failing: 'units'}, 'full store': {full: 'units'},
+        'unknown schema': {suite: {_twHandBack: marker(3, 'native', {schema: 2})}}, 'applied': {}};
+    for (const [name, options] of Object.entries(failures)) {
+        for (const platformFirst of [true, false]) {
+            const {applied, events, choice} = await collectionAfter(options, platformFirst);
+            assert.equal(applied.includes(true), false, `${name}, platformReady ${platformFirst ? 'first' : 'last'}: ${applied}`);
+            assert.deepEqual(events, [], name);
+            assert.equal(choice, false, name);
+        }
+    }
 });
 
 test('an emptied WebView store restores the native hand-back as well', async () => {
@@ -177,6 +239,18 @@ function heldSuite() {
     };
 }
 
+// cordova-plugin-app-preferences on Android: a removal of a key the suite does not hold answers NO_RESULT, so neither
+// callback runs; stores answer.
+function pluginSuite() {
+    const values = new Map(), pending = [];
+    return {
+        values, pending,
+        runAll() { while (pending.length) pending.shift()(); },
+        store(ok, fail, k, v) { pending.push(() => { values.set(k, v); if (ok) ok(); }); },
+        remove(ok, fail, k) { pending.push(() => { if (values.has(k)) { values.delete(k); if (ok) ok(); } }); }
+    };
+}
+
 function immediateSuite(values) {
     return {
         store(ok, fail, k, v) { values.set(k, v); if (ok) ok(); },
@@ -184,10 +258,10 @@ function immediateSuite(values) {
     };
 }
 
-function monetization({stored, flag = true, suite} = {}) {
+function monetization({stored, flag = true, suite, full} = {}) {
     let factory;
     const applied = [], mirrored = suite ? suite.values : new Map(), screens = [];
-    const localStorage = storageOf(stored === undefined ? {} : {twAnalyticsConsentV1: stored});
+    const localStorage = storageOf(stored === undefined ? {} : {twAnalyticsConsentV1: stored}, full);
     const window = {
         console: {info() {}, warn() {}}, setTimeout() { return 1; }, clearTimeout() {}, localStorage,
         plugins: {appPreferences: {suite() { return suite || immediateSuite(mirrored); }}},
@@ -212,7 +286,7 @@ test('a stale WebView grant is never applied before the storage is read', () => 
     m.screen('start');
     assert.deepEqual(applied, [], 'nothing applied yet');
     localStorage.setItem('twAnalyticsConsentV1', 'false');
-    m.storageReady();
+    m.storageReady(true);
     assert.equal(m.getCollectionChoice(), false);
     assert.deepEqual(applied, [false]);
     assert.deepEqual(screens, []);
@@ -222,12 +296,12 @@ test('without a hand-back the stored choice applies once both are ready, in eith
     const late = monetization({stored: 'true'});
     late.m.init();
     late.m.screen('start');
-    late.m.storageReady();
-    late.m.storageReady();
+    late.m.storageReady(true);
+    late.m.storageReady(true);
     assert.deepEqual(late.applied, [false, true], 'once');
     assert.deepEqual(late.screens, ['start'], 'the screen shown before is measured after the grant applied');
     const early = monetization({stored: 'true'});
-    early.m.storageReady();
+    early.m.storageReady(true);
     early.m.init();
     assert.deepEqual(early.applied, [false, true]);
 });
@@ -236,13 +310,13 @@ test('a handed-back grant still needs the SDK flag', () => {
     const granted = monetization({stored: 'false', flag: true});
     granted.m.init();
     granted.localStorage.setItem('twAnalyticsConsentV1', 'true');
-    granted.m.storageReady();
+    granted.m.storageReady(true);
     assert.equal(granted.m.getCollectionChoice(), true);
     assert.deepEqual(granted.applied, [false, true]);
     const refused = monetization({stored: 'false', flag: false});
     refused.m.init();
     refused.localStorage.setItem('twAnalyticsConsentV1', 'true');
-    refused.m.storageReady();
+    refused.m.storageReady(true);
     assert.equal(refused.m.getCollectionChoice(), false, 'the SDK flag withdrew it');
     assert.deepEqual(refused.applied, [false]);
     assert.equal(refused.localStorage.getItem('twAnalyticsConsentV1'), 'false');
@@ -252,7 +326,7 @@ test('choices reach the suite in the order they were made, whatever order the pl
     // The plugin runs each call on a thread pool: a grant's write finishing after the withdrawal's would leave the grant.
     const suite = heldSuite();
     const {m} = monetization({stored: 'true', suite});
-    m.storageReady();
+    m.storageReady(true);
     m.init();
     const results = [];
     m.setCollectionEnabled(true, ok => results.push(['grant', ok]));
@@ -265,24 +339,54 @@ test('choices reach the suite in the order they were made, whatever order the pl
     assert.deepEqual(results, [['grant', true], ['withdraw', true]]);
 });
 
-test('a choice the suite does not take is removed there and reported as not saved', () => {
+test('a choice the suite does not take is written there as a withdrawal and reported as not saved', () => {
     const suite = heldSuite();
     suite.values.set('twAnalyticsConsentV1', 'true');
     const {m} = monetization({stored: 'true', suite});
-    m.storageReady();
+    m.storageReady(true);
     m.init();
     let result;
     m.setCollectionEnabled(false, ok => { result = ok; });
     suite.pending.shift().fail();
     suite.pending.shift().run();
-    assert.equal(suite.values.has('twAnalyticsConsentV1'), false, 'no older grant stays there');
+    assert.equal(suite.values.get('twAnalyticsConsentV1'), 'false', 'no older grant stays there');
     assert.equal(result, false, 'the menu reports LOC_PRIVACY_SAVE_FAILED');
     assert.equal(m.getCollectionChoice(), false);
 });
 
+test('a choice this build cannot keep is reported, and later choices still reach the suite', () => {
+    // The plugin never answers the removal of a key it does not hold.
+    const suite = pluginSuite();
+    const {m, localStorage} = monetization({suite, full: 'twAnalyticsConsentV1'});
+    m.storageReady(true);
+    m.init();
+    let first;
+    m.setCollectionEnabled(true, ok => { first = ok; });
+    suite.runAll();
+    assert.equal(first, false, 'LOC_PRIVACY_SAVE_FAILED');
+    assert.equal(suite.values.get('twAnalyticsConsentV1'), 'false');
+    localStorage.setItem = function (k, v) { this.map.set(k, String(v)); };
+    let second;
+    m.setCollectionEnabled(true, ok => { second = ok; });
+    suite.runAll();
+    assert.equal(second, true);
+    assert.equal(suite.values.get('twAnalyticsConsentV1'), 'true');
+});
+
+test('a stored grant this build cannot trust is not applied, while a choice made then is', () => {
+    const {m, applied} = monetization({stored: 'true'});
+    m.init();
+    m.storageReady(false);
+    assert.equal(m.getCollectionChoice(), false);
+    assert.deepEqual(applied, [false]);
+    m.setCollectionEnabled(true);
+    assert.equal(m.getCollectionChoice(), true);
+    assert.deepEqual(applied, [false, false, true]);
+});
+
 test('a choice made in the fallback build is mirrored into the suite', () => {
     const {m, mirrored} = monetization({stored: 'true'});
-    m.storageReady();
+    m.storageReady(true);
     m.init();
     m.setCollectionEnabled(false);
     assert.equal(mirrored.get('twAnalyticsConsentV1'), 'false');

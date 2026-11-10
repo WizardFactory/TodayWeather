@@ -40,8 +40,9 @@ angular.module('service.monetization', [])
         var collectionBusy = false, nextCollection;
         // The choice in the suite too (AN-17): after a rollback to this build and a return to the native app, that app
         // keeps its own grant only while the suite says "true", so a withdrawal made here holds there. The plugin runs
-        // each call on a thread pool, so the writes go one at a time in the order of the choices; one that fails removes
-        // the key, so no older grant stays there, and reports the failure.
+        // each call on a thread pool, so the writes go one at a time in the order of the choices. A choice not kept here
+        // is written as a withdrawal; a write that fails is tried once as a withdrawal, so no older grant stays there,
+        // and reported. Only stores: the plugin never answers the removal of a key it does not hold.
         var mirrors = [], mirroring = false;
         function mirrorChoice(value, done) {
             mirrors.push({value: value, done: done || function() {}});
@@ -59,14 +60,12 @@ angular.module('service.monetization', [])
                 }
             } catch (e) {}
             if (!suite) { finish(true); return; }
-            function removeIt() {
-                try { suite.remove(function() { finish(false); }, function() { finish(false); }, consentKey); }
+            function withdraw() {
+                try { suite.store(function() { finish(false); }, function() { finish(false); }, consentKey, 'false'); }
                 catch (e) { finish(false); }
             }
-            try {
-                if (job.value === undefined) { suite.remove(function() { finish(true); }, function() { finish(false); }, consentKey); }
-                else { suite.store(function() { finish(true); }, removeIt, consentKey, String(job.value)); }
-            } catch (e) { removeIt(); }
+            try { suite.store(function() { finish(true); }, withdraw, consentKey, job.value === true ? 'true' : 'false'); }
+            catch (e) { withdraw(); }
         }
         function persistChoice(value) {
             try {
@@ -142,7 +141,7 @@ angular.module('service.monetization', [])
             function restore(value) {
                 if (revision !== collectionRevision) { return; }
                 choice = value === true || value === 1;
-                if (!choice) { pendingScreen = undefined; mirrorChoice(persistChoice(false) ? false : undefined); }
+                if (!choice) { pendingScreen = undefined; persistChoice(false); mirrorChoice(false); }
                 applyCollection(choice);
             }
             try { sdk.isAnalyticsCollectionEnabled(restore, function() { restore(false); }); }
@@ -153,12 +152,15 @@ angular.module('service.monetization', [])
             initialized = true;
             if (storageReady) { applyStored(); }
         };
-        // TwStorage.init is done, a hand-back included: the choice is read again and applies once init has run.
-        obj.storageReady = function() {
+        // TwStorage.init is done, a hand-back included: the choice is read again and applies once init has run. When the
+        // native app may hold a newer choice this build could not read ([trusted] false), a stored grant does not apply
+        // in this session; a choice made in it does.
+        obj.storageReady = function(trusted) {
             if (storageReady) { return; }
             storageReady = true;
-            try { choice = $window.localStorage.getItem(consentKey) === 'true'; }
+            try { choice = trusted === true && $window.localStorage.getItem(consentKey) === 'true'; }
             catch (e) { choice = false; }
+            if (!choice) { pendingScreen = undefined; }
             if (initialized) { applyStored(); }
         };
         obj.setCollectionEnabled = function(value, callback) {
