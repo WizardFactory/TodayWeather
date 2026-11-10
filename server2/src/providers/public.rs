@@ -75,7 +75,7 @@ impl HttpPublicTransport {
         } else {
             reqwest::redirect::Policy::none()
         };
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .http1_max_headers(32)
             .redirect(redirect)
             .retry(reqwest::retry::never())

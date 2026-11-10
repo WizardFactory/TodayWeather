@@ -103,6 +103,8 @@ const ASOS_RELOAD: Duration = Duration::from_secs(600);
 const GEOCODE_CONCURRENCY: usize = 4;
 /// ASOS range acquisitions in flight at once (legacy recovery runs two workers).
 const ASOS_CONCURRENCY: usize = 2;
+/// Stored ASOS ranges of one kind read at once by a station's S3 read.
+const ASOS_READS: usize = 4;
 /// Legacy ASOS mapping radius.
 const ASOS_MAX_KM: f64 = 100.;
 
@@ -210,6 +212,8 @@ enum Acq {
     City(Publication),
     /// The backfill pass of the window ending at this hour.
     Backfill(Publication),
+    /// The pass over the absent hours of today and yesterday of a raced restore.
+    Fill(Publication),
     AsosRun(String),
 }
 #[derive(Default)]
@@ -244,7 +248,9 @@ struct Pages {
 struct AsosEntry {
     /// The station's data.go.kr acquisitions in fetch order.
     fetched: Vec<AsosFetched>,
-    loaded: std::time::Instant,
+    /// When the station state was last read from S3 (None: only this process's ranges of a
+    /// raced restore, KMA-RESTART-RACE).
+    loaded: Option<std::time::Instant>,
 }
 #[derive(Default)]
 struct State {
@@ -288,6 +294,9 @@ struct HourlyFold {
 
 pub struct Observations<T> {
     reader: Reader<T>,
+    /// Reads and writes no request waits for (the rest of a restart read, full reads of reduced
+    /// pages and the day products) on the bulk lane of the shared S3 admission (KMA-RESTART-RACE).
+    bulk: Reader<T>,
     acquire: Arc<dyn Acquire>,
     locate: Arc<dyn Locate>,
     state: Mutex<State>,
@@ -344,7 +353,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         acquire: Arc<dyn Acquire>,
         locate: Arc<dyn Locate>,
     ) -> Self {
+        let bulk = transport.bulk_view();
         Self {
+            bulk: Reader {
+                store: Arc::new(
+                    CatalogStore::new(bulk.clone(), store.limits().clone())
+                        .expect("the limits of a built store"),
+                ),
+                transport: bulk,
+            },
             reader: Reader { transport, store },
             acquire,
             locate,
@@ -463,22 +480,66 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// request needs until `until`. None when no fold exists yet (the readers answer as legacy
     /// does over empty collections).
     pub async fn stations(self: &Arc<Self>, now_ms: i64, until: Instant) -> Option<Arc<Folded>> {
-        // What S3 already holds decides what to acquire.
-        Self::wait(self.load(now_ms).into_iter().collect(), until).await;
+        self.stations_by(now_ms, until, until).await
+    }
+    /// [`Self::stations`] with the stored restore's head start (KMA-RESTART-RACE): what S3
+    /// holds decides what to acquire when the restore ([`Flight::Load`]) is done by `race_at`.
+    /// A restore still running then is raced: the owned acquisitions of what memory lacks start
+    /// alongside it, as on an empty S3, with the hours of today and yesterday S3 does not list
+    /// ([`Self::fill_window`]). Restore and acquisitions are waited for until `until`, and a
+    /// restored page never replaces a newer acquired one ([`hold`]).
+    pub async fn stations_by(
+        self: &Arc<Self>,
+        now_ms: i64,
+        race_at: Instant,
+        until: Instant,
+    ) -> Option<Arc<Folded>> {
+        let mut load = Box::pin(Self::wait(self.load(now_ms).into_iter().collect(), until));
+        let raced = crate::resolver::race::races(
+            &mut load,
+            race_at,
+            until,
+            crate::observability::Component::Domestic,
+        )
+        .await;
         let mut owned = Vec::new();
         owned.extend(self.ensure_minute(now_ms, until));
         let latest = latest_hourly(now_ms);
-        owned.extend(self.ensure_hourly(latest, until));
-        owned.extend(self.ensure_city(latest, until));
-        if let Some(previous) = latest.add_hours(-1) {
-            owned.extend(self.ensure_hourly(previous, until));
+        // A raced hour fetched now past its ongoing reach would replace a stored ongoing page
+        // (its ASOS hour): such an hour is left to the fill, which asks only what S3 lacks.
+        let direct =
+            |h: Publication| !raced || now_ms as f64 <= schedule::to_ms(h) as f64 + ONGOING_MS;
+        let mut asked = Vec::new();
+        for hour in std::iter::once(latest).chain(latest.add_hours(-1)) {
+            if direct(hour) {
+                asked.push(hour);
+                owned.extend(self.ensure_hourly(hour, until));
+            }
         }
+        owned.extend(self.ensure_city(latest, until));
         // ASOS owns completed history under the observed policy. A speculative 192-hour
         // AWS sweep would compete with the foreground sources without proving missing fields.
         if !self.observed_history {
             self.backfill_hours(now_ms);
         }
-        crate::history::join_all(owned).await;
+        // Each acquisition is a part of its own (RR2-page-progress): a page that arrives while a
+        // slower provider is still waited for is folded then, not when the slowest one ends.
+        let mut parts: futures_util::stream::FuturesUnordered<BoxFuture<'_, ()>> =
+            owned.into_iter().collect();
+        if raced {
+            parts.push(self.fill_window(now_ms, asked, until));
+            parts.push(Box::pin(load));
+        }
+        // Each part ends by `until`. What one brings is folded while the others are waited for,
+        // so a restore still running at `until` leaves the acquired pages their fold.
+        use futures_util::StreamExt;
+        while parts.next().await.is_some() {
+            if !parts.is_empty()
+                && let Some(rx) = self.fold_if_dirty(now_ms)
+            {
+                Self::wait(vec![rx], until).await;
+            }
+        }
         // Pages beyond the readers' reach make the collections out of date by themselves.
         {
             let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
@@ -596,13 +657,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             reads.drain(..).partition(|r| r.day >= yesterday);
         crate::history::join_all(
             now.into_iter()
-                .map(|r| self.complete_day(r, deadline))
+                .map(|r| self.complete_day(&self.reader, r, deadline))
                 .collect(),
         )
         .await;
         let floor = schedule::from_ms(now_ms - MINUTE_KEEP_MS as i64);
         let later = minutes.split_off(minutes.len().min(MINUTE_FIRST));
-        self.restore_minutes(minutes, floor, deadline).await;
+        self.restore_minutes(&self.reader, minutes, floor, deadline)
+            .await;
         {
             let mut s = self.state();
             s.pages.minute.retain(|k, _| *k > floor);
@@ -617,13 +679,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             s.products.retain(|d, _| *d >= oldest);
             s.product_attempts.retain(|d, _| *d >= oldest);
         }
+        // No request waits for the rest: it reads on the bulk lane.
         if !rest.is_empty() || !later.is_empty() {
             let _ = self.start(Flight::LoadRest, Duration::ZERO, move |this| {
                 Box::pin(async move {
                     for day in rest {
-                        this.complete_day(day, Instant::now() + READ_DEADLINE).await;
+                        this.complete_day(&this.bulk, day, Instant::now() + READ_DEADLINE)
+                            .await;
                     }
-                    this.restore_minutes(later, floor, Instant::now() + READ_DEADLINE)
+                    this.restore_minutes(&this.bulk, later, floor, Instant::now() + READ_DEADLINE)
                         .await;
                 })
             });
@@ -765,6 +829,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     continue;
                 }
                 let reduced = (page.kind == "aws-hourly").then(|| reduced.clone());
+                let raw_id = page.raw_id.clone();
                 let held = (
                     page.hour,
                     page.rows,
@@ -772,7 +837,11 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                     page.sha256,
                     page.raw_id,
                 );
-                hold(&mut s.pages, page.kind, held, reduced);
+                // A newer page of the hour (a provider page of a raced restore) stays held; the
+                // product's page is a complete listed group all the same.
+                if !hold(&mut s.pages, page.kind, held, reduced) {
+                    stored.known.insert(raw_id);
+                }
             }
             r.base = Some(Accounted {
                 known: stored.known,
@@ -787,7 +856,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// ones, and a new page newer than the held one of its kind and hour is parsed and held.
     /// Otherwise, or when such a page does not parse, every page of the day is read as before
     /// (the newest complete page of each hour).
-    async fn complete_day(&self, r: DayRead, deadline: Instant) {
+    async fn complete_day(&self, reader: &Reader<T>, r: DayRead, deadline: Instant) {
         let DayRead {
             day, listed, base, ..
         } = r;
@@ -796,17 +865,18 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             return;
         };
         if let Some(base) = base {
-            match self.compare_day(day, &listed, base, deadline).await {
+            match self.compare_day(reader, day, &listed, base, deadline).await {
                 Ok(Some((changed, accounted))) => return self.day_read(day, accounted, changed),
                 Ok(None) => {}
                 Err(()) => return self.day_failed(day),
             }
         }
-        self.raw_day(day, &listed, deadline).await;
+        self.raw_day(reader, day, &listed, deadline).await;
     }
     /// [`Self::complete_day`] with pages held. Ok(None): a new newest page does not parse.
     async fn compare_day(
         &self,
+        reader: &Reader<T>,
         day: u32,
         listed: &[ListedPage],
         base: Accounted,
@@ -831,7 +901,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             .iter()
             .map(|p| (p.catalog.clone(), p.member.clone()))
             .collect();
-        let read = self.restore(&wanted, deadline).await?;
+        let read = self.restore(reader, &wanted, deadline).await?;
         let mut excluded = BTreeSet::new();
         let mut complete: Vec<(&ListedPage, Vec<RawRecord>)> = Vec::new();
         for (page, records) in unknown.into_iter().zip(read) {
@@ -907,6 +977,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// Err: a read failed.
     async fn restore(
         &self,
+        reader: &Reader<T>,
         wanted: &[(CatalogId, crate::storage::RecordId)],
         deadline: Instant,
     ) -> Result<Vec<Option<Vec<RawRecord>>>, ()> {
@@ -919,7 +990,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 end += 1;
             }
             let members: Vec<_> = wanted[at..end].iter().map(|(_, m)| m.clone()).collect();
-            match self.reader.members(catalog, &members, deadline).await {
+            match reader.members(catalog, &members, deadline).await {
                 Ok(Some(read)) if read.len() == members.len() => {
                     for (slot, records) in out[at..end].iter_mut().zip(read) {
                         *slot = Some(records);
@@ -929,8 +1000,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 Ok(_) => {
                     // One of them is not complete: each alone.
                     for (slot, member) in out[at..end].iter_mut().zip(&members) {
-                        *slot = self
-                            .reader
+                        *slot = reader
                             .members(catalog, std::slice::from_ref(member), deadline)
                             .await
                             .map_err(|_| ())?
@@ -944,7 +1014,13 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         Ok(out)
     }
     /// Read every page of one day (each complete acquisition is restored and parsed).
-    async fn raw_day(&self, day: u32, listed: &[ListedPage], deadline: Instant) {
+    async fn raw_day(
+        &self,
+        reader: &Reader<T>,
+        day: u32,
+        listed: &[ListedPage],
+        deadline: Instant,
+    ) {
         let partition = format!("{day:08}");
         let (aws, city_k) = (aws_key(), city_key());
         let (want_hourly, want_city) = (
@@ -954,7 +1030,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         let (hourly, city) = tokio::join!(
             async {
                 if want_hourly {
-                    self.reader
+                    reader
                         .raw_excluded("kma-web", "aws-hourly", &aws, &partition, deadline)
                         .await
                 } else {
@@ -963,7 +1039,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             },
             async {
                 if want_city {
-                    self.reader
+                    reader
                         .raw_excluded("kma-web", "city-obs", &city_k, &partition, deadline)
                         .await
                 } else {
@@ -1092,6 +1168,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
     /// is not complete or does not parse, the next one.
     async fn restore_minutes(
         &self,
+        reader: &Reader<T>,
         minutes: Vec<Vec<MinuteEntry>>,
         floor: Publication,
         deadline: Instant,
@@ -1114,7 +1191,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 .iter()
                 .map(|(_, e)| (e.catalog.clone(), e.member.clone()))
                 .collect();
-            let Ok(read) = self.restore(&wanted, deadline).await else {
+            let Ok(read) = self.restore(reader, &wanted, deadline).await else {
                 break;
             };
             let parsed = crate::observability::spawn_blocking(move || {
@@ -1255,15 +1332,14 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         if let Some(records) = self
             .acquire_web(request, Instant::now() + page_time())
             .await
-            && let Some((p, rows, at, sha, raw_id)) = parse_hourly(&records)
+            && let Some(page) = parse_hourly(&records)
         {
+            // Newest wins: a restore that held this hour meanwhile keeps a newer page.
             let mut s = self.state();
-            s.pages.hourly.insert(p, rows);
-            s.pages.hourly_at.insert(p, at);
-            s.pages.reduced.remove(&p);
-            s.pages.ids.insert(("aws-hourly", p), (at, sha, raw_id));
-            s.pages.dirty = true;
-            s.pages.hourly_dirty = true;
+            if hold(&mut s.pages, "aws-hourly", page, None) {
+                s.pages.dirty = true;
+                s.pages.hourly_dirty = true;
+            }
         }
     }
     fn ensure_city(
@@ -1285,16 +1361,97 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 if let Some(records) = this
                     .acquire_web(request, Instant::now() + page_time())
                     .await
-                    && let Some((p, rows, at, sha, raw_id)) = parse_city_record(&records)
+                    && let Some(page) = parse_city_record(&records)
                 {
                     let mut s = this.state();
-                    s.pages.city.insert(p, rows);
-                    s.pages.ids.insert(("city-obs", p), (at, sha, raw_id));
-                    s.pages.dirty = true;
-                    s.pages.hourly_dirty = true;
+                    if hold(&mut s.pages, "city-obs", page, None) {
+                        s.pages.dirty = true;
+                        s.pages.hourly_dirty = true;
+                    }
                 }
             })
         }))
+    }
+    /// KMA-RESTART-RACE (AK 2026-11-07, decision 3): the AWS hourly pages of today and yesterday
+    /// (before `latest`, other than the hours `asked` directly) that neither the day catalogs list
+    /// nor memory holds, in one owned pass newest first, three at a time, each hour at most once
+    /// per [`BACKFILL_RETRY`]. A held or listed hour is never fetched again (a later page would
+    /// replace an ongoing one), and the days before yesterday come from S3 alone. A day whose
+    /// catalog cannot be listed is not filled (absence is not proven).
+    fn fill_window(
+        self: &Arc<Self>,
+        now_ms: i64,
+        asked: Vec<Publication>,
+        until: Instant,
+    ) -> BoxFuture<'static, ()> {
+        let latest = latest_hourly(now_ms);
+        let today = schedule::from_ms(now_ms);
+        let days: Vec<u32> = [today.add_hours(-24), Some(today)]
+            .into_iter()
+            .flatten()
+            .map(|p| p.date())
+            .collect();
+        self.own(
+            Acq::Fill(latest),
+            crate::resolver::owned::MAX_OWNED,
+            until,
+            move |this| {
+                Box::pin(async move {
+                    let deadline = Instant::now() + READ_DEADLINE;
+                    let listed = crate::history::join_all(
+                        days.iter()
+                            .map(|day| this.listed_hours(*day, deadline))
+                            .collect(),
+                    )
+                    .await;
+                    let mut wanted: Vec<Publication> = Vec::new();
+                    for (day, listed) in days.iter().zip(listed) {
+                        let Some(listed) = listed else {
+                            continue;
+                        };
+                        let mut hour = Publication::new(*day, 0);
+                        while let Some(h) = hour.filter(|h| h.date() == *day && *h < latest) {
+                            if !listed.contains(&h) && !asked.contains(&h) {
+                                wanted.push(h);
+                            }
+                            hour = h.add_hours(1);
+                        }
+                    }
+                    wanted.retain(|h| !this.state().pages.hourly.contains_key(h));
+                    wanted.sort_by(|a, b| b.cmp(a));
+                    // An hour is claimed only when its acquisition starts, as a backfill pass.
+                    let mut pending = wanted.into_iter();
+                    loop {
+                        let chunk: Vec<Publication> = pending
+                            .by_ref()
+                            .filter(|h| this.claim(&Flight::Hourly(*h), BACKFILL_RETRY))
+                            .take(BACKFILL_CONCURRENCY)
+                            .collect();
+                        if chunk.is_empty() {
+                            break;
+                        }
+                        crate::history::join_all(
+                            chunk.iter().map(|h| this.hourly_page(*h)).collect(),
+                        )
+                        .await;
+                    }
+                })
+            },
+        )
+    }
+    /// The AWS hourly hours one day catalog lists (control object only), or None when it cannot
+    /// be listed.
+    async fn listed_hours(&self, day: u32, deadline: Instant) -> Option<BTreeSet<Publication>> {
+        let id = super::records::catalog("kma-web", "aws-hourly", &aws_key(), &format!("{day:08}"))
+            .ok()?;
+        let entries = self.reader.listed_acquisitions(&id, deadline).await.ok()?;
+        Some(
+            entries
+                .into_iter()
+                .filter_map(|(_, _, e)| ListedPage::new("aws-hourly", &id, e))
+                .map(|page| page.hour)
+                .collect(),
+        )
     }
     /// One owned backfill pass over the missing hours of the 8-day window, newest first, three
     /// at a time (legacy `getStnPastHourlyWeather`); each hour at most once per
@@ -1621,7 +1778,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 .into_iter()
                 .map(|(_, catalog, member)| (catalog, member))
                 .collect();
-            let Ok(read) = self.restore(&wanted, deadline).await else {
+            let Ok(read) = self.restore(&self.bulk, &wanted, deadline).await else {
                 continue;
             };
             let parsed = crate::observability::spawn_blocking(move || {
@@ -1714,7 +1871,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         };
         let declaration =
             crate::storage::GroupDeclaration::new(vec![member], &limits).map_err(|_| ())?;
-        self.reader
+        self.bulk
             .store
             .publish(declaration, vec![record], Instant::now() + READ_DEADLINE)
             .await
@@ -1786,26 +1943,12 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             return (reason("station-unavailable", None), None);
         };
         // Station state from S3 (a failed read is retried after ASOS_LOAD_RETRY).
-        let (stale, failed) = {
-            let s = self.state();
-            (
-                s.asos
-                    .get(&station)
-                    .is_none_or(|e| e.loaded.elapsed() >= ASOS_RELOAD),
-                s.asos_failed
-                    .get(&station)
-                    .is_some_and(|at| at.elapsed() < ASOS_LOAD_RETRY),
-            )
-        };
-        if stale && !failed {
-            let station_c = station.clone();
-            let rx = self.start(
-                Flight::AsosLoad(station.clone()),
-                ASOS_LOAD_RETRY,
-                move |this| Box::pin(async move { this.load_asos(&station_c, now_ms).await }),
-            );
-            Self::wait(rx.into_iter().collect(), until).await;
-        }
+        Self::wait(
+            self.asos_load(&station, now_ms).into_iter().collect(),
+            until,
+        )
+        .await;
+        // A raced run's ranges answer before the S3 read ends.
         let loaded = self.state().asos.contains_key(&station);
         if !loaded {
             let failed = self
@@ -1820,35 +1963,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             };
             return (answer, None);
         }
-        // One recovery run per station at a time and at most once per hour (legacy lease and
-        // hourly job): it plans the incomplete ranges and acquires them in order.
-        let station_c = station.clone();
-        let folded_c = folded.clone();
-        let (start_c, end_c) = (start.clone(), end.clone());
-        let run_key = Flight::AsosRun(format!("{station}/{end}"));
-        // A pre-release miss must become eligible at the documented 11:00 API boundary.
-        let release = Publication::new(schedule::from_ms(now_ms as i64).date(), 1100)
-            .map(schedule::to_ms)
-            .unwrap_or(now_ms as i64);
-        let retry = if release > now_ms as i64 {
-            ASOS_RUN_RETRY.min(Duration::from_millis((release - now_ms as i64) as u64))
-        } else {
-            ASOS_RUN_RETRY
-        };
-        self.own(
-            Acq::AsosRun(station.clone()),
-            crate::resolver::owned::MAX_OWNED,
-            until,
-            move |this| {
-                Box::pin(async move {
-                    if this.claim(&run_key, retry) {
-                        this.recover_asos(&station_c, &folded_c, &start_c, &end_c)
-                            .await;
-                    }
-                })
-            },
-        )
-        .await;
+        self.asos_run(&station, folded, &start, &end, now_ms, until)
+            .await;
         // The acquisitions and their completeness are read under one lock (S16).
         // An S3 reload still running (the answer then uses the previous read) is not complete.
         let reloading = self.flight(&Flight::AsosLoad(station.clone())).is_some();
@@ -1901,51 +2017,178 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         }
         (object(answer), Some(view))
     }
+    /// Start (or join) the S3 read of a station's ASOS state unless it is current or a failed
+    /// read is waiting out [`ASOS_LOAD_RETRY`].
+    fn asos_load(self: &Arc<Self>, station: &str, now_ms: f64) -> Option<watch::Receiver<bool>> {
+        let (stale, failed) = {
+            let s = self.state();
+            (
+                s.asos
+                    .get(station)
+                    .is_none_or(|e| e.loaded.is_none_or(|at| at.elapsed() >= ASOS_RELOAD)),
+                s.asos_failed
+                    .get(station)
+                    .is_some_and(|at| at.elapsed() < ASOS_LOAD_RETRY),
+            )
+        };
+        if !stale || failed {
+            return None;
+        }
+        let station_c = station.to_owned();
+        self.start(
+            Flight::AsosLoad(station.to_owned()),
+            ASOS_LOAD_RETRY,
+            move |this| Box::pin(async move { this.load_asos(&station_c, now_ms).await }),
+        )
+    }
+    /// One recovery run per station at a time and at most once per hour (legacy lease and
+    /// hourly job): it plans the incomplete ranges and acquires them in order. Waited for until
+    /// `until`.
+    async fn asos_run(
+        self: &Arc<Self>,
+        station: &str,
+        folded: &Folded,
+        start: &str,
+        end: &str,
+        now_ms: f64,
+        until: Instant,
+    ) {
+        let station_c = station.to_owned();
+        let folded_c = folded.clone();
+        let (start_c, end_c) = (start.to_owned(), end.to_owned());
+        let run_key = Flight::AsosRun(format!("{station}/{end}"));
+        // A pre-release miss must become eligible at the documented 11:00 API boundary.
+        let release = Publication::new(schedule::from_ms(now_ms as i64).date(), 1100)
+            .map(schedule::to_ms)
+            .unwrap_or(now_ms as i64);
+        let retry = if release > now_ms as i64 {
+            ASOS_RUN_RETRY.min(Duration::from_millis((release - now_ms as i64) as u64))
+        } else {
+            ASOS_RUN_RETRY
+        };
+        self.own(
+            Acq::AsosRun(station.to_owned()),
+            crate::resolver::owned::MAX_OWNED,
+            until,
+            move |this| {
+                Box::pin(async move {
+                    if this.claim(&run_key, retry) {
+                        this.recover_asos(&station_c, &folded_c, &start_c, &end_c)
+                            .await;
+                    }
+                })
+            },
+        )
+        .await;
+    }
+    /// KMA-RESTART-RACE (AK 2026-11-07, decision 2): the ASOS history of `town` starts with the
+    /// request instead of after the station collections. The station comes from the current
+    /// fold or, before any fold, from the default station list (the carried seed); its S3 state
+    /// is read at once, and the recovery run starts at `race_at` (the head start). A read done by
+    /// then leaves the run to the keys S3 lacks, as a running process plans it; a read still
+    /// running is raced by a run over the whole window, whose ranges answer until the read
+    /// ends. A failed read keeps its retry interval. Both are waited for until `until`;
+    /// [`Self::history_with_inputs`] then answers from them.
+    pub async fn prefetch_history(
+        self: &Arc<Self>,
+        town: &Doc,
+        now_ms: f64,
+        race_at: Instant,
+        until: Instant,
+    ) {
+        let folded = self.state().folded.clone().unwrap_or_else(seed_only);
+        let chosen = if self.observed_history {
+            representative_mapping(town, folded.registry.docs(), ASOS_MAX_KM)
+                .ok()
+                .flatten()
+        } else {
+            nearest(town, folded.registry.docs(), ASOS_MAX_KM)
+        };
+        let (Some(mapping), Some((start, end, _))) = (chosen, policy::window(now_ms)) else {
+            return;
+        };
+        let station = mapping.station;
+        let mut load = Box::pin(Self::wait(
+            self.asos_load(&station, now_ms).into_iter().collect(),
+            until,
+        ));
+        let raced = crate::resolver::race::races(
+            &mut load,
+            race_at,
+            until,
+            crate::observability::Component::Domestic,
+        )
+        .await;
+        let failed = self
+            .state()
+            .asos_failed
+            .get(&station)
+            .is_some_and(|at| at.elapsed() < ASOS_LOAD_RETRY);
+        tokio::join!(
+            async {
+                if raced {
+                    load.await;
+                }
+            },
+            async {
+                if !failed {
+                    self.asos_run(&station, &folded, &start, &end, now_ms, until)
+                        .await;
+                }
+            }
+        );
+    }
     async fn load_asos(self: Arc<Self>, station: &str, now_ms: f64) {
         let deadline = Instant::now() + READ_DEADLINE;
         let key = AsosRequest::record_key(station);
         // Ranges start at most 7 days before a window that starts 7 days before today.
         let months = super::records::months(now_ms - 15. * 86_400_000., now_ms);
-        let mut fetched: Vec<AsosFetched> = Vec::new();
-        let mut partial = false;
-        for kind in [AsosKind::Hourly, AsosKind::Daily] {
-            let parts = match self
-                .reader
-                .partitions("data-go-kr", kind.kind(), &key, &months, deadline)
-                .await
-            {
-                Ok(p) => p,
-                Err(_) => {
-                    self.state()
-                        .asos_failed
-                        .insert(station.to_owned(), std::time::Instant::now());
-                    return;
-                }
-            };
-            for partition in parts {
-                let Some((start, end)) = AsosRequest::parse_partition(kind, &partition) else {
-                    continue;
-                };
-                match self
-                    .reader
-                    .raw_counted("data-go-kr", kind.kind(), &key, &partition, deadline)
+        // The hourly and daily kinds are read together, each kind's ranges a few at a time.
+        let reader = &self.reader;
+        let kind = |kind: AsosKind| {
+            let (key, months) = (&key, &months);
+            async move {
+                let parts = reader
+                    .partitions("data-go-kr", kind.kind(), key, months, deadline)
                     .await
-                {
-                    Ok((acquisitions, excluded)) => {
-                        partial |= excluded > 0;
-                        for records in acquisitions {
-                            fetched.push(asos_fetched(kind, &start, &end, &records));
-                        }
-                    }
-                    Err(_) => {
-                        self.state()
-                            .asos_failed
-                            .insert(station.to_owned(), std::time::Instant::now());
-                        return;
+                    .map_err(|_| ())?;
+                use futures_util::StreamExt;
+                let read: Vec<_> = futures_util::stream::iter(parts)
+                    .filter_map(|partition| async move {
+                        let (start, end) = AsosRequest::parse_partition(kind, &partition)?;
+                        Some((partition, start, end))
+                    })
+                    .map(|(partition, start, end)| async move {
+                        reader
+                            .raw_counted("data-go-kr", kind.kind(), key, &partition, deadline)
+                            .await
+                            .map(|read| (start, end, read))
+                    })
+                    .buffered(ASOS_READS)
+                    .collect()
+                    .await;
+                let mut fetched = Vec::new();
+                let mut partial = false;
+                for result in read {
+                    let (start, end, (acquisitions, excluded)) = result.map_err(|_| ())?;
+                    partial |= excluded > 0;
+                    for records in acquisitions {
+                        fetched.push(asos_fetched(kind, &start, &end, &records));
                     }
                 }
+                Ok::<_, ()>((fetched, partial))
             }
-        }
+        };
+        let (hourly, daily) = tokio::join!(kind(AsosKind::Hourly), kind(AsosKind::Daily));
+        let (Ok((mut fetched, hourly_partial)), Ok((daily, daily_partial))) = (hourly, daily)
+        else {
+            self.state()
+                .asos_failed
+                .insert(station.to_owned(), std::time::Instant::now());
+            return;
+        };
+        fetched.extend(daily);
+        let partial = hourly_partial || daily_partial;
         fetched.sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
         let mut s = self.state();
         s.asos_failed.remove(station);
@@ -1973,7 +2216,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
             station.to_owned(),
             AsosEntry {
                 fetched,
-                loaded: std::time::Instant::now(),
+                loaded: Some(std::time::Instant::now()),
             },
         );
     }
@@ -2042,13 +2285,21 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
                 records
             };
             let f = asos_fetched(kind, request.start(), request.end(), &records);
-            if let Some(entry) = self.state().asos.get_mut(station) {
-                entry.fetched.push(f);
-                entry
-                    .fetched
-                    .sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
-                retain_window(&mut entry.fetched, start);
-            }
+            // A raced run that ends before the S3 read answers with its own ranges; the read
+            // keeps them when it ends.
+            let mut s = self.state();
+            let entry = s
+                .asos
+                .entry(station.to_owned())
+                .or_insert_with(|| AsosEntry {
+                    fetched: Vec::new(),
+                    loaded: None,
+                });
+            entry.fetched.push(f);
+            entry
+                .fetched
+                .sort_by(|a, b| a.fetched_at_ms.total_cmp(&b.fetched_at_ms));
+            retain_window(&mut entry.fetched, start);
         }
     }
 }

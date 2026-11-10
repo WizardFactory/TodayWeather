@@ -39,7 +39,7 @@ class EntryLinkDeviceTest {
         assumeTrue("needs -e link seed", step == "seed")
         runBlocking {
             app.migration.await()
-            app.appState.dataStore.updateData { it.copy(places = places, placeIndex = 0) }
+            app.appState.dataStore.updateData { it.copy(places = places, placeIndex = 0).afterStart() }
         }
     }
 

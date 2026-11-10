@@ -112,7 +112,7 @@ impl HttpS3Transport {
         }
         let bucket = Bucket::new(url, UrlStyle::Path, bucket.to_owned(), region.to_owned())
             .map_err(|_| Error::Invalid("bucket"))?;
-        let client = Client::builder()
+        let client = crate::dns::client()
             .http1_max_headers(32)
             .redirect(Policy::none())
             .retry(reqwest::retry::never())

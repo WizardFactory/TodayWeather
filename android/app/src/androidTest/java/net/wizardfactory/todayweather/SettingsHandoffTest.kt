@@ -35,6 +35,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -48,13 +49,17 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class SettingsHandoffTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    // Past the start page without a place: the weather pages ask how to start (O02), and the tests go on from Locations.
+    @get:Rule val chain: RuleChain = RuleChain.outerRule(StateRule()).around(rule)
 
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val app get() = rule.activity.application as TestTodayWeatherApp
     private val pkg = "net.wizardfactory.todayweather"
 
     @Before fun record() = Intents.init()
+    @Before fun locations() = rule.closeStartChoice()
     @After fun release() = Intents.release()
 
     private fun menu(row: MenuRow) {

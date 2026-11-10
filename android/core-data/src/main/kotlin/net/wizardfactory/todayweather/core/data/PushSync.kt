@@ -56,6 +56,27 @@ class PushSync(
         send(state, PushRegistration.onUnitsChanged(state.push, state.places, ctx))
     }
 
+    /**
+     * `Push.updateCityInfo(index)` after a place's update (`WeatherInfo.updateCity`, AN-10): its records follow the
+     * place; when anything changed they are posted (with a token) and the list is saved. The state is read through the
+     * store's writer, after the place's own write.
+     */
+    suspend fun updateCity(index: Int): Outcome? = lock.withLock {
+        val state = try {
+            store.updateData { it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return@withLock null
+        }
+        val ctx = context(state) ?: return@withLock null
+        val result = PushRegistration.onCityChanged(state.push, state.places, index, ctx)
+        if (result.state == state.push) return@withLock Outcome(emptyList(), emptyList())
+        val statuses = result.requests.map { transport.send(it) }
+        store.updateData { it.copy(push = it.push.copy(records = result.state.records)) }
+        Outcome(result.requests, statuses)
+    }
+
     private suspend fun send(state: AppState, result: PushRegistration.Result): Outcome {
         val statuses = result.requests.map { transport.send(it) }
         if (result.state.fcmToken != state.push.fcmToken) {

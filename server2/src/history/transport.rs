@@ -225,6 +225,14 @@ pub trait IndexListing: CatalogTransport {
         prefix: &str,
         token: Option<&str>,
     ) -> impl Future<Output = Result<ListPage, StorageError>> + Send;
+    /// The same storage for reads and writes no request waits for (KMA-RESTART-RACE): the bulk
+    /// lane of a shared admission ([`crate::world::BoundedS3::bulk`]), otherwise this transport.
+    fn bulk_view(&self) -> Self
+    where
+        Self: Sized + Clone,
+    {
+        self.clone()
+    }
 }
 fn index_key_ok(key: &str) -> bool {
     key.starts_with("index/v2/") && key.len() <= 1024 && key.ends_with(".json") && segment_ok(key)

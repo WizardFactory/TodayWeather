@@ -1,0 +1,54 @@
+{
+  "task": "KMA-RESTART-ALLOC",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "PR-A of the restart re-examination (AK 2026-11-10, design section 11): #2907 plus only two commits of #2916, mimalloc as the global allocator and the observed KMA waits counted from the request's accept, measured on EC2 against #2907, with their intent, spec, plan and architecture notes. No other restart machinery. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/Cargo.lock",
+    "server2/Cargo.toml",
+    "server2/config/tasks/KMA-RESTART-ALLOC.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/gateway/backend.rs",
+    "server2/src/gateway/mod.rs",
+    "server2/src/lib.rs",
+    "server2/src/resolver/race.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-restart-alloc.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-restart-alloc.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-restart-alloc.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The global allocator, its RSS cost and the accept clock; the wait and head-start statements count from the accept."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "The observed request's wait counts from the gateway's accept, the geocode included."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Archify source: the request wait counts from the accept."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
+    }
+  ]
+}

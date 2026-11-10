@@ -31,8 +31,8 @@ const DAY: f64 = 86_400_000.;
 
 /// Publish one acquisition group as the S13 acquirers do.
 #[allow(clippy::too_many_arguments)]
-async fn publish(
-    store: &Store,
+async fn publish<T: server2::storage::CatalogTransport>(
+    store: &CatalogStore<T>,
     source: &str,
     kind: &str,
     key: ProviderKey,
@@ -1470,5 +1470,571 @@ async fn a_request_behind_a_capture_pass_does_not_list_the_kasi_kind() {
     assert_eq!(
         served(&peer, "LIST index/v2/data-go-kr/kasi-area-rise-set").await,
         lists
+    );
+}
+
+// ---- KMA-RESTART-RACE: the stored reads' head start (AK 2026-11-07, plan A) ----
+
+use super::observe::Counted;
+use server2::domestic::kma::source::life_input::LifeAnswers;
+use server2::resolver::race::HEAD_START;
+
+/// S3 requests in flight for a restarted process's inputs. The process before it keeps its
+/// pooled connections until the peer closes them 2 s after they opened (the test's store and,
+/// with an acquirer, its KASI capture task keep it alive), so a restarted process with the usual
+/// 8 could fill the peer's 16 connections: the quota reservation of its raced acquisition was
+/// then refused at the head start (`connection_reset`) and the first answer lacked what it
+/// would have acquired.
+const RESTARTED_PERMITS: usize = 4;
+/// A restarted process's counted transport, admitting [`RESTARTED_PERMITS`] requests at once.
+fn restarted_transport(peer: &Peer) -> Counted {
+    Counted::new(peer.transport_limited(RESTARTED_PERMITS))
+}
+/// The life inputs of a process reading through `counted`, acquiring through the stub.
+fn restarted(
+    peer: &Peer,
+    counted: &Counted,
+    store: &Arc<Store>,
+    stub: Option<&Stub>,
+) -> LifeInputs<Counted> {
+    let inputs = LifeInputs::new(
+        counted.clone(),
+        Arc::new(CatalogStore::new(counted.clone(), CatalogLimits::default()).unwrap()),
+    )
+    .with_clock(test_clock())
+    .with_kasi_schedule(HOLD, HOLD);
+    match stub {
+        Some(stub) => inputs.with_acquire(Some(live(peer, store.clone(), &stub.base))),
+        None => inputs,
+    }
+}
+/// The request of a restarted process: the head start ends 0.7 s, the wait 2.5 s after it starts
+/// (a longer `budget` moves both later by as much).
+async fn first_request(inputs: &LifeInputs<Counted>, budget: Duration) -> (LifeAnswers, Duration) {
+    let started = Instant::now();
+    let extra = budget.saturating_sub(Duration::from_millis(2700));
+    let answers = inputs
+        .load_by(now_ms(), started + HEAD_START + extra, started + budget)
+        .await;
+    (answers, started.elapsed())
+}
+/// The issuances of an area's UV rows (`lastUpdateDate`).
+fn uv_issued(answers: &LifeAnswers, area: f64) -> Vec<String> {
+    serde_json::from_slice::<serde_json::Value>(&answers.life.by_area(area).to_bytes())
+        .unwrap()
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|d| d["indexType"] == "ultrv")
+        .map(|d| d["lastUpdateDate"].as_str().unwrap().to_owned())
+        .collect()
+}
+const LIFE_RAW: [&str; 5] = [
+    "raw/v2/data-go-kr/uv-idx-v5/",
+    "raw/v2/data-go-kr/oak-pollen-v3/",
+    "raw/v2/data-go-kr/pine-pollen-v3/",
+    "raw/v2/data-go-kr/weeds-pollen-v3/",
+    "raw/v2/mfds/",
+];
+
+/// RACE (life): a restarted process whose stored life reads end after the request bound decides
+/// its acquisitions at the head start and answers today's UV, pollen and food poisoning from them
+/// on its first request, each asked once; once the reads end it answers as a process that read
+/// S3.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_slow_life_read_starts_uv_at_the_head_start() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    // The producing process acquires today's datasets.
+    let produced = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_kasi_schedule(HOLD, HOLD)
+        .load(now_ms(), deadline())
+        .await;
+    assert!(!uv_issued(&produced, 1_100_000_000.).is_empty());
+    let s = &stub.state;
+    let asked = |s: &StubState| [&s.uv, &s.weeds, &s.mfds].map(|n| n.load(Ordering::SeqCst));
+    assert_eq!(asked(s), [1, 1, 1]);
+    // The restart: every stored life read ends after the bound.
+    let counted = restarted_transport(&peer);
+    let b = restarted(&peer, &counted, &store, Some(&stub));
+    let gate = counted.hold(&LIFE_RAW);
+    let (first, took) = first_request(&b, Duration::from_millis(2700)).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the life restore reads during the request"
+    );
+    assert!(took < Duration::from_millis(3000), "{took:?}");
+    assert_eq!(
+        uv_issued(&first, 1_100_000_000.),
+        uv_issued(&produced, 1_100_000_000.),
+        "today's UV from the acquisition"
+    );
+    assert_eq!(first.life.pollen_day3(1_100_000_000.).len(), 1, "weeds");
+    assert!(!first.mfds.is_empty(), "food poisoning");
+    assert_eq!(
+        asked(s),
+        [2, 2, 2],
+        "each dataset asked once by the restart"
+    );
+    // The stored reads end: the answers of a process that read S3.
+    let mut later = b.load(now_ms(), deadline()).await;
+    for _ in 0..40 {
+        if later.life.len() == produced.life.len() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        later = b.load(now_ms(), deadline()).await;
+    }
+    let cold = restarted(&peer, &restarted_transport(&peer), &store, None)
+        .load(now_ms(), deadline())
+        .await;
+    same(
+        &later.life.by_area(1_100_000_000.),
+        &cold.life.by_area(1_100_000_000.),
+        "after the restore",
+    );
+    assert_eq!(later.mfds.json().to_bytes(), cold.mfds.json().to_bytes());
+    assert_eq!(asked(s), [2, 2, 2]);
+}
+
+/// FAST (life): a restart whose stored reads end before the head start asks the providers
+/// nothing a running process would not ask, and answers as the producing process. (Pollen
+/// out of season is asked again by any new process: the no-data mark is not stored.)
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_current_stored_slot_asks_no_uv() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let produced = LifeInputs::new(transport.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_kasi_schedule(HOLD, HOLD)
+        .load(now_ms(), deadline())
+        .await;
+    let s = &stub.state;
+    let asked = |s: &StubState| [&s.uv, &s.weeds, &s.mfds].map(|n| n.load(Ordering::SeqCst));
+    assert_eq!(asked(s), [1, 1, 1]);
+    let counted = restarted_transport(&peer);
+    let b = restarted(&peer, &counted, &store, Some(&stub));
+    // A head start of 4.7 s keeps a prompt read ahead of it on a slow runner.
+    let (first, _) = first_request(&b, Duration::from_millis(6700)).await;
+    assert_eq!(asked(s), [1, 1, 1], "no UV, pollen or MFDS call");
+    same(
+        &first.life.by_area(1_100_000_000.),
+        &produced.life.by_area(1_100_000_000.),
+        "the first answer",
+    );
+    assert_eq!(
+        first.mfds.json().to_bytes(),
+        produced.mfds.json().to_bytes()
+    );
+}
+
+/// One UV acquisition of every area issued at `issued` (`YYYYMMDDHH`), as the stub answers.
+fn uv_page(issued: &str) -> Vec<u8> {
+    let items: Vec<serde_json::Value> = AREAS
+        .iter()
+        .map(|a| {
+            let mut it = json!({"code": "A07_2", "areaNo": a, "date": issued});
+            for n in (0..=75).step_by(3) {
+                it[format!("h{n}")] = json!(format!("{}", n % 11));
+            }
+            it
+        })
+        .collect();
+    kma_page(serde_json::Value::Array(items))
+}
+
+/// An in-memory S3 for a paused clock: raw objects, conditional control objects and index
+/// listings; each LIST takes `list_delay` and each GET `get_delay` (virtual time), and the most
+/// GETs in flight at once is kept.
+#[derive(Clone, Default)]
+pub(super) struct MemS3(Arc<Mutex<MemData>>);
+#[derive(Default)]
+pub(super) struct MemData {
+    objects: std::collections::BTreeMap<String, server2::storage::Object>,
+    controls: std::collections::BTreeMap<String, (Vec<u8>, u64)>,
+    revision: u64,
+    list_delay: Duration,
+    get_delay: Duration,
+    gets: usize,
+    peak_gets: usize,
+}
+impl MemS3 {
+    fn data(&self) -> std::sync::MutexGuard<'_, MemData> {
+        self.0.lock().unwrap()
+    }
+    async fn get_delayed(&self) {
+        let delay = {
+            let mut d = self.data();
+            d.gets += 1;
+            d.peak_gets = d.peak_gets.max(d.gets);
+            d.get_delay
+        };
+        tokio::time::sleep(delay).await;
+        self.data().gets -= 1;
+    }
+}
+impl server2::storage::ObjectTransport for MemS3 {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        let mut d = self.data();
+        if d.objects.contains_key(&record.key) {
+            return Ok(412);
+        }
+        let object = server2::storage::Object {
+            metadata: record.metadata.clone(),
+            length: record.body.len(),
+            body: record.body.clone(),
+        };
+        d.objects.insert(record.key.clone(), object);
+        Ok(200)
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        let d = self.data();
+        let o = d
+            .objects
+            .get(key)
+            .ok_or(server2::storage::Error::NotFound)?;
+        Ok(server2::storage::Object {
+            metadata: o.metadata.clone(),
+            length: o.length,
+            body: Vec::new(),
+        })
+    }
+    async fn get(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.get_delayed().await;
+        let o = self
+            .data()
+            .objects
+            .get(key)
+            .cloned()
+            .ok_or(server2::storage::Error::NotFound)?;
+        if o.length > maximum {
+            return Err(server2::storage::Error::Capacity);
+        }
+        Ok(o)
+    }
+}
+impl server2::storage::CatalogTransport for MemS3 {
+    async fn get_control(
+        &self,
+        key: &str,
+        maximum: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.get_delayed().await;
+        let (body, revision) = self
+            .data()
+            .controls
+            .get(key)
+            .cloned()
+            .ok_or(server2::storage::Error::NotFound)?;
+        if body.len() > maximum {
+            return Err(server2::storage::Error::Capacity);
+        }
+        Ok(server2::storage::ControlObject {
+            body,
+            etag: format!("\"{revision}\""),
+            version: None,
+        })
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        let mut d = self.data();
+        let current = d.controls.get(key).map(|(_, r)| format!("\"{r}\""));
+        let allowed = match condition {
+            server2::storage::WriteCondition::Absent => current.is_none(),
+            server2::storage::WriteCondition::Match(etag) => {
+                current.as_deref() == Some(etag.as_str())
+            }
+        };
+        if !allowed {
+            return Ok(412);
+        }
+        d.revision += 1;
+        let revision = d.revision;
+        d.controls.insert(key.to_owned(), (body.to_vec(), revision));
+        Ok(200)
+    }
+    async fn list_raw_document(
+        &self,
+        _: &str,
+        _: Option<&str>,
+        _: usize,
+        _: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        Err(server2::storage::Error::Invalid(
+            "no raw listing in this test",
+        ))
+    }
+}
+impl server2::history::IndexListing for MemS3 {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        _: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        let delay = self.data().list_delay;
+        tokio::time::sleep(delay).await;
+        let keys = self
+            .data()
+            .controls
+            .keys()
+            .filter(|k| k.starts_with(prefix))
+            .cloned()
+            .collect();
+        Ok(server2::storage::ListPage { keys, next: None })
+    }
+}
+/// A life provider that answers nothing and records which datasets were asked.
+#[derive(Default)]
+struct Asked(Mutex<Vec<String>>);
+impl Asked {
+    fn uv(&self) -> usize {
+        self.0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|a| a.contains("UvIdx"))
+            .count()
+    }
+}
+impl LifeAcquire for Asked {
+    fn acquire(
+        &self,
+        request: LifeRequest,
+    ) -> server2::gateway::BoxFuture<
+        'static,
+        Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,
+    > {
+        self.0.lock().unwrap().push(format!("{request:?}"));
+        Box::pin(async { Ok(server2::domestic::kma::source::life_live::LifeOutcome::Nothing) })
+    }
+}
+
+/// NEEDED-FIRST: the first life read lists the four families' partitions together. With every
+/// LIST taking 300 ms (a paused clock), today's UV is folded before the 700 ms head start, so the
+/// request starts no UV acquisition; listed one family after another, the four listings alone
+/// end past it.
+#[tokio::test(start_paused = true)]
+async fn the_needed_first_read_lists_the_life_families_together() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let mem = MemS3::default();
+    let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
+    for time in (0..=12).step_by(3).map(|h| format!("20261016{h:02}")) {
+        let p = Publication::parse_compact(&format!("{time}00")).unwrap();
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            named("all-areas"),
+            p.period(),
+            &p.partition(),
+            server2::history::schedule::to_ms(p) as f64 + 600_000.,
+            &[uv_page(&time)],
+        )
+        .await;
+    }
+    mem.data().list_delay = Duration::from_millis(300);
+    let asked = Arc::new(Asked::default());
+    let inputs = LifeInputs::new(mem.clone(), store)
+        .with_clock(test_clock())
+        .with_acquire(Some(asked.clone()))
+        .with_kasi_schedule(HOLD, HOLD);
+    let started = Instant::now();
+    let answers = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    let today = uv_issued(&answers, 1_100_000_000.);
+    assert!(today.iter().any(|i| i == "2026101612"), "{today:?}");
+    assert_eq!(
+        asked.uv(),
+        0,
+        "today's UV was folded before the head start: {:?}",
+        asked.0.lock().unwrap()
+    );
+}
+
+/// Page `n` of a UV acquisition: the rows of [`uv_page`] under their own page number.
+fn uv_page_numbered(issued: &str, n: u32) -> Vec<u8> {
+    let mut page: serde_json::Value = serde_json::from_slice(&uv_page(issued)).unwrap();
+    page["response"]["body"]["pageNo"] = json!(n);
+    page.to_string().into_bytes()
+}
+
+/// NEEDED-FIRST: the first life read restores today's records with several S3 reads in flight.
+/// Today's UV partition holds three 4-page acquisitions, as after the EC2 restarts: read one at a
+/// time, its catalog, 3 descriptors and 12 pages are 16 reads in a row, which at 170 ms each (a
+/// paused clock) end past the request's life section (2.5 s). Read at most 4 at a time, today's
+/// UV is on the first answer.
+#[tokio::test(start_paused = true)]
+async fn the_needed_first_read_restores_todays_records_together() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let mem = MemS3::default();
+    let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
+    let p = Publication::parse_compact("202610161200").unwrap();
+    // Acquired 10, 15 and 20 minutes after the issuance, before the request (12:30 KST).
+    for minutes in [10., 15., 20.] {
+        let pages: Vec<Vec<u8>> = (1..=4).map(|n| uv_page_numbered("2026101612", n)).collect();
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            named("all-areas"),
+            p.period(),
+            &p.partition(),
+            server2::history::schedule::to_ms(p) as f64 + minutes * 60_000.,
+            &pages,
+        )
+        .await;
+    }
+    {
+        let mut d = mem.data();
+        d.get_delay = Duration::from_millis(170);
+        d.peak_gets = 0;
+    }
+    let inputs = LifeInputs::new(mem.clone(), store)
+        .with_clock(test_clock())
+        .with_acquire(Some(Arc::new(Asked::default())))
+        .with_kasi_schedule(HOLD, HOLD);
+    let started = Instant::now();
+    let answers = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    let today = uv_issued(&answers, 1_100_000_000.);
+    assert!(
+        today.iter().any(|i| i == "2026101612"),
+        "today's UV on the first answer: {today:?}"
+    );
+    let peak = mem.data().peak_gets;
+    assert!(peak <= 4, "S3 reads in flight: {peak}");
+}
+
+/// NEEDED-FIRST: the first life read of a process restores today's partitions (and the latest
+/// before) before the rest of its 14-day window, so with the rest delayed past the bound the first
+/// answer has today's UV; the rest follows.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_life_read_restores_todays_slots_first() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let peer = Peer::persistent();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    // Noon issuances of 10-03..10-15 and today's (10-16) of 00..12 KST, each acquired 10 minutes
+    // after its issuance.
+    let mut issued: Vec<String> = (3..=15).map(|d| format!("202610{d:02}12")).collect();
+    issued.extend((0..=12).step_by(3).map(|h| format!("20261016{h:02}")));
+    for time in &issued {
+        let p = Publication::parse_compact(&format!("{time}00")).unwrap();
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            named("all-areas"),
+            p.period(),
+            &p.partition(),
+            server2::history::schedule::to_ms(p) as f64 + 600_000.,
+            &[uv_page(time)],
+        )
+        .await;
+    }
+    let counted = restarted_transport(&peer);
+    let b = restarted(&peer, &counted, &store, None);
+    let older: Vec<String> = (3..=14)
+        .map(|day| format!("raw/v2/data-go-kr/uv-idx-v5/2026/10/{day:02}/"))
+        .collect();
+    let gate = counted.hold(&older.iter().map(String::as_str).collect::<Vec<_>>());
+    let (first, took) = first_request(&b, Duration::from_millis(2700)).await;
+    gate.open();
+    assert!(
+        gate.was_reached(),
+        "the older days are read during the request"
+    );
+    assert!(took < Duration::from_millis(3000), "{took:?}");
+    let today = uv_issued(&first, 1_100_000_000.);
+    assert!(
+        today.iter().any(|i| i == "2026101612"),
+        "today's UV on the first answer: {today:?}"
+    );
+    assert!(
+        today.iter().all(|i| i.as_str() >= "2026101512"),
+        "the rest of the window follows: {today:?}"
+    );
+    let cold = restarted(&peer, &restarted_transport(&peer), &store, None)
+        .load(now_ms(), deadline())
+        .await;
+    let mut later = b.load(now_ms(), deadline()).await;
+    for _ in 0..40 {
+        if later.life.len() == cold.life.len() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        later = b.load(now_ms(), deadline()).await;
+    }
+    same(
+        &later.life.by_area(1_100_000_000.),
+        &cold.life.by_area(1_100_000_000.),
+        "the whole window",
+    );
+}
+
+/// LANES: the KASI capture pass, which no request waits for, reads and writes on the bulk lane;
+/// a request's KASI restore reads on the request lane.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_kasi_pass_uses_the_bulk_lane() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
+    seed_oracle(&store).await;
+    let kasi = |counts: std::collections::HashMap<String, usize>, bulk: bool| -> usize {
+        counts
+            .iter()
+            .filter(|(k, _)| k.contains("kasi") && k.starts_with("bulk ") == bulk)
+            .map(|(_, n)| *n)
+            .sum()
+    };
+    let counted = restarted_transport(&peer);
+    let pass = restarted(&peer, &counted, &store, None);
+    pass.kasi_pass(KASI_NOW).await.unwrap();
+    let all = kasi(counted.counts(), false);
+    assert!(all > 0);
+    assert_eq!(
+        kasi(counted.counts(), true),
+        all,
+        "the pass on the bulk lane"
+    );
+    let counted = restarted_transport(&peer);
+    let request = restarted(&peer, &counted, &store, None).with_kasi_wait(Duration::from_secs(20));
+    assert!(request.load(KASI_NOW, deadline()).await.kasi.is_some());
+    assert!(kasi(counted.counts(), false) > 0);
+    assert_eq!(
+        kasi(counted.counts(), true),
+        0,
+        "the request on the request lane"
     );
 }

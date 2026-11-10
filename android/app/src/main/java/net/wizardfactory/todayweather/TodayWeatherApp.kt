@@ -5,6 +5,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,6 +18,7 @@ import net.wizardfactory.todayweather.analytics.ConsentStore
 import net.wizardfactory.todayweather.analytics.FirebaseAnalyticsSdk
 import net.wizardfactory.todayweather.analytics.FirebaseRemoteConfigSource
 import net.wizardfactory.todayweather.analytics.RemoteConfigSource
+import net.wizardfactory.todayweather.core.data.GeocodeClient
 import net.wizardfactory.todayweather.core.data.HttpPushTransport
 import net.wizardfactory.todayweather.core.data.NationSource
 import net.wizardfactory.todayweather.core.data.PushSync
@@ -26,7 +28,12 @@ import net.wizardfactory.todayweather.core.data.WeatherPhotoFeed
 import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.AppStateStore
+import net.wizardfactory.todayweather.core.domain.start.TownSearch
 import net.wizardfactory.todayweather.core.storage.CordovaMigrator
+import net.wizardfactory.todayweather.location.AndroidLocationAccess
+import net.wizardfactory.todayweather.search.BundledTowns
+import net.wizardfactory.todayweather.search.GooglePlaceSearch
+import net.wizardfactory.todayweather.search.PlaceSearch
 
 /**
  * The application and its dependencies. Device tests replace dependencies in a subclass (androidTest).
@@ -78,6 +85,20 @@ open class TodayWeatherApp : Application() {
     val weather: WeatherRepository by lazy {
         WeatherRepository(serverUrl(), File(filesDir, "weather"), telemetry = Telemetry { name, params -> analytics.track(name, params) })
     }
+
+    /** The geocoding of the start page (#2889). */
+    val geocode: GeocodeClient by lazy { GeocodeClient(serverUrl()) }
+
+    /** The device's location (#2889); the shown activity lends it the system's prompts. */
+    val location: AndroidLocationAccess by lazy { AndroidLocationAccess(this) }
+
+    /** Google's place predictions with the build's Places key; none without one (#2889). */
+    open fun placeSearch(): PlaceSearch? = BuildConfig.PLACES_API_KEY.takeIf { it.isNotBlank() }?.let { GooglePlaceSearch(this, it) }
+
+    val places: PlaceSearch? by lazy { placeSearch() }
+
+    /** The bundled towns, read once when a search needs them: S01 searches them in a build without a Places key. */
+    val towns: Deferred<TownSearch> by lazy { appScope.async(Dispatchers.IO, CoroutineStart.LAZY) { TownSearch(BundledTowns.load(this@TodayWeatherApp)) } }
 
     /** The requests of the nationwide and warning pages (#2892). */
     val nation: NationSource by lazy { NationSource(serverUrl()) }

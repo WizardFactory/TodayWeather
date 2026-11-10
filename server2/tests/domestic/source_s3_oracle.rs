@@ -233,6 +233,9 @@ async fn rss_and_mid_documents_read_from_s3_equal_the_legacy_oracle() {
     }
 }
 
+/// ORACLE over the S3 HTTP path: the legacy zone runs published to the S06 loopback peer and read
+/// back with empty memory give legacy's answers (KMA-ZONE-NEWEST: answer level,
+/// [`same_zone_answers`](super::source::same_zone_answers)).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn forecast_zones_read_from_s3_equal_the_legacy_oracle() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
@@ -265,16 +268,8 @@ async fn forecast_zones_read_from_s3_equal_the_legacy_oracle() {
             .await;
         }
         let now = base + 3_600_000.;
-        let zones = source(&peer, now)
-            .zones(now, deadline())
-            .await
-            .map(|z| (*z).clone())
-            .unwrap_or_default();
-        same(
-            &zone_docs(&zones),
-            at(run, &["docs"]),
-            &format!("S3 zones {id}"),
-        );
+        let zones = source(&peer, now).zones(now, deadline()).await.unwrap();
+        super::source::same_zone_answers(run, &zones, &format!("S3 zones {id}"));
     }
 }
 
@@ -476,9 +471,11 @@ async fn stored_mid_documents_outlive_retirement_and_failed_publications() {
     );
 }
 
-/// S15b1-R5: fields set by an older zone list and omitted by a newer one stay (legacy `$set`).
+/// KMA-ZONE-NEWEST (replaces S15b1-R5, AK 2026-11-10): the zones come from the newest complete
+/// list alone. A field an older list set and the newest one omits is not kept (legacy `$set`
+/// kept it; no answer uses it).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn forecast_zone_fields_from_older_months_are_kept() {
+async fn forecast_zone_fields_come_from_the_newest_list_alone() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::persistent();
     let store = store(&peer);
@@ -500,7 +497,8 @@ async fn forecast_zone_fields_from_older_months_are_kept() {
     let zones = source(&peer, now).zones(now, deadline()).await.unwrap();
     let found = zones.find_by_name("서울특별시", "종로구");
     assert_eq!(found.len(), 1);
-    assert_eq!(found[0].get("ht").and_then(|v| v.as_num()), Some(12.5));
+    assert_eq!(found[0].get("ht"), None, "the newest list has no ht");
+    assert_eq!(zones.docs().len(), 1);
 }
 
 /// S15b1-R1: a short publication more than 10 days old still owns retained slots.
@@ -528,10 +526,11 @@ fn the_short_lookback_covers_retained_slots_of_old_publications() {
     let _ = grid_documents;
 }
 
-/// S15b1-R7: a list published after the memory fold but completed before the last folded one is
-/// not appended out of order: the refresh refolds, so warm memory equals a cold fold.
+/// KMA-ZONE-NEWEST (replaces S15b1-R7, AK 2026-11-10): a list published after memory's list but
+/// completed before it is not newer: the refresh keeps memory's list, as a cold read selects it.
+/// A list completed later replaces it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_late_zone_list_refolds_instead_of_being_skipped() {
+async fn a_late_zone_list_completed_earlier_does_not_replace_the_newer_one() {
     let _peers = super::source_s3::S3_PEERS.lock().await;
     let peer = Peer::persistent();
     let store = store(&peer);
@@ -565,11 +564,11 @@ async fn a_late_zone_list_refolds_instead_of_being_skipped() {
     same(
         &zone_docs(&refreshed),
         &zone_docs(&cold),
-        "warm refresh equals a cold fold",
+        "warm refresh equals a cold read",
     );
     let found = refreshed.find_by_name("서울특별시", "종로구");
-    assert_eq!(found[0].get("ht").and_then(|v| v.as_num()), Some(12.5));
-    // A newer list in the window is appended incrementally.
+    assert_eq!(found[0].get("ht"), None, "B stays: A is older");
+    // A list completed later replaces it.
     put_zones(
         &store,
         20261013,
@@ -577,11 +576,13 @@ async fn a_late_zone_list_refolds_instead_of_being_skipped() {
         zone_list(&[("11B20201", "인천", None)]),
     )
     .await;
-    let appended = s3.refresh_zones(now, deadline()).await.unwrap();
+    let replaced = s3.refresh_zones(now, deadline()).await.unwrap();
     let cold = source(&peer, now).zones(now, deadline()).await.unwrap();
     same(
-        &zone_docs(&appended),
+        &zone_docs(&replaced),
         &zone_docs(&cold),
-        "incremental append equals a cold fold",
+        "the newer list replaces it, as a cold read selects it",
     );
+    assert!(replaced.find_by_name("서울특별시", "종로구").is_empty());
+    assert_eq!(replaced.find_by_name("인천광역시", "남동구").len(), 1);
 }

@@ -57,7 +57,7 @@ pub struct HttpAirTransport {
 impl HttpAirTransport {
     /// 1 MiB body bound (the provider bodies are a few KiB); no redirects, proxy or decoding.
     pub fn new() -> Result<Self, AirHttpError> {
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .http1_max_headers(32)
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())

@@ -80,10 +80,11 @@ impl LifeRequest {
     }
 }
 /// What one owned acquisition did.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub enum LifeOutcome {
-    /// A new complete group was published.
-    Published,
+    /// A new complete group was published: its records, so the requests that wait for it use
+    /// them without reading S3 again (KMA-RESTART-RACE).
+    Published(Vec<crate::storage::RawRecord>),
     /// The provider answered no data for the request (`03`/`99`: e.g. out of season).
     NoData,
     /// Nothing new (not published yet or an older publication).
@@ -189,11 +190,12 @@ where
         .map_err(|e| e.to_string())?;
         match outcome {
             Acquired::Complete(a) => {
+                let records = a.records.clone();
                 self.store
                     .publish(a.declaration, a.records, Instant::now() + PUBLISH_BUDGET)
                     .await
                     .map_err(|e| format!("publication: {e}"))?;
-                Ok(LifeOutcome::Published)
+                Ok(LifeOutcome::Published(records))
             }
             Acquired::NoData => Ok(LifeOutcome::NoData),
             Acquired::NotPublished | Acquired::Stale(_) => Ok(LifeOutcome::Nothing),

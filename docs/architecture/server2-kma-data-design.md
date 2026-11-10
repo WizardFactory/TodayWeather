@@ -510,16 +510,25 @@ process timer (below), and no request decodes the GIFs. The station page product
 (`station-pages`, one per KST day) holds the parsed AWS hourly and city pages any folding process
 keeps; a restarted process reads it, compares it with the day catalogs and restores only the
 pages it lacks, falling back to the raw pages when it cannot be used
-([restart read](server2.md#s15b-2-restart-read-and-station-page-products-2026-11-07)). The observed response also
+([restart read](server2.md#s15b-2-restart-read-and-station-page-products-2026-11-07)); a
+restore that misses its 700 ms head start is raced by the page acquisitions
+([restart race](server2.md#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)). The observed response also
 uses the release's land zones (`data/kma_forecast_land_zones.csv`) until a forecast-zone list is
-stored, so its first answer can request mid temperatures. Measurements are in the
+stored, so its first answer can request mid temperatures. The forecast-zone lists are not folded:
+a process reads only the newest complete list (catalog control objects, then one group), and
+acquires a list when the newest is more than 24 h old
+([newest list](server2.md#forecast-zone-newest-list-2026-11-10)). Measurements are in the
 [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#result-of-the-change).
 
 ### One wait for a request
 
-The observed request stops waiting for everything it started 2.5 s after it reaches the handler, 2.7 s for air and life and 2.9 s for the narrative it adds last. A KR remap before the snapshot counts too, so the waits cannot add up. What is late is omitted. Stored reads keep the 8 s budget, so a slow S3 delays an answer instead of failing it, which is a decision for AK. The town geocoder runs before the handler and keeps its own 3 s cap.
+The observed request stops waiting for everything it started 2.5 s after the gateway accepted it, 2.7 s for air and life and 2.9 s for the narrative it adds last. A KR remap before the snapshot counts too, so the waits cannot add up. What is late is omitted. Stored reads keep the 8 s budget, so a slow S3 delays an answer instead of failing it, which is a decision for AK. The town geocoder runs before the handler and keeps its own 3 s cap; since the [accept clock](server2.md#restart-allocator-and-the-accept-clock-2026-11-10) its time counts toward these waits.
 
 Two kinds of owned work no longer hold a request. The warning collector offers its zone state once fetched, before its publications; a request answers from that memory, and the push feed still sees only durable rows. No request acquires or decodes an AirKorea forecast image, because the GIFs and their decoding take longer than the bound (AK 2026-11-06): the process acquires the images and stores the decoded hourly forecast at startup and every ten minutes, independent of requests, and a request only reads the newest product. Measurements are in the [speed evidence](../evidence/research/kma-speed-options-2026-11-04.md#with-one-bound-on-the-request).
+
+### Restores with a head start
+
+After a restart a part S3 holds is not an allowed omission (AK 2026-11-07), so a stored restore no longer holds back the providers of the same data. Each restore of the station pages, the ASOS history, the life datasets, the narrative and the warning state starts with the request and has a 700 ms head start. A restore not done then is raced: the owned acquisitions of what memory lacks start alongside it, as on an empty S3, and the answer takes whichever delivers by its bound; a restore done by then leaves them to what S3 lacks, so a fast restore adds no provider call. The ASOS history takes its station from the default station list before any station fold, the life read restores today's partitions before the rest of its 14-day window, and the narrative read is owned work that a waiter's timeout does not cancel. Of the 8-day hourly window a raced restore acquires only the hours of today and yesterday the day catalogs do not list; older days come from S3 alone, and a listed or held hour is never fetched again (a later page would replace the ongoing one). Reads and writes no request waits for (the rest of the restart read, full reads of reduced pages, day products, image production, the KASI pass) use the bulk lane of the S3 admission; the reads a request waits for, its warning-state read included, use the request lane. Grid forecasts are not raced. The calls this adds and the tests are in the [restart race](server2.md#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07).
 
 ## Wire, storage and assembly format boundaries
 

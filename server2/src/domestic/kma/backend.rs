@@ -37,6 +37,11 @@ pub trait KmaSource: Send + Sync {
     fn narrative_by(&self, deadline: Instant) -> Instant {
         deadline
     }
+    /// KMA-RESTART-RACE: when the narrative's stored read loses its head start (None: the read
+    /// starts when the answer attaches the narrative).
+    fn narrative_race(&self, _deadline: Instant) -> Option<Instant> {
+        None
+    }
 }
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
 /// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
@@ -180,6 +185,10 @@ impl KmaBackend {
     /// S17b: assemble a parsed request (a gateway backend or a direct public route) from the
     /// source's snapshot. Async source preparation remaps KR before reads; a source compatibility
     /// marker is a counted dependency failure and cannot cause a legacy hop.
+    ///
+    /// Through the gateway `deadline` is the request's accept instant plus [`Self::request_budget`]
+    /// (KMA-RESTART-BOUND), so the instants the source derives from it (its head start and waits)
+    /// count from the accept, the geocode included; the `min` below only bounds direct callers.
     pub async fn outcome(
         &self,
         request: KmaRequest,
@@ -213,6 +222,13 @@ impl KmaBackend {
         };
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
+        }
+        // The narrative's stored read starts with the request, beside the snapshot.
+        if let (Some(reader), Some(race_at)) =
+            (&self.narrative, self.source.narrative_race(deadline))
+            && let Some(office) = request.region.as_deref().and_then(crate::narrative::office)
+        {
+            reader.prefetch(office, race_at);
         }
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,

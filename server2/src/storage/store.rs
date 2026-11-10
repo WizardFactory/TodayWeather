@@ -106,7 +106,7 @@ impl<T: ObjectTransport> RawRecordStore<T> {
                     return Ok(record);
                 }
             }
-            cache.invalidate(expected).await;
+            cache.invalidate(expected);
         }
         let object = self.transport.get(key, self.limits.gzip_bytes).await?;
         let writer = cache.as_ref().and_then(|c| c.writer(expected));

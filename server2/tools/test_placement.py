@@ -68,7 +68,7 @@ class PlacementTests(unittest.TestCase):
         self.assertTrue(self.errors())
     def test_shared_workflow_wiring_only(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
-        self.write('.github/workflows/server2.yml','timeout-minutes: 45\ndefaults:\n  run:\n    working-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n');self.assertEqual([],self.errors())
+        self.write('.github/workflows/server2.yml','timeout-minutes: 60\ndefaults:\n  run:\n    working-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n');self.assertEqual([],self.errors())
         self.write('.github/workflows/server2.yml','working-directory: server2\nsteps:\n  - run: |\n      python3 -c "business logic"\n');self.assertTrue(self.errors())
 
     def test_encoded_compiler_and_runtime_literals_rejected(self):
@@ -226,10 +226,10 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.assertTrue(self.errors())
     def test_extra_workflow_action_and_missing_timeout_rejected(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml',category='ci-wiring',reason='shared CI'))
-        good='timeout-minutes: 45\nworking-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n'
+        good='timeout-minutes: 60\nworking-directory: server2\nsteps:\n  - uses: actions/checkout@v4\n    with:\n      fetch-depth: 0\n  - run: bash tools/ci.sh\n'
         self.write('.github/workflows/server2.yml',good+'  - uses: third-party/side-effect@main\n')
         self.assertTrue(self.errors())
-        self.write('.github/workflows/server2.yml',good.replace('timeout-minutes: 45\n',''))
+        self.write('.github/workflows/server2.yml',good.replace('timeout-minutes: 60\n',''))
         self.assertTrue(self.errors())
 
     def golden_fixture(self):
@@ -307,7 +307,7 @@ permissions:
 jobs:
   foundation:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: server2
@@ -334,14 +334,14 @@ jobs:
           python-version: '3.11'
       - run: python tools/golden/ci.py --install
 """
-    def test_foundation_45_and_goldens_30_are_exact_independent_budgets(self):
+    def test_foundation_60_and_goldens_30_are_exact_independent_budgets(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml', category='ci-wiring', reason='reviewed foundation budget'))
         good = self.golden_workflow()
         self.write('.github/workflows/server2.yml', good)
         self.assertEqual([], self.errors())
-        for minutes in (0, 30, 44, 46, 300):
+        for minutes in (0, 30, 45, 59, 61, 300):
             with self.subTest(job='foundation', minutes=minutes):
-                self.write('.github/workflows/server2.yml', good.replace('timeout-minutes: 45', f'timeout-minutes: {minutes}'))
+                self.write('.github/workflows/server2.yml', good.replace('timeout-minutes: 60', f'timeout-minutes: {minutes}'))
                 self.assertTrue(self.errors())
         for minutes in (0, 29, 31, 45, 300):
             with self.subTest(job='goldens', minutes=minutes):

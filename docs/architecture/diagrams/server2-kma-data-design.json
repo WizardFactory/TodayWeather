@@ -240,7 +240,7 @@
       "to": "s3",
       "y": 1713,
       "label": "Read and bounded repair",
-      "note": "Zone state, KASI and station pages restore from stored folds; a restore holds a request at most 500 ms."
+      "note": "Stored folds restore first; at 700 ms providers fill what is still missing. Other reads use the bulk lane."
     },
     {
       "id": "reacquire",
@@ -277,7 +277,7 @@
       "items": [
         "Writer owns charged raw before Ready; server body end/drop, no waiters, a10s cap or shutdown releases S3 publication.",
         "Default virtual reservation768MiB, shrunk to actual retained bytes; retries preserve originals. S16 waits for a frozen durability fence after the body.",
-        "A request stops waiting 2.5 s after it starts and omits what is late. It reads the image forecast the process timer produced and decodes no GIF. Warning zone state reaches it before the collector publishes."
+        "A request stops waiting 2.5 s after the request is accepted and omits what is late. It reads the image forecast the process timer produced and decodes no GIF. Warning zone state reaches it before the collector publishes."
       ]
     },
     {

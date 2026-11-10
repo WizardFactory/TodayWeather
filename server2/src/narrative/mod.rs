@@ -171,6 +171,10 @@ pub fn select(
 }
 pub trait Read: Send + Sync {
     fn read(&self, station: u16, deadline: Instant) -> BoxFuture<'_, Option<Narrative>>;
+    /// KMA-RESTART-RACE: start the stored read of `station` now, for an answer that attaches the
+    /// narrative later. A reader that acquires may race a read that has no answer by
+    /// `race_at`. By default nothing starts before [`Self::read`].
+    fn prefetch(&self, _station: u16, _race_at: Instant) {}
 }
 pub trait Acquire: Send + Sync {
     fn refresh(&self) -> BoxFuture<'_, ()>;

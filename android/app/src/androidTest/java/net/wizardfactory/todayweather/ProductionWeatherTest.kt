@@ -21,6 +21,7 @@ import net.wizardfactory.todayweather.ui.forecast.ForecastTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -32,7 +33,13 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ProductionWeatherTest {
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    // Korean units, as on the ko-KR emulator, whatever the device's region (°F would round the temperatures); the places
+    // are saved before the app opens.
+    @get:Rule val chain: RuleChain = RuleChain.outerRule(StateRule {
+        it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = 1, units = UnitSettings.defaults("KR"))
+    }).around(rule)
 
     private val app get() = rule.activity.application as TestTodayWeatherApp
     private val seoul = Place(false, false, "서울", "대한민국 서울특별시 중구", "KR", Location(37.56, 126.98))
@@ -42,13 +49,8 @@ class ProductionWeatherTest {
     fun seoulAndLondonRenderFromProduction() {
         assumeTrue("needs -e weather production", TestRunner.args.getString("weather") == "production")
         rule.waitUntil(30_000) { app.appState.current() != null }
-        rule.runOnUiThread {
-            // Korean units, as on the ko-KR emulator, whatever the device's region (°F would round the temperatures).
-            app.appState.change { it.copy(places = listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = 1, units = UnitSettings.defaults("KR")) }
-        }
         rule.waitForIdle()
-        // A visit keeps the units it opened with, as ForecastCtrl did until its page was left: open Hourly again so it
-        // starts with the Korean units (the app opened on Hourly in the device's region).
+        // Daily, then Hourly again: a new visit of Hourly.
         rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()

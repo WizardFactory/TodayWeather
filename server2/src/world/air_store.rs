@@ -407,6 +407,9 @@ impl<T: crate::history::IndexListing + Send + Sync> crate::history::IndexListing
         let _permit = self.admit().await?;
         self.inner.list_index(prefix, token).await
     }
+    fn bulk_view(&self) -> Self {
+        self.bulk()
+    }
 }
 impl<T: crate::budget::BudgetTransport> crate::budget::BudgetTransport for BoundedS3<T> {
     async fn get_budget(

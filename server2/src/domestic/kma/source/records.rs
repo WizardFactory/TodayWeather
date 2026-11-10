@@ -27,6 +27,27 @@ impl Fetched {
         self.pages.iter().map(|p| &p[..]).collect()
     }
 }
+/// One fetch group a catalog lists, read from the catalog control object alone.
+#[derive(Debug, Clone)]
+pub struct ListedGroup {
+    /// Its completion: the latest fetch instant of its members.
+    pub completed: u64,
+    /// The fetch group (its descriptor key; a lone record's raw hash).
+    pub group: String,
+    /// The member the catalog lists first, which names the group to [`Reader::members`].
+    pub member: Envelope,
+    /// Every member's raw hash, in page order ([`page_order`]).
+    pub raw_sha256: Vec<String>,
+}
+/// The order of one acquisition's pages: the page number (1 without pagination), then the fetch
+/// instant and raw hash, which order a catalog's entries.
+pub fn page_order(e: &Envelope) -> (u32, u64, &str) {
+    (
+        e.pagination.as_ref().map_or(1, |p| p.page),
+        e.identity.fetched_at_ms,
+        &e.identity.raw_sha256,
+    )
+}
 /// LIST pages allowed per key and month (1,000 keys each; a month of hourly partitions is 744).
 const LIST_PAGES: usize = 4;
 /// LIST pages allowed for every key of one kind (1,000 keys each).
@@ -197,6 +218,20 @@ impl<T: IndexListing + Clone> Reader<T> {
         id: &CatalogId,
         deadline: Instant,
     ) -> Result<Vec<(u64, String, Envelope)>, Error> {
+        Ok(self
+            .listed_groups(id, deadline)
+            .await?
+            .into_iter()
+            .map(|g| (g.completed, g.group, g.member))
+            .collect())
+    }
+    /// [`Self::listed_acquisitions`] with every member's raw hash of each group, in page order
+    /// (KMA-ZONE-NEWEST: an order key from the catalog alone). Groups in fetch-group order.
+    pub async fn listed_groups(
+        &self,
+        id: &CatalogId,
+        deadline: Instant,
+    ) -> Result<Vec<ListedGroup>, Error> {
         let limits = CatalogLimits::default();
         let object = match tokio::time::timeout_at(
             deadline,
@@ -210,21 +245,35 @@ impl<T: IndexListing + Clone> Reader<T> {
             Ok(Ok(object)) => object,
         };
         let catalog = Catalog::from_bytes(&object.body, id, &limits)?;
-        let mut groups: BTreeMap<String, (u64, Envelope)> = BTreeMap::new();
+        let mut groups: BTreeMap<String, Vec<Envelope>> = BTreeMap::new();
         for e in catalog.entries {
             let group = match &e.fetch_group {
                 Some(g) => g.descriptor_key()?,
                 None => e.identity.raw_sha256.clone(),
             };
-            let fetched = e.identity.fetched_at_ms;
-            groups
-                .entry(group)
-                .and_modify(|(f, _)| *f = (*f).max(fetched))
-                .or_insert((fetched, e));
+            groups.entry(group).or_default().push(e);
         }
         Ok(groups
             .into_iter()
-            .map(|(group, (fetched, e))| (fetched, group, e))
+            .map(|(group, entries)| {
+                let completed = entries
+                    .iter()
+                    .map(|e| e.identity.fetched_at_ms)
+                    .max()
+                    .unwrap_or_default();
+                let mut paged: Vec<&Envelope> = entries.iter().collect();
+                paged.sort_by(|a, b| page_order(a).cmp(&page_order(b)));
+                let raw_sha256 = paged
+                    .iter()
+                    .map(|e| e.identity.raw_sha256.clone())
+                    .collect();
+                ListedGroup {
+                    completed,
+                    group,
+                    member: entries[0].clone(),
+                    raw_sha256,
+                }
+            })
             .collect())
     }
     /// The hash a key's partitions are listed under.
@@ -254,6 +303,35 @@ impl<T: IndexListing + Clone> Reader<T> {
         partition: &str,
         deadline: Instant,
     ) -> Result<(Vec<Fetched>, usize), Error> {
+        self.restored(source, kind, key, partition, 1, deadline)
+            .await
+    }
+    /// [`Self::acquisitions`] with up to `width` S3 reads in flight
+    /// ([`CatalogStore::lookup_wide`]), for a read a request waits on.
+    pub async fn acquisitions_wide(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        width: usize,
+        deadline: Instant,
+    ) -> Result<Vec<Fetched>, Error> {
+        self.restored(source, kind, key, partition, width, deadline)
+            .await
+            .map(|(f, _)| f)
+    }
+    /// One catalog's complete acquisitions and excluded groups, restored with `width` S3 reads in
+    /// flight (one: [`CatalogStore::lookup`]).
+    async fn restored(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        width: usize,
+        deadline: Instant,
+    ) -> Result<(Vec<Fetched>, usize), Error> {
         let id = CatalogId {
             source: source.into(),
             kind: kind.into(),
@@ -261,7 +339,12 @@ impl<T: IndexListing + Clone> Reader<T> {
             partition: partition.into(),
         };
         id.validate()?;
-        let set = match self.store.lookup(&id, deadline).await {
+        let looked = if width > 1 {
+            self.store.lookup_wide(&id, width, deadline).await
+        } else {
+            self.store.lookup(&id, deadline).await
+        };
+        let set = match looked {
             Ok(LookupOutcome::Ready(set)) => set,
             Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
             Err(Error::NotFound) => return Ok((Vec::new(), 0)),

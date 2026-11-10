@@ -213,6 +213,9 @@ impl Gateway {
         response
     }
     async fn respond(&self, request: Request<Body>) -> Response {
+        // KMA-RESTART-BOUND: the instant the gateway took the request; a native backend's budget
+        // (and the observed KMA waits derived from it) counts from here, not from its dispatch.
+        let accepted = Instant::now();
         let method = request.method().clone();
         let headers = request.headers().clone();
         if method == Method::OPTIONS {
@@ -243,15 +246,18 @@ impl Gateway {
             Err(_) => return response::error(&method, &headers, GatewayError::Unavailable(5)),
         };
         let inner = self.inner.clone();
-        let deadline = Instant::now() + inner.deadline;
+        let deadline = accepted + inner.deadline;
         // The spawned owner survives a disconnected waiter; all owned IO shares its deadline.
         let owned = metrics::Owned::start();
         let task = crate::observability::spawn(async move {
             let _owned = owned;
             let _owner = owner.clone();
-            tokio::time::timeout_at(deadline, inner.process(route, lang, query, deadline, owner))
-                .await
-                .map_err(|_| GatewayError::Provider)?
+            tokio::time::timeout_at(
+                deadline,
+                inner.process(route, lang, query, (accepted, deadline), owner),
+            )
+            .await
+            .map_err(|_| GatewayError::Provider)?
         });
         match task.await {
             Ok(Ok((bytes, max_age, tag))) => response::send_tagged(
@@ -274,11 +280,11 @@ impl Inner {
         route: input::Route,
         lang: String,
         query: String,
-        deadline: Instant,
+        (accepted, deadline): (Instant, Instant),
         owner: Arc<OwnedSemaphorePermit>,
     ) -> Result<(Vec<u8>, u32, String), GatewayError> {
         let (value, max_age) = self
-            .result(route, lang, query, deadline, owner.clone())
+            .result(route, lang, query, (accepted, deadline), owner.clone())
             .await?;
         let (bytes, tag) = self.backends.encode(value, deadline, owner).await?;
         Ok((bytes, max_age, tag))
@@ -288,7 +294,7 @@ impl Inner {
         route: input::Route,
         lang: String,
         query: String,
-        deadline: Instant,
+        (accepted, deadline): (Instant, Instant),
         owner: Arc<OwnedSemaphorePermit>,
     ) -> Result<(OrderedJson, u32), GatewayError> {
         match route {
@@ -324,7 +330,7 @@ impl Inner {
                 path.push_str(&query);
                 let mut value = self
                     .backends
-                    .fetch(version, family, path, lang, deadline, owner)
+                    .fetch(version, family, path, lang, (accepted, deadline), owner)
                     .await?;
                 value.merge_geo(&OrderedJson::from_serde(&geo)?);
                 Ok((value, 300))

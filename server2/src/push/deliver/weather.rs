@@ -30,7 +30,7 @@ pub struct HttpFetch {
 impl HttpFetch {
     pub fn new() -> Result<Self, String> {
         Ok(Self {
-            client: reqwest::Client::builder()
+            client: crate::dns::client()
                 .timeout(WEATHER_TIMEOUT)
                 .retry(reqwest::retry::never())
                 .build()

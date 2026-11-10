@@ -295,7 +295,7 @@ pub struct WarningStore<T> {
     limits: CatalogLimits,
     config: StoreConfig,
     pub counters: Arc<Counters>,
-    offered: watch::Sender<Option<OfferedZones>>,
+    offered: Arc<watch::Sender<Option<OfferedZones>>>,
 }
 /// When a `_sync` marker's bootstrap had seen the whole lookback: the time of its last sync. An
 /// unfinished bootstrap (covered start later than sync - 59 days) has not seen older days.
@@ -353,7 +353,30 @@ impl<T: CatalogTransport> WarningStore<T> {
             limits,
             config,
             counters,
-            offered: watch::channel(None).0,
+            offered: Arc::new(watch::channel(None).0),
+        })
+    }
+    /// The same store over another transport of the bucket: reads of its own (with their own
+    /// bound) and this store's zone offers and counters. A request reads the zone state through
+    /// one on the request lane while the collector replays and publishes on the bulk lane
+    /// (KMA-RESTART-RACE).
+    pub fn on_transport(&self, transport: T) -> Result<Self, Error> {
+        let transport = Arc::new(transport);
+        Ok(Self {
+            reader: Reader {
+                catalogs: Arc::new(CatalogStore::new(
+                    Shared(transport.clone()),
+                    self.limits.clone(),
+                )?),
+                counters: self.counters.clone(),
+                page: self.config.page_acquisitions,
+                reads: Arc::new(Semaphore::new(self.config.reads)),
+            },
+            transport,
+            limits: self.limits.clone(),
+            config: self.config.clone(),
+            counters: self.counters.clone(),
+            offered: self.offered.clone(),
         })
     }
     /// The S3 transport this store reads and publishes through.
