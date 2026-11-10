@@ -1,0 +1,39 @@
+{
+  "task": "KMA-LIFE-DISTINCT",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Life index after the EC2 restart acceptance (AK 2026-11-10, design revision 3 approved after three design reviews): the life read restores each distinct content of a partition once (D1), and an owned UV or pollen acquisition whose content a stored group already holds is not published again (D2), with its own check budget, the flight's owner deadline and an overlay kept until a committed read applies the stored group. MFDS, KASI and the storage layer are unchanged. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-LIFE-DISTINCT.json",
+    "server2/src/domestic/kma/source/life_distinct_tests.rs",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/src/domestic/kma/source/life_live.rs",
+    "server2/src/domestic/kma/source/live.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/source_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-life-distinct.md",
+      "category": "documentation",
+      "reason": "Task intent: the EC2 restart finding and AK's decision of 2026-11-10."
+    },
+    {
+      "path": "specs/issue-2614-kma-life-distinct.md",
+      "category": "documentation",
+      "reason": "Acceptance with the tests that check it."
+    },
+    {
+      "path": "plans/issue-2614-kma-life-distinct.md",
+      "category": "documentation",
+      "reason": "Plan and user scenarios mapped to tests."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The life-index input (S15b-3b): the distinct read, the publication check, its budget, the overlay rule and the stated differences; the restart race no longer uses wide reads for the life read; the restart acceptance points to this change."
+    }
+  ]
+}

@@ -358,6 +358,17 @@ impl Flights {
         owned_for: Duration,
         work: impl FnOnce() -> BoxFuture<'static, bool>,
     ) -> bool {
+        self.join_owned(key, ready_by, owned_for, |_| work()).await
+    }
+    /// [`join_for`](Self::join_for) whose work is given its owner deadline: the instant the owned
+    /// task ends at (its start plus `owned_for`, at most `MAX_OWNED`).
+    pub async fn join_owned(
+        &self,
+        key: &str,
+        ready_by: Instant,
+        owned_for: Duration,
+        work: impl FnOnce(Instant) -> BoxFuture<'static, bool>,
+    ) -> bool {
         if self.throttled(key) {
             return false;
         }
@@ -377,6 +388,16 @@ impl Flights {
         owned_for: Duration,
         work: impl FnOnce() -> BoxFuture<'static, bool>,
     ) -> bool {
+        self.run_owned(key, owned_for, |_| work()).await
+    }
+    /// [`run`](Self::run) whose work is given its owner deadline, as in
+    /// [`join_owned`](Self::join_owned).
+    pub async fn run_owned(
+        &self,
+        key: &str,
+        owned_for: Duration,
+        work: impl FnOnce(Instant) -> BoxFuture<'static, bool>,
+    ) -> bool {
         if self.throttled(key) {
             return false;
         }
@@ -395,12 +416,12 @@ impl Flights {
     fn start(
         &self,
         key: &str,
-        work: impl FnOnce() -> BoxFuture<'static, bool>,
+        work: impl FnOnce(Instant) -> BoxFuture<'static, bool>,
     ) -> impl FnOnce(Instant) -> BoxFuture<'static, bool> {
         let ended = self.ended.clone();
         let name = key.to_owned();
-        move |_| {
-            let work = work();
+        move |owner_deadline| {
+            let work = work(owner_deadline);
             Box::pin(async move {
                 let _ended = Ended(ended, name);
                 work.await

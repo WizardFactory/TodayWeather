@@ -671,6 +671,7 @@ fn kma_life(
         settings,
         daily,
         Arc::new(mfds),
+        s3.clone(),
         Arc::new(store),
     )))
 }
