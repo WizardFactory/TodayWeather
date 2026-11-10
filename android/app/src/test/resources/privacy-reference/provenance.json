@@ -1,7 +1,7 @@
 {
  "tool": "android/tools/privacy-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "dad8801e5a78b7cf4f93069fc68fca461eb4522fcff0b8ab84c6eaefcefd9ebd",
+  "sha256": "12a9805fcc1f166cb00fcf759d3049411b2cea4e1504e4bd2608c268f19573b0",
   "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
@@ -23,11 +23,11 @@
    },
    {
     "file": "client/www/js/service.monetization.js",
-    "apkSha256": "0db16c46005d8f4d18b5da81004783d4c73e9309dee0f260d59ba8448054ad05",
+    "apkSha256": "5efe59ec4a58b12919c66f94328eb05697b9cd39a2e6a7865f65cf039c5f8691",
     "tracked": true,
-    "clientSha256": "0db16c46005d8f4d18b5da81004783d4c73e9309dee0f260d59ba8448054ad05",
+    "clientSha256": "5efe59ec4a58b12919c66f94328eb05697b9cd39a2e6a7865f65cf039c5f8691",
     "matchesClient": true,
-    "lastCommit": "4a1e50d3a6a69e7b0033a5cd8bcc8a9dbc136538"
+    "lastCommit": "3190a0c0647ba071902c3dee5c9b0f5a5133cf4c"
    },
    {
     "file": "client/www/js/service.admobemi.js",
@@ -106,7 +106,7 @@
  "files": [
   {
    "file": "en-US/actions.json",
-   "sha256": "2a680807ccca295f510ebe58d5b4f8e98cbffcf4af154b58e3543874e7943391"
+   "sha256": "52ae790fc1c4cea47e4932f9a11847d3738e462e934605929ff6f70f4657f481"
   },
   {
    "file": "en-US/analytics-popup.json",
@@ -122,7 +122,7 @@
   },
   {
    "file": "en-US/menu-allowed.png",
-   "sha256": "263a41965998aafc0f017fe7a4d6edda326cba8b0c3938b8e502855f432f2b5a"
+   "sha256": "e8b606498c87703a95ed7d6b5082506a4a2b8814dcea322ef94a5f5f5fe548f1"
   },
   {
    "file": "en-US/menu-off.json",
@@ -134,7 +134,7 @@
   },
   {
    "file": "ko-KR/actions.json",
-   "sha256": "1050410b11a6f0b18ad07061e1eae7a8f5634dbcbac736ec2c94fe1bbcbb96c8"
+   "sha256": "64cd47db2f890112d9bf219af612477245a1eb9aa16166154c64eb643caedb2b"
   },
   {
    "file": "ko-KR/analytics-popup.json",
@@ -150,7 +150,7 @@
   },
   {
    "file": "ko-KR/menu-allowed.png",
-   "sha256": "bcd0962d7056d7e61f5f640e694140a444db861b2caae3fb8594c9246ba821c4"
+   "sha256": "422e294fa29625781c39130a8a72df598f65c74cd53361feb8299aa48974d8e6"
   },
   {
    "file": "ko-KR/menu-off.json",
