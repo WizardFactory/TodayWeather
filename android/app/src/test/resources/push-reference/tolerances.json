@@ -1,0 +1,62 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in push-reference/<lang>",
+ "why": "Residual differences are glyph rasterization and advances: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, most visible in the Medium and Bold Latin text (the card titles, the weekday buttons, Cancel and Save, the popup buttons), where Robolectric's Roboto Medium is narrower, and up to 1 dp in the vertical place of some glyphs (the grid's hours, the alarm rows); the switch's handle shadow (the shared .toggle-search switch of S02). Geometry follows the WebView: the cards, titles, descriptions, weekday buttons, alarm rows, the bar, Cancel and Save, the switch and the popups at the capture's boxes within 0.6 dp (AlarmsScreenshotTest boxes, pickerBoxes, popupBoxes), the descriptions broken where Chrome breaks them on its 20 dp Korean lines, text on fixed CSS lines on Chrome's baseline of the first font (CssFixedLine).",
+ "cases": {
+  "en-US/confirm": {
+   "strong": 0.00211,
+   "mean": 0.978,
+   "heightDifference": 0
+  },
+  "en-US/equal": {
+   "strong": 0.00129,
+   "mean": 0.841,
+   "heightDifference": 0
+  },
+  "en-US/picker": {
+   "strong": 0.00242,
+   "mean": 1.096,
+   "heightDifference": 0
+  },
+  "en-US/settings": {
+   "strong": 0.00417,
+   "mean": 1.351,
+   "heightDifference": 0
+  },
+  "ko-KR/confirm": {
+   "strong": 0.00215,
+   "mean": 1.666,
+   "heightDifference": 0
+  },
+  "ko-KR/equal": {
+   "strong": 0.00211,
+   "mean": 1.73,
+   "heightDifference": 0
+  },
+  "ko-KR/permission": {
+   "strong": 0.0035,
+   "mean": 2.069,
+   "heightDifference": 0
+  },
+  "ko-KR/picker": {
+   "strong": 0.00208,
+   "mean": 1.573,
+   "heightDifference": 0
+  },
+  "ko-KR/settings": {
+   "strong": 0.00308,
+   "mean": 2.407,
+   "heightDifference": 0
+  }
+ }
+}

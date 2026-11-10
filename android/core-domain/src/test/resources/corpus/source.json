@@ -67,6 +67,11 @@
    "sha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c"
   },
   {
+   "path": "client/www/js/controller.push.js",
+   "commit": "e6421044f53c19e851a6a4af4dd5c5ac79890bfa",
+   "sha256": "0b89a4e6e05f34d681bfb543e1ba26055e09c4e0e3d80d78586f0396be1d7662"
+  },
+  {
    "path": "client/www/locales/ko.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"
@@ -75,6 +80,11 @@
    "path": "client/www/locales/en.json",
    "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
    "sha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92"
+  },
+  {
+   "path": "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "sha256": "a5d37bdc91f7fe403c1ada87a5aa57954f36136b5f795fdb201aa714b1257ae2"
   }
  ]
 }

@@ -82,6 +82,9 @@ const SEED = `(function () {
 
 const ws = new WebSocket(await devtoolsPage());
 await new Promise((r) => ws.addEventListener('open', r, {once: true}));
+// The page can still hold the WebView's first document, about:blank, which the app's page replaces with whatever
+// was evaluated there (seen on a cold-booted emulator, where DevTools already lists the app's URL).
+for (let i = 0; i < 60 && (await evaluate(ws, 'location.href')) === 'about:blank'; i++) await sleep(500);
 // Old WebViews cannot await a promise over DevTools, so the page stores the result and we poll for it.
 await evaluate(ws, `window.__twSeed = ''; ${SEED}.then(function (r) { window.__twSeed = JSON.stringify(r); },
     function (e) { window.__twSeed = JSON.stringify({error: String(e)}); }); 0`);

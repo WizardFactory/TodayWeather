@@ -27,4 +27,8 @@ object Glyphs {
     const val SEARCH = "\uF21F"
     const val IOS_SEARCH = "\uF4A5"
     const val IOS_CLOSE_OUTLINE = "\uF405"
+    const val IOS_GEAR_OUTLINE = "\uF43C"
+    const val IOS_PLUS_EMPTY = "\uF489"
+    const val CHEVRON_UP = "\uF126"
+    const val CHEVRON_DOWN = "\uF123"
 }

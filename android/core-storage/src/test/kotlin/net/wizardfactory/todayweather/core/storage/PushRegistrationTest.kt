@@ -155,6 +155,54 @@ class PushRegistrationTest {
         }
     }
 
+    /**
+     * The S09 save (`updatePushListByCityIndex`, AN-14) and the O06 answers (`enableAlertForOldAlarm`) against the Cordova
+     * service: the place's list posted alone, the others kept with the start's repair, nothing without a token.
+     */
+    @Test
+    fun aSavedPlaceAndTheAlertIntroductionPostAsCordovaDoes() {
+        val ctx = PushRegistration.Context(
+            deviceId = corpus["deviceId"]!!.jsonPrimitive.content, language = corpus["language"]!!.jsonPrimitive.content,
+            appVersion = corpus["appVersion"]!!.jsonPrimitive.content, units = UnitSettings.defaults("KR"),
+            nowMillis = corpus["now"]!!.jsonPrimitive.long, zone = TimeZone.getTimeZone(corpus["zone"]!!.jsonPrimitive.content),
+        )
+        val saved = corpus["placeSaved"]!!.jsonArray.map { it.jsonObject }
+        val intro = corpus["alertIntro"]!!.jsonArray.map { it.jsonObject }
+        assertEquals(5, saved.size)
+        assertEquals(3, intro.size)
+        for (case in saved + intro) {
+            val name = case["name"]!!.jsonPrimitive.content
+            val stored = case["pushList"]!!.jsonArray.map { it.jsonObject }
+            val push = PushState(fcmToken = case["storedToken"]?.takeIf { it != JsonNull }?.jsonPrimitive?.content, records = stored)
+            val result = if ("answer" in case) {
+                PushRegistration.onAlertIntro(push.copy(needsAlertIntro = true), places, case["answer"]!!.jsonPrimitive.content == "intro-ok", ctx)
+                    .also { assertEquals(false, it.state.needsAlertIntro, "$name: the introduction is answered") }
+            } else {
+                PushRegistration.onPlaceSaved(push, places, case["list"]!!.jsonArray.map { it.jsonObject }, case["index"]!!.jsonPrimitive.content.toInt(), ctx)
+            }
+            val expected = case["requests"]!!.jsonArray.map { it.jsonObject }
+            assertEquals(expected.size, result.requests.size, "$name: request count")
+            expected.zip(result.requests).forEach { (e, a) ->
+                assertEquals(e["method"]!!.jsonPrimitive.content, a.method, name)
+                assertEquals(e["url"]!!.jsonPrimitive.content.removePrefix("https://server").replace("/v000902/", "/v000903/"), a.path, name)
+                assertEquals(e["headers"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }, a.headers, name)
+                assertEquals(e["data"], a.body, "$name body")
+            }
+            assertEquals(case["saved"]!!.jsonArray.map { it.jsonObject }, result.state.records, "$name: the saved list")
+            // The posts after the page's change (review F1) send the same from the stored list.
+            val after = if ("answer" in case) {
+                if (case["answer"]!!.jsonPrimitive.content == "intro-ok") PushRegistration.listPost(result.state, ctx) else emptyList()
+            } else {
+                PushRegistration.placePost(result.state, case["index"]!!.jsonPrimitive.content.toInt(), ctx)
+            }
+            assertEquals(result.requests, after, "$name: the post from the stored list")
+        }
+        // Without a server nothing is sent, and the records are replaced all the same.
+        val offline = PushRegistration.onPlaceSaved(PushState(fcmToken = "t"), places, listOf(corpus["pushList"]!!.jsonArray[1].jsonObject), 1, null)
+        assertEquals(emptyList(), offline.requests)
+        assertEquals(1, offline.state.records.size)
+    }
+
     @Test
     fun aRefreshedTokenIsReplacedWithoutTheStartRepost() {
         val ctx = PushRegistration.Context("d", "ko-KR", "2.0.0", UnitSettings.defaults("KR"), 0, TimeZone.getTimeZone("UTC"))
