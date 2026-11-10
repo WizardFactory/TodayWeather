@@ -235,15 +235,18 @@ owned flights, domestic zone acquirer, S08 funding and catalog publication.
 The first acquisition receives two 503 responses. A request after the three-second
 completed-flight retention still must not start another acquisition. After the
 five-minute monotonic memo expires, new demand retries, publishes the complete
-recorded zone fixture and reads three zone documents from S3, including one
-Seoul name match. A later request must not add HTTP.
+recorded zone fixture and answers its three zone documents, including one
+Seoul name match. A later request must not add HTTP. Since KMA-ZONE-NEWEST
+(2026-11-10) the acquired list is installed in memory when it ends, and it is
+not acquired again while it is under 24 hours old.
 
 Expected report: two logical acquisitions, three actual/funded HTTP attempts,
 three logical/authority units using synthetic one-unit blocks, readable S3
 recovery, and both peers stopped/reaped before PASS. The fixed publication date
 is synthetic; the retry wait uses real monotonic time. Unit controls separately
 force test-only memo expiry for None, panic and unreadable results and prove
-success remains latched after expiry. No production retry override is added.
+that a fresh installed list is not acquired again after expiry (the 24-hour rule
+replaced the success latch). No production retry override is added.
 
 The adapter calls the real acquisition/publication components with a synthetic
 key and volatile budget; it does not exercise runtime environment-key discovery
