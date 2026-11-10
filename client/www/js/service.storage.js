@@ -18,17 +18,15 @@ angular.module('service.storage', [])
         // versionCode), the native app has left the state the user had there in the suite under this marker
         // ({schema, generation, writer, complete, keys}). A newer complete native hand-back replaces the stale WebView
         // values, removals included, before the restore or mirror below; this build then claims the state
-        // (writer 'cordova', generation + 1), so a later native start migrates what changes here. One this start cannot
-        // read or apply whole stays in the suite for the next start. The promise resolves whether the stored analytics
-        // choice can be trusted: not while a hand-back this build cannot use may hold a newer one.
+        // (writer 'cordova', generation + 1), so a later native start migrates what changes here. While the marker or
+        // a key cannot be read, or localStorage refuses the texts, the start waits (the splash stays until a view
+        // enters) and tries again with growing delays: nothing of the stale state is shown, posted or edited, and
+        // nothing mixes into the suite. The promise resolves whether the stored analytics choice can be trusted: not
+        // under a marker this build cannot use, which may hold a newer choice.
         var handBackKey = '_twHandBack';
         var handBackApplied = 'twHandBackApplied';
         var handBackKeys = ['cities', 'cityIndex', 'cityList', 'units', 'settingsInfo', 'pushData2', 'pushData',
             'expandShortChart', 'startVersion', 'appVersion', 'disableUpdateInfo', 'twAnalyticsConsentV1'];
-        // False after a start that could not read or apply a native hand-back whole: until the next start tries again,
-        // this build writes nothing into the suite (init skips its mirror; TwStorage.set keeps to localStorage), so its
-        // texts never mix with the hand-back under the native marker.
-        var suiteWritable = true;
 
         function _readHandBack(value) {
             var marker = value;
@@ -44,79 +42,77 @@ angular.module('service.storage', [])
 
         function _handBack() {
             var deferred = $q.defer();
-            var applied = Number(localStorage.getItem(handBackApplied)) || 0;
+            var delay = 1000;
 
-            function claim(generation) {
-                suitePrefs.store(null, null, handBackKey, JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
-                    writer: 'cordova', complete: true, keys: handBackKeys}));
+            function retry(reason) {
+                console.log('[_handBack] ' + reason + '; trying again in ' + delay + ' ms');
+                Util.ga.trackEvent('storage', 'error', 'handBack');
+                setTimeout(attempt, delay);
+                delay = Math.min(delay * 2, 30000);
             }
 
-            suitePrefs.fetch(function (value) {
-                var marker = _readHandBack(value);
-                if (value == undefined || value === '') {
-                    claim(0);
-                    deferred.resolve(true);
-                    return;
-                }
-                // An unreadable or unknown marker, or this build's own claim: the WebView state stays and is not claimed.
-                if (!marker || marker.writer !== 'native') {
-                    deferred.resolve(!!marker);
-                    return;
-                }
-                if (marker.generation <= applied) {
-                    claim(marker.generation);
-                    deferred.resolve(true);
-                    return;
-                }
-                var keys = handBackKeys.filter(function (key) { return marker.keys.indexOf(key) >= 0; });
-                var texts = {}, count = keys.length, failed = false;
-                function finish() {
-                    if (failed) {
-                        console.log('[_handBack] unreadable, not applied');
-                        suiteWritable = false;
-                        deferred.resolve(false);
-                        return;
-                    }
-                    // All keys or none: a write that throws (a full store) puts back the keys written before it.
-                    var before = {};
-                    keys.concat(handBackApplied).forEach(function (key) { before[key] = localStorage.getItem(key); });
-                    try {
-                        keys.forEach(function (key) {
-                            if (texts[key] == undefined || texts[key] === '') { localStorage.removeItem(key); }
-                            else { localStorage.setItem(key, texts[key]); }
-                        });
-                        localStorage.setItem(handBackApplied, String(marker.generation));
-                    } catch (e) {
-                        console.log('[_handBack] not applied: ' + e);
-                        Object.keys(before).forEach(function (key) {
-                            try {
-                                if (before[key] === null) { localStorage.removeItem(key); } else { localStorage.setItem(key, before[key]); }
-                            } catch (ignored) {}
-                        });
-                        suiteWritable = false;
-                        deferred.resolve(false);
-                        return;
-                    }
-                    claim(marker.generation);
-                    deferred.resolve(true);
-                }
-                if (count === 0) { finish(); return; }
-                keys.forEach(function (key) {
-                    suitePrefs.fetch(function (text) {
-                        texts[key] = text == undefined || typeof text === 'string' ? text : JSON.stringify(text);
-                        if (--count === 0) { finish(); }
-                    }, function (err) {
-                        failed = true;
-                        Util.ga.trackEvent('storage', 'error', 'handBack ' + key);
-                        if (--count === 0) { finish(); }
-                    }, key);
-                });
-            }, function (err) {
-                Util.ga.trackEvent('storage', 'error', 'handBack');
-                suiteWritable = false;
-                deferred.resolve(false);
-            }, handBackKey);
+            function attempt() {
+                var applied = Number(localStorage.getItem(handBackApplied)) || 0;
 
+                function claim(generation) {
+                    suitePrefs.store(null, null, handBackKey, JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
+                        writer: 'cordova', complete: true, keys: handBackKeys}));
+                }
+
+                suitePrefs.fetch(function (value) {
+                    var marker = _readHandBack(value);
+                    if (value == undefined || value === '') {
+                        claim(0);
+                        deferred.resolve(true);
+                        return;
+                    }
+                    // An unreadable or unknown marker, or this build's own claim: the WebView state stays and is not claimed.
+                    if (!marker || marker.writer !== 'native') {
+                        deferred.resolve(!!marker);
+                        return;
+                    }
+                    if (marker.generation <= applied) {
+                        claim(marker.generation);
+                        deferred.resolve(true);
+                        return;
+                    }
+                    var keys = handBackKeys.filter(function (key) { return marker.keys.indexOf(key) >= 0; });
+                    var texts = {}, count = keys.length, failed = false;
+                    function finish() {
+                        if (failed) {
+                            retry('a key unreadable');
+                            return;
+                        }
+                        try {
+                            // Every owned key goes first, so the texts take the room of the stale ones.
+                            keys.forEach(function (key) { localStorage.removeItem(key); });
+                            keys.forEach(function (key) {
+                                if (texts[key] != undefined && texts[key] !== '') { localStorage.setItem(key, texts[key]); }
+                            });
+                            localStorage.setItem(handBackApplied, String(marker.generation));
+                        } catch (e) {
+                            retry('not applied: ' + e);
+                            return;
+                        }
+                        claim(marker.generation);
+                        deferred.resolve(true);
+                    }
+                    if (count === 0) { finish(); return; }
+                    keys.forEach(function (key) {
+                        suitePrefs.fetch(function (text) {
+                            texts[key] = text == undefined || typeof text === 'string' ? text : JSON.stringify(text);
+                            if (--count === 0) { finish(); }
+                        }, function (err) {
+                            failed = true;
+                            if (--count === 0) { finish(); }
+                        }, key);
+                    });
+                }, function (err) {
+                    retry('the marker unreadable');
+                }, handBackKey);
+            }
+
+            attempt();
             return deferred.promise;
         }
 
@@ -252,17 +248,6 @@ angular.module('service.storage', [])
             }
         }
 
-        // setForwardCompatibility without its write: the stored settings, or init's defaults, in $rootScope.
-        function _settingsInMemory() {
-            var settingsInfo = obj.get("settingsInfo");
-            if (settingsInfo !== null && typeof settingsInfo === 'object') {
-                if (settingsInfo.theme == undefined) {
-                    settingsInfo.theme = 'light'; //밝은 테마
-                }
-                $rootScope.settingsInfo = settingsInfo;
-            }
-        }
-
         obj.setForwardCompatibility = function () {
             var that = this;
 
@@ -292,7 +277,7 @@ angular.module('service.storage', [])
         obj.set = function (name, value) {
             var data = JSON.stringify(value);
 
-            if (_hasAppPreferences() && suiteWritable) {
+            if (_hasAppPreferences()) {
                 suitePrefs.store(function (data) {
                     //callback("OK");
                 }, function(err) {
@@ -339,14 +324,6 @@ angular.module('service.storage', [])
             }
 
             function _restoreOrMirror() {
-                // A start that could not apply the hand-back writes nothing more (AN-17): the session runs on what
-                // localStorage holds, with the settings in memory, so no refused write can keep init from settling; the
-                // next start tries the hand-back again.
-                if (!suiteWritable) {
-                    _settingsInMemory();
-                    deferred.resolve();
-                    return;
-                }
                 // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update.
                 // A new web origin (file:// → app://localhost or https://localhost) also starts empty; test the
                 // city keys, not length, so an unrelated early write cannot skip the restore.
