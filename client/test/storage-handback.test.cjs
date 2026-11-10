@@ -132,7 +132,7 @@ async function untilALaterStart(failure) {
     assert.equal(first.localStorage.getItem('cityIndex'), '2', 'the WebView state shows');
     assert.equal(first.localStorage.getItem('pushData'), staleWebView.pushData);
     assert.equal(first.localStorage.getItem('twHandBackApplied'), null);
-    first.storage.set('cityIndex', 1);
+    first.storage.set('expandShortChart', true);
     await new Promise(r => setTimeout(r, 0));
     assert.deepEqual([...handed.entries()], [...before.entries()], 'the suite holds the hand-back unchanged');
     assert.deepEqual(first.calls.filter(c => c.startsWith('storageReady')), ['storageReady:true']);
