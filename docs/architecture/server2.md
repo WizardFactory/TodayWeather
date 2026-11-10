@@ -2530,7 +2530,7 @@ lock for every allocation and free. `src/lib.rs` declares mimalloc (`mimalloc` 0
 and test of the crate allocates from its per-thread heaps. Its defaults are kept: no option bounds
 its memory. On the t3.small it costs about 110 MiB of peak RSS (median of the first 60 s after a
 restart: 300 MiB against 192 MiB) on a 2 GiB host; after the first minute of an 11-minute run it
-stayed between 278 and 290 MiB ([restart acceptance](#restart-acceptance-on-ec2-2026-11-10)).
+stayed between 240 and 290 MiB ([restart acceptance](#restart-acceptance-on-ec2-2026-11-10)).
 A test checks that heap allocations lie in mimalloc's heap (dev-dependency `libmimalloc-sys` with
 `extended`).
 
@@ -2696,10 +2696,11 @@ finishing worker stayed unmade until a later request. Measured on EC2: [restart 
 The last step of the restart re-examination ran on 2026-11-10 with master's server2 tree after
 #2921, #2924 and #2923 (c55f330b: the CI artifact of #2923 at 00bfa8ab, run 42731557096). It used a
 t3.small and a temporary bucket (local evidence `reports/kma-ec2-20261110c/acceptance.json`, not
-tracked). First, fifteen short runs of #2907 (43d02167) each stored one forecast-zone list, as
-every binary before the newest-list selection did. That left 15 identical lists in the day's
-partition (the #2907 501s of the allocator comparison came with 12 and 13). The new binary then
-operated for 55 minutes (156 probe requests, all 200, median 216 ms) and was restarted 8 times
+tracked). First, fifteen short runs of #2907 (43d02167) each stored one forecast-zone list, as every
+binary before the newest-list selection did. That left 15 identical lists in the day's partition
+(the #2907 501s of the allocator comparison came with 12 and 13). The new binary then operated for
+about an hour: 55 minutes as planned, then until the HH:33-44 publication window ended. Its 156
+probe requests, from 10:43 to 11:43 KST, were all 200 (median 216 ms). It was then restarted 8 times
 between 11:45 and 11:54 KST. Each restart asked Seoul, Seoul again 5 s later, Busan and Gangneung,
 and fetched the same path from the production API right after each (GET only, AK 2026-11-07). The
 last run stayed up 11 minutes.
@@ -2708,31 +2709,38 @@ last run stayed up 11 minutes.
 | --- | --- |
 | First answer (Seoul, request to response) | 2,548 to 2,554 ms in 8 of 8, none over 3 s |
 | Status | 32 of 32 answers 200, no 501 |
-| Restart completeness: the first answer judged against the same process's answer 5 s later (`kma_client_validation.py compare`) | 8 of 8 equal: no missing or invalid field and no value difference |
+| Restart completeness: the first answer judged against the same process's answer 5 s later (`kma_client_validation.py compare`) | 8 of 8 equal on every judged field: no missing or invalid field, no value difference. UV is not judged: every first answer lacked the 12 UV fields (`current` and three days) that the answer 5 s later had |
 | Client validation against production | 32 of 32 without a missing or invalid field outside the stored-history limit below; 20 of them are "not comparable" only because server2 already held the 11:00 KST ultra-short forecast that production still answered with 10:00 |
 | Forecast-zone lists | 15 before and after every restart; the new binary stored none, its newest list being under 24 h old |
-| RSS (MiB, as in the allocator comparison) | peak in the first 60 s 320 to 356, median 334 (#2921: 300); the 11-minute run 278, 283, 283 and 290 at 1, 5, 10 and 11 minutes, VmHWM 356 |
+| RSS (MiB, as in the allocator comparison) | peak in the first 60 s 320 to 356, median 334 (#2921: 300); in the 11-minute run 240 to 290 after the first minute (278, 283, 283 and 290 sampled at 1, 5, 10 and 11 minutes), VmHWM 356 |
 
 **Stored-history limit.** A bucket filled for about an hour holds none of the earlier publications
-that production answers past rows and days from. The gaps are the forecast fields of the past
-days of `midData.dailyData` (`pop`, `r06`, `s06`, `lgtAm`, `lgtPm`, `ptyPm`), the wind, wave and
-lightning values of the past rows of `short[]` (−100 and −1) and `current.yesterday`'s `uuu`, `vvv`
-and `pty`. They number 82 to 110 per answer and fall in the same classes as #2921's answers in the
-allocator comparison. Nothing else was missing. The `rn1` gap of a station product after a fill did not
-recur: every first answer equalled the warm one.
+and station pages that production answers past rows and days from. `accept_report.py` counts a gap
+against this limit by its position alone: a `short[]` row before the answer's current hour, a
+`midData.dailyData` day before today, or `current.yesterday`. Every gap, 82 to 110 per answer, fell
+in those positions:
+- past days of `midData.dailyData`: `pop`, `r06`, `s06`, `lgtAm`, `lgtPm` and `ptyPm`, plus
+  `ptyAm`, `skyAm`, `skyPm`, `wfAm`, `wfPm` and `rn1Str` for Gangneung;
+- past rows of `short[]`: wind, wave and lightning values (−100 and −1), `pty` (−1) for Gangneung
+  and Busan, `rn1` and `rn1Str` for Gangneung, and one `tmn` (−50) for Busan;
+- `current.yesterday`: `uuu`, `vvv` and `pty`.
 
-**Requests right after a restart.** The answer 5 s after the first, about 8 s after the start,
-took 2,553 to 2,555 ms in 7 of 8 restarts (1,037 ms in one). Busan and Gangneung, 10 to 12 s after
-the start, took 320 to 1,584 ms. They waited, up to their 2.5 s observed wait, for the life index
-(UV and pollen). The first request of a process finds that fold empty and acquires UV again,
-although S3 holds the current slot: four more objects per start. That publication makes the next
-request read every life-index acquisition of the last 14 days again, one at a time: 68 to 96
-`uv-idx-v5` objects here, raised by the fifteen seed starts and the restarts. This predates the
-re-examination (the S15b-3b life-index input) and is not changed by it.
+The position does not prove the cause of each gap. Seoul's gaps fall in the same classes as #2921's
+in the allocator comparison. The `rn1` gap of a station product after a fill did not recur: every
+first answer equalled the warm one.
+
+**Requests right after a restart.** The answer 5 s after the first, about 8 s after the start, took
+2,553 to 2,555 ms in 7 of 8 restarts (1,037 ms in one). Busan and Gangneung, 10 to 12 s after the
+start, took 320 to 1,584 ms. They waited, up to their 2.5 s observed wait, for the life index (UV
+and pollen). The first request of a process finds that fold empty and acquires UV again, although S3
+holds the current slot: four more objects per start, byte-identical to stored ones. That publication
+makes the next request read every life-index acquisition of the last 14 days again, one at a time:
+68 to 96 `uv-idx-v5` objects here, raised by the fifteen seed starts and the restarts. This predates
+the re-examination (the S15b-3b life-index input) and is not changed by it.
 
 Not established by this run: other hours, hosts or traffic; values that depend on stored history
-deeper than the bucket's hour. The seed starts also added per-start acquisitions of other kinds
-(UV, the ultra-short nowcast, warnings) that the restarts read.
+deeper than the bucket's hour. The seed starts also added per-start acquisitions of other kinds (UV,
+the ultra-short nowcast, warnings) that the restarts read.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
