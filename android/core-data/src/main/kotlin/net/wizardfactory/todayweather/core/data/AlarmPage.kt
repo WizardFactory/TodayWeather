@@ -64,6 +64,7 @@ class AlarmPage(
     private val _popup = MutableStateFlow<AlarmPopup?>(null)
     private val _closed = MutableStateFlow(false)
     private val _title = MutableStateFlow("")
+    private var opened = false
 
     val settings: StateFlow<AlarmSettings?> = _settings.asStateFlow()
     val popup: StateFlow<AlarmPopup?> = _popup.asStateFlow()
@@ -72,8 +73,11 @@ class AlarmPage(
     /** `cityData.name || getShortenAddress(cityData.address)`. */
     val title: StateFlow<String> = _title.asStateFlow()
 
+    /** Once per visit: a page kept across the activity's recreation is not opened again. */
     fun open(fav: Int?) {
+        if (opened) return
         val s = state.current() ?: return
+        opened = true
         if (fav != null && (fav != 0 || s.places.getOrNull(0)?.disable == false)) {
             if (fav >= 0 && fav < s.places.size) state.change { it.copy(placeIndex = fav) }
         }

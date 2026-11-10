@@ -30,11 +30,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +66,9 @@ import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import net.wizardfactory.todayweather.R
 import net.wizardfactory.todayweather.core.data.AlarmPage
 import net.wizardfactory.todayweather.core.data.AlarmPopup
@@ -122,8 +125,35 @@ object AlarmRoutes {
     const val SCREEN = NAME
 }
 
-/** S09's visits: a page for each opening, with the app's settings page for O11. */
-class AlarmsHost(val newPage: (scope: CoroutineScope, openSettings: () -> Unit) -> AlarmPage)
+/**
+ * S09's visits: a page for each opening, with the app's settings page for O11. Kept by the activity's view model, a
+ * visit's page and its scope outlive the activity's recreation (a rotation, a theme or language change) until the page
+ * goes back, as the Cordova page kept its edits (its activity handled those changes itself; review F5). O11's Settings
+ * goes through the shown activity.
+ */
+class AlarmsHost(val newPage: (scope: CoroutineScope, openSettings: () -> Unit) -> AlarmPage) {
+    private class Visit(val key: Any, val page: AlarmPage, val scope: CoroutineScope)
+
+    private var visit: Visit? = null
+
+    /** The shown activity's opener of the app's settings page. */
+    internal var openSettings: () -> Unit = {}
+
+    /** The page of the visit [key]: the same one until it goes back ([end]); a new key ends the visit before. */
+    internal fun page(key: Any): AlarmPage {
+        visit?.takeIf { it.key == key }?.let { return it.page }
+        visit?.scope?.cancel()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        return newPage(scope) { openSettings() }.also { visit = Visit(key, it, scope) }
+    }
+
+    /** The visit of [page] went back. */
+    internal fun end(page: AlarmPage) {
+        val v = visit?.takeIf { it.page === page } ?: return
+        v.scope.cancel()
+        visit = null
+    }
+}
 
 /** `.push` and `.dark-theme.push` (the SCSS of setting-push). */
 private class PushColors(
@@ -140,20 +170,28 @@ private class PushColors(
 }
 
 /**
- * S09 (setting-push.html, PushCtrl, #2893) for the visit [page]: the header with the back arrow and the place's name, the
- * alert card (the switch, its description, the hour bar while the alert is not off), the alarm card (its description,
- * the weekday buttons, the enabled alarms with the gear and the add row with the plus while fewer than five are on),
- * Cancel and Save, and the popups O11–O14. The back arrow and Cancel ask before discarding edits (O12); Android back
- * leaves without asking (D34). [onBack] runs when the page goes back.
+ * S09 (setting-push.html, PushCtrl, #2893) for the visit [visit] of [route] (the pages' return count, saved with the
+ * route): the header with the back arrow and the place's name, the alert card (the switch, its description, the hour bar
+ * while the alert is not off), the alarm card (its description, the weekday buttons, the enabled alarms with the gear and
+ * the add row with the plus while fewer than five are on), Cancel and Save, and the popups O11–O14. The back arrow and
+ * Cancel ask before discarding edits (O12); Android back leaves without asking (D34). [onBack] runs when the page goes back.
  */
 @Composable
-fun AlarmsScreen(route: String, theme: Theme, host: AlarmsHost, onBack: () -> Unit, openAppSettings: () -> Unit = {},
+fun AlarmsScreen(route: String, visit: Int, theme: Theme, host: AlarmsHost, onBack: () -> Unit, openAppSettings: () -> Unit = {},
                  zone: () -> TimeZone = TimeZone::getDefault) {
-    val scope = rememberCoroutineScope()
-    val page = remember(route) { host.newPage(scope, openAppSettings) }
+    val page = remember(route, visit) { host.page(route to visit) }
+    DisposableEffect(host, openAppSettings) {
+        host.openSettings = openAppSettings
+        onDispose { host.openSettings = {} }
+    }
     LaunchedEffect(page) { page.open(AlarmRoutes.fav(route)) }
     val closed by page.closed.collectAsState()
-    LaunchedEffect(closed) { if (closed) onBack() }
+    LaunchedEffect(closed) {
+        if (closed) {
+            host.end(page)
+            onBack()
+        }
+    }
     val settings by page.settings.collectAsState()
     val popup by page.popup.collectAsState()
     val title by page.title.collectAsState()

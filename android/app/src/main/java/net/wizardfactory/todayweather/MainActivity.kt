@@ -421,7 +421,7 @@ fun AppContent(
         overlay = {
             pages.lastOrNull()?.let { route ->
                 if (AlarmRoutes.known(route)) {
-                    AlarmsScreen(route, theme, alarms!!, onBack = ::back, openAppSettings = openAppSettings)
+                    AlarmsScreen(route, returns, theme, alarms!!, onBack = ::back, openAppSettings = openAppSettings)
                 } else if (NationRoutes.known(route)) {
                     // A page restored after the process ended has not sent its request in this one.
                     LaunchedEffect(route) { nation?.ensure(route) }

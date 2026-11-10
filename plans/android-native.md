@@ -477,6 +477,7 @@ Design. Sources: `setting-push.html`, PushCtrl (`controller.push.js`), `service.
 - Anomalies kept (AN-06): the defaults counted as edits (D34), Android back leaving S09 without O12 (D34), the English "Permission" and "Save" titles, the equal-hours check ignoring the switch, 12:00 AM as Delete, noon opening as 12 AM in the picker (12:00 PM set again becomes Delete, 12:30 PM becomes 00:30; found in the AN-14 survey, not in the rewrite docs), Delete keeping the record disabled, the month-end 24 h detection (A23), index identity (A20, A24), O06 repeating after back (A22), O07 read as HTML (A21), taps never changing the page.
 - Differences (`tools/corpus/differences.md`): the S09 save writes before it sends; the channel is created once instead of deleted and recreated at each start.
 - Archify not applicable: an app-internal client flow on the legacy push API, no service structure or route change.
+- Review round 1 (F1, F4): the S09 save and O06's answer became state changes shown at once, with their posts in turn, so S02's bells follow a save while another registration is in flight (`AlarmsScreenTest` runs the real state writer and `PushSync`); the hour bar's drag no longer restarts on its own changes. Round 2 (F5): a visit's page lives in the activity's view model (`AlarmsHost`), so its edits survive the activity's recreation. F2 and F3: the phone run and its cleanup.
 
 ### User scenarios
 

@@ -31,6 +31,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -154,7 +155,8 @@ class AlarmsScreenTest {
         PushRecords.newAlert(1, index, start, end, places, System.currentTimeMillis(), zone),
         PushRecords.newAlarm(2, index, 7 * 3600 + 40 * 60, listOf(false, true, true, true, true, true, false), places, System.currentTimeMillis(), zone))
 
-    private fun show(push: PushState = PushState(fcmToken = "t"), index: Int = 1, tab: Tab = Tab.HOURLY, intro: Boolean = false) {
+    private fun show(push: PushState = PushState(fcmToken = "t"), index: Int = 1, tab: Tab = Tab.HOURLY, intro: Boolean = false,
+                     restoration: StateRestorationTester? = null) {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), push = push).closeStart().copy(placeIndex = index))
         val http = HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }
         val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
@@ -169,7 +171,8 @@ class AlarmsScreenTest {
             override fun due() = intro && !shown.also { shown = true }
             override fun answer(enable: Boolean) { answers += enable }
         }
-        rule.setContent {
+        val setContent: (@androidx.compose.runtime.Composable () -> Unit) -> Unit = restoration?.let { r -> { r.setContent(it) } } ?: { rule.setContent(it) }
+        setContent {
             val state by memory.flow.collectAsState()
             val entries by repository.weather.collectAsState()
             val loading by repository.loading.collectAsState()
@@ -308,6 +311,38 @@ class AlarmsScreenTest {
         } finally {
             io.cancel()
         }
+    }
+
+    /**
+     * Review F5: the activity's recreation (a rotation, a theme or language change) keeps the visit's edits and its open
+     * picker, as the Cordova activity handled those changes itself; the permission is not asked again. The host lives in
+     * the activity's view model.
+     */
+    @Test
+    fun editsSurviveTheActivitysRecreation() {
+        val restoration = StateRestorationTester(rule)
+        show(restoration = restoration)
+        rule.onNodeWithTag(WeatherTabTags.BELL).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(AlarmsTags.day(0)).performClick()
+        rule.onNodeWithTag(AlarmsTags.TOGGLE).performClick()
+        rule.onNodeWithTag(AlarmsTags.row(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("07 : 40 AM", useUnmergedTree = true).assertExists()
+        restoration.emulateSavedInstanceStateRestore()
+        rule.waitForIdle()
+        rule.onNodeWithTag(AlarmsTags.PAGE).assertExists()
+        rule.onNodeWithText("07 : 40 AM", useUnmergedTree = true).assertExists()
+        rule.onNodeWithTag(AlarmsTags.PICKER_CLOSE).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(AlarmsTags.SAVE).performClick()
+        rule.waitForIdle()
+        assertEquals(listOf("grant", "has"), access.calls.filter { it == "grant" || it == "has" }.take(2))
+        assertEquals("asked once", 1, access.calls.count { it == "grant" })
+        val records = memory.current().push.records
+        assertEquals(false, PushRecords.enabled(records.single { PushRecords.category(it) == "alert" }))
+        assertEquals("Sunday kept", true, (records.first { PushRecords.category(it) == "alarm" }["dayOfWeek"] as kotlinx.serialization.json.JsonArray)[0]
+            .let { (it as JsonPrimitive).content.toBoolean() })
     }
 
     /** Review F4: a handle follows one drag across several hours; its own changes do not restart the gesture. */
