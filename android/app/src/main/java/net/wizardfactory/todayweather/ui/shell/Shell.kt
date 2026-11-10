@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -157,6 +158,8 @@ fun rememberShellNavigation(startup: Tab): ShellNavigation = rememberSaveable(sa
  */
 class TabContent(
     val title: String = "",
+    /** A header of the tab's own in place of the title bar (S02's search field), given the colors and the menu's opener. */
+    val header: (@Composable (ShellColors, () -> Unit) -> Unit)? = null,
     val afterTitle: @Composable RowScope.(ShellColors) -> Unit = {},
     val actions: @Composable RowScope.(ShellColors) -> Unit = {},
     val scrolled: () -> Float = { 0f },
@@ -211,8 +214,13 @@ fun TodayWeatherShell(
                             val tab = content(selected)
                             Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
                                 tab.page(this, colors)
-                                HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
-                                    scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
+                                val header = tab.header
+                                if (header != null) {
+                                    header(colors) { navigation.menuOpen = true }
+                                } else {
+                                    HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
+                                        scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
+                                }
                             }
                             TabBar(selected, colors) { tab ->
                                 val now = System.currentTimeMillis()
@@ -517,9 +525,14 @@ internal fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: Fo
  * baseline. Icon fonts draw their own glyphs; an icon inside a line of text takes the text's baseline.
  */
 @Composable
-internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
+internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) =
+    LineText(AnnotatedString(text), style, modifier, baselineOf, maxLines)
+
+/** [LineText] of styled text, such as [net.wizardfactory.todayweather.ui.text.chromeRuns]' font runs. */
+@Composable
+internal fun LineText(text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
     val measurer = rememberTextMeasurer()
-    val reference = if (baselineOf.fontFamily == null) "x" else text
+    val reference = if (baselineOf.fontFamily == null) AnnotatedString("x") else text
     val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
     Text(text, modifier.layout { measurable, constraints ->
         val placeable = measurable.measure(constraints)
