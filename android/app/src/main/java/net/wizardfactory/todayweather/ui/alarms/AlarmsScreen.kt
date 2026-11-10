@@ -59,8 +59,10 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextMotion
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import java.util.TimeZone
 import kotlin.math.abs
@@ -240,7 +242,9 @@ private fun text(key: String): String = stringResource(when (key) {
 private val DAYS = listOf(R.string.LOC_SUN, R.string.LOC_MON, R.string.LOC_TUE, R.string.LOC_WED, R.string.LOC_THU, R.string.LOC_FRI, R.string.LOC_SAT)
 
 @Composable
-private fun Content(s: AlarmSettings, colors: PushColors, page: AlarmPage, zone: TimeZone) {
+private fun Content(s: AlarmSettings, colors: PushColors, page: AlarmPage, zone: TimeZone) = BoxWithConstraints(Modifier.fillMaxSize()) {
+    // `@media (max-width: 359px)`: the weekday row's padding and buttons shrink in a narrow window.
+    val narrow = maxWidth < 360.dp
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         // `.list.card`: 5 dp under each card, which draws its shadow (0 1 px 3 px, 30 % black) and 2 dp corners.
         Card(colors) {
@@ -253,7 +257,7 @@ private fun Content(s: AlarmSettings, colors: PushColors, page: AlarmPage, zone:
         Card(colors) {
             TitleItem(stringResource(R.string.LOC_WEATHER_ALARM), colors, Modifier.testTag(AlarmsTags.title(1)))
             Description(stringResource(R.string.LOC_ALARM_DESCRIPTION), colors, Modifier.testTag(AlarmsTags.description(1)))
-            Item(colors, bottomBorder = true) { Days(s.days, colors, page::toggleDay) }
+            Item(colors, bottomBorder = true, horizontal = if (narrow) 8.dp else 16.dp) { Days(s.days, colors, narrow, page::toggleDay) }
             s.rows(zone).forEach { (index, seconds) ->
                 AlarmItem(AlarmRow.text(seconds), Glyphs.IOS_GEAR_OUTLINE, colors, bottomBorder = true, Modifier.testTag(AlarmsTags.row(index))) {
                     page.openPicker(index)
@@ -320,12 +324,15 @@ private fun Description(text: String, colors: PushColors, modifier: Modifier = M
         val style = line(14.sp, TextUnit.Unspecified, colors.text).copy(textMotion = TextMotion.Animated)
         val width = with(density) { (maxWidth - 32.dp).roundToPx() }
         val lines = remember(text, width, density) { chromeLines(measurer, text.trim(), style, width) }
-        val normal = remember(text, density) {
-            CssMetrics.line(AnnotatedString(text), style, style, density).let { (it.ascent + it.descent) / density.density / density.fontScale }
-        }
-        // The block is its lines' height: Compose's text box can round a pixel above it.
-        Text(chromeRuns(lines.joinToString("\n")), Modifier.height((16 + lines.size * normal).dp).padding(horizontal = 16.dp, vertical = 8.dp)
-            .wrapContentHeight(Alignment.Top, unbounded = true), style = style.copy(lineHeight = normal.sp,
+        val linePx = remember(text, density) { CssMetrics.line(AnnotatedString(text), style, style, density).let { it.ascent + it.descent } }
+        // Relative to the font size as drawn, so the lines keep it under any font scale (sp converts nonlinearly above 1);
+        // a hundredth of a pixel under the whole height, which the text's line box rounds up.
+        val normal = ((linePx - 0.01f) / with(density) { style.fontSize.toPx() }).em
+        // The block is its lines' height (in px, as the text draws them at the font scale; review F6): Compose's text box
+        // can round a pixel above it.
+        Text(chromeRuns(lines.joinToString("\n")), Modifier.height(16.dp + with(density) { (lines.size * linePx).toDp() })
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .wrapContentHeight(Alignment.Top, unbounded = true), style = style.copy(lineHeight = normal,
             lineHeightStyle = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
                 androidx.compose.ui.text.style.LineHeightStyle.Trim.None)))
     }
@@ -333,10 +340,10 @@ private fun Description(text: String, colors: PushColors, modifier: Modifier = M
 
 /** `.item`: a 1 dp border above (and under, unless the card's last), 12 dp and 16 dp of padding. */
 @Composable
-private fun Item(colors: PushColors, bottomBorder: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+private fun Item(colors: PushColors, bottomBorder: Boolean, modifier: Modifier = Modifier, horizontal: Dp = 16.dp, content: @Composable () -> Unit) {
     Column(modifier.fillMaxWidth().background(colors.card)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
-        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) { content() }
+        Box(Modifier.fillMaxWidth().padding(horizontal = horizontal, vertical = 12.dp)) { content() }
         if (bottomBorder) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.border))
     }
 }
@@ -354,27 +361,46 @@ private fun AlarmItem(text: String, glyph: String, colors: PushColors, bottomBor
 
 /**
  * The seven `.day-button`s (`.col` of a flex row): each a seventh of the row with 4 dp of margin, a 1 dp border, 4 dp
- * corners and 5 dp of padding around a 32 dp line. Chrome keeps the sevenths' fractions, so each button starts at its
- * rounded fraction rather than at Compose's whole-pixel shares.
+ * corners and 5 dp of padding around a 32 dp line of 15 sp; in a [narrow] window (`max-width: 359px`) 2 dp of margin
+ * beside them and 14 sp. Chrome keeps the sevenths' fractions, so each button starts at its rounded fraction rather than
+ * at Compose's whole-pixel shares. A label may run into the padding beside it, as Chrome draws an overflowing line; when
+ * the widest is wider than its button's inside, which a large font scale gives in a narrow window, all seven are drawn at
+ * the size that fits it (review F6; the Cordova page did not follow the font scale).
  */
 @Composable
-private fun Days(days: List<Boolean>, colors: PushColors, onToggle: (Int) -> Unit) {
+private fun Days(days: List<Boolean>, colors: PushColors, narrow: Boolean, onToggle: (Int) -> Unit) = BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val labels = DAYS.map { chromeRuns(stringResource(it)) }
+    val base = line(if (narrow) 14.sp else 15.sp, TextUnit.Unspecified, colors.dayText, FontWeight.Medium)
+    val side = if (narrow) 2.dp else 4.dp
+    val room = with(density) { (constraints.maxWidth / 7f - 2 * side.toPx()).toInt() - 2.dp.roundToPx() }
+    // Measured again after each step: sp converts nonlinearly above font scale 1, so the width does not follow the size.
+    val size = remember(labels, base, density, room) {
+        var s = base.fontSize
+        for (step in 0 until 4) {
+            val widest = labels.maxOf { measurer.measure(it, base.copy(fontSize = s), maxLines = 1, softWrap = false, density = density).size.width }
+            if (widest < room || room <= 1) break
+            s *= (room - 1f) / widest
+        }
+        s
+    }
     Layout({
-        DAYS.forEachIndexed { i, key ->
+        labels.forEachIndexed { i, label ->
             val on = days.getOrElse(i) { false }
             Box(Modifier.clip(RoundedCornerShape(4.dp))
                 .background(if (on) Color(0xFFE5E5E5) else Color.Transparent)
                 .border(1.dp, if (on) Color(0xFFA2A2A2) else Color(0xFFCCCCCC), RoundedCornerShape(4.dp))
-                .clickable { onToggle(i) }.testTag(AlarmsTags.day(i)).padding(6.dp), contentAlignment = Alignment.Center) {
-                CssFixedLine(chromeRuns(stringResource(key)), line(15.sp, TextUnit.Unspecified, if (on) colors.dayActiveText else colors.dayText, FontWeight.Medium), 32.dp)
+                .clickable { onToggle(i) }.testTag(AlarmsTags.day(i)).padding(horizontal = 1.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                CssFixedLine(label, line(size, TextUnit.Unspecified, if (on) colors.dayActiveText else colors.dayText, FontWeight.Medium), 32.dp)
             }
         }
     }, Modifier.fillMaxWidth()) { parts, c ->
         val margin = 4.dp.toPx()
         val cell = c.maxWidth / 7f
         val placed = parts.mapIndexed { i, p ->
-            val left = (i * cell + margin).roundToInt()
-            val right = ((i + 1) * cell - margin).roundToInt()
+            val left = (i * cell + side.toPx()).roundToInt()
+            val right = ((i + 1) * cell - side.toPx()).roundToInt()
             p.measure(androidx.compose.ui.unit.Constraints.fixedWidth(right - left)) to left
         }
         val height = (placed.maxOfOrNull { it.first.height } ?: 0) + 2 * margin.roundToInt()
