@@ -2570,10 +2570,12 @@ another part of the request ended, after the 2.5 s wait. AK approved the fix on 
 ([restart race](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)) records the
 days it held new pages for. When the pass ends, it hands them to the single product worker
 (`Flight::Product`), which stores each such day whose made-of changed once, past the ten-minute
-limit. A running worker compares the days again before it ends, and a worker that ended as the
-pass ended is followed by a new one. The pass waits for that comparison; no request waits for the
-pass. The store does not wait for a fold of the filled pages, because a product is made of the
-pages held. A day not yet read without failure, or a process that has not folded yet, keeps the
+limit. Every comparison asked of that worker (after a fold of the hourly part, at the end of a
+pass, or after a read that makes a flushed day storable) is made without a later request: a
+running worker compares again before it ends, and a worker that has already made its last
+comparison is followed, once its flight has ended, by a new one while the comparison is still
+due. No request or read waits for the comparison. The store does not wait for a fold of the
+filled pages, because a product is made of the pages held. A day not yet read without failure, or a process that has not folded yet, keeps the
 flush until the day can be stored. The read that makes such a day storable asks the worker for it,
 also when the read changed no page (a fold would not). An unchanged day spends the flush, and so
 does a failed store, after which the ten-minute limit applies again. Each pass adds at most one
@@ -2613,12 +2615,13 @@ chunk restores were not added (AK, 2026-11-10); they will be reconsidered only i
 acceptance shows that the lag remains.
 
 Verification (local, S06 loopback S3 peer, provider doubles; the order is set by gates and injected
-request instants; the time contracts and the read that makes a flushed day storable on a paused
-clock over an in-memory S3) is listed in the [spec](../../specs/issue-2614-kma-station-flush.md).
-Red before each change: the next restart restored 4 pages one by one, the worker's only product of
-the day lacked the filled hours, the first answers at the end of their 2.5 s wait had 0 of 35 rain
-rows of today and yesterday, and a flush kept by a failed day read stayed unstored after the next
-read. Not measured: the restart on EC2.
+request instants; the time contracts, the read that makes a flushed day storable and a worker
+that ends as a comparison is asked for on a paused clock over an in-memory S3) is listed in the
+[spec](../../specs/issue-2614-kma-station-flush.md). Red before each change: the next restart
+restored 4 pages one by one, the worker's only product of the day lacked the filled hours, the
+first answers at the end of their 2.5 s wait had 0 of 35 rain rows of today and yesterday, a flush
+kept by a failed day read stayed unstored after the next read, and a comparison asked of a
+finishing worker stayed unmade until a later request. Not measured: the restart on EC2.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
