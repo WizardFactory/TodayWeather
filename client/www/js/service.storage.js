@@ -19,9 +19,9 @@ angular.module('service.storage', [])
         // ({schema, generation, writer, complete, keys}). A newer complete native hand-back replaces the stale WebView
         // values, removals included, before the restore or mirror below; this build then claims the state
         // (writer 'cordova', generation + 1), so a later native start migrates what changes here. While the marker or
-        // a key cannot be read, or localStorage refuses the texts, the start waits (the splash stays until a view
-        // enters) and tries again with growing delays: nothing of the stale state is shown, posted or edited, and
-        // nothing mixes into the suite. The promise resolves whether the stored analytics choice can be trusted: not
+        // a key cannot be read, localStorage refuses the texts, or the claim is not stored, the start waits (the splash
+        // stays until a view enters) and tries again with growing delays: nothing of the stale state is shown, posted
+        // or edited, and nothing mixes into the suite. The promise resolves whether the stored analytics choice can be trusted: not
         // under a marker this build cannot use, which may hold a newer choice.
         var handBackKey = '_twHandBack';
         var handBackApplied = 'twHandBackApplied';
@@ -54,10 +54,17 @@ angular.module('service.storage', [])
             function attempt() {
                 var applied = Number(localStorage.getItem(handBackApplied)) || 0;
 
-                function claim(generation) {
-                    suitePrefs.store(null, null, handBackKey, JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
+                // The claim lets a later native start adopt what changes here: under a native marker the start goes on
+                // ([done]) only once it is stored, and tries again when it is not.
+                function claim(generation, done) {
+                    suitePrefs.store(function () {
+                        if (done) { done(); }
+                    }, function () {
+                        if (done) { retry('the claim not stored'); }
+                    }, handBackKey, JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
                         writer: 'cordova', complete: true, keys: handBackKeys}));
                 }
+                function resolveTrusted() { deferred.resolve(true); }
 
                 suitePrefs.fetch(function (value) {
                     var marker = _readHandBack(value);
@@ -72,8 +79,7 @@ angular.module('service.storage', [])
                         return;
                     }
                     if (marker.generation <= applied) {
-                        claim(marker.generation);
-                        deferred.resolve(true);
+                        claim(marker.generation, resolveTrusted);
                         return;
                     }
                     var keys = handBackKeys.filter(function (key) { return marker.keys.indexOf(key) >= 0; });
@@ -94,8 +100,7 @@ angular.module('service.storage', [])
                             retry('not applied: ' + e);
                             return;
                         }
-                        claim(marker.generation);
-                        deferred.resolve(true);
+                        claim(marker.generation, resolveTrusted);
                     }
                     if (count === 0) { finish(); return; }
                     keys.forEach(function (key) {
