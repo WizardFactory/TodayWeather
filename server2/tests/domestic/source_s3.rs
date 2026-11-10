@@ -869,6 +869,7 @@ impl server2::domestic::kma::source::life_live::LifeAcquire for SlowEverything {
     fn acquire(
         &self,
         _: server2::domestic::kma::source::life_live::LifeRequest,
+        _: Instant,
     ) -> server2::gateway::BoxFuture<
         'static,
         Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,

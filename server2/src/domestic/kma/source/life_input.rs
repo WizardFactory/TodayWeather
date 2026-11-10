@@ -12,6 +12,13 @@
 //! S3 reads run as owned single-flight tasks that update the process folds; a request waits for
 //! them only until its own deadline and otherwise answers with the last folds.
 //!
+//! KMA-LIFE-DISTINCT: the life read restores each distinct content of a catalog once
+//! ([`Reader::distinct`]): acquisitions repeating a restored one are applied with its pages at their
+//! own completion. An owned UV or pollen acquisition whose content S3 already holds is not
+//! published again ([`LifeOutcome::Stored`]): the requests that waited use its records, no own
+//! publication is counted, and its records stay over the fold until a committed read has applied
+//! the stored group.
+//!
 //! Freshness (owned acquisitions, S13d `OwnedFlights`, 10-minute retry per dataset key): a
 //! request whose UV fold lacks the current three-hour slot, whose pollen fold lacks the latest
 //! 06/18 KST issuance, or whose MFDS fold lacks the current 08:20/12:20/17:20 KST slot starts the
@@ -184,15 +191,29 @@ pub struct LifeAnswers {
 /// One own acquisition a request may use before a read of S3 covers it (KMA-RESTART-RACE):
 /// (kind index, completion instant, pages, own publication number).
 type OwnRun = (usize, f64, Vec<Arc<[u8]>>, u64);
+/// What keeps an own life acquisition over the fold until a read of S3 holds it.
+#[derive(Clone)]
+enum Held {
+    /// Published as own publication `n`: a read that began after it and whose cut reaches its
+    /// completion holds it.
+    Published(u64),
+    /// Not published, its content already stored (KMA-LIFE-DISTINCT D2): a committed read whose
+    /// applied set holds the stored group (kind index, partition, completion) holds it, whatever
+    /// its cut or publication count.
+    Stored((usize, String, u64)),
+}
+/// One own life acquisition: (kind index, completion instant, pages, what keeps it).
+type LifeRun = (usize, f64, Vec<Arc<[u8]>>, Held);
 /// The answer over a fold: (the fold it was built on, the fold with the own acquisitions, the
 /// completion of the newest of them).
 type Overlay<F> = Option<(Arc<F>, Arc<F>, f64)>;
 #[derive(Default)]
 struct LifeState {
     folded: Arc<LifeIndex>,
-    /// Own acquisitions the fold does not hold yet (completed after its cut, or published after
-    /// its read began), and the fold with them.
-    own: Vec<OwnRun>,
+    /// Own acquisitions the fold does not hold yet (completed after its cut, published after its
+    /// read began, or not published and their stored group not applied yet), and the fold with
+    /// them.
+    own: Vec<LifeRun>,
     overlay: Overlay<LifeIndex>,
     /// Applied acquisitions: (kind index, partition, completion instant).
     seen: HashSet<(usize, String, u64)>,
@@ -659,11 +680,12 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
         };
         self.shared
             .flights
-            .join_for(
+            .join_owned(
                 &key,
                 until,
                 owned_for,
-                move || -> BoxFuture<'static, bool> {
+                // One owner deadline for every candidate (KMA-LIFE-DISTINCT D2).
+                move |owner_deadline| -> BoxFuture<'static, bool> {
                     Box::pin(async move {
                         // Legacy `collect` marks the slot before it fetches.
                         if settle == Settle::Always && !mark(&shared) {
@@ -678,7 +700,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                                 LifeRequest::Mfds(_) => Some(Own::Mfds),
                                 LifeRequest::RiseSet(_) => None,
                             };
-                            match acquire.acquire(request).await {
+                            match acquire.acquire(request, owner_deadline).await {
                                 Ok(LifeOutcome::Published(records)) => {
                                     shared.published_at.fetch_max(
                                         wall_ms(&*shared.clock) as i64,
@@ -686,7 +708,18 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
                                     );
                                     let seq = shared.published.fetch_add(1, Ordering::AcqRel) + 1;
                                     if let Some(own) = own {
-                                        add_own(&shared, own, &records, seq).await;
+                                        add_own(&shared, own, &records, Held::Published(seq)).await;
+                                    }
+                                    return true;
+                                }
+                                // KMA-LIFE-DISTINCT D2: S3 already holds this content. The waiting
+                                // requests use the records at once; nothing new is in S3, so the
+                                // reads' memo stays valid.
+                                Ok(LifeOutcome::Stored { records, twin }) => {
+                                    if let Some(Own::Life(k)) = own {
+                                        let (partition, completed) = twin;
+                                        let held = Held::Stored((k, partition, completed));
+                                        add_own(&shared, Own::Life(k), &records, held).await;
                                     }
                                     return true;
                                 }
@@ -752,12 +785,13 @@ fn current<F>(folded: &Arc<F>, overlay: &Overlay<F>, cut: f64) -> Arc<F> {
     }
 }
 /// KMA-RESTART-RACE: keep an own acquisition's records for the answers until a read of S3 holds
-/// them, so a request that waited for it uses it whatever the stored read is doing.
+/// them, so a request that waited for it uses it whatever the stored read is doing. MFDS
+/// acquisitions are kept only as publications.
 async fn add_own<T: IndexListing + Clone + 'static>(
     shared: &Arc<Shared<T>>,
     own: Own,
     records: &[RawRecord],
-    seq: u64,
+    held: Held,
 ) {
     let Some(completed) = records
         .iter()
@@ -769,17 +803,18 @@ async fn add_own<T: IndexListing + Clone + 'static>(
     let mut records = records.to_vec();
     records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
     let pages: Vec<Arc<[u8]>> = records.iter().map(|r| r.bytes.clone()).collect();
-    match own {
-        Own::Life(k) => {
+    match (own, held) {
+        (Own::Life(k), held) => {
             shared
                 .life
                 .lock()
                 .unwrap_or_else(|e| e.into_inner())
                 .own
-                .push((k, completed as f64, pages, seq));
+                .push((k, completed as f64, pages, held));
             rebuild_life(shared).await;
         }
-        Own::Mfds => {
+        (Own::Mfds, Held::Stored(_)) => {}
+        (Own::Mfds, Held::Published(seq)) => {
             shared
                 .mfds
                 .lock()
@@ -971,20 +1006,18 @@ async fn read_life_once<T: IndexListing + Clone + 'static>(
                 .saturating_sub(1);
             needed.extend(parts.split_off(at).into_iter().map(|p| (k, p)));
         }
-        // Every family's needed partitions are restored together, NEEDED_READS S3 reads in
-        // flight shared among them: a partition read alone gets them all.
+        // Every family's needed partitions are restored together, NEEDED_READS of them at a time,
+        // each distinct content once (KMA-LIFE-DISTINCT D1).
         for chunk in needed.chunks(NEEDED_READS) {
-            let width = NEEDED_READS / chunk.len();
             let reads = crate::history::join_all(
                 chunk
                     .iter()
                     .map(|(k, p)| {
-                        shared.reader.acquisitions_wide(
+                        shared.reader.distinct(
                             DATA_GO_KR,
                             LIFE_FAMILIES[*k].0.kind(),
                             &areas,
                             p,
-                            width,
                             deadline,
                         )
                     })
@@ -992,7 +1025,7 @@ async fn read_life_once<T: IndexListing + Clone + 'static>(
             )
             .await;
             for ((k, _), fetched) in chunk.iter().zip(reads) {
-                let fetched = fetched.map_err(|e| format!("life read: {e}"))?;
+                let (fetched, _) = fetched.map_err(|e| format!("life read: {e}"))?;
                 found.extend(fetched.into_iter().map(|f| (*k, f)));
             }
         }
@@ -1003,7 +1036,7 @@ async fn read_life_once<T: IndexListing + Clone + 'static>(
     for (k, parts) in wanted.iter().enumerate() {
         let fetched = shared
             .reader
-            .all(
+            .all_distinct(
                 DATA_GO_KR,
                 LIFE_FAMILIES[k].0.kind(),
                 &all_areas(),
@@ -1053,10 +1086,15 @@ async fn read_life_once<T: IndexListing + Clone + 'static>(
         state.cut = cut;
         state.published = published;
         state.refreshed = Some(std::time::Instant::now());
-        // Own acquisitions this read holds leave the overlay.
-        state
-            .own
-            .retain(|(_, at, _, seq)| *seq > published || *at > cut);
+        // Own acquisitions this read holds leave the overlay: a published one when the read began
+        // after its publication and its cut reaches it; a stored one (KMA-LIFE-DISTINCT D2) when
+        // the committed applied set holds its stored group. (The needed-first fold commits no
+        // applied set and removes nothing.)
+        let LifeState { own, seen, .. } = &mut *state;
+        own.retain(|(_, at, _, held)| match held {
+            Held::Published(seq) => *seq > published || *at > cut,
+            Held::Stored(twin) => !seen.contains(twin),
+        });
     }
     rebuild_life(shared).await;
     Ok(true)
@@ -1517,14 +1555,20 @@ async fn acquire_kasi<T: IndexListing + Clone + 'static>(
             let seen = outcome.clone();
             let published = shared
                 .flights
-                .run(&key, owned_for, move || -> BoxFuture<'static, bool> {
-                    Box::pin(async move {
-                        let result = acquire.acquire(LifeRequest::RiseSet(request)).await;
-                        let published = matches!(result, Ok(LifeOutcome::Published(_)));
-                        *seen.lock().unwrap_or_else(|e| e.into_inner()) = Some(result.is_ok());
-                        published
-                    })
-                })
+                .run_owned(
+                    &key,
+                    owned_for,
+                    move |owner_deadline| -> BoxFuture<'static, bool> {
+                        Box::pin(async move {
+                            let result = acquire
+                                .acquire(LifeRequest::RiseSet(request), owner_deadline)
+                                .await;
+                            let published = matches!(result, Ok(LifeOutcome::Published(_)));
+                            *seen.lock().unwrap_or_else(|e| e.into_inner()) = Some(result.is_ok());
+                            published
+                        })
+                    },
+                )
                 .await;
             if *outcome.lock().unwrap_or_else(|e| e.into_inner()) == Some(false) {
                 // Legacy `mapSeries` stops an area at its first failure.
@@ -1562,6 +1606,9 @@ fn apply_kasi<T>(shared: &Arc<Shared<T>>, area: &str, fetched: &[Fetched], first
     Arc::make_mut(&mut state.folded).forget_before(first_day);
 }
 
+#[cfg(test)]
+#[path = "life_distinct_tests.rs"]
+mod distinct_tests;
 #[cfg(test)]
 mod tests {
     use super::read_key;

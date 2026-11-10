@@ -2399,7 +2399,7 @@ would not make. Each raced restore records one `operation.action` (stage `restor
 | --- | --- | --- |
 | Station pages | `Flight::Load`: the products, today and yesterday, the four newest minute pages | the minute page, the latest hourly and city page, the previous hourly page while a fetch now is still within two hours of its hour, and the fill below. Each acquisition (and the restore) is folded as it ends while the others are waited for, so a slow provider does not keep the pages that came before it from the first answer. A restored page never replaces a newer acquired one (newest fetch wins), and a replaced page stays accounted for S16 |
 | ASOS history | the station's S3 state, started with the request; its station comes from the current fold or, before any fold, from the default station list (the carried seed); the hourly and daily kinds are read together | the station's recovery run, started at the head start. A run before the read ends plans the whole window (one hourly and one daily range), and its ranges answer until the read merges them (replay in fetch order, `same_original`) |
-| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first, together and with at most four S3 reads in flight among them (wide reads below), and folds them for the requests, then the rest of the 14-day window | the UV, pollen and MFDS acquisitions decided from the fold at the head start. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
+| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first, four at a time and each distinct content once ([KMA-LIFE-DISTINCT](#each-stored-content-once-kma-life-distinct-2026-11-10)), and folds them for the requests, then the rest of the 14-day window | the UV, pollen and MFDS acquisitions decided from the fold at the head start. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
 | Narrative | the office's stored read, started right after `prepare` beside the snapshot as owned work: a waiter that stops waiting neither cancels it nor sets the error gate | one fetch-and-publish of the office when the read has no answer at the head start (still running or failed), at most once per office and ten minutes. It shares one fetch per office with the three-minute refresh: whichever starts second joins the running one. The newest publication answers, whichever of the read, the race and the refresh ends last, also past the answer's 30 s TTL: an announcement older than one the office answered is not installed, and the next request reads S3 |
 | Warnings | the request's zone-state read, started with the request on the request lane | the warning cycle (every three minutes), whose offered state answers when it comes first, or when the read fails |
 
@@ -2427,16 +2427,17 @@ while the collector replays and publishes on the bulk lane.
 
 **Wide reads.** `CatalogStore::lookup` restores a catalog one S3 read at a time: on EC2 after the
 restarts, today's UV partition (three 4-page acquisitions) took 16 reads in a row. The life read's
-needed partitions use `CatalogStore::lookup_wide` instead, opt-in per call
-(`Reader::acquisitions_wide`); every other reader still uses `lookup`. It restores as `lookup`
+needed partitions used `CatalogStore::lookup_wide` instead, opt-in per call, until
+[KMA-LIFE-DISTINCT](#each-stored-content-once-kma-life-distinct-2026-11-10) restored each distinct
+content once (one group's pages in series); no reader uses it now. It restores as `lookup`
 does (same checks, control byte budget, exclusions and result), except that a group's pages are
 read up to `width` at a time when the restore reaches the group and are met in page order: the
 first failure ends the group and drops the reads still in flight, and nothing is read ahead of the
 group being restored. It waits for one I/O admission of the store, as `lookup` does, and takes
 the others only if they are free at once, so no other reader's lookup queues behind it; its reads
-still pass the shared S3 admission (12 in flight per process) like any other read. The four reads
-are shared among the needed partitions (one partition read alone gets all four), so the station
-restore keeps the rest of the admission.
+still pass the shared S3 admission (12 in flight per process) like any other read. The life read
+shared four reads among the needed partitions (one partition read alone got all four), so the
+station restore kept the rest of the admission; it now restores four needed partitions at a time.
 
 **Provider calls a raced restart adds** (none when every restore beats the head start). Keyless:
 KMA web pages (the minute page, the latest hourly and city page and the previous hourly page, at
@@ -2737,6 +2738,10 @@ holds the current slot: four more objects per start, byte-identical to stored on
 makes the next request read every life-index acquisition of the last 14 days again, one at a time:
 68 to 96 `uv-idx-v5` objects here, raised by the fifteen seed starts and the restarts. This predates
 the re-examination (the S15b-3b life-index input) and is not changed by it.
+[KMA-LIFE-DISTINCT](#each-stored-content-once-kma-life-distinct-2026-11-10) addresses it: the life
+read restores each distinct content of a partition once, and an owned UV or pollen acquisition whose
+content S3 holds is not published, so it no longer makes the next request read the window again. Its
+effect on a restart has not been measured on EC2.
 
 Not established by this run: other hours, hosts or traffic; values that depend on stored history
 deeper than the bucket's hour. The seed starts also added per-start acquisitions of other kinds (UV,
@@ -2834,6 +2839,77 @@ UV acquisition releasing the request and serving the next one, out-of-season pol
 an MFDS slot asked once after a failure, and the KASI capture continuing past failing areas. Live
 on 2026-10-15 the server2 acquirer published UV (four pages), weeds pollen, KASI 서울 and the MFDS
 table into the local peer, oak pollen answered no data, and the folds answered from them.
+
+#### Each stored content once (KMA-LIFE-DISTINCT, 2026-11-10)
+
+Every process start stored the current UV slot again, and the life read restored every copy: on EC2
+one partition held 24 byte-identical acquisitions after the seed starts and restarts
+([restart acceptance](#restart-acceptance-on-ec2-2026-11-10)). AK chose on 2026-11-10 to treat the
+life index like the forecast-zone list: no new copy of a stored content and bounded reads
+([intent](../../intent/issue-2614-kma-life-distinct.md),
+[spec](../../specs/issue-2614-kma-life-distinct.md), [plan](../../plans/issue-2614-kma-life-distinct.md)).
+
+**Read.** The life read, needed-first and the rest of the window, restores each partition through
+`Reader::distinct`. One read of the catalog control object lists the groups in S06 `lookup`'s order
+(each group's own first page). A group's content is its members' raw hashes in page order (a group
+the catalog does not list whole is restored on its own). The groups of one content are restored in
+that order with `lookup`'s per-group rules (`Reader::members`): a group S06 excludes (descriptor or
+a member's body missing, not eligible) is counted and the next is tried, and an error (a corrupt
+member, transport, deadline) fails the read. Every later group of that content is applied with the
+restored pages, at its own completion and place, without reading its own descriptor or bodies. An
+absent catalog, or no group restored, fails the read with `lookup`'s incomplete catalog, as before.
+The fold order and rules are unchanged, so a repeated acquisition still runs UV `remove_old` at its
+own completion and is then skipped by the issuance rule. A partition costs one catalog GET plus,
+per distinct content, one group restore (the catalog again, the descriptor and the pages one at a
+time); each failed restore adds one. Parsing, ordering and folding stay linear in the listed
+groups. The needed partitions are still restored four at a time, but no longer with wide page
+reads. Contents are not shared across partitions.
+
+**Stated difference.** While every listed group's descriptor and members are present, the fold,
+each kind's last issuance, the pollen day+3, the applied set and the last applied acquisition are
+those of restoring every group. A later group of a restored content whose own descriptor or bodies
+are lost is now applied with the restored pages; before, it was excluded, or a corrupt one failed
+the read. S06's output and control byte budgets now bound each group restore, not a partition.
+
+**No identical publication.** `LiveLife` checks a complete UV or pollen acquisition before
+publishing it: it reads the catalog control object and restores a group with the same member raw
+hashes in page order. If one restores completely, nothing is published: the outcome is `Stored`,
+with the acquisition's records and that group's partition and completion. The requests that waited
+answer from the records at once, but no own publication is counted, so the read memo stays valid.
+No such group, an absent catalog, an error or a timeout publishes as before. MFDS and KASI publish
+as before.
+
+**Budget.** The check runs only when `CHECK_BUDGET` (3 s) and `PUBLISH_BUDGET` (10 s) remain before
+the owned task's deadline; its catalog read and every restore share one deadline 3 s away. A UV or
+pollen request is owned for its provider time plus both (493 s), still capped at `MAX_OWNED`
+(600 s) for a flight's candidates together. The provider deadline of each attempt is unchanged
+(480 s from its start). The flight passes its one owner deadline to every candidate, so a slot that
+completes with less than 13 s left, after earlier slots answered no data, is published unchecked.
+
+**Overlay.** A `Stored` acquisition stays over the fold until a committed read's applied set holds
+its stored group (kind, partition, completion), whatever that read's cut or publication count. The
+needed-first fold of a first read does not count. A published one keeps its rule.
+
+**Consequences.** A skipped acquisition's own completion is never replayed; its stored group's
+earlier one is. So a later read's UV `remove_old` may keep rows dated between that completion minus
+10 days and the skipped one's minus 10 days, until the next UV acquisition (dates no response
+shows). An identical acquisition no longer makes the process read S3 at once, so other hosts' new
+acquisitions appear within the 60 s memo, their existing bound. Still published: copies two hosts
+make at once, those whose check failed or timed out, and those beside a stored group that does not
+restore; the read bounds their cost. Copies already in S3 stay (nothing is deleted).
+
+Verification (local; isolated in-memory S3 on a paused clock, provider doubles; no provider or AWS),
+listed in the [spec](../../specs/issue-2614-kma-life-distinct.md): the fold, last issuances, day+3,
+applied set and last applied acquisition equal restoring every group after the initial, an
+incremental and a full read (1, 5 and 30 identical acquisitions, ties, a pollen kind, the
+`remove_old` edge), and each partition read equals `lookup`'s; 1, 10 and 50 identical 4-page
+acquisitions cost the first read one descriptor and four body GETs; the exclusion walk, errors and
+the stated difference; no PUT or own publication for an identical acquisition, the records answering
+at once, no read after it, and the overlay kept through a refresh without the stored group and
+through the needed-first fold; publication for another content, no catalog, a lost descriptor or
+page, a stalled check and a slot completing 10 s before the cap; the provider time of an attempt; and
+a restart over 20 identical UV acquisitions with 40 ms GETs behind the shared admission that asks no
+UV and reads nothing on its next request. Not measured on EC2.
 
 ### S15b-3c AirKorea image hourly forecast (2026-10-15)
 
