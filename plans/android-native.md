@@ -658,10 +658,12 @@ Decisions: the native user manual is produced here (AK 2026-11-08, [comment](htt
 
 | PR | Task | Scope | AC of #2897 |
 | --- | --- | --- | --- |
-| 1 | `android-an-18` | The parity checklist `android/parity.md`; the request-path test against a route table generated from `server/`; behavior tests for the checklist's small gaps | AC1 (each row links evidence, an accepted difference or the PR that adds it), AC3 |
+| 1 | `android-an-18a` | The parity checklist `android/parity.md`; the request-path test against a route table generated from `server/`; behavior tests for the checklist's small gaps | AC1 (each row links evidence, an accepted difference or the PR that adds it), AC3 |
 | 2 | `android-an-18b` | Fit checks for every screen and dialog at phone, tablet and foldable sizes in both orientations, in windows smaller than the display, and at font scale 1.3; an emulator run on tablet and foldable images with resize, rotation and split screen | AC4 |
 | 3 | `android-an-18c` | Cordova captures at 384×832, 360×780, 412×892 and 320×694 (the nominal display, with the WebView measured and recorded); representative states per screen and main dialog in Korean and English; the four Material dialogs made Ionic popups; the missing theme states | AC2 |
-| 4 | `android-an-18d` | The native user manual in `docs/user/android-app/` (`manual.json`, `manual.pdf`, `screenshots/`, provenance), captured from the app against production read-only weather | AC5; closes #2897 and completes AC1 |
+| 4 | `android-an-18` | The native user manual in `docs/user/android-app/` (`manual.json`, `manual.pdf`, `screenshots/`, provenance), captured from the app against production read-only weather | AC5; closes #2897 and completes AC1 |
+
+`android-an-18` is the issue's task: it ships with the last pull request, and its completion accounts for every criterion of #2897 with the evidence of all four. The other tasks carry only their pull request's criteria, with AC6 for their own delivery.
 
 ### PR 1 design
 
