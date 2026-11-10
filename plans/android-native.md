@@ -333,6 +333,45 @@ Design. Sources: `controller.start.js`, `start.html`, `controller.searchctrl.js`
 - Device: `ProductionStartTest` through `tools/emulator/run-production-start.sh`: a fresh install on the API 36 emulator with a geo fix reaches S03 through 현재위치 날씨보기, and with location denied through a Places search (production server, read-only).
 - Mutations: `reports/sdlc/android-an-10/probe/mutations.py`.
 
+## AN-11 — saved places S02 (#2890)
+
+Design. Sources: `tab-search.html`, SearchCtrl, WeatherInfo (`addCity`, `removeCity`, `disableCity`, `setFirstCityIndex`, `canLoadCity`), `service.push.js` (`removePushListByCityIndex`, `_deletePushInfo`, `updateCityInfo`), TabCtrl (`goPage` routing, `reloadEvent 'search'`, the O03 `search` variants, swipes), `.search` styles, V18, A24 and manual pages 13–20. Surveys: `reports/sdlc/android-an-11/`.
+
+- `core-domain` `places/`: the row (`[name]`, else the shortened address split on `,`, else blank; 현재위치 / Current Location for slot 0 without an address, without a space for ko, ja, zh-CN and the `zh-TU` typo; `t1h`, `tmn`, `tmx` by `toFixed(0)`, shown only when `t1h` is not `-`); `goPage` (startupPage 0/1/3 → Hourly/Daily/Air, anything else Hourly); the S02 Places query (terms joined by `,`); `SearchLocation.retry` (O03 `search`: Close first; permanent denial → hint and Settings to the app's page; unrecorded → OK; location off → Settings to the location settings and OK; else OK).
+- `core-storage`: `PlaceList.remove` (splice; the selection resets to the first enabled place only when it equals the new count, A24's neighbours kept); `PushRegistration.onCityRemoved` (`DELETE /v000903/push` with `Content-Type` and `Device-Id`, body `{cityIndex, fcmToken | registrationId}`, nothing without either; the place's records dropped, no other record renumbered, A24 kept), with corpus cases from the Cordova `Push` service.
+- `core-data`: `PushSync.removeCity`; `StartFlow` shared by S01 and S02 (the position lookup returns the geocode or the failure; S02's prediction query; the find-by-location result added as an ordinary place); `PlacesPage` (SearchCtrl for one visit: rows and their init-time bells, the sequential row reload through the ten-minute gate with silent failures, the entry lookup of an enabled slot 0 that only reloads it, delete, the slot-0 switch with its first enable, find-by-location, adds that select the new place).
+- `app` `ui/places/`: S02 in the Locations tab: the search header (☰, the input, 편집/취소/확인), the list (rows, bells, the location glyph), edit mode (switch, ⊗), search mode (현재위치로 지역찾기, towns with "powered by TodayWeather", predictions with Google's logo), the overlay, O09 and O03 `search`; a row tap selects the place and opens the startup page with `reloadEvent 'search'`; with no enabled place the input takes focus. The shell gains a custom header slot for this tab. The bell's alarm page is AN-14's.
+- Swipes stay on the header block of S03, S04 and S05; a test pins that a chart drag scrolls the chart and keeps the place.
+- Differences (`tools/corpus/differences.md` B27, B28): the S02 Places query from the prediction's full text (Places API (New) has no terms); a visit's row loads stop when the tab closes.
+- Device tests: `closeStartChoice` also closes the keyboard that S02's empty state opens.
+- Anomalies kept (AN-06): A24 (no renumbering; disabled-only records survive), the init-time bells, the selection after a delete, the silent row and first-enable weather failures, the entry lookup that discards its position, O03 Retry always finding by location, back opening the exit confirmation in search and edit mode.
+- Archify not applicable: an app-internal client flow on the legacy API, no service structure change.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN11-US1 | User opens saved places | Places saved, one with an alarm | Tap 즐겨찾기 | Rows in saved order with temperature, min/max and bells; rows reload through the gate | Load failure: the row keeps its values | AC1, AC4 |
+| AN11-US2 | User adds 부산 and London | Online | Search 부산, pick the town; search London, pick the prediction | Each opens Hourly for the new place, selected | Duplicate or weather failure: O09; geocode failure: nothing | AC2, AC4 |
+| AN11-US3 | User switches places | Two or more enabled | Swipe the header, or tap the arrows; drag a chart | Header swipes and arrows switch; a chart drag scrolls only the chart | — | AC2, AC3 |
+| AN11-US4 | User deletes a place | Edit mode | Tap ⊗ | The row goes without confirmation; with an alarm, `DELETE /push` for its index | No token: nothing sent | AC1, AC2 |
+| AN11-US5 | User turns the current position off and on | Edit mode | Switch off, then on | Off: disabled, its alarms deleted; first on: position, geocode and weather | Position failure: O03 `search`; weather failure silent | AC1 |
+| AN11-US6 | User finds the place they are in | Location allowed | Focus the input, tap 현재위치로 지역찾기, tap the row | The geocoded place is added as an ordinary place and opens | Denied or off: O03 `search` | AC1, AC4 |
+| AN11-US7 | User restarts the app | Places changed | Kill and open | Places, selection and records as left | — | AC1 |
+
+### Acceptance (from #2890)
+
+- AC1: unit tests cover adding, deleting, the slot-0 switch and persistence across restarts, and compare the push requests for deleting a place and turning off the current position with the Cordova app's requests.
+- AC2: on an emulator, search for 부산 and London, add both, switch between them by swiping, and delete one.
+- AC3: a UI test shows that dragging a chart sideways does not switch places.
+- AC4: the screenshot comparison with manual pages 13–20 passes (the S02 pages 13, 14, 18 and 19 against Cordova captures; 15–17 and 20 are S03 states that AN-08's comparisons cover); delivery (README, plan, review PASS, CI, merge).
+
+### Checks
+
+- JVM: the `places/` domain tests; `PlaceListTest` and `PushRegistrationTest` (corpus removal cases from the Cordova `Push` service); `PlacesPageTest`, `PushSyncTest` (the removal; a store that cannot be written fails nothing) and `StartFlowTest` (core-data); `PlacesScreenTest` (Robolectric UI: rows, edit, delete, switch, search, find-by-location with the keyboard up replacing the results, O09, O03, row taps); a chart-drag test; `PlacesScreenshotTest` against `tools/places-reference` captures of the Cordova build.
+- Device: `ProductionPlacesTest` through a run script: 부산 and London added, a header swipe between them, one deleted (production server, read-only GETs; push requests recorded).
+- Mutations: `reports/sdlc/android-an-11/probe/mutations.py`.
+
 ## AN-12 — settings and menu hand-offs S07, S08, O10 (#2891)
 
 Design (sources: `units.html`, `setting-radio.html`, `controller.units.js`, `controller.setting.radio.js`, `controller.settingctrl.js` and the menu in `index.html`, `service.util.js`, `service.push.js` `updateUnits`; behavior checked on the Cordova debug build with `tools/settings-reference`, which drives it with real taps against a stand-in server and records every request). AN-10 is next in the task graph but waits for AK's place-search decision (AN-06), which blocks AN-10 only, so AN-12 comes first.
@@ -446,7 +485,7 @@ Design. Sources: `service.twads.js`, `service.admobemi.js`, `service.monetizatio
   - 광고 개인정보 선택 shows the UMP privacy options form when it is required, else `LOC_AD_PRIVACY_UNAVAILABLE`.
   - 개인정보처리방침 and 이용약관 open `todayweather.ai/mobile/{privacy|terms}{'' | .ja | .en}.html` for the app's language in the system browser.
   - The menu stays open.
-- Events: `weather_fetch` and `weather_load` from `WeatherRepository` and `WeatherSession`, `screen_view` with the Cordova route names on page and tab changes, and the ad events. `favorite_change` and `location_permission` come with AN-10 and AN-11, which add those actions. AN-10 also hides the banner while S01 shows and starts the ads after it, as TabCtrl did.
+- Events: `weather_fetch` and `weather_load` from `WeatherRepository` and `WeatherSession`, `screen_view` with the Cordova route names on page and tab changes, and the ad events. `favorite_change` and `location_permission` come with AN-10 and AN-11 (`remove`), which add those actions. AN-10 also hides the banner while S01 shows and starts the ads after it, as TabCtrl did.
 - Firebase:
   - Remote Config and Crashlytics come through the Firebase BOM, with the Crashlytics Gradle plugin when `google-services.json` exists. Crashlytics collects, independent of the analytics choice, as in the Cordova build.
   - Automatic screen reporting is off (`config.xml`).

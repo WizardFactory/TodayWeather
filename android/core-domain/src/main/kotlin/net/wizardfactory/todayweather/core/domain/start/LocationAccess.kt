@@ -69,7 +69,7 @@ enum class RetryButton(val key: String, val positive: Boolean) {
 /** A retry confirmation (`showRetryConfirm`, titled `LOC_ERROR`): the body's lines and the buttons. */
 data class RetryConfirm(val lines: List<String>, val buttons: List<RetryButton>)
 
-private const val APP_INFO_HINT = "LOC_OPENS_THE_APP_INFO_PAGE"
+internal const val APP_INFO_HINT = "LOC_OPENS_THE_APP_INFO_PAGE"
 
 /**
  * StartCtrl's location attempt on Android (controller.start.js L395-L573) and its retry confirmation (O04, L683-L814).

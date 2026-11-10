@@ -1,0 +1,57 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova height in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in places-reference/<lang>",
+ "why": "Residual differences are glyph rasterization and advances: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, most in the search's ten Korean town rows, where the advances of 17 sp Korean add up along each row, plus the native input's caret after the real focus (the Cordova capture entered search mode without the keyboard). Geometry follows the WebView: the header's field and mode button, the rows at the capture's tops and heights (PlacesScreenshotTest koreanBoxes, within 1 dp), the 40 % name cell, the 48 dp icon and bell cells, the switch, the find button at the capture's box, and Korean text on Chrome's line of its fallback font (CssText with chromeRuns).",
+ "cases": {
+  "en-US/edit": {
+   "strong": 0.0072,
+   "mean": 1.731,
+   "heightDifference": 0
+  },
+  "en-US/favorites": {
+   "strong": 0.00354,
+   "mean": 0.964,
+   "heightDifference": 0
+  },
+  "en-US/location": {
+   "strong": 0.00597,
+   "mean": 1.642,
+   "heightDifference": 0
+  },
+  "en-US/search": {
+   "strong": 0.01846,
+   "mean": 4.187,
+   "heightDifference": 0
+  },
+  "ko-KR/edit": {
+   "strong": 0.00628,
+   "mean": 1.874,
+   "heightDifference": 0
+  },
+  "ko-KR/favorites": {
+   "strong": 0.0032,
+   "mean": 1.166,
+   "heightDifference": 0
+  },
+  "ko-KR/location": {
+   "strong": 0.00831,
+   "mean": 2.134,
+   "heightDifference": 0
+  },
+  "ko-KR/search": {
+   "strong": 0.0208,
+   "mean": 4.703,
+   "heightDifference": 0
+  }
+ }
+}

@@ -59,7 +59,7 @@ class PushSync(
     /**
      * `Push.updateCityInfo(index)` after a place's update (`WeatherInfo.updateCity`, AN-10): its records follow the
      * place; when anything changed they are posted (with a token) and the list is saved. The state is read through the
-     * store's writer, after the place's own write.
+     * store's writer, after the place's own write. A list that cannot be saved fails nothing; the next change posts it.
      */
     suspend fun updateCity(index: Int): Outcome? = lock.withLock {
         val state = try {
@@ -73,8 +73,38 @@ class PushSync(
         val result = PushRegistration.onCityChanged(state.push, state.places, index, ctx)
         if (result.state == state.push) return@withLock Outcome(emptyList(), emptyList())
         val statuses = result.requests.map { transport.send(it) }
-        store.updateData { it.copy(push = it.push.copy(records = result.state.records)) }
+        save { it.copy(push = it.push.copy(records = result.state.records)) }
         Outcome(result.requests, statuses)
+    }
+
+    /**
+     * `Push.removePushListByCityIndex(index)` (AN-11): the place's records are dropped and saved, then `DELETE /push` is
+     * sent once and its answer ignored; nothing without a token or a registration ID. When the records cannot be saved
+     * (a full disk) nothing is sent and nothing fails (#2925 F1).
+     */
+    suspend fun removeCity(index: Int): Outcome? = lock.withLock {
+        val state = try {
+            store.updateData { it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return@withLock null
+        }
+        val ctx = context(state) ?: return@withLock null
+        val result = PushRegistration.onCityRemoved(state.push, index, ctx)
+        if (result.requests.isEmpty()) return@withLock Outcome(emptyList(), emptyList())
+        if (!save { it.copy(push = PushRegistration.onCityRemoved(it.push, index, ctx).state) }) return@withLock null
+        Outcome(result.requests, result.requests.map { transport.send(it) })
+    }
+
+    /** Writes [update]; false when the store cannot be written. */
+    private suspend fun save(update: (AppState) -> AppState): Boolean = try {
+        store.updateData(update)
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        false
     }
 
     private suspend fun send(state: AppState, result: PushRegistration.Result): Outcome {

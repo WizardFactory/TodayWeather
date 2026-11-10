@@ -56,6 +56,12 @@ class StartFlow(
     /** `window.updateCityInfo(index)`, which `updateCity` calls: the push records of the place follow it. */
     private val cityUpdated: (Int) -> Unit = {},
 ) {
+    /** What the position lookup ended in: the geocoded position, or the message of its failure. */
+    sealed interface Located {
+        data class Found(val geoInfo: JsonObject) : Located
+        data class Failed(val message: LocationMessage) : Located
+    }
+
     sealed interface Outcome {
         /** A place was saved and S01 closed. */
         data object Added : Outcome
@@ -79,14 +85,17 @@ class StartFlow(
         add(Place(false, false, shortcut.name, shortcut.address, shortcut.country, Location(shortcut.lat, shortcut.long)))
 
     /**
-     * A chosen Places prediction: named by [PredictionName], geocoded by its full text (`getGeoInfoByAddr(description)`);
-     * a failed geocode shows nothing.
+     * A chosen Places prediction: named by [PredictionName], geocoded by [query] (S01: its full text,
+     * `getGeoInfoByAddr(description)`; S02: its terms joined by commas); a failed geocode shows nothing.
      */
-    suspend fun addPrediction(fullText: String, firstMatch: Int?, word: String): Outcome {
+    suspend fun addPrediction(fullText: String, firstMatch: Int?, word: String, query: String = fullText): Outcome {
         val name = PredictionName.of(fullText, firstMatch, word)
-        val geoInfo = geocode.byAddress(fullText, languages()) ?: return Outcome.None
+        val geoInfo = geocode.byAddress(query, languages()) ?: return Outcome.None
         return add(GeocodeClient.place(geoInfo, currentPosition = false).copy(name = name))
     }
+
+    /** S02's find-by-location row: the geocoded position added as an ordinary place with its name. */
+    suspend fun addGeoInfo(geoInfo: JsonObject): Outcome = add(GeocodeClient.place(geoInfo, currentPosition = false))
 
     /** A chosen bundled town, with the address and name SearchCtrl builds; no geocode request. */
     suspend fun addTown(town: Town): Outcome {
@@ -116,7 +125,18 @@ class StartFlow(
      * geocode. A grant from the prompt runs it again at once; every failure ends in O04 (#2871). [loading] shows and
      * hides the loading overlay as StartCtrl did, hidden before the prompt while location services are on.
      */
-    suspend fun useCurrentLocation(loading: (Boolean) -> Unit = {}): Outcome {
+    suspend fun useCurrentLocation(loading: (Boolean) -> Unit = {}): Outcome = when (val located = locate(loading)) {
+        is Located.Found -> saveCurrent(located.geoInfo, loading)
+        is Located.Failed -> fail(located.message, loading)
+    }
+
+    /**
+     * `updateCurrentPosition` of StartCtrl and SearchCtrl: the permission and the location service decide
+     * ([StartLocation]); a fix, rounded to three decimals, is geocoded (`/coord`). A grant from the prompt runs it again
+     * at once. [loading] shows the overlay at each attempt and hides it before the prompt while location services are
+     * on; the caller hides it at the end.
+     */
+    suspend fun locate(loading: (Boolean) -> Unit = {}): Located {
         while (true) {
             loading(true)
             val enabled = location.enabled()
@@ -132,8 +152,8 @@ class StartFlow(
                         LocationMessage.NOT_FOUND
                     } else {
                         val (lat, long) = GeoLocation.normalize(fix.lat, fix.long)
-                        val geoInfo = geocode.byLocation(Location(lat, long), languages()) ?: return fail(LocationMessage.NO_INFORMATION, loading)
-                        return saveCurrent(geoInfo, loading)
+                        val geoInfo = geocode.byLocation(Location(lat, long), languages()) ?: return Located.Failed(LocationMessage.NO_INFORMATION)
+                        return Located.Found(geoInfo)
                     }
                 }
                 is LocationStep.Ask -> {
@@ -146,7 +166,7 @@ class StartFlow(
                 // TabCtrl's steps do not occur on S01.
                 LocationStep.UseSaved, LocationStep.AskHighAccuracy -> LocationMessage.NOT_FOUND
             }
-            return fail(message, loading)
+            return Located.Failed(message)
         }
     }
 

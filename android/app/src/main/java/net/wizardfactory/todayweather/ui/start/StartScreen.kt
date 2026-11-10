@@ -366,7 +366,7 @@ private fun Divider(content: @Composable () -> Unit) {
 
 /** `img/powered_by_google_on_white.png` at 144 dp wide. */
 @Composable
-private fun GoogleLogo() {
+internal fun GoogleLogo() {
     val context = LocalContext.current
     val logo: ImageBitmap? = remember(context) {
         runCatching { context.assets.open(GOOGLE_LOGO).use { BitmapFactory.decodeStream(it).asImageBitmap() } }.getOrNull()

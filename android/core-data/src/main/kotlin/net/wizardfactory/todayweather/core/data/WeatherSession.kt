@@ -224,6 +224,29 @@ class WeatherSession(
         scope.launch { reload(Sender.RETRY) }
     }
 
+    /**
+     * S02's row tap or add (`setCityIndex` then `goPage()`, AN-11): [index] is selected when given (an add selected its
+     * place already), then `reloadEvent 'search'` loads it unless the ten-minute gate or an open confirmation stops it.
+     */
+    fun openFromSearch(index: Int?) {
+        val s = state.current() ?: return
+        if (index != null && index in s.places.indices) state.change { it.copy(placeIndex = index) }
+        reload(Sender.SEARCH)
+    }
+
+    /**
+     * S02's `updateWeatherData(index)` (SearchCtrl, AN-11): [place]'s weather when the ten-minute gate allows it
+     * ([force]: always), saved as any response is (`updateCity`); failures change nothing. True when it loaded.
+     */
+    suspend fun refresh(place: Place, force: Boolean = false): Boolean {
+        val s = state.current() ?: return false
+        if (!force && !repository.canLoad(place)) return false
+        val result = repository.load(place, s.units, languages(), force = true)
+        if (result !is LoadResult.Loaded) return false
+        save(result)
+        return true
+    }
+
     /** The photo feed arrived (`loadWeatherPhotos`): each place without a photo gets one for its cached weather. */
     suspend fun photosLoaded() {
         val feed = photos() ?: return

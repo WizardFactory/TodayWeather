@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -40,12 +41,14 @@ import net.wizardfactory.todayweather.ads.AdsConsent
 import net.wizardfactory.todayweather.ads.BannerSlot
 import net.wizardfactory.todayweather.ads.TwAds
 import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
+import net.wizardfactory.todayweather.core.data.PlacesPage
 import net.wizardfactory.todayweather.core.data.SettingsActions
 import net.wizardfactory.todayweather.core.data.StartFlow
 import net.wizardfactory.todayweather.core.data.Telemetry
 import net.wizardfactory.todayweather.core.data.WeatherEntry
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
+import net.wizardfactory.todayweather.core.domain.places.PlaceRows
 import net.wizardfactory.todayweather.core.domain.settings.About
 import net.wizardfactory.todayweather.core.domain.settings.Handoffs
 import net.wizardfactory.todayweather.core.domain.settings.SettingLists
@@ -64,6 +67,7 @@ import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
+import net.wizardfactory.todayweather.ui.nation.IonicLoading
 import net.wizardfactory.todayweather.ui.nation.NationLoads
 import net.wizardfactory.todayweather.ui.nation.NationRoutes
 import net.wizardfactory.todayweather.ui.nation.NationScreen
@@ -77,7 +81,10 @@ import net.wizardfactory.todayweather.ui.shell.ShellState
 import net.wizardfactory.todayweather.ui.shell.TabContent
 import net.wizardfactory.todayweather.ui.shell.TodayWeatherShell
 import net.wizardfactory.todayweather.ui.shell.rememberShellNavigation
+import net.wizardfactory.todayweather.ui.places.PlacesHost
+import net.wizardfactory.todayweather.ui.places.rememberPlacesTab
 import net.wizardfactory.todayweather.ui.start.LocationRetryPopup
+import net.wizardfactory.todayweather.ui.start.locationText
 import net.wizardfactory.todayweather.ui.start.StartChoicePopup
 import net.wizardfactory.todayweather.ui.start.StartPage
 import net.wizardfactory.todayweather.ui.start.StartScreen
@@ -162,7 +169,7 @@ class MainActivity : ComponentActivity() {
                     handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (shown) ({ BannerSlot(banner) }) else null,
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
                     openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
-                    openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) })
+                    openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places)
             }
         }
     }
@@ -214,7 +221,7 @@ class MainActivity : ComponentActivity() {
  * - the menu's privacy rows, the banner under the tab bar and the routes reported to analytics (#2894);
  * - the retry confirmation, the current position's confirmation (O03 `forecast`) and, with no enabled place, the start
  *   choice O02 that a weather page, a weather or Air tab tapped or a share opens (#2889).
- * The Locations tab comes with AN-11.
+ * - the saved places S02 in the Locations tab (#2890).
  */
 @Composable
 fun AppContent(
@@ -239,6 +246,8 @@ fun AppContent(
     /** `switchToSettings()` and `switchToLocationSettings()` of the current position's confirmation. */
     openAppSettings: () -> Unit = {},
     openLocationSettings: () -> Unit = {},
+    /** The saved places S02 (#2890): its search and a visit's page; none, an empty Locations tab. */
+    places: PlacesHost? = null,
 ) {
     val theme = Theme.of(state.settings.theme)
     val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
@@ -278,6 +287,18 @@ fun AppContent(
     }
     // O02's answer: the current position on Hourly, or the Locations tab.
     fun started(currentPosition: Boolean) = if (currentPosition) navigation.selected = Tab.HOURLY else openLocations()
+    // A visit of S02 while the Locations tab shows (`cache: false`): new each time it opens.
+    val placesPage = if (navigation.selected == Tab.LOCATIONS && places != null) {
+        val scope = rememberCoroutineScope()
+        remember { places.newPage(scope) }
+    } else {
+        null
+    }
+    // `goPage()`: the startup page's tab with `reloadEvent 'search'`.
+    fun openFromPlaces(index: Int?) {
+        navigation.selected = PlaceRows.startTab(state.settings.startupPage)
+        session.openFromSearch(index)
+    }
     val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
     LaunchedEffect(screen) { onScreen(screen) }
     val texts = host.texts
@@ -376,6 +397,19 @@ fun AppContent(
                 StartChoicePopup(autoSearch, onChoose = session::chooseAutoSearch, onOk = { started(session.startChoice(ok = true)) },
                     onBack = { started(session.startChoice(ok = false)) })
             }
+            placesPage?.let { page ->
+                val loadingPlaces by page.loading.collectAsState()
+                val placesPopup by page.popup.collectAsState()
+                if (loadingPlaces) IonicLoading()
+                when (val shown = placesPopup) {
+                    is StartFlow.Outcome.Alert -> IonicAlert(stringResource(R.string.LOC_ERROR), listOf(locationText(shown.message)),
+                        stringResource(R.string.LOC_OK), onClose = page::closePopup)
+                    is StartFlow.Outcome.Confirm -> LocationRetryPopup(shown.confirm, onBack = page::closePopup) { button ->
+                        page.retryButton(button, openAppSettings, openLocationSettings)
+                    }
+                    else -> {}
+                }
+            }
             positionRetry?.let { confirm ->
                 LocationRetryPopup(confirm, onBack = session::closePositionRetry) { button ->
                     when (button) {
@@ -406,7 +440,9 @@ fun AppContent(
             }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup)
             Tab.AIR -> rememberAirTab(state, entries, loading, theme, host, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
                 onUnits = openUnits)
-            else -> TabContent() // AN-11
+            else -> placesPage?.let { page ->
+                rememberPlacesTab(state, entries, theme, page, places!!, onSelect = ::openFromPlaces, onAdded = { openFromPlaces(null) })
+            } ?: TabContent()
         }
     }
     if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
@@ -435,6 +471,13 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
 
     val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos,
         telemetry = telemetry, location = twApp.location, cityUpdated = cityUpdated)
+
+    /** S02's search and its visits (#2890); a deleted place's alarms go in the app's scope. */
+    val places = PlacesHost(twApp.places, { twApp.towns.await() }) { scope ->
+        PlacesPage(twApp.appState, twApp.weather, session,
+            StartFlow(twApp.appState, twApp.weather, twApp.geocode, twApp.location, ::languages, telemetry, cityUpdated), twApp.location, scope,
+            removeAlarms = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.removeCity(index) } }, cityUpdated = cityUpdated, telemetry = telemetry)
+    }
 
     /** The start page's visit of this app open (S01, #2889). */
     val start: StartPage by lazy {

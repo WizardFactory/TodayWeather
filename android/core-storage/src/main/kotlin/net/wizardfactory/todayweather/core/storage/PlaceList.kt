@@ -18,6 +18,19 @@ object PlaceList {
     fun add(state: AppState, city: Place): AppState? =
         if (indexOf(state.places, city) != -1) null else state.copy(places = state.places + city.copy(disable = false))
 
+    /**
+     * `removeCity(index)`: the place at [index] removed (never the current position, which S02 offers no delete for);
+     * the selection moves to the first enabled place only when it now equals the number of places
+     * (`setFirstCityIndex`, which keeps it when none is enabled), so deleting an earlier place keeps the selected
+     * number, now naming the next place (kept, AN-06).
+     */
+    fun remove(state: AppState, index: Int): AppState {
+        if (index !in state.places.indices) return state
+        val places = state.places.filterIndexed { i, _ -> i != index }
+        val selected = if (state.placeIndex == places.size) PlaceIndex.first(places.map { it.disable }, state.placeIndex) else state.placeIndex
+        return state.copy(places = places, placeIndex = selected)
+    }
+
     /** `disableCity(disable)`: the current position's flag, then `setFirstCityIndex` while the index is at most 0. */
     fun disableCurrent(state: AppState, disable: Boolean): AppState {
         if (state.places.isEmpty()) return state

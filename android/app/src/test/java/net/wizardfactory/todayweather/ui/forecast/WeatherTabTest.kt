@@ -4,7 +4,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -103,6 +107,36 @@ class WeatherTabTest {
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
+    }
+
+    /**
+     * #2890 AC3: only the header block switches places; a sideways drag on the hourly chart or the daily chart scrolls
+     * that chart and keeps the place, as the Cordova charts scrolled beside the swipe area (`md-page-header`).
+     */
+    @Test
+    fun aChartDragScrollsTheChartAndKeepsThePlace() {
+        show()
+        for (tab in listOf(Tab.HOURLY, Tab.DAILY)) {
+            if (tab == Tab.DAILY) {
+                rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
+                rule.waitForIdle()
+            }
+            val selected = memory.current().placeIndex
+            val chart = rule.onNode(hasAnyAncestor(hasTestTag(ForecastTags.block(1))) and
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange))
+            fun offset() = chart.fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange].value()
+            val start = offset()
+            rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft(durationMillis = 100) }
+            rule.waitForIdle()
+            assertEquals("$tab: a chart drag left keeps the place", selected, memory.current().placeIndex)
+            assertTrue("$tab: the drag scrolled the chart", offset() > start)
+            rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeRight(durationMillis = 100) }
+            rule.waitForIdle()
+            assertEquals("$tab: a chart drag right keeps the place", selected, memory.current().placeIndex)
+            rule.onNodeWithTag(ForecastTags.HEADER).performTouchInput { swipeLeft(durationMillis = 100) }
+            rule.waitForIdle()
+            assertTrue("$tab: a header swipe switches", memory.current().placeIndex != selected)
+        }
     }
 
     @Test

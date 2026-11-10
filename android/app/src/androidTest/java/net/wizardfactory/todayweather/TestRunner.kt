@@ -99,11 +99,15 @@ class StateRule(private val seed: (AppState) -> AppState = { it }) : TestRule {
 
 /**
  * Without an enabled place the weather pages ask how to start (O02, AN-10): waits for it, then Android back answers
- * "search" and the Locations tab shows, so a test of the shell goes on without a place.
+ * "search" and the Locations tab shows, so a test of the shell goes on without a place. S02 then focuses its search
+ * field (AN-11); the keyboard is closed.
  */
 fun AndroidComposeTestRule<*, *>.closeStartChoice() {
     waitUntil(30_000) { onAllNodes(hasTestTag(LocationPopupTags.START_CHOICE)).fetchSemanticsNodes().isNotEmpty() }
     Espresso.pressBack()
+    waitForIdle()
+    Thread.sleep(500)
+    Espresso.closeSoftKeyboard()
     waitForIdle()
 }
 
