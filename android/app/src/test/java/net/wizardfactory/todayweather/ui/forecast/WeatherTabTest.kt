@@ -18,6 +18,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
+import android.location.LocationManager
+import android.provider.Settings
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -43,14 +45,17 @@ import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.UnitSettings
+import net.wizardfactory.todayweather.location.LocationGlyph
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -88,13 +93,19 @@ class WeatherTabTest {
 
     @After fun stop() = scope.cancel()
 
-    private fun show(answer: suspend (String) -> String = { url -> if ("51.51" in url) londonBody else seoulBody }, places: List<Place>? = null) {
+    private fun show(
+        answer: suspend (String) -> String = { url -> if ("51.51" in url) londonBody else seoulBody },
+        places: List<Place>? = null,
+        index: Int = 1,
+    ) {
         // The current position is off, as when location was never allowed: Seoul and London are saved places.
-        memory = Memory(AppState(places = places ?: listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = 1,
+        memory = Memory(AppState(places = places ?: listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = index,
             units = UnitSettings.defaults("KR")))
         repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; answer(url) },
             io = Dispatchers.Unconfined)
         session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
+        // The activity's glyph: a tap with location off clears the selected place's gate, as MainActivity's does.
+        val glyph = LocationGlyph(rule.activity) { memory.current().let { s -> s.places.getOrNull(s.placeIndex)?.let(repository::invalidate) } }
         rule.setContent {
             val state by memory.state.collectAsState()
             val entries by repository.weather.collectAsState()
@@ -102,7 +113,7 @@ class WeatherTabTest {
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next,
-                { expand -> memory.change { it.copy(expandShortChart = expand) } })
+                { expand -> memory.change { it.copy(expandShortChart = expand) } }, onLocationGlyph = glyph::tap, locationEnabled = glyph::enabled)
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {})
         }
         session.reload(WeatherSession.Sender.INIT)
@@ -226,4 +237,82 @@ class WeatherTabTest {
         val seoulTemp = runBlocking { repository.cached(seoul) }!!.weather["currentWeather"]!!.jsonObject["t1h"]
         assertEquals("Seoul's answer went to Seoul", JsonPrimitive(3.3), seoulTemp)
     }
+
+    /** The current position's header glyph (tab-forecast.html, `isLocationEnabled()`): `location_on` or `location_off`, as each draw finds it. */
+    @Test
+    fun theLocationGlyphFollowsTheLocationSetting() {
+        location(on = false)
+        show(places = listOf(here, london), index = 0)
+        assertEquals(setOf(" $LOCATION_OFF"), glyphs())
+        location(on = true)
+        rule.onNodeWithTag(ForecastTags.NEXT).performClick()
+        rule.waitForIdle()
+        assertEquals("only the current position has it", emptySet<String>(), glyphs())
+        // Back on the current position the header is drawn again, with the setting as it is now.
+        rule.onNodeWithTag(ForecastTags.NEXT).performClick()
+        rule.waitForIdle()
+        assertEquals(0, memory.current().placeIndex)
+        assertEquals(setOf(" $LOCATION_ON"), glyphs())
+    }
+
+    /**
+     * `switchToLocationSettings()`: with location off a tap opens the location settings, and the place loads again when
+     * the app comes back; with location on it does nothing and the return waits for the ten-minute gate.
+     */
+    @Test
+    fun aGlyphTapWithLocationOffOpensTheSettingsAndReloadsOnReturn() {
+        location(on = false)
+        show(places = listOf(here, london), index = 0)
+        assertEquals(1, requests.size)
+        rule.onNodeWithTag(WeatherTabTags.LOCATION).performClick()
+        rule.waitForIdle()
+        assertEquals(Settings.ACTION_LOCATION_SOURCE_SETTINGS, shadowOf(rule.activity).nextStartedActivity?.action)
+        session.reload(WeatherSession.Sender.RESUME)
+        rule.waitForIdle()
+        assertEquals("the return loads the place again", 2, requests.size)
+
+        location(on = true)
+        rule.onNodeWithTag(WeatherTabTags.LOCATION).performClick()
+        rule.waitForIdle()
+        assertNull("location on: no hand-off", shadowOf(rule.activity).nextStartedActivity)
+        session.reload(WeatherSession.Sender.RESUME)
+        rule.waitForIdle()
+        assertEquals("the gate holds the return", 2, requests.size)
+    }
+
+    /** O08 from S03's source row (`popUpAirForecastInfo`): the AirKorea text, or the KAQ text for a `kaq` source. */
+    @Test
+    fun theAirSourceRowOpensItsDialogForEitherSource() {
+        val kaqBody = Json.parseToJsonElement(seoulBody).jsonObject.let { body ->
+            val list = body["airInfoList"] as kotlinx.serialization.json.JsonArray
+            val first = JsonObject((list[0] as JsonObject) + ("forecastSource" to JsonPrimitive("kaq")))
+            JsonObject(body + ("airInfoList" to kotlinx.serialization.json.JsonArray(listOf(first) + list.drop(1)))).toString()
+        }
+        var kaq = false
+        show(answer = { if (kaq) kaqBody else seoulBody })
+        for ((source, text) in listOf("AIRKOREA" to R.string.LOC_AIRKOREA_DESCRIPTION, "KAQ" to R.string.LOC_KAQ_DESCRIPTION)) {
+            if (source == "KAQ") {
+                kaq = true
+                rule.mainClock.advanceTimeBy(1000)
+                rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+                rule.waitForIdle()
+            }
+            rule.onNodeWithText("$source ", substring = true, useUnmergedTree = true).performScrollTo().performClick()
+            rule.waitForIdle()
+            rule.onNodeWithTag(WeatherTabTags.SOURCE_DIALOG).assertExists()
+            rule.onNodeWithText(rule.activity.getString(text)).assertExists()
+            rule.onNodeWithText(rule.activity.getString(R.string.LOC_CLOSE)).performClick()
+            rule.waitForIdle()
+            rule.onAllNodesWithTag(WeatherTabTags.SOURCE_DIALOG).assertCountEquals(0)
+        }
+    }
+
+    private val here = Place(true, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.56, 126.98))
+
+    private fun location(on: Boolean) = shadowOf(rule.activity.getSystemService(LocationManager::class.java)).setLocationEnabled(on)
+
+    /** The texts of the header's location glyph; none while it does not show. */
+    private fun glyphs(): Set<String> =
+        rule.onAllNodes(hasAnyAncestor(hasTestTag(WeatherTabTags.LOCATION)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true)
+            .fetchSemanticsNodes().flatMap { node -> node.config[SemanticsProperties.Text].map { it.text } }.toSet()
 }

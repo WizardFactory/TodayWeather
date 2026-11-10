@@ -29,6 +29,11 @@ Each sub-issue's completion criteria are its acceptance criteria. Per-task IDs (
 
 Recorded in #2877 by AN-06 (https://github.com/WizardFactory/TodayWeather/issues/2877#issuecomment-6718290258): go; API path `v000903` for every call (option A); keep the Cordova behavior for documented anomalies except where the recommendation is a fix (A01: tie each response to the place that requested it); follow the system font scale and verify layouts up to 1.3; Cordova Android receives fixes only; place search follows the Cordova app's current provider (Google Places). Open, blocking AN-10 only: whether the native client uses the Places SDK for Android or the Places web service (key restriction, billing and usage need the Google Cloud console).
 
+## AN-18 decisions (AK 2026-11-11)
+
+- AC2 of #2897 compares representative states at 360×780, 412×892 and 320×694, in Korean and English: for each screen S01–S12 and its main dialogs, the state the user manual shows. Every state compared today stays at 384×832, and the clipping checks cover every state at every size.
+- AN-18 ships as four pull requests, each merged after a review PASS and CI: (1) the parity checklist and the request-path test, (2) large screens and the font scale up to 1.3, (3) the four-size comparisons, (4) the user manual. The last one closes #2897.
+
 ## Scope
 
 In scope: AN-01..AN-18. Out of scope: AN-19, widgets, iOS, the #2651 restyle, server changes.

@@ -218,7 +218,7 @@ JVM: `ShellLogicTest` (languages, region, themes, startup page; `corpus/photos.j
 
 Design (survey: `reports/sdlc/android-an-08/forecast-survey.md`, from `service.weatherutil.js`, `service.weatherinfo.js`, `controller.tabctrl.js`, `controller.forecastctrl.js`, the two templates and the SCSS):
 
-- `core-data` requests: the route of `getWeatherByGeoInfo` (coordinates when `location.lat` is truthy, A05 kept; else the address with `대한민국 ` added, split into the KMA town route `/v000903/kma/addr/{first}[/{second}][/{third}]`, or the free-form `/weather/v000903/addr/{address}`, which answers 501), `/weather/v000903/coord/{lat},{long}`, the units query in `Units.getAllUnits()` order plus `airForecastSource=kaq`, and `Accept-Language` from the app's languages in Chrome's form (`ko-KR,ko;q=0.9,…`), since the WebView sent its default header and the gateway reads it. Attempts follow `_getHttp`/`_retryGetHttp` (another 2 s later while none has answered, up to three, 10 s each, the first to settle decides; the others are cancelled); one HTTP client serves the weather and the photo feed.
+- `core-data` requests: the route of `getWeatherByGeoInfo` (coordinates when `location.lat` is truthy, A05 kept; else the address with `대한민국 ` added, split into the KMA town route `/v000903/kma/addr/{first}[/{second}][/{third}]`, or the free-form `/weather/v000903/addr/{address}`, which the server does not serve: 501 from the Lambda, 404 from the legacy server's gateway, AN-18), `/weather/v000903/coord/{lat},{long}`, the units query in `Units.getAllUnits()` order plus `airForecastSource=kaq`, and `Accept-Language` from the app's languages in Chrome's form (`ko-KR,ko;q=0.9,…`), since the WebView sent its default header and the gateway reads it. Attempts follow `_getHttp`/`_retryGetHttp` (another 2 s later while none has answered, up to three, 10 s each, the first to settle decides; the others are cancelled); one HTTP client serves the weather and the photo feed.
 - `core-data` `WeatherRepository`: each place's weather in memory and in a file cache, so a cold start shows the last data while it loads (Cordova saved the weather with the city). A response applies to the place that requested it (A01 fix): it is keyed by the place (current position, coordinates or address), and only the latest request of a key applies. The rest is Cordova's: `updateCity` keeps old fields a response omits (A02), the current-position slot takes the response's name, country, address and location, the ten-minute gate lives in memory only, and a failure keeps the cached data. Loads: app open, re-tapping the selected weather tab and the retry button bypass the gate; resume and switching places are gated; the refresh-interval timer restarts with every load.
 - `core-domain` `Forecast`: the values of ForecastCtrl for S03 and S04 from the converted place (hero temperature with `getTemp`, summary, yesterday text, update time, the S03 hourly and daily AQI lists, the detail weather and air rows with the Cordova formatting, the three-day details of S04, the pollen popup rows, attribution), checked against goldens generated from the Cordova controller code.
 - `app` screens: S03 and S04 as the shell's Hourly and Daily pages: the header block (photo box in the photo theme, arrows with more than one place, temperature, sky icon, summary and air summary), the hourly chart with the expander (`expandShortChart`) and the daily chart (AN-05), the air and detail cards, the pollen popup, attribution; the title with the place name, the current-position glyph and the loading spinner, the bell and share buttons (AN-14 and AN-16 open their pages); swiping or the arrows switch places; the retry confirmation (O03: 오류, 날씨 정보를 가져오지 못하였습니다, 닫기/확인). Card and chart colors per theme from the SCSS.
@@ -235,7 +235,7 @@ Design (survey: `reports/sdlc/android-an-08/forecast-survey.md`, from `service.w
 | AN08-US3 | User checks an overseas place | London saved | Open the app, switch to London | S03 and S04 show London's data without Korean-only cards; Visual Crossing attribution | – | AC2 |
 | AN08-US4 | User switches places while one is loading | Two places, slow network | Swipe to the other place before the response arrives | Each place shows its own weather (A01 fixed) | – | AC1 |
 | AN08-US5 | User refreshes | Weather shown | Tap the selected Hourly tab; wait for the refresh interval; reopen within ten minutes | A tap and the timer load again; reopening within ten minutes does not | – | AC1 |
-| AN08-US6 | User with an old address-only place | Place without coordinates | Open the app | The KMA town route loads it; a free-form address gets the server's 501 and the retry confirmation | – | AC1 |
+| AN08-US6 | User with an old address-only place | Place without coordinates | Open the app | The KMA town route loads it; a free-form address gets the server's error (501 from the Lambda, 404 from the legacy server's gateway) and the retry confirmation | – | AC1 |
 | AN08-US7 | Maintainer refreshes the forecast references after a Cordova change | Emulator, Cordova debug APK | `check-sources.mjs` fails; run `tools/forecast-reference/capture.sh`, `./gradlew test` | New references and provenance; the emulator is offline while an app is installed and restored afterwards | Non-emulator serial: refused | AC3, AC4 |
 
 ### Acceptance (from #2887)
@@ -651,3 +651,61 @@ Design. Sources: `service.storage.js` (TwStorage: the suite `group.net.wizardfac
 - JVM: `CordovaHandBackTest` (core-storage: the texts against `CordovaMigration` both ways, deletions, the marker, the re-migration decision and the first migration's adoption of a claim), `HandBackTest` (app, Robolectric: one commit after a saved state and after each write of the choice, the generation, the consent withdrawal at the start).
 - Cordova: `client/test/storage-handback.test.cjs` (node --test, TwStorage and Monetization in `vm` with a fake suite and `localStorage`): a newer complete native marker applied with removals, older/equal/incomplete/unknown ignored, the claim, the consent gate in either order, repeated generations; the existing Monetization harnesses report the storage ready as `TwStorage.init` does.
 - Device: `tools/upgrade/run-handback-test.sh` (offline): Cordova 1.1.1 seeded; this build with `HandBackDeviceTest` editing places, alarms, units, the theme and consent; a fallback debug APK built from `client/` with a higher versionCode checked over WebView DevTools (`verify-handback.mjs`); an edit and a grant there, this build again (re-migration, grant), the fallback again (check, withdrawal), and this build a last time (the withdrawal holds); no crash of the fallback build over the native SDKs' files.
+
+## AN-18 — parity verification, large screens and the user manual (#2897)
+
+Decisions: the native user manual is produced here (AK 2026-11-08, [comment](https://github.com/WizardFactory/TodayWeather/issues/2897#issuecomment-6716907228)); AC2 compares representative states at the three new sizes, and AN-18 ships as four pull requests (AK 2026-11-11, [comment](https://github.com/WizardFactory/TodayWeather/issues/2897#issuecomment-6781582298)). Surveys: `reports/sdlc/android-an-18/` (parity rows and gaps, capture tools and sizes, request paths, large screens, the manual).
+
+| PR | Task | Scope | AC of #2897 |
+| --- | --- | --- | --- |
+| 1 | `android-an-18` | The parity checklist `android/parity.md`; the request-path test against a route table generated from `server/`; behavior tests for the checklist's small gaps | AC1 (each row links evidence, an accepted difference or the PR that adds it), AC3 |
+| 2 | `android-an-18b` | Fit checks for every screen and dialog at phone, tablet and foldable sizes in both orientations, in windows smaller than the display, and at font scale 1.3; an emulator run on tablet and foldable images with resize, rotation and split screen | AC4 |
+| 3 | `android-an-18c` | Cordova captures at 384×832, 360×780, 412×892 and 320×694 (the nominal display, with the WebView measured and recorded); representative states per screen and main dialog in Korean and English; the four Material dialogs made Ionic popups; the missing theme states | AC2 |
+| 4 | `android-an-18d` | The native user manual in `docs/user/android-app/` (`manual.json`, `manual.pdf`, `screenshots/`, provenance), captured from the app against production read-only weather | AC5; closes #2897 and completes AC1 |
+
+### PR 1 design
+
+- **Parity checklist** (`android/parity.md`): one row per screen S01–S16, overlay O01–O19 and the shell elements without a spec ID. Columns: the Cordova reference (manual pages, spec lines), the native evidence (tests, reference images), the accepted differences, and the status (covered, or the later PR that adds the evidence). Each accepted difference names its decision: the AN-06 record (anomalies kept unless fixed; A01 fixed; the system font scale), or the sub-issue that recorded it in `tools/corpus/differences.md` under AK's acceptance of the recommended defaults (2026-11-08).
+- **Request paths** (AC3, spec R8):
+  - `tools/server-routes/generate.mjs` walks `server/app.js` and the routers it mounts as text (it never loads them). It writes `core-data/src/test/resources/server-routes/routes.json`: each router's layers in registration order (method, path, the regular expression Express matches it with under path-to-regexp 0.1.7, file and line, mounts and middleware), the Express version from `server/package-lock.json`, and the hash and last commit of each file read. CI regenerates it in the job with the full checkout and fails on a difference. The Android workflow also runs on `server/app.js`, `server/routes/**` and `server/package-lock.json` changes.
+  - `RequestPathsTest` (core-data, JVM): the production clients send to a recording `MockWebServer` (`WeatherRepository`, `GeocodeClient`, `NationSource`, `PushSync` with `HttpPushTransport`, `WeatherPhotoFeed`). The inputs are representative: the corpus weather requests, geocode by location and by address, the nation and warning requests, and every push flow.
+    - The test dispatches each encoded path through the route table as Express does (routers in order, mounts trimmed, methods matched, error handlers skipped).
+    - A legacy-server request passes when a route of its method serves it under `v000903` and every middleware before that route is one the test reviewed, or when the exception register lists the route that answers it (`server-routes/exceptions.json`):
+      - E1, the weather-address fallback, which the server does not serve (kept by AN-06);
+      - E2 and E3, the photo feed and its photos;
+      - E4, SDK traffic.
+    - The observed (method, route) pairs must equal the expected set, and every register entry must be observed.
+  - `RequestSitesTest` checks that the HTTP-capable calls, server path literals, SDK entry points and libraries of the main sources are the known ones, so a new request site fails until it is enumerated. `PushContextTest` (app) checks that push uses `/v000903`.
+- **Gap tests:**
+  - the header location glyph (on and off, the hand-off to the location settings, and S05's inert glyph, A10);
+  - O17 on S01 and S02, and O09's duplicate message;
+  - the `#111111` status bar with light icons;
+  - S01's banner hiding and its keyboard rule;
+  - S03's O08 source row with the AirKorea and `kaq` texts.
+
+  Three behaviors lived in `MainActivity`, which no JVM test starts; they move unchanged into `LocationGlyph`, `hideBannerWhileStartShows` and `enableShellSystemBars`, which the tests call.
+- **Checklist check:** `ParityChecklistTest` (app) checks the checklist's rows, links, anchors and test names.
+- Archify not applicable: tests, a checklist and a route table; no service structure, route or storage change.
+
+### User scenarios (PR 1)
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| AN18-US1 | Maintainer checks parity before release | The checklist | Open `android/parity.md`; follow a row | Each screen and dialog links native tests or references, an accepted difference with its decision, or the PR that adds them | A row without evidence, a broken link or a test that does not exist fails `ParityChecklistTest` | AC1 |
+| AN18-US2 | Developer adds a request to the native client | `RequestPathsTest` | Add a new path or HTTP call | The test fails until the path is a served `v000903` route or a listed exception, and the expected set is updated | A new call site outside the known clients fails `RequestSitesTest` | AC3 |
+| AN18-US3 | Server developer changes a route | CI with the full checkout | Change `server/routes/**` | The regenerated route table differs and CI fails until it is committed; the request test then shows whether a native path lost its route | – | AC3 |
+| AN18-US4 | User with location off taps the header location glyph | S03 or S04 open, location off | Tap the glyph | The location settings open, and the page reloads on return; on S05 the glyph does nothing (A10) | Location on: the glyph shows `location_on` | AC1 |
+| AN18-US5 | User adds a place already saved | S02 with that place | Search it again and pick it | The duplicate message (O09) shows and nothing is added | – | AC1 |
+| AN18-US6 | User on a small or large phone, in Korean or English (PR 3) | The app at 320×694, 360×780, 384×832 or 412×892 | Open each screen and its main dialogs | The screens look as the Cordova app does at that size, within the recorded tolerances | A difference outside the tolerances fails the comparison | AC2 |
+| AN18-US7 | User on a tablet or a foldable, or with large text (PR 2) | Tablet or foldable; font scale 1.3 | Rotate, fold, resize, open split screen; visit every screen and dialog | No text or control is cut, and the content follows the window | Cut content fails the fit check | AC4 |
+| AN18-US8 | User learns the native app from its manual (PR 4) | `docs/user/android-app/manual.pdf` | Read a section and repeat its steps in the app | Each page shows the native screen of its step, as captured from the app | – | AC5 |
+
+### Acceptance (PR 1)
+
+- AC1: `android/parity.md` covers S01–S12 and their dialogs, with the removed and unreachable items. Every row links native evidence, an accepted difference with its decision, or the later PR that adds it.
+- AC3: `RequestPathsTest` passes: every request is a served `v000903` route or a listed exception, the route table is generated from `server/`, and CI keeps it current.
+- AC6: delivery (README, plan, review PASS, CI, merge).
+
+### Checks (PR 1)
+
+- JVM: `RequestPathsTest`, `RequestSitesTest` (core-data), `PushContextTest`, `ParityChecklistTest` and the gap tests (app, Robolectric). Route table: `node tools/server-routes/generate.mjs` leaves no difference, and its expressions equal those of path-to-regexp 0.1.7 itself (a one-off comparison).

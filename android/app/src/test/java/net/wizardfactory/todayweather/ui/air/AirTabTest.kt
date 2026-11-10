@@ -17,6 +17,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import android.location.LocationManager
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +42,8 @@ import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.Settings
 import net.wizardfactory.todayweather.core.storage.UnitSettings
+import net.wizardfactory.todayweather.location.LocationGlyph
+import net.wizardfactory.todayweather.ui.forecast.LOCATION_OFF
 import net.wizardfactory.todayweather.ui.forecast.ForecastTags
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
@@ -47,10 +52,12 @@ import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -86,20 +93,23 @@ class AirTabTest {
 
     @After fun stop() = scope.cancel()
 
-    /** The app on Seoul (the current position off) opening on [startupPage]; the server answers with [body]. */
-    private fun show(startupPage: String = "3", body: String = seoulBody) {
-        memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder(), seoul), placeIndex = 1,
-            units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage)))
+    /** The app on [places] (Seoul, the current position off) opening on [startupPage]; the server answers with [body]. */
+    private fun show(startupPage: String = "3", body: String = seoulBody, places: List<Place> = listOf(Place.currentPositionPlaceholder(), seoul),
+                     index: Int = 1) {
+        memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage)))
         val repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; body },
             io = Dispatchers.Unconfined)
         session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
+        // The activity's glyph, as MainActivity gives it to every weather tab.
+        val glyph = LocationGlyph(rule.activity) { memory.current().let { s -> s.places.getOrNull(s.placeIndex)?.let(repository::invalidate) } }
         rule.setContent {
             val state by memory.state.collectAsState()
             val entries by repository.weather.collectAsState()
             val loading by repository.loading.collectAsState()
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
-            val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
+            val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {},
+                onLocationGlyph = glyph::tap, locationEnabled = glyph::enabled)
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {})
         }
         session.reload(WeatherSession.Sender.INIT)
@@ -209,5 +219,22 @@ class AirTabTest {
         rule.waitForIdle()
         rule.onNodeWithTag(ForecastTags.PAGE).assertExists()
         rule.onAllNodesWithTag(AirTags.PAGE).assertCountEquals(0)
+    }
+
+    /** A10, kept: S05 shows the current position's glyph, but a tap does nothing (`switchToLocationSettings` is not defined there). */
+    @Test
+    fun theAirLocationGlyphDoesNothing() {
+        shadowOf(rule.activity.getSystemService(LocationManager::class.java)).setLocationEnabled(false)
+        show(places = listOf(Place(true, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.56, 126.98))), index = 0)
+        rule.onNodeWithTag(AirTags.PAGE).assertExists()
+        val glyph = rule.onAllNodes(hasAnyAncestor(hasTestTag(WeatherTabTags.LOCATION)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text),
+            useUnmergedTree = true).fetchSemanticsNodes().flatMap { node -> node.config[SemanticsProperties.Text].map { it.text } }.toSet()
+        assertEquals(setOf(" $LOCATION_OFF"), glyph)
+        rule.onNodeWithTag(WeatherTabTags.LOCATION).performClick()
+        rule.waitForIdle()
+        assertNull("no hand-off", shadowOf(rule.activity).nextStartedActivity)
+        session.reload(WeatherSession.Sender.RESUME)
+        rule.waitForIdle()
+        assertEquals("the gate still holds the return", 1, requests.size)
     }
 }

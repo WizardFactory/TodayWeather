@@ -18,16 +18,12 @@ import net.wizardfactory.todayweather.ui.alarms.AlarmRoutes
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Bundle
 import android.os.SystemClock
-import android.provider.Settings
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,7 +35,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.core.location.LocationManagerCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.AndroidViewModel
@@ -75,6 +70,7 @@ import net.wizardfactory.todayweather.core.domain.start.RetryButton
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.startShows
 import net.wizardfactory.todayweather.location.AndroidLocationAccess
+import net.wizardfactory.todayweather.location.LocationGlyph
 import net.wizardfactory.todayweather.location.LocationSwitch
 import net.wizardfactory.todayweather.ui.air.rememberAirTab
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
@@ -95,6 +91,7 @@ import net.wizardfactory.todayweather.ui.shell.PopupButton
 import net.wizardfactory.todayweather.ui.shell.ShellState
 import net.wizardfactory.todayweather.ui.shell.TabContent
 import net.wizardfactory.todayweather.ui.shell.TodayWeatherShell
+import net.wizardfactory.todayweather.ui.shell.enableShellSystemBars
 import net.wizardfactory.todayweather.ui.shell.rememberShellNavigation
 import net.wizardfactory.todayweather.ui.places.PlacesHost
 import net.wizardfactory.todayweather.ui.places.rememberPlacesTab
@@ -103,6 +100,7 @@ import net.wizardfactory.todayweather.ui.start.locationText
 import net.wizardfactory.todayweather.ui.start.StartChoicePopup
 import net.wizardfactory.todayweather.ui.start.StartPage
 import net.wizardfactory.todayweather.ui.start.StartScreen
+import net.wizardfactory.todayweather.ui.start.hideBannerWhileStartShows
 
 /**
  * The launcher activity. It keeps the Cordova component name (`net.wizardfactory.todayweather/.MainActivity`),
@@ -112,6 +110,11 @@ import net.wizardfactory.todayweather.ui.start.StartScreen
  */
 class MainActivity : ComponentActivity() {
     private val app get() = application as TodayWeatherApp
+
+    /** The weather pages' location glyph: with location off, a tap clears the selected place's gate so it loads on return. */
+    private val locationGlyph by lazy {
+        LocationGlyph(this) { app.appState.current()?.let { s -> s.places.getOrNull(s.placeIndex)?.let(app.weather::invalidate) } }
+    }
     private lateinit var opened: OpenedModel
     private lateinit var banner: AdMobBanner
     private var resumedBefore = false
@@ -123,8 +126,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
-        // The shell paints the Cordova status bar (#111111, config.xml) under light icons.
-        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
+        enableShellSystemBars()
         splash.setKeepOnScreenCondition { !app.migration.isCompleted }
         opened = ViewModelProvider(this)[OpenedModel::class.java]
         app.location.attach(this)
@@ -169,8 +171,8 @@ class MainActivity : ComponentActivity() {
                         onPrevious = session::previous,
                         onNext = session::next,
                         onExpand = { expand -> app.appState.change { it.copy(expandShortChart = expand) } },
-                        onLocationGlyph = ::switchToLocationSettings,
-                        locationEnabled = ::isLocationEnabled,
+                        onLocationGlyph = locationGlyph::tap,
+                        locationEnabled = locationGlyph::enabled,
                         onShare = WeatherShare(this, app.appState::current, { app.weather.weather.value }, session::openStartPopup)::share,
                     )
                 }
@@ -221,16 +223,6 @@ class MainActivity : ComponentActivity() {
         app.entryIntents.submit(intent)
     }
 
-    /** `isLocationEnabled()`: the device's location service. */
-    private fun isLocationEnabled(): Boolean =
-        LocationManagerCompat.isLocationEnabled(getSystemService(LocationManager::class.java))
-
-    /** `switchToLocationSettings()`: with location off, the device's location settings, and the place loads again on return. */
-    private fun switchToLocationSettings() {
-        if (isLocationEnabled()) return
-        runCatching { startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }
-        app.appState.current()?.let { s -> s.places.getOrNull(s.placeIndex)?.let(app.weather::invalidate) }
-    }
 }
 
 /**
@@ -604,14 +596,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         locationSwitch.register()
         viewModelScope.launch {
             twApp.migration.await()
-            var state = twApp.appState.state.first { it != null }!!
-            // The start page hides the banner while it shows, and its close shows it again (`setShowAds`); the tabs' loading
-            // starts after it (TabCtrl `init`).
-            if (state.startShows) {
-                ads.setShowAds(false)
-                state = twApp.appState.state.first { it != null && !it.startShows }!!
-                ads.setShowAds(true)
-            }
+            val state = hideBannerWhileStartShows(twApp.appState.state, ads::setShowAds)
             // The cached weather first, as Cordova showed the saved cities while it loaded.
             state.places.getOrNull(state.placeIndex)?.let { twApp.weather.cached(it) }
             session.reload(WeatherSession.Sender.INIT)
