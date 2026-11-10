@@ -2067,7 +2067,11 @@ struct LifeNow {
     log: std::sync::Mutex<Vec<String>>,
 }
 impl LifeAcquire for LifeNow {
-    fn acquire(&self, request: LifeRequest) -> BoxFuture<'static, Result<LifeOutcome, String>> {
+    fn acquire(
+        &self,
+        request: LifeRequest,
+        _: Instant,
+    ) -> BoxFuture<'static, Result<LifeOutcome, String>> {
         let (kind, p) = match &request {
             LifeRequest::Index(r) => (r.family().kind(), r.publication()),
             LifeRequest::Mfds(slot) => ("mfds-food-poisoning", *slot),

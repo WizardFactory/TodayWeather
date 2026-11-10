@@ -40,7 +40,7 @@ async fn publish<T: server2::storage::CatalogTransport>(
     partition: &str,
     fetched_at: f64,
     pages: &[Vec<u8>],
-) {
+) -> Vec<RawRecord> {
     let limits = CatalogLimits::default();
     let n = pages.len() as u32;
     let mut records = Vec::new();
@@ -71,9 +71,10 @@ async fn publish<T: server2::storage::CatalogTransport>(
     }
     let declaration = GroupDeclaration::new(members, &limits).unwrap();
     store
-        .publish(declaration, records, deadline())
+        .publish(declaration, records.clone(), deadline())
         .await
         .unwrap();
+    records
 }
 fn named(id: &str) -> ProviderKey {
     ProviderKey::Named { id: id.into() }
@@ -651,10 +652,13 @@ async fn stub() -> Stub {
 }
 /// The life acquirer on the KMA source's data.go.kr acquirer (S15b-2), against the stub.
 fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
+    // The acquirer's own S3 requests (its budgets and the KMA-LIFE-DISTINCT catalog check) share
+    // one admission beside the inputs'.
+    let s3 = peer.transport_limited(super::source_s3::ACQUIRER_PERMITS);
     let daily = server2::domestic::kma::source::observe::DailyAcquirer::new(
         Arc::new(server2::providers::HttpProviderTransport::new(2 << 20).unwrap()),
         Arc::new(server2::providers::HttpPublicTransport::new(2 << 20).unwrap()),
-        Arc::new(peer.transport_limited(super::source_s3::ACQUIRER_PERMITS)),
+        Arc::new(s3.clone()),
         vec!["S15B3B_LOCAL_KEY_A+aaaaaaaaaaaaaaaa/=".into()],
         server2::domestic::quota::DataGoKrApi::daily_units,
         server2::domestic::family::Endpoints::new(base, base, base).unwrap(),
@@ -672,6 +676,7 @@ fn live(peer: &Peer, store: Arc<Store>, base: &str) -> Arc<dyn LifeAcquire> {
         LifeSettings::with_mfds_root(base).unwrap(),
         Arc::new(daily),
         Arc::new(mfds),
+        s3,
         store,
     ))
 }
@@ -1165,7 +1170,9 @@ async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
     let acquire = live(&peer, store, &base);
     let slot = server2::domestic::mfds::slot_at(request_now()).unwrap();
     let started = std::time::Instant::now();
-    let result = acquire.acquire(LifeRequest::Mfds(slot)).await;
+    let request = LifeRequest::Mfds(slot);
+    let owned = Instant::now() + request.owned_for();
+    let result = acquire.acquire(request, owned).await;
     assert!(result.is_err());
     assert!(started.elapsed() < Duration::from_secs(10));
     let first = waits
@@ -1655,7 +1662,7 @@ fn uv_page(issued: &str) -> Vec<u8> {
 
 /// An in-memory S3 for a paused clock: raw objects, conditional control objects and index
 /// listings; each LIST takes `list_delay` and each GET `get_delay` (virtual time), and the most
-/// GETs in flight at once is kept.
+/// GETs in flight at once and every request made are kept.
 #[derive(Clone, Default)]
 pub(super) struct MemS3(Arc<Mutex<MemData>>);
 #[derive(Default)]
@@ -1667,6 +1674,8 @@ pub(super) struct MemData {
     get_delay: Duration,
     gets: usize,
     peak_gets: usize,
+    /// Requests of every kind (GET, HEAD, LIST, PUT).
+    calls: usize,
 }
 impl MemS3 {
     fn data(&self) -> std::sync::MutexGuard<'_, MemData> {
@@ -1676,6 +1685,7 @@ impl MemS3 {
         let delay = {
             let mut d = self.data();
             d.gets += 1;
+            d.calls += 1;
             d.peak_gets = d.peak_gets.max(d.gets);
             d.get_delay
         };
@@ -1689,6 +1699,7 @@ impl server2::storage::ObjectTransport for MemS3 {
         record: &server2::storage::PreparedRecord,
     ) -> Result<u16, server2::storage::Error> {
         let mut d = self.data();
+        d.calls += 1;
         if d.objects.contains_key(&record.key) {
             return Ok(412);
         }
@@ -1701,7 +1712,8 @@ impl server2::storage::ObjectTransport for MemS3 {
         Ok(200)
     }
     async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
-        let d = self.data();
+        let mut d = self.data();
+        d.calls += 1;
         let o = d
             .objects
             .get(key)
@@ -1759,6 +1771,7 @@ impl server2::storage::CatalogTransport for MemS3 {
         condition: &server2::storage::WriteCondition,
     ) -> Result<u16, server2::storage::Error> {
         let mut d = self.data();
+        d.calls += 1;
         let current = d.controls.get(key).map(|(_, r)| format!("\"{r}\""));
         let allowed = match condition {
             server2::storage::WriteCondition::Absent => current.is_none(),
@@ -1792,7 +1805,11 @@ impl server2::history::IndexListing for MemS3 {
         prefix: &str,
         _: Option<&str>,
     ) -> Result<server2::storage::ListPage, server2::storage::Error> {
-        let delay = self.data().list_delay;
+        let delay = {
+            let mut d = self.data();
+            d.calls += 1;
+            d.list_delay
+        };
         tokio::time::sleep(delay).await;
         let keys = self
             .data()
@@ -1821,6 +1838,7 @@ impl LifeAcquire for Asked {
     fn acquire(
         &self,
         request: LifeRequest,
+        _: Instant,
     ) -> server2::gateway::BoxFuture<
         'static,
         Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,
@@ -2036,5 +2054,166 @@ async fn the_kasi_pass_uses_the_bulk_lane() {
         kasi(counted.counts(), true),
         0,
         "the request on the request lane"
+    );
+}
+
+/// One pollen answer of every area issued at `issued` (`YYYYMMDDHH`), as the stub answers weeds.
+fn pollen_page(issued: &str) -> Vec<u8> {
+    let items: Vec<serde_json::Value> = AREAS
+        .iter()
+        .map(|a| {
+            json!({"code": "D07", "areaNo": a, "date": issued, "today": "1", "tomorrow": "2",
+                   "dayaftertomorrow": "0", "twodaysaftertomorrow": "3"})
+        })
+        .collect();
+    kma_page(serde_json::Value::Array(items))
+}
+/// A UV provider that answers as the stored acquisitions did and publishes the answer, as every
+/// process start did on EC2 (KMA-LIFE-DISTINCT); everything else answers nothing.
+struct Republish {
+    store: Arc<CatalogStore<BoundedS3<MemS3>>>,
+    pages: Vec<Vec<u8>>,
+    uv: AtomicUsize,
+}
+impl LifeAcquire for Republish {
+    fn acquire(
+        &self,
+        request: LifeRequest,
+        _: Instant,
+    ) -> server2::gateway::BoxFuture<
+        'static,
+        Result<server2::domestic::kma::source::life_live::LifeOutcome, String>,
+    > {
+        use server2::domestic::kma::source::life_live::LifeOutcome;
+        let LifeRequest::Index(r) = &request else {
+            return Box::pin(async { Ok(LifeOutcome::Nothing) });
+        };
+        if r.family() != server2::domestic::family::DataGoKrFamily::UvIdxV5 {
+            return Box::pin(async { Ok(LifeOutcome::Nothing) });
+        }
+        self.uv.fetch_add(1, Ordering::SeqCst);
+        let (store, pages, p) = (self.store.clone(), self.pages.clone(), r.publication());
+        Box::pin(async move {
+            let records = publish(
+                &store,
+                "data-go-kr",
+                "uv-idx-v5",
+                named("all-areas"),
+                p.period(),
+                &p.partition(),
+                now_ms(),
+                &pages,
+            )
+            .await;
+            Ok(LifeOutcome::Published(records))
+        })
+    }
+}
+
+/// KMA-LIFE-DISTINCT T6: a restart over 20 identical 4-page acquisitions of today's UV slot (as the
+/// EC2 restarts left them), the slot before it and two pollen issuances of each kind, every S3 GET
+/// and LIST taking 40 ms behind the shared admission (12 in flight). The first request's life read
+/// restores each distinct content once and ends before the head start, so the UV provider is not
+/// asked; the next request makes no S3 request at all.
+#[tokio::test(start_paused = true)]
+async fn a_restart_over_identical_uv_acquisitions_reads_before_the_head_start() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let mem = MemS3::default();
+    let s3 = BoundedS3::new(mem.clone(), 12);
+    let store = Arc::new(CatalogStore::new(s3.clone(), CatalogLimits::default()).unwrap());
+    let uv_pages =
+        |issued: &str| -> Vec<Vec<u8>> { (1..=4).map(|n| uv_page_numbered(issued, n)).collect() };
+    let ms = |p: Publication| server2::history::schedule::to_ms(p) as f64;
+    let slot = Publication::parse_compact("202610161200").unwrap();
+    for i in 0..20 {
+        let at = ms(slot) + 600_000. + f64::from(i) * 60_000.;
+        let pages = uv_pages("2026101612");
+        let key = named("all-areas");
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            key,
+            slot.period(),
+            &slot.partition(),
+            at,
+            &pages,
+        )
+        .await;
+    }
+    let before = Publication::parse_compact("202610160900").unwrap();
+    publish(
+        &store,
+        "data-go-kr",
+        "uv-idx-v5",
+        named("all-areas"),
+        before.period(),
+        &before.partition(),
+        ms(before) + 600_000.,
+        &uv_pages("2026101609"),
+    )
+    .await;
+    for kind in ["oak-pollen-v3", "pine-pollen-v3", "weeds-pollen-v3"] {
+        for issued in ["2026101518", "2026101606"] {
+            let p = Publication::parse_compact(&format!("{issued}00")).unwrap();
+            publish(
+                &store,
+                "data-go-kr",
+                kind,
+                named("all-areas"),
+                p.period(),
+                &p.partition(),
+                ms(p) + 600_000.,
+                &[pollen_page(issued)],
+            )
+            .await;
+        }
+    }
+    {
+        let mut d = mem.data();
+        d.get_delay = Duration::from_millis(40);
+        d.list_delay = Duration::from_millis(40);
+    }
+    let republish = Arc::new(Republish {
+        store: store.clone(),
+        pages: uv_pages("2026101612"),
+        uv: AtomicUsize::new(0),
+    });
+    let inputs = LifeInputs::new(s3.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(republish.clone()))
+        .with_kasi_schedule(HOLD, HOLD);
+    let started = Instant::now();
+    let first = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    let took = started.elapsed();
+    let today = uv_issued(&first, 1_100_000_000.);
+    assert!(today.iter().any(|i| i == "2026101612"), "{today:?}");
+    assert_eq!(
+        republish.uv.load(Ordering::SeqCst),
+        0,
+        "no UV acquisition: the read ended before the head start ({took:?})"
+    );
+    assert!(took < HEAD_START, "{took:?}");
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    let calls = mem.data().calls;
+    let started = Instant::now();
+    let second = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    assert_eq!(mem.data().calls, calls, "the next request reads nothing");
+    same(
+        &second.life.by_area(1_100_000_000.),
+        &first.life.by_area(1_100_000_000.),
+        "the next answer",
     );
 }

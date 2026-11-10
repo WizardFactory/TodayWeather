@@ -3,8 +3,8 @@
 //! in page order and its fetch instant.
 use crate::history::IndexListing;
 use crate::storage::{
-    Catalog, CatalogId, CatalogLimits, CatalogStore, Envelope, Error, LookupOutcome, PageOutcome,
-    ProviderKey, RawRecord, ReadCursor, ReadOrder, sha256,
+    Catalog, CatalogId, CatalogLimits, CatalogStore, Envelope, Error, GroupDeclaration,
+    LookupOutcome, PageOutcome, ProviderKey, RawRecord, ReadCursor, ReadOrder, sha256,
 };
 use std::{
     collections::{BTreeMap, HashMap},
@@ -38,6 +38,9 @@ pub struct ListedGroup {
     pub member: Envelope,
     /// Every member's raw hash, in page order ([`page_order`]).
     pub raw_sha256: Vec<String>,
+    /// Every listed member, in page order (KMA-LIFE-DISTINCT): the first places the group in
+    /// `lookup`'s order ([`lookup_order`]), and the members name its records.
+    pub entries: Vec<Envelope>,
 }
 /// The order of one acquisition's pages: the page number (1 without pagination), then the fetch
 /// instant and raw hash, which order a catalog's entries.
@@ -47,6 +50,53 @@ pub fn page_order(e: &Envelope) -> (u32, u64, &str) {
         e.identity.fetched_at_ms,
         &e.identity.raw_sha256,
     )
+}
+/// The order S06 `lookup` returns a catalog's acquisitions in, by the identity of each one's first
+/// record (S06 `identity_order`): fetch instant, raw hash, period, then the catalog's names.
+fn lookup_order(e: &Envelope) -> (u64, &str, u32, &str, &str, &str, &str) {
+    let id = &e.identity;
+    (
+        id.fetched_at_ms,
+        &id.raw_sha256,
+        id.period.local_date,
+        &id.period.slot,
+        &id.source,
+        &id.kind,
+        &id.key_sha256,
+    )
+}
+/// One restored acquisition as [`Reader::acquisitions`] returns it: completed when its last page
+/// arrived, its pages and raw ids in page order. None without records.
+fn restored_fetched(records: &[RawRecord], partition: &str) -> Result<Option<Fetched>, Error> {
+    let mut records: Vec<&RawRecord> = records.iter().collect();
+    records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
+    // An acquisition is complete when its last page arrived: that instant orders replays and
+    // decides whether it existed at a request instant.
+    let Some(completed) = records
+        .iter()
+        .map(|r| r.envelope.identity.fetched_at_ms)
+        .max()
+    else {
+        return Ok(None);
+    };
+    Ok(Some(Fetched {
+        fetched_at_ms: completed,
+        partition: partition.into(),
+        pages: records.iter().map(|r| r.bytes.clone()).collect(),
+        raw_ids: records
+            .iter()
+            .map(|r| r.envelope.identity.object_key())
+            .collect::<Result<_, _>>()?,
+    }))
+}
+/// Whether the catalog lists every member of the group, so that its raw hashes in page order are
+/// its whole content (a lone record is its only member).
+fn whole(g: &ListedGroup) -> bool {
+    let members = g.entries[0]
+        .fetch_group
+        .as_ref()
+        .map_or(1, |r| r.members as usize);
+    g.entries.len() == members
 }
 /// LIST pages allowed per key and month (1,000 keys each; a month of hourly partitions is 744).
 const LIST_PAGES: usize = 4;
@@ -261,7 +311,8 @@ impl<T: IndexListing + Clone> Reader<T> {
                     .map(|e| e.identity.fetched_at_ms)
                     .max()
                     .unwrap_or_default();
-                let mut paged: Vec<&Envelope> = entries.iter().collect();
+                let member = entries[0].clone();
+                let mut paged = entries;
                 paged.sort_by(|a, b| page_order(a).cmp(&page_order(b)));
                 let raw_sha256 = paged
                     .iter()
@@ -270,8 +321,9 @@ impl<T: IndexListing + Clone> Reader<T> {
                 ListedGroup {
                     completed,
                     group,
-                    member: entries[0].clone(),
+                    member,
                     raw_sha256,
+                    entries: paged,
                 }
             })
             .collect())
@@ -303,48 +355,8 @@ impl<T: IndexListing + Clone> Reader<T> {
         partition: &str,
         deadline: Instant,
     ) -> Result<(Vec<Fetched>, usize), Error> {
-        self.restored(source, kind, key, partition, 1, deadline)
-            .await
-    }
-    /// [`Self::acquisitions`] with up to `width` S3 reads in flight
-    /// ([`CatalogStore::lookup_wide`]), for a read a request waits on.
-    pub async fn acquisitions_wide(
-        &self,
-        source: &str,
-        kind: &str,
-        key: &ProviderKey,
-        partition: &str,
-        width: usize,
-        deadline: Instant,
-    ) -> Result<Vec<Fetched>, Error> {
-        self.restored(source, kind, key, partition, width, deadline)
-            .await
-            .map(|(f, _)| f)
-    }
-    /// One catalog's complete acquisitions and excluded groups, restored with `width` S3 reads in
-    /// flight (one: [`CatalogStore::lookup`]).
-    async fn restored(
-        &self,
-        source: &str,
-        kind: &str,
-        key: &ProviderKey,
-        partition: &str,
-        width: usize,
-        deadline: Instant,
-    ) -> Result<(Vec<Fetched>, usize), Error> {
-        let id = CatalogId {
-            source: source.into(),
-            kind: kind.into(),
-            key_sha256: sha256(&key.canonical_bytes()?),
-            partition: partition.into(),
-        };
-        id.validate()?;
-        let looked = if width > 1 {
-            self.store.lookup_wide(&id, width, deadline).await
-        } else {
-            self.store.lookup(&id, deadline).await
-        };
-        let set = match looked {
+        let id = catalog(source, kind, key, partition)?;
+        let set = match self.store.lookup(&id, deadline).await {
             Ok(LookupOutcome::Ready(set)) => set,
             Ok(LookupOutcome::Incomplete) => return Err(Error::Corrupt("incomplete catalog")),
             Err(Error::NotFound) => return Ok((Vec::new(), 0)),
@@ -352,28 +364,175 @@ impl<T: IndexListing + Clone> Reader<T> {
         };
         let mut out = Vec::new();
         for a in set.acquisitions() {
-            let mut records: Vec<_> = a.records().to_vec();
-            records.sort_by_key(|r| r.envelope.pagination.as_ref().map_or(1, |p| p.page));
-            // An acquisition is complete when its last page arrived: that instant orders
-            // replays and decides whether it existed at a request instant.
-            let Some(completed) = records
-                .iter()
-                .map(|r| r.envelope.identity.fetched_at_ms)
-                .max()
+            out.extend(restored_fetched(a.records(), partition)?);
+        }
+        Ok((out, set.excluded_groups()))
+    }
+    /// KMA-LIFE-DISTINCT D1, for the life read only: one catalog's complete acquisitions and
+    /// excluded groups as [`Self::acquisitions_counted`] returns them, each distinct content
+    /// restored once. One read of the catalog control object lists the groups; a group's content is
+    /// its members' raw hashes in page order (the catalog lists every member). The groups of one
+    /// content are restored in `lookup`'s order with its per-group rules ([`Self::members`]) until
+    /// one restores: a group S06 excludes (descriptor or a member's body missing, not eligible) is
+    /// counted and the next is tried, and an error ends the read. Every later group of that content
+    /// is returned with the restored group's pages, at its own completion and place in `lookup`'s
+    /// order, without reading its own descriptor or bodies (so it is applied even when they are
+    /// lost). No catalog, or no restored group: `lookup`'s incomplete catalog, as before.
+    pub async fn distinct(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partition: &str,
+        deadline: Instant,
+    ) -> Result<(Vec<Fetched>, usize), Error> {
+        let id = catalog(source, kind, key, partition)?;
+        // An absent catalog lists no group: the incomplete catalog below, as `lookup`'s.
+        let mut groups = self.listed_groups(&id, deadline).await?;
+        groups.sort_by(|a, b| lookup_order(&a.entries[0]).cmp(&lookup_order(&b.entries[0])));
+        // The pages each restored content is read from.
+        let mut read: HashMap<String, Vec<Arc<[u8]>>> = HashMap::new();
+        let mut out: Vec<(Envelope, Fetched)> = Vec::new();
+        let mut excluded = 0;
+        for g in &groups {
+            let content = whole(g).then(|| super::pages_digest(&g.raw_sha256));
+            if let Some(pages) = content.as_ref().and_then(|c| read.get(c)) {
+                out.push((
+                    g.entries[0].clone(),
+                    Fetched {
+                        fetched_at_ms: g.completed,
+                        partition: partition.into(),
+                        pages: pages.clone(),
+                        raw_ids: g
+                            .entries
+                            .iter()
+                            .map(|e| e.identity.object_key())
+                            .collect::<Result<_, _>>()?,
+                    },
+                ));
+                continue;
+            }
+            let restored = match self
+                .members(&id, std::slice::from_ref(&g.member.identity), deadline)
+                .await
+            {
+                Ok(Some(acquisitions)) => acquisitions,
+                Ok(None) => {
+                    excluded += 1;
+                    continue;
+                }
+                // As `lookup`'s missing lone record in `acquisitions_counted`.
+                Err(Error::NotFound) => return Ok((Vec::new(), 0)),
+                Err(e) => return Err(e),
+            };
+            for records in restored {
+                let Some(fetched) = restored_fetched(&records, partition)? else {
+                    continue;
+                };
+                // The content is read from this group only when its pages are the listed ones.
+                let mut paged: Vec<&Envelope> = records.iter().map(|r| &r.envelope).collect();
+                paged.sort_by(|a, b| page_order(a).cmp(&page_order(b)));
+                if let Some(c) = &content
+                    && paged
+                        .iter()
+                        .map(|e| &e.identity.raw_sha256)
+                        .eq(g.raw_sha256.iter())
+                {
+                    read.insert(c.clone(), fetched.pages.clone());
+                }
+                out.push((records[0].envelope.clone(), fetched));
+            }
+        }
+        if out.is_empty() {
+            return Err(Error::Corrupt("incomplete catalog"));
+        }
+        out.sort_by(|a, b| lookup_order(&a.0).cmp(&lookup_order(&b.0)));
+        Ok((out.into_iter().map(|(_, f)| f).collect(), excluded))
+    }
+    /// [`Self::distinct`] of many partitions of one key, at most [`LOOKUPS`] at a time, ordered as
+    /// [`Self::all`] orders its acquisitions (by completion, stable by partition).
+    pub async fn all_distinct(
+        &self,
+        source: &str,
+        kind: &str,
+        key: &ProviderKey,
+        partitions: &[String],
+        deadline: Instant,
+    ) -> Result<Vec<Fetched>, Error> {
+        let mut out = Vec::new();
+        for chunk in partitions.chunks(LOOKUPS) {
+            let reads = crate::history::join_all(
+                chunk
+                    .iter()
+                    .map(|p| self.distinct(source, kind, key, p, deadline))
+                    .collect(),
+            )
+            .await;
+            for r in reads {
+                out.extend(r?.0);
+            }
+        }
+        out.sort_by(|a, b| {
+            a.fetched_at_ms
+                .cmp(&b.fetched_at_ms)
+                .then_with(|| a.partition.cmp(&b.partition))
+        });
+        Ok(out)
+    }
+    /// KMA-LIFE-DISTINCT D2: the stored group of `declaration`'s catalog that holds the same content
+    /// as the acquisition it declares (its members' raw hashes in page order) and restores
+    /// completely, as [`Self::distinct`] restores (groups of that content in `lookup`'s order, S06
+    /// exclusions tried past): its (partition, completion). None when no such group restores or the
+    /// declaration names more than one catalog.
+    pub async fn stored_twin(
+        &self,
+        declaration: &GroupDeclaration,
+        deadline: Instant,
+    ) -> Result<Option<(String, u64)>, Error> {
+        let [id] = declaration.partitions.as_slice() else {
+            return Ok(None);
+        };
+        let mut members: Vec<&Envelope> = declaration.members.iter().map(|m| &m.envelope).collect();
+        members.sort_by(|a, b| page_order(a).cmp(&page_order(b)));
+        let content: Vec<&str> = members
+            .iter()
+            .map(|e| e.identity.raw_sha256.as_str())
+            .collect();
+        let mut twins: Vec<ListedGroup> = self
+            .listed_groups(id, deadline)
+            .await?
+            .into_iter()
+            .filter(|g| {
+                g.raw_sha256
+                    .iter()
+                    .map(String::as_str)
+                    .eq(content.iter().copied())
+            })
+            .collect();
+        twins.sort_by(|a, b| lookup_order(&a.entries[0]).cmp(&lookup_order(&b.entries[0])));
+        for g in twins {
+            let Some(restored) = self
+                .members(id, std::slice::from_ref(&g.member.identity), deadline)
+                .await?
             else {
                 continue;
             };
-            out.push(Fetched {
-                fetched_at_ms: completed,
-                partition: partition.into(),
-                pages: records.iter().map(|r| r.bytes.clone()).collect(),
-                raw_ids: records
+            for mut records in restored {
+                records.sort_by(|a, b| page_order(&a.envelope).cmp(&page_order(&b.envelope)));
+                let pages = records
                     .iter()
-                    .map(|r| r.envelope.identity.object_key())
-                    .collect::<Result<_, _>>()?,
-            });
+                    .map(|r| r.envelope.identity.raw_sha256.as_str());
+                if let Some(completed) = records
+                    .iter()
+                    .map(|r| r.envelope.identity.fetched_at_ms)
+                    .max()
+                    && pages.eq(content.iter().copied())
+                {
+                    return Ok(Some((id.partition.clone(), completed)));
+                }
+            }
         }
-        Ok((out, set.excluded_groups()))
+        Ok(None)
     }
     /// Every complete acquisition of one catalog as raw records (envelopes kept), in catalog
     /// order; empty when the catalog does not exist.
