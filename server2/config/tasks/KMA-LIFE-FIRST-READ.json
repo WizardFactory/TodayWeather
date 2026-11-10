@@ -1,0 +1,35 @@
+{
+  "task": "KMA-LIFE-FIRST-READ",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Life index after the EC2 re-measurement of KMA-LIFE-DISTINCT (AK 2026-11-10, design revision 2 approved after two design reviews): while a process's first owned life read runs, no request starts a UV or pollen acquisition, raced or not. A guard held by that read's owned task ends this however the read ends (completed, failed, owner deadline, cancelled or panicked); waiter outcomes never do. Afterwards requests decide as before, and a later read that misses the head start races as before. MFDS, KASI, the life read and its publication check, the memo and the overlay are unchanged. No timer or budget is added. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-LIFE-FIRST-READ.json",
+    "server2/src/domestic/kma/source/life_distinct_tests.rs",
+    "server2/src/domestic/kma/source/life_first_read_tests.rs",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-life-first-read.md",
+      "category": "documentation",
+      "reason": "Task intent: the EC2 re-measurement finding and AK's decision of 2026-11-10."
+    },
+    {
+      "path": "specs/issue-2614-kma-life-first-read.md",
+      "category": "documentation",
+      "reason": "Acceptance with the tests that check it."
+    },
+    {
+      "path": "plans/issue-2614-kma-life-first-read.md",
+      "category": "documentation",
+      "reason": "Plan and user scenarios mapped to tests."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "The life-index input (S15b-3b): the first-read rule, its bounds and the stated differences; the restart race: UV and pollen do not race before the first life read ends; the restart acceptance links the rule."
+    }
+  ]
+}

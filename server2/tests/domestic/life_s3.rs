@@ -1544,12 +1544,14 @@ const LIFE_RAW: [&str; 5] = [
     "raw/v2/mfds/",
 ];
 
-/// RACE (life): a restarted process whose stored life reads end after the request bound decides
-/// its acquisitions at the head start and answers today's UV, pollen and food poisoning from them
-/// on its first request, each asked once; once the reads end it answers as a process that read
-/// S3.
+/// RACE (life), KMA-LIFE-FIRST-READ: a restarted process whose stored life reads end after the
+/// request bound starts no UV or pollen acquisition while its first life read runs, so its first
+/// answer has neither; food poisoning still races (asked once at the head start) and is on the
+/// first answer. Once the reads end it answers as a process that read S3, without asking UV or
+/// pollen. (Before KMA-LIFE-FIRST-READ, as `a_slow_life_read_starts_uv_at_the_head_start`, the first
+/// answer had UV and pollen from acquisitions started at the head start.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_slow_life_read_starts_uv_at_the_head_start() {
+async fn a_slow_first_life_read_starts_no_uv_or_pollen() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
@@ -1578,16 +1580,21 @@ async fn a_slow_life_read_starts_uv_at_the_head_start() {
     );
     assert!(took < Duration::from_millis(3000), "{took:?}");
     assert_eq!(
-        uv_issued(&first, 1_100_000_000.),
-        uv_issued(&produced, 1_100_000_000.),
-        "today's UV from the acquisition"
-    );
-    assert_eq!(first.life.pollen_day3(1_100_000_000.).len(), 1, "weeds");
-    assert!(!first.mfds.is_empty(), "food poisoning");
-    assert_eq!(
         asked(s),
-        [2, 2, 2],
-        "each dataset asked once by the restart"
+        [1, 1, 2],
+        "only food poisoning asked while the first life read runs"
+    );
+    assert!(
+        uv_issued(&first, 1_100_000_000.).is_empty(),
+        "no UV before the first life read ends"
+    );
+    assert!(
+        first.life.pollen_day3(1_100_000_000.).is_empty(),
+        "no weeds"
+    );
+    assert!(
+        !first.mfds.is_empty(),
+        "food poisoning from its acquisition"
     );
     // The stored reads end: the answers of a process that read S3.
     let mut later = b.load(now_ms(), deadline()).await;
@@ -1607,7 +1614,7 @@ async fn a_slow_life_read_starts_uv_at_the_head_start() {
         "after the restore",
     );
     assert_eq!(later.mfds.json().to_bytes(), cold.mfds.json().to_bytes());
-    assert_eq!(asked(s), [2, 2, 2]);
+    assert_eq!(asked(s), [1, 1, 2], "UV and weeds from S3, never asked");
 }
 
 /// FAST (life): a restart whose stored reads end before the head start asks the providers
@@ -1850,8 +1857,9 @@ impl LifeAcquire for Asked {
 
 /// NEEDED-FIRST: the first life read lists the four families' partitions together. With every
 /// LIST taking 300 ms (a paused clock), today's UV is folded before the 700 ms head start, so the
-/// request starts no UV acquisition; listed one family after another, the four listings alone
-/// end past it.
+/// request starts no UV acquisition and answers before the head start; listed one family after
+/// another, the four listings alone end past it. (KMA-LIFE-FIRST-READ: no UV acquisition starts
+/// while a first read runs, so the answer's time shows the read's.)
 #[tokio::test(start_paused = true)]
 async fn the_needed_first_read_lists_the_life_families_together() {
     let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
@@ -1885,6 +1893,7 @@ async fn the_needed_first_read_lists_the_life_families_together() {
             started + Duration::from_millis(2700),
         )
         .await;
+    let took = started.elapsed();
     let today = uv_issued(&answers, 1_100_000_000.);
     assert!(today.iter().any(|i| i == "2026101612"), "{today:?}");
     assert_eq!(
@@ -1892,6 +1901,10 @@ async fn the_needed_first_read_lists_the_life_families_together() {
         0,
         "today's UV was folded before the head start: {:?}",
         asked.0.lock().unwrap()
+    );
+    assert!(
+        took < HEAD_START,
+        "answered before the head start: {took:?}"
     );
 }
 
@@ -2211,6 +2224,124 @@ async fn a_restart_over_identical_uv_acquisitions_reads_before_the_head_start() 
         )
         .await;
     assert_eq!(mem.data().calls, calls, "the next request reads nothing");
+    same(
+        &second.life.by_area(1_100_000_000.),
+        &first.life.by_area(1_100_000_000.),
+        "the next answer",
+    );
+}
+
+/// The bucket of [`a_restart_over_identical_uv_acquisitions_reads_before_the_head_start`]: 20
+/// identical 4-page acquisitions of today's 12:00 UV slot, the 09:00 slot and two pollen issuances
+/// of each kind, behind the shared admission (12 in flight).
+async fn identical_uv_bucket() -> (MemS3, BoundedS3<MemS3>, Arc<CatalogStore<BoundedS3<MemS3>>>) {
+    let mem = MemS3::default();
+    let s3 = BoundedS3::new(mem.clone(), 12);
+    let store = Arc::new(CatalogStore::new(s3.clone(), CatalogLimits::default()).unwrap());
+    let uv_pages =
+        |issued: &str| -> Vec<Vec<u8>> { (1..=4).map(|n| uv_page_numbered(issued, n)).collect() };
+    let ms = |p: Publication| server2::history::schedule::to_ms(p) as f64;
+    let slot = Publication::parse_compact("202610161200").unwrap();
+    for i in 0..20 {
+        let at = ms(slot) + 600_000. + f64::from(i) * 60_000.;
+        let pages = uv_pages("2026101612");
+        publish(
+            &store,
+            "data-go-kr",
+            "uv-idx-v5",
+            named("all-areas"),
+            slot.period(),
+            &slot.partition(),
+            at,
+            &pages,
+        )
+        .await;
+    }
+    let before = Publication::parse_compact("202610160900").unwrap();
+    publish(
+        &store,
+        "data-go-kr",
+        "uv-idx-v5",
+        named("all-areas"),
+        before.period(),
+        &before.partition(),
+        ms(before) + 600_000.,
+        &uv_pages("2026101609"),
+    )
+    .await;
+    for kind in ["oak-pollen-v3", "pine-pollen-v3", "weeds-pollen-v3"] {
+        for issued in ["2026101518", "2026101606"] {
+            let p = Publication::parse_compact(&format!("{issued}00")).unwrap();
+            publish(
+                &store,
+                "data-go-kr",
+                kind,
+                named("all-areas"),
+                p.period(),
+                &p.partition(),
+                ms(p) + 600_000.,
+                &[pollen_page(issued)],
+            )
+            .await;
+        }
+    }
+    (mem, s3, store)
+}
+
+/// KMA-LIFE-FIRST-READ T9: the restart of
+/// [`a_restart_over_identical_uv_acquisitions_reads_before_the_head_start`] with every S3 LIST
+/// taking 1 s, so its first life read ends past the head start. No UV acquisition starts while that
+/// read runs: the request waits for it and answers today's UV from S3, and the next request asks
+/// none either.
+#[tokio::test(start_paused = true)]
+async fn a_slow_restart_over_identical_uv_acquisitions_asks_no_uv() {
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let (mem, s3, store) = identical_uv_bucket().await;
+    {
+        let mut d = mem.data();
+        d.get_delay = Duration::from_millis(40);
+        d.list_delay = Duration::from_secs(1);
+    }
+    let republish = Arc::new(Republish {
+        store: store.clone(),
+        pages: (1..=4).map(|n| uv_page_numbered("2026101612", n)).collect(),
+        uv: AtomicUsize::new(0),
+    });
+    let inputs = LifeInputs::new(s3.clone(), store.clone())
+        .with_clock(test_clock())
+        .with_acquire(Some(republish.clone()))
+        .with_kasi_schedule(HOLD, HOLD);
+    let started = Instant::now();
+    let first = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    let took = started.elapsed();
+    assert!(took > HEAD_START, "the first read ended past it: {took:?}");
+    assert_eq!(
+        republish.uv.load(Ordering::SeqCst),
+        0,
+        "no UV acquisition while the first read ran ({took:?})"
+    );
+    let today = uv_issued(&first, 1_100_000_000.);
+    assert!(today.iter().any(|i| i == "2026101612"), "{today:?}");
+    tokio::time::sleep(Duration::from_secs(5)).await;
+    let started = Instant::now();
+    let second = inputs
+        .load_by(
+            now_ms(),
+            started + HEAD_START,
+            started + Duration::from_millis(2700),
+        )
+        .await;
+    assert_eq!(
+        republish.uv.load(Ordering::SeqCst),
+        0,
+        "nor once it has ended"
+    );
     same(
         &second.life.by_area(1_100_000_000.),
         &first.life.by_area(1_100_000_000.),

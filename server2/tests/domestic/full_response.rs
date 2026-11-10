@@ -2247,7 +2247,8 @@ async fn produced_answer(peer: &Peer) -> serde_json::Value {
 /// RACE (the whole answer): a restarted process whose stored reads of the station pages, the ASOS
 /// history, the life datasets, the narrative and the warning state all end after the request
 /// bound answers each of them on its first request from its providers, asking each dataset key
-/// once.
+/// once. Of the life datasets only food poisoning races: no UV or pollen acquisition starts while
+/// the process's first life read runs (KMA-LIFE-FIRST-READ), so the first answer has no UV.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_restart_answers_every_stored_family_first() {
     let _peers = S3_PEERS.lock().await;
@@ -2282,8 +2283,8 @@ async fn a_slow_restart_answers_every_stored_family_first() {
         "the stored families are read during the request"
     );
     assert!(took < Duration::from_millis(3300), "{took:?}");
-    // Current station observations, the ASOS history (past days), today's UV, the narrative and
-    // the active warning.
+    // Current station observations, the ASOS history (past days), the narrative and the active
+    // warning; no UV yet.
     assert_eq!(body["current"]["stnDateTime"], "2026.09.24.10:49");
     for day in 17..=23 {
         let date = format!("202609{day}");
@@ -2300,8 +2301,12 @@ async fn a_slow_restart_answers_every_stored_family_first() {
         );
     }
     assert_eq!(body["historyStatus"], produced["historyStatus"]);
-    assert_eq!(body["current"]["ultrv"], produced["current"]["ultrv"]);
-    assert!(body["current"]["ultrv"].is_number());
+    assert!(produced["current"]["ultrv"].is_number());
+    assert!(
+        body["current"]["ultrv"].is_null(),
+        "no UV before the first life read ends: {}",
+        body["current"]["ultrv"]
+    );
     assert_eq!(body["forecastNarrative"]["text"], "acquired");
     assert_eq!(
         body["current"]["specialInfo"],
@@ -2323,18 +2328,11 @@ async fn a_slow_restart_answers_every_stored_family_first() {
         assert!(pages.iter().any(|p| p == asked), "{asked}: {pages:?}");
     }
     let life = doubles.life.log.lock().unwrap().clone();
-    let mut kinds: Vec<&str> = life.iter().map(|l| l.split(' ').next().unwrap()).collect();
-    kinds.sort_unstable();
+    let kinds: Vec<&str> = life.iter().map(|l| l.split(' ').next().unwrap()).collect();
     assert_eq!(
         kinds,
-        [
-            "mfds-food-poisoning",
-            "oak-pollen-v3",
-            "pine-pollen-v3",
-            "uv-idx-v5",
-            "weeds-pollen-v3"
-        ],
-        "{life:?}"
+        ["mfds-food-poisoning"],
+        "only food poisoning races the first life read: {life:?}"
     );
     assert_eq!(doubles.office.fetched.load(SeqCst), 1);
 }

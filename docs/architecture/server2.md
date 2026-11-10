@@ -2399,7 +2399,7 @@ would not make. Each raced restore records one `operation.action` (stage `restor
 | --- | --- | --- |
 | Station pages | `Flight::Load`: the products, today and yesterday, the four newest minute pages | the minute page, the latest hourly and city page, the previous hourly page while a fetch now is still within two hours of its hour, and the fill below. Each acquisition (and the restore) is folded as it ends while the others are waited for, so a slow provider does not keep the pages that came before it from the first answer. A restored page never replaces a newer acquired one (newest fetch wins), and a replaced page stays accounted for S16 |
 | ASOS history | the station's S3 state, started with the request; its station comes from the current fold or, before any fold, from the default station list (the carried seed); the hourly and daily kinds are read together | the station's recovery run, started at the head start. A run before the read ends plans the whole window (one hourly and one daily range), and its ranges answer until the read merges them (replay in fetch order, `same_original`) |
-| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first, four at a time and each distinct content once ([KMA-LIFE-DISTINCT](#each-stored-content-once-kma-life-distinct-2026-11-10)), and folds them for the requests, then the rest of the 14-day window | the UV, pollen and MFDS acquisitions decided from the fold at the head start. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
+| Life (UV, pollen, MFDS) | the first life read of a process lists the four families together, restores the partitions of today (KST) and the latest before first, four at a time and each distinct content once ([KMA-LIFE-DISTINCT](#each-stored-content-once-kma-life-distinct-2026-11-10)), and folds them for the requests, then the rest of the 14-day window | the MFDS acquisition decided from the fold at the head start. UV and pollen do not race before the process's first life read has ended ([KMA-LIFE-FIRST-READ](#no-provider-race-during-the-first-life-read-kma-life-first-read-2026-11-10)); a later life read that misses the head start races them, decided from the fold the same way. A request uses an acquisition's published records at once, over the stored fold, until a read of S3 holds them (an answer holds what completed by its instant, or by the publication it waited for). UV's provider needs 5.5 to 7 s for four slots, so in practice only the restore delivers it in time |
 | Narrative | the office's stored read, started right after `prepare` beside the snapshot as owned work: a waiter that stops waiting neither cancels it nor sets the error gate | one fetch-and-publish of the office when the read has no answer at the head start (still running or failed), at most once per office and ten minutes. It shares one fetch per office with the three-minute refresh: whichever starts second joins the running one. The newest publication answers, whichever of the read, the race and the refresh ends last, also past the answer's 30 s TTL: an announcement older than one the office answered is not installed, and the next request reads S3 |
 | Warnings | the request's zone-state read, started with the request on the request lane | the warning cycle (every three minutes), whose offered state answers when it comes first, or when the read fails |
 
@@ -2460,10 +2460,14 @@ after a quota or authentication answer. Logical acquisitions and units per raced
 | `HealthWthrIdx` (pollen V3) | one per kind whose latest 06/18 KST issuance is missing (at most 3) | all areas in season (not measured, at most 8); 1 out of season (no data) | 3 out of season; 3 × its pages in season | 2 × 3 × 8 = 48 |
 | `VilageFcstMsg` (narrative) | the request's office when its read has no answer at the head start, at most once per office and ten minutes, and none while the three-minute refresh fetches that office (one shared fetch) | 1 | 1 per raced office | 2 on one key; over K configured keys, one unit on each key that answers quota or authentication and two on the key that fails retryably: K + 1 |
 
-A one-town restart (one raced station and office) normally adds 1 `AsosHourly`, 1 `AsosDaily`, 4
-`LivingWthrIdx`, 3 `HealthWthrIdx` out of season (three times the kind's pages in season) and 1
-`VilageFcstMsg` unit; each further raced station adds 1 `AsosHourly` and 1 `AsosDaily`. The last
-column bounds each owner when pages fail. These are bounds from the code, not measured quota use.
+A one-town restart (one raced station and office) normally adds 1 `AsosHourly`, 1 `AsosDaily` and 1
+`VilageFcstMsg` unit; each further raced station adds 1 `AsosHourly` and 1 `AsosDaily`. UV and pollen
+do not race a process's first life read
+([KMA-LIFE-FIRST-READ](#no-provider-race-during-the-first-life-read-kma-life-first-read-2026-11-10)),
+so their rows count a later life read that misses the head start; before, a restart also added 4
+`LivingWthrIdx` and 3 `HealthWthrIdx` units out of season (three times the kind's pages in season).
+The last column bounds each owner when pages fail. These are bounds from the code, not measured
+quota use.
 
 **Failure paths.** A provider failure during the race leaves that part to the restore or to the
 next request (never 503 for late data). A restore failure after the race keeps the provider data.
@@ -2478,7 +2482,9 @@ raced first answer, one acquisition per dataset key and the settled answer equal
 read S3, the fill, the default station list, the needed-first life read, the owned narrative read,
 the zone-state read beside a cycle that never ends, the lanes (including a full bulk lane), and a
 whole first answer with every stored family slowed and with prompt reads; listed with their names
-in the [spec](../../specs/issue-2614-kma-restart-race.md). Measured on EC2 with the rest of the restart
+in the [spec](../../specs/issue-2614-kma-restart-race.md). Since KMA-LIFE-FIRST-READ the slowed life
+read races food poisoning only; the rewritten life tests are listed in its
+[spec](../../specs/issue-2614-kma-life-first-read.md). Measured on EC2 with the rest of the restart
 re-examination: [restart acceptance](#restart-acceptance-on-ec2-2026-11-10).
 
 ### Restart CPU: name resolution and the disk cache off the blocking pool (2026-11-08)
@@ -2740,8 +2746,12 @@ makes the next request read every life-index acquisition of the last 14 days aga
 the re-examination (the S15b-3b life-index input) and is not changed by it.
 [KMA-LIFE-DISTINCT](#each-stored-content-once-kma-life-distinct-2026-11-10) addresses it: the life
 read restores each distinct content of a partition once, and an owned UV or pollen acquisition whose
-content S3 holds is not published, so it no longer makes the next request read the window again. Its
-effect on a restart has not been measured on EC2.
+content S3 holds is not published, so it no longer makes the next request read the window again. A
+re-measurement on EC2 with it (2026-11-10, reported on PR #2927) found that a restart published no new
+UV copy but still made one UV provider flight (four pages, 5.1 to 5.5 s): the first life read outlasted
+the head start.
+[KMA-LIFE-FIRST-READ](#no-provider-race-during-the-first-life-read-kma-life-first-read-2026-11-10)
+keeps UV and pollen from racing a process's first life read; its effect has not been measured on EC2.
 
 Not established by this run: other hours, hosts or traffic; values that depend on stored history
 deeper than the bucket's hour. The seed starts also added per-start acquisitions of other kinds (UV,
@@ -2798,7 +2808,9 @@ fold at a time (each starts from the committed fold and commits fold, applied se
 consumed publication count together); a fold is read again after 60 s or as soon as an own
 acquisition published, and a request waits for a read only until its deadline. A request whose
 fold lacks the current three-hour UV slot, the latest 06/18 KST pollen issuance of a kind or the
-current MFDS slot starts that owned acquisition (S13d `OwnedFlights`, 10-minute retry per key)
+current MFDS slot starts that owned acquisition (S13d `OwnedFlights`, 10-minute retry per key; UV
+and pollen not while the process's first life read runs,
+[KMA-LIFE-FIRST-READ](#no-provider-race-during-the-first-life-read-kma-life-first-read-2026-11-10))
 and waits only until its deadline; otherwise it answers with what S3 holds, the legacy output for
 missing data. The life inputs are loaded only for a request the snapshot serves (after the grid,
 mid and warning inputs), so a forwarded request starts no life acquisition. UV follows `taskUltrvV5`: the current slot, then each of the four earlier
@@ -2909,7 +2921,62 @@ at once, no read after it, and the overlay kept through a refresh without the st
 through the needed-first fold; publication for another content, no catalog, a lost descriptor or
 page, a stalled check and a slot completing 10 s before the cap; the provider time of an attempt; and
 a restart over 20 identical UV acquisitions with 40 ms GETs behind the shared admission that asks no
-UV and reads nothing on its next request. Not measured on EC2.
+UV and reads nothing on its next request. Not measured on EC2. A first read that ends past the head
+start no longer races UV or pollen at all
+([KMA-LIFE-FIRST-READ](#no-provider-race-during-the-first-life-read-kma-life-first-read-2026-11-10)).
+
+#### No provider race during the first life read (KMA-LIFE-FIRST-READ, 2026-11-10)
+
+An EC2 re-measurement with KMA-LIFE-DISTINCT on 2026-11-10 (reported on PR #2927; local evidence,
+not tracked) still found one UV provider flight on every restart: four pages in 5.1 to 5.5 s, after
+which the publication check found the stored twin and published nothing. The process's first life
+read took 2.7 to 3.0 s under the restart's S3 contention, longer than the 700 ms
+[head start](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07), and the race decided
+from a fold that had never been read. The acquisition could not reach the first answer, which waits
+2.5 s. AK chose this follow-up on 2026-11-10 ([intent](../../intent/issue-2614-kma-life-first-read.md),
+[spec](../../specs/issue-2614-kma-life-first-read.md), [plan](../../plans/issue-2614-kma-life-first-read.md)).
+
+**Rule.** While the process's first owned life read runs, no request starts a UV or pollen
+acquisition, raced or not, also on the path without a head start. A raced request still waits for
+the read to its bound and answers from the fold it holds then. The read's owned task holds a guard
+that ends the rule when it is dropped: the read completed, failed, reached its owner deadline, was
+cancelled or panicked. A waiter that stops waiting (pending), a cancelled request, a read refused for
+capacity (busy) and NEEDED-FIRST's interim fold do not end it, and it never returns. Afterwards every
+request decides as before, and a later read that misses the head start (the memo expired, slow S3, a
+second attempt after a failed first one) is raced as before. MFDS keeps its own race; KASI, the life
+read with its publication check, the memo and the overlay are unchanged.
+
+**Bounds.** No timer or budget is added. The rule ends when the first owned read ends: at the latest
+at its creation plus `READ_FOR` (120 s, the owned task's deadline, which later joiners never extend).
+Acquisitions resume at the next request's decision; the provider's own time comes on top. The four
+families are listed together (`join_all`), so one failing LIST does not end the read while another is
+still waiting. A read refused for capacity starts no owned task and no 120 s bound; the first owned
+read that starts does.
+
+**Stated differences.** With a provider faster than the first answer's wait, a slow first read's race
+used to put UV or pollen into the first answer; it no longer does. On EC2 the UV provider's four pages
+took 4.9 to 7.5 s in 16 restarts, longer than the 2.5 s wait: every first answer lacked UV in the
+[restart acceptance](#restart-acceptance-on-ec2-2026-11-10) and in the re-measurement, so the measured
+first answers do not change (UV and pollen are excluded from the client validation as a slow
+provider's parts). A restart whose S3 lacks the slot (a new slot just after its boundary, an empty
+bucket) starts the acquisition at the first request after the first read ends, not at the head start:
+UV or pollen arrive later by up to the first read's duration plus the gap to that request. During an
+S3 outage at start the provider path waits until the first owned read ends, at most 120 s after it
+began; before, a raced acquisition started at the head start.
+
+**Expected effect.** A restart whose S3 holds the current slot makes no UV or pollen provider call:
+the first read completes and its fold holds the slot. Not measured on EC2.
+
+Verification (local; isolated in-memory S3 on a paused clock, provider doubles; no provider or AWS),
+listed in the [spec](../../specs/issue-2614-kma-life-first-read.md): no UV or pollen call while a slow
+first read runs, for a stored slot (none after it either), a missing slot (asked by the first request
+after it, with the needed-first fold already installed at the head start) and pollen in season; a
+first read failing after the head start (no call until it fails, then a second uncommitted read raced
+as before) and before it (acquired at once); a later read that misses the head start raced as before;
+the read ending at its owner deadline or by a panic, while cancelled and pending waiters do not end
+it; the path without a head start, including a read refused for capacity; and the restart over 20
+identical UV acquisitions with its listings slowed past the head start. The slow-read and whole-answer
+restart tests now expect food poisoning as the only raced life dataset.
 
 ### S15b-3c AirKorea image hourly forecast (2026-10-15)
 
