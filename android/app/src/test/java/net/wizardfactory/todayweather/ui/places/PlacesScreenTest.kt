@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ui.places
 
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,6 +14,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -215,6 +219,30 @@ class PlacesScreenTest {
         val added = memory.current().places.last()
         assertEquals("회현동", added.name)
         assertFalse(added.currentPosition)
+    }
+
+    /** #2925 F2, F3: with the keyboard up the button finds at once (a result tap only closes it), and the found row replaces the towns. */
+    @Test
+    fun findingByLocationWithTheKeyboardUpReplacesTheResults() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul))
+        rule.onNodeWithTag(PlacesTags.INPUT).performClick().performTextInput("부산")
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.TOWN_DIVIDER).assertExists()
+        rule.runOnUiThread {
+            val insets = WindowInsetsCompat.Builder().setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                .setVisible(WindowInsetsCompat.Type.ime(), true).build()
+            ViewCompat.dispatchApplyWindowInsets(rule.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0), insets)
+        }
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        assertEquals("the keyboard is up: a town tap only closes it", 2, memory.current().places.size)
+        rule.onNodeWithTag(PlacesTags.FIND).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.FOUND).assertExists()
+        rule.onNodeWithTag(PlacesTags.town(0)).assertDoesNotExist()
+        rule.onNodeWithTag(PlacesTags.TOWN_DIVIDER).assertDoesNotExist()
+        rule.onNodeWithTag(PlacesTags.INPUT).assertTextEquals("회현동")
     }
 
     @Test

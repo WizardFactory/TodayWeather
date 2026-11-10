@@ -140,7 +140,7 @@ private class PlacesColors(val page: Color, val row: Color, val border: Color, v
  *   a row tap selects the place ([onSelect], `goPage`), a tap while the keyboard shows only closes it; an added result
  *   is selected already ([onAdded], `goPage`);
  * - edit mode: the current position's switch, a ⊗ on every other row (no confirmation);
- * - search mode: 현재위치로 지역찾기, the bundled towns (10 at a time, more on each scroll) under "powered by TodayWeather",
+ * - search mode: 현재위치로 지역찾기 (at once, also with the keyboard up; its result replaces the others), the bundled towns (10 at a time, more on each scroll) under "powered by TodayWeather",
  *   then Google's predictions, 300 ms after the last change and the latest answer only, or the found position, under
  *   Google's logo; a word without predictions keeps the last ones. With no enabled place the input takes focus.
  */
@@ -168,8 +168,15 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
         towns = null
         page.clearFound()
     }
-    // A found position names the search word (`search.word = geoInfo.name`).
-    LaunchedEffect(found) { (found?.get("name") as? JsonPrimitive)?.content?.let { field = TextFieldValue(it) } }
+    // A found position replaces the results, names the search word (`search.word = geoInfo.name`), ends the town pages
+    // and scrolls to the top (`OnSearchCurrentPosition`).
+    LaunchedEffect(found) {
+        val name = (found?.get("name") as? JsonPrimitive)?.content ?: return@LaunchedEffect
+        towns = null
+        predictions = emptyList()
+        field = TextFieldValue(name)
+        scroll.scrollTo(0)
+    }
     LaunchedEffect(word) {
         if (found != null && word == (found?.get("name") as? JsonPrimitive)?.content) return@LaunchedEffect
         towns = if (word.isEmpty()) null else host.towns().search(word)
@@ -249,7 +256,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
             // The page starts under the header bar, which the shell draws over it.
             Column(Modifier.fillMaxSize().background(colors.page).verticalScroll(scroll).padding(top = 44.dp)) {
                 if (searching) {
-                    FindButton(colors) { if (!keyboardOnly()) page.findByLocation() }
+                    FindButton(colors) { page.findByLocation() }
                     val shownTowns = towns?.towns.orEmpty()
                     val places = found?.let { listOf((it["address"] as? JsonPrimitive)?.content.orEmpty()) } ?: predictions.map { it.fullText }
                     if (shownTowns.isNotEmpty() || places.isNotEmpty()) {

@@ -3,6 +3,7 @@ package net.wizardfactory.todayweather.core.data
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.util.Collections
 import java.util.TimeZone
@@ -134,6 +135,30 @@ class PushSyncTest {
         assertEquals(listOf("DELETE /v000903/push"), outcome.requests.map { "${it.method} ${it.path}" })
         assertEquals(listOf(JsonObject(other)), store.data.first().push.records, "A24: the other place's record keeps its index")
         assertEquals(1, transport.sent.size)
+    }
+
+    /** A full disk: the store reads, and any change fails. */
+    private class FullStore(private val state: AppState) : DataStore<AppState> {
+        override val data = kotlinx.coroutines.flow.flowOf(state)
+        override suspend fun updateData(transform: suspend (t: AppState) -> AppState): AppState {
+            if (transform(state) != state) throw IOException("no space left on device")
+            return state
+        }
+    }
+
+    /** #2925 F1: an unsaved removal sends nothing and an unsaved update fails nothing; neither throws. */
+    @Test
+    fun aStoreThatCannotBeWrittenFailsNothing() = runBlocking {
+        val moved = Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.558, 126.978), source = "KMA")
+        val town = Json.parseToJsonElement("""{"first":"서울특별시","second":"중구","third":"명동"}""")
+        val state = AppState(places = listOf(Place.currentPositionPlaceholder(), moved),
+            push = PushState(fcmToken = "A", records = listOf(JsonObject(record + ("town" to town)))))
+        val transport = HeldTransport()
+        transport.release.complete(Unit)
+        val sync = PushSync(FullStore(state), transport) { ctx }
+        assertEquals(null, sync.removeCity(1))
+        assertEquals(emptyList(), transport.sent)
+        assertEquals(listOf("POST /v000903/push-list"), sync.updateCity(1)!!.requests.map { "${it.method} ${it.path}" })
     }
 
     @Test

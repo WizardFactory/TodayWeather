@@ -368,7 +368,7 @@ Design. Sources: `tab-search.html`, SearchCtrl, WeatherInfo (`addCity`, `removeC
 
 ### Checks
 
-- JVM: the `places/` domain tests; `PlaceListTest` and `PushRegistrationTest` (corpus removal cases from the Cordova `Push` service); `PlacesPageTest` and `StartFlowTest` (core-data); `PlacesScreenTest` (Robolectric UI: rows, edit, delete, switch, search, find-by-location, O09, O03, row taps); a chart-drag test; `PlacesScreenshotTest` against `tools/places-reference` captures of the Cordova build.
+- JVM: the `places/` domain tests; `PlaceListTest` and `PushRegistrationTest` (corpus removal cases from the Cordova `Push` service); `PlacesPageTest`, `PushSyncTest` (the removal; a store that cannot be written fails nothing) and `StartFlowTest` (core-data); `PlacesScreenTest` (Robolectric UI: rows, edit, delete, switch, search, find-by-location with the keyboard up replacing the results, O09, O03, row taps); a chart-drag test; `PlacesScreenshotTest` against `tools/places-reference` captures of the Cordova build.
 - Device: `ProductionPlacesTest` through a run script: 부산 and London added, a header swipe between them, one deleted (production server, read-only GETs; push requests recorded).
 - Mutations: `reports/sdlc/android-an-11/probe/mutations.py`.
 
