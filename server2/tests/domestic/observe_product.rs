@@ -90,7 +90,14 @@ async fn answer<T>(obs: &Arc<Observations<T>>) -> Arc<Folded>
 where
     T: server2::history::IndexListing + Clone + Send + Sync + 'static,
 {
-    obs.stations(NOW as i64, Instant::now() + Duration::from_millis(2500))
+    answer_at(obs, NOW as i64).await
+}
+/// [`answer`] for a request at `now` (an injected clock).
+async fn answer_at<T>(obs: &Arc<Observations<T>>, now: i64) -> Arc<Folded>
+where
+    T: server2::history::IndexListing + Clone + Send + Sync + 'static,
+{
+    obs.stations(now, Instant::now() + Duration::from_millis(2500))
         .await
         .unwrap()
 }
@@ -99,9 +106,16 @@ async fn settle<T>(obs: &Arc<Observations<T>>) -> Arc<Folded>
 where
     T: server2::history::IndexListing + Clone + Send + Sync + 'static,
 {
+    settle_at(obs, NOW as i64).await
+}
+/// [`settle`] for requests at `now` (an injected clock).
+async fn settle_at<T>(obs: &Arc<Observations<T>>, now: i64) -> Arc<Folded>
+where
+    T: server2::history::IndexListing + Clone + Send + Sync + 'static,
+{
     for _ in 0..120 {
-        let folded = answer(obs).await;
-        if obs.settled(NOW as i64, &folded) {
+        let folded = answer_at(obs, now).await;
+        if obs.settled(now, &folded) {
             return folded;
         }
         tokio::time::sleep(Duration::from_millis(250)).await;
@@ -202,6 +216,18 @@ async fn until(obs: &Arc<Obs>, mut done: impl FnMut() -> bool) {
         tokio::time::sleep(Duration::from_millis(250)).await;
     }
     panic!("never reached");
+}
+/// [`until`] for at most `within` instead of 120 requests.
+async fn until_within(obs: &Arc<Obs>, within: Duration, mut done: impl FnMut() -> bool) {
+    let deadline = std::time::Instant::now() + within;
+    while !done() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "never reached within {within:?}"
+        );
+        let _ = answer(obs).await;
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
 }
 fn product_catalog(day: u32) -> CatalogId {
     let key = ProviderKey::Named {
@@ -806,7 +832,8 @@ async fn a_failed_full_read_keeps_answers_unsettled_until_it_is_tried_again() {
     const FAILING: &str = "raw/v2/kma-web/aws-hourly/2026/09/17";
     c_counted.fail_gets(Some(FAILING));
     let attempts = || c_counted.get(&format!("GET {FAILING}"));
-    until(&c, || attempts() > 0).await;
+    // A first attempt can end before its raw GET; the retry comes after EXPAND_RETRY (60 s).
+    until_within(&c, Duration::from_secs(90), || attempts() > 0).await;
     for _ in 0..20 {
         let folded = answer(&c).await;
         assert!(
@@ -883,16 +910,52 @@ fn warm_city_page(h: Publication) -> Vec<u8> {
 /// What a provider answers now (fetched at 10:49): every hour's AWS and city page with the stored
 /// bodies (except the warmer city page of 10:00), the minute page of 10:49 and station 108's
 /// ranges. Every call is logged; a call whose label starts with a delayed prefix answers after
-/// that delay.
+/// that delay, and one a hold covers waits until the test opens the hold.
 #[derive(Default)]
 pub(super) struct Pages {
     calls: std::sync::Mutex<Vec<String>>,
     delays: std::sync::Mutex<Vec<(String, Duration)>>,
+    /// Labels each hold covers, and whether the test opened it.
+    holds: std::sync::Mutex<Vec<(Vec<String>, Opened)>>,
+    /// The fetch instant of the KMA pages answered (None: a minute before NOW).
+    fetched: std::sync::Mutex<Option<u64>>,
+    /// KMA pages of hours before this one fail as an unreachable provider's do (None: none).
+    answers_from: std::sync::Mutex<Option<Publication>>,
+    /// The KMA page records answered, in answer order.
+    records: std::sync::Mutex<Vec<RawRecord>>,
+}
+/// Whether a hold of [`Pages`] calls is open.
+type Opened = Arc<tokio::sync::watch::Sender<bool>>;
+/// A hold of [`Pages`] calls: the calls it covers wait until [`Held::open`].
+pub(super) struct Held(Opened);
+impl Held {
+    fn open(&self) {
+        self.0.send_replace(true);
+    }
 }
 impl Pages {
     /// Answer the calls whose label starts with `prefix` after `delay`.
     fn delay(&self, prefix: &str, delay: Duration) {
         self.delays.lock().unwrap().push((prefix.to_owned(), delay));
+    }
+    /// Hold the calls whose label is one of `labels` until the hold opens (a provider that answers
+    /// where the test says, not at an instant a slow runner can reach late).
+    fn hold(&self, labels: Vec<String>) -> Held {
+        let open = Arc::new(tokio::sync::watch::channel(false).0);
+        self.holds.lock().unwrap().push((labels, open.clone()));
+        Held(open)
+    }
+    /// Answer the KMA pages as fetched at `ms`.
+    fn fetched_at(&self, ms: u64) {
+        *self.fetched.lock().unwrap() = Some(ms);
+    }
+    /// Fail the KMA pages of hours before `first` (the minute page of 10:49 too).
+    fn answer_from(&self, first: Publication) {
+        *self.answers_from.lock().unwrap() = Some(first);
+    }
+    /// The KMA page records answered so far.
+    fn records(&self) -> Vec<RawRecord> {
+        self.records.lock().unwrap().clone()
     }
     fn delay_of(&self, label: &str) -> Option<Duration> {
         self.delays
@@ -915,6 +978,41 @@ impl Pages {
             .into_iter()
             .filter(|c| c.starts_with(prefix))
             .collect()
+    }
+}
+/// A KMA page acquisition fetched at `fetched` (one group, the day catalog of `hour`), as
+/// [`acquisition`] builds one.
+fn page_acquisition(
+    kind: &str,
+    key: &ProviderKey,
+    hour: Publication,
+    body: Vec<u8>,
+    content_type: &str,
+    fetched: u64,
+) -> server2::resolver::Acquisition {
+    let limits = CatalogLimits::default();
+    let record = RawRecord::new(
+        "kma-web",
+        kind,
+        key,
+        hour.period(),
+        fetched,
+        200,
+        content_type,
+        None,
+        body.into(),
+        &limits.raw,
+    )
+    .unwrap();
+    let member = GroupMember {
+        envelope: record.envelope.clone(),
+        catalogs: vec![
+            CatalogId::for_record(&record.envelope.identity, &hour.base_date()).unwrap(),
+        ],
+    };
+    server2::resolver::Acquisition {
+        declaration: GroupDeclaration::new(vec![member], &limits).unwrap(),
+        records: vec![record],
     }
 }
 impl Acquire for Pages {
@@ -949,19 +1047,36 @@ impl Acquire for Pages {
                 }
                 WebFamily::TownRss => return Err(DomesticError::Transport),
             };
+            if self
+                .answers_from
+                .lock()
+                .unwrap()
+                .is_some_and(|first| hour < first)
+            {
+                return Err(DomesticError::Transport);
+            }
+            let held: Vec<_> = self
+                .holds
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|(labels, _)| labels.contains(&label))
+                .map(|(_, open)| open.subscribe())
+                .collect();
+            for mut open in held {
+                let _ = open.wait_for(|open| *open).await;
+            }
             if let Some(delay) = self.delay_of(&label) {
                 tokio::time::sleep(delay).await;
             }
             self.calls.lock().unwrap().push(label);
-            Ok(Acquired::Complete(acquisition(
-                "kma-web",
-                kind,
-                &key,
-                hour,
-                &hour.base_date(),
-                body,
-                ct,
-            )))
+            let fetched = self.fetched.lock().unwrap().unwrap_or(NOW as u64 - 60_000);
+            let answered = page_acquisition(kind, &key, hour, body, ct, fetched);
+            self.records
+                .lock()
+                .unwrap()
+                .push(answered.records[0].clone());
+            Ok(Acquired::Complete(answered))
         })
     }
     fn asos(
@@ -1392,4 +1507,544 @@ async fn a_full_bulk_lane_does_not_hold_the_first_answer_restore() {
     assert!(!b.settled(NOW as i64, &answer(&b).await), "the rest waits");
     counted.open_bulk();
     same(&*settle(&b).await, &a_folded, "settled");
+}
+
+// ---- KMA-STATION-FLUSH: the day's product after a fill, and the early fold (AK 2026-11-10) ----
+//
+// Restart b1 of the 2026-11-10 EC2 re-examination answered without the station rain (`rn1`) of
+// yesterday: the previous process stored that day's product while it held one of its hours, its
+// fill pass then acquired the other 23, and the ten-minute product gate kept the product from
+// being stored again before the process stopped. b1 restored the 23 pages one by one, and the
+// pages it restored were folded only when another part of the request ended, after its wait.
+
+use server2::resolver::race::HEAD_START;
+
+const TODAY: u32 = 20260924;
+/// Hours of today [`absent_peer`] does not hold, which a raced restart's fill acquires.
+const FILLED: [u16; 4] = [500, 600, 700, 800];
+/// 11:20 KST, half an hour after NOW: the 11:00 pages are due (an injected clock).
+const LATER: i64 = NOW as i64 + 30 * 60_000;
+
+/// [`station_records`] without today's AWS hourly pages of [`FILLED`].
+async fn absent_peer() -> Peer {
+    let peer = Peer::new();
+    let records: Vec<RawRecord> = station_records()
+        .into_iter()
+        .filter(|r| {
+            let id = &r.envelope.identity;
+            !(id.kind == "aws-hourly"
+                && id.period.local_date == TODAY
+                && id
+                    .period
+                    .slot
+                    .parse::<u16>()
+                    .is_ok_and(|slot| FILLED.contains(&slot)))
+        })
+        .collect();
+    store_pages_without(&peer.transport_limited(4), records, &[]).await;
+    peer
+}
+/// The provider labels of today's AWS hourly pages of `hours`.
+fn fill_labels(hours: &[u16]) -> Vec<String> {
+    hours
+        .iter()
+        .map(|h| format!("aws-hourly {}", p(TODAY, *h).compact()))
+        .collect()
+}
+/// A process of the observed policy (no backfill pass; a raced restore fills only the absent
+/// hours of today and yesterday) whose provider is `pages`.
+fn observing(peer: &Peer, pages: Arc<Pages>) -> (Arc<Obs>, Counted) {
+    let counted = Counted::new(peer.transport_limited(4));
+    let obs = Observations::new(
+        counted.clone(),
+        Arc::new(CatalogStore::new(counted.clone(), CatalogLimits::default()).unwrap()),
+        pages,
+        Arc::new(Unreachable),
+    )
+    .observed_history();
+    (Arc::new(obs), counted)
+}
+/// A request at NOW with the production head start: a restore not done [`HEAD_START`] into it is
+/// raced, and the request waits 2.5 s.
+async fn raced(obs: &Arc<Obs>) -> Arc<Folded> {
+    let start = Instant::now();
+    obs.stations_by(
+        NOW as i64,
+        start + HEAD_START,
+        start + Duration::from_millis(2500),
+    )
+    .await
+    .unwrap()
+}
+/// The AWS hourly hours (`HHMM`) a stored product holds.
+fn aws_hours(product: &Value) -> Vec<u64> {
+    product["pages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|page| page["kind"] == "aws-hourly")
+        .filter_map(|page| page["hour"].as_u64())
+        .collect()
+}
+/// Whether a stored product holds every hour of [`FILLED`].
+fn holds_filled(product: &Value) -> bool {
+    let hours = aws_hours(product);
+    FILLED.iter().all(|h| hours.contains(&u64::from(*h)))
+}
+/// Wait, without a request, until the stored products of `day` satisfy `done`; false after 30 s.
+async fn stored_until(peer: &Peer, day: u32, done: impl Fn(&[Value]) -> bool) -> bool {
+    for _ in 0..120 {
+        if done(&products(peer, day).await) {
+            return true;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    false
+}
+/// Answer requests at NOW until the stored products of `day` satisfy `done` (or panic).
+async fn answered_until(obs: &Arc<Obs>, peer: &Peer, day: u32, done: impl Fn(&[Value]) -> bool) {
+    for _ in 0..120 {
+        if done(&products(peer, day).await) {
+            return;
+        }
+        let _ = answer(obs).await;
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    panic!("the products of {day} never reached the expected state");
+}
+/// Station pages (AWS hourly and city) of `day` a process restored one by one: raw GETs.
+fn pages_restored(counted: &Counted, day: u32) -> usize {
+    ["aws-hourly", "city-obs"]
+        .iter()
+        .map(|kind| {
+            counted.get(&format!(
+                "GET raw/v2/kma-web/{kind}/{:04}/{:02}/{:02}",
+                day / 10000,
+                day / 100 % 100,
+                day % 100
+            ))
+        })
+        .sum()
+}
+/// FLUSH (KMA-STATION-FLUSH V1, the rn1 gap of restart b1): a raced restart stores today's product
+/// while its fill pass still waits for the hours S3 does not list. When the pass ends with those
+/// pages, the day's product is stored again within ten minutes of the first, with no request and
+/// no fold of the filled pages in between, and the next restart reads the whole day from it: it
+/// restores no station page of the day one by one and answers as the first process.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_end_of_a_fill_pass_stores_the_filled_days_product() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = absent_peer().await;
+    let pages = Arc::new(Pages::default());
+    let fill = pages.hold(fill_labels(&FILLED));
+    let (a, a_counted) = observing(&peer, pages.clone());
+    let restore = a_counted.hold(&STATION_RAW);
+    let _ = raced(&a).await;
+    restore.open();
+    assert!(
+        restore.was_reached(),
+        "the restore reads during the request"
+    );
+    answered_until(&a, &peer, TODAY, |stored| stored.len() == 1).await;
+    assert!(
+        !holds_filled(&products(&peer, TODAY).await[0]),
+        "the first product is made before the fill's pages"
+    );
+    fill.open();
+    let flushed = stored_until(&peer, TODAY, |stored| stored.iter().any(holds_filled)).await;
+    for label in fill_labels(&FILLED) {
+        assert_eq!(pages.count(&label), 1, "{label}: {:?}", pages.calls());
+    }
+    let a_folded = settle(&a).await;
+    let (b, b_counted) = process(&peer);
+    let b_folded = settle(&b).await;
+    let restored = pages_restored(&b_counted, TODAY);
+    assert!(
+        flushed && restored == 0,
+        "the filled day's product stored at the end of the pass: {flushed}; station pages of the \
+         day the next restart restored one by one: {restored}"
+    );
+    assert_eq!(products(&peer, TODAY).await.len(), 2, "one more product");
+    same(&b_folded, &a_folded, "the next restart");
+}
+
+/// FLUSH (DR-V-flush-ownership): the end of a fill pass reaches the single product worker while
+/// it runs. The worker waits on a full bulk lane with the products it made before the fill's
+/// pages; the pass ends (its pages held and folded) meanwhile, and once the lane frees the worker
+/// stores the filled day's product again, within ten minutes of the first.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_end_of_a_fill_pass_reaches_a_running_product_worker() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = absent_peer().await;
+    let pages = Arc::new(Pages::default());
+    let fill = pages.hold(fill_labels(&FILLED));
+    let (a, a_counted) = observing(&peer, pages.clone());
+    a_counted.close_bulk();
+    let restore = a_counted.hold(&STATION_RAW);
+    let _ = raced(&a).await;
+    restore.open();
+    until(&a, || {
+        a_counted.get("bulk GET index/v2/kma-web/station-pages") > 0
+    })
+    .await;
+    fill.open();
+    let mut folded = answer(&a).await;
+    for _ in 0..120 {
+        if hours_of_108(&folded, p(TODAY, 500), p(TODAY, 800)) == FILLED.len() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        folded = answer(&a).await;
+    }
+    assert_eq!(
+        hours_of_108(&folded, p(TODAY, 500), p(TODAY, 800)),
+        FILLED.len()
+    );
+    assert!(
+        products(&peer, TODAY).await.is_empty(),
+        "the worker still waits"
+    );
+    a_counted.open_bulk();
+    assert!(
+        stored_until(&peer, TODAY, |stored| stored.iter().any(holds_filled)).await,
+        "the running worker stores the filled day's product: {:?}",
+        products(&peer, TODAY)
+            .await
+            .iter()
+            .map(aws_hours)
+            .collect::<Vec<_>>()
+    );
+}
+
+/// EARLY-FOLD (KMA-STATION-FLUSH V2) over the S3 peer: order and final result only. The time
+/// contract (the first answer within its wait has today's and yesterday's rows) is checked on a
+/// paused clock (`observe_flush_tests.rs`, SF-real-clock-deadlines). With the minute pages of a
+/// restart's read held, the first answer reaches them and is not complete (S16); once they arrive
+/// the answers equal the producing process's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn held_minute_pages_leave_the_first_answer_incomplete_until_they_arrive() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let (_, _, a_folded) = producing(&peer).await;
+    let (b, b_counted) = process(&peer);
+    let minutes = b_counted.hold(&["raw/v2/kma-web/aws-minute/"]);
+    let first = answer(&b).await;
+    let complete = b.settled(NOW as i64, &first);
+    minutes.open();
+    assert!(
+        minutes.was_reached(),
+        "the minute pages are read during the answer"
+    );
+    assert!(!complete, "not complete while the read runs (S16)");
+    same(&*settle(&b).await, &a_folded, "settled");
+}
+
+/// EARLY-FOLD (DR-V-early-fold-order) over the S3 peer: order and final result only (the time
+/// contract is on a paused clock). With the 09-20 product read of a restart held, the first answer
+/// reaches it and is not complete (S16); once the read ends the answers equal the producing
+/// process's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_held_older_day_product_leaves_the_first_answer_incomplete_until_it_arrives() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let (_, _, a_folded) = producing(&peer).await;
+    let (b, b_counted) = process(&peer);
+    let older = b_counted.hold(&["raw/v2/kma-web/station-pages/2026/09/20/"]);
+    let first = answer(&b).await;
+    let complete = b.settled(NOW as i64, &first);
+    older.open();
+    assert!(
+        older.was_reached(),
+        "the 09-20 product is read during the answer"
+    );
+    assert!(!complete, "not complete while the read runs (S16)");
+    same(&*settle(&b).await, &a_folded, "settled");
+}
+
+/// EARLY-FOLD (SF-older-city-set-test): a city station that only an older day's city page names
+/// (강남, 400, at 09-20 08:00). A process reading the raw pages folds today and yesterday before
+/// the older days and stores their products for a city set without the station. The restart after
+/// it stores them for the whole set, so the newest product of every day has the station. A restart
+/// whose 09-20 product read is held applies today's and yesterday's products before the older
+/// days' and folds them for the smaller set; that first answer is not complete (S16). Once the read
+/// ends, the pages folded for the smaller set are read in full again (`Flight::Expand`, bulk lane),
+/// and the settled answers, values and page identities, equal a cold read of the same raw pages.
+/// The cost of this order: today's and yesterday's AWS pages are read in full again, and their
+/// products are stored again for the smaller set.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_city_station_only_an_older_day_names_is_read_in_full_after_the_early_fold() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let hour = p(20260920, 800);
+    let named = page_record(
+        "city-obs",
+        hour,
+        schedule::to_ms(hour) as u64 + 50 * 60_000,
+        city_page_of(hour, &[("108", "서울"), ("400", "강남")]),
+    );
+    let peer = seeded_peer(&[], vec![named.clone()]).await;
+    let newest = |stored: Vec<Value>| {
+        stored
+            .into_iter()
+            .max_by(|x, y| {
+                x["made"]
+                    .as_f64()
+                    .unwrap()
+                    .total_cmp(&y["made"].as_f64().unwrap())
+            })
+            .unwrap()
+    };
+    let has_400 = |product: &Value| {
+        product["cityIds"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| id == "400")
+    };
+    let full = |counted: &Counted, day: &str| {
+        counted.get(&format!("bulk GET raw/v2/kma-web/aws-hourly/2026/09/{day}"))
+    };
+    let _ = producing(&peer).await;
+    for day in [20260923, TODAY] {
+        assert!(!has_400(&newest(products(&peer, day).await)), "{day}");
+    }
+    let _ = producing(&peer).await;
+    for day in DAYS {
+        assert!(has_400(&newest(products(&peer, day).await)), "{day}");
+    }
+    // The restart, its 09-20 product read held.
+    let (b, b_counted) = process(&peer);
+    let held = b_counted.hold(&["raw/v2/kma-web/station-pages/2026/09/20/"]);
+    let first = answer(&b).await;
+    let complete = b.settled(NOW as i64, &first);
+    held.open();
+    assert!(
+        held.was_reached(),
+        "the 09-20 product is read during the answer"
+    );
+    assert!(!complete, "not complete while the read runs (S16)");
+    let b_folded = settle(&b).await;
+    assert_eq!(
+        (full(&b_counted, "23"), full(&b_counted, "24")),
+        (24, 11),
+        "today's and yesterday's AWS pages read in full again"
+    );
+    for day in [20260923, TODAY] {
+        let stored = products(&peer, day).await;
+        assert_eq!(stored.len(), 3, "{day}");
+        assert!(
+            !has_400(&newest(stored)),
+            "{day}: stored again for the smaller set"
+        );
+    }
+    let cold = seeded_peer(&[], vec![named]).await;
+    let (d, _) = process(&cold);
+    same(&b_folded, &*settle(&d).await, "a cold read");
+}
+
+/// RESIDUAL (DR-V-residual-lag): the end of a fill pass is not the only time a process acquires
+/// pages. A process that stored its products answers a request at 11:20 and acquires the 11:00
+/// AWS and city pages; the day's product is not stored again within ten minutes, so a restart
+/// right after restores those two pages one by one (the residual cost), stores the day's product
+/// again, and the restart after it restores none.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_quick_restart_after_a_request_time_acquisition_restores_its_pages() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let pages = Arc::new(Pages::default());
+    pages.answer_from(p(TODAY, 1100));
+    pages.fetched_at(LATER as u64 - 60_000);
+    let (a, _) = observing(&peer, pages.clone());
+    let _ = settle(&a).await;
+    assert_eq!(products(&peer, TODAY).await.len(), 1);
+    let _ = settle_at(&a, LATER).await;
+    let mut calls = pages.calls();
+    calls.sort();
+    assert_eq!(calls, ["aws-hourly 202609241100", "city 202609241100"]);
+    assert_eq!(
+        products(&peer, TODAY).await.len(),
+        1,
+        "not stored again within ten minutes"
+    );
+    let (b, b_counted) = process(&peer);
+    let b_folded = settle_at(&b, LATER).await;
+    assert_eq!(
+        pages_restored(&b_counted, TODAY),
+        2,
+        "the pages acquired after the product"
+    );
+    assert_eq!(products(&peer, TODAY).await.len(), 2, "stored again");
+    let (c, c_counted) = process(&peer);
+    let c_folded = settle_at(&c, LATER).await;
+    assert_eq!(pages_restored(&c_counted, TODAY), 0);
+    same(&c_folded, &b_folded, "the restart after it");
+}
+
+/// RESIDUAL: a process that stops in the middle of its fill pass (its last hour, 05:00, never
+/// answers) never reaches the end of the pass. The three pages it acquired are not in its product
+/// (stored before them, and not again within ten minutes), and the next restart restores them one
+/// by one.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_restart_in_the_middle_of_a_fill_restores_what_it_acquired() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = absent_peer().await;
+    let pages = Arc::new(Pages::default());
+    let acquired = pages.hold(fill_labels(&[600, 700, 800]));
+    let _never = pages.hold(fill_labels(&[500]));
+    let (a, a_counted) = observing(&peer, pages.clone());
+    let restore = a_counted.hold(&STATION_RAW);
+    let _ = raced(&a).await;
+    restore.open();
+    answered_until(&a, &peer, TODAY, |stored| stored.len() == 1).await;
+    acquired.open();
+    let mut folded = answer(&a).await;
+    for _ in 0..120 {
+        if hours_of_108(&folded, p(TODAY, 600), p(TODAY, 800)) == 3
+            && a.settled(NOW as i64, &folded)
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        folded = answer(&a).await;
+    }
+    assert_eq!(hours_of_108(&folded, p(TODAY, 600), p(TODAY, 800)), 3);
+    assert_eq!(
+        products(&peer, TODAY).await.len(),
+        1,
+        "the pass has not ended"
+    );
+    let (b, b_counted) = process(&peer);
+    let _ = settle(&b).await;
+    assert_eq!(
+        pages_restored(&b_counted, TODAY),
+        3,
+        "the pages the stopped pass acquired"
+    );
+}
+
+/// RESIDUAL: a process that stops after its fill pass made the pages durable but before the pass
+/// ends leaves the day's product without them. The next restart restores all of them one by one
+/// (four here, 23 in restart b1) and stores the day's product again; the restart after it
+/// restores none.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_stop_before_the_end_of_a_fill_costs_the_next_restart_its_pages() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = absent_peer().await;
+    let _ = producing(&peer).await;
+    let store = CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap();
+    for h in FILLED {
+        let hour = p(TODAY, h);
+        let page = aws_page(&dotted(hour), hour.hour().is_multiple_of(5));
+        publish_record(
+            &store,
+            page_record("aws-hourly", hour, NOW as u64 - 60_000, page),
+        )
+        .await;
+    }
+    assert!(!holds_filled(&products(&peer, TODAY).await[0]));
+    let (b, b_counted) = process(&peer);
+    let b_folded = settle(&b).await;
+    assert_eq!(pages_restored(&b_counted, TODAY), FILLED.len());
+    assert_eq!(products(&peer, TODAY).await.len(), 2, "stored again");
+    let (c, c_counted) = process(&peer);
+    let c_folded = settle(&c).await;
+    assert_eq!(pages_restored(&c_counted, TODAY), 0);
+    same(&c_folded, &b_folded, "the restart after it");
+}
+
+/// FLUSH (DR-V-multiprocess-product): two processes store products of one day with different
+/// pages, in the reverse order of their pages. At 11:20 B acquires the 11:00 AWS and city pages
+/// (fetched 11:19) and stores its product; A, which has not read them, acquires the same hours
+/// with an earlier fetch instant (11:18) and stores its product after B's. A restart reads A's
+/// product (the newest), restores B's two pages from the day catalogs (the extra raw restores)
+/// and keeps them (the later fetch wins); its answers and page identities, and the known and
+/// excluded groups of the day's product it stores, equal those of a cold read of the same raw
+/// pages.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn two_processes_products_in_reverse_order_keep_the_newest_pages() {
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = seeded_peer(&[], Vec::new()).await;
+    let _ = producing(&peer).await;
+    let start = |fetched: u64| {
+        let pages = Arc::new(Pages::default());
+        pages.answer_from(p(TODAY, 1100));
+        pages.fetched_at(fetched);
+        let (obs, _) = observing(&peer, pages.clone());
+        (obs, pages)
+    };
+    let (a, a_pages) = start(LATER as u64 - 120_000);
+    let (b, b_pages) = start(LATER as u64 - 60_000);
+    let _ = settle(&a).await;
+    let _ = settle(&b).await;
+    let _ = settle_at(&b, LATER).await;
+    assert_eq!(products(&peer, TODAY).await.len(), 2, "B's product");
+    let _ = settle_at(&a, LATER).await;
+    let newest = |stored: Vec<Value>| {
+        stored
+            .into_iter()
+            .max_by(|x, y| {
+                x["made"]
+                    .as_f64()
+                    .unwrap()
+                    .total_cmp(&y["made"].as_f64().unwrap())
+            })
+            .unwrap()
+    };
+    let fetched_1100 = |product: &Value| {
+        product["pages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|page| page["hour"] == 1100)
+            .map(|page| page["fetchedAt"].as_f64().unwrap())
+            .collect::<Vec<_>>()
+    };
+    let stored = products(&peer, TODAY).await;
+    assert_eq!(stored.len(), 3, "A's product after B's");
+    let a_product = newest(stored);
+    assert_eq!(
+        fetched_1100(&a_product),
+        [(LATER - 120_000) as f64; 2],
+        "the newest product holds A's earlier pages"
+    );
+    // The restart.
+    let (c, c_counted) = process(&peer);
+    let c_folded = settle_at(&c, LATER).await;
+    assert_eq!(
+        pages_restored(&c_counted, TODAY),
+        2,
+        "B's two pages restored from the catalogs"
+    );
+    let c_product = newest(products(&peer, TODAY).await);
+    assert_eq!(fetched_1100(&c_product), [(LATER - 60_000) as f64; 2]);
+    // A cold read of the same raw pages.
+    let mut acquired = a_pages.records();
+    acquired.extend(b_pages.records());
+    assert_eq!(acquired.len(), 4);
+    let cold = seeded_peer(&[], acquired).await;
+    let (d, _) = process(&cold);
+    let d_folded = settle_at(&d, LATER).await;
+    same(&c_folded, &d_folded, "a cold read");
+    let d_product = newest(products(&cold, TODAY).await);
+    let ids = |product: &Value, field: &str| {
+        let mut ids: Vec<String> = product[field]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|id| id.as_str().unwrap().to_owned())
+            .collect();
+        ids.sort();
+        ids
+    };
+    let mut superseded: Vec<String> = a_pages
+        .records()
+        .iter()
+        .map(|r| r.envelope.identity.object_key().unwrap())
+        .collect();
+    superseded.sort();
+    assert_eq!(ids(&c_product, "knownIds"), superseded, "A's pages, known");
+    assert_eq!(ids(&c_product, "knownIds"), ids(&d_product, "knownIds"));
+    assert_eq!(
+        ids(&c_product, "excludedIds"),
+        ids(&d_product, "excludedIds")
+    );
 }

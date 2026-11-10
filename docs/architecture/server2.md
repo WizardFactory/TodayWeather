@@ -2320,12 +2320,16 @@ Any process that folds writes products: after a fold that recomputed the hourly 
 `Flight::Product` (never awaited by a request) stores the day whose made-of (sorted page raw
 identities, `cityIds`, excluded identities, `parseRevision`) differs from the last product this process read or stored.
 Only days read without failure whose every hour is in the window are stored, each at most once per
-ten minutes per process. Products are not cached on disk.
+ten minutes per process, and once more at the end of a fill pass that held new pages for the day
+([after a fill](#s15b-2-station-product-after-a-fill-and-the-early-fold-2026-11-10)). Products are
+not cached on disk.
 
 **Restart read.** In parallel: the product, AWS hourly and city partition LISTs, the seed and the
-minute catalogs. Then for the due days, newest first and eight at a time, the day's page and
-product catalogs are listed (control objects only) and, the first time a process reads the day,
-its newest product (completion, then digest) is read and decoded. A product whose `cityIds` does
+minute catalogs. Then for the due days, eight at a time, the day's page and product catalogs are
+listed (control objects only) and, the first time a process reads the day, its newest product
+(completion, then digest) is read and decoded. Since 2026-11-10 today and yesterday are read on
+their own, beside the older days (newest first)
+([early fold](#s15b-2-station-product-after-a-fill-and-the-early-fold-2026-11-10)). A product whose `cityIds` does
 not cover the current city set (seed and city pages) is not used. Product pages the catalogs do not
 list are dropped (S3 is truth). A day is then compared: every listed group that is neither held nor
 known complete (the excluded ones again, and those published since) is restored, four per catalog
@@ -2340,8 +2344,10 @@ reads those pages in full again by their raw identity, four per catalog read, an
 as it completes; no request waits for it. A page whose read was started waits a minute before it
 is tried again; pages not reached before the read's 30 s limit, and due retries, are started by the
 next fold or request without waiting for a new hourly page. The next fold reduces the pages read
-in full for the new set. `Flight::Load` ends after the products, today's
-and yesterday's comparisons, the seed and the four newest minute pages. `Flight::LoadRest`, which
+in full for the new set. `Flight::Load` folds today's and yesterday's pages as soon as their
+comparisons end ([early fold](#s15b-2-station-product-after-a-fill-and-the-early-fold-2026-11-10)),
+and ends after the products, today's and yesterday's comparisons, the seed and the four newest
+minute pages. `Flight::LoadRest`, which
 no request waits for, then compares the other days (each marked read and the pages dirty) and
 restores the rest of the minute window, on the bulk lane of the S3 admission. Reloads every five
 minutes compare with the pages held. A request no longer waits for `Flight::Load` past a 700 ms
@@ -2406,7 +2412,8 @@ acquires the hours before the latest that neither the listing nor memory holds, 
 pass, newest first, three at a time, each hour at most once per six hours. A listed or held hour
 is never fetched again: a later page would replace the ongoing one, whose rows stand for the ASOS
 hour. A day that cannot be listed is not filled. The days before yesterday come from S3 alone
-(day products or raw pages).
+(day products or raw pages). At the end of the pass the products of the days it held new pages for
+are stored ([after a fill](#s15b-2-station-product-after-a-fill-and-the-early-fold-2026-11-10)).
 
 **Lanes.** Reads and writes no request waits for use the bulk lane of the shared S3 admission (a
 third of its permits, KMA-RESTART-READS): the rest of the restart read (`Flight::LoadRest`), the
@@ -2435,7 +2442,8 @@ restore keeps the rest of the admission.
 KMA web pages (the minute page, the latest hourly and city page and the previous hourly page, at
 most 4, and the absent hours of today and yesterday, at most 46) and MFDS (1). Grids, RSS, mid and
 AirKorea add none. Every acquisition stores a second copy beside the stored one, and today's day
-product is stored again when its pages changed (at most once per ten minutes).
+product is stored again when its pages changed (at most once per ten minutes, and once more at the
+end of the fill pass for each day it filled).
 
 data.go.kr charges one unit per HTTP attempt of a page to its quota owner: one key and one API,
 each with its own allowance per KST day (`DataGoKrApi::daily_units`; 10,000 for each API below on
@@ -2609,6 +2617,77 @@ every legacy oracle query gives the same `regId`s and count, and `collected` the
 Verification (local; an in-memory store on a paused clock with an injected wall clock, and the S3
 HTTP peer for the oracle): the tests are listed in the
 [spec](../../specs/issue-2614-kma-zone-newest.md). Not measured: a restart on EC2.
+
+### S15b-2 station product after a fill and the early fold (2026-11-10)
+
+The restart re-examination of 2026-11-10 on EC2 (t3.small, #2921) found one first answer, restart
+b1, without the station rain (`rn1`) of `short[]`, `dailyData[]` and `current.yesterday`. That
+value comes from the AWS hourly pages (`KMA_STATION_HOURLY`, the page's `rs1h`), not from ASOS.
+The previous process had stored the 11-09 product while it held one of that day's hours. Its fill
+pass then acquired the other 23, and the ten-minute product limit kept it from storing the day
+again before it stopped. b1 restored the 23 listed pages one after another (one member at a time,
+about 85 ms per page with parsing). The pages it restored during its read were folded only when
+another part of the request ended, after the 2.5 s wait. AK approved the fix on 2026-11-10
+([intent](../../intent/issue-2614-kma-station-flush.md),
+[spec](../../specs/issue-2614-kma-station-flush.md),
+[plan](../../plans/issue-2614-kma-station-flush.md)).
+
+**Store at the end of a fill pass.** The fill pass of a raced restart
+([restart race](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07)) records the
+days it held new pages for. When the pass ends, it hands them to the single product worker
+(`Flight::Product`), which stores each such day whose made-of changed once, past the ten-minute
+limit. Every comparison asked of that worker (after a fold of the hourly part, at the end of a
+pass, or after a read that makes a flushed day storable) is made without a later request: a
+running worker compares again before it ends, and a worker that has already made its last
+comparison is followed, once its flight has ended, by a new one while the comparison is still
+due. No request or read waits for the comparison. The store does not wait for a fold of the
+filled pages, because a product is made of the pages held. A day not yet read without failure, or a process that has not folded yet, keeps the
+flush until the day can be stored. The read that makes such a day storable asks the worker for it,
+also when the read changed no page (a fold would not). An unchanged day spends the flush, and so
+does a failed store, after which the ten-minute limit applies again. Each pass adds at most one
+product PUT per filled day. The per-day rules, the made-of comparison and the bookkeeping after a
+store are those of every product.
+
+**Today and yesterday first.** The restart read lists the catalogs and reads the products of today
+and yesterday, compares them with the catalogs and folds them. Meanwhile it reads the older days'
+catalogs and products with the remaining lookups (eight in all). It reads the minute pages after
+both. The fold waits only for a fold already running, and the load does not wait for the fold.
+`Flight::Load` stays in flight until it ends, and `Flight::LoadRest` follows as before, so an answer
+from the early fold is never complete (S16). Whichever of the two groups of products is applied
+first decides the city set (seed, held pages and products) the other is checked against. While only
+an older day's city page names a city station, today's and yesterday's products, usually applied
+first, are folded for the smaller set: once the older days' products arrive, the read of the grown
+city set (`Flight::Expand`) reads those 35 AWS pages in full again on the bulk lane after the first
+answer, and their products are stored again, for the smaller set when they had the whole set. When
+the older days' products come first, today's and yesterday's products made for the smaller set are
+refused and those days are read raw before the answer, as before. Before this change a restart
+applied every product before its first fold, so this cost stopped after one restart.
+
+**Residual lag.** The store at the end of a pass bounds the product's lag to the pages acquired
+after the last pass or product store. It does not keep every product current. Each case below
+costs the next restart one targeted restore per page the newest product lacks, once: that restart
+stores the day's product (the tests check the restart after it in the first and third case).
+
+| Case | Pages the next restart restores (tests) |
+| --- | --- |
+| A request-time acquisition of the latest hour's AWS and city pages within ten minutes of the day's product, then a quick restart | 2 |
+| A restart in the middle of a fill pass (three hours acquired, the fourth never answered) | 3 |
+| A stop after the pass made its pages durable but before it ended | 4 (b1 restored 23 pages one by one) |
+| Two processes storing products of one day in the reverse order of their pages | the newer pages the newest product lacks (2); the later fetch wins |
+
+Not handled: a pass cut by its owned deadline (600 s) stores nothing at its end. The backfill pass
+of the legacy policy keeps the ten-minute limit (the observed source runs no backfill). Concurrent
+chunk restores were not added (AK, 2026-11-10); they will be reconsidered only if the EC2
+acceptance shows that the lag remains.
+
+Verification (local, S06 loopback S3 peer, provider doubles; the order is set by gates and injected
+request instants; the time contracts, the read that makes a flushed day storable and a worker
+that ends as a comparison is asked for on a paused clock over an in-memory S3) is listed in the
+[spec](../../specs/issue-2614-kma-station-flush.md). Red before each change: the next restart
+restored 4 pages one by one, the worker's only product of the day lacked the filled hours, the
+first answers at the end of their 2.5 s wait had 0 of 35 rain rows of today and yesterday, a flush
+kept by a failed day read stayed unstored after the next read, and a comparison asked of a
+finishing worker stayed unmade until a later request. Not measured: the restart on EC2.
 
 ### S15b-2 s station registry seed (2026-10-15)
 
@@ -3385,7 +3464,9 @@ station-page day can be read from its day product and the day catalogs instead o
 The input identities are the same, a product carries the S06 exclusions of the read it was made
 from, and a station fold is not complete while the rest of a restart read or a product comparison
 is still running.
-The first answer after a start therefore records no summary; a later request does.
+The first answer after a start therefore records no summary; a later request does. The early fold
+of today and yesterday ([2026-11-10](#s15b-2-station-product-after-a-fill-and-the-early-fold-2026-11-10))
+does not change this: the load stays in flight until it ends.
 
 **Last-year lookup** (`summary::Lookup::last_year`, not wired to a route). The same date a year
 earlier (Feb 29 → Feb 28), then ±1..±3, earlier first. At each date: the town's grid summary, then

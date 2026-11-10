@@ -1,7 +1,7 @@
 {
  "tool": "android/tools/privacy-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "964443f77cdba9aeae7f4b55118ac2dd2cd7fb579a25ce8ad17cc8b09b8c41e9",
+  "sha256": "257638d9a24db91de8d0aa6f1e37452f9bacd49c9a40e203be77cc2a64c0d095",
   "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
@@ -31,11 +31,11 @@
    },
    {
     "file": "client/www/js/service.admobemi.js",
-    "apkSha256": "f970514965c319be236b344f7404b435b554a8e2b27cae0c3d82bf4f695f3754",
+    "apkSha256": "7f516ea8707661b42ba22f35791761ef0df917d83e29eae1c83c9fdf9a178a2e",
     "tracked": true,
-    "clientSha256": "f970514965c319be236b344f7404b435b554a8e2b27cae0c3d82bf4f695f3754",
+    "clientSha256": "7f516ea8707661b42ba22f35791761ef0df917d83e29eae1c83c9fdf9a178a2e",
     "matchesClient": true,
-    "lastCommit": "4a1e50d3a6a69e7b0033a5cd8bcc8a9dbc136538"
+    "lastCommit": "7543f541a75d091095bf60dc9c01aa7df5f6a554"
    },
    {
     "file": "client/www/js/service.twads.js",
@@ -114,7 +114,7 @@
   },
   {
    "file": "en-US/analytics-popup.png",
-   "sha256": "026704d4bc5ac05323382eb4150a950994bfb84005f4d0952afb22707a942e36"
+   "sha256": "12e99218bbfded8e6e735cffbb9b8c7913d7f760e3260fb9769a586e4c0d9fcc"
   },
   {
    "file": "en-US/menu-allowed.json",
@@ -122,7 +122,7 @@
   },
   {
    "file": "en-US/menu-allowed.png",
-   "sha256": "e8b606498c87703a95ed7d6b5082506a4a2b8814dcea322ef94a5f5f5fe548f1"
+   "sha256": "263a41965998aafc0f017fe7a4d6edda326cba8b0c3938b8e502855f432f2b5a"
   },
   {
    "file": "en-US/menu-off.json",
@@ -130,11 +130,11 @@
   },
   {
    "file": "en-US/menu-off.png",
-   "sha256": "57c1faa400e4e063e3b8bd6080b02854fbeece54c519ea7216a11c7c6037cf0d"
+   "sha256": "bf52da83c479d8bbe4fbac4bb7d7d99c07c37d46e8ee2681f12c51aceb8714db"
   },
   {
    "file": "ko-KR/actions.json",
-   "sha256": "da9d52bf103593571fc37ed2c7f63c03891787adfe47b3c2beb3df0a1b6ff1a1"
+   "sha256": "64cd47db2f890112d9bf219af612477245a1eb9aa16166154c64eb643caedb2b"
   },
   {
    "file": "ko-KR/analytics-popup.json",
@@ -142,7 +142,7 @@
   },
   {
    "file": "ko-KR/analytics-popup.png",
-   "sha256": "483d784c6bbe804e97c82f8f7d7c76794ba5f00169bd57f65e7168bcb2f2265c"
+   "sha256": "531112cb821c7bfceb8b68232feab52d9b5073a325fb695c1d3e4fc6f2c9db93"
   },
   {
    "file": "ko-KR/menu-allowed.json",
@@ -158,7 +158,7 @@
   },
   {
    "file": "ko-KR/menu-off.png",
-   "sha256": "d809eff8179cee46bf106c248f15c55976824d1a7023b783cb208ca20c7c9bbc"
+   "sha256": "6968969e92fc3d0ece72b167b74aeb2d22e21b9903635b08b2f3c740ddbc01b5"
   }
  ]
 }
