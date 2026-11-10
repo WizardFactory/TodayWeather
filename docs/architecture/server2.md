@@ -2748,7 +2748,7 @@ the re-examination (the S15b-3b life-index input) and is not changed by it.
 read restores each distinct content of a partition once, and an owned UV or pollen acquisition whose
 content S3 holds is not published, so it no longer makes the next request read the window again. A
 re-measurement on EC2 with it (2026-11-10, reported on PR #2927) found that a restart published no new
-UV copy but still made one UV provider flight (four pages, about 5.4 s): the first life read outlasted
+UV copy but still made one UV provider flight (four pages, 5.1 to 5.5 s): the first life read outlasted
 the head start.
 [KMA-LIFE-FIRST-READ](#no-provider-race-during-the-first-life-read-kma-life-first-read-2026-11-10)
 keeps UV and pollen from racing a process's first life read; its effect has not been measured on EC2.
@@ -2928,9 +2928,9 @@ start no longer races UV or pollen at all
 #### No provider race during the first life read (KMA-LIFE-FIRST-READ, 2026-11-10)
 
 An EC2 re-measurement with KMA-LIFE-DISTINCT on 2026-11-10 (reported on PR #2927; local evidence,
-not tracked) still found one UV provider flight on every restart: four pages in about 5.4 s, after
+not tracked) still found one UV provider flight on every restart: four pages in 5.1 to 5.5 s, after
 which the publication check found the stored twin and published nothing. The process's first life
-read took about 2.7 s under the restart's S3 contention, longer than the 700 ms
+read took 2.7 to 3.0 s under the restart's S3 contention, longer than the 700 ms
 [head start](#s15b-2-restart-race-providers-when-a-restore-is-late-2026-11-07), and the race decided
 from a fold that had never been read. The acquisition could not reach the first answer, which waits
 2.5 s. AK chose this follow-up on 2026-11-10 ([intent](../../intent/issue-2614-kma-life-first-read.md),
@@ -2955,7 +2955,7 @@ read that starts does.
 
 **Stated differences.** With a provider faster than the first answer's wait, a slow first read's race
 used to put UV or pollen into the first answer; it no longer does. On EC2 the UV provider's four pages
-took 4.6 to 5.5 s, longer than the 2.5 s wait: every first answer lacked UV in the
+took 4.9 to 7.5 s in 16 restarts, longer than the 2.5 s wait: every first answer lacked UV in the
 [restart acceptance](#restart-acceptance-on-ec2-2026-11-10) and in the re-measurement, so the measured
 first answers do not change (UV and pollen are excluded from the client validation as a slow
 provider's parts). A restart whose S3 lacks the slot (a new slot just after its boundary, an empty
