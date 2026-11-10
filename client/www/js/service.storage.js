@@ -44,10 +44,10 @@ angular.module('service.storage', [])
             var deferred = $q.defer();
             var delay = 1000;
 
-            function retry(reason) {
+            function retry(reason, next) {
                 console.log('[_handBack] ' + reason + '; trying again in ' + delay + ' ms');
                 Util.ga.trackEvent('storage', 'error', 'handBack');
-                setTimeout(attempt, delay);
+                setTimeout(next || attempt, delay);
                 delay = Math.min(delay * 2, 30000);
             }
 
@@ -55,14 +55,20 @@ angular.module('service.storage', [])
                 var applied = Number(localStorage.getItem(handBackApplied)) || 0;
 
                 // The claim lets a later native start adopt what changes here: under a native marker the start goes on
-                // ([done]) only once it is stored, and tries again when it is not.
+                // ([done]) only once the suite reports it stored. A commit that fails leaves the claim in the suite's
+                // memory while its file keeps the native marker, so the same claim is stored again until it is, instead
+                // of being read back.
                 function claim(generation, done) {
-                    suitePrefs.store(function () {
-                        if (done) { done(); }
-                    }, function () {
-                        if (done) { retry('the claim not stored'); }
-                    }, handBackKey, JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
-                        writer: 'cordova', complete: true, keys: handBackKeys}));
+                    var text = JSON.stringify({schema: 1, generation: Math.max(generation, applied) + 1,
+                        writer: 'cordova', complete: true, keys: handBackKeys});
+                    function store() {
+                        suitePrefs.store(function () {
+                            if (done) { done(); }
+                        }, function () {
+                            if (done) { retry('the claim not stored', store); }
+                        }, handBackKey, text);
+                    }
+                    store();
                 }
                 function resolveTrusted() { deferred.resolve(true); }
 

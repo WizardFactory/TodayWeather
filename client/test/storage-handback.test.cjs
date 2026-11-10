@@ -15,16 +15,19 @@ const marker = (generation, writer = 'native', extra = {}) =>
     JSON.stringify(Object.assign({schema: 1, generation, writer, complete: true, keys: KEYS}, extra));
 
 // The local cordova-plugin-app-preferences: a string comes back as stored; calls answer asynchronously. The fetch of a
-// key in [failing], and the store of a key in [refusing] (Sets the test may empty later), fail.
-function suiteOf(values, failing = new Set(), refusing = new Set()) {
+// key in [failing] fails; the store of a key in [refusing] (Sets the test may empty later) fails as Android's commit
+// does: SharedPreferences takes the value in memory, fetches return it, and only the file ([disk]) keeps the old one.
+function suiteOf(values, failing = new Set(), refusing = new Set(), disk = new Map(values)) {
     const later = fn => Promise.resolve().then(fn);
     return {
-        values,
+        values, disk,
         fetch(ok, fail, key) { later(() => failing.has(key) ? fail('unreadable') : ok(values.has(key) ? values.get(key) : null)); },
         store(ok, fail, key, value) {
             later(() => {
+                const text = typeof value === 'string' ? value : JSON.stringify(value);
+                values.set(key, text);
                 if (refusing.has(key)) { if (fail) fail('commit failed'); return; }
-                values.set(key, typeof value === 'string' ? value : JSON.stringify(value));
+                disk.set(key, text);
                 if (ok) ok();
             });
         },
@@ -58,6 +61,7 @@ function launch({suite = {}, local = {}, failing = [], refusing = [], full} = {}
     const values = suite instanceof Map ? suite : new Map(Object.entries(suite));
     const unreadable = new Set(failing), refused = new Set(refusing);
     const suitePrefs = suiteOf(values, unreadable, refused);
+    const disk = suitePrefs.disk;
     const localStorage = storageOf(local, full);
     const timers = [];
     const calls = [];
@@ -79,7 +83,7 @@ function launch({suite = {}, local = {}, failing = [], refusing = [], full} = {}
     const Monetization = {storageReady(trusted) { calls.push(`storageReady:${trusted}:${localStorage.getItem('twAnalyticsConsentV1')}`); }};
     const storage = factory(rootScope, q(), Util, Monetization);
     const init = storage.init().then(() => { settled = true; });
-    return {storage, localStorage, values, calls, timers, unreadable, refused, init, settled: () => settled,
+    return {storage, localStorage, values, disk, calls, timers, unreadable, refused, init, settled: () => settled,
         fire() { timers.shift().fn(); }};
 }
 
@@ -190,16 +194,16 @@ test('a claim the suite does not take: the start waits and claims again', async 
         const run = launch({suite: Object.assign({_twHandBack: marker(3)}, nativeState), local, refusing: ['_twHandBack']});
         for (const delay of [1000, 2000]) {
             await tick();
-            assert.equal(run.settled(), false, 'the start waits for the claim');
+            assert.equal(run.settled(), false, 'the start waits for the claim, though the suite answers it from memory');
             assert.deepEqual(run.timers.map(t => t.ms), [delay]);
-            assert.equal(JSON.parse(run.values.get('_twHandBack')).writer, 'native');
+            assert.equal(JSON.parse(run.disk.get('_twHandBack')).writer, 'native', 'the file keeps the native marker');
             if (delay < 2000) run.fire();
         }
         assert.equal(run.localStorage.getItem('twHandBackApplied'), '3', 'applied once; the next attempts only claim');
         run.refused.clear();
         run.fire();
         await run.init;
-        assert.deepEqual(JSON.parse(run.values.get('_twHandBack')), {schema: 1, generation: 4, writer: 'cordova', complete: true, keys: KEYS});
+        assert.deepEqual(JSON.parse(run.disk.get('_twHandBack')), {schema: 1, generation: 4, writer: 'cordova', complete: true, keys: KEYS});
         assert.equal(run.localStorage.getItem('cityIndex'), nativeState.cityIndex);
     }
 });
@@ -208,7 +212,7 @@ test('without a marker the start does not wait for its claim', async () => {
     // A Cordova build the native app never ran over: a native start would migrate it all anyway.
     const run = await start({local: staleWebView, refusing: ['_twHandBack']});
     assert.equal(run.settled(), true);
-    assert.equal(run.values.has('_twHandBack'), false);
+    assert.equal(run.disk.has('_twHandBack'), false);
 });
 
 test('the delays stop growing at 30 s', async () => {
