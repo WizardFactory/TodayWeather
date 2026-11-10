@@ -11,8 +11,8 @@ use crate::providers::{
     HttpPublicTransport, ProviderResponse, ProviderTransport, ProviderTransportError, Request,
 };
 use crate::storage::{
-    CatalogTransport, ControlObject, Error, ListPage, Object, ObjectTransport, PreparedRecord,
-    WriteCondition,
+    Catalog, CatalogTransport, ControlObject, Error, ListPage, Object, ObjectTransport,
+    PreparedRecord, WriteCondition,
 };
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -29,7 +29,7 @@ struct Calls {
 }
 /// An isolated in-memory S3: raw objects, conditional control objects, the catalog index and
 /// budget objects, with its requests counted. It does no I/O; a control key can stall once (virtual
-/// time) and a LIST prefix can wait at a gate the test opens.
+/// time) or be gone while it is still listed, and a LIST prefix can wait at a gate the test opens.
 #[derive(Clone, Default)]
 struct Memory(Arc<Mutex<Objects>>);
 #[derive(Default)]
@@ -41,6 +41,7 @@ struct Objects {
     calls: Calls,
     listed: Vec<String>,
     stall: Option<(String, Duration)>,
+    hidden: std::collections::BTreeSet<String>,
     hold: Option<(String, Arc<tokio::sync::Semaphore>)>,
     reached: bool,
 }
@@ -70,6 +71,10 @@ impl Memory {
         let gate = Arc::new(tokio::sync::Semaphore::new(0));
         self.0.lock().unwrap().hold = Some((prefix.to_owned(), gate.clone()));
         gate
+    }
+    /// GETs of control object `key` find nothing while LISTs still name it.
+    fn hide(&self, key: &str) {
+        self.0.lock().unwrap().hidden.insert(key.to_owned());
     }
     fn reached(&self) -> bool {
         self.0.lock().unwrap().reached
@@ -137,6 +142,9 @@ impl CatalogTransport for Memory {
             objects.calls.descriptors += 1;
         } else {
             objects.calls.catalogs += 1;
+        }
+        if objects.hidden.contains(key) {
+            return Err(Error::NotFound);
         }
         objects.control.get(key).cloned().ok_or(Error::NotFound)
     }
@@ -888,6 +896,63 @@ async fn a_corrupt_or_wholly_lost_partition_fails_the_read_as_before() {
         assert!(read.is_err(), "corrupt: {corrupt}: {read:?}");
         assert!(inputs.shared.life.lock().unwrap().refreshed.is_none());
     }
+}
+
+/// T3 (guard, as before): an absent catalog fails the read with `lookup`'s incomplete catalog, the
+/// error of every acquisition excluded: one never published, one listing no acquisition, and a
+/// listed partition whose catalog object is gone.
+#[tokio::test(start_paused = true)]
+async fn an_absent_catalog_fails_the_read_as_before() {
+    let mem = Memory::default();
+    let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
+    let wall = wall_at(20261110, 1230);
+    let reader = reader(&mem, &store);
+    let incomplete = Error::Corrupt("incomplete catalog");
+    let p = publication(20261110, 1200);
+    let empty = publication(20261110, 900);
+    let catalog = uv_catalog(empty);
+    let body = Catalog::empty(catalog.clone())
+        .bytes(&CatalogLimits::default())
+        .unwrap();
+    let written = mem
+        .put_control(&catalog.key(), &body, &WriteCondition::Absent)
+        .await
+        .unwrap();
+    assert_eq!(written, 200);
+    for (what, partition) in [("never published", p), ("listing nothing", empty)] {
+        let partition = partition.partition();
+        let before = reader
+            .acquisitions_counted(DATA_GO_KR, "uv-idx-v5", &all_areas(), &partition, far())
+            .await
+            .unwrap_err();
+        let now = reader
+            .distinct(DATA_GO_KR, "uv-idx-v5", &all_areas(), &partition, far())
+            .await
+            .unwrap_err();
+        assert_eq!(before, incomplete, "{what}: before");
+        assert_eq!(now, before, "{what}: as before");
+    }
+    // Listed, but its catalog object is gone: the life read fails, as before.
+    mem.remove(&catalog.key());
+    store_at(
+        &store,
+        "uv-idx-v5",
+        p,
+        kst(20261110, 1210),
+        &uv("2026111012", 0, 1),
+    )
+    .await;
+    mem.hide(&uv_catalog(p).key());
+    let before = oracle(&reader, wall.now()).await.unwrap_err();
+    assert!(before.contains("incomplete catalog"), "{before}");
+    let inputs = stored_only(&mem, &store, &wall);
+    let read = read_life(&inputs.shared, wall.now(), far()).await;
+    assert!(
+        read.as_ref()
+            .is_err_and(|e| e.contains("incomplete catalog")),
+        "{read:?}"
+    );
+    assert!(inputs.shared.life.lock().unwrap().refreshed.is_none());
 }
 
 /// T3 (the stated difference, I1): a later acquisition of a content whose own descriptor or page is

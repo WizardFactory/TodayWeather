@@ -377,7 +377,7 @@ impl<T: IndexListing + Clone> Reader<T> {
     /// counted and the next is tried, and an error ends the read. Every later group of that content
     /// is returned with the restored group's pages, at its own completion and place in `lookup`'s
     /// order, without reading its own descriptor or bodies (so it is applied even when they are
-    /// lost). No restored group: `lookup`'s incomplete catalog. No catalog: empty.
+    /// lost). No catalog, or no restored group: `lookup`'s incomplete catalog, as before.
     pub async fn distinct(
         &self,
         source: &str,
@@ -387,10 +387,8 @@ impl<T: IndexListing + Clone> Reader<T> {
         deadline: Instant,
     ) -> Result<(Vec<Fetched>, usize), Error> {
         let id = catalog(source, kind, key, partition)?;
+        // An absent catalog lists no group: the incomplete catalog below, as `lookup`'s.
         let mut groups = self.listed_groups(&id, deadline).await?;
-        if groups.is_empty() {
-            return Ok((Vec::new(), 0));
-        }
         groups.sort_by(|a, b| lookup_order(&a.entries[0]).cmp(&lookup_order(&b.entries[0])));
         // The pages each restored content is read from.
         let mut read: HashMap<String, Vec<Arc<[u8]>>> = HashMap::new();

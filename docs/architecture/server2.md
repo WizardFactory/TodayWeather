@@ -2855,15 +2855,15 @@ life index like the forecast-zone list: no new copy of a stored content and boun
 the catalog does not list whole is restored on its own). The groups of one content are restored in
 that order with `lookup`'s per-group rules (`Reader::members`): a group S06 excludes (descriptor or
 a member's body missing, not eligible) is counted and the next is tried, and an error (a corrupt
-member, transport, deadline) fails the read.
-Every later group of that content is applied with the restored pages, at its own completion and
-place, without reading its own descriptor or bodies. No group restored is `lookup`'s incomplete
-catalog; an absent catalog gives nothing. The fold order and rules are unchanged, so a repeated
-acquisition still runs UV `remove_old` at its own completion and is then skipped by the issuance
-rule. A partition costs one catalog GET plus, per distinct content, one group restore (the catalog
-again, the descriptor and the pages one at a time); each failed restore adds one. Parsing, ordering
-and folding stay linear in the listed groups. The needed partitions are still restored four at a
-time, but no longer with wide page reads. Contents are not shared across partitions.
+member, transport, deadline) fails the read. Every later group of that content is applied with the
+restored pages, at its own completion and place, without reading its own descriptor or bodies. An
+absent catalog, or no group restored, fails the read with `lookup`'s incomplete catalog, as before.
+The fold order and rules are unchanged, so a repeated acquisition still runs UV `remove_old` at its
+own completion and is then skipped by the issuance rule. A partition costs one catalog GET plus,
+per distinct content, one group restore (the catalog again, the descriptor and the pages one at a
+time); each failed restore adds one. Parsing, ordering and folding stay linear in the listed
+groups. The needed partitions are still restored four at a time, but no longer with wide page
+reads. Contents are not shared across partitions.
 
 **Stated difference.** While every listed group's descriptor and members are present, the fold,
 each kind's last issuance, the pollen day+3, the applied set and the last applied acquisition are
