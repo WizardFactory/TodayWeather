@@ -26,7 +26,8 @@ angular.module('service.storage', [])
         var handBackKeys = ['cities', 'cityIndex', 'cityList', 'units', 'settingsInfo', 'pushData2', 'pushData',
             'expandShortChart', 'startVersion', 'appVersion', 'disableUpdateInfo', 'twAnalyticsConsentV1'];
         // False after a start that could not read or apply a native hand-back whole: until the next start tries again,
-        // this build writes nothing into the suite, so its texts never mix with the hand-back under the native marker.
+        // this build writes nothing into the suite (init skips its mirror; TwStorage.set keeps to localStorage), so its
+        // texts never mix with the hand-back under the native marker.
         var suiteWritable = true;
 
         function _readHandBack(value) {
@@ -179,7 +180,7 @@ angular.module('service.storage', [])
                         else {
                             localStorage.setItem(key, value);
 
-                            if (ionic.Platform.isAndroid() && suiteWritable) {
+                            if (ionic.Platform.isAndroid()) {
                                 suitePrefs.store(null, null, key, value);
                                 oldSuitePrefs.remove(null, null, key);
                             }
@@ -205,9 +206,6 @@ angular.module('service.storage', [])
         // localStorage에 저장된 data를 appPreference로 update
         function _localStorage2appPref() {
             var keys = ['cities', 'cityIndex', 'pushData', 'startVersion', 'settingsInfo'];
-            if (!suiteWritable) {
-                return;
-            }
 
             keys.forEach(function (key){
                 var value = localStorage.getItem(key);
@@ -251,6 +249,17 @@ angular.module('service.storage', [])
                 }
 
                 localStorage.setItem("settingsInfo", JSON.stringify(settingsInfo));
+            }
+        }
+
+        // setForwardCompatibility without its write: the stored settings, or init's defaults, in $rootScope.
+        function _settingsInMemory() {
+            var settingsInfo = obj.get("settingsInfo");
+            if (settingsInfo !== null && typeof settingsInfo === 'object') {
+                if (settingsInfo.theme == undefined) {
+                    settingsInfo.theme = 'light'; //밝은 테마
+                }
+                $rootScope.settingsInfo = settingsInfo;
             }
         }
 
@@ -330,16 +339,18 @@ angular.module('service.storage', [])
             }
 
             function _restoreOrMirror() {
+                // A start that could not apply the hand-back writes nothing more (AN-17): the session runs on what
+                // localStorage holds, with the settings in memory, so no refused write can keep init from settling; the
+                // next start tries the hand-back again.
+                if (!suiteWritable) {
+                    _settingsInMemory();
+                    deferred.resolve();
+                    return;
+                }
                 // localStorage가 clear 된 경우 appPreference의 data를 localStorage로 update.
                 // A new web origin (file:// → app://localhost or https://localhost) also starts empty; test the
                 // city keys, not length, so an unrelated early write cannot skip the restore.
                 if (localStorage.getItem('cityList') === null && localStorage.getItem('cities') === null) {
-                    // The suite holds a hand-back this start could not apply: no part of it is restored now.
-                    if (!suiteWritable) {
-                        that.setForwardCompatibility();
-                        deferred.resolve();
-                        return;
-                    }
                     _appPref2localStorage().finally(function () {
                         that.setForwardCompatibility();
                         deferred.resolve();

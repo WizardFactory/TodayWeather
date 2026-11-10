@@ -26,13 +26,13 @@ function suiteOf(values, failing) {
     };
 }
 
-// localStorage; a write of the key [full] throws as a full store does.
+// localStorage; a write of the key [full] ('*': of any key) throws as a full store does.
 function storageOf(items, full) {
     const map = items instanceof Map ? items : new Map(Object.entries(items));
     return {
         map,
         getItem(k) { return map.has(k) ? map.get(k) : null; },
-        setItem(k, v) { if (k === full) throw new Error('QuotaExceededError'); map.set(k, String(v)); },
+        setItem(k, v) { if (k === full || full === '*') throw new Error('QuotaExceededError'); map.set(k, String(v)); },
         removeItem(k) { map.delete(k); }
     };
 }
@@ -70,6 +70,7 @@ async function start({suite = {}, local = {}, failing, full} = {}) {
     const storage = factory(rootScope, q(), Util, Monetization);
     await Promise.race([storage.init(), new Promise((_, no) => setTimeout(() => no(new Error('init did not settle')), 500))]);
     await new Promise(r => setTimeout(r, 0));
+    storage.rootSettings = () => rootScope.settingsInfo;
     return {storage, localStorage, values, calls};
 }
 
@@ -154,14 +155,21 @@ test('a localStorage write that fails while applying: the keys go back and the h
     await untilALaterStart({full: 'units', local});
 });
 
-test('an emptied WebView store and a hand-back that fails to apply: nothing restored in part, and init settles', async () => {
-    const handed = new Map(Object.entries(Object.assign({_twHandBack: marker(3)}, nativeState)));
-    const before = new Map(handed);
-    const first = await start({suite: handed, local: {}, full: 'units'});
-    assert.deepEqual([...first.localStorage.map.keys()].filter(k => k !== 'settingsInfo'), [], 'no key of the hand-back restored');
-    assert.deepEqual([...handed.entries()], [...before.entries()]);
-    const later = await start({suite: handed, local: first.localStorage.map});
-    assert.equal(later.localStorage.getItem('cities'), nativeState.cities);
+// A start that could not apply the hand-back writes nothing more: the session runs on what localStorage holds, with
+// the settings in memory, so it settles whatever the store refuses, and the next start applies the hand-back.
+test('a start that could not apply the hand-back needs no further write to settle', async () => {
+    for (const [local, full] of [[{}, 'units'], [{}, 'settingsInfo'], [{}, '*'], [staleWebView, '*']]) {
+        const name = `${Object.keys(local).length ? 'stale' : 'emptied'} store, ${full} refused`;
+        const handed = new Map(Object.entries(Object.assign({_twHandBack: marker(3)}, nativeState)));
+        const before = new Map(handed);
+        const stored = new Map(Object.entries(local));
+        const first = await start({suite: handed, local: stored, full});
+        assert.deepEqual([...first.localStorage.map.entries()], Object.entries(local), `${name}: nothing written, nothing restored in part`);
+        assert.deepEqual([...handed.entries()], [...before.entries()], name);
+        assert.equal(first.storage.rootSettings().theme, local.settingsInfo ? 'dark' : 'light', `${name}: the stored or default settings in memory`);
+        const later = await start({suite: handed, local: first.localStorage.map});
+        assert.equal(later.localStorage.getItem('cities'), nativeState.cities, name);
+    }
 });
 
 // TwStorage with the real Monetization: after a native withdrawal, a start that cannot use the hand-back never turns
