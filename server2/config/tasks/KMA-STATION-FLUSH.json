@@ -1,0 +1,38 @@
+{
+  "task": "KMA-STATION-FLUSH",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "PR-V of the restart re-examination (AK 2026-11-10; design review 5 APPROVE): the rn1 gap of restart b1. A fill pass that ends with new pages for a day stores that day's station-page product once at the end of the pass, past the ten-minute product gate and only when what the day is made of changed, through the single product worker. A restart read reads, compares and folds today's and yesterday's pages before the older days' catalogs and products and the minute pages, without marking the load complete for S16 early. Tests for the residual product lag and for two processes' products in reverse order. No new cache, budget or restore machinery; no deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-STATION-FLUSH.json",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/domestic/kma/source/observe_flush_tests.rs",
+    "server2/tests/domestic/observe_product.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-station-flush.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-station-flush.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-station-flush.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Station-page product writes after a fill pass, the restart read order and the residual product lag."
+    }
+  ],
+  "path_notes": {
+    "server2/src/domestic/kma/source/observe.rs": "fill_window records the days a pass held new pages for and hands them to flush_products at the end of the pass; product_candidates lets such a day pass PRODUCT_EVERY once; a complete day read reports a waiting flush and the read asks the product worker (SF-flush-read-recovery); read_s3 reads, compares and folds today and yesterday (fold_held) beside the older days' catalogs and products; hourly_page reports whether it held a page; want_products follows the worker it started or joined and starts the next one while a comparison is still due (code review 2); unit test of the gate; declares the paused-clock tests (observe_flush_tests.rs)",
+    "server2/tests/domestic/observe_product.rs": "KMA-STATION-FLUSH tests: the end-of-fill product with no fold and with a running worker, the early fold's order and final result with held minute pages and a held older-day product, a city station only an older day names, the residual lag cases and two processes' products in reverse order; the Pages double gains holds, a fetch instant, a first answered hour and its records",
+    "server2/src/domestic/kma/source/observe_flush_tests.rs": "Unit tests over an isolated in-memory S3 on a paused clock: a flush kept by a failed day read is stored after the next read alone, also when that read joins a finishing product worker or arrives during a product store, and the early fold's time contract (the first answer within its wait has today's and yesterday's rows) with the minute pages and with an older day's product held"
+  }
+}
