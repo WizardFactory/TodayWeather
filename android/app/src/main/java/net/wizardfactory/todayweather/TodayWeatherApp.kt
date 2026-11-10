@@ -1,5 +1,11 @@
 package net.wizardfactory.todayweather
 
+import net.wizardfactory.todayweather.notify.AndroidNotificationAccess
+import net.wizardfactory.todayweather.notify.ForegroundNotifications
+import net.wizardfactory.todayweather.notify.NotificationChannels
+import net.wizardfactory.todayweather.notify.NotificationPoster
+import net.wizardfactory.todayweather.notify.NotificationTaps
+import net.wizardfactory.todayweather.notify.PushMessage
 import android.app.Application
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
@@ -70,9 +76,27 @@ open class TodayWeatherApp : Application() {
     /** The place indexes of `todayweather://N` links, for the open app's session (AN-16). */
     val entryLinks = EntryLinks()
 
-    /** Handles an entry intent after the migration: links here; notification taps are AN-14's work. */
+    /** The place indexes of notification taps (AN-14), for the open app's session. */
+    val notificationTaps = NotificationTaps()
+
+    /** Handles an entry intent after the migration: links and notification taps. */
     protected open fun onEntryIntent(intent: android.content.Intent) {
-        entryLinks.accept(intent)
+        if (!entryLinks.accept(intent)) notificationTaps.accept(intent)
+    }
+
+    /** The notification permission for S09 (AN-14); the shown activity lends it the system's prompt. */
+    val notifications: AndroidNotificationAccess by lazy { AndroidNotificationAccess(this) }
+
+    /** Messages while the app shows (O07). */
+    val foreground = ForegroundNotifications()
+
+    /**
+     * A message FCM handed over (`onMessageReceived`): the open tabs take it as O07; otherwise, or when it asks to show
+     * in the foreground too, it is posted (firebasex's `showNotification`).
+     */
+    open fun receive(message: PushMessage) {
+        val shown = foreground.offer(message)
+        if (!shown || message.foreground) NotificationPoster.post(this, message)
     }
 
     /** The weather photo feed of the photo theme, loaded once per process (AN-08 chooses each place's photo). */
@@ -124,5 +148,6 @@ open class TodayWeatherApp : Application() {
     override fun onCreate() {
         super.onCreate()
         migration.start()
+        NotificationChannels.ensure(this)
     }
 }

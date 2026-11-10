@@ -89,6 +89,7 @@ import net.wizardfactory.todayweather.ui.chart.rememberChartImages
 import net.wizardfactory.todayweather.ui.shell.BarButton
 import net.wizardfactory.todayweather.ui.shell.FixedLine
 import net.wizardfactory.todayweather.ui.shell.Glyphs
+import net.wizardfactory.todayweather.ui.shell.IonicToggle
 import net.wizardfactory.todayweather.ui.shell.Icon
 import net.wizardfactory.todayweather.ui.shell.LineText
 import net.wizardfactory.todayweather.ui.shell.ShellColors
@@ -430,7 +431,7 @@ private fun PlaceRowItem(row: PlaceRow, theme: Theme, images: ChartImages, color
                     !editing -> Box(Modifier.clickable(onClick = onBell).testTag(PlacesTags.bell(index))) {
                         Icon { LineText(if (row.hasPush) Glyphs.NOTIFICATIONS else Glyphs.NOTIFICATIONS_NONE, line(28.sp, 28.sp, colors.text, family = Glyphs.ionicons)) }
                     }
-                    row.currentPosition -> Switch(!row.disabled, onSwitch)
+                    row.currentPosition -> IonicToggle(!row.disabled, onSwitch, Modifier.testTag(PlacesTags.TOGGLE))
                     else -> Box(Modifier.clickable(onClick = onDelete).testTag(PlacesTags.delete(index))) {
                         Icon { LineText(Glyphs.IOS_CLOSE_OUTLINE, line(28.sp, 28.sp, colors.text, FontWeight.Bold, family = Glyphs.ionicons)) }
                     }
@@ -446,16 +447,6 @@ private fun Label(lines: List<String>, style: TextStyle) {
     Column { lines.take(2).forEach { CssText(chromeRuns(it), style, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
 }
 
-/** `.toggle.toggle-search`: a 38 by 14 dp track (8 dp corners, gray, blue when on) and a 20 dp white handle. */
-@Composable
-private fun Switch(on: Boolean, onChange: (Boolean) -> Unit) {
-    Box(Modifier.size(48.dp, 30.dp).semantics { toggleableState = ToggleableState(on) }.clickable(role = Role.Switch) { onChange(!on) }
-        .testTag(PlacesTags.TOGGLE)) {
-        Box(Modifier.offset(5.dp, 5.5.dp).size(38.dp, 14.dp).clip(RoundedCornerShape(8.dp))
-            .background(if (on) Color(0xFF387EF5) else Color(0xCC9E9E9E)))
-        Box(Modifier.offset(if (on) 23.dp else 5.dp, 2.5.dp).size(20.dp).shadow(2.dp, CircleShape).background(Color.White, CircleShape))
-    }
-}
 
 private const val PREDICTION_DELAY_MS = 300L
 

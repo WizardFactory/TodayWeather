@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ui.text
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -174,4 +175,21 @@ internal fun CssText(
         val last = placeable[LastBaseline]
         layout(placeable.width, box.ascent + (last - first) + box.descent) { placeable.place(0, box.ascent - first) }
     }, style = if (align != null) style.copy(textAlign = align) else style, maxLines = maxLines, softWrap = maxLines != 1, overflow = overflow)
+}
+
+/**
+ * A line of a set CSS `line-height` ([height]) as Chrome lays it out: the half-leading of the first available font (the
+ * block's Roboto, CssMetrics' rounded ascent and descent) above its ascent, so the baseline sits where the WebView's does
+ * whatever box Compose gives the font; a fallback font's glyphs (Korean) take the same baseline. [text] is one line.
+ */
+@Composable
+internal fun CssFixedLine(text: AnnotatedString, style: TextStyle, height: Dp, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    val box = remember(style, density) { CssMetrics.line(AnnotatedString("x"), style, style, density) }
+    Text(text, modifier.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+        val lineHeight = height.roundToPx()
+        val baseline = ((lineHeight - (box.ascent + box.descent)) / 2f + box.ascent).toInt()
+        layout(placeable.width, lineHeight) { placeable.place(0, baseline - placeable[FirstBaseline]) }
+    }, style = style, maxLines = 1, softWrap = false)
 }

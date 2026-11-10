@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- firebasex's notification color (@color/accent, ANDROID_ICON_ACCENT #FFFFFF in the Cordova build, AN-14). -->
+    <color name="notification_accent">#FFFFFFFF</color>
+</resources>
