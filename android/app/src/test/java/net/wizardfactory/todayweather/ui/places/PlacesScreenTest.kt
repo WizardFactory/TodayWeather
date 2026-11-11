@@ -18,6 +18,7 @@ import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,6 +52,7 @@ import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.PopupTags
+import net.wizardfactory.todayweather.ui.nation.NationTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -103,13 +105,19 @@ class PlacesScreenTest {
 
     private fun string(id: Int) = rule.activity.getString(id)
 
+    /** While it is set, weather requests wait for it (the rows' loads at entry come before). */
+    private var held: CompletableDeferred<Unit>? = null
+
     private fun show(places: List<Place>, index: Int = 1, startupPage: String = "2", records: List<JsonObject> = emptyList(), device: Device = Device()) {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage),
             push = PushState(fcmToken = "t", records = records)).closeStart().copy(placeIndex = index))
         val http = HttpGet { url, _ ->
             when {
                 "/geocode/" in url -> File(inputs, "geocode-seoul.json").readText()
-                else -> File(inputs, "kma-seoul.json").readText()
+                else -> {
+                    held?.await()
+                    File(inputs, "kma-seoul.json").readText()
+                }
             }
         }
         val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
@@ -266,5 +274,50 @@ class PlacesScreenTest {
         rule.waitForIdle()
         rule.onNodeWithTag(PlacesTags.INPUT).assertIsFocused()
         rule.onNodeWithTag(PlacesTags.FIND).assertExists()
+    }
+
+    /** O17 on S02: the loading overlay shows while a town from the search loads, and goes when it is added. */
+    @Test
+    fun theLoadingOverlayShowsWhileAPlaceIsAdded() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul))
+        search("부산")
+        val hold = CompletableDeferred<Unit>().also { held = it }
+        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(NationTags.LOADING).assertExists()
+        hold.complete(Unit)
+        rule.waitForIdle()
+        rule.onNodeWithTag(NationTags.LOADING).assertDoesNotExist()
+        assertEquals("부산광역시", memory.current().places.last().name)
+    }
+
+    /** O09 on S02: a place already saved is not added again; the alert says so (`LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED`). */
+    @Test
+    fun aPlaceAlreadySavedShowsTheDuplicateMessage() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul))
+        search("부산")
+        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        val saved = memory.current().places
+        assertEquals("부산광역시", saved.last().name)
+        rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
+        rule.waitForIdle()
+        search("부산")
+        rule.onNodeWithTag(PlacesTags.town(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText(string(R.string.LOC_ERROR)).assertExists()
+        rule.onNodeWithText(string(R.string.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED)).assertExists()
+        assertEquals(saved, memory.current().places)
+        rule.onNodeWithText(string(R.string.LOC_OK), useUnmergedTree = true).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText(string(R.string.LOC_ALREADY_THE_SAME_LOCATION_HAS_BEEN_ADDED)).assertDoesNotExist()
+    }
+
+    /** S02's search mode with [word] typed. */
+    private fun search(word: String) {
+        rule.onNodeWithTag(PlacesTags.INPUT).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(PlacesTags.INPUT).performTextInput(word)
+        rule.waitForIdle()
     }
 }

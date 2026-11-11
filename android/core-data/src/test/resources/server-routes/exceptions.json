@@ -1,0 +1,55 @@
+{
+ "about": "Requests of the native client that are not a v000903 route the legacy server serves, each with the decision that keeps it (AN-18, #2897; spec R8). A not-served entry lists its request (method, and the path on the wire as an anchored regular expression) and the route that answers it. RequestPathsTest and RequestSitesTest (core-data) fail when an entry is no longer observed or a request outside this register appears.",
+ "exceptions": [
+  {
+   "id": "E1",
+   "request": "GET /weather/v000903/addr/{address}{units}",
+   "kind": "not-served",
+   "match": {"method": "GET", "path": "^/weather/v000903/addr/.+$"},
+   "route": {"file": "server/routes/gateway.js", "method": "ALL", "path": "OWN_PATH"},
+   "reason": "The Cordova free-form weather fallback (_makeQueryUrlWithAddr in service.weatherutil.js), sent for a place with an address but no coordinates whose address has no KMA town (foreign free text, or 대한민국 alone). The legacy server's gateway answers every other /weather path with 404 (the AWS Lambda answered 501); the app shows the failure as the Cordova app does.",
+   "decision": "AN-06 (#2885): the free-form weather-address fallback is kept",
+   "evidence": ["server/routes/gateway.js router.all(OWN_PATH)", "specs/issue-2606.md shape X1", "docs/architecture/aws-code-correlation.md"],
+   "observedBy": "RequestPathsTest"
+  },
+  {
+   "id": "E2",
+   "request": "GET {TW_WEATHER_PHOTOS_URL}",
+   "kind": "other-host",
+   "reason": "The photo theme's feed, at the private build input TW_WEATHER_PHOTOS_URL, as the Cordova app's clientConfig.weatherPhotosUrl (loadWeatherPhotos). Without the input nothing is requested.",
+   "decision": "#2886 (AN-08): the photo theme loads the Cordova feed",
+   "evidence": ["android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherPhotoFeed.kt"],
+   "observedBy": "RequestPathsTest"
+  },
+  {
+   "id": "E3",
+   "request": "GET {a photo URL of the feed}",
+   "kind": "other-host",
+   "reason": "The photo the feed names for a place's weather (twUrls.regular), loaded by the app's PhotoLoader as the WebView loaded it.",
+   "decision": "#2886 (AN-08): the photo theme loads the Cordova feed",
+   "evidence": ["android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/PhotoLoader.kt"],
+   "observedBy": "RequestSitesTest",
+   "sites": ["app/src/main/java/net/wizardfactory/todayweather/ui/forecast/PhotoLoader.kt"]
+  },
+  {
+   "id": "E4",
+   "request": "SDK traffic: Places, Firebase (Messaging, Analytics, Remote Config, Crashlytics), Google Mobile Ads with UMP, and Google Play services location",
+   "kind": "sdk",
+   "reason": "The SDKs reach Google's endpoints themselves; the app builds no URL for them. Places runs only with a Places key, Firebase only with its configuration, Analytics only after the user's consent.",
+   "decision": "AN-06 (#2885) and AN-10, AN-14, AN-15: the Cordova app's providers through their native SDKs",
+   "evidence": ["android/app/build.gradle.kts", "android/README.md"],
+   "observedBy": "RequestSitesTest",
+   "sdks": [
+    "com.google.android.gms:play-services-ads",
+    "com.google.android.gms:play-services-location",
+    "com.google.android.libraries.places:places",
+    "com.google.android.ump:user-messaging-platform",
+    "com.google.firebase:firebase-analytics",
+    "com.google.firebase:firebase-bom",
+    "com.google.firebase:firebase-config",
+    "com.google.firebase:firebase-crashlytics",
+    "com.google.firebase:firebase-messaging"
+   ]
+  }
+ ]
+}

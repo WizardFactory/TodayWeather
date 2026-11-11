@@ -51,6 +51,9 @@ on:
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/android/icon/**"
       - "client/tw.resources/android-launcher-icon.png"
+      - "server/app.js"
+      - "server/routes/**"
+      - "server/package-lock.json"
       - ".github/workflows/android.yml"
   push:
     branches: [master]
@@ -104,6 +107,9 @@ on:
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/android/icon/**"
       - "client/tw.resources/android-launcher-icon.png"
+      - "server/app.js"
+      - "server/routes/**"
+      - "server/package-lock.json"
       - ".github/workflows/android.yml"
 permissions:
   contents: read
@@ -124,10 +130,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Imported client assets and golden corpus are current
+      - name: Imported client assets, golden corpus and server route table are current
         run: |
           python3 android/tools/import_client_assets.py
           node android/tools/corpus/generate.mjs
+          node android/tools/server-routes/generate.mjs
           git diff --exit-code -- android
           test -z "$(git status --porcelain -- android)"
       - name: Chart and shell references match the client sources

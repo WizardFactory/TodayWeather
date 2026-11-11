@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ui.start
 
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -13,6 +14,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.espresso.Espresso
 import java.io.File
 import java.io.IOException
@@ -21,7 +25,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import net.wizardfactory.todayweather.AppContent
 import net.wizardfactory.todayweather.R
 import net.wizardfactory.todayweather.core.data.GeocodeClient
@@ -45,6 +52,7 @@ import net.wizardfactory.todayweather.search.Prediction
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
+import net.wizardfactory.todayweather.ui.nation.NationTags
 import net.wizardfactory.todayweather.ui.shell.PopupTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.After
@@ -115,7 +123,7 @@ class StartScreenTest {
 
     private fun string(id: Int) = rule.activity.getString(id)
 
-    private fun http(weather: () -> String = { seoulBody }) = HttpGet { url, _ ->
+    private fun http(weather: suspend () -> String = { seoulBody }) = HttpGet { url, _ ->
         requests += url
         when {
             "/geocode/v000903/coord/" in url -> geocodeBody
@@ -125,7 +133,7 @@ class StartScreenTest {
     }
 
     /** S01 of a new install over [device], with [predictions] for the search box. */
-    private fun start(device: Device, weather: () -> String = { seoulBody }, predictions: List<Prediction> = emptyList()) {
+    private fun start(device: Device, weather: suspend () -> String = { seoulBody }, predictions: List<Prediction> = emptyList()) {
         memory = Memory(AppState(places = listOf(Place.currentPositionPlaceholder()), placeIndex = -1, units = UnitSettings.defaults("KR")))
         val get = http(weather)
         val repository = WeatherRepository("https://server.test.invalid", null, get, io = Dispatchers.Unconfined)
@@ -401,5 +409,81 @@ class StartScreenTest {
         assertTrue(memory.current().places[0].disable)
         assertEquals(1, memory.current().placeIndex)
         rule.onNodeWithTag(ShellTags.page(Tab.LOCATIONS)).assertExists()
+    }
+
+    /** O17 on S01: the loading overlay shows while the chosen place's weather loads, and Android back waits for it. */
+    @Test
+    fun theLoadingOverlayShowsWhileAPlaceLoads() {
+        val answer = CompletableDeferred<String>()
+        start(Device(true, PermissionStatus.GRANTED), weather = { answer.await() })
+        closeNotice()
+        rule.onNodeWithTag(NationTags.LOADING).assertDoesNotExist()
+        rule.onNodeWithTag(StartTags.chip(0)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(NationTags.LOADING).assertExists()
+        Espresso.pressBackUnconditionally()
+        rule.waitForIdle()
+        assertEquals("back waits for the load", 0, exits)
+        answer.complete(seoulBody)
+        rule.waitForIdle()
+        rule.onNodeWithTag(NationTags.LOADING).assertDoesNotExist()
+        assertFalse(memory.current().startShows)
+    }
+
+    /** With the keyboard up a tap on a result only closes the keyboard (`cordova.plugins.Keyboard.isVisible()`); without it the tap adds. */
+    @Test
+    fun aTapWhileTheKeyboardIsUpOnlyClosesIt() {
+        start(Device(true, PermissionStatus.GRANTED), predictions = listOf(Prediction("대한민국 서울특별시 중구 회현동", 14)))
+        closeNotice()
+        rule.onNodeWithTag(StartTags.INPUT).performTextInput("회현")
+        rule.mainClock.advanceTimeBy(400)
+        rule.waitForIdle()
+        keyboard(up = true)
+        rule.onNodeWithTag(StartTags.result(0)).performClick()
+        rule.waitForIdle()
+        assertEquals("nothing is added", emptyList<String>(), requests)
+        assertTrue(memory.current().startShows)
+        rule.onNodeWithTag(StartTags.result(0)).assertExists()
+        keyboard(up = false)
+        rule.onNodeWithTag(StartTags.result(0)).performClick()
+        rule.waitForIdle()
+        assertEquals(2, requests.size)
+        assertFalse(memory.current().startShows)
+    }
+
+    /** S01 hides the banner while it shows and its close shows it again (`setShowAds`); the tabs load after it. Without S01 nothing changes. */
+    @Test
+    fun theBannerHidesOnTheStartPageAndShowsAfterIt() = runBlocking {
+        val open = AppState()
+        assertTrue(open.startShows)
+        val states = MutableStateFlow<AppState?>(null)
+        val calls = mutableListOf<Boolean>()
+        val after = async { hideBannerWhileStartShows(states, calls::add) }
+        yield()
+        assertEquals(emptyList<Boolean>(), calls)
+        states.value = open
+        yield()
+        assertEquals(listOf(false), calls)
+        states.value = open.closeStart()
+        assertEquals(open.closeStart(), after.await())
+        assertEquals(listOf(false, true), calls)
+        val none = mutableListOf<Boolean>()
+        assertEquals(open.closeStart(), hideBannerWhileStartShows(MutableStateFlow(open.closeStart()), none::add))
+        assertEquals(emptyList<Boolean>(), none)
+    }
+
+    /**
+     * The keyboard [up] or down, as the window's insets tell the page. Robolectric has no keyboard, and insets given to
+     * its window do not reach the page, so they go to the page's view directly, as MainActivity's edge-to-edge window passes them on.
+     */
+    private fun keyboard(up: Boolean) {
+        rule.runOnUiThread {
+            val insets = WindowInsetsCompat.Builder()
+                .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, if (up) 600 else 0))
+                .setVisible(WindowInsetsCompat.Type.ime(), up)
+                .build()
+            ViewCompat.dispatchApplyWindowInsets(rule.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0), insets)
+        }
+        rule.waitForIdle()
     }
 }

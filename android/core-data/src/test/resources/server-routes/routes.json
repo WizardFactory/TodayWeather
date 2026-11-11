@@ -1,0 +1,1796 @@
+{
+ "generator": "android/tools/server-routes/generate.mjs",
+ "app": "server/app.js",
+ "express": "4.13.4",
+ "pathToRegexp": "0.1.7",
+ "routers": [
+  {
+   "file": "server/app.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 81,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "cors(…)"
+    },
+    {
+     "line": 85,
+     "kind": "mount",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "router": "server/routes/gateway.js"
+    },
+    {
+     "line": 88,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "session(…)"
+    },
+    {
+     "line": 98,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "favicon(…)"
+    },
+    {
+     "line": 100,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "bodyParser.json(…)"
+    },
+    {
+     "line": 101,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "bodyParser.urlencoded(…)"
+    },
+    {
+     "line": 102,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "cookieParser(…)"
+    },
+    {
+     "line": 103,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "express.static(…)"
+    },
+    {
+     "line": 105,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "i18n.init"
+    },
+    {
+     "line": 107,
+     "kind": "mount",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "router": "server/routes/v000001/index.js"
+    },
+    {
+     "line": 108,
+     "kind": "mount",
+     "path": "/v000001",
+     "regex": "^\\/v000001\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/index.js"
+    },
+    {
+     "line": 109,
+     "kind": "mount",
+     "path": "/v000705",
+     "regex": "^\\/v000705\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/index.js"
+    },
+    {
+     "line": 110,
+     "kind": "mount",
+     "path": "/v000803",
+     "regex": "^\\/v000803\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/index.js"
+    },
+    {
+     "line": 111,
+     "kind": "mount",
+     "path": "/v000901",
+     "regex": "^\\/v000901\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000901/index.js"
+    },
+    {
+     "line": 112,
+     "kind": "mount",
+     "path": "/v000902",
+     "regex": "^\\/v000902\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000902/index.js"
+    },
+    {
+     "line": 113,
+     "kind": "mount",
+     "path": "/v000903",
+     "regex": "^\\/v000903\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000903/index.js"
+    },
+    {
+     "line": 114,
+     "kind": "mount",
+     "path": "/ww",
+     "regex": "^\\/ww\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/worldweather/routeWeather.js"
+    },
+    {
+     "line": 115,
+     "kind": "mount",
+     "path": "/req",
+     "regex": "^\\/req\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/worldweather/routeRequester.js"
+    },
+    {
+     "line": 116,
+     "kind": "route",
+     "method": "GET",
+     "path": "/health",
+     "regex": "^\\/health\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 168,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function (req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 179,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function (err, req, res)",
+     "arity": 3
+    },
+    {
+     "line": 190,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function (err, req, res)",
+     "arity": 3
+    }
+   ]
+  },
+  {
+   "file": "server/routes/gateway.js",
+   "caseSensitive": true,
+   "layers": [
+    {
+     "line": 352,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/coord/:loc",
+     "regex": "^\\/weather\\/coord\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 353,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/:version(v000901|v000902|v000903)/coord/:loc",
+     "regex": "^\\/weather\\/(?:(v000901|v000902|v000903))\\/coord\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 354,
+     "kind": "route",
+     "method": "GET",
+     "path": "/geocode/:version(v000903)/coord/:loc",
+     "regex": "^\\/geocode\\/(?:(v000903))\\/coord\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 355,
+     "kind": "route",
+     "method": "GET",
+     "path": "/geocode/:version(v000901|v000903)/addr/*",
+     "regex": "^\\/geocode\\/(?:(v000901|v000903))\\/addr\\/(.*)\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 358,
+     "kind": "route",
+     "method": "ALL",
+     "path": "OWN_PATH",
+     "regex": "^\\/(?:weather|geocode)(?:\\/|$)",
+     "ignoreCase": false
+    },
+    {
+     "line": 365,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": false,
+     "matchesAll": true,
+     "handler": "function (err, req, res, next)",
+     "arity": 4
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000001/index.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 5,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 9,
+     "kind": "mount",
+     "path": "/town",
+     "regex": "^\\/town\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeTownForecast.js"
+    },
+    {
+     "line": 10,
+     "kind": "mount",
+     "path": "/gather",
+     "regex": "^\\/gather\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeGather.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000001/routeGather.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 14,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 21,
+     "kind": "route",
+     "method": "GET",
+     "path": "/current/:mx/:my",
+     "regex": "^\\/current\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 38,
+     "kind": "route",
+     "method": "GET",
+     "path": "/current",
+     "regex": "^\\/current\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 48,
+     "kind": "route",
+     "method": "GET",
+     "path": "/past",
+     "regex": "^\\/past\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 59,
+     "kind": "route",
+     "method": "GET",
+     "path": "/shortrss",
+     "regex": "^\\/shortrss\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 66,
+     "kind": "route",
+     "method": "GET",
+     "path": "/midrss",
+     "regex": "^\\/midrss\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 75,
+     "kind": "route",
+     "method": "GET",
+     "path": "/midtemp",
+     "regex": "^\\/midtemp\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 84,
+     "kind": "route",
+     "method": "GET",
+     "path": "/midland",
+     "regex": "^\\/midland\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 93,
+     "kind": "route",
+     "method": "GET",
+     "path": "/midforecast",
+     "regex": "^\\/midforecast\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 102,
+     "kind": "route",
+     "method": "GET",
+     "path": "/midsea",
+     "regex": "^\\/midsea\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 111,
+     "kind": "route",
+     "method": "GET",
+     "path": "/keco",
+     "regex": "^\\/keco\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 120,
+     "kind": "route",
+     "method": "GET",
+     "path": "/kecoSido",
+     "regex": "^\\/kecoSido\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 129,
+     "kind": "route",
+     "method": "GET",
+     "path": "/kecoForecast",
+     "regex": "^\\/kecoForecast\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 139,
+     "kind": "route",
+     "method": "GET",
+     "path": "/short/:mx/:my",
+     "regex": "^\\/short\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 157,
+     "kind": "route",
+     "method": "GET",
+     "path": "/short",
+     "regex": "^\\/short\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 167,
+     "kind": "route",
+     "method": "GET",
+     "path": "/shortest/:mx/:my",
+     "regex": "^\\/shortest\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 184,
+     "kind": "route",
+     "method": "GET",
+     "path": "/shortest",
+     "regex": "^\\/shortest\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 194,
+     "kind": "route",
+     "method": "GET",
+     "path": "/lifeindex",
+     "regex": "^\\/lifeindex\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 206,
+     "kind": "route",
+     "method": "GET",
+     "path": "/kmaStnHourly",
+     "regex": "^\\/kmaStnHourly\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 224,
+     "kind": "route",
+     "method": "GET",
+     "path": "/kmaStnPastHourly",
+     "regex": "^\\/kmaStnPastHourly\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 242,
+     "kind": "route",
+     "method": "GET",
+     "path": "/kmaStnMinute",
+     "regex": "^\\/kmaStnMinute\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 260,
+     "kind": "route",
+     "method": "GET",
+     "path": "/updateStnRnsHitRate",
+     "regex": "^\\/updateStnRnsHitRate\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 273,
+     "kind": "route",
+     "method": "GET",
+     "path": "/invalidateCloudFront/:items",
+     "regex": "^\\/invalidateCloudFront\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 296,
+     "kind": "route",
+     "method": "GET",
+     "path": "/gatherKasiRiseSet",
+     "regex": "^\\/gatherKasiRiseSet\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 306,
+     "kind": "route",
+     "method": "GET",
+     "path": "/updateInvalidt1h",
+     "regex": "^\\/updateInvalidt1h\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000001/routeTownForecast.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 9,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 16,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 40,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 45,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 50,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 57,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/mid",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/mid\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 60,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/short",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/short\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 62,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/shortest",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/shortest\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 64,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/current",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/current\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000705/dailySummary.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 11,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 27,
+     "kind": "route",
+     "method": "GET",
+     "path": "/town/*",
+     "regex": "^\\/town\\/(.*)\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 36,
+     "kind": "route",
+     "method": "GET",
+     "path": "/geo/:lat/:lon",
+     "regex": "^\\/geo\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000705/index.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 8,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 22,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 26,
+     "kind": "mount",
+     "path": "/gather",
+     "regex": "^\\/gather\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeGather.js"
+    },
+    {
+     "line": 27,
+     "kind": "mount",
+     "path": "/town",
+     "regex": "^\\/town\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/routeTownForecast.js"
+    },
+    {
+     "line": 28,
+     "kind": "mount",
+     "path": "/daily",
+     "regex": "^\\/daily\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/dailySummary.js"
+    },
+    {
+     "line": 29,
+     "kind": "mount",
+     "path": "/push",
+     "regex": "^\\/push\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/routePushNotification.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000705/routePushNotification.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 10,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function (req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 28,
+     "kind": "route",
+     "method": "POST",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 114,
+     "kind": "route",
+     "method": "PUT",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 163,
+     "kind": "route",
+     "method": "DELETE",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000705/routeTownForecast.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 12,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 19,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 43,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 52,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 65,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 77,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/mid",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/mid\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 82,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/short",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/short\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 87,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/shortest",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/shortest\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 90,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town/current",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/current\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000803/index.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 24,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function checkAuthorization(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 111,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 115,
+     "kind": "mount",
+     "path": "/gather",
+     "regex": "^\\/gather\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeGather.js"
+    },
+    {
+     "line": 116,
+     "kind": "mount",
+     "path": "/town",
+     "regex": "^\\/town\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/routeTownForecast.js"
+    },
+    {
+     "line": 117,
+     "kind": "mount",
+     "path": "/daily",
+     "regex": "^\\/daily\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/dailySummary.js"
+    },
+    {
+     "line": 118,
+     "kind": "mount",
+     "path": "/push",
+     "regex": "^\\/push\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/routePushNotification.js"
+    },
+    {
+     "line": 120,
+     "kind": "mount",
+     "path": "/nation",
+     "regex": "^\\/nation\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.nation.js"
+    },
+    {
+     "line": 122,
+     "kind": "route",
+     "method": "POST",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 126,
+     "kind": "mount",
+     "path": "/test",
+     "regex": "^\\/test\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.test.js"
+    },
+    {
+     "line": 128,
+     "kind": "mount",
+     "path": "/geo",
+     "regex": "^\\/geo\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.geo.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000803/route.geo.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 19,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 77,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:lat/:lon",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000803/route.nation.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 18,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 153,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:nation",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000803/route.test.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 9,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 24,
+     "kind": "route",
+     "method": "GET",
+     "path": "/stnWeatherHourly/*",
+     "regex": "^\\/stnWeatherHourly\\/(.*)\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 25,
+     "kind": "route",
+     "method": "GET",
+     "path": "/stnWeatherMinute/*",
+     "regex": "^\\/stnWeatherMinute\\/(.*)\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 29,
+     "kind": "route",
+     "method": "GET",
+     "path": "/special",
+     "regex": "^\\/special\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 42,
+     "kind": "route",
+     "method": "GET",
+     "path": "/gatherKasiRiseSet",
+     "regex": "^\\/gatherKasiRiseSet\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000803/routeTownForecast.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 12,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 19,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 55,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 57,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 59,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000901/index.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 10,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 24,
+     "kind": "mount",
+     "path": "/gather",
+     "regex": "^\\/gather\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeGather.js"
+    },
+    {
+     "line": 26,
+     "kind": "mount",
+     "path": "/daily",
+     "regex": "^\\/daily\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/dailySummary.js"
+    },
+    {
+     "line": 27,
+     "kind": "mount",
+     "path": "/push",
+     "regex": "^\\/push\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/routePushNotification.js"
+    },
+    {
+     "line": 28,
+     "kind": "mount",
+     "path": "/nation",
+     "regex": "^\\/nation\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.nation.js"
+    },
+    {
+     "line": 30,
+     "kind": "mount",
+     "path": "/kma/addr",
+     "regex": "^\\/kma\\/addr\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000901/route.kma.addr.js"
+    },
+    {
+     "line": 33,
+     "kind": "mount",
+     "path": "/dsf/coord",
+     "regex": "^\\/dsf\\/coord\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000901/route.dsf.coord.js"
+    },
+    {
+     "line": 38,
+     "kind": "route",
+     "method": "POST",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 42,
+     "kind": "mount",
+     "path": "/test",
+     "regex": "^\\/test\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.test.js"
+    },
+    {
+     "line": 44,
+     "kind": "mount",
+     "path": "/geo",
+     "regex": "^\\/geo\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.geo.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000901/route.dsf.coord.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 14,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 33,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:loc",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000901/route.kma.addr.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 14,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 21,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 62,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 64,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 66,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:region/:city/:town",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000902/index.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 10,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 24,
+     "kind": "mount",
+     "path": "/gather",
+     "regex": "^\\/gather\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeGather.js"
+    },
+    {
+     "line": 26,
+     "kind": "mount",
+     "path": "/daily",
+     "regex": "^\\/daily\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/dailySummary.js"
+    },
+    {
+     "line": 27,
+     "kind": "mount",
+     "path": "/push",
+     "regex": "^\\/push\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/routePushNotification.js"
+    },
+    {
+     "line": 28,
+     "kind": "mount",
+     "path": "/push-list",
+     "regex": "^\\/push-list\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000902/route.push.update.list.js"
+    },
+    {
+     "line": 29,
+     "kind": "mount",
+     "path": "/nation",
+     "regex": "^\\/nation\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.nation.js"
+    },
+    {
+     "line": 31,
+     "kind": "mount",
+     "path": "/kma",
+     "regex": "^\\/kma\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000902/route.kma.v000902.js"
+    },
+    {
+     "line": 33,
+     "kind": "mount",
+     "path": "/dsf/coord",
+     "regex": "^\\/dsf\\/coord\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000902/route.dsf.coord.v000902.js"
+    },
+    {
+     "line": 38,
+     "kind": "route",
+     "method": "POST",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 42,
+     "kind": "mount",
+     "path": "/test",
+     "regex": "^\\/test\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.test.js"
+    },
+    {
+     "line": 44,
+     "kind": "mount",
+     "path": "/geo",
+     "regex": "^\\/geo\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.geo.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000902/route.dsf.coord.v000902.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 14,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 81,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:loc",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000902/route.kma.v000902.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 14,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 21,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 62,
+     "kind": "route",
+     "method": "GET",
+     "path": "/addr/:region",
+     "regex": "^\\/addr\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 64,
+     "kind": "route",
+     "method": "GET",
+     "path": "/addr/:region/:city",
+     "regex": "^\\/addr\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 66,
+     "kind": "route",
+     "method": "GET",
+     "path": "/addr/:region/:city/:town",
+     "regex": "^\\/addr\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 70,
+     "kind": "route",
+     "method": "GET",
+     "path": "/coord/:loc",
+     "regex": "^\\/coord\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000902/route.push.update.list.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 9,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function (req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 80,
+     "kind": "route",
+     "method": "POST",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000903/index.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 10,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 24,
+     "kind": "mount",
+     "path": "/gather",
+     "regex": "^\\/gather\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000001/routeGather.js"
+    },
+    {
+     "line": 26,
+     "kind": "mount",
+     "path": "/daily",
+     "regex": "^\\/daily\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/dailySummary.js"
+    },
+    {
+     "line": 27,
+     "kind": "mount",
+     "path": "/push",
+     "regex": "^\\/push\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000705/routePushNotification.js"
+    },
+    {
+     "line": 28,
+     "kind": "mount",
+     "path": "/push-list",
+     "regex": "^\\/push-list\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000902/route.push.update.list.js"
+    },
+    {
+     "line": 29,
+     "kind": "mount",
+     "path": "/nation",
+     "regex": "^\\/nation\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.nation.js"
+    },
+    {
+     "line": 31,
+     "kind": "mount",
+     "path": "/kma",
+     "regex": "^\\/kma\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000903/route.kma.v000903.js"
+    },
+    {
+     "line": 33,
+     "kind": "mount",
+     "path": "/dsf/coord",
+     "regex": "^\\/dsf\\/coord\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000903/route.dsf.coord.v000903.js"
+    },
+    {
+     "line": 38,
+     "kind": "route",
+     "method": "POST",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 42,
+     "kind": "mount",
+     "path": "/test",
+     "regex": "^\\/test\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000803/route.test.js"
+    },
+    {
+     "line": 44,
+     "kind": "mount",
+     "path": "/geo",
+     "regex": "^\\/geo\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "router": "server/routes/v000903/route.geo.v000903.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000903/route.dsf.coord.v000903.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 10,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function (req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 14,
+     "kind": "mount",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "router": "server/routes/v000902/route.dsf.coord.v000902.js"
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000903/route.geo.v000903.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 79,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:loc",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/v000903/route.kma.v000903.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 14,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 21,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 62,
+     "kind": "route",
+     "method": "GET",
+     "path": "/addr/:region",
+     "regex": "^\\/addr\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 64,
+     "kind": "route",
+     "method": "GET",
+     "path": "/addr/:region/:city",
+     "regex": "^\\/addr\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 66,
+     "kind": "route",
+     "method": "GET",
+     "path": "/addr/:region/:city/:town",
+     "regex": "^\\/addr\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 70,
+     "kind": "route",
+     "method": "GET",
+     "path": "/coord/:loc",
+     "regex": "^\\/coord\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 72,
+     "kind": "route",
+     "method": "GET",
+     "path": "/special",
+     "regex": "^\\/special\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/worldweather/routeRequester.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 9,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 22,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 26,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:category/:command",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  },
+  {
+   "file": "server/routes/worldweather/routeWeather.js",
+   "caseSensitive": false,
+   "layers": [
+    {
+     "line": 8,
+     "kind": "middleware",
+     "path": "/",
+     "regex": "^\\/?(?=\\/|$)",
+     "ignoreCase": true,
+     "matchesAll": true,
+     "handler": "function timestamp(req, res, next)",
+     "arity": 3
+    },
+    {
+     "line": 14,
+     "kind": "route",
+     "method": "GET",
+     "path": "/",
+     "regex": "^\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 18,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:version",
+     "regex": "^\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 19,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:version/:category",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    },
+    {
+     "line": 24,
+     "kind": "route",
+     "method": "GET",
+     "path": "/:version/:category/:days",
+     "regex": "^\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/(?:([^\\/]+?))\\/?$",
+     "ignoreCase": true
+    }
+   ]
+  }
+ ],
+ "sources": [
+  {
+   "path": "server/app.js",
+   "commit": "78b918a2c346c481b29ebdd9a8c75982ac8d34fe",
+   "sha256": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8"
+  },
+  {
+   "path": "server/routes/gateway.js",
+   "commit": "5f8c5ddc73666b93ad1b90fcf78c4d4a903981b2",
+   "sha256": "90d772e4aa915928be66f3835db9e4db4ffcb266614016b9f903be24f49dba75"
+  },
+  {
+   "path": "server/routes/v000001/index.js",
+   "commit": "cd60de6336018faff0d3e95bbefd4b04d75807ea",
+   "sha256": "9e687813b83ec13c16e1b14dc1508ea6b55a56e1f489df28b67b94e5b94f075b"
+  },
+  {
+   "path": "server/routes/v000001/routeGather.js",
+   "commit": "e66f9aa9a1630463c96c242630e5405a7d581ef5",
+   "sha256": "6b97c4e93af0b3aa12c7c38f6034ab39efec4cc7acd8477dbc5397f785508437"
+  },
+  {
+   "path": "server/routes/v000001/routeTownForecast.js",
+   "commit": "e96de9855c2469429ae461f0acd3283d03e02056",
+   "sha256": "0432ee2fc231b5b526ce9230b1c190fc55fb918461015145d34199b3ccdb8c59"
+  },
+  {
+   "path": "server/routes/v000705/dailySummary.js",
+   "commit": "35877cc209ba1f7fcad3daeae182ed9b958652b5",
+   "sha256": "d650951cc3c98d50c24dab43e019ee5d78bee04309da9ff770dee7bd1fba1ae0"
+  },
+  {
+   "path": "server/routes/v000705/index.js",
+   "commit": "b9090518b479bc124931143701a4b576b2a7f46b",
+   "sha256": "b29f289fab08549d31ddde85dac03590d6b4137004e475cd7e5da33995dc1154"
+  },
+  {
+   "path": "server/routes/v000705/routePushNotification.js",
+   "commit": "78b918a2c346c481b29ebdd9a8c75982ac8d34fe",
+   "sha256": "c0a52209f6deba75f04107f9346d4039b71e323f01d162356877de1aa3a3fd03"
+  },
+  {
+   "path": "server/routes/v000705/routeTownForecast.js",
+   "commit": "d3418c112cac68f37b34e482bce48159ad99a63b",
+   "sha256": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599"
+  },
+  {
+   "path": "server/routes/v000803/index.js",
+   "commit": "b9090518b479bc124931143701a4b576b2a7f46b",
+   "sha256": "8c5345effbc6553cf37a5f73f83c46b560f9efcbe181de82a9672b575f65545a"
+  },
+  {
+   "path": "server/routes/v000803/route.geo.js",
+   "commit": "0f0bf8a7b31b315ff4ad75ad1ee9acd5e1dfd121",
+   "sha256": "4d3cc024e78f4f9c993a7d2fda28166508bd39d65540dd5e573831a84d27446b"
+  },
+  {
+   "path": "server/routes/v000803/route.nation.js",
+   "commit": "e69b175a6972b878f7d18dadb019caa875b97651",
+   "sha256": "d57c5d810a334756d479c8d6fa62b760bc706198c2d3d0adedde5b725b7da779"
+  },
+  {
+   "path": "server/routes/v000803/route.test.js",
+   "commit": "41da1e34e6b8a32e71b7f9d1cc58a747edc5fa1f",
+   "sha256": "b9b10b25862ce7860826e5181e8cb5cb7b3d9949281fcef46d03ed03c15201e3"
+  },
+  {
+   "path": "server/routes/v000803/routeTownForecast.js",
+   "commit": "0f0bf8a7b31b315ff4ad75ad1ee9acd5e1dfd121",
+   "sha256": "26e1fcdba3e3b85e64376dbcc18a7f1c718317c0e0f9b35c44f6d9cc76f890fe"
+  },
+  {
+   "path": "server/routes/v000901/index.js",
+   "commit": "b9090518b479bc124931143701a4b576b2a7f46b",
+   "sha256": "45efc29fc957e2c0f88b28317bfa5b0272b17e9a3f7ccc9b898df82f79e4187d"
+  },
+  {
+   "path": "server/routes/v000901/route.dsf.coord.js",
+   "commit": "750bd577143538581b9368add126588b6bf6d533",
+   "sha256": "8f417f7b6f9062c4a094b43e8fcbd800b30cdec4fb96d59d16812b4e6a9fe74e"
+  },
+  {
+   "path": "server/routes/v000901/route.kma.addr.js",
+   "commit": "0f0bf8a7b31b315ff4ad75ad1ee9acd5e1dfd121",
+   "sha256": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8"
+  },
+  {
+   "path": "server/routes/v000902/index.js",
+   "commit": "b9090518b479bc124931143701a4b576b2a7f46b",
+   "sha256": "072956e313042c8a395c3782f1502cbd67ec77aab60b1a70f919395b54a64bcc"
+  },
+  {
+   "path": "server/routes/v000902/route.dsf.coord.v000902.js",
+   "commit": "c3d9a7687898d7445838d1c76319909cd7db8594",
+   "sha256": "dc63dc3fb0c628f83eb1fcf5a49e1a594a5ae56186d3368a39f9267dc4e68de2"
+  },
+  {
+   "path": "server/routes/v000902/route.kma.v000902.js",
+   "commit": "0f0bf8a7b31b315ff4ad75ad1ee9acd5e1dfd121",
+   "sha256": "b883df033ea670e62fd2a7ba3f38a51b2b688c2ef3928562296804ec2c1a81a6"
+  },
+  {
+   "path": "server/routes/v000902/route.push.update.list.js",
+   "commit": "78b918a2c346c481b29ebdd9a8c75982ac8d34fe",
+   "sha256": "517f2da24486939c30028bec5aab61864e94c8ebe9105f6350d6f5f49c5d23c8"
+  },
+  {
+   "path": "server/routes/v000903/index.js",
+   "commit": "b9090518b479bc124931143701a4b576b2a7f46b",
+   "sha256": "898b628a7354ae5f90102ad85a05d3598d088f1d3a908d500502300cbaed840b"
+  },
+  {
+   "path": "server/routes/v000903/route.dsf.coord.v000903.js",
+   "commit": "5940e723ec0151eea4987895e7f02820d8b4f063",
+   "sha256": "3eaec169225df44f34d87b9ee50938e24018a1acd7ad86af0930acb6b0c60161"
+  },
+  {
+   "path": "server/routes/v000903/route.geo.v000903.js",
+   "commit": "82715f9eb9afbe37388d457e87b5b7a2b6115899",
+   "sha256": "36fc9077da114f250482021fa3fecf5795db31bd14d59e8b7a90ef41a68b25e9"
+  },
+  {
+   "path": "server/routes/v000903/route.kma.v000903.js",
+   "commit": "0f0bf8a7b31b315ff4ad75ad1ee9acd5e1dfd121",
+   "sha256": "b7b7d8ea661783ad51f764a379fafa642ae5072f57e3fba14620b44ad43070eb"
+  },
+  {
+   "path": "server/routes/worldweather/routeRequester.js",
+   "commit": "ca73310f3a4a79971197da092511bd648adbb216",
+   "sha256": "d89bbdc3767e183276a036ae07a03669ec23a47a9725561805847dbccc116e07"
+  },
+  {
+   "path": "server/routes/worldweather/routeWeather.js",
+   "commit": "750bd577143538581b9368add126588b6bf6d533",
+   "sha256": "9466525346849475a9ee07e6d063cf347f51930521e1f41624c8649b9db6ea12"
+  }
+ ]
+}
