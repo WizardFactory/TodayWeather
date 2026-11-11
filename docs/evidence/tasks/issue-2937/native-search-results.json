@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-12 KST",
+  "artifact": "see device-artifact-identity.json",
+  "case": "ja-typed-search-weather",
+  "status": "passed",
+  "query": "Tokyo",
+  "actual_google_result_label": "Tokyo, 日本",
+  "assertions": [
+    "real Google suggestion exists",
+    "result selected; second tap if first only dismisses keyboard",
+    "weather degree text visible",
+    "initial city field no longer hittable"
+  ],
+  "test_method": "TodayWeatherDeviceTests/testTypedSearchSelectsWeather",
+  "command_template": "xcodebuild test-without-building -xctestrun <signed-runner.xctestrun> -destination id:<paired-test-device> -resultBundlePath <new-ignored-result-path>",
+  "source_sha256": "37abb0d4b2896587370b06f42b603c2390979f6fef9c302212a0229b3a4da6ca",
+  "log_sha256": "f475ca4435bbf73f0ea7e969270e219c3dee7098233c50ae134ba2c3d289cee2",
+  "earlier_attempt": "lost testmanagerd after prior radio-off transport loss; not counted as product failure or passing search"
+}

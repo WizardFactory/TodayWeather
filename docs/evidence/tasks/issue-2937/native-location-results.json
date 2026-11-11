@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-12 KST",
+  "cases": [
+    {
+      "case": "location-allowed",
+      "status": "passed"
+    },
+    {
+      "case": "ja-denied-alternate-Tokyo",
+      "status": "passed"
+    }
+  ],
+  "privacy": "actual current coordinates and address omitted",
+  "reset_scope": "only isolated clone location authorization reset; original app unchanged"
+}
