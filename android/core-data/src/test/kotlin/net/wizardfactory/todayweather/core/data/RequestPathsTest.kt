@@ -63,7 +63,8 @@ class RequestPathsTest {
         }
     }
 
-    private data class Verdict(val method: String, val path: String, val match: ServerRoutes.Match?, val exception: String?) {
+    /** A request's route, the register entry that lists it, or what fails it ([problem]). */
+    private data class Verdict(val method: String, val path: String, val match: ServerRoutes.Match?, val exception: String?, val problem: String?) {
         val route: String get() = match?.let { "${it.route.method} ${it.pattern}" } ?: "(no route)"
     }
 
@@ -88,11 +89,38 @@ class RequestPathsTest {
         val verdicts = legacy.requests.map { verdict(it.method, it.target.substringBefore('?')) }
         println(table(verdicts, photos.requests.size))
 
+        assertEquals(emptyList(), verdicts.mapNotNull { v -> v.problem?.let { "${v.method} ${v.path}: $it" } }.distinct())
         assertEquals(EXPECTED, verdicts.map { it.route }.toSet(), "the routes the native client reaches")
         assertEquals(listOf("E1", "E2", "E3", "E4"), register.map { it.text("id") })
         assertEquals(listOf("E1", "E2"), register.filter { it.text("observedBy") == "RequestPathsTest" }.map { it.text("id") })
         assertEquals(setOf("E1"), verdicts.mapNotNull { it.exception }.toSet(), "the server's exceptions the client still sends")
         assertEquals(listOf("GET $FEED_PATH"), photos.requests.map { "${it.method} ${it.target}" }, "E2: the photo feed, at its own URL")
+    }
+
+    /**
+     * The register lists requests, not routes (review F1): a request is an exception only when its method and path are
+     * the entry's and the entry's route answers it. Anything else the gateway's 404 route answers fails, as does a path
+     * no route serves, a route of another method, or another version.
+     */
+    @Test
+    fun onlyARegisteredRequestIsAnException() {
+        assertEquals("E1", verdict("GET", "/weather/v000903/addr/London").exception)
+        assertEquals("E1", verdict("GET", "/weather/v000903/addr/1/2%20Abbey%20Road").exception)
+        for ((method, path) in listOf(
+            "POST" to "/weather/v000903/addr/London",
+            "GET" to "/geocode/v000903/not-a-route",
+            "GET" to "/weather/v000903/address/London",
+            "GET" to "/weather/v000903/addr/",
+            "GET" to "/v000903/kma/addr/a/b/c/d",
+            "GET" to "/v000903/push",
+            "GET" to "/weather/v000902/coord/37.5,127",
+        )) {
+            val v = verdict(method, path)
+            assertNull(v.exception, "$method $path is not E1")
+            assertNotNull(v.problem, "$method $path must fail")
+        }
+        assertEquals("not under v000903", verdict("GET", "/weather/v000902/coord/37.5,127").problem)
+        assertNull(verdict("GET", "/weather/v000903/coord/37.5,127").problem)
     }
 
     /** The dispatch follows Express where these paths need it (the server's behavior, read from its source). */
@@ -128,22 +156,30 @@ class RequestPathsTest {
         assertNull(route("GET", "/nowhere"))
     }
 
+    /**
+     * [method] [path] passes when a route of its method serves it under `v000903` behind reviewed middleware, or when a
+     * not-served register entry lists this request (its method and path) and names the route that answers it.
+     */
     private fun verdict(method: String, path: String): Verdict {
-        assertTrue(VERSIONED.matches(path), "$method $path is not under v000903")
         val match = routes.dispatch(method, path)
-        val listed = register.firstOrNull { entry ->
-            val route = entry["route"]?.jsonObject ?: return@firstOrNull false
-            entry.text("kind") == "not-served" && match != null && route.text("file") == match.route.file &&
-                route.text("method") == match.route.method && route.text("path") == match.route.path
+        val listed = register.firstOrNull { it.lists(method, path, match) }
+        val problem = when {
+            !VERSIONED.matches(path) -> "not under v000903"
+            listed != null -> null
+            match == null -> "no route of the legacy server answers it"
+            match.route.method != method -> "answered by ${match.route.method} ${match.pattern} (${match.route.source}), which the register does not list for it"
+            else -> match.passed.firstOrNull { "${it.file} ${it.handler}" !in PASSED }?.let { "passes ${it.handler} (${it.source}), which is not reviewed" }
         }
-        if (listed == null) {
-            assertNotNull(match, "$method $path: no route of the legacy server answers it")
-            assertEquals(method, match.route.method, "$method $path: answered by ${match.route.method} ${match.pattern} (${match.route.source})")
-            for (layer in match.passed) {
-                assertTrue("${layer.file} ${layer.handler}" in PASSED, "$method $path passes ${layer.handler} (${layer.source}), which is not reviewed")
-            }
-        }
-        return Verdict(method, path, match, listed?.text("id"))
+        return Verdict(method, path, match, listed?.text("id"), problem)
+    }
+
+    /** This not-served entry lists [method] [path]: its request's method and path, answered by its route. */
+    private fun JsonObject.lists(method: String, path: String, match: ServerRoutes.Match?): Boolean {
+        if (text("kind") != "not-served" || match == null) return false
+        val request = this["match"]!!.jsonObject
+        val route = this["route"]!!.jsonObject
+        return method == request.text("method") && Regex(request.text("path")!!).matches(path) &&
+            route.text("file") == match.route.file && route.text("method") == match.route.method && route.text("path") == match.route.path
     }
 
     /** What the app sends, through the production clients and transports. */

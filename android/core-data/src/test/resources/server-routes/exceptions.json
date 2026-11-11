@@ -1,10 +1,11 @@
 {
- "about": "Requests of the native client that are not a v000903 route the legacy server serves, each with the decision that keeps it (AN-18, #2897; spec R8). RequestPathsTest and RequestSitesTest (core-data) fail when an entry is no longer observed or a request outside this register appears.",
+ "about": "Requests of the native client that are not a v000903 route the legacy server serves, each with the decision that keeps it (AN-18, #2897; spec R8). A not-served entry lists its request (method, and the path on the wire as an anchored regular expression) and the route that answers it. RequestPathsTest and RequestSitesTest (core-data) fail when an entry is no longer observed or a request outside this register appears.",
  "exceptions": [
   {
    "id": "E1",
    "request": "GET /weather/v000903/addr/{address}{units}",
    "kind": "not-served",
+   "match": {"method": "GET", "path": "^/weather/v000903/addr/.+$"},
    "route": {"file": "server/routes/gateway.js", "method": "ALL", "path": "OWN_PATH"},
    "reason": "The Cordova free-form weather fallback (_makeQueryUrlWithAddr in service.weatherutil.js), sent for a place with an address but no coordinates whose address has no KMA town (foreign free text, or 대한민국 alone). The legacy server's gateway answers every other /weather path with 404 (the AWS Lambda answered 501); the app shows the failure as the Cordova app does.",
    "decision": "AN-06 (#2885): the free-form weather-address fallback is kept",
