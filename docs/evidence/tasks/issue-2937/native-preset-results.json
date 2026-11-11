@@ -1,0 +1,419 @@
+{
+  "date": "2026-11-12 KST",
+  "artifact": "see device-artifact-identity.json",
+  "cases": [
+    {
+      "case": "ja-preset-0",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "서울",
+      "preset_index": 0,
+      "preset_coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-1",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "New York",
+      "preset_index": 1,
+      "preset_coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-2",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "東京",
+      "preset_index": 2,
+      "preset_coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-3",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "Berlin",
+      "preset_index": 3,
+      "preset_coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-4",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "北京",
+      "preset_index": 4,
+      "preset_coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-5",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "臺北市",
+      "preset_index": 5,
+      "preset_coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-6",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "दिल्ली",
+      "preset_index": 6,
+      "preset_coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-7",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "Hồ Chí Minh",
+      "preset_index": 7,
+      "preset_coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-8",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "Москва",
+      "preset_index": 8,
+      "preset_coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-9",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "Roma",
+      "preset_index": 9,
+      "preset_coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-10",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "İstanbul",
+      "preset_index": 10,
+      "preset_coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-11",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "香港",
+      "preset_index": 11,
+      "preset_coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-12",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "São Paulo",
+      "preset_index": 12,
+      "preset_coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-13",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "กรุงเทพมหานคร",
+      "preset_index": 13,
+      "preset_coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-14",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "Madrid",
+      "preset_index": 14,
+      "preset_coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-15",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "Warszawa",
+      "preset_index": 15,
+      "preset_coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ja-preset-16",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "كراچى",
+      "preset_index": 16,
+      "preset_coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "ko-tokyo",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "東京",
+      "preset_index": 2,
+      "preset_coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "en-tokyo",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "東京",
+      "preset_index": 2,
+      "preset_coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "de-tokyo",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "東京",
+      "preset_index": 2,
+      "preset_coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "zh-Hans-tokyo",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "東京",
+      "preset_index": 2,
+      "preset_coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    },
+    {
+      "case": "zh-Hant-tokyo",
+      "status": "passed",
+      "layer": "physical iOS/XCUITest",
+      "path": "public API after approved EIP restoration",
+      "city": "東京",
+      "preset_index": 2,
+      "preset_coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "assertions": [
+        "weather temperature/summary degree symbol visible",
+        "initial city input no longer hittable"
+      ],
+      "native_http_capture": false,
+      "path_source": "unchanged released coordinate URL builder; native check asserts rendered outcome"
+    }
+  ],
+  "japanese_presets": 17,
+  "other_locale_controls": [
+    "ko",
+    "en",
+    "de",
+    "zh-Hans",
+    "zh-Hant"
+  ],
+  "note": "all22 cases assert visible weather and closed initial picker; typed search probe is not counted as a passed search journey",
+  "execution": {
+    "command": "xcodebuild test-without-building -xctestrun reports/sdlc/issue-2937/device-ui/dd/Build/Products/TWUITests_iphoneos27.2-arm64.xctestrun -destination id:<paired-test-device> -resultBundlePath <new-ignored-result-path>",
+    "japanese_test": "TodayWeatherDeviceTests/testJapaneseEveryPhonePreset",
+    "locale_control_test": "TodayWeatherDeviceTests/testLocaleControls",
+    "precondition": "isolated development-signed archive clone clears clone localStorage and uses a unique clone preferences suite per launch; original app/domain untouched",
+    "actual_result": "both XCTest methods passed;22 assertion-bound scenario IDs",
+    "source_sha256": "81cea700802282e3bd0c0e33b0cd5778a45a80c4f633eca4c1a5653aea62ef1d"
+  }
+}

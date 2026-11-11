@@ -1,0 +1,33 @@
+{
+  "device": "iPhone12 Pro Max",
+  "os": "26.0.1",
+  "original_artifact": "submitted1.1.1(1) archive",
+  "clone_bundle_id": "net.wizardfactory.todayweather.issue2937",
+  "changes": [
+    "development wildcard re-sign, unique application identifier/keychain isolation, app-group and push entitlements omitted",
+    "independent preferences suite name changes per launch, only clone localStorage clears on launch",
+    "Google test AdMob application and unit IDs; consent logic retained",
+    "display name TW2937 Test"
+  ],
+  "core_hashes": {
+    "www/js/controller.start.js": {
+      "submitted": "a46f0c5f1c45375008c195fde9c35f74849c7b4173b777354cf61f13097e6f71",
+      "clone": "a46f0c5f1c45375008c195fde9c35f74849c7b4173b777354cf61f13097e6f71"
+    },
+    "www/js/service.weatherutil.js": {
+      "submitted": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+      "clone": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+    }
+  },
+  "original_app_and_data": "untouched; clone has no original app-group entitlement or suite reference",
+  "native_executable_uuid": "5B5587C3-46E3-350A-8361-9E36C2989BAC (arm64), same in submitted archive and re-signed clone",
+  "additional_device": {
+    "device": "iPhone 8 (iPhone10,4)",
+    "os": "16.7.16",
+    "purpose": "USB healthy Tokyo, actual offline/same-city retry and state restoration",
+    "same_clone_artifact": true,
+    "ui_viewport_points": "320x568",
+    "screenshot_pixels": "640x1136",
+    "driver": "isolated re-signed Appium WebDriverAgent prebuilt; see native-offline-transport.json"
+  }
+}

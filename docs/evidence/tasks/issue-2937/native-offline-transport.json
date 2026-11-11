@@ -1,0 +1,81 @@
+{
+  "date": "2026-11-12 KST",
+  "status": "passed",
+  "attempt": "real disconnected-network native failure and same-city recovery over USB",
+  "device": "iPhone 8 (iPhone10,4)",
+  "os": "16.7.16",
+  "locale": "ja_JP, clone-scoped -AppleLanguages (ja)",
+  "artifact": "same isolated re-signed submitted 1.1.1 (1) archive as device-artifact-identity.json; core hashes and native Mach-O UUID unchanged",
+  "transport": "paired USB usbmux + signed legacy developer image + Appium WebDriverAgent; survived Wi-Fi and cellular data off",
+  "discovery_correction": "system_profiler USB inventory was empty, but IORegistry and libimobiledevice found an already paired USB iPhone. Earlier no-USB conclusion was wrong.",
+  "original_states": {
+    "wifi": 1,
+    "cellular_data": 1,
+    "airplane": 0
+  },
+  "disconnected_states": {
+    "wifi": 0,
+    "cellular_data": 0,
+    "airplane": 0
+  },
+  "request": {
+    "path": "/weather/v000903/coord/35.709,139.732",
+    "host": "todayweather.wizardfactory.net",
+    "http_status": null,
+    "failure_stage": "native device network unavailable; no HTTP response",
+    "limits": "No decrypted native wire trace or per-request status captured; public path inferred from bundled unchanged configuration and selected preset coordinates."
+  },
+  "observations": [
+    "Fresh clone picker; select Tokyo with both data paths disabled",
+    "Japanese weather error displayed in 3.063 seconds (tap/UI-observation interval, not raw HTTP latency)",
+    "Dismiss confirmation: loading overlay absent and city chips accessible",
+    "Restore original Wi-Fi and cellular data; reselect same Tokyo without relaunch/data reset",
+    "Tokyo forecast visible: 8.5 degrees, Japanese summary and hourly chart",
+    "Separate final UI check confirms Wi-Fi1, cellular data1 and airplane0"
+  ],
+  "restoration": {
+    "status": "passed",
+    "wifi": 1,
+    "cellular_data": 1,
+    "airplane": 0,
+    "verified_at": "2026-11-11T22:53:57.535328+00:00"
+  },
+  "test_harness_limits": [
+    "Initial Settings locator matched the application instead of the back button; repaired using accessible element XPath. No product failure inferred.",
+    "First restoration navigation could not find cellular row; Wi-Fi restored by finally guard, then cellular restored in a separate verified UI continuation before same-city retry.",
+    "No global locale, privacy reset, original application data or original app permissions changed."
+  ],
+  "driver_provenance": {
+    "upstream": "https://github.com/appium/WebDriverAgent/releases/tag/v11.1.0",
+    "asset": "WebDriverAgentRunner-Runner.zip",
+    "archive_sha256": "ca89c486748d931c8ac461dbbf2c216a22f4460785d6256f8ee3882a47ff8712",
+    "minimum_os": "13.0",
+    "purpose": "temporary USB iOS16 UI test driver; isolated ID and existing development signing"
+  },
+  "execution": {
+    "procedure": "Launch re-signed clone with Japanese process arguments; dismiss access notice. In Settings record Wi-Fi/cellular states, disable both switches; activate clone without relaunch, tap Tokyo, assert error and dismiss. Restore exact states in finally/verified continuation; activate same clone and tap Tokyo again. Independently read both switches and airplane state.",
+    "launch_template": "pymobiledevice3 developer dvt xcuitest --udid <paired-USB-device> --target-bundle-id net.wizardfactory.todayweather.issue2937 --timeout 900 net.wizardfactory.todayweather.issue2937.wda",
+    "forward_template": "pymobiledevice3 usbmux forward 29371 8100 --udid <paired-USB-device>",
+    "source_sha256": "a35905778dba5a02dc287331eb7c7a5c339b88fbf45d552e63eb6b31405e0811",
+    "ui_helper_sha256": "d9937ad368192b6b6a9c7d93f2167d3c284d3d1dfbbc89d4f7bf471f414af142",
+    "run_sha256": "ccc3d72cd6c94b5310b1533235d06aaeb12b0e5e849a9669b94e1e686d62bc90",
+    "log_sha256": "9909a82b74c2bff0bd3876f2a20be3e6075a69d7b466dea95bb57dc0fdd70ee4",
+    "restoration_sha256": "da5bcf25fc9daece682ab2aa6049983299447cf6e7c11ca409fb698490f2e7bd"
+  },
+  "screenshots": [
+    "native-usb-ja-offline-error.png",
+    "native-usb-ja-offline-settled.png",
+    "native-usb-ja-offline-recovery.png"
+  ],
+  "prior_wireless_attempt": {
+    "date": "2026-11-12 KST",
+    "status": "blocked",
+    "attempt": "real radio-off native test",
+    "failure_stage": "test transport lost immediately on Wi-Fi disconnection, before weather interaction",
+    "product_outcome": "not observed; not counted as product failure or PASS",
+    "error": "CoreDevice1001/Mercury remote communication, then lost testmanagerd",
+    "restore_check": "dedicated native testRestoreRadios passed; Wi-Fi connected=true, cellular=1 match original on states",
+    "next_requirement": "stable USB data transport before another radio-off attempt",
+    "restoration_log_sha256": "85d456b3850e1413b17023928af9ed3143f60e0cc7f3cdb3414a047179207f74"
+  }
+}

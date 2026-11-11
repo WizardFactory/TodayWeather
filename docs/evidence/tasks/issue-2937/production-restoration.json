@@ -1,0 +1,14 @@
+{
+  "at": "2026-11-11T21:40:37.994912+00:00",
+  "authority": "AK explicit reply: \uace0\uc815 IP \uc5f0\uacb0\uc744 \uc2b9\uc778\ud569\ub2c8\ub2e4",
+  "operation": "EC2 AssociateAddress",
+  "allocation": "eipalloc-05ca71894c8db2c0c",
+  "ip": "13.124.25.12",
+  "instance": "i-0fd9f349294ae57ad",
+  "allow_reassociation": false,
+  "association": "eipassoc-033986b8454bf46e1",
+  "readback_matched": true,
+  "public_health_status": 200,
+  "public_tokyo_status": 200,
+  "source_changes": false
+}

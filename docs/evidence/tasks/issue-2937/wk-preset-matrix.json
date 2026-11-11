@@ -1,0 +1,2041 @@
+{
+  "artifact": "submitted1.1.1(1) archive web assets; see artifact-identity.json",
+  "path": "loopback proxy to healthy origin before approved EIP recovery",
+  "date": "2026-11-12 KST",
+  "cases": [
+    {
+      "locale": "ja",
+      "index": 0,
+      "name": "서울",
+      "coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "state": "tab.forecast",
+      "ms": 510,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 1,
+      "name": "New York",
+      "coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "state": "tab.forecast",
+      "ms": 1158,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 2,
+      "name": "東京",
+      "coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 3,
+      "name": "Berlin",
+      "coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "state": "tab.forecast",
+      "ms": 1502,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 4,
+      "name": "北京",
+      "coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "state": "tab.forecast",
+      "ms": 1251,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 5,
+      "name": "臺北市",
+      "coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "state": "tab.forecast",
+      "ms": 1234,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 6,
+      "name": "दिल्ली",
+      "coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "state": "tab.forecast",
+      "ms": 1667,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 7,
+      "name": "Hồ Chí Minh",
+      "coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "state": "tab.forecast",
+      "ms": 1268,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 8,
+      "name": "Москва",
+      "coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "state": "tab.forecast",
+      "ms": 1438,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 9,
+      "name": "Roma",
+      "coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "state": "tab.forecast",
+      "ms": 1145,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 10,
+      "name": "İstanbul",
+      "coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "state": "tab.forecast",
+      "ms": 1376,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 11,
+      "name": "香港",
+      "coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "state": "tab.forecast",
+      "ms": 1332,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 12,
+      "name": "São Paulo",
+      "coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "state": "tab.forecast",
+      "ms": 1352,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 13,
+      "name": "กรุงเทพมหานคร",
+      "coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "state": "tab.forecast",
+      "ms": 1353,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 14,
+      "name": "Madrid",
+      "coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "state": "tab.forecast",
+      "ms": 1299,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 15,
+      "name": "Warszawa",
+      "coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "state": "tab.forecast",
+      "ms": 1339,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 16,
+      "name": "كراچى",
+      "coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "state": "tab.forecast",
+      "ms": 1334,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 0,
+      "name": "서울",
+      "coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "state": "tab.forecast",
+      "ms": 511,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 1,
+      "name": "New York",
+      "coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "state": "tab.forecast",
+      "ms": 128,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 2,
+      "name": "東京",
+      "coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "state": "tab.forecast",
+      "ms": 118,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 3,
+      "name": "Berlin",
+      "coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "state": "tab.forecast",
+      "ms": 124,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 4,
+      "name": "北京",
+      "coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "state": "tab.forecast",
+      "ms": 128,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 5,
+      "name": "臺北市",
+      "coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 6,
+      "name": "दिल्ली",
+      "coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "state": "tab.forecast",
+      "ms": 143,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 7,
+      "name": "Hồ Chí Minh",
+      "coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "state": "tab.forecast",
+      "ms": 117,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 8,
+      "name": "Москва",
+      "coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "state": "tab.forecast",
+      "ms": 112,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 9,
+      "name": "Roma",
+      "coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "state": "tab.forecast",
+      "ms": 124,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 10,
+      "name": "İstanbul",
+      "coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 11,
+      "name": "香港",
+      "coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "state": "tab.forecast",
+      "ms": 206,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 12,
+      "name": "São Paulo",
+      "coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 13,
+      "name": "กรุงเทพมหานคร",
+      "coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 14,
+      "name": "Madrid",
+      "coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 15,
+      "name": "Warszawa",
+      "coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "state": "tab.forecast",
+      "ms": 110,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 16,
+      "name": "كراچى",
+      "coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "state": "tab.forecast",
+      "ms": 113,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 0,
+      "name": "서울",
+      "coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "state": "tab.forecast",
+      "ms": 235,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 1,
+      "name": "New York",
+      "coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "state": "tab.forecast",
+      "ms": 118,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 2,
+      "name": "東京",
+      "coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "state": "tab.forecast",
+      "ms": 109,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 3,
+      "name": "Berlin",
+      "coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 4,
+      "name": "北京",
+      "coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 5,
+      "name": "臺北市",
+      "coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 6,
+      "name": "दिल्ली",
+      "coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "state": "tab.forecast",
+      "ms": 156,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 7,
+      "name": "Hồ Chí Minh",
+      "coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "state": "tab.forecast",
+      "ms": 128,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 8,
+      "name": "Москва",
+      "coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 9,
+      "name": "Roma",
+      "coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "state": "tab.forecast",
+      "ms": 112,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 10,
+      "name": "İstanbul",
+      "coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 11,
+      "name": "香港",
+      "coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "state": "tab.forecast",
+      "ms": 312,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 12,
+      "name": "São Paulo",
+      "coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "state": "tab.forecast",
+      "ms": 114,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 13,
+      "name": "กรุงเทพมหานคร",
+      "coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "state": "tab.forecast",
+      "ms": 117,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 14,
+      "name": "Madrid",
+      "coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 15,
+      "name": "Warszawa",
+      "coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 16,
+      "name": "كراچى",
+      "coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 0,
+      "name": "서울",
+      "coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "state": "tab.forecast",
+      "ms": 250,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 1,
+      "name": "New York",
+      "coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "state": "tab.forecast",
+      "ms": 109,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 2,
+      "name": "東京",
+      "coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "state": "tab.forecast",
+      "ms": 113,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 3,
+      "name": "Berlin",
+      "coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 4,
+      "name": "北京",
+      "coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "state": "tab.forecast",
+      "ms": 116,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 5,
+      "name": "臺北市",
+      "coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 6,
+      "name": "दिल्ली",
+      "coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "state": "tab.forecast",
+      "ms": 205,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 7,
+      "name": "Hồ Chí Minh",
+      "coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "state": "tab.forecast",
+      "ms": 114,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 8,
+      "name": "Москва",
+      "coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "state": "tab.forecast",
+      "ms": 114,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 9,
+      "name": "Roma",
+      "coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "state": "tab.forecast",
+      "ms": 115,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 10,
+      "name": "İstanbul",
+      "coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "state": "tab.forecast",
+      "ms": 123,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 11,
+      "name": "香港",
+      "coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "state": "tab.forecast",
+      "ms": 306,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 12,
+      "name": "São Paulo",
+      "coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "state": "tab.forecast",
+      "ms": 115,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 13,
+      "name": "กรุงเทพมหานคร",
+      "coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "state": "tab.forecast",
+      "ms": 107,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 14,
+      "name": "Madrid",
+      "coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "state": "tab.forecast",
+      "ms": 121,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 15,
+      "name": "Warszawa",
+      "coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 16,
+      "name": "كراچى",
+      "coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 0,
+      "name": "서울",
+      "coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "state": "tab.forecast",
+      "ms": 243,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 1,
+      "name": "New York",
+      "coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 2,
+      "name": "東京",
+      "coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 3,
+      "name": "Berlin",
+      "coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 4,
+      "name": "北京",
+      "coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 5,
+      "name": "臺北市",
+      "coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 6,
+      "name": "दिल्ली",
+      "coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "state": "tab.forecast",
+      "ms": 131,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 7,
+      "name": "Hồ Chí Minh",
+      "coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 8,
+      "name": "Москва",
+      "coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "state": "tab.forecast",
+      "ms": 109,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 9,
+      "name": "Roma",
+      "coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 10,
+      "name": "İstanbul",
+      "coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "state": "tab.forecast",
+      "ms": 113,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 11,
+      "name": "香港",
+      "coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "state": "tab.forecast",
+      "ms": 213,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 12,
+      "name": "São Paulo",
+      "coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 13,
+      "name": "กรุงเทพมหานคร",
+      "coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 14,
+      "name": "Madrid",
+      "coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 15,
+      "name": "Warszawa",
+      "coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "state": "tab.forecast",
+      "ms": 109,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 16,
+      "name": "كراچى",
+      "coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 0,
+      "name": "서울",
+      "coordinate": {
+        "lat": 37.567,
+        "long": 126.978
+      },
+      "state": "tab.forecast",
+      "ms": 238,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 1,
+      "name": "New York",
+      "coordinate": {
+        "lat": 43.299,
+        "long": -74.218
+      },
+      "state": "tab.forecast",
+      "ms": 107,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 2,
+      "name": "東京",
+      "coordinate": {
+        "lat": 35.709,
+        "long": 139.732
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 3,
+      "name": "Berlin",
+      "coordinate": {
+        "lat": 52.52,
+        "long": 13.405
+      },
+      "state": "tab.forecast",
+      "ms": 110,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 4,
+      "name": "北京",
+      "coordinate": {
+        "lat": 39.904,
+        "long": 116.407
+      },
+      "state": "tab.forecast",
+      "ms": 107,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 5,
+      "name": "臺北市",
+      "coordinate": {
+        "lat": 25.033,
+        "long": 121.565
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 6,
+      "name": "दिल्ली",
+      "coordinate": {
+        "lat": 28.704,
+        "long": 77.102
+      },
+      "state": "tab.forecast",
+      "ms": 142,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 7,
+      "name": "Hồ Chí Minh",
+      "coordinate": {
+        "lat": 10.823,
+        "long": 106.63
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 8,
+      "name": "Москва",
+      "coordinate": {
+        "lat": 55.756,
+        "long": 37.617
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 9,
+      "name": "Roma",
+      "coordinate": {
+        "lat": 41.903,
+        "long": 12.496
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 10,
+      "name": "İstanbul",
+      "coordinate": {
+        "lat": 41.008,
+        "long": 28.978
+      },
+      "state": "tab.forecast",
+      "ms": 115,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 11,
+      "name": "香港",
+      "coordinate": {
+        "lat": 22.259,
+        "long": 114.191
+      },
+      "state": "tab.forecast",
+      "ms": 240,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 12,
+      "name": "São Paulo",
+      "coordinate": {
+        "lat": -23.551,
+        "long": -46.633
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 13,
+      "name": "กรุงเทพมหานคร",
+      "coordinate": {
+        "lat": 13.756,
+        "long": 100.502
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 14,
+      "name": "Madrid",
+      "coordinate": {
+        "lat": 40.417,
+        "long": -3.704
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 15,
+      "name": "Warszawa",
+      "coordinate": {
+        "lat": 52.23,
+        "long": 21.012
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 16,
+      "name": "كراچى",
+      "coordinate": {
+        "lat": 24.861,
+        "long": 67.01
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 17,
+      "name": "وهران",
+      "coordinate": {
+        "lat": 35.698,
+        "long": -0.634
+      },
+      "state": "tab.forecast",
+      "ms": 1678,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 18,
+      "name": "Sydney",
+      "coordinate": {
+        "lat": -33.869,
+        "long": 151.209
+      },
+      "state": "tab.forecast",
+      "ms": 1435,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 19,
+      "name": "London",
+      "coordinate": {
+        "lat": 51.507,
+        "long": -0.128
+      },
+      "state": "tab.forecast",
+      "ms": 1259,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 20,
+      "name": "Paris",
+      "coordinate": {
+        "lat": 48.857,
+        "long": 2.352
+      },
+      "state": "tab.forecast",
+      "ms": 1463,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 21,
+      "name": "Kinshasa",
+      "coordinate": {
+        "lat": -4.441,
+        "long": 15.266
+      },
+      "state": "tab.forecast",
+      "ms": 1674,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 22,
+      "name": "القاهرة",
+      "coordinate": {
+        "lat": 30.044,
+        "long": 31.236
+      },
+      "state": "tab.forecast",
+      "ms": 1457,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 23,
+      "name": "Jakarta",
+      "coordinate": {
+        "lat": -6.209,
+        "long": 106.846
+      },
+      "state": "tab.forecast",
+      "ms": 1563,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 24,
+      "name": "Ciudad de México",
+      "coordinate": {
+        "lat": 19.432,
+        "long": -99.133
+      },
+      "state": "tab.forecast",
+      "ms": 1283,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ja",
+      "index": 25,
+      "name": "تهران",
+      "coordinate": {
+        "lat": 35.689,
+        "long": 51.389
+      },
+      "state": "tab.forecast",
+      "ms": 1640,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 17,
+      "name": "وهران",
+      "coordinate": {
+        "lat": 35.698,
+        "long": -0.634
+      },
+      "state": "tab.forecast",
+      "ms": 115,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 18,
+      "name": "Sydney",
+      "coordinate": {
+        "lat": -33.869,
+        "long": 151.209
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 19,
+      "name": "London",
+      "coordinate": {
+        "lat": 51.507,
+        "long": -0.128
+      },
+      "state": "tab.forecast",
+      "ms": 147,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 20,
+      "name": "Paris",
+      "coordinate": {
+        "lat": 48.857,
+        "long": 2.352
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 21,
+      "name": "Kinshasa",
+      "coordinate": {
+        "lat": -4.441,
+        "long": 15.266
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 22,
+      "name": "القاهرة",
+      "coordinate": {
+        "lat": 30.044,
+        "long": 31.236
+      },
+      "state": "tab.forecast",
+      "ms": 115,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 23,
+      "name": "Jakarta",
+      "coordinate": {
+        "lat": -6.209,
+        "long": 106.846
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 24,
+      "name": "Ciudad de México",
+      "coordinate": {
+        "lat": 19.432,
+        "long": -99.133
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "ko",
+      "index": 25,
+      "name": "تهران",
+      "coordinate": {
+        "lat": 35.689,
+        "long": 51.389
+      },
+      "state": "tab.forecast",
+      "ms": 117,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 17,
+      "name": "وهران",
+      "coordinate": {
+        "lat": 35.698,
+        "long": -0.634
+      },
+      "state": "tab.forecast",
+      "ms": 125,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 18,
+      "name": "Sydney",
+      "coordinate": {
+        "lat": -33.869,
+        "long": 151.209
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 19,
+      "name": "London",
+      "coordinate": {
+        "lat": 51.507,
+        "long": -0.128
+      },
+      "state": "tab.forecast",
+      "ms": 133,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 20,
+      "name": "Paris",
+      "coordinate": {
+        "lat": 48.857,
+        "long": 2.352
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 21,
+      "name": "Kinshasa",
+      "coordinate": {
+        "lat": -4.441,
+        "long": 15.266
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 22,
+      "name": "القاهرة",
+      "coordinate": {
+        "lat": 30.044,
+        "long": 31.236
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 23,
+      "name": "Jakarta",
+      "coordinate": {
+        "lat": -6.209,
+        "long": 106.846
+      },
+      "state": "tab.forecast",
+      "ms": 109,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 24,
+      "name": "Ciudad de México",
+      "coordinate": {
+        "lat": 19.432,
+        "long": -99.133
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "en",
+      "index": 25,
+      "name": "تهران",
+      "coordinate": {
+        "lat": 35.689,
+        "long": 51.389
+      },
+      "state": "tab.forecast",
+      "ms": 120,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 17,
+      "name": "وهران",
+      "coordinate": {
+        "lat": 35.698,
+        "long": -0.634
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 18,
+      "name": "Sydney",
+      "coordinate": {
+        "lat": -33.869,
+        "long": 151.209
+      },
+      "state": "tab.forecast",
+      "ms": 114,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 19,
+      "name": "London",
+      "coordinate": {
+        "lat": 51.507,
+        "long": -0.128
+      },
+      "state": "tab.forecast",
+      "ms": 132,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 20,
+      "name": "Paris",
+      "coordinate": {
+        "lat": 48.857,
+        "long": 2.352
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 21,
+      "name": "Kinshasa",
+      "coordinate": {
+        "lat": -4.441,
+        "long": 15.266
+      },
+      "state": "tab.forecast",
+      "ms": 103,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 22,
+      "name": "القاهرة",
+      "coordinate": {
+        "lat": 30.044,
+        "long": 31.236
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 23,
+      "name": "Jakarta",
+      "coordinate": {
+        "lat": -6.209,
+        "long": 106.846
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 24,
+      "name": "Ciudad de México",
+      "coordinate": {
+        "lat": 19.432,
+        "long": -99.133
+      },
+      "state": "tab.forecast",
+      "ms": 109,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "de",
+      "index": 25,
+      "name": "تهران",
+      "coordinate": {
+        "lat": 35.689,
+        "long": 51.389
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 17,
+      "name": "وهران",
+      "coordinate": {
+        "lat": 35.698,
+        "long": -0.634
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 18,
+      "name": "Sydney",
+      "coordinate": {
+        "lat": -33.869,
+        "long": 151.209
+      },
+      "state": "tab.forecast",
+      "ms": 107,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 19,
+      "name": "London",
+      "coordinate": {
+        "lat": 51.507,
+        "long": -0.128
+      },
+      "state": "tab.forecast",
+      "ms": 130,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 20,
+      "name": "Paris",
+      "coordinate": {
+        "lat": 48.857,
+        "long": 2.352
+      },
+      "state": "tab.forecast",
+      "ms": 120,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 21,
+      "name": "Kinshasa",
+      "coordinate": {
+        "lat": -4.441,
+        "long": 15.266
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 22,
+      "name": "القاهرة",
+      "coordinate": {
+        "lat": 30.044,
+        "long": 31.236
+      },
+      "state": "tab.forecast",
+      "ms": 105,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 23,
+      "name": "Jakarta",
+      "coordinate": {
+        "lat": -6.209,
+        "long": 106.846
+      },
+      "state": "tab.forecast",
+      "ms": 111,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 24,
+      "name": "Ciudad de México",
+      "coordinate": {
+        "lat": 19.432,
+        "long": -99.133
+      },
+      "state": "tab.forecast",
+      "ms": 106,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-CN",
+      "index": 25,
+      "name": "تهران",
+      "coordinate": {
+        "lat": 35.689,
+        "long": 51.389
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 17,
+      "name": "وهران",
+      "coordinate": {
+        "lat": 35.698,
+        "long": -0.634
+      },
+      "state": "tab.forecast",
+      "ms": 107,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 18,
+      "name": "Sydney",
+      "coordinate": {
+        "lat": -33.869,
+        "long": 151.209
+      },
+      "state": "tab.forecast",
+      "ms": 107,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 19,
+      "name": "London",
+      "coordinate": {
+        "lat": 51.507,
+        "long": -0.128
+      },
+      "state": "tab.forecast",
+      "ms": 114,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 20,
+      "name": "Paris",
+      "coordinate": {
+        "lat": 48.857,
+        "long": 2.352
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 21,
+      "name": "Kinshasa",
+      "coordinate": {
+        "lat": -4.441,
+        "long": 15.266
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 22,
+      "name": "القاهرة",
+      "coordinate": {
+        "lat": 30.044,
+        "long": 31.236
+      },
+      "state": "tab.forecast",
+      "ms": 104,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 23,
+      "name": "Jakarta",
+      "coordinate": {
+        "lat": -6.209,
+        "long": 106.846
+      },
+      "state": "tab.forecast",
+      "ms": 108,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 24,
+      "name": "Ciudad de México",
+      "coordinate": {
+        "lat": 19.432,
+        "long": -99.133
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    },
+    {
+      "locale": "zh-TW",
+      "index": 25,
+      "name": "تهران",
+      "coordinate": {
+        "lat": 35.689,
+        "long": 51.389
+      },
+      "state": "tab.forecast",
+      "ms": 102,
+      "hasWeather": true,
+      "popup": null
+    }
+  ],
+  "limitations": [
+    "17 phone presets plus9 extra presets via test-only screen.height override",
+    "translation-service switching/recreated controllers; not six OS-language reinstalls",
+    "programmatic StartCtrl handlers; no native Cordova bridge",
+    "unit settings retained; no saved favorites between cases"
+  ]
+}
