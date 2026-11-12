@@ -1,0 +1,984 @@
+{
+  "schema": 1,
+  "product": "TodayWeather Android native 2.0.0 preview",
+  "runtime": "Kotlin / Jetpack Compose; no Ionic or Cordova runtime",
+  "product_base_commit": "1ba03849a691b09d47773b885f92a65cf17b9e28",
+  "capture_date": "2026-11-13",
+  "environment": {
+    "device": "owned Pixel 8 API 36 Google APIs emulator",
+    "system_locale": "ko-KR (primary), en-US (secondary)",
+    "app_locale": "ko-KR",
+    "timezone": "Asia/Seoul",
+    "raw_pixels": [
+      1080,
+      2400
+    ],
+    "density_dpi": 420,
+    "font_scale": 1.0,
+    "configuration": [
+      "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+      "Physical size: 1080x2400",
+      "Physical density: 420",
+      "Asia/Seoul",
+      "config: mcc310-mnc260-ko-rKR,en-rUS-ldltr-sw411dp-w411dp-h914dp-normal-long-notround-nowidecg-lowdr-port-notnight-420dpi-finger-keysexposed-nokeys-navhidden-nonav-2400x1080-v36",
+      "abi: arm64-v8a"
+    ]
+  },
+  "build_inputs": [
+    "TW_SERVER_URL",
+    "TW_WEATHER_PHOTOS_URL",
+    "TW_PLACES_API_KEY_ANDROID",
+    "private Firebase configuration"
+  ],
+  "build_type": "debug; Google sample AdMob identifiers",
+  "apk_sha256": {
+    "app-debug.apk": "e218f7f640c7da5611abd7011db2ef4abfb5e61745a668791cf9914b8f48cac7",
+    "app-debug-androidTest.apk": "0339134950180186413253e0d2dd6f2f053279492eecef8f6355bf5e6f816ee7"
+  },
+  "safety": {
+    "product_push": "intercepted by TestTodayWeatherApp; no token argument",
+    "analytics": "off, asserted at each capture",
+    "alarms": "edited then discarded; stored push state asserted unchanged",
+    "share": "Android text chooser opened and canceled; no recipient",
+    "data": "live weather/geocode/nation/Places reads; seeded saved places for later sections",
+    "sdk_network": "Google Places, test ads, consent, Firebase installation/configuration/messaging may contact their services",
+    "cleanup": "both task APKs removed on exit; runner fails offline if removal cannot be verified"
+  },
+  "processing": "RGB, Lanczos 1080x2400 -> 720x1600, 256-color MEDIANCUT without dithering; no screen content replaced or redrawn",
+  "screenshots": {
+    "screenshots/01-access-notice.png": {
+      "sha256": "cf02d7297887b478cbb8bbe1d4e468ed9d1c182efbdc9b0da07e21a6dd1fcf68",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "5c2330efcc1516a53eb3ed32a68dfd9394e8d9cd8c5e532b2a02ab9110fb0bc7",
+      "captured_at": "2026-11-12T22:31:06.514Z",
+      "app_language": "ko"
+    },
+    "screenshots/02-start.png": {
+      "sha256": "ce1948d0f7adb98f81f116c80eb733c3a7564d5dd3d7292dc75602d02aeb33d7",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "fdb0e41c42e61ceca6037ecf3d99a2785f9d32ab989862eb7a5188b7eeea1c69",
+      "captured_at": "2026-11-12T22:31:07.272Z",
+      "app_language": "ko"
+    },
+    "screenshots/03-location-permission.png": {
+      "sha256": "9974354e2d7b6aa210c4c9b88df81d11cf3a2b4a88d9387636433a09b0c1c6a9",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "52ef7ebc137378173dbdc6442863efbfcf61e6ba382176db3dc0ea173ba576d3",
+      "captured_at": "2026-11-12T22:31:08.275Z",
+      "app_language": "ko"
+    },
+    "screenshots/04-current-location.png": {
+      "sha256": "248ba5816132d8090d9d717a9af98b26929584c4973d2ea089c38461cf5648e6",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "2264db89f14135e9ee50bcb01710cf82a3f1a2589f5f0c3801de1dbda324f532",
+      "captured_at": "2026-11-12T22:31:15.102Z",
+      "app_language": "ko"
+    },
+    "screenshots/05-hourly.png": {
+      "sha256": "0ce72537f71b7c108f79f770b597f5de187f4b926a50f395cceb3213c7db88cb",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "59b5a990a0062bb48d98c867cb1c644b01e8782be800ccc01782b39f525477f3",
+      "captured_at": "2026-11-12T22:31:20.510Z",
+      "app_language": "ko"
+    },
+    "screenshots/06-hourly-expanded.png": {
+      "sha256": "98a4429516fae0cd4b5479c4ba8d149692c658ff6bc51119eb4af79685460b2a",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "f40d2f958691382cf9230260826d9bec526c056447794aad18b7e2d7911aa256",
+      "captured_at": "2026-11-12T22:31:21.314Z",
+      "app_language": "ko"
+    },
+    "screenshots/07-hourly-past.png": {
+      "sha256": "2e55dd6d53f6ce0dffd8d4b78406bc6096684f93aeeb5521c968cca9e2fcb29c",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "7317323fd358eb7df0b4381e6c5ec0e909e7b3b086b1cbd77e873f7ee4012779",
+      "captured_at": "2026-11-12T22:31:22.554Z",
+      "app_language": "ko"
+    },
+    "screenshots/08-hourly-future.png": {
+      "sha256": "962915ea52060da310ab8ea616148c3e4b448b2ba0b634847e4ed82b96fb7621",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "df9e2fcf37e7943d9e4d5ddc258b9e97a698c356533c2c6041bc9d1adad434da",
+      "captured_at": "2026-11-12T22:31:23.828Z",
+      "app_language": "ko"
+    },
+    "screenshots/09-daily.png": {
+      "sha256": "f981d5b4c6266bbfcf6aef004b1e57a9cedb38b22ddf4f450e3554c17df605a1",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "59a8d636dc646b4e35dba03716fba3f0546555e47ed9df2fa10297a8b7ff39d7",
+      "captured_at": "2026-11-12T22:31:25.544Z",
+      "app_language": "ko"
+    },
+    "screenshots/10-daily-past.png": {
+      "sha256": "9610f663e9879cf01e41f5c41e16d1daac991c83d6614cfd563a167a72fac92b",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "ea8477b02dbba700e35b72cdde3159c4d6540a282ce922811a1efd19578ae195",
+      "captured_at": "2026-11-12T22:31:26.710Z",
+      "app_language": "ko"
+    },
+    "screenshots/11-daily-future.png": {
+      "sha256": "d022f485ca0c6347b8d032545984fa779272e0e015abad39a1b8ca29f3c8a2ac",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "eff6c5f626fe330b219b27ca7c7a4d7fca42609dee3a7f81aa70d7a7cb37080f",
+      "captured_at": "2026-11-12T22:31:27.858Z",
+      "app_language": "ko"
+    },
+    "screenshots/12-air.png": {
+      "sha256": "2e3696a3f66c4d7eea6a1aaa33ff74ad50c9eea189a0db377a82724de3ea5b93",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "c96aa287dd0186ee0cd3aba321257caa3b8f1743dcf949196d60af2ab8564a15",
+      "captured_at": "2026-11-12T22:31:29.491Z",
+      "app_language": "ko"
+    },
+    "screenshots/13-air-pm25.png": {
+      "sha256": "33f34cb08f2c32315e8805e3807c7ab7fe5b349bd1223fc8f498f3b652e2c6de",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "25c5cdde26076d33570225b5ee6c87673508d80c5885a0c0cd1184d1532014aa",
+      "captured_at": "2026-11-12T22:31:30.302Z",
+      "app_language": "ko"
+    },
+    "screenshots/14-stations.png": {
+      "sha256": "88c28130c4a68d7c677ddb206d736334a686603badcbf77e717631b963072be7",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "14fff299df12ad7027c6a1806532579fa1fe82e9a5afee901d00fc97806db7b6",
+      "captured_at": "2026-11-12T22:31:31.072Z",
+      "app_language": "ko"
+    },
+    "screenshots/15-station-selected.png": {
+      "sha256": "e048fd345a357b54709c3074bbe57c09b24758058c3e6a3e6e380ded3ff9425f",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "33a07a8ace4747c3286086b97a1c6be514fe125cbab0bec7bdf3427e071dedd0",
+      "captured_at": "2026-11-12T22:31:31.907Z",
+      "app_language": "ko"
+    },
+    "screenshots/16-places.png": {
+      "sha256": "1eb4de19a37c1042e2e327a867647482ae2b19f759f83e47fb7078e8214f1b7a",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "9dd9072c934c96fa7fa038aaf0d57910946133bb73c30f229470269346657655",
+      "captured_at": "2026-11-12T22:31:38.329Z",
+      "app_language": "ko"
+    },
+    "screenshots/17-place-search.png": {
+      "sha256": "36292fc3f605ef84fa8f693a0f3772aec9773f145ffd4588c9fd19c3c091a15f",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "a2038e9945a450ac564093c538433b35a9a77e8e1fb334a647a5c11517c86b76",
+      "captured_at": "2026-11-12T22:31:40.091Z",
+      "app_language": "ko"
+    },
+    "screenshots/18-busan.png": {
+      "sha256": "8c0667805eb9a7efe2ffda0469f51fbab075d283ac0e60717f7ac0da5b49f5b0",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "fce19f0b3e143c6b9a644822e5e2e3f271bf7df41452216c183044bff81d387a",
+      "captured_at": "2026-11-12T22:31:41.321Z",
+      "app_language": "ko"
+    },
+    "screenshots/19-switch-seoul.png": {
+      "sha256": "927fbf0967ab3d3b92626a5ed25abd943877db23d154700b1c43a55f9ced25c5",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "916c90c7731a170d4d877a7aed239c68c9f22b767886fb9a3dc56aae1ee66ba5",
+      "captured_at": "2026-11-12T22:31:42.132Z",
+      "app_language": "ko"
+    },
+    "screenshots/20-london.png": {
+      "sha256": "45ea309aecb731695f3005777240b56d47b77e0c731e20bc90b4b29544d30149",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "9e6771a2080a8e823384b461d0c892e199b9d5ebff65cf24f3ab61255b324d49",
+      "captured_at": "2026-11-12T22:31:47.513Z",
+      "app_language": "ko"
+    },
+    "screenshots/21-delete-place.png": {
+      "sha256": "77cbe3e5df6ef0b2ab9427ff4e8109567bc50dc5e5a47dea39d6eb3f38533224",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "48346e5dbf5bbbb2d746fc21a7989ed84d0ada5fda1525e24a7b86fa4ddf86ce",
+      "captured_at": "2026-11-12T22:31:49.190Z",
+      "app_language": "ko"
+    },
+    "screenshots/22-place-deleted.png": {
+      "sha256": "10e6288ddd182c820643fe2041b9290bd17fb7bd9b0d335588ba57994529f441",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "3f9352913030374f69cb6f0eb93735f9696b060d1f529205084c6654ae473462",
+      "captured_at": "2026-11-12T22:31:49.938Z",
+      "app_language": "ko"
+    },
+    "screenshots/23a-notification-permission.png": {
+      "sha256": "03502f057a367b648b1df75ee1396e1498b2f39512790abd0770e729c0c095ce",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "611a9e7c766977a6c3c289eb882379387027e16f3cd0bff62c8db50c4a6acd1f",
+      "captured_at": "2026-11-12T22:31:55.899Z",
+      "app_language": "ko"
+    },
+    "screenshots/23-alarms.png": {
+      "sha256": "54bc531babda9b6f0267138bddda6bc5e36831dd1c0800b1d6e9fdcc1bb6f5ae",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "3b940913b0db36a6638216815826786229bd83f498827ac417b795e0ab877f95",
+      "captured_at": "2026-11-12T22:31:57.328Z",
+      "app_language": "ko"
+    },
+    "screenshots/24-time-picker.png": {
+      "sha256": "77f44cc9b1f58de9ebab3623a795b10f56d19fd3c18ef9d16be7bffb855f55eb",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "3f10eac99dd7914bdd13bc414f1d3eeacd572c515a3e549dba4978877073da19",
+      "captured_at": "2026-11-12T22:31:58.185Z",
+      "app_language": "ko"
+    },
+    "screenshots/25-alarm-confirmation.png": {
+      "sha256": "6fa64f03710445b55dd38a1be0c1a9b1e1211faa0a50f69a90acd3afaecf585c",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "3e118617e0fa97e150cc69e1cf61edf84a132302da184992bc305947227bb035",
+      "captured_at": "2026-11-12T22:31:59.110Z",
+      "app_language": "ko"
+    },
+    "screenshots/26-menu.png": {
+      "sha256": "cc9da7603ba857d624eb2285ae357a568bfc9bd6808663bf66dcd304ac4e177e",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "ef3ec62954be71af399a361830778444e88a80c2cd151a784852445fd9323a1a",
+      "captured_at": "2026-11-12T22:32:04.648Z",
+      "app_language": "ko"
+    },
+    "screenshots/27-units.png": {
+      "sha256": "7d5d86fc5cd4e67e6a7c3f93c6cc4d0074bc8d214abf87674cbde107a2e067a0",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "8e2d495986a3dd78d7fb5a357d1ad09b74448daab615597d8f5e52b6d407f998",
+      "captured_at": "2026-11-12T22:32:05.970Z",
+      "app_language": "ko"
+    },
+    "screenshots/28-temperature.png": {
+      "sha256": "7ced61468a6e6da79e32f642980da794b180118f291eaab1308e8367063618c5",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "e3e9dd4928da606a461dfe12afca265f5159b3809bae8912746debff69061e82",
+      "captured_at": "2026-11-12T22:32:06.728Z",
+      "app_language": "ko"
+    },
+    "screenshots/29-fahrenheit.png": {
+      "sha256": "9d8510b943c1d5318952ec758d9c449c5cb4f659ebaa8a44e515b8088760701d",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "06727394c2e1409d1be8ed7be02f0180477dda81b8d5e2040b728fd7929d5ebd",
+      "captured_at": "2026-11-12T22:32:07.533Z",
+      "app_language": "ko"
+    },
+    "screenshots/30-startup-page.png": {
+      "sha256": "157f704a82660f8534e5e42eed27b086e172f482f8acd507e5618c383a7bfdf0",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "4fcab73243507cda82c6254ef2d9ceb5f242cc5baf09c5c972cab0e60e13cf97",
+      "captured_at": "2026-11-12T22:32:08.589Z",
+      "app_language": "ko"
+    },
+    "screenshots/31-refresh.png": {
+      "sha256": "7e58fb1eb4764b53268b41cb09fe311d57f36189edb1b5c7408ca30ae3db8ebe",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "db40dda53489eb48b9a9bc746d72b232ad1433e8b950acee2702434de929cf38",
+      "captured_at": "2026-11-12T22:32:09.555Z",
+      "app_language": "ko"
+    },
+    "screenshots/32-dark-theme.png": {
+      "sha256": "9c1b92a3ea7d4fcbfdb1256230dfd4955c33102bc5d5e82bb209fd76c3e1018d",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "f6a731ad3188b6acc43c3da647140672949c1ccdfda8d1b0807442df46bf8380",
+      "captured_at": "2026-11-12T22:32:10.669Z",
+      "app_language": "ko"
+    },
+    "screenshots/33-dark-weather.png": {
+      "sha256": "0252ed260e8e73fa465ac88a963c71fc25a034ad6624f38a9cd3c52b2e58f7a9",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "1ea40969ad6c0bd07f3f4785c64281a7e9bda51a0aef37ccda961b79c322ee56",
+      "captured_at": "2026-11-12T22:32:11.425Z",
+      "app_language": "ko"
+    },
+    "screenshots/34-photo-theme.png": {
+      "sha256": "ecc294eda598c01b70a404c5a20bedd4be23824535a67824d684047a662fd66e",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "786fb372c389c95a86e2828d81d510385d749e0ae41196acad825dce6eb9f6ab",
+      "captured_at": "2026-11-12T22:32:13.796Z",
+      "app_language": "ko"
+    },
+    "screenshots/35-warnings.png": {
+      "sha256": "33974ee9587be0cf98b3d925e9a7cf7f6510bfdfb8c679c165ff152c0f897547",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "0afbeec422d55aa17e566d0a6d064546e1e0b745d269c750c53a61e1fff6b561",
+      "captured_at": "2026-11-12T22:32:20.785Z",
+      "app_language": "ko"
+    },
+    "screenshots/36-national-weather.png": {
+      "sha256": "af1f4bfa2508fdf17bc9b99050b97e984845b23c55fa526ce6bcf1a677e5cce4",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "0347d33e5faaa5cf1038d3e3c15a490ee357415b0af9fe80b5491672dbe01963",
+      "captured_at": "2026-11-12T22:32:25.097Z",
+      "app_language": "ko"
+    },
+    "screenshots/37-national-wind.png": {
+      "sha256": "19d64c96480b2eda290b13aa315c5f416273e892c8075b6502fbe068da1fa4bc",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "c33672a134aee5af55f73fb5f6ad8a2b7a539697d863d2fb5ef03facd12f7a16",
+      "captured_at": "2026-11-12T22:32:25.894Z",
+      "app_language": "ko"
+    },
+    "screenshots/38-national-air.png": {
+      "sha256": "b23fa4c54a8f3552b9814690103b9adfb8e78e4dac97dd25508db6bcd091c031",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "f8dfcb49f074ebe6315dde635017b5ead2cb4f24950ec188c015d6c9ea7c55a8",
+      "captured_at": "2026-11-12T22:32:27.324Z",
+      "app_language": "ko"
+    },
+    "screenshots/39-about.png": {
+      "sha256": "cb5df6f71c67768c1dd2be55694b762ad56a0e2abe5b7cecb95324e899dca9db",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "0ba4f6446f03b771b8d2d8d305b6a35b390fe1de75d08d8c5d920c51d97b8dff",
+      "captured_at": "2026-11-12T22:32:32.930Z",
+      "app_language": "ko"
+    },
+    "screenshots/40-analytics.png": {
+      "sha256": "509e0ee31c945d610f9d242e03119f4ae0f3ab34e83d76d78297c207a0079938",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "c2d43e3495560ea0567dd38b7979a262c8ecc49ecf0f56628ce12b88fbc50db2",
+      "captured_at": "2026-11-12T22:32:33.954Z",
+      "app_language": "ko"
+    },
+    "screenshots/41-ad-privacy.png": {
+      "sha256": "54ad3d41dfb443c6904995d4df753e6d4e9113b0960888bcfea45d06749bab14",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "10a10d035221fe0ca4b8ba1a484f808316aaba2d9ea466650f101965afc1bf4c",
+      "captured_at": "2026-11-12T22:32:34.952Z",
+      "app_language": "ko"
+    },
+    "screenshots/42-share-chooser.png": {
+      "sha256": "7c4c07a58fbc127cdc80f05ec1894de04662d65d91545fd308dceed6422c3d5e",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "c6484e2de832f86729a63b06499fc6bc541eb8f699a57f78f12e00aa62b31b7a",
+      "captured_at": "2026-11-12T22:32:37.927Z",
+      "app_language": "ko"
+    },
+    "screenshots/43-exit.png": {
+      "sha256": "660180dedfeaf06c0de0914b5885d038909e46a28ef8348fcc36ef58cb4ec83b",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "87d7483ca4f917c52e707cbaddc0cec51d5b9ba84acae5f6c630b45efe4db7f2",
+      "captured_at": "2026-11-12T22:32:39.686Z",
+      "app_language": "ko"
+    }
+  },
+  "sources": {
+    "android/app/build.gradle.kts": "a7148f09f88c84fee786aafe1ec76d80b8ebc4504c6cd6b69b71ff8d1b8837fa",
+    "android/app/src/androidTest/java/net/wizardfactory/todayweather/ManualCaptureTest.kt": "425a8b1f338f53a74d304cf37a93d5919ab5073f45216c8216e2ff474affd672",
+    "android/app/src/androidTest/java/net/wizardfactory/todayweather/TestRunner.kt": "69588ee2101fb2e2d878868bc9139881e7740837d99f5b5053b921338de49d14",
+    "android/app/src/main/AndroidManifest.xml": "0b96ddd49b93a503a296c36f5cfd53a1741cd6238363312e05daf3149620d159",
+    "android/app/src/main/assets/data/towns.json": "d7465149c463fdbacbb0a52bad9a19cb37a7c7566d0d9134f37eef36fa51ac16",
+    "android/app/src/main/assets/img/app_icon.png": "c10cdce6943ead714e5363d3a5da9574d578abd6dbed9eadf974fee84d76b976",
+    "android/app/src/main/assets/img/bg.png": "247869fd255893887b263e7e231aacff990e21ed6fc18b78a6057d2c6e00641c",
+    "android/app/src/main/assets/img/guide_01.png": "a4af556f44f0ad9d9f0555189f1c92294b6bbb391699a18ececfd8ee4bdb8797",
+    "android/app/src/main/assets/img/guide_02.png": "ed8b1770c5a8b4080ebdf90531a8712f30d60c5011ee371f691c62083e5c7b19",
+    "android/app/src/main/assets/img/guide_04.png": "0f5c0a1ca3ee8d5294909bdcbede1b5061922df4d84f449d0c0abed733bec998",
+    "android/app/src/main/assets/img/guide_android_01.png": "8e979ee2948a6a4309d7d13e68c1f762e14532737a58def4096a472361b84877",
+    "android/app/src/main/assets/img/guide_android_02.png": "67c9d8ab25f7048b89da0d8aa3dd529d2e90f63ee2d2abe5361784c2350bc24e",
+    "android/app/src/main/assets/img/guide_android_04.png": "2cafe27a24dfc4a739b47a592772141b91823c20509cd423b7907c58860c7609",
+    "android/app/src/main/assets/img/icons_dark/asthma.png": "98ab85bd27359368ff1085dc6863877e7c82280b2ce28570a21298a5aaa5abe0",
+    "android/app/src/main/assets/img/icons_dark/car_wash.png": "6af21ffdc8297c308f894f0b17fc71be346fe96f7e1a4a0221df1f800c90a9c0",
+    "android/app/src/main/assets/img/icons_dark/discomport_index.png": "6dbe15e172c1a6a6c790bc49c4cf5acc35178e7c98b2377a3191ed14199a0570",
+    "android/app/src/main/assets/img/icons_dark/earthquake.png": "020e6eca922597574899eb2ba294891659e9b39202746bd432e9f88494ada089",
+    "android/app/src/main/assets/img/icons_dark/feels_like.png": "023488eab8c41a45bafa27b66139aa0b9e698bc4acc26499434de4b87a6452dc",
+    "android/app/src/main/assets/img/icons_dark/food_poisoning.png": "b2dd291027ff983573d6924942a566d8b4894d66936ac92d8f816773d017e7a3",
+    "android/app/src/main/assets/img/icons_dark/freezing_burst.png": "4329442f67ed11aaf349565bed84cff4df91f7ebed2e5347df85e4023573a2cd",
+    "android/app/src/main/assets/img/icons_dark/good.png": "ea2444d07b7f1bf75d61e6665619fd29d5a619a12b78094fe4b5ab07dba99fd0",
+    "android/app/src/main/assets/img/icons_dark/hazardous.png": "8e86de50ff682e0518c1131b3b40911fcf1cd5ea9bbc4d3785b682b817773cf0",
+    "android/app/src/main/assets/img/icons_dark/humidity_00.png": "46db569b310e0fc2d2ecdf7d6f6e6593cf188377722e0ce416ef0ea2b7313b5d",
+    "android/app/src/main/assets/img/icons_dark/humidity_10.png": "ad5b54c0c47a812cd65650e5ed029919362b2cf78296cce6c2d16c8581845764",
+    "android/app/src/main/assets/img/icons_dark/humidity_100.png": "ef9bf6e445a6b0751c71009a86eaee5e801e54b53cd0adb875f395c1d7cbb1f7",
+    "android/app/src/main/assets/img/icons_dark/humidity_20.png": "f71006504f13bd9b74110562348188de40722b3d29bed58fc784fb63af581f59",
+    "android/app/src/main/assets/img/icons_dark/humidity_30.png": "093f95c94645ae6bdd49d18a5059b423955f15fdad1332fa6977fa5db6314198",
+    "android/app/src/main/assets/img/icons_dark/humidity_40.png": "088af6f018d11ff067ce43c4374909902a32f0f3a0460fa524c26403588dece2",
+    "android/app/src/main/assets/img/icons_dark/humidity_50.png": "272eae0de5cee590c5e2a696545a973bc809286a1dd4468238b567c3e347c13c",
+    "android/app/src/main/assets/img/icons_dark/humidity_60.png": "e80a14e6bea8d6a52d0a7b1951dbd2f182e8acf8923dba7b4d31825a88a00486",
+    "android/app/src/main/assets/img/icons_dark/humidity_70.png": "2e9e913fc67ed98edc9fbfbf49fc2326770b56bfc3760d59209dc2a08c6d9503",
+    "android/app/src/main/assets/img/icons_dark/humidity_80.png": "16c095506b11ab23bc1d13ab596f1364ba4a1b3b576b17f6d07a2c179b8d587a",
+    "android/app/src/main/assets/img/icons_dark/humidity_90.png": "1cc1de1240606b5437c96a40026a42db708844808541622609b44d3407805cc9",
+    "android/app/src/main/assets/img/icons_dark/influenza.png": "9df8e39defde649ca412d8c4033882c74ddbc5280b0d6dc30fb408195fb88600",
+    "android/app/src/main/assets/img/icons_dark/laundry.png": "06c3ec98ba7ab1c0e9159571d4af655f4e3bd4fd633eecd81a5ec97d2fc91283",
+    "android/app/src/main/assets/img/icons_dark/location.png": "97d45e60308edfddce8f50991517c8041cd712e23c82cdea0f503b31c720bda0",
+    "android/app/src/main/assets/img/icons_dark/moderate.png": "b14635daf282c093c2e04a91177befc5e8da1c1077daed00a421bb99af0e0d77",
+    "android/app/src/main/assets/img/icons_dark/outing.png": "84f80b22dded7638df4e1509e880a01f853bc8845dff3f8d9666e8f5dc58d324",
+    "android/app/src/main/assets/img/icons_dark/pollen.png": "93aa11d7c3fff29551f16223da95bc88d618ab5fbcc633267b91ec46dd00b273",
+    "android/app/src/main/assets/img/icons_dark/precipitation.png": "ae16bb72e5b21a499c750e39185ddfe5811dc726ecf69d253f45a39db9bdda5b",
+    "android/app/src/main/assets/img/icons_dark/pressure.png": "42a6415ded4ab147ec2e493ec8790ed08908ce1b0b9a5eea949552a67ec6e1e1",
+    "android/app/src/main/assets/img/icons_dark/rot.png": "9e59486800d93d72f7799dde0b0e22a28bca0f901718094ee714c5854e21cfae",
+    "android/app/src/main/assets/img/icons_dark/skin_disease.png": "193e26fb9de60d2019a029aaee67c04813d5a6ee41592a9e5e4d4f2024b9ed7a",
+    "android/app/src/main/assets/img/icons_dark/stroke.png": "7b92a684a5a79e6e0154004a0a7a6b12dcfc0dff749a8d1264033031c18fb393",
+    "android/app/src/main/assets/img/icons_dark/sunrise.png": "29fa0d70e42d827dc0f8218c47560455f0c42584f6dab3addd32344ad17434d9",
+    "android/app/src/main/assets/img/icons_dark/sunset.png": "91a1e312c5de6cec5b88e5e38c1970afe1ae9edd8c2a8a7afbc34302cc85217d",
+    "android/app/src/main/assets/img/icons_dark/temp_10.png": "05d49b32db8ce5233489944f3b67593b786c887a81b3abfea4c4f322838beb43",
+    "android/app/src/main/assets/img/icons_dark/temp_100.png": "5ac955514a010ae78723c748b3786d3de3e736a02054eebc2b59156d6308d809",
+    "android/app/src/main/assets/img/icons_dark/temp_20.png": "ea984a3a054819e7d9042eede351eb2409a3d86815f9aa8fbb791d1fbb1c3ed4",
+    "android/app/src/main/assets/img/icons_dark/temp_30.png": "b77d61ffaf1b5750e247884c77878e03f7a343eecfc53f97c66dfdcde3167f7f",
+    "android/app/src/main/assets/img/icons_dark/temp_40.png": "778c0eb384fabcdd787eea1aa490f4214967fb279542ef816864601ee915dcb7",
+    "android/app/src/main/assets/img/icons_dark/temp_50.png": "d39021481168a5f20ee2e91fe8effc645db6579997bf0a137fc58fed9da37ee2",
+    "android/app/src/main/assets/img/icons_dark/temp_60.png": "1340e41efd40bbcbabb90b30712b82eed0527646b19820b24cf9eb16d3fa964d",
+    "android/app/src/main/assets/img/icons_dark/temp_70.png": "3483cac78be9dbbf63c679a9c18abd4e6de73bf3c1e2d5e9e9f1f9fd26dd510f",
+    "android/app/src/main/assets/img/icons_dark/temp_80.png": "cdac38fb7e679705d79163c0cf7269fcb0f24b0277260d6dae5a61d6c1d94a31",
+    "android/app/src/main/assets/img/icons_dark/temp_90.png": "209437ae8f9e0b86afcdc370610a586a06adf57185fda888758dbc5b66d1061b",
+    "android/app/src/main/assets/img/icons_dark/time.png": "de0a9f9988c64b7dc8c9069cea4dc2c57e71c06623dc98459b2d1692f2176af6",
+    "android/app/src/main/assets/img/icons_dark/ultrv.png": "dc0d0525bf29f54fccf27bd5ec5fed5c2d3568a2fe32a67eac9003a8ad86fe51",
+    "android/app/src/main/assets/img/icons_dark/umbrella.png": "c5fcd79a86795f250f3c8f8aef9f395aea4349063136854d7afd680d8d06e6fc",
+    "android/app/src/main/assets/img/icons_dark/unhealthy.png": "4be392e040dead2182e2f6ecacba21bc9e4f2aa877b9cfa9677b72340d4629f6",
+    "android/app/src/main/assets/img/icons_dark/very_good.png": "487efc2cdf363a2b3ac6901d85f84c50d02910baabe5885824ced59650eb633e",
+    "android/app/src/main/assets/img/icons_dark/very_unhealthy.png": "1e0cdbcc6260988fa19b4bd65042a8ec431ff61b72b809f81e7420f517be8baa",
+    "android/app/src/main/assets/img/icons_dark/visibility.png": "ee58ce1c8edc0bbcdad0826cca947a12c0fb65ecf0637cfb13a0eb213a1b7330",
+    "android/app/src/main/assets/img/icons_dark/wind.png": "f320c522d8b233c646b2eedd4fb421c23baae33ad7d64831eed61ceb973c5446",
+    "android/app/src/main/assets/img/icons_dark/wind_direction.png": "fd10038c1907b3f4d24d0d247da2b0989ce331621382c88b3373eb5c344ff7df",
+    "android/app/src/main/assets/img/icons_dark/yellow_dust.png": "351a3be6524912332d13ed9c9ffa45c8094a71273dc82b3ea93c342a586d5d45",
+    "android/app/src/main/assets/img/icons_default/asthma.png": "6b57db99ee4fda597f40762055a0a418d9a0b14ec1701d8e26f6257cdcfe6f0c",
+    "android/app/src/main/assets/img/icons_default/car_wash.png": "6eaa0d129895bb9376234724ab3f7fbe33ad10c4855f32721db6bf6bef458329",
+    "android/app/src/main/assets/img/icons_default/discomport_index.png": "2164d791bd87c31767d2dc635a92de2630e329b4709c290fecbffef2f313b4af",
+    "android/app/src/main/assets/img/icons_default/earthquake.png": "e84715772103e498770d30c5801cd32ccfb7105ce6b4403d86df4c25eb5795cc",
+    "android/app/src/main/assets/img/icons_default/feels_like.png": "41db89cb144195eabc2e412e609a9fcd05b86be6005d5e9fcf5ee18f83f499ec",
+    "android/app/src/main/assets/img/icons_default/food_poisoning.png": "2eface33ced68c6fd347566fe6f782e5a9b0855f99f79b154f74c5749e70d0ca",
+    "android/app/src/main/assets/img/icons_default/freezing_burst.png": "685224b9c0ab5cdbba9350b1e0e65811b1a4e3908267c8b707b7c4cd7f4d2c5c",
+    "android/app/src/main/assets/img/icons_default/good.png": "380e6704b3e133950f02d8bd026975d640e5ea1c7bce546e2f01721bfb3e61ae",
+    "android/app/src/main/assets/img/icons_default/hazardous.png": "3bdbf008f2a5f83347fbdefbfd23d31196ea3c47e04897ed367cba30967e0ab1",
+    "android/app/src/main/assets/img/icons_default/humidity_00.png": "6b97bd19383ed315d9be455c46d9369dd47d5fd2838ba6f7309f9080e21539cb",
+    "android/app/src/main/assets/img/icons_default/humidity_10.png": "87dc8bb7aef918ace80834d5551d84163e99f970d30cb809386a611a8d22f211",
+    "android/app/src/main/assets/img/icons_default/humidity_100.png": "d412d7f3b9bf29625b3d8cbf944c10ccd2280c8d28be6621096b0704022ce9d2",
+    "android/app/src/main/assets/img/icons_default/humidity_20.png": "8006f8f8392d0ba88ec9229e403a0631d577d0e188edf8302ca659713af7b090",
+    "android/app/src/main/assets/img/icons_default/humidity_30.png": "9579a030cf295ae8a9acbd6a6b01c09ae4bfdc73da204287628e093ff892c093",
+    "android/app/src/main/assets/img/icons_default/humidity_40.png": "adfe55953ce5f0847ca9eff26d32c31bcf95bc9fcc78a9eb9c37342364d000ea",
+    "android/app/src/main/assets/img/icons_default/humidity_50.png": "f319f1d4860e28f8db182d9d117bc879cd96dadb4768fe9cf4fb75adde64aa29",
+    "android/app/src/main/assets/img/icons_default/humidity_60.png": "8c48ee2f7796bf7e9b94e9b1565fc0f39f982a39a14c07a01dfcf53350c1428b",
+    "android/app/src/main/assets/img/icons_default/humidity_70.png": "6a5753b9076e5ec4975cc80398048a12b6846faef97fa7caf4400aeda6e419d6",
+    "android/app/src/main/assets/img/icons_default/humidity_80.png": "8d84ac697e615648d07977af01342a256b7e3d920e9947b202aac92521a2eed2",
+    "android/app/src/main/assets/img/icons_default/humidity_90.png": "cd0d2a7f709b108d17da882a1e0425a61899c72225edf2555c10a58176e723cb",
+    "android/app/src/main/assets/img/icons_default/influenza.png": "f2521bdf59b418ac994459966a0a32c11c4ba033d84432265c882236bfeed948",
+    "android/app/src/main/assets/img/icons_default/laundry.png": "da0e912e5091e7438de356b9ae59bca6807049f4a4a812d5b723e42d07bbb8ed",
+    "android/app/src/main/assets/img/icons_default/location.png": "d5396610dc332748528d051d704f0336ba1e647a15b9524185810263b3c7890c",
+    "android/app/src/main/assets/img/icons_default/moderate.png": "e785dbe579e5276891eb0dd6828866a3de1fc38633811a6e9ef4df72aeafae49",
+    "android/app/src/main/assets/img/icons_default/outing.png": "837dc9220ff196de3c6c9ffc2ffeeeb3a6050d28db23d6d28770552a5721016b",
+    "android/app/src/main/assets/img/icons_default/pollen.png": "6a561ddf3f5e00c7de8ce502b8a01a86cdb4dc9b43439b8955414c3df580cbdb",
+    "android/app/src/main/assets/img/icons_default/precipitation.png": "16ec72cd99815b1d56d75927b95688d3c72b07769478833c5eefcc94c0ba0348",
+    "android/app/src/main/assets/img/icons_default/pressure.png": "8582acc1c00cda3663773d4653f9a4dd17aa7a68f3d17924267e5d09c91a5119",
+    "android/app/src/main/assets/img/icons_default/rot.png": "7f159c1c994a8e8af312ff303fb425ac8083802285dda1968fb81c4790ae0895",
+    "android/app/src/main/assets/img/icons_default/skin_disease.png": "54355ed6d48abdf580f0e81b21a026c23c46899abee05f9d645a7e4ad0389a86",
+    "android/app/src/main/assets/img/icons_default/stroke.png": "3b716e88252ae70f8960b55b8ede9b48c18eb4150941a12f90585f176189b7b8",
+    "android/app/src/main/assets/img/icons_default/sunrise.png": "88f95170359b6e2a2906fc3f74b8b79906e595879a56d31ceba4cf7ac8e0335a",
+    "android/app/src/main/assets/img/icons_default/sunset.png": "d5b8dcab962349b97c6dcc0304181386b77bc3b337e9a6b4ff22fc110aeb3284",
+    "android/app/src/main/assets/img/icons_default/temp_10.png": "c04a993848b3bbba1915d03dae66a28a7b25f22745afe409499cb2d6de70fda6",
+    "android/app/src/main/assets/img/icons_default/temp_100.png": "85460795012d8a244a3a857d9f8e858e903b666abe4586f9efdbf87812513a46",
+    "android/app/src/main/assets/img/icons_default/temp_20.png": "977bf06ad74326418771edc3259d0be4e34b37d189151554624e6ad789c8196c",
+    "android/app/src/main/assets/img/icons_default/temp_30.png": "bc2179f67d05b87a39a3aefa0778290564c31bdd143199348567ec05d60af16c",
+    "android/app/src/main/assets/img/icons_default/temp_40.png": "c01b543b514964e91a3f2599401fa95577837346c54d62443d6766ba5e89c2b9",
+    "android/app/src/main/assets/img/icons_default/temp_50.png": "6f027e8fd9411b5b716446270107ca8022d5bf7f1e851f97069b325f96eaefb6",
+    "android/app/src/main/assets/img/icons_default/temp_60.png": "6f8808d6abe9dbbc751358d33ec820b0c09b3deeacec8167a73bc5597e6a7143",
+    "android/app/src/main/assets/img/icons_default/temp_70.png": "ef6f0fbb6011fffd0ec074fcda196306437833d9f4469bf05244846a882373c3",
+    "android/app/src/main/assets/img/icons_default/temp_80.png": "fb4604f07009062a39beb04989b9889f2ab90b5ca06abff3cbbb40777b440d0e",
+    "android/app/src/main/assets/img/icons_default/temp_90.png": "fd56f6b8b5a00de506781f2c47c99aeb6127d3c7e75faeb71db5a2bb9b8505a2",
+    "android/app/src/main/assets/img/icons_default/time.png": "4493e75912d78e6a7792d06b120393f83bfa59b8c330e51d291b9f55e981d023",
+    "android/app/src/main/assets/img/icons_default/ultrv.png": "e5fb316257a12e3a37c5234d501679184bb53ba923eeff10ccdec0429e3ef7bf",
+    "android/app/src/main/assets/img/icons_default/umbrella.png": "807c7e16600ad50c25002900a4b79557068e15f958819981514446bfd0348610",
+    "android/app/src/main/assets/img/icons_default/unhealthy.png": "c131310fb97990de2a4dcb4ead9b3dd7c8cf3ffef2db7b6df6942ebdbc722724",
+    "android/app/src/main/assets/img/icons_default/very_good.png": "44c958b580861edad8f7dd00ea671087ecff7c824ae37f7cdd1870762c4b0c3f",
+    "android/app/src/main/assets/img/icons_default/very_unhealthy.png": "5cab27b95ebbce8a60ca8dd03f60d512131b75946d06bc231ca82149e3e1e3a9",
+    "android/app/src/main/assets/img/icons_default/visibility.png": "13b6e8172639ba39452994514048ad0a1fa062cc3493656b03eeb9ba0a06da92",
+    "android/app/src/main/assets/img/icons_default/wind.png": "3e013e1df691252bc919aba6d33314aa294cb7f5b200a7cecc9333514cf1237b",
+    "android/app/src/main/assets/img/icons_default/wind_direction.png": "f5cda14e2f4a40f92ff71a834bddb8c47eeaeca8a9a93154d2678b2f827274aa",
+    "android/app/src/main/assets/img/icons_default/yellow_dust.png": "d1f317c3e496f313cf6254c7b94a9af3b7d3b264c3bd46d50f2b83a9e70d9671",
+    "android/app/src/main/assets/img/icons_old/asthma.png": "4992ef94daa3a45195f398174c80ecd9ef930562a45822127c276b47f3d9e593",
+    "android/app/src/main/assets/img/icons_old/car_wash.png": "a2dc05f79aff736149f27836b530ea9fbc42e302a50f36839cec3b5a1f0df96e",
+    "android/app/src/main/assets/img/icons_old/discomport_index.png": "e5ed52d4babc822789a5187b1b43c6334b017e9af844749e773fc9154bb8824f",
+    "android/app/src/main/assets/img/icons_old/earthquake.png": "6b341eae3816051898458a85b3d4b8a963b2a5e3e5947ec353bdc5e39699fd1f",
+    "android/app/src/main/assets/img/icons_old/feels_like.png": "5108eea9a58ea17a3094baaebb2a43a52259a9e7eed040e81323d0c99e3d4004",
+    "android/app/src/main/assets/img/icons_old/food_poisoning.png": "6f5237cedff88d64c9a5f738745ac336341c3aa594a77b6938d60fae773ba887",
+    "android/app/src/main/assets/img/icons_old/freezing_burst.png": "4adb795a0c12e5ee6ddba246331c5ea3419d5007c00a97de993c98d2787b1b83",
+    "android/app/src/main/assets/img/icons_old/good.png": "93445e14bd1280ef2370211011dd8e5c1202f89b62ce7a81dba896e0906ce263",
+    "android/app/src/main/assets/img/icons_old/hazardous.png": "c2862c53613d5d60af79563a9dea460e24dbff3cb06dac91fe2b64b9a123e97a",
+    "android/app/src/main/assets/img/icons_old/humidity_00.png": "fa8aa13fef6cae2cae3d94103bf4fcf96a2befe1678e5e27e76c584b05931b68",
+    "android/app/src/main/assets/img/icons_old/humidity_10.png": "70d4cf7c3b7bf3ac4d923ea40bb6597041f07b9424e1e0d8b329208cc2bf5dc2",
+    "android/app/src/main/assets/img/icons_old/humidity_100.png": "e64578422bfa0081e80964d4bcf46eb0b4c0840868bffddc7a63e5540ccf1579",
+    "android/app/src/main/assets/img/icons_old/humidity_20.png": "7e85e103fa07acdf8a9c09cc216d4184d48091f813b896b8ceb9e86520335bf5",
+    "android/app/src/main/assets/img/icons_old/humidity_30.png": "2f92e3d67c9ab45baa85c8607854da6de1d8aa6d675e6b7b1b713a11a49ed221",
+    "android/app/src/main/assets/img/icons_old/humidity_40.png": "b952bdc9a2e2366dc32799d4ce0b8a32ec9bc676065f3e02fafa13bd7ea8511e",
+    "android/app/src/main/assets/img/icons_old/humidity_50.png": "fae5c33789fb06915eb5bfd45084d0f7fd8b23a4ece6d9f58f9861bc94de0710",
+    "android/app/src/main/assets/img/icons_old/humidity_60.png": "3492efaa122feee1d584ec5b27d2b8c5a463559971aa139fba6bd3422598b860",
+    "android/app/src/main/assets/img/icons_old/humidity_70.png": "1586a8e720fa5d60d87c0b8cf972da95bce0f8c03a259d624ee471a6daf94c0d",
+    "android/app/src/main/assets/img/icons_old/humidity_80.png": "6a5e6fc1bbe25cb0d6ae72a9cc8b02a99dcc5dce3c66d97e90fcf2edc2776e5d",
+    "android/app/src/main/assets/img/icons_old/humidity_90.png": "8dcc1b6d4923c538cf676c6524161ef476747d2dfdf517022b456a3afdefd0ca",
+    "android/app/src/main/assets/img/icons_old/influenza.png": "c0211799c1d456a074ca1eb306f622c21571d8b0af4d1f1de3dc97b5ff0acfcd",
+    "android/app/src/main/assets/img/icons_old/laundry.png": "5110df91b2b541380ed371d5c000252db73fece351a19877048dc62229033ed1",
+    "android/app/src/main/assets/img/icons_old/location.png": "5c352cafcb7e721dc91c5fb7eb8503678085b18a65b4d4bdc0bea9175a8a15fd",
+    "android/app/src/main/assets/img/icons_old/moderate.png": "619005db90fb919d7f2287ad920cfff12ae530b5e4ac9fff0ac18f0d9e7eb61a",
+    "android/app/src/main/assets/img/icons_old/outing.png": "5cef7ea7085c45c0843402b1b8432ba76fac6b07b73d2e6e4ff0a0060ebe6549",
+    "android/app/src/main/assets/img/icons_old/pollen.png": "fd1be4ad0251928fd3b0d6fdfb01e41ed0f91677ab9184427cd47167775473a7",
+    "android/app/src/main/assets/img/icons_old/precipitation.png": "91b9cc524b5719cbc55103d32ffdb28376dd7fedfd9ad02952f9d5586408acf6",
+    "android/app/src/main/assets/img/icons_old/pressure.png": "a58db0d3eafb4c5e9dcb694100fc4a4bfed18ec84f873c9013bff16cc04ae78c",
+    "android/app/src/main/assets/img/icons_old/rot.png": "5957aee5a90046b32685aac0fdf875258f15141aeff4f520097282f90f033d28",
+    "android/app/src/main/assets/img/icons_old/skin_disease.png": "98d7da5e8208cb322ded67f7afad965333f8570bb480cac475311f941b6d8743",
+    "android/app/src/main/assets/img/icons_old/stroke.png": "a8149f8f8b25b0f82ed4a4c7162b606c6d25f28fcf8596e676ddf9cc0f217334",
+    "android/app/src/main/assets/img/icons_old/sunrise.png": "1adbe60ac0c6136b70b3d5b1672fd25e47efbe2adb4727af51b1a0e9f3d2623d",
+    "android/app/src/main/assets/img/icons_old/sunset.png": "ce1096657c3185cf6ff8dce69adffe107c2f0a36ad8e44ec07ed51852f4724b0",
+    "android/app/src/main/assets/img/icons_old/temp_10.png": "7e057f611b99039dda6cb081645c440a5477d3cc3b95dcb5a0e31dfc1c19a74d",
+    "android/app/src/main/assets/img/icons_old/temp_100.png": "44b7a44e580fdc680ff8881e057752497977efc38395404a802f4c36c69e43c6",
+    "android/app/src/main/assets/img/icons_old/temp_20.png": "af36589b3c8b000fa9b49889aeb308d6214474983388f8c392f194d621f867fe",
+    "android/app/src/main/assets/img/icons_old/temp_30.png": "5914fd203a4eb030cdece7ef3c70afdc914a8d576cc4bba9e3916f7869a575a7",
+    "android/app/src/main/assets/img/icons_old/temp_40.png": "c0af001410184a89c138146bea557a800a1f9c8f678d6c74b66a04edfa4825f7",
+    "android/app/src/main/assets/img/icons_old/temp_50.png": "c0af001410184a89c138146bea557a800a1f9c8f678d6c74b66a04edfa4825f7",
+    "android/app/src/main/assets/img/icons_old/temp_60.png": "399115f28bebc0edc6f3b117f9872903e5f25f5acb74d8c9a088eb8a7794b6b2",
+    "android/app/src/main/assets/img/icons_old/temp_70.png": "6819e23f14f51210dbe21968de835b267331405e6e3768c0fe4cfac528a9fc26",
+    "android/app/src/main/assets/img/icons_old/temp_80.png": "3d2d7f8eca075d689dbfb637cdde74be4d7a70c0abcbebe238f8ad82244b28ab",
+    "android/app/src/main/assets/img/icons_old/temp_90.png": "939ad4be63dfa49896c53bb72fb427df22e73320582239ede371f5545352913a",
+    "android/app/src/main/assets/img/icons_old/time.png": "b727494e002ee4c6d6909a085aa089a15f20c1055774419f71fa24dab4637575",
+    "android/app/src/main/assets/img/icons_old/ultrv.png": "19dbfe45d07b959ccb7ec699c473cdb3397a4e6342f2b90c6c3263c4647e25ff",
+    "android/app/src/main/assets/img/icons_old/umbrella.png": "667e757cd96babca9d207254411e1d82932163eb22c5e166f33813c7a25a9003",
+    "android/app/src/main/assets/img/icons_old/unhealthy.png": "c521680671a743a9a5e52ba545ce90a824b89b1611a2953f8cf4c636161e8b7a",
+    "android/app/src/main/assets/img/icons_old/very_good.png": "a2e39af5452b55f5ad80fff9f34292f363c594f88821892b87903c03aaf3fd95",
+    "android/app/src/main/assets/img/icons_old/very_unhealthy.png": "363c6dfb46626c12e87031c25c7bcff2dadcffd063772bf5ad340c890d35ec55",
+    "android/app/src/main/assets/img/icons_old/visibility.png": "d8d770213596195941c075415a85bf133ac0e7c6712261cd3cd5087c497a7d78",
+    "android/app/src/main/assets/img/icons_old/wind.png": "a146c9e8eca09bdb195e8e9ff7dbe657f027ce578b384a75b9d49a3312694ec5",
+    "android/app/src/main/assets/img/icons_old/wind_direction.png": "b41604263f5ddf7356aef4411a169600fc9f74fa396d4d2c63df6ad4cdd56c3c",
+    "android/app/src/main/assets/img/icons_old/yellow_dust.png": "1d767a28d72eebbf8a6a85eea1a5de9bea9d168c991558229f6a038dc8197962",
+    "android/app/src/main/assets/img/kr.png": "2a4298f62c4a741725c938b20eae06d1b157ca3aa16f8b04834eb11469b66437",
+    "android/app/src/main/assets/img/powered_by_google_on_non_white.png": "0803fe07b2401e2a78ca8d9959ee9e24780fa7b614c1d4a9ef50306a2f147d53",
+    "android/app/src/main/assets/img/powered_by_google_on_white.png": "85e8811af8ce7aff2444abb675d1acff9189884726709c6c5d89badb6bb96828",
+    "android/app/src/main/assets/img/poweredby_darksky.png": "2a8befcb3a37b2fc7ce46009e20161831696b1424b55ac5321c857da03d52b9f",
+    "android/app/src/main/assets/img/poweredby_darksky_darkbackground.png": "a64727ce9f0bef7e5536f9ca974ce83f45d28b721c3a5cae21cc0a27c0898a79",
+    "android/app/src/main/assets/img/reddot.png": "aa675954adf0facb4a1b763c054c2bcc4c9b7730d294ffea584231c652789fca",
+    "android/app/src/main/assets/img/ta_app_icon.png": "dbe72f5dab7310ce26f285d97f686a41062d58ef62caf47676bf9c43f6d18925",
+    "android/app/src/main/assets/img/weatherIcon/Cloud.png": "38c08e490697520bf4938e80fc9a1be97366851e45fd4de5818ded0851c265c5",
+    "android/app/src/main/assets/img/weatherIcon/CloudLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/CloudRain.png": "7da39fe06f7d44c99b9e92b35eae89ce8651026f33850712ad87d211dd0493a0",
+    "android/app/src/main/assets/img/weatherIcon/CloudRainLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/CloudRainSnow.png": "3d6ff456f2a8513e3ee41cda24eadf9abafa6f151d182bffbb02b446e9362885",
+    "android/app/src/main/assets/img/weatherIcon/CloudRainSnowLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/CloudSnow.png": "3c9aaa06d472578a5bb35d026db95c3b7780fa253fd3a287e379cfaadcd59e39",
+    "android/app/src/main/assets/img/weatherIcon/CloudSnowLightning-Big.png": "28c089985e6d908b8005b188a120a86abcba0de1b36e3516e1fdc0ccb69f5c12",
+    "android/app/src/main/assets/img/weatherIcon/CloudSnowLightning.png": "28c089985e6d908b8005b188a120a86abcba0de1b36e3516e1fdc0ccb69f5c12",
+    "android/app/src/main/assets/img/weatherIcon/CloudWind.png": "02c1723a29ee17f59aff31712f44ae04662fae6ae410836cc342938b70f41ce8",
+    "android/app/src/main/assets/img/weatherIcon/Moon.png": "8c6a6daee9242e22ecc044808b332f13b720cd0d162fad38f86285cc3cd68ba7",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigCloud.png": "db7e29065e8e2720613db25257a4d37809558ff0f7e269f776e2d755cde67336",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigCloudLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigCloudRain.png": "7da39fe06f7d44c99b9e92b35eae89ce8651026f33850712ad87d211dd0493a0",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigCloudRainLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigCloudRainSnow.png": "3d6ff456f2a8513e3ee41cda24eadf9abafa6f151d182bffbb02b446e9362885",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigCloudSnowLightning.png": "28c089985e6d908b8005b188a120a86abcba0de1b36e3516e1fdc0ccb69f5c12",
+    "android/app/src/main/assets/img/weatherIcon/MoonBigRainSnowLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/MoonLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallCloud.png": "db7e29065e8e2720613db25257a4d37809558ff0f7e269f776e2d755cde67336",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallCloudLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallCloudRain.png": "7da39fe06f7d44c99b9e92b35eae89ce8651026f33850712ad87d211dd0493a0",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallCloudRainLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallCloudRainSnow.png": "3d6ff456f2a8513e3ee41cda24eadf9abafa6f151d182bffbb02b446e9362885",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallCloudSnowLightning.png": "28c089985e6d908b8005b188a120a86abcba0de1b36e3516e1fdc0ccb69f5c12",
+    "android/app/src/main/assets/img/weatherIcon/MoonSmallRainSnowLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/Sun.png": "fbd4dbaff3814ea54e06ae670510eefc195df44b6273da38d6fd89bb93461eeb",
+    "android/app/src/main/assets/img/weatherIcon/SunBigCloud.png": "2fe51e80b386684130c865f9242096d0b82ea5894307f923b4fe1f481fb888ed",
+    "android/app/src/main/assets/img/weatherIcon/SunBigCloudLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/SunBigCloudRain.png": "7da39fe06f7d44c99b9e92b35eae89ce8651026f33850712ad87d211dd0493a0",
+    "android/app/src/main/assets/img/weatherIcon/SunBigCloudRainLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/SunBigCloudRainSnow.png": "3d6ff456f2a8513e3ee41cda24eadf9abafa6f151d182bffbb02b446e9362885",
+    "android/app/src/main/assets/img/weatherIcon/SunBigCloudSnowLightning.png": "28c089985e6d908b8005b188a120a86abcba0de1b36e3516e1fdc0ccb69f5c12",
+    "android/app/src/main/assets/img/weatherIcon/SunBigRainSnowLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/SunLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallCloud.png": "2fe51e80b386684130c865f9242096d0b82ea5894307f923b4fe1f481fb888ed",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallCloudLightning.png": "cbf702a3de942a9c5d7c31d47160d6df49d94238f9bca1d368c21a8a77be13d8",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallCloudRain.png": "7da39fe06f7d44c99b9e92b35eae89ce8651026f33850712ad87d211dd0493a0",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallCloudRainLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallCloudRainSnow.png": "3d6ff456f2a8513e3ee41cda24eadf9abafa6f151d182bffbb02b446e9362885",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallCloudSnowLightning.png": "28c089985e6d908b8005b188a120a86abcba0de1b36e3516e1fdc0ccb69f5c12",
+    "android/app/src/main/assets/img/weatherIcon/SunSmallRainSnowLightning.png": "7fb776de395c8ae3c7ecdaf02ef12e74a7a4981e731a0e215ff03d4e16041384",
+    "android/app/src/main/assets/img/weather_default/cloud.png": "7bf1cf67d55f9b669f59f32cdd95f8e8876310b1af7c1f1e9fe207a2c336d4ed",
+    "android/app/src/main/assets/img/weather_default/cloud_fog.png": "251f05e4e7c4afa5eb37cd395ff3e1790dafde721f90003eb26eaebcccbc6a9e",
+    "android/app/src/main/assets/img/weather_default/cloud_lightning.png": "0dc72add19c6e43718edc29c92026999d5da0f2a24c01b6320e983c6963f7481",
+    "android/app/src/main/assets/img/weather_default/cloud_rain.png": "4c1a700eaab4a5ca114e5e24f01ac7e6012d9dd01161d85bc0102fa023efba7d",
+    "android/app/src/main/assets/img/weather_default/cloud_rain_lightning.png": "2e2ab12913a19e1d538c7b4d66b7124aa256b7793c3c84516270ca231ad707c7",
+    "android/app/src/main/assets/img/weather_default/cloud_rainsnow.png": "6770199eae9f73d4c7ac1dfdf415df3d5c046cde32fb9857dc95cec719385513",
+    "android/app/src/main/assets/img/weather_default/cloud_rainsnow_lightning.png": "f9d8e8c6b0c994ebd0be6df239d6e64a4087179bafc8364bcc87d31a961cf041",
+    "android/app/src/main/assets/img/weather_default/cloud_snow.png": "36b9b704d3a68c6434647a3c97b1a80e4c58106ed5610431c044f48ffd2c05e9",
+    "android/app/src/main/assets/img/weather_default/cloud_snow_lightning.png": "48ddd1b80e1a7a3568858c59dc9c2c0a434867c96841127c5ce8ed1cef87a525",
+    "android/app/src/main/assets/img/weather_default/moon.png": "dbe18608e76388c6929130b926224126d6316c8b29e64db9b9d571067f9c152a",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud.png": "199181ef54184794be1b3c70ea0d03d9e3c66e177ef2054d95a726473c61dac8",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_fog.png": "c178bcd70542f76efa16c0cc7d8588455f5c6997e34ea272f2c3e3f120fabe4a",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_lightning.png": "7e36b26c9f74dd7459de23c80c669c6386aae76ed7e30fb6b8c34182473ad3d1",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_rain.png": "ae1807cd9b41806d1895b3b93f69bd7a8440453ff8e5637d1eeef68d4abfd08d",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_rain_lightning.png": "f48c3e7113e2c48c17214fc8a32f40a0042405b8eb5242f7472d6bb44131b7c4",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_rainsnow.png": "38d9d3ab7a35558f7ff845191e614b8e3d95b225eaa773d4c361bacdf4af531d",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_rainsnow_lightning.png": "24c96cb95f968d7b9a6b7886569f5fd3c54417c4f1080c378cd68f8c02de959b",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_snow.png": "9143a3665045482ef2900e488232a17ffe0222991b7d2120a57dbb1e656fcf28",
+    "android/app/src/main/assets/img/weather_default/moon_bigcloud_snow_lightning.png": "5d6af80ac753cb8780a2fb099ccf8214af491026343a7937649e778013d76003",
+    "android/app/src/main/assets/img/weather_default/moon_fog.png": "60e0846b265c44a9405fc65359f23fac8dde4e3a881436438386ee11ccdb42d2",
+    "android/app/src/main/assets/img/weather_default/moon_lightning.png": "49300ab81d6389f1e96c27b8363a3fd9d711c10ea87cd6c56cb65cf910df556c",
+    "android/app/src/main/assets/img/weather_default/moon_rain.png": "444a99d5656544a6dd2bc50d30ba2254e4fa4ae50a624765171d31b1b19b10c6",
+    "android/app/src/main/assets/img/weather_default/moon_rain_lightning.png": "ed06fd01b4c838ad212f13d567aa06bfc84ba8153af38accee199ee223ec801e",
+    "android/app/src/main/assets/img/weather_default/moon_rainsnow.png": "ece49944d931e48fefe5a8881d909470cc090f1aba1ec49b4ae6dfe5c0853ab5",
+    "android/app/src/main/assets/img/weather_default/moon_rainsnow_lightning.png": "35f4da31595cd638b07d069e6c1cbcc8bb575230168cdd4d1c4a3b94b1b3f672",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud.png": "f424e7debac76c8f9543dc489d989e9745cebdb5ed4e144b060d5d677c18915e",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_fog.png": "e303c5dade78b2ab3b9b83ba2ec0dd1389f1604869da5e5b60349a682a3b37d9",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_lightning.png": "08b61823006340130625389c577e6ea6f236f123865f08cfdb89641907527786",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_rain.png": "d9750e610e5157fde1cd2500e941804021665f854db916eb603e5ab110564322",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_rain_lightning.png": "deae78657412824ef1a1297c7ee57f373922462cee840566ad6c885cc77177fa",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_rainsnow.png": "8e09f2f5b968656a1c7fc1d72bfed01b727409eecc3343f0f1163e5a479ecf8d",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_rainsnow_lightning.png": "3fa131ad27cc8013fa79372986fecee7fd6469cb63eeb6495b89d7d9df7f6092",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_snow.png": "c5e282ee14fbe942dba263d0c88c5af44d058bdfad821c71dbc72c666b372fc1",
+    "android/app/src/main/assets/img/weather_default/moon_smallcloud_snow_lightning.png": "f6b882137dd1ec759ebc3ac8e3c9df699bc0eef2ed13419b23881ce3d3543da8",
+    "android/app/src/main/assets/img/weather_default/moon_snow.png": "1869c5eb25febf63d6968a91cca17ea5af4f4c8edbc17d0ccf5d0bf7ca70cb1d",
+    "android/app/src/main/assets/img/weather_default/moon_snow_lightning.png": "91330ae7b76677479f3a853a7b676dd3281fadfe874b20613a68fb67af39e328",
+    "android/app/src/main/assets/img/weather_default/sun.png": "9cd010b320095d8cbc959ea7b24d50e2ed1daea64a9cb32c32514033178890c0",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud.png": "d0cefd13326ed078c5ec6d04a27fe29580dd197b82239dd8410d6e04a751a322",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_fog.png": "057235920f951dad8615b86a534140673cb477a1ff6fa515341088ad06ad7f71",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_lightning.png": "0049b8e9dfb395307d74211111f24bd4c0ff7f958fc1a603cb908734d447496d",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_rain.png": "5198a35501cbea67bcb7918f9cb4cbc3ee9d370d60fd461787db46a8f0b6c7b1",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_rain_lightning.png": "b3a1e0160bca4f339a3a184cedb3a557a260793a0c9f5872d4b7a1e0890272ed",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_rainsnow.png": "24ac142e9205c7c11f2e6e49cc2ba3e2cfc2b2da162ddbdf50cffb0f23cfeef5",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_rainsnow_lightning.png": "74438e626c1fab464cb9aa3eef09ed414f1e0d1236fdfe10d34a5b06374397cb",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_snow.png": "00d2d875ddddbaeb60ef16b96b686edb9c108975ec340455c1d230832ca5ee4f",
+    "android/app/src/main/assets/img/weather_default/sun_bigcloud_snow_lightning.png": "89e659aca3af464ed169bbfcb8e4d93ae2dedec48e09282e9eca459ef0ddc0c1",
+    "android/app/src/main/assets/img/weather_default/sun_fog.png": "326a0d8b3c2eded96713117001b88a31344391d8381e0e5281f1d2c5b8d6c49a",
+    "android/app/src/main/assets/img/weather_default/sun_lightning.png": "38d8fc08dd811e4a899474c156bd72015aaf6f6201876ae3bc614795a4c0b3ed",
+    "android/app/src/main/assets/img/weather_default/sun_rain.png": "ad524fdcbe4f1218a8ddad677b467275131a980d2e072220459d3fde01177a50",
+    "android/app/src/main/assets/img/weather_default/sun_rain_lightning.png": "801435280a1b87ab708c5b5aee4dd0362c62157dce2ba68d6b48b60af063eef5",
+    "android/app/src/main/assets/img/weather_default/sun_rainsnow.png": "ba79a41a1a6b00f5c02828abe4df7bd8c7c55af6efc701a0dbf086322645d864",
+    "android/app/src/main/assets/img/weather_default/sun_rainsnow_lightning.png": "2e6ee4ef453f8d9e76488a586fb592cb29b61e918114f3f1c1a3bd9c348cde96",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud.png": "f928d3f25ef64399cc026b27c755cf6b85a86e16e81bff931e8de1a87caac9df",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_fog.png": "f5db7e6e6670759c26076034fa1f8318903cd9dba9252fa0f15fdc01085e70c5",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_lightning.png": "1ad41a69fa3e343d59ee02b42e64048bcc8582685dc6b08e39cd5b657bc8f202",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_rain.png": "1cfc4d83fd15c64a92c37b12fbd26b0510f4c4f4b9e28741194236937316783c",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_rain_lightning.png": "048b472a436907feb6cf712ff568a409d0f558d84d05f085c71d49780b9734c5",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_rainsnow.png": "41ed0a6bb978c7fa0ab802b81bf56cbefd7e9aa583de215f3d4664212bd26024",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_rainsnow_lightning.png": "7f27f7d516429cbc10381d7fe1f72bfe1ef40f9b3580a0322298672000939746",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_snow.png": "5845d7a85bcfb543b05180241d2a32237883be25f22d844a3e3f93b2f4cc8d38",
+    "android/app/src/main/assets/img/weather_default/sun_smallcloud_snow_lightning.png": "cbdce9544b0af151b6ad1548fe5664bbc2d72638393443a3d73e777fbbe8e618",
+    "android/app/src/main/assets/img/weather_default/sun_snow.png": "0f102e42d2eb4719e0da82d6c02b932321f74d027aac494728d77dc0d0755b6a",
+    "android/app/src/main/assets/img/weather_default/sun_snow_lightning.png": "accc3f2d9e245f1e6be44ac040c28e40b9d83874b40ad95594cc5ce9a1e6e1df",
+    "android/app/src/main/assets/img/weather_old/cloud.png": "f16bcb2aeb116280ae9ee2b4c5e85f4c6fd0cd9f06a1d76200ffa58322b70f31",
+    "android/app/src/main/assets/img/weather_old/cloud_fog.png": "f16bcb2aeb116280ae9ee2b4c5e85f4c6fd0cd9f06a1d76200ffa58322b70f31",
+    "android/app/src/main/assets/img/weather_old/cloud_lightning.png": "8638768722b0ffc370fe916d18ebcd945f11208ff4de7f1e46cebc2df216c44f",
+    "android/app/src/main/assets/img/weather_old/cloud_rain.png": "00e5896bfbe9e135b2e37ef284d0476ba7bf186cf69e46ebd993947464f1aa07",
+    "android/app/src/main/assets/img/weather_old/cloud_rain_lightning.png": "03c206743458f6528100166bea0871080801042f61ffd6b9ea249c1f65a3d4ea",
+    "android/app/src/main/assets/img/weather_old/cloud_rainsnow.png": "68d67341cc18e7987ac30185499803704b7875327cfb63de513ef1684b7a436e",
+    "android/app/src/main/assets/img/weather_old/cloud_rainsnow_lightning.png": "f6d1045c7e336a4d7f1198115d6468676e14a27a43823fc7abc82ab763db3300",
+    "android/app/src/main/assets/img/weather_old/cloud_snow.png": "5fa90bddc105f49a88ee178e12f44cbd5850f7e1162e1131f349a40efd35ef25",
+    "android/app/src/main/assets/img/weather_old/cloud_snow_lightning.png": "889efbc42187560ee425626b4180e2139c875564b7e4e7d13ce359676e643f87",
+    "android/app/src/main/assets/img/weather_old/moon.png": "998f891603d261e1b9f5e2ef0f2e6859c14cb17ed83c8dea4ab269c7c23444e0",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud.png": "7af290f154c2b2bb4f258a8bc731b9362cd44da8692cd44b6fa0ab93def26092",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_fog.png": "7af290f154c2b2bb4f258a8bc731b9362cd44da8692cd44b6fa0ab93def26092",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_lightning.png": "df5c308e6b484c59eaea1857fbb5c40b3be5eba175450c06cc4d7f34911cd33b",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_rain.png": "6e1ecc31fac7f647c1fe59d5e6becf515b169ada7964895fd660e061db21912c",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_rain_lightning.png": "bc1c318bd2615edc37bc2a8ea5ecd6667b424c92d6de69b73f658994b072e58d",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_rainsnow.png": "e50a9366831155fc8f70ec4f0df39c6be65f7a9db60978407eecbdeb9581104b",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_rainsnow_lightning.png": "e30cc3fb30fd48a4adbf9cd7c00f85772062c2b488c6b172ea12ca46726104f6",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_snow.png": "79dd260c74f1a367c2092875a075f699dff1489570ea6561768b9759926b0813",
+    "android/app/src/main/assets/img/weather_old/moon_bigcloud_snow_lightning.png": "50663dbf3ce6c54fc8449889095baa48eafd68e11910e8ce8687aab5e2125b75",
+    "android/app/src/main/assets/img/weather_old/moon_fog.png": "998f891603d261e1b9f5e2ef0f2e6859c14cb17ed83c8dea4ab269c7c23444e0",
+    "android/app/src/main/assets/img/weather_old/moon_lightning.png": "08be54a6ae45ea2e20828eeed05bf79275ead1309a3dc87ce83d66ef6162ba77",
+    "android/app/src/main/assets/img/weather_old/moon_rain.png": "3c630628a0b1d3c84386d2e73befc6a22f73d83aa412ea1277b074a24bc3aa8a",
+    "android/app/src/main/assets/img/weather_old/moon_rain_lightning.png": "4571d14d05ebc1a87ad577cfbc5185ff1bd5f5063d3d26d88102a348e542a2b9",
+    "android/app/src/main/assets/img/weather_old/moon_rainsnow.png": "5355829fe4d45da0ce53410c6347864d9d6045bf499c6b6fbe7bc9ce0ede7940",
+    "android/app/src/main/assets/img/weather_old/moon_rainsnow_lightning.png": "faa59a909f54512d5e7f6941093efa02c12d2a48e1ffd97716643f572adb869f",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud.png": "9a7b9d13e17f1221ffae3e7da6d41981536ec08e9bed2c5de9e85915521d90cc",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_fog.png": "9a7b9d13e17f1221ffae3e7da6d41981536ec08e9bed2c5de9e85915521d90cc",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_lightning.png": "08be54a6ae45ea2e20828eeed05bf79275ead1309a3dc87ce83d66ef6162ba77",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_rain.png": "3c630628a0b1d3c84386d2e73befc6a22f73d83aa412ea1277b074a24bc3aa8a",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_rain_lightning.png": "4571d14d05ebc1a87ad577cfbc5185ff1bd5f5063d3d26d88102a348e542a2b9",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_rainsnow.png": "5355829fe4d45da0ce53410c6347864d9d6045bf499c6b6fbe7bc9ce0ede7940",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_rainsnow_lightning.png": "faa59a909f54512d5e7f6941093efa02c12d2a48e1ffd97716643f572adb869f",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_snow.png": "f810e51013df01d1d6dfe69c3dd9665b6934df8d184e2d65768575d739946708",
+    "android/app/src/main/assets/img/weather_old/moon_smallcloud_snow_lightning.png": "2e1b127632d9d916497e559c49f38df525c772f1de4c5eef8682ce1e3ef7af12",
+    "android/app/src/main/assets/img/weather_old/moon_snow.png": "f810e51013df01d1d6dfe69c3dd9665b6934df8d184e2d65768575d739946708",
+    "android/app/src/main/assets/img/weather_old/moon_snow_lightning.png": "2e1b127632d9d916497e559c49f38df525c772f1de4c5eef8682ce1e3ef7af12",
+    "android/app/src/main/assets/img/weather_old/sun.png": "1ed727caf193c16a5e827ebb7b41b851fdb689d03a84e38dcac8c3f1c60ae897",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud.png": "9eaedc7788cfa6343bbf7c508eef3c986027113b8501faf22ea6810a5f5974a7",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_fog.png": "9eaedc7788cfa6343bbf7c508eef3c986027113b8501faf22ea6810a5f5974a7",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_lightning.png": "8071412ae5f7da3df1680d4104287017d2863a6f9a0a4315126be887a11b7c26",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_rain.png": "8a970ef3303daa3398c9ae61393d3247decbb4f34541796d7a5c69d2991df2f3",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_rain_lightning.png": "aefc76fbd61e80543ae58f29dd0c5d30280a7c7f1685038872791eae0e159da6",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_rainsnow.png": "02738a08f67bf21843f2a3c48adf6b91d9f75b48c4ede3832169062a202ef6e4",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_rainsnow_lightning.png": "8675e18ee0382351f4d8a96d959051e45a259ecb55e88657026432b25e3fec91",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_snow.png": "c346f1cbac56b060a8e8ed4cccf11bb846275e51b10188762b2196495fe39e13",
+    "android/app/src/main/assets/img/weather_old/sun_bigcloud_snow_lightning.png": "3f225bebe5af38732fb879628bd7df9b0589eddb3942d0283e4d054c792ffb12",
+    "android/app/src/main/assets/img/weather_old/sun_fog.png": "1ed727caf193c16a5e827ebb7b41b851fdb689d03a84e38dcac8c3f1c60ae897",
+    "android/app/src/main/assets/img/weather_old/sun_lightning.png": "ef594870992f8185de0b79c4fa7caef5793ce976f059fe949e1a82cebe4a7b56",
+    "android/app/src/main/assets/img/weather_old/sun_rain.png": "dc3f0afd02d5cbdc6554a392360463e3b08b1279dcc95e2247374799fceffb09",
+    "android/app/src/main/assets/img/weather_old/sun_rain_lightning.png": "dbeff6540a4f06db7428c9ee43d5b711eb2350f15981b0c1e2eaafef7a7ba4fe",
+    "android/app/src/main/assets/img/weather_old/sun_rainsnow.png": "2706d9c8d519e294f640577039b25ca46898d7ddb511fa1649b76057033e659c",
+    "android/app/src/main/assets/img/weather_old/sun_rainsnow_lightning.png": "fdc6c53abfeac1b1d2a9ad059ef86d24cafa8175c65b6f07638b514261e97bde",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud.png": "f4c23748975da4d59961c3befcfc2e8fc84f822da8313309e6315bcaf3295636",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_fog.png": "f4c23748975da4d59961c3befcfc2e8fc84f822da8313309e6315bcaf3295636",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_lightning.png": "ef594870992f8185de0b79c4fa7caef5793ce976f059fe949e1a82cebe4a7b56",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_rain.png": "dc3f0afd02d5cbdc6554a392360463e3b08b1279dcc95e2247374799fceffb09",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_rain_lightning.png": "dbeff6540a4f06db7428c9ee43d5b711eb2350f15981b0c1e2eaafef7a7ba4fe",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_rainsnow.png": "2706d9c8d519e294f640577039b25ca46898d7ddb511fa1649b76057033e659c",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_rainsnow_lightning.png": "fdc6c53abfeac1b1d2a9ad059ef86d24cafa8175c65b6f07638b514261e97bde",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_snow.png": "c0fb8c340c0600b414903eb50904b8d53cd0318b03a7f97bd64d9ae19e702e2e",
+    "android/app/src/main/assets/img/weather_old/sun_smallcloud_snow_lightning.png": "6fa81ce55153cd2eeed87b3eb7728e36ffc3033d27a69e375c8a9a4620d5d44a",
+    "android/app/src/main/assets/img/weather_old/sun_snow.png": "c0fb8c340c0600b414903eb50904b8d53cd0318b03a7f97bd64d9ae19e702e2e",
+    "android/app/src/main/assets/img/weather_old/sun_snow_lightning.png": "6fa81ce55153cd2eeed87b3eb7728e36ffc3033d27a69e375c8a9a4620d5d44a",
+    "android/app/src/main/java/net/wizardfactory/todayweather/AnalyticsGuard.kt": "0c0f77d330d0ae808b5439acda596d1b0a359c171de9bec10ba492311340c63f",
+    "android/app/src/main/java/net/wizardfactory/todayweather/AppLocale.kt": "1c4e351f573444d1e3aaf3db3e6a17772fcd0c0a1641379b0c6e43bf972c7791",
+    "android/app/src/main/java/net/wizardfactory/todayweather/AppStateHolder.kt": "ab14017f4f288791b05df0a07478e80a58764608b471421a860c854da2e1c459",
+    "android/app/src/main/java/net/wizardfactory/todayweather/EntryIntents.kt": "ed08b7de8e6c859c6fbcc6c4cc27dc389dc735c40ac6e4c6fdec050d77ae1bd0",
+    "android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt": "391be181e10e4286ca4dd808f31d80124a37d8b6bcc339fea76e98a6ed637eb4",
+    "android/app/src/main/java/net/wizardfactory/todayweather/Handoff.kt": "394e35a01fab46ce7d43a6f11baf249dcd6755fdec625722e50cafc7bd39b2a6",
+    "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "4a13f72b8ab8fb8ad57abf2c26fd285eb785309922b1d6bf7757413b2ff263fa",
+    "android/app/src/main/java/net/wizardfactory/todayweather/MessagingService.kt": "1d04d3d25e13d43da725bf43a7cd3d19f754d28c65a2de176b80fb71f555f800",
+    "android/app/src/main/java/net/wizardfactory/todayweather/Push.kt": "a91e5a76a6c1303e4a7f63aa6d1cb6435f51ed1044a55015cbc9d22ddbb4ae13",
+    "android/app/src/main/java/net/wizardfactory/todayweather/PushTokenWorker.kt": "c20de52940cf8619d1de7e9874d4c2234a206ea95592c94157d75c62222634e3",
+    "android/app/src/main/java/net/wizardfactory/todayweather/Share.kt": "8a6286843cb4accbfe80f5c174a9779fe33f9f34f4edee9e200811e488a5e534",
+    "android/app/src/main/java/net/wizardfactory/todayweather/TodayWeatherApp.kt": "ecbab6cc55fae5552f547aa04f4d3251ca63796e0340663584773eaae5cfaa07",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ads/AdMobBanner.kt": "d7582f79e977e7ece14ad8a2bd6f11035331f6f3b92db40ed04ee5e92bd7acd0",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ads/AdsConsent.kt": "700f6a4b404566aa818901fb5eae4ab98631d68c130f1f9be1b84db831180ac0",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ads/TwAds.kt": "ce8cfa146b4326c52df68f15db46ab66b6e3fd908aa5a9fb4ffc42dee4f3c3ba",
+    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt": "19f3e06aecf654140046ac0b878a0360b88f85077197d26be884705ae9ad0d6a",
+    "android/app/src/main/java/net/wizardfactory/todayweather/analytics/RemoteBannerConfig.kt": "677d834655be6814d7ce279b412125ec961d98bb26e23f6cf38084067c3052f9",
+    "android/app/src/main/java/net/wizardfactory/todayweather/location/AndroidLocationAccess.kt": "4d26ff3b9b0516f979bdc652c063f12140c161a96ed1d4d7073817119546d222",
+    "android/app/src/main/java/net/wizardfactory/todayweather/location/LocationGlyph.kt": "a0b9ea053b7c80c02e79d0e51dc45c2a2249988f80f3a789bcff73139286252d",
+    "android/app/src/main/java/net/wizardfactory/todayweather/notify/Notifications.kt": "385a35755fd1af57cc440d3ce69497e340e31e0ea1c891e88a3e5df10b25f4cc",
+    "android/app/src/main/java/net/wizardfactory/todayweather/search/BundledTowns.kt": "53281c45c93c46cf77b02b105e10f16fd49daf6babd775be1e83216f2797bf3c",
+    "android/app/src/main/java/net/wizardfactory/todayweather/search/PlaceSearch.kt": "a078a37b3fd30ff4245c855189435f9f3e130c37b554588168966d681b168836",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirChartView.kt": "c15736a3ec6d64925bb529d7bf718357b344651a02edf6024dbe7420ca976d73",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirColors.kt": "35b715ac7b055398ac410c07e6c56443d9086266423be4bde1768a892da36a26",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirScreen.kt": "293a175492900358c5e16862e0666348a440b043dbfe21a3b5a559edf0d6c62b",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirTab.kt": "f989bdf1584eb49c8c5507f3654753bb432d00f355320aa141d83e80c081e7de",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/alarms/AlarmsScreen.kt": "cbf5865d42bee39b67341a92539b8b960e097df603296f7bf167b010df73bd28",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartIcons.kt": "f6f0e85791d761ca7f710cc0fffa5116e3f9072fb739c57fcadb5b4d94ba375d",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartImages.kt": "6a9187808c5535443045a0e6a8f61e283a5ee43d79cffc3feffef1096c7ae958",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartStrings.kt": "0a4a20ae18e1c3feed4648a3c842c07b0ef4ab62794ebffb6e7d5c24a72a173c",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartStyle.kt": "5dab7247262e2a0e7550de1622f04a8248bdadd66710c2fb31fb5b12027ccf9a",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/DailyChartView.kt": "97242cfa64a664bef634bfe4a3495d24809fa56358d662900cf4507114d633d6",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/HourlyChartView.kt": "864a4269b46495f668e6a19fab038721e9f99d0c006efec79b43685bf7401304",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/SvgDrawing.kt": "0dcba7fcb2d8b3e298394d2407471e53b2f9eba5a4b2cdf37845b1f1d4678842",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/ForecastColors.kt": "ce1aae20d378c853c07bd1ff16a3f3d6fdc42795028924bf3a871dbd2e1ad49a",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/ForecastStrings.kt": "e5e26849a09b3fc288aaecb853312de808a72e0e9ef4e092b8530d969543a574",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/PhotoLoader.kt": "b304a8d2c37ef2aaf4f2b982ec33bc8a9b98ec62af4be79c41edfab12c3d13fe",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherPage.kt": "f077e46ae7dc623cf76aac4692a4f784b29d38109ee4d0b87a4c5cd449f07629",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "f2142317c557bd41e715dc870b80f1ecbde8d99bb3ccebae4b7c6b05f44a5324",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/nation/NationLoads.kt": "957e5fec4bce187cd668728a407b6c2b83dca21b1825234f3ef54a4991d5f0d7",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/nation/NationScreens.kt": "697c07c3dbd7e0a7c0f31750dc3ec1ccebe749ca962469ad098cfde00d6d537e",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "100e4564aa6a16fa4e3a89406a0a5b9656cf69257c60cff6135fc629d5e81657",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/settings/SettingsPages.kt": "ad54ccbc98bcc03b6e270834d500f98deba30967ebc42eca201d197675e61aa1",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "cef43aa621afc0b89aadbaa51c958000409dc9122d2d87c4519d111fc1fb5266",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Popup.kt": "b9902e4bae319182e85063f5f1859a69677e4a359aa73f16664b9d38ec17b034",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "f81c5980ff2a2aea01c50d4b08a6e1926df10a790ad1098c21a30224805f7834",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/ShellColors.kt": "8fd2cdb579e2af28c0c987f59476e39f640ae08be0592eed3a6574e5627cf984",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/SystemBars.kt": "09520a8ccf1aff7b0818ff2daf29d382aedccab7552c91a4f23da4a9cba498d2",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/LocationPopups.kt": "da51561865338e046444e7e441e75de9fa6eb3e7fda8d7f0c18c76ebc1473be5",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/StartBanner.kt": "19a47677d2c9754212e690a45d6a941cd057473499d2c7aa6d75cfd68f63345b",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/StartPage.kt": "e2a1837cf25abce1df351987ec69ec21c499acce01ea0169140f1b2bcc462dfc",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/StartScreen.kt": "58559d4e4ee488e42cd29b72aeaafb03208c1cea3fd4c886313b8177818ffb4d",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/text/CssText.kt": "f4719a63c3c1c2ede9214963f2b9a02451fdc8f3e1f65a1244ed278b1ca66c2b",
+    "android/app/src/main/java/org/apache/cordova/firebasex/CordovaNotificationTaps.kt": "3c1ea41baf045d336280b32e13670e99728f26eb74793f9154512cfbe0049e28",
+    "android/app/src/main/res/drawable-nodpi/splash_icon.png": "0219dad2ef5cc72f0d86f09014b9e954995fc8081e71ef39fa9f464b8f75280d",
+    "android/app/src/main/res/font/ionicons.ttf": "2ba7f20b1d8990e17a47fe3d88e4c766628aaa2baf1dd30fca0a0db59836f5f9",
+    "android/app/src/main/res/font/material_icons.ttf": "b7f4a3ab562048f28dd1fa691601bc43363a61d0f876d16d8316c52e4f32d696",
+    "android/app/src/main/res/mipmap-hdpi/ic_launcher.png": "708f14ebc45bf8d5b4dbf51e031c943ba4d98b470d2a7ade1565d415362dd3d8",
+    "android/app/src/main/res/mipmap-ldpi/ic_launcher.png": "5dfa691e6a88455e65954de34446eb516083e417553ba8792c58df2f31539852",
+    "android/app/src/main/res/mipmap-mdpi/ic_launcher.png": "9614f27a4405bb58a26c27741c5d17379d5eb0e670316f6a0c2ee3ce8d491c42",
+    "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": "a73f46059b0919bf548e1c6ae22ebb6c4c2ad90a781cb738c8d090bb22e632f4",
+    "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": "6e38fbc178b89e5374a5994c0b6ccf984179a4388ea5b988bc406a592937b581",
+    "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": "efa30f113f8c96998ce9aaab7ecab60416198b2c09f040bce78b37b11435a85d",
+    "android/app/src/main/res/values-de/client_strings.xml": "688a7fba6407d2659d087bc8ffe141e915ed71515dfa1c435a6aa4f0d94ec03a",
+    "android/app/src/main/res/values-ja/client_strings.xml": "206402ba769a8e5d497b28a67f2026775a612893763b8f02bc53530b5b303e80",
+    "android/app/src/main/res/values-ko/client_strings.xml": "028eb0638f84031c737ca89e47937a458cda72c33867f2ce499dc399098e01e7",
+    "android/app/src/main/res/values-zh-rCN/client_strings.xml": "16fc56f9867b7371acf4bae8d2336fd63f2647fde4a261277b29cc784cd3f5d8",
+    "android/app/src/main/res/values-zh-rTW/client_strings.xml": "704827b6c39ca2858ebc46d1f750f940fc0fd8b6330a10758bec4f1b3049ade5",
+    "android/app/src/main/res/values/app_strings.xml": "c7576a8a0251c9a67b5d9e639706a09849ebe9911c01937916a6bd916b24b98e",
+    "android/app/src/main/res/values/client_strings.xml": "f48cf3f941cdd09b9870731184c21396928dfe37ff5e0822635d94c3675d2301",
+    "android/app/src/main/res/values/colors.xml": "c52616d9eccb7a7f747d34ff69d8209b5eb03ef1b15719261993bdba772fd3e6",
+    "android/app/src/main/res/values/themes.xml": "d73ff26ba3e8f38ca2cb162bef616684d4df21b1ae49970c8ab575f622babb1f",
+    "android/app/src/main/res/xml/backup_rules.xml": "ff10cbce776a139e6e574f67fa24df239fd9bab9a910f6b929ef38e0b96efa56",
+    "android/app/src/main/res/xml/data_extraction_rules.xml": "1e0746f0855d163a401bd6c386313de37e6279df1afe0a048c1dff4bef726cfa",
+    "android/build.gradle.kts": "2e1b856f19e50d550a830486351850881b527ef2fddd4ae27f86f71f8a775daf",
+    "android/core-data/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/AlarmPage.kt": "d5050067d60eb3ef875c5f6d1cd9a72f3318a48eb8e34f18e6d47c18fdbbb25c",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/GeocodeClient.kt": "6d92ed76e13122edd072599880b799d44b856574be0b3c6df9502cc3cc652e96",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/Http.kt": "8b56188020546024a732e326754c6a854f274cb007de2e41cbf61988082e107b",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/NationSource.kt": "3910aac8f95ebf088fc04e8c2fb622052092f03b6c1ac8dd8804176fb4b92d15",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/PlacesPage.kt": "6a55cb541a80ff4a5e85dcebdbea0eed60c2990f9ba77c63bf03766a17f926a7",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/PushSync.kt": "6759f07faa48bacd3c373c205fc335b4163399538366510fc581fafcad177567",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/PushTransport.kt": "0b8032d61c21f25356774eaae7a40aecb57a3ea29464c3194d1ccea2a415566c",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/SettingsActions.kt": "5ebc247073cd57bc41625bb0f1b502eee69f608ee5b5dd3c0fec0f40aadeb40a",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/StartFlow.kt": "30eb999e07515fb314777bc8970f0fa227682f7e7032fb40f15ec73c46f850ec",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/Telemetry.kt": "1daea2bcb6baebaf4b24f27783f93c2863e1a20181fae26d93b9a5bc608786d9",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherPhotoFeed.kt": "fb68e734a32c80abb038d9127b1619eca2ec79b8240157eed87f00adddec162e",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRepository.kt": "fc3ccf7c87fdef0959596eee7d36f3b9369570043c1d14044c6911c07db50885",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRequests.kt": "81638be6c619f55633fcd65dae6da5856a731eeb46463a7b3193f4b5b2c42eba",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherSession.kt": "4c109a8836410848fd8ef5b4d912dd97ad63f0819e569bcd48edffafb69f38f0",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/AirQuality.kt": "a4d6a4b4b57203e1b080855f7ce1ec2b38dbb3c260c36a37dde531c9a94e614e",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/ChartPosition.kt": "51833dd576c1e5357be9de6181c07410ede4d30e33e7b9a109ca44577034b785",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/Js.kt": "b534e23ee8ac747be05a11616fb85c8a0bb77351f32e57d2bd172f90851f2570",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/Nationwide.kt": "2b7c8418dc924b3ee6805d1948637ca0a7a1e9a5bf319f4d8d506c0b97d8d0ac",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/Text.kt": "d84d21f6dd6ded27c074da0255924729e0783a5f9ff059f88f9da347255ddca8",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/Warnings.kt": "a5aa77c1d8222b655920594c9520752554577a82b81fcf83d897725c0a5b6c20",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/WeatherConverter.kt": "a4f79d2ee84b8aedbaed668cd00ebe27f76b18b5e539385f40c75482047d3998",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/ads/BannerGate.kt": "83675308d23b3e2e8bf7bd67789406376bfc62183594eb382893702917745e08",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/air/AirChart.kt": "5865e238d697a3dff32217cd29b3b51f0317eb20efe2355535d48406d5e80e74",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/air/AirPage.kt": "ae842342b0c6c2f9bf2ae68839884146d5958c72777d1c066aa72bbfd06f5ccc",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/air/AirScope.kt": "8794cebb2b60959d27a0f9a45cae6224e64d77cb1be68bd722e3deb6dd67e249",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/alarms/Alarms.kt": "3db68dbc06e4f13398411c5c27be0e057d962016e9e10de8d218feb6cb69c013",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/analytics/AnalyticsSchema.kt": "8ca9339ea6a60f15e67f3e79061f876ab01b414198a6fbda55c178ab74a6089e",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/ChartMetrics.kt": "35839b1e675ae55b52762ce1f04f606bfbd319291ffb2809279278b6652e87aa",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/D3.kt": "ea0f1bc0ebffd5b9be56d2fdc8f2328c989d488c736873df801f669889adf3b9",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/DailyChart.kt": "dd2956675c06b4441eae9ec1d92ff4bf5eb75e13ee4ef15d8d49f87901026371",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/HourlyChart.kt": "79669b95d2afc4bf4fef0a34a34dcbb7807d9b9b11940c022cb7b599ad9369c1",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/Svg.kt": "3b53959092f56a91d3f9faf17efb79b0fa5b4921ddd72c4447cfb001f5f87171",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/forecast/ForecastPage.kt": "3c062a94aa3031c3657c612c010e96adbec592f7327ce9c0df3d2879d3c07738",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/forecast/ForecastScope.kt": "a44b41f98c979b18b41f1b90fad05fc72dcb5815c8f05aef9376b16a77a6a075",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/forecast/PlaceIndex.kt": "9d0b5ca324b46d4cb3cede7c337edfb8eaaa49eeffbab4575de243f66319255b",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/nation/NationPages.kt": "1f3bee8499b166fde9a21c68ea2021843356a3ceb7cd081e30a9ad4afb302f64",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/places/Places.kt": "d7b85ee0a92683e6d57bfdbddf08cedd5dbd1da946f52661cf6f0da355d1044a",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/settings/Handoffs.kt": "c039b1f126ee21003f7b9f839fb5f6e80835096ad4047856f8532cb3b8f6c3b9",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/settings/SettingLists.kt": "c7f34c0c05b314d4d0d788ab23e1812969982d2fef01b2cbe7b72a474802e618",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/share/ShareMessage.kt": "0e2797940989dd833347b75e000ef8c34883a33a22a685f740a388cf91f98783",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/shell/AppLanguage.kt": "8eca06cebb743283054e18878409b9f9e7b72675b6de88cb84679a7922c0a721",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/shell/Shell.kt": "17121030c37b58e140837b87e7520f7f38cad87c32e92b91808b1d8a37730a48",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/shell/WeatherPhotos.kt": "e21486816ec6e774c7693d92e85542b398d7769a0f9b6d3c70ed68b5a037d11a",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/start/CityShortcuts.kt": "c67b55e81c32a3fcaa59680abb91eebfe02ef37e52daef960d4153e8964e6268",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/start/LocationAccess.kt": "bb1b7779753baac72199f1f3829137cea840b2b5112dc5db1837915c7c2d1b1c",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/start/StartGate.kt": "56074127abbf531933aa84fdd8d228bddedd98979f09c448a3fe1d802338d7bc",
+    "android/core-model/src/main/kotlin/net/wizardfactory/todayweather/core/model/Models.kt": "a5c339f679fc7faa10a7d19c83ebddf9933f29d7cb52b7daf0d8e3f657385d41",
+    "android/core-storage/src/main/AndroidManifest.xml": "571f2735faf5e857752ee057ac8ef63425576a721616c60b86ee5d4c0a2d682f",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/AlarmSettings.kt": "98db47a2cb89ad9101048a06653607aee8ab76580065137798edf6f71ce3e48d",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/AppState.kt": "0f0a63b2287cf63d6bb20e9190cdfe02b61f606c5a7359f800884ba19f00355f",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/AppStateStore.kt": "00e86a899dafbf75b66594d406da570f4419693fba841820b684fab46f8856d5",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/CordovaHandBack.kt": "c7406803b085d4f06a6c00cb4168e5acb978a2cfbd8e1afa4d5c78ae6e905e7f",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/CordovaMigration.kt": "9c4d54dea6aa5ce5d7fa0825ee1ec55036d6145a369e54dce95d86176f405a52",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/DeviceIdentity.kt": "bf5c1485780dce05fd8974104a8a8969855d8d93ffc98454ae79cbf78de515b4",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/LevelDbReader.kt": "afbc8b0e669a117c08f6c79133ad1c1f13cb2f030a4f29f6733fd609f2e004ca",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/PlaceList.kt": "684a1be793b60b5dde3e33e213403b3be0524b74cedfbdeed6b98d3893032b5c",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/PushRegistration.kt": "9d0d51864b4be3ab5f0d85d0800bddb19731718637cb8ec30f02b7a18400ea93",
+    "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/WebViewLocalStorage.kt": "82ca04eeabbb9f598c66787dc89f4fbc85025d79f2030d64380a940c929e47db",
+    "android/gradle/libs.versions.toml": "a7c1a69effc1b7a8fc936f14e64360446f538427ca7430aa0c7e1e5b5ad96bea",
+    "android/settings.gradle.kts": "bebd82b1565efeb97319d8d900368f779736fde0c3ddb7a646183f2ff9a86bcf",
+    "android/tools/manual/capture.sh": "28ea606533415a98c56881fdd5ac7e1b94fba7d6477f7d22b67ca1b9bafe7ce4"
+  },
+  "manual_sha256": "9cdf5590d3ee75e5ec2361e4aab781f378fed9760f715de39068e6004b84f257",
+  "pdf_sha256": "ac00d7d9a153f6d1d1e0920daed71b97f176033d3e61b5da1f864c2fed495cce",
+  "limitations": [
+    "API36 emulator captures; not a release APK or physical-device certification",
+    "Live values, test advertisements, forecasts, available warning bulletins and Android dialogs vary",
+    "No actual notification delivery, analytics opt-in, or share recipient exercised",
+    "The selected photo and SDK artwork retain their original third-party rights"
+  ]
+}

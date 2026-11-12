@@ -1,0 +1,314 @@
+{
+  "title": "TodayWeather for Android: native app user manual",
+  "scenario": "Version 2.0.0 preview, Korean screens. English instructions retain Korean control labels. Live examples captured on 13 November 2026; weather, ads and Android dialogs may vary.",
+  "steps": [
+    {
+      "title": "Read the first-launch notice",
+      "instruction": "Open TodayWeather and read 선택 접근 권한 (Optional permissions). Tap 확인 (OK). The notice retains legacy storage/phone wording; this native app asks Android for location and notifications when needed.",
+      "screenshot": "screenshots/01-access-notice.png",
+      "caption": "The access notice appears over the start page.",
+      "expected": "The notice closes; the start page remains."
+    },
+    {
+      "title": "Choose how to start",
+      "instruction": "Tap 현재위치 날씨보기 (Weather at my location), choose a city shortcut, or enter a place in the search field. Internet access is needed for current weather.",
+      "screenshot": "screenshots/02-start.png",
+      "caption": "The start page offers location, city shortcuts and search.",
+      "expected": "A selected place opens its weather. Search also works without location permission."
+    },
+    {
+      "title": "Allow location when needed",
+      "instruction": "After choosing current-location weather, use the Android permission dialog. Choose 앱 사용 중에만 허용 (While using the app). Approximate location is also supported; it may select a nearby area.",
+      "screenshot": "screenshots/03-location-permission.png",
+      "caption": "Android asks for location access.",
+      "expected": "The app finds the position and loads its weather. If denied, use place search; a permanently denied permission can be changed in Android Settings."
+    },
+    {
+      "title": "Recognize your current location",
+      "instruction": "Check the place name and location pin in the header. Use the hourly, daily and air tabs at the bottom. The example uses an emulator position near Seoul City Hall.",
+      "screenshot": "screenshots/04-current-location.png",
+      "caption": "Current-location weather after a successful position lookup.",
+      "expected": "The header identifies the area found from the location. Values and place names depend on your position and the latest data."
+    },
+    {
+      "title": "Read hourly weather",
+      "instruction": "Tap 시간별날씨 (Hourly weather). Read the current temperature and summary, then the hourly sky, precipitation probability and temperature chart. Swipe up to see lower cards.",
+      "screenshot": "screenshots/05-hourly.png",
+      "caption": "Hourly weather for a saved Seoul location.",
+      "expected": "The blue chart shows forecast temperatures; the gray comparison shows yesterday where available."
+    },
+    {
+      "title": "Expand chart details",
+      "instruction": "Tap the downward chevron below the hourly chart. Tap it again to collapse the additional detail rows.",
+      "screenshot": "screenshots/06-hourly-expanded.png",
+      "caption": "The expanded hourly chart includes wind and humidity information.",
+      "expected": "The extra rows appear below the temperature plot."
+    },
+    {
+      "title": "Look at earlier hours",
+      "instruction": "Swipe right across the chart to move toward the earliest available hours. Read the date above the time labels.",
+      "screenshot": "screenshots/07-hourly-past.png",
+      "caption": "The chart at its earliest available position.",
+      "expected": "Earlier hours become visible; the scroll stops at the available data boundary."
+    },
+    {
+      "title": "Look at later hours",
+      "instruction": "Swipe left across the chart to move toward the latest available hours.",
+      "screenshot": "screenshots/08-hourly-future.png",
+      "caption": "The chart at its latest available position.",
+      "expected": "Later forecast hours appear. The available range depends on the weather source."
+    },
+    {
+      "title": "Read daily weather",
+      "instruction": "Tap 일별날씨 (Daily weather). Read the dates, sky symbols, precipitation and low/high temperature ranges. Swipe up for detail cards.",
+      "screenshot": "screenshots/09-daily.png",
+      "caption": "The daily tab at its initial date position.",
+      "expected": "Daily forecast information replaces the hourly chart."
+    },
+    {
+      "title": "Look at earlier days",
+      "instruction": "Swipe right across the daily chart to view the earliest available dates.",
+      "screenshot": "screenshots/10-daily-past.png",
+      "caption": "Earlier days in the daily chart.",
+      "expected": "Past dates appear where the source supplies them."
+    },
+    {
+      "title": "Look at later days",
+      "instruction": "Swipe left across the daily chart to view the latest available dates.",
+      "screenshot": "screenshots/11-daily-future.png",
+      "caption": "The latest dates available in this capture.",
+      "expected": "Later daily forecasts appear; do not treat the example dates as a fixed forecast window."
+    },
+    {
+      "title": "Read the air-quality summary",
+      "instruction": "Tap 대기정보 (Air information). Read the grade and advice, then swipe up to see pollutant cards and the information source.",
+      "screenshot": "screenshots/12-air.png",
+      "caption": "The air-quality tab for Seoul.",
+      "expected": "The selected air standard controls the grade bands. Missing readings may appear as a dash."
+    },
+    {
+      "title": "Choose a pollutant",
+      "instruction": "Tap 초미세먼지 (PM2.5) in a pollutant card.",
+      "screenshot": "screenshots/13-air-pm25.png",
+      "caption": "PM2.5 concentration and its grade are selected.",
+      "expected": "The main reading and chart change to the selected pollutant."
+    },
+    {
+      "title": "Find nearby monitoring stations",
+      "instruction": "Swipe up to 측정소 (Monitoring stations). Compare the available station cards and timestamps.",
+      "screenshot": "screenshots/14-stations.png",
+      "caption": "Station choices and source information below the air charts.",
+      "expected": "The currently selected station is marked; station availability depends on the source."
+    },
+    {
+      "title": "Change the monitoring station",
+      "instruction": "Tap another station card.",
+      "screenshot": "screenshots/15-station-selected.png",
+      "caption": "The main air reading after selecting the second station.",
+      "expected": "The selected card, main value and station information update together."
+    },
+    {
+      "title": "Open saved places",
+      "instruction": "Tap 즐겨찾기 (Favorites). The current-location entry is separate from saved places. Use the search field to add another place.",
+      "screenshot": "screenshots/16-places.png",
+      "caption": "The places list with Seoul saved.",
+      "expected": "The list shows the available locations and their alarm buttons."
+    },
+    {
+      "title": "Search for a place",
+      "instruction": "Enter 부산 (Busan). Review the result name and address before choosing it. If the keyboard is open, the first tap may only dismiss it; tap the result again to select.",
+      "screenshot": "screenshots/17-place-search.png",
+      "caption": "Search results for Busan.",
+      "expected": "Choosing a result adds the place and opens its weather. Duplicate places are not added again."
+    },
+    {
+      "title": "Check the newly added place",
+      "instruction": "Confirm the new place name in the weather header.",
+      "screenshot": "screenshots/18-busan.png",
+      "caption": "Weather after selecting Busan from search.",
+      "expected": "The saved-place list gains Busan and weather loads for its coordinates."
+    },
+    {
+      "title": "Switch between saved places",
+      "instruction": "Use the left/right arrows beside the weather summary, or swipe the header, to move between enabled places.",
+      "screenshot": "screenshots/19-switch-seoul.png",
+      "caption": "Seoul selected again after moving from Busan.",
+      "expected": "The header and weather change to the selected saved place."
+    },
+    {
+      "title": "Add an overseas place",
+      "instruction": "Return to 즐겨찾기 (Favorites), enter London, and select the matching search prediction. Check its country/address before choosing.",
+      "screenshot": "screenshots/20-london.png",
+      "caption": "Weather for the selected London result.",
+      "expected": "The app loads overseas weather. Forecast sources and available details can differ from Korea."
+    },
+    {
+      "title": "Edit the places list",
+      "instruction": "Open 즐겨찾기 (Favorites) and tap the edit control. Tap the delete control beside the place you no longer need.",
+      "screenshot": "screenshots/21-delete-place.png",
+      "caption": "Delete controls in the places list.",
+      "expected": "Deleting removes that saved place; the current-location entry is managed separately."
+    },
+    {
+      "title": "Verify a deletion",
+      "instruction": "Check that the deleted place is absent. Leave edit mode when finished.",
+      "screenshot": "screenshots/22-place-deleted.png",
+      "caption": "The list after deleting London.",
+      "expected": "The remaining places stay saved. You can search for a deleted place again later."
+    },
+    {
+      "title": "Allow notifications",
+      "instruction": "Open the bell for a location. On Android 13 or later, tap 허용 (Allow) if you want weather notifications. You can change this in Android Settings later.",
+      "screenshot": "screenshots/23a-notification-permission.png",
+      "caption": "Android notification permission for the native app.",
+      "expected": "The permission dialog closes. Permission alone does not save an alarm or guarantee delivery."
+    },
+    {
+      "title": "Review location-specific alarms",
+      "instruction": "Use the bell in the weather header or beside a saved place. Review the enabled days, weather conditions and scheduled times. Swipe up for lower controls.",
+      "screenshot": "screenshots/23-alarms.png",
+      "caption": "Alarm settings for the selected location.",
+      "expected": "Edits apply to this location when saved. The manual capture does not register or deliver a real notification."
+    },
+    {
+      "title": "Edit a scheduled time",
+      "instruction": "Tap a time row. Use the arrow controls and AM/PM selector, then 설정 (Set) to apply or 닫기 (Close) to cancel. Check the resulting time before saving.",
+      "screenshot": "screenshots/24-time-picker.png",
+      "caption": "The native time picker.",
+      "expected": "The row reflects the chosen time. Known inherited behavior: 12:00 AM deletes a row, noon may open as AM, and 12:30 PM may become 00:30. Avoid these noon values until corrected."
+    },
+    {
+      "title": "Leave edited alarm settings",
+      "instruction": "After editing, use 취소 (Cancel) or the page back arrow. The app asks 저장하시겠습니까? (Save changes?). Choose 닫기 (Close) to discard or 저장 (Save) to apply. The capture chooses Close.",
+      "screenshot": "screenshots/25-alarm-confirmation.png",
+      "caption": "Save-changes question when leaving an edited alarm page.",
+      "expected": "Close discards the edits. Save applies them and attempts registration when supported. The main 저장 (Save) button saves directly; Android Back leaves without this question."
+    },
+    {
+      "title": "Open the menu",
+      "instruction": "Tap the three-line menu button. Swipe up in the menu to reach lower settings and information items.",
+      "screenshot": "screenshots/26-menu.png",
+      "caption": "The native app menu.",
+      "expected": "The menu provides nationwide information, units, startup, refresh, theme and privacy controls. Some nationwide items appear only for the Korean region."
+    },
+    {
+      "title": "Choose measurement units",
+      "instruction": "Open 단위설정 (Units). Tap the measurement you want to change.",
+      "screenshot": "screenshots/27-units.png",
+      "caption": "Unit settings including temperature, wind, pressure, distance, precipitation and air standard.",
+      "expected": "A choice list opens for the selected measurement."
+    },
+    {
+      "title": "Choose a temperature unit",
+      "instruction": "Tap the temperature row, then choose C or F.",
+      "screenshot": "screenshots/28-temperature.png",
+      "caption": "The temperature-unit choices.",
+      "expected": "The selected row gains a check mark and the unit is saved."
+    },
+    {
+      "title": "Check the saved unit",
+      "instruction": "Check that F is selected. Use the back arrow to return to Units and then to the weather.",
+      "screenshot": "screenshots/29-fahrenheit.png",
+      "caption": "Fahrenheit selected in the temperature list.",
+      "expected": "Weather temperatures use the saved unit when the data is applied. Change back to C in the same way."
+    },
+    {
+      "title": "Choose the startup tab",
+      "instruction": "Open 시작 페이지 (Startup page) from the menu. Select the tab you want to see when the app starts.",
+      "screenshot": "screenshots/30-startup-page.png",
+      "caption": "Startup-page choices.",
+      "expected": "A check mark identifies the saved choice. This does not replace the first-launch setup when no place has been configured."
+    },
+    {
+      "title": "Choose the refresh interval",
+      "instruction": "Open 업데이트 주기 (Refresh interval). Select 수동 (Manual) or an interval. You can also tap the selected weather tab to request a refresh.",
+      "screenshot": "screenshots/31-refresh.png",
+      "caption": "Refresh-interval choices.",
+      "expected": "The app saves the choice. A refresh needs network access and current data from the provider."
+    },
+    {
+      "title": "Choose a theme",
+      "instruction": "Open 테마 설정 (Theme) and select 어두운 테마 (Dark theme).",
+      "screenshot": "screenshots/32-dark-theme.png",
+      "caption": "Dark theme selected in the choice list.",
+      "expected": "The page colors change and the choice is saved."
+    },
+    {
+      "title": "Read weather in dark theme",
+      "instruction": "Return to the weather tab after selecting the dark theme.",
+      "screenshot": "screenshots/33-dark-weather.png",
+      "caption": "The hourly page in dark theme.",
+      "expected": "The same weather information appears with the selected theme colors."
+    },
+    {
+      "title": "Use the photo theme",
+      "instruction": "Choose 날씨 사진 테마 (Photo theme) and return to weather. Allow the photo feed and image to load.",
+      "screenshot": "screenshots/34-photo-theme.png",
+      "caption": "Photo theme on the weather header.",
+      "expected": "A photo appears when available. If the feed or image cannot load, the app may show its fallback background."
+    },
+    {
+      "title": "Read weather warnings",
+      "instruction": "From the menu, open 기상특보 (Weather warnings). Swipe to read any available bulletins.",
+      "screenshot": "screenshots/35-warnings.png",
+      "caption": "The current warnings page at capture time.",
+      "expected": "The page shows bulletins supplied by the source, or an empty state when none are available. Check the announcement time."
+    },
+    {
+      "title": "View nationwide weather",
+      "instruction": "Open 전국날씨 (Nationwide weather). Read the city labels and values.",
+      "screenshot": "screenshots/36-national-weather.png",
+      "caption": "The nationwide weather map.",
+      "expected": "Weather values appear for the listed Korean cities when supplied by the source."
+    },
+    {
+      "title": "Change the nationwide map mode",
+      "instruction": "Use the mode controls on 전국날씨 (Nationwide weather) to view wind.",
+      "screenshot": "screenshots/37-national-wind.png",
+      "caption": "Nationwide wind mode.",
+      "expected": "The map labels change to wind direction and speed."
+    },
+    {
+      "title": "View nationwide air quality",
+      "instruction": "Open 전국미세먼지 (Nationwide air). Choose a pollutant in the tab strip; swipe the strip if an option is off-screen.",
+      "screenshot": "screenshots/38-national-air.png",
+      "caption": "The nationwide air-quality map.",
+      "expected": "Regional values and colors change with the selected pollutant and available readings."
+    },
+    {
+      "title": "Read app information",
+      "instruction": "Open 정보 (About) from the menu. Read the version and application information, then close the dialog.",
+      "screenshot": "screenshots/39-about.png",
+      "caption": "The About dialog over the menu.",
+      "expected": "The menu remains when the dialog closes."
+    },
+    {
+      "title": "Choose optional usage statistics",
+      "instruction": "Open 선택적 이용 통계 (Optional usage statistics). Read the explanation and choose whether to allow collection. This manual keeps collection off.",
+      "screenshot": "screenshots/40-analytics.png",
+      "caption": "The optional analytics choice.",
+      "expected": "Your choice is saved. Withdrawing consent disables collection. A choice made in the old app is not automatically treated as native consent."
+    },
+    {
+      "title": "Review advertising privacy options",
+      "instruction": "Open 광고 개인정보 선택 (Ad privacy choices). The available form depends on the advertising consent service and region.",
+      "screenshot": "screenshots/41-ad-privacy.png",
+      "caption": "The ad-privacy response in this capture environment.",
+      "expected": "A form opens when required; otherwise an explanatory message appears. This is separate from optional usage statistics."
+    },
+    {
+      "title": "Share weather using Android",
+      "instruction": "Tap the share icon in the weather header. Review the Android chooser and choose an app only if you want to send the weather text. Back cancels.",
+      "screenshot": "screenshots/42-share-chooser.png",
+      "caption": "The Android share chooser; no recipient is selected.",
+      "expected": "Android hands a text weather summary and app link to the chosen app. This manual stops before sending anything."
+    },
+    {
+      "title": "Close the app",
+      "instruction": "From the main screen, press Android Back. Read the exit confirmation. Cancel to keep using the app or confirm to close it.",
+      "screenshot": "screenshots/43-exit.png",
+      "caption": "Exit confirmation on the native app.",
+      "expected": "Cancel keeps the app open. Back first closes an open dialog or page before reaching the exit prompt."
+    }
+  ]
+}
