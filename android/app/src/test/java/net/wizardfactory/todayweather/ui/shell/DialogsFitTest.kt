@@ -33,6 +33,9 @@ import org.robolectric.annotation.GraphicsMode
 /** Actual O01/O02/O03/O04/O08 components; behavior tests separately verify their app entry points. */
 abstract class DialogsFitTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
+    @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f)
+    fun phoneLargeText() = fits()
+
     @Test @Config(qualifiers = "+w320dp-h480dp-port", fontScale = 1.3f) fun narrow() = fits()
     @Test @Config(qualifiers = "+w832dp-h384dp-land", fontScale = 1.3f) fun landscape() = fits()
     @Test @Config(qualifiers = "+w1280dp-h800dp-land", fontScale = 1.3f) fun tablet() = fits()

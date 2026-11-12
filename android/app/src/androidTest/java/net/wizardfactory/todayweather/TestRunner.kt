@@ -68,6 +68,14 @@ class TestTodayWeatherApp : TodayWeatherApp() {
      * requests); push requests are recorded either way.
      */
     override fun serverUrl() = if (TestRunner.args.getString("weather") == "production") BuildConfig.SERVER_URL else "https://push.test.invalid"
+    // Exercise five Google-style predictions offline during the window traversal.
+    override fun placeSearch(): net.wizardfactory.todayweather.search.PlaceSearch? =
+        if (argsForScreenWalk()) net.wizardfactory.todayweather.search.PlaceSearch {
+            (1..5).map { net.wizardfactory.todayweather.search.Prediction("Search result $it", 0) }
+        } else super.placeSearch()
+
+    private fun argsForScreenWalk() = TestRunner.args.getString("screens") == "true"
+
     override fun weatherPhotosUrl() = "" // no photo feed request from device tests
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
     override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport {

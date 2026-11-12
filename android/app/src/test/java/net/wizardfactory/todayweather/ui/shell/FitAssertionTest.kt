@@ -85,6 +85,41 @@ class FitAssertionTest {
             ShellFit.texts(rule, "scroll fixture", rule.onRoot().fetchSemanticsNode().boundsInRoot).isEmpty())
     }
 
+    @Test fun disabledVerticalScrollCannotHideClippedOrOffscreenText() {
+        rule.setContent {
+            Column(Modifier.size(120.dp, 30.dp).verticalScroll(rememberScrollState(), enabled = false)) {
+                Spacer(Modifier.height(20.dp))
+                Text("Partial", Modifier.requiredSize(120.dp, 40.dp))
+                Text("Offscreen", Modifier.requiredSize(120.dp, 40.dp))
+            }
+        }
+        rule.waitForIdle()
+        val problems = ShellFit.texts(rule, "disabled", rule.onRoot().fetchSemanticsNode().boundsInRoot)
+        org.junit.Assert.assertEquals("both inaccessible labels must fail", 2, problems.size)
+    }
+
+    @Test fun disabledHorizontalScrollCannotHideClipping() {
+        rule.setContent {
+            Box(Modifier.size(8.dp, 40.dp).horizontalScroll(rememberScrollState(), enabled = false)) {
+                Text("Clipped label", Modifier.requiredSize(120.dp, 40.dp))
+            }
+        }
+        rule.waitForIdle()
+        assertTrue(ShellFit.texts(rule, "disabled", null).isNotEmpty())
+    }
+
+    @Test fun disabledScrollDoesNotExemptTheBottomSafeArea() {
+        rule.setContent {
+            Column(Modifier.size(120.dp, 80.dp).verticalScroll(rememberScrollState(), enabled = false)) {
+                Spacer(Modifier.height(40.dp))
+                Text("Behind bar", Modifier.requiredSize(120.dp, 40.dp))
+            }
+        }
+        rule.waitForIdle()
+        val root = rule.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue(ShellFit.texts(rule, "disabled", root.copy(bottom = root.top + 60f)).isNotEmpty())
+    }
+
     @Test fun onePixelOfLineBoxRoundingPasses() = lineBoxRounding(1, false)
 
     @Test fun twoPixelsOfParentClippingFails() = lineBoxRounding(2, true)

@@ -76,6 +76,9 @@ abstract class PlacesFitTest {
 
     @After fun stop() = scope.cancel()
 
+    @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f)
+    fun phoneLargeText() = fits()
+
     @Test @Config(qualifiers = "+w384dp-h832dp-port", fontScale = 1.3f) fun phone() = fits()
     @Test @Config(qualifiers = "+w320dp-h480dp-port", fontScale = 1.3f) fun narrow() = fits()
     @Test @Config(qualifiers = "+w832dp-h384dp-land", fontScale = 1.3f) fun landscape() = fits()

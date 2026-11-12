@@ -75,7 +75,7 @@ import net.wizardfactory.todayweather.core.domain.start.TownPage
 import net.wizardfactory.todayweather.core.domain.start.TownSearch
 import net.wizardfactory.todayweather.search.PlaceSearch
 import net.wizardfactory.todayweather.search.Prediction
-import net.wizardfactory.todayweather.ui.forecast.screenMetrics
+import net.wizardfactory.todayweather.ui.forecast.rememberScreenMetrics
 import net.wizardfactory.todayweather.ui.nation.IonicLoading
 import net.wizardfactory.todayweather.ui.shell.FixedLine
 import net.wizardfactory.todayweather.ui.shell.Glyphs
@@ -184,7 +184,8 @@ fun StartContent(
     onLocation: () -> Unit,
 ) {
     val context = LocalContext.current
-    val shortcuts = remember(context) { CityShortcuts.forScreenHeight(screenMetrics(context).bodyHeight) }
+    val metrics = rememberScreenMetrics()
+    val shortcuts = remember(metrics.bodyHeight) { CityShortcuts.forScreenHeight(metrics.bodyHeight) }
     val icon = remember(context) { runCatching { context.assets.open(ICON).use { BitmapFactory.decodeStream(it).asImageBitmap() } }.getOrNull() }
     var field by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
     // `ng-model` trims, and an empty word is none.
@@ -226,7 +227,7 @@ fun StartContent(
         add()
     }
     val shown = results
-    Column(Modifier.fillMaxSize().background(Color.White).verticalScroll(scroll, enabled = shown is Results.Towns).testTag(StartTags.PAGE)) {
+    Column(Modifier.fillMaxSize().background(Color.White).verticalScroll(scroll).testTag(StartTags.PAGE)) {
         Spacer(Modifier.height(24.dp))
         icon?.let {
             Image(it, null, Modifier.size(96.dp).align(Alignment.CenterHorizontally).testTag(StartTags.ICON), contentScale = ContentScale.FillBounds,
