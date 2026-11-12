@@ -24,7 +24,7 @@ Layout changes for larger text that only the plan or the README records follow f
 - **PR 1:** this checklist, the request-path tests (X11), and tests for the checklist's small gaps: the location glyph, O08 on S03, O09, O17 on S01 and S02, S01's banner and keyboard rules, and the status bar.
 - **PR 2:** fit checks for every screen and dialog at phone, tablet and foldable sizes, in both orientations, in split windows and at font scale 1.3; a run on tablet and foldable emulators. Delivered in AN-18b, including the subsequent disabled-scroll and S01 reachability corrections.
 - **PR 3:** Cordova captures and comparisons at 384×832, 360×780, 412×892 and 320×694 dp for representative states of each screen and its main dialogs, in Korean and English; native Compose popups matching the original appearance for O03 `weather`, O08, pollen X2 and O15; the missing theme states. The matrix entry in each affected row links its native comparator and maintained capture contract. No Ionic or Cordova runtime is used by the native app.
-- **PR 4:** the native user manual in `docs/user/android-app/`.
+- **PR 4:** the [native user manual](../docs/user/android-app/README.md): 44 illustrated steps, editable source, actual API36 captures and a rendered PDF.
 
 ## Start and places (S01, S02)
 

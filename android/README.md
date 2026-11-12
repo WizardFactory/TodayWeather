@@ -401,3 +401,12 @@ equality. CI checks source provenance and reference integrity before the build,
 then requires all declared comparisons in successful JUnit results. Missing
 images, wrong viewport metadata, omitted execution and failed/skipped comparisons
 are qualified failure cases. The actual native manual/PDF remains AN-18 PR4.
+
+## Native user manual
+
+The [native app manual](../docs/user/android-app/README.md) includes 44 illustrated steps,
+actual API36 screenshots, editable JSON and a PDF. It covers the 2.0.0 preview with
+Korean screens and English instructions. [Capture tooling](tools/manual/README.md)
+uses the production activity with read-only product data and intercepted push
+transport; no notification delivery or release is claimed. The older Cordova
+manual remains a separate document.

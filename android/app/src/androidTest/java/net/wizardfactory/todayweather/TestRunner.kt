@@ -76,7 +76,10 @@ class TestTodayWeatherApp : TodayWeatherApp() {
 
     private fun argsForScreenWalk() = TestRunner.args.getString("screens") == "true"
 
-    override fun weatherPhotosUrl() = "" // no photo feed request from device tests
+    // A manual capture may read the production photo feed; ordinary device checks stay offline.
+    override fun weatherPhotosUrl() = if (TestRunner.args.getString("manual") == "true" &&
+        TestRunner.args.getString("weather") == "production" && TestRunner.args.getString("photos") == "feed")
+        BuildConfig.WEATHER_PHOTOS_URL else ""
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
     override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport {
         sent += it
