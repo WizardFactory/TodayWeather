@@ -71,17 +71,21 @@ abstract class AlarmsFitTest(private val lang: String) {
 
     @After fun stop() = scope.cancel()
 
+    // AN-18 AC4: window-size coverage; real multi-window is checked separately on device.
+    @Test @Config(qualifiers = "+w800dp-h1280dp-port", fontScale = 1.3f) fun tabletPortraitLargeText() = fits("tabletPortraitLargeText")
+    @Test @Config(qualifiers = "+w841dp-h701dp-land", fontScale = 1.3f) fun foldableOpenLargeText() = fits("foldableOpenLargeText")
+    @Test @Config(qualifiers = "+w701dp-h841dp-port", fontScale = 1.3f) fun foldableOpenRotatedLargeText() = fits("foldableOpenRotatedLargeText")
+    @Test @Config(qualifiers = "+w411dp-h797dp-port", fontScale = 1.3f) fun foldableClosedLargeText() = fits("foldableClosedLargeText")
+    @Test @Config(qualifiers = "+w797dp-h411dp-land", fontScale = 1.3f) fun foldableClosedRotatedLargeText() = fits("foldableClosedRotatedLargeText")
+    @Test @Config(qualifiers = "+w832dp-h384dp-land", fontScale = 1.3f) fun phoneLandscapeLargeText() = fits("phoneLandscapeLargeText")
+    @Test @Config(qualifiers = "+w640dp-h800dp-port", fontScale = 1.3f) fun splitHalfLargeText() = fits("splitHalfLargeText")
+    @Test @Config(qualifiers = "+w421dp-h701dp-port", fontScale = 1.3f) fun foldableSplitLargeText() = fits("foldableSplitLargeText")
+
     @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f) fun phoneLargeText() = fits("phone-text-1.3")
     @Test @Config(qualifiers = "+w320dp-h480dp-port", fontScale = 1.3f) fun smallWindowLargeText() = fits("small-window-text-1.3")
     @Test @Config(qualifiers = "+w1280dp-h800dp-land", fontScale = 1.3f) fun tabletLargeText() = fits("tablet-text-1.3")
     @Test @Config(qualifiers = "+w384dp-h832dp-port") fun phone() = fits("phone")
     @Test @Config(qualifiers = "+w320dp-h480dp-port") fun smallWindow() = fits("small-window")
-
-    private object Allowed : NotificationAccess {
-        override val available = true
-        override fun enabled() = true
-        override suspend fun request() = true
-    }
 
     private fun fits(name: String) {
         val seoul = Place(false, false, "서울", "대한민국 서울특별시", "KR", Location(37.567, 126.978))
@@ -94,7 +98,14 @@ abstract class AlarmsFitTest(private val lang: String) {
         val repository = WeatherRepository("https://server.test.invalid", null,
             HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf(lang) }, { null })
-        val alarms = AlarmsHost { s, openSettings -> AlarmPage(memory, Allowed, post = {}, openSettings = openSettings, scope = s) }
+        var granted = true
+        val permission = object : NotificationAccess {
+            override val available = true
+            override fun enabled() = granted
+            override suspend fun request() = granted
+        }
+        lateinit var page: AlarmPage
+        val alarms = AlarmsHost { s, openSettings -> AlarmPage(memory, permission, post = {}, openSettings = openSettings, scope = s).also { page = it } }
         rule.setContent {
             val state by memory.flow.collectAsState()
             val entries by repository.weather.collectAsState()
@@ -124,6 +135,21 @@ abstract class AlarmsFitTest(private val lang: String) {
         rule.waitForIdle()
         problems += ShellFit.texts(rule, "picker", safe)
         capture("$name-picker")
+        rule.runOnIdle { page.back(); page.setAlert(true); page.setHours(6.0, 6.0); page.save() }
+        rule.waitForIdle()
+        assertEquals(net.wizardfactory.todayweather.core.data.AlarmPopup.EqualHours, page.popup.value)
+        problems += ShellFit.texts(rule, "equal-hours", safe)
+        capture("$name-equal-hours")
+        rule.runOnIdle { page.closeEqualHours(); page.setHours(6.0, 22.0); page.cancel() }
+        rule.waitForIdle()
+        assertEquals(net.wizardfactory.todayweather.core.data.AlarmPopup.SaveChanges, page.popup.value)
+        problems += ShellFit.texts(rule, "save-changes", safe)
+        capture("$name-save-changes")
+        rule.runOnIdle { granted = false; page.answerSaveChanges(true) }
+        rule.waitForIdle()
+        assertEquals(net.wizardfactory.todayweather.core.data.AlarmPopup.Permission, page.popup.value)
+        problems += ShellFit.texts(rule, "notification-permission", safe)
+        capture("$name-permission")
         assertEquals("$lang $name", emptyList<String>(), problems.distinct())
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.captureToImage
@@ -52,24 +53,26 @@ object ShellFit {
     fun check(rule: AndroidComposeTestRule<*, out ComponentActivity>, capture: (String, ImageBitmap) -> Unit): List<String> {
         val activity = rule.activity
         val problems = mutableListOf<String>()
-        val safe = safeArea(activity, rule.onRoot().fetchSemanticsNode().boundsInRoot)
+        // Insets can change while a menu is opened (for example, the IME owns the navigation bar).
+        fun currentSafeArea() = safeArea(activity, rule.onRoot().fetchSemanticsNode().boundsInRoot)
         fun inside(where: String, tag: String) {
+            val safe = currentSafeArea()
             val bounds = rule.onNode(hasTestTag(tag)).fetchSemanticsNode().boundsInRoot
             if (!safe.contains(bounds)) problems += "$where: $tag at $bounds outside the safe area $safe"
         }
-        problems += texts(rule, "main", safe)
+        problems += texts(rule, "main", currentSafeArea())
         for (tag in listOf(ShellTags.MENU_BUTTON) + Tab.entries.map(ShellTags::tab)) inside("main", tag)
         capture("main", rule.onRoot().captureToImage())
 
         rule.onNode(hasTestTag(ShellTags.MENU_BUTTON)).performClick()
         rule.waitForIdle()
-        problems += texts(rule, "menu", safe)
+        problems += texts(rule, "menu", currentSafeArea())
         inside("menu", ShellTags.MENU_BACK)
         capture("menu", rule.onRoot().captureToImage())
         val last = ShellTags.row(MenuRow.entries.last())
         rule.onNode(hasTestTag(last)).performScrollTo().assertIsDisplayed()
         rule.waitForIdle()
-        problems += texts(rule, "menu end", safe)
+        problems += texts(rule, "menu end", currentSafeArea())
         inside("menu end", last)
         capture("menu-end", rule.onRoot().captureToImage())
 
@@ -79,7 +82,7 @@ object ShellFit {
         rule.waitForIdle()
         problems += texts(rule, "exit question", null)
         capture("exit", rule.onNode(isDialog()).captureToImage())
-        rule.onNode(hasText(activity.getString(R.string.LOC_CANCEL))).performClick()
+        rule.onNode(hasText(activity.getString(R.string.LOC_CANCEL)) and hasAnyAncestor(isDialog())).performClick()
         rule.waitForIdle()
         return problems
     }
@@ -116,6 +119,17 @@ object ShellFit {
         }
         // Bounds are clipped to what shows: empty for an empty text or a row scrolled out of view.
         val bounds = node.boundsInRoot
+        // Scrolled content may intentionally be partially visible. Fixed content must remain whole even
+        // when its own text layout fits but an ancestor clips it.
+        val scrolls = generateSequence(node.parent) { it.parent }.any {
+            SemanticsProperties.VerticalScrollAxisRange in it.config || SemanticsProperties.HorizontalScrollAxisRange in it.config
+        }
+        if (!scrolls && !designed && node.text().isNotBlank()) {
+            if (bounds.width + 0.5f < node.size.width || bounds.height + 0.5f < node.size.height) {
+                return "is clipped by an ancestor (${node.size} shown in $bounds)"
+            }
+            if (safe != null && !safe.contains(bounds)) return "at $bounds reaches past the safe area $safe"
+        }
         if (safe != null && !bounds.isEmpty && (bounds.left < safe.left - 0.5f || bounds.right > safe.right + 0.5f)) {
             return "at $bounds reaches past the safe area $safe"
         }

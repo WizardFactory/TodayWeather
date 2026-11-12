@@ -6,6 +6,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -18,6 +21,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import net.wizardfactory.todayweather.R
 import net.wizardfactory.todayweather.AppContent
 import net.wizardfactory.todayweather.core.data.HttpGet
 import net.wizardfactory.todayweather.core.data.StateAccess
@@ -56,6 +66,16 @@ abstract class ForecastFitTest(private val lang: String) {
 
     @After fun stop() = scope.cancel()
 
+    // AN-18 AC4: window-size coverage; real multi-window is checked separately on device.
+    @Test @Config(qualifiers = "+w800dp-h1280dp-port", fontScale = 1.3f) fun tabletPortraitLargeText() = fits("tabletPortraitLargeText")
+    @Test @Config(qualifiers = "+w841dp-h701dp-land", fontScale = 1.3f) fun foldableOpenLargeText() = fits("foldableOpenLargeText")
+    @Test @Config(qualifiers = "+w701dp-h841dp-port", fontScale = 1.3f) fun foldableOpenRotatedLargeText() = fits("foldableOpenRotatedLargeText")
+    @Test @Config(qualifiers = "+w411dp-h797dp-port", fontScale = 1.3f) fun foldableClosedLargeText() = fits("foldableClosedLargeText")
+    @Test @Config(qualifiers = "+w797dp-h411dp-land", fontScale = 1.3f) fun foldableClosedRotatedLargeText() = fits("foldableClosedRotatedLargeText")
+    @Test @Config(qualifiers = "+w832dp-h384dp-land", fontScale = 1.3f) fun phoneLandscapeLargeText() = fits("phoneLandscapeLargeText")
+    @Test @Config(qualifiers = "+w640dp-h800dp-port", fontScale = 1.3f) fun splitHalfLargeText() = fits("splitHalfLargeText")
+    @Test @Config(qualifiers = "+w421dp-h701dp-port", fontScale = 1.3f) fun foldableSplitLargeText() = fits("foldableSplitLargeText")
+
     @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f) fun phoneLargeText() = fits("phone-text-1.3")
     @Test @Config(qualifiers = "+w320dp-h480dp-port", fontScale = 1.3f) fun smallWindowLargeText() = fits("small-window-text-1.3")
     @Test @Config(qualifiers = "+w1280dp-h800dp-land", fontScale = 1.3f) fun tabletLargeText() = fits("tablet-text-1.3")
@@ -71,7 +91,7 @@ abstract class ForecastFitTest(private val lang: String) {
             override fun change(update: (AppState) -> AppState) { flow.value = update(flow.value) }
         }
         val repository = WeatherRepository("https://server.test.invalid", null,
-            HttpGet { url, _ -> File(inputs, if ("51.51" in url) "vc-london.json" else "kma-seoul.json").readText() }, io = Dispatchers.Unconfined)
+            HttpGet { url, _ -> if ("51.51" in url) File(inputs, "vc-london.json").readText() else pollenFixture() }, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf(lang) }, { null })
         rule.setContent {
             val state by memory.flow.collectAsState()
@@ -91,12 +111,35 @@ abstract class ForecastFitTest(private val lang: String) {
                 rule.waitForIdle()
                 problems += ShellFit.texts(rule, "$place $tab", safe)
                 capture("$name-$place-${tab.state}")
+                for (index in 0..8) {
+                    val card = ForecastTags.block(index)
+                    if (rule.onAllNodes(hasTestTag(card)).fetchSemanticsNodes().isNotEmpty()) {
+                        rule.onNodeWithTag(card).performScrollTo()
+                        problems += ShellFit.texts(rule, "$place $tab card $index", safe)
+                    }
+                }
+                if (place == "seoul" && tab == Tab.HOURLY) {
+                    rule.onNodeWithTag(ForecastTags.POLLEN).performScrollTo().performClick()
+                    rule.waitForIdle()
+                    problems += ShellFit.texts(rule, "pollen", null)
+                    rule.onNode(hasText(rule.activity.getString(R.string.LOC_CLOSE)) and hasAnyAncestor(hasTestTag(WeatherTabTags.POLLEN_DIALOG))).performClick()
+                }
                 if (tab == Tab.HOURLY) rule.onNodeWithTag(EXPANDER_TAG).performScrollTo()
             }
             rule.onNodeWithTag(ForecastTags.NEXT).performClick()
             rule.waitForIdle()
         }
         assertEquals("$lang $name", emptyList<String>(), problems)
+    }
+
+    private fun pollenFixture(): String {
+        val body = Json.parseToJsonElement(File(inputs, "kma-seoul.json").readText()).jsonObject
+        val mid = body.getValue("midData").jsonObject
+        val days = mid.getValue("dailyData").jsonArray.map { day ->
+            JsonObject(day.jsonObject + mapOf("pollenGrade" to JsonPrimitive(2), "pollenStr" to JsonPrimitive("높음"),
+                "flowerPineGrade" to JsonPrimitive(2), "flowerPineStr" to JsonPrimitive("높음")))
+        }
+        return JsonObject(body + ("midData" to JsonObject(mid + ("dailyData" to JsonArray(days))))).toString()
     }
 
     private fun capture(name: String) {

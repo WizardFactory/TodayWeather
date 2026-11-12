@@ -711,3 +711,11 @@ Decisions: the native user manual is produced here (AK 2026-11-08, [comment](htt
 ### Checks (PR 1)
 
 - JVM: `RequestPathsTest`, `RequestSitesTest` (core-data), `PushContextTest`, `ParityChecklistTest` and the gap tests (app, Robolectric). Route table: `node tools/server-routes/generate.mjs` leaves no difference, and its expressions equal those of path-to-regexp 0.1.7 itself (a one-off comparison).
+
+### PR 2 execution design (AN-18b)
+
+Build on PR 1 with AC4 and AC6 only. First expand existing Korean/English fit checks to tablet portrait, open/closed foldable in both orientations, phone landscape and split-sized windows at 1.3. Retain the normal-font reference cases. Then cover S01/S02 and their dialogs, qualify ancestor clipping and reachable-control assertions with intentional failing fixtures, and fix only demonstrated fit failures. Window metrics tests must distinguish the current window from the maximum display.
+
+The device run uses owned `tw_` tablet/foldable AVDs only, offline seeded weather and state. Record current/maximum metrics, font scale, orientation, multi-window state and screenshots after rotation, folding and actual split-screen. A resized display alone is not multi-window evidence. Restore changed emulator settings; never operate the attached physical phone or another project's AVD. Run one build/device suite at a time.
+
+Owner: main. Dependencies: matrix/check qualification → demonstrated layout fixes → integrated device traversal → full tests/docs → independent review/CI → merge. Owned paths: Android test/shared-test/instrumentation sources, `android/tools/large-screen`, narrowly affected layout sources, README/parity and this plan. No server/client changes. Existing scenario AN18-US7 covers AC4; a cut label, inaccessible action or false multi-window claim must fail verification. PR 3 owns visual equivalence and Material-to-Ionic changes; PR 4 owns the manual.
