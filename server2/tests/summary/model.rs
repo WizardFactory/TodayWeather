@@ -91,6 +91,37 @@ fn object_names_order_by_newest_input_then_count() {
     }
 }
 
+/// A policy revision is part of the body and the name, and names order by it first.
+#[test]
+fn policy_revisions_round_trip_and_order_first() {
+    let (older, newer) = policy_pair(0, 1, true);
+    let name = newer.object_name();
+    assert!(name.starts_with("p0001-0000000000200-000002-"), "{name}");
+    let text = String::from_utf8(newer.body()).unwrap();
+    assert!(
+        text.contains(r#""date":"20261014","policy":1,"grid""#),
+        "{text}"
+    );
+    assert_eq!(
+        Summary::parse(&newer.body(), &newer.key, 20261014, &name),
+        Some(newer.clone())
+    );
+    assert!(!String::from_utf8(older.body()).unwrap().contains("policy"));
+    let (old_name, new_name) = (
+        ObjectName::parse(&older.object_name()).unwrap(),
+        ObjectName::parse(&name).unwrap(),
+    );
+    assert_eq!((old_name.policy, new_name.policy), (0, 1));
+    assert!(old_name.revision > new_name.revision && old_name < new_name);
+    // A name that claims another policy than its body does not verify.
+    let claimed = format!("p0002-{}", name.strip_prefix("p0001-").unwrap());
+    assert!(Summary::parse(&newer.body(), &newer.key, 20261014, &claimed).is_none());
+    for bad in ["p0000-", "p1-", "px001-"] {
+        let bad = format!("{bad}{}", older.object_name());
+        assert!(ObjectName::parse(&bad).is_none(), "{bad}");
+    }
+}
+
 #[test]
 fn inputs_concern_the_hours_of_a_kst_day_and_digest_ignores_order() {
     let d = 20261014;

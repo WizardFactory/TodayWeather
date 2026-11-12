@@ -1,4 +1,5 @@
-//! Required in-request current-day history; completed days come from ASOS.
+//! Required in-request current-day history; completed days come from ASOS. Under ASOS-primary,
+//! hours of the last 23 h that the ASOS rules leave unknown add their nowcast (`fill`).
 use crate::{domestic::publication::Publication, history::schedule};
 /// Newest publication is always first. VSRT's six valid hours cover the current
 /// day from the previous 23:30 issue; no past SHRT is a historical substitute. The current

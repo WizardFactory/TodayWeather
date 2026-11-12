@@ -144,7 +144,10 @@ distinguishes compatible inputs from candidate replacements:
 | Live station refinements | Reuse existing city/hourly/minute inputs and rain neighborhood | New APIHub endpoints need field/value equivalence before substitution |
 
 ODAM does not currently provide SKY/LGT. ASOS cloud amount can produce a sky
-category. The observed adapter now parses bounded, unambiguous domestic
+category. Under ASOS-primary an hour before today within the nowcast's 23 h
+reach whose type or amount the ASOS rules leave unknown reads the cell's stored
+ODAM or acquires it once per cell and base time within the request wait
+(`nowcast-fill-v1`, AK 2026-11-08); a late one serves the next answer. The observed adapter now parses bounded, unambiguous domestic
 phenomenon codes into PTY, keeps unknowns absent and represents winter rain as
 `rn3h` only at three-hour ending marks. It does not invent numeric LGT. Official VSRT files exist through the previous
 day, but an archive page is not proof of an automated low-latency API.
@@ -337,12 +340,19 @@ what it gets today). So does the row the client shows as current (`currentIndex`
 which follows the observation's time and can therefore be past by the clock when
 the observation lags. From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3, so
 the previous one is read from S3 or acquired, at most once per cell and
-publication; so is the publication covering a lagging row shown as current. Clearing a historical row's forecast amounts also clears the totals
-kept beside them; its snow amount then finalizes like that of every past row
-without a covering publication (0 over 0 hours) and no forecast text remains.
-The answer keeps legacy's missing values: probability 0 (`adjustShort`), snow
-−1 through the cm-to-mm conversion, and wind components −100 where ASOS fills an
-hour that no grid observation holds. Under ASOS-primary the yesterday comparison also pairs
+publication; so is the publication covering a lagging row shown as current.
+A historical row loses the forecast values of the fields history observes, and
+the rain total kept beside its amount, so no forecast text remains beside a
+measured amount. The fields no history source observes (probability, wave
+height, snow amount and text, wind components) keep the stored publication's
+values, as legacy keeps them (AK 2026-11-08, `past-forecast-v1`); LGT is legacy
+`_summaryLgt`'s 0, and past days take probability, amounts and AM/PM LGT from
+those rows for D-2 and D-1, whether or not their halves have a known type. No
+older publication is read or acquired for a past
+row. Without a stored publication the answer keeps legacy's missing values:
+probability 0 (`adjustShort`), snow −1 through the cm-to-mm conversion, and wind
+components −100 where ASOS fills an hour that no grid observation holds. Under
+ASOS-primary the yesterday comparison also pairs
 the live reading of station X in the current hour with X's ASOS hour exactly 24 h
 earlier, one thermometer; other stations, hours and sources keep the safeguard,
 which is a last-resort rule since `yesterday.t1h` must be sent. See the
@@ -356,14 +366,25 @@ invariants. SKY values, snow, LGT and other daily rain totals are not declared
 yet. Under ASOS-primary, `precipitation-guard-v1` keeps measured precipitation
 evidence from becoming PTY 0. A slot whose evidence has no known type gets PTY
 −1. A half loses its PTY, SKY and text, keeps its date and is listed in
-`missingDailyDates`. `dry-closure-v1` checks each observation day
+`missingDailyDates`. A past half whose hours have no known type loses its
+text with its PTY rather than keeping a sky prefix that is no weather text
+(`untyped-half-v1`); a half built from known or filled hours keeps its fields. `dry-closure-v1` checks each observation day
 (01:00–24:00 KST) against its official daily total. When the day's 24 hourly
 amounts close against that total, an April–October QC9 hour without a
 precipitation code is dry (R1b). A blank daily total without numeric or coded
 hourly precipitation is 0 mm (D1). Both passed held-out validation and AK
-approved them on 2026-10-31. `wet-bulb-rain-v1` types an uncoded April–October
-amount as rain at a wet-bulb temperature of at least 5 °C (R2s, approved
-2026-11-03 after a fourth held-out sample). Hourly rule-derived values stay
+approved them on 2026-10-31. `wet-bulb-rain-v2` types an uncoded amount as
+rain at a wet-bulb temperature of at least 5 °C: April–October (R2s, approved
+2026-11-03 after a fourth held-out sample) and, since AK's 2026-11-08 decision,
+November–March too (R2w, the three-hour amount at a mark). The
+[fifth held-out sample](../evidence/research/kma-history-gap-options-2026-10-30.md#fifth-held-out-sample-50-c-wet-bulb-rule-in-november-march-2026-11-08)
+passed with no errors in 117 scored hours and 160 typed three-hour windows.
+It weakly challenged the cutoff: the warmest snow or mixed hour with an amount
+had a wet-bulb temperature of 2.43 °C. A stricter recheck of the third sample
+found a window counterexample: station 138 at 2026-02-25 03:00 KST had an
+uncoded trace amount at 6.18 °C while its window contained sleet at 01:00.
+The earlier claim that all three errors were below 5 °C applies to hours,
+not that window. Below 5 °C the type stays unknown. Hourly rule-derived values stay
 apart from measured values in the ASOS record's `inferred` field. They fill only
 what measured ASOS, ODAM and VSRT left missing. A derived rain type also replaces
 PTY 0, because the ASOS amount contradicts it, and a recorded type always stays.
@@ -374,8 +395,8 @@ reports `station-unrepresentative`. Island stations serve only their own county.
 Stations 185 and 188 keep their measurements but not wind. Towns without an
 official coordinate keep the nearest station. The temperature-qualified type (R2)
 and winter windows (W1) failed a second held-out sample, a winter-inclusive
-wet-bulb variant failed a third, and both remain proposed edges that are excluded
-from coverage; see the
+wet-bulb variant at a 2.5 °C cutoff failed a third, and both remain proposed edges
+that are excluded from coverage; see the
 [2026-10-30 research](../evidence/research/kma-history-gap-options-2026-10-30.md#held-out-validation-of-proposed-rules-2026-10-31).
 
 Client delivery is checked separately by the

@@ -4,8 +4,9 @@
   "slice": "precipitation-1",
   "scope": "Seven completed KST days of Korean (KMA) history in the existing mobile response: precipitation presence and type from hourly rows through the public three-hour slots to the AM/PM day halves.",
   "not_a_claim": "This contract does not certify seven-day history, source completeness, SKY, snow or LGT values, or latency.",
-  "checked_at": "2026-11-05",
-  "aggregation_policy_version": "stored-read-window-v1",
+  "checked_at": "2026-11-08",
+  "aggregation_policy_version": "untyped-half-v1",
+  "aggregation_policy_revision": 1,
   "evidence": [
     "docs/evidence/research/kma-history-gap-options-2026-10-30.md",
     "docs/evidence/research/kma-asos-closure-qualification-2026-10-25.md",
@@ -174,7 +175,7 @@
         "half.pty"
       ],
       "rule": "sky-to-kor",
-      "missing": "absent"
+      "missing": "absent; under ASOS-primary also when the half has no known type (untyped-half-v1)"
     },
     "wire.half-icon": {
       "stage": "wire",
@@ -293,7 +294,19 @@
       "approval": "approved",
       "verification": "verified",
       "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#fourth-held-out-sample-april-october-wet-bulb-rule-r2s-2026-11-02",
-      "rule": "wet-bulb-rain-v1"
+      "rule": "wet-bulb-rain-v2"
+    },
+    {
+      "id": "R2w",
+      "node": "hourly.pty",
+      "source": "asos-hourly",
+      "field": "rn, ta, hm",
+      "transform": "winter-wet-bulb-rain: in a November-March hour, an uncoded normal-QC amount (the three-hour quantity at a mark) at wet-bulb >= 5.0 C (Stull 2011) becomes PTY 1; below that it stays unknown, and a recorded type stays",
+      "precedence": 4,
+      "approval": "approved",
+      "verification": "verified",
+      "holdout": "docs/evidence/research/kma-history-gap-options-2026-10-30.md#fifth-held-out-sample-50-c-wet-bulb-rule-in-november-march-2026-11-08 (pre-registered November-March sample: 117 scored hours and 160 typed windows without a snow or mixed code; cutoff weakly challenged, warmest snow at 2.43 C wet-bulb; the third sample's data hold one window this rule types as rain, station 138, 2026-02-25 03:00, a trace at 6.18 C with sleet at 01:00). AK approved it on 2026-11-08.",
+      "rule": "wet-bulb-rain-v2"
     },
     {
       "id": "R1b",
@@ -360,9 +373,9 @@
       "implementation": "server2/src/domestic/kma/source/asos.rs",
       "summary": "Under ASOS-primary only, per observation day 01:00..24:00 KST with all 24 latest hourly originals: when numeric hourly amounts (any QC) sum to sumRn, or sumRn is blank with no numeric hour, an April-October blank QC9 hour without a precipitation code gets rn1 0 and PTY 0 (R1b); a blank sumRn without numeric or coded hourly precipitation and without rain duration gets rn1 0 (D1). Days whose stored rain fields differ from their latest originals are skipped; only absent fields are filled. Hourly results are derived values, as below."
     },
-    "wet-bulb-rain-v1": {
+    "wet-bulb-rain-v2": {
       "implementation": "server2/src/domestic/kma/source/asos.rs",
-      "summary": "Under ASOS-primary only, per April-October hour of the latest originals: a normal-QC numeric amount without a phenomenon code, with unflagged temperature and humidity of at least 5 %, gets a derived PTY 1 when the wet-bulb temperature (Stull 2011, humidity at most 99) is at least 5 C. November-March stays unknown."
+      "summary": "Under ASOS-primary only, per hour of the latest originals in every month (AK 2026-11-08; v1 covered April-October, AK 2026-11-03): a normal-QC numeric amount without a phenomenon code, with unflagged temperature and humidity of at least 5 %, gets a derived PTY 1 when the wet-bulb temperature (Stull 2011, humidity at most 99) is at least 5 C. A November-March amount is the three-hour quantity at a mark. Below 5 C the type stays unknown."
     },
     "derived-precedence": {
       "implementation": "server2/src/domestic/kma/policy.rs",
@@ -375,6 +388,18 @@
     "station-altitude-v1": {
       "implementation": "server2/src/domestic/kma/source/representative.rs",
       "summary": "Under ASOS-primary only, AK 2026-11-03: a town listed in data/town_elevations.csv keeps its nearest city station when any of three elevation estimates lies within 200 m of the station altitude. Otherwise it takes the nearest station within 35 km that all three estimates accept, or no station. An island station serves only its county and keeps it; Jeju stations serve only Jeju. Unlisted towns keep the nearest station. Stations 185 and 188 keep their measurements but not wind."
+    },
+    "past-forecast-v1": {
+      "implementation": "server2/src/domestic/kma/short.rs",
+      "summary": "Under ASOS-primary only, AK 2026-11-08: a past three-hour row (label + 3 h <= now) keeps the stored publication's values for the fields no history source observes (probability, wave height, snow amount and text, wind components), as legacy _mergeShortWithCurrent keeps them, with the observed fields over them; without a stored publication it sends legacy's missing-forecast values. Its LGT is legacy _summaryLgt's value for its hours, 0 when none has one. Past days D-2 and D-1 take probability, rain and snow amounts and AM/PM LGT from those rows as legacy _getDaySummaryListByShort sums them, also when a half has no known type and so no text (legacy keeps only days with both texts); their types, texts and extremes stay observed. No older publication is read or acquired for a past row."
+    },
+    "nowcast-fill-v1": {
+      "implementation": "server2/src/domestic/kma/source/fill.rs",
+      "summary": "Under ASOS-primary only, AK 2026-11-08: an hour before today within the last 23 hours (the getUltraSrtNcst reach, publication::past_current_bases) whose type or amount the ASOS rules leave unknown (no PTY, or neither an hourly amount nor the three-hour amount of its winter mark) takes the cell's grid nowcast (ODAM, edge E3): read from S3, or acquired as owned single-flight work at most once per cell and base time (24 h retry bound), within the request wait. A late acquisition serves the next answer; an ASOS answer still loading or failed asks for nothing. Today's hours are required anyway."
+    },
+    "untyped-half-v1": {
+      "implementation": "server2/src/domestic/kma/policy.rs",
+      "summary": "Under ASOS-primary only, AK 2026-11-08: a past half whose hours have no known type has no text. day-summaries drops its PTY, but sky-to-kor reduces its text to the sky prefix, which is no weather text; that text is withheld too, and the date is listed in missingDailyDates. A half built from known hours (measured, rule-derived or filled by nowcast-fill-v1) keeps its type, sky and text."
     }
   },
   "invariants": [
@@ -395,9 +420,10 @@
     },
     {
       "id": "I3",
-      "statement": "Missing rain never becomes 0; existing missing behavior for snow and LGT is preserved.",
+      "statement": "Missing rain never becomes 0. Snow and LGT have no history source: a past slot keeps the stored publication's snow amount and legacy _summaryLgt's LGT (past-forecast-v1).",
       "checked_by": [
-        "server2/tests/domestic/asos.rs"
+        "server2/tests/domestic/asos.rs",
+        "server2/tests/domestic/observed_history.rs"
       ]
     },
     {
@@ -443,6 +469,14 @@
       "statement": "Under ASOS-primary, a request reads no stored grid publication older than the read window, and how a cell's data is split between S3 and the providers does not change the response apart from that window's stored fields.",
       "checked_by": [
         "server2/tests/domestic/full_response.rs"
+      ]
+    },
+    {
+      "id": "I10",
+      "statement": "Under ASOS-primary, a past hour's nowcast is read or acquired only within the last 23 hours and only when the ASOS rules leave its precipitation unknown; it is acquired at most once per cell and base time, and a failure or a late answer leaves the hour unknown for that answer.",
+      "checked_by": [
+        "server2/src/domestic/kma/source/fill.rs",
+        "server2/tests/domestic/nowcast_fill.rs"
       ]
     }
   ],

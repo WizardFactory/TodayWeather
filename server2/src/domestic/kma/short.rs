@@ -190,8 +190,9 @@ pub fn usable(v: &V, missing: f64) -> bool {
         _ => false,
     }
 }
-/// `_convertSummaryTo3H(summary)`.
-fn summary_to_3h(summary: &V) -> V {
+/// `_convertSummaryTo3H(summary)`. `recovered_lightning` applies the recovered-row rule to
+/// lightning as well (a slot of recovered hours without a valid hourly value is -1).
+fn summary_to_3h(summary: &V, recovered_lightning: bool) -> V {
     let item = V::Obj(Ob::new());
     for key in summary.o().keys() {
         let list = summary.get(&key);
@@ -231,6 +232,9 @@ fn summary_to_3h(summary: &V) -> V {
     }
     if summary.get("historyObservation").truthy() {
         for field in ["rn1", "pty", "lgt"] {
+            if field == "lgt" && !recovered_lightning {
+                continue;
+            }
             let values = summary.get(field);
             let values = if values.truthy() {
                 values.a().items()
@@ -248,6 +252,11 @@ fn summary_to_3h(summary: &V) -> V {
 }
 /// `_convert1Hto3H(srcList, usePartial)`.
 pub fn convert_1h_to_3h(src: &Arr, use_partial: bool) -> Arr {
+    convert_hours(src, use_partial, true)
+}
+/// [`convert_1h_to_3h`], with the recovered-row rule for lightning only when
+/// `recovered_lightning`.
+fn convert_hours(src: &Arr, use_partial: bool, recovered_lightning: bool) -> Arr {
     let mut slots = Slots::new();
     for row in src.items() {
         let summary = slots.get(&row.get("date"), &row.get("time"));
@@ -266,7 +275,7 @@ pub fn convert_1h_to_3h(src: &Arr, use_partial: bool) -> Arr {
         if !use_partial && !loose_eq(&summary.get("date").len(), &V::Num(3.)) {
             continue;
         }
-        let item = summary_to_3h(&summary);
+        let item = summary_to_3h(&summary, recovered_lightning);
         item.set("date", summary.get("date3h"));
         item.set("time", summary.get("time3h"));
         out.push(item);
@@ -1431,13 +1440,26 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
     let tmp = convert_1h_to_3h(current, true);
     // Slots are unique per (date, time) string pair, so a map gives the same single match as
     // the legacy nested scan.
-    let mut slots: std::collections::HashMap<(String, String), V> =
-        std::collections::HashMap::new();
-    for t in tmp.items() {
-        if let (V::Str(d), V::Str(tm)) = (t.get("date"), t.get("time")) {
-            slots.entry((d.to_string(), tm.to_string())).or_insert(t);
+    let by_slot = |list: Arr| {
+        let mut slots: std::collections::HashMap<(String, String), V> =
+            std::collections::HashMap::new();
+        for t in list.items() {
+            if let (V::Str(d), V::Str(tm)) = (t.get("date"), t.get("time")) {
+                slots.entry((d.to_string(), tm.to_string())).or_insert(t);
+            }
         }
-    }
+        slots
+    };
+    let slots = by_slot(tmp);
+    // A past slot's lightning as legacy `_summaryLgt` gives it. No source of ASOS-primary
+    // history observes lightning (ASOS has no such field, the grid nowcast neither), so its
+    // hours carry only the missing value and the slot is 0, as legacy sends for its nowcast
+    // hours (AK 2026-11-08); the recovered-row rule would keep it -1 for good.
+    let lightning = if primary {
+        by_slot(convert_hours(current, true, false))
+    } else {
+        Default::default()
+    };
     let rows = short.items();
     let shown = if primary {
         shown_current(cx, &rows)
@@ -1447,49 +1469,41 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
     for (index, item) in rows.into_iter().enumerate() {
         let historical = primary && past_slot(&item, cx.now) && !shown[index];
         if historical {
-            // No past SHRT/RSS fallback. Unsupported historical forecast-only fields
-            // remain explicit sentinels; measured rain below carries its true 3h interval.
-            // The forecast totals kept beside the amounts go too, so that finalization and the
-            // rain/snow texts see the cleared amount rather than the forecast (#2614 parity).
-            for field in ["r06", "s06"] {
-                precip::keep(&item, field, None);
-            }
+            // The fields ASOS-primary history observes have no forecast fallback: they are
+            // cleared here and set from the observations below, where measured rain carries its
+            // true 3h interval. The rain total kept beside the amount goes too, so that
+            // finalization and the rain text see the cleared amount rather than the forecast
+            // (#2614 parity); a qualitative forecast amount is also a weather value. The fields
+            // no observation supplies (probability, wave height, snow, wind components) keep the
+            // stored publication's values, as legacy `_mergeShortWithCurrent` keeps them, or
+            // legacy's missing-forecast values without one (AK 2026-11-08); lightning is the
+            // slot's `_summaryLgt` below.
+            precip::keep(&item, "r06", None);
             for (field, missing) in [
-                ("pop", -1.),
                 ("pty", -1.),
                 ("r06", -1.),
-                ("s06", -1.),
                 ("reh", -1.),
                 ("sky", -1.),
                 ("t3h", -50.),
                 ("tmn", -50.),
                 ("tmx", -50.),
-                ("uuu", -100.),
-                ("vvv", -100.),
-                ("wav", -1.),
                 ("vec", -1.),
                 ("wsd", -1.),
                 ("rn1", -1.),
-                ("lgt", -1.),
             ] {
                 item.set(field, missing);
             }
-            for field in ["r06Approx", "s06Approx"] {
-                item.set(field, false);
-            }
-            for field in ["r06Hours", "s06Hours"] {
-                item.set(field, 0.);
-            }
-            // Qualitative forecast amounts are also weather values. Leaving these
-            // behind lets finalization turn an unknown measurement into forecast zero.
-            for field in ["r06Text", "s06Text", "rn1Text"] {
+            item.set("r06Approx", false);
+            item.set("r06Hours", 0.);
+            for field in ["r06Text", "rn1Text"] {
                 item.del(field);
             }
         }
-        let matched = match (item.get("date"), item.get("time")) {
-            (V::Str(d), V::Str(tm)) => slots.get(&(d.to_string(), tm.to_string())).cloned(),
+        let key = match (item.get("date"), item.get("time")) {
+            (V::Str(d), V::Str(tm)) => Some((d.to_string(), tm.to_string())),
             _ => None,
         };
+        let matched = key.as_ref().and_then(|k| slots.get(k).cloned());
         if let Some(t) = matched {
             {
                 for key in t.o().keys() {
@@ -1504,6 +1518,12 @@ fn merge_short_with_current(cx: &Cx, short: &Arr, current: &Arr) {
                 item.set("r06", t.get("rn1"));
                 item.set("r06Hours", 3.);
             }
+        }
+        if historical
+            && let Some(slot) = key.as_ref().and_then(|k| lightning.get(k))
+            && slot.has("lgt")
+        {
+            item.set("lgt", slot.get("lgt"));
         }
         if historical && let Some(rain) = policy::slot(&item).and_then(|k| winter_rain.get(&k)) {
             item.set("rn1", rain.clone());

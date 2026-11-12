@@ -122,7 +122,7 @@
       "y": 613,
       "label": "Pinned full input closure",
       "variant": "emphasis",
-      "note": "ASOS primary; ODAM/VSRT cover elapsed hours. Preserve public 3h slots; past SHRT/RSS weather is removed."
+      "note": "ASOS primary for observed fields; past rows keep stored SHRT values ASOS lacks; ODAM fills unknown hours within 23 h."
     },
     {
       "id": "full-ready",
@@ -267,7 +267,7 @@
         "Seven completed days and current public 3h slots stay required; historical numbers may change from acquired ASOS.",
         "Scripted wet/dry history proves response-before-raw-PUT and replay. Real QC9, winter, pre-release and p95/p99 remain open.",
         "ASOS normal blanks mean dry; trace0 stays precipitation. Apr-Oct QC9 hours on closed days read dry (dry-closure-v1); winter QC9 and midnight gaps remain.",
-        "Apr-Oct uncoded rain at wet-bulb 5C or more reads rain; other untyped rain never reads dry: slot PTY -1, AM/PM omitted (history contract v1).",
+        "Uncoded rain at wet-bulb 5C or more reads rain in every month (wet-bulb-rain-v2); other untyped rain never reads dry: slot PTY -1, AM/PM omitted.",
         "A town reads a station within 200 m of its elevation, or none (station-altitude-v1); island stations serve only their county."
       ]
     },

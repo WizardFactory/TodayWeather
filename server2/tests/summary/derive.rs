@@ -37,6 +37,7 @@ fn grid_acquisitions_concern_every_date_their_rows_can_reach() {
 fn inputs(ids: Vec<server2::summary::InputId>) -> GridInputs {
     GridInputs {
         town: town(),
+        policy: 0,
         grid: (60, 127),
         ids,
         asos: None,

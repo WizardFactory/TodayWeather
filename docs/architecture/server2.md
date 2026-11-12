@@ -427,7 +427,7 @@ raw/v2/{source}/{kind}/{YYYY}/{MM}/{DD}/{period}/{key_sha256}/
   {fetched_at_ms}-{raw_sha256}.raw.gz
 index/v2/{source}/{kind}/{key_sha256}/{partition}.json
 packs/v2/{source}/{kind}/{key_sha256}/{date}/{pack_sha256}.pack
-summary/v2/{source}/{key_sha256}/{date}/{latest_fetched_ms}-{count}-{revision_sha256}.json
+summary/v2/{source}/{key_sha256}/{date}/[p{policy}-]{latest_fetched_ms}-{count}-{revision_sha256}.json
 state/v2/...
 budgets/v2/...
 ```
@@ -3616,13 +3616,20 @@ Grid summaries are keyed by town, not grid: `mergeCurrentByStnHourly` corrects a
 its own stations and ASOS mapping, so towns of one grid can differ. AK approved town keys and
 lookup-only VC derivation on 2026-10-16 (decision 6); revision volume is measured after S15b-4.
 
-**Objects.** `summary/v2/{source}/{key_sha256}/{YYYYMMDD}/{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`,
+**Objects.** `summary/v2/{source}/{key_sha256}/{YYYYMMDD}/[p{policy:04}-]{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`,
 created with `If-None-Match: *` (a 412 counts only when the stored bytes are identical) and never
 deleted; the role has no delete permission and no lifecycle rule exists, so retention is unbounded
-(at least the three years of D6/O-4). The body records the canonical key, date, values and the
-input set (`count`, `latestFetchedMs`, SHA-256 of the sorted input identity lines, per-family
-counts). The newest revision is the greatest name whose body verifies; a later newest input sorts
-later.
+(at least the three years of D6/O-4). The body records the canonical key, date, the derivation
+policy revision when there is one, values and the input set (`count`, `latestFetchedMs`, SHA-256
+of the sorted input identity lines, per-family counts). Grid summaries of the observed source carry
+`OBSERVED_HISTORY_REVISION`, which every change of `OBSERVED_HISTORY_POLICY` bumps; summaries
+stored before revisions existed, and ASOS and VC summaries, have none (0). The newest revision is
+the greatest name whose body verifies: a newer policy revision sorts first, then a later newest
+input. A re-summary of the same originals under another policy changes only the input digest, so
+without that order an older policy's revision with a greater hash would keep winning (review
+AP-summary-policy-compat). A lookup given the observed revision (`Lookup::with_grid_policy`; no
+production route builds a lookup yet) does not read an older policy's grid summary, and the
+recorder never lets one supersede a newer policy's.
 
 **Complete inputs and late revisions.** The KMA snapshot records summary inputs only when its
 reads were complete; a listed group that S06 excludes (not eligible, or a raw body missing) makes a
@@ -3649,7 +3656,9 @@ request). Per source, key and date it skips an input digest it already examined;
 the date in S3 (another process may have written), and a new revision is written when its newest
 input is newer than the stored newest revision's (also with equal values, so the stored order follows
 the inputs) or as new with other values. An older input set never supersedes a newer one. A late
-input therefore recomputes the day; an older input set never supersedes a newer one.
+input therefore recomputes the day; an older input set never supersedes a newer one. The policy
+revision comes before both: a newer policy's summary supersedes an older one's, and an older one's,
+from a process still on that policy, is not written over it.
 
 S16 also changes one S15b-2 behavior: a station-page day whose `aws-hourly` or `city-obs` catalog
 is not listed now reads as empty. Before, the absent catalog's lookup answered "incomplete", so a
@@ -4565,9 +4574,10 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
   the observation's time, so a lagging observation (a grid nowcast before HH:40 at a slot
   boundary, or a late live reading) marks a row already past by the clock. The wipe applies
   `convertUnits`'s rule to the same inputs, which are final by then (`short::shown_current`,
-  `present::marked_current`). Past rows keep the ASOS-primary rule; their cleared amounts no longer
-  keep the forecast totals behind them, which had turned −1 snow into −10 and left the forecast's
-  rain or snow text beside a measured amount.
+  `present::marked_current`). Past rows keep the ASOS-primary rule for the fields history
+  observes (see the next section for the others); their cleared rain amount no longer keeps the
+  forecast total behind it, which had left the forecast's rain text beside a measured amount and
+  turned −1 snow into −10.
 - **Previous publication.** From HH+2:10 to HH+2:59 the latest SHRT starts at HH+3. The source then
   also requires the previous publication, the newest covering slot HH (`required::foreground`).
   When the observation lags, the row shown as current is the slot before the clock's, and the
@@ -4591,7 +4601,8 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
 - **Sentinels.** A missing probability is 0 on every row (legacy `adjustShort`, so the app never
   prints "-1%"); a missing `s06`, `sn1` or `s1d` stays −1 through the cm-to-mm conversion; an hour
   ASOS fills without a grid observation (a row of legacy's validation template) carries wind
-  components −100, the value legacy's three-hour summary skips, instead of the template's −1.
+  components −100, the value legacy's three-hour summary skips, instead of the template's −1, so
+  its past slot keeps the stored publication's components or −100 without one.
 - **Yesterday.** Under ASOS-primary only, the comparison adds one branch that legacy lacks
   (`compare_sources`; legacy mode keeps legacy's `can_compare`, which the kma-rich paired replay
   of frozen legacy inputs checks): the live reading of station X in
@@ -4602,9 +4613,57 @@ the production API, five places, 18:31–19:29 KST) found these defects independ
 
 `adjustShort` later drops trailing rows without a temperature; that moves the mark only when the
 current slot and every later row have none, so the wipe's rule matches `convertUnits` otherwise.
-Past-slot forecast values, ASOS precipitation rules and fetching older publications for past rows
-wait for AK's decisions. Tests: `observed_history` and `parity_evidence` (domestic), `policy`,
-`present`, `required` and `previous_short_tests` (library).
+AK decided past-slot forecast values and the ASOS precipitation rules on 2026-11-08 (next
+section); older publications are not fetched for past rows. Tests: `observed_history` and
+`parity_evidence` (domestic), `policy`, `present`, `required` and `previous_short_tests`
+(library).
+
+### #2614 KMA ASOS-primary parity: past rows, precipitation fill and past days
+
+On 2026-11-08 AK chose the recommended options for the gaps the 2026-11-07 parity run left
+([intent](../../intent/issue-2614-kma-asos-primary-parity.md),
+[acceptance](../../specs/issue-2614-kma-asos-primary-parity.md)). Under ASOS-primary, recorded in
+the [history contract](../../server2/config/contracts/kma-history.v1.json):
+
+- **Past forecast values** (`past-forecast-v1`). A past row (label + 3 h ≤ now) loses the forecast
+  values of the fields history observes (temperature, humidity, sky, type, rain, wind speed and
+  direction, extremes), which the observations then set, and keeps the stored publication's values
+  for the others (probability, wave height, snow amount and text, wind components), as legacy
+  `_mergeShortWithCurrent` keeps them. Without a stored publication it sends legacy's
+  missing-forecast values (probability 0). No source observes LGT, so a past slot's LGT is legacy
+  `_summaryLgt`'s 0 rather than the recovered-row −1 (`short::merge_short_with_current`). Past
+  days D-2 and D-1 take probability, rain and snow amounts and AM/PM LGT from those rows as legacy
+  `_getDaySummaryListByShort` sums them, also when a half has no known type and so no text (legacy
+  keeps only days with both texts; review AP-past-daily-fields); their types, texts and extremes
+  stay observed (`mid::PAST_DAY_FIELDS`). Nothing older than the 54 h read window is read, and no
+  publication is acquired for a past row.
+- **Wet-bulb rain** (`wet-bulb-rain-v2`). An uncoded normal-QC ASOS amount at a wet-bulb
+  temperature of at least 5 °C is rain in every month, not only April to October; in November to
+  March that amount is the three-hour quantity at a mark (`AsosStore::type_rain`). Below 5 °C the
+  type stays unknown, and a recorded code still decides. The winter part (R2w) passed a
+  pre-registered [fifth held-out sample](../evidence/research/kma-history-gap-options-2026-10-30.md#fifth-held-out-sample-50-c-wet-bulb-rule-in-november-march-2026-11-08)
+  (117 scored hours and 160 typed windows without a snow or mixed code). Its cutoff was weakly
+  challenged (warmest snow at 2.43 °C wet-bulb), and one earlier window would be typed as rain
+  (station 138, 2026-02-25 03:00: a trace at 6.18 °C with sleet at 01:00).
+- **Nowcast fill** (`nowcast-fill-v1`). An hour before today within the last 23 hours, which the
+  nowcast API still serves (`publication::past_current_bases`), whose type or amount the ASOS
+  rules leave unknown (`fill::unknown_hours`) takes the cell's grid nowcast. The ASOS answer hands
+  those hours to the current grid answer, which reads them from S3 or acquires them as owned
+  single-flight work, as it does the publications of the rows shown as current. Each is asked at
+  most once per cell and base time (`NOWCAST_FILL_RETRY`, 24 h) through the process data.go.kr
+  acquirer and its quota; a late acquisition is stored and serves the next answer, and an ASOS
+  answer still loading asks for nothing. This adds at most one `getUltraSrtNcst` call per cell
+  and unknown hour: none for a cell whose hours are stored or known, up to the 22 hours of the
+  previous day a new cell reaches shortly after midnight, all of them before ASOS releases the
+  previous day at 11:00, and in winter the hours between the three-hour marks.
+- **Past days** (`untyped-half-v1`). A past day's AM and PM come from its hours, so a half built
+  from known hours, measured, rule-derived or filled from the nowcast, keeps its type, sky and
+  text. A half whose hours have no known type, such as a QC9 afternoon older than the nowcast's
+  reach, has no text either: legacy `_convertSkyToKorStr` reduces it to the sky prefix
+  (`흐리고 `), which is no weather text (`policy::withhold_untyped_halves`), and its date is
+  listed in `missingDailyDates`.
+
+Legacy replay mode is unchanged; the kma-rich and kma paired replays check it.
 
 ### #2819 D1 forecast-zone recovery
 

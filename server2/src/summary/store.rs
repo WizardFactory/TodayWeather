@@ -1,5 +1,6 @@
 //! Summary revisions in S3. A revision is written once (`If-None-Match: *`) and never deleted;
-//! the newest is the greatest object name under its date prefix whose body verifies.
+//! the newest is the greatest object name under its date prefix whose body verifies, a newer
+//! policy revision first ([`ObjectName`]).
 use super::transport::SummaryTransport;
 use super::{ObjectName, Summary, SummaryKey};
 use crate::storage::Error;
@@ -68,7 +69,19 @@ impl<T: SummaryTransport> SummaryStore<T> {
         date: u32,
         deadline: Instant,
     ) -> Result<Option<Stored>, Error> {
-        let names = self.names(key, date, deadline).await?;
+        self.newest_from(key, date, 0, deadline).await
+    }
+    /// [`Self::newest`] among the revisions of policy revision `policy` or newer: an older
+    /// policy's revision is never read.
+    pub async fn newest_from(
+        &self,
+        key: &SummaryKey,
+        date: u32,
+        policy: u32,
+        deadline: Instant,
+    ) -> Result<Option<Stored>, Error> {
+        let mut names = self.names(key, date, deadline).await?;
+        names.retain(|(_, name)| name.policy >= policy);
         self.newest_of(key, date, names, deadline).await
     }
     /// [`Self::newest`] over already listed names (greatest first).

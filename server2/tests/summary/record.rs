@@ -50,6 +50,7 @@ fn inputs_at(fetched: u64) -> GridInputs {
     let start = server2::summary::kst_midnight_ms(20261014).unwrap();
     GridInputs {
         town: town(),
+        policy: 0,
         grid: (60, 127),
         ids: vec![input(
             "ultra-srt-ncst",
@@ -289,5 +290,82 @@ async fn newer_inputs_with_equal_values_keep_older_inputs_from_superseding() {
             (newest.name.latest, newest.summary.value("taMax")),
             (400, Some(20.))
         );
+    }
+}
+
+/// Review AP-summary-policy-compat: two revisions of the same originals and fetch time under
+/// policy revisions 0 and 1. The newer policy's is read, whichever revision hash is greater.
+#[tokio::test]
+async fn the_newer_policy_revision_is_read_whatever_the_hash_order() {
+    for older_greater in [true, false] {
+        let (older, newer) = policy_pair(0, 1, older_greater);
+        assert_eq!(
+            (older.inputs.latest_fetched_ms, older.inputs.count),
+            (newer.inputs.latest_fetched_ms, newer.inputs.count)
+        );
+        assert_ne!(older.inputs.sha256, newer.inputs.sha256);
+        let t = Arc::new(MemorySummaries::new());
+        let store = SummaryStore::new(t.clone());
+        for s in [&older, &newer] {
+            store.publish(s, deadline()).await.unwrap();
+        }
+        let newest = store
+            .newest(&newer.key, 20261014, deadline())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(newest.summary, newer, "older hash greater: {older_greater}");
+    }
+}
+
+/// The recorder writes the newer policy's revision over an older one of the same originals and
+/// remembers it; a process still on the older policy, even with newer inputs, does not supersede
+/// it.
+#[tokio::test]
+async fn a_newer_policy_revision_supersedes_and_an_older_one_never_wins() {
+    let now = kst(20261015, 1200);
+    for older_greater in [true, false] {
+        let (older, newer) = policy_pair(0, 1, older_greater);
+        let t = Arc::new(MemorySummaries::new());
+        let recorder = Recorder::new(t.clone());
+        let written = |r: server2::summary::RecordReport| r.written.len();
+        assert_eq!(
+            written(
+                recorder
+                    .record_now(vec![older.clone()], now, deadline())
+                    .await
+            ),
+            1
+        );
+        assert_eq!(
+            written(
+                recorder
+                    .record_now(vec![newer.clone()], now, deadline())
+                    .await
+            ),
+            1
+        );
+        let newest = recorder
+            .store()
+            .newest(&newer.key, 20261014, deadline())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(newest.summary, newer, "older hash greater: {older_greater}");
+        let mut late = older.clone();
+        late.inputs = server2::summary::Inputs::of([&input("ultra-srt-ncst", 0, 0, 300)]);
+        for r in [&recorder, &Recorder::new(t.clone())] {
+            assert_eq!(
+                written(r.record_now(vec![late.clone()], now, deadline()).await),
+                0
+            );
+        }
+        let newest = recorder
+            .store()
+            .newest(&newer.key, 20261014, deadline())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(newest.summary, newer, "older hash greater: {older_greater}");
     }
 }

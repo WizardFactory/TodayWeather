@@ -30,6 +30,7 @@ pub mod airkorea;
 pub mod asos;
 mod doc;
 pub mod fetch;
+mod fill;
 pub mod forecast_input;
 pub mod gif;
 mod grid;
@@ -91,9 +92,15 @@ use std::sync::Arc;
 use tokio::time::Instant;
 
 /// Observed-history derivation identity for stored summaries; a new aggregation rule must change
-/// it so that summaries built under an earlier rule are not reused. Its last segment is the
-/// `aggregation_policy_version` of `server2/config/contracts/kma-history.v1.json`.
-pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v1;station-altitude-v1;stored-read-window-v1";
+/// it, and bump [`OBSERVED_HISTORY_REVISION`], so that summaries built under an earlier rule are
+/// not reused. Its last segment is the `aggregation_policy_version` of
+/// `server2/config/contracts/kma-history.v1.json`.
+pub const OBSERVED_HISTORY_POLICY: &str = "asos-primary-v1;measured-history;public3h;rain-blank-semantics-v2;precipitation-guard-v1;dry-closure-v1;wet-bulb-rain-v2;station-altitude-v1;stored-read-window-v1;past-forecast-v1;nowcast-fill-v1;untyped-half-v1";
+/// The comparable revision of [`OBSERVED_HISTORY_POLICY`] that stored grid summaries record:
+/// bump it with every change of the policy, so that a summary of the newer derivation supersedes
+/// those of an older one, which are no longer read (review AP-summary-policy-compat). Summaries
+/// stored before revisions were recorded read as revision 0.
+pub const OBSERVED_HISTORY_REVISION: u32 = 1;
 
 const DAY_MS: f64 = 86_400_000.;
 const HOUR_MS: f64 = 3_600_000.;
@@ -294,17 +301,19 @@ impl Attempts {
             })
     }
 }
-/// What the observed grid answer of one family shares with another's.
-enum Link<'a> {
-    /// Nothing: the legacy replay, and the families no other answer waits for.
-    None,
+/// What the observed grid answer of one family shares with another's; nothing for the legacy
+/// replay and the families no other answer waits for.
+#[derive(Default)]
+struct Link<'a> {
     /// The Current answer sends its newest document once its stored read and its latest
     /// publication settled, without today's earlier acquisitions, so the rows shown as current are
     /// decided early (review RP-lagging-current-publication).
-    Newest(tokio::sync::oneshot::Sender<Option<Doc>>),
-    /// The Short answer also reads or acquires the publications this resolves to: the ones
-    /// covering the rows the client will show as current ([`shown::publications`]).
-    Shown(BoxFuture<'a, Vec<Publication>>),
+    newest: Option<tokio::sync::oneshot::Sender<Option<Doc>>>,
+    /// Further publications the answer reads or acquires once this resolves: for Short the ones
+    /// covering the rows the client will show as current ([`shown::publications`]), for Current
+    /// the hours of the last 23 h whose precipitation the ASOS rules leave unknown
+    /// ([`fill::unknown_hours`]).
+    extra: Option<BoxFuture<'a, Vec<Publication>>>,
 }
 impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     /// `acquire` makes the request-time acquisitions (S15b-2 station pages and ASOS ranges);
@@ -763,7 +772,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         deadline: Instant,
         until: Instant,
     ) -> Result<(Vec<Doc>, Option<Vec<InputId>>, Vec<String>), String> {
-        self.grid_answer_with(family, grid, now, deadline, until, Link::None)
+        self.grid_answer_with(family, grid, now, deadline, until, Link::default())
             .await
     }
     /// [`Self::grid_answer_by`] with what the observed answer of this family shares with another
@@ -821,11 +830,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             })
         };
         let (mut fetched, excluded, own) = if self.observed_history {
-            let (newest, shown) = match link {
-                Link::Newest(newest) => (Some(newest), None),
-                Link::Shown(shown) => (None, Some(shown)),
-                Link::None => (None, None),
-            };
+            let Link { newest, extra } = link;
             let stored = read().shared();
             let latest = sf.latest(now as i64);
             let required_now = required::foreground(sf, now as i64);
@@ -851,14 +856,15 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 }
             };
             // Earlier publications: the absent ones and the unusable listed ones, under the one
-            // wait.
-            let acquired = |publications: Vec<Publication>| {
+            // wait and the retry bound `memo`.
+            let acquired = |publications: Vec<Publication>, memo: std::time::Duration| {
                 let (first, listed): (Vec<_>, Vec<_>) =
                     publications.into_iter().partition(|p| absent(p));
                 let again = unusable(listed);
                 async move {
-                    tokio::join!(self.foreground_grid(sf, grid, &first, until), async {
-                        self.foreground_grid(sf, grid, &again.await, until).await
+                    tokio::join!(self.foreground_grid(sf, grid, &first, until, memo), async {
+                        self.foreground_grid(sf, grid, &again.await, until, memo)
+                            .await
                     })
                 }
             };
@@ -893,25 +899,34 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .copied()
                 .filter(|p| Some(*p) != latest)
                 .collect();
-            // The publications of the rows shown as current that the clock rule does not
-            // require.
-            let shown_part = async {
-                let Some(shown) = shown else {
+            // The further publications the clock rule does not require: those of the rows shown
+            // as current, or a past hour's nowcast, at most once per cell and base time.
+            let extra_part = async {
+                let Some(extra) = extra else {
                     return (Vec::new(), Vec::new());
                 };
-                let extra: Vec<Publication> = shown
+                let extra: Vec<Publication> = extra
                     .await
                     .into_iter()
                     .filter(|p| Some(*p) != latest && !required_now.contains(p))
                     .collect();
-                acquired(extra).await
+                let memo = match sf {
+                    schedule::Family::Current => NOWCAST_FILL_RETRY,
+                    _ => foreground_retry(sf),
+                };
+                acquired(extra, memo).await
             };
             let (
                 stored,
                 (latest_first, latest_again),
                 (earlier_first, earlier_again),
-                (shown_first, shown_again),
-            ) = tokio::join!(stored.clone(), latest_part, acquired(earlier), shown_part);
+                (extra_first, extra_again),
+            ) = tokio::join!(
+                stored.clone(),
+                latest_part,
+                acquired(earlier, foreground_retry(sf)),
+                extra_part
+            );
             let (mut fetched, excluded) = stored?;
             // The fold order is the stored acquisitions, the ones of absent publications, then
             // the ones asked again.
@@ -919,10 +934,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 latest_first
                     .into_iter()
                     .chain(earlier_first)
-                    .chain(shown_first)
+                    .chain(extra_first)
                     .chain(latest_again)
                     .chain(earlier_again)
-                    .chain(shown_again),
+                    .chain(extra_again),
             );
             (fetched, excluded, None)
         } else {
@@ -1027,12 +1042,8 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
         grid: crate::history::Grid,
         publications: &[Publication],
         until: Instant,
+        memo: std::time::Duration,
     ) -> Vec<Fetched> {
-        let memo = if sf == schedule::Family::Short {
-            PREVIOUS_SHORT_RETRY
-        } else {
-            LATEST_RETRY
-        };
         let mut acquired = Vec::new();
         for chunk in publications.chunks(BACKFILL_CONCURRENCY) {
             if Instant::now() >= until {
@@ -1524,13 +1535,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
             .stations_by(now as i64, race_at, until)
             .shared();
         let (newest_sent, newest) = tokio::sync::oneshot::channel();
+        // The ASOS answer tells the current grid answer which past hours' nowcasts to read or
+        // acquire (`nowcast-fill-v1`).
+        let (unknown_sent, unknown) = tokio::sync::oneshot::channel();
         let current_grid = async {
             match grid {
                 Some(grid) => {
                     let link = if self.observed_history {
-                        Link::Newest(newest_sent)
+                        Link {
+                            newest: Some(newest_sent),
+                            extra: Some(Box::pin(async move { unknown.await.unwrap_or_default() })),
+                        }
                     } else {
-                        Link::None
+                        Link::default()
                     };
                     self.grid_answer_with(Family::Current, grid, now, deadline, until, link)
                         .await
@@ -1552,6 +1569,9 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 .observations
                 .history_with_inputs(&town, folded.as_deref(), now, until)
                 .await;
+            if self.observed_history {
+                let _ = unknown_sent.send(fill::unknown_hours(&history, now));
+            }
             // S16: completeness of the station state these answers came from, judged at once.
             let settled = folded
                 .as_ref()
@@ -1593,17 +1613,20 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                 // whole current history (review RP-lagging-current-publication).
                 let shown = if self.observed_history {
                     let (stations, town) = (stations.clone(), &town);
-                    Link::Shown(Box::pin(async move {
-                        let stations = stations.await;
-                        let station = shown::station_time(stations.as_deref(), town, now, true);
-                        let newest = match station {
-                            Some(_) => None,
-                            None => newest.await.ok().flatten(),
-                        };
-                        shown::publications(newest.as_ref(), station.as_deref(), now)
-                    }))
+                    Link {
+                        newest: None,
+                        extra: Some(Box::pin(async move {
+                            let stations = stations.await;
+                            let station = shown::station_time(stations.as_deref(), town, now, true);
+                            let newest = match station {
+                                Some(_) => None,
+                                None => newest.await.ok().flatten(),
+                            };
+                            shown::publications(newest.as_ref(), station.as_deref(), now)
+                        })),
+                    }
                 } else {
-                    Link::None
+                    Link::default()
                 };
                 tokio::join!(
                     current_grid,
@@ -1673,7 +1696,19 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
                         content_sha256: crate::storage::sha256(OBSERVED_HISTORY_POLICY.as_bytes()),
                     });
                 }
-                summary_inputs(&town, grid, &history, ids, stations.as_deref(), asos)
+                let policy = if self.observed_history {
+                    OBSERVED_HISTORY_REVISION
+                } else {
+                    0
+                };
+                summary_inputs(
+                    &town,
+                    grid,
+                    &history,
+                    (ids, policy),
+                    stations.as_deref(),
+                    asos,
+                )
             }
             _ => None,
         };
@@ -1812,7 +1847,7 @@ fn summary_inputs(
     town: &Doc,
     grid: crate::history::Grid,
     history: &OrderedJson,
-    mut ids: Vec<InputId>,
+    (mut ids, policy): (Vec<InputId>, u32),
     folded: Option<&observe::Folded>,
     asos: Option<observe::AsosView>,
 ) -> Option<GridInputs> {
@@ -1865,6 +1900,7 @@ fn summary_inputs(
     };
     Some(GridInputs {
         town: town_key,
+        policy,
         grid: (grid.nx(), grid.ny()),
         ids,
         asos,
@@ -2093,6 +2129,18 @@ const BACKFILL_RETRY: std::time::Duration = std::time::Duration::from_secs(3600)
 /// one attempt per cell and publication, at most one data.go.kr acquisition per cell and three
 /// hours. A failure leaves that row with legacy's missing-publication values until the next one.
 const PREVIOUS_SHORT_RETRY: std::time::Duration = std::time::Duration::from_secs(3 * 3600);
+/// Retry bound of a past hour's nowcast that the ASOS rules leave unknown (`nowcast-fill-v1`):
+/// longer than the 23 h the API serves a base time, so it is one data.go.kr acquisition per cell
+/// and base time. A failure leaves the hour unknown.
+const NOWCAST_FILL_RETRY: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
+/// The retry bound of a publication the clock rule requires in the foreground.
+fn foreground_retry(sf: schedule::Family) -> std::time::Duration {
+    if sf == schedule::Family::Short {
+        PREVIOUS_SHORT_RETRY
+    } else {
+        LATEST_RETRY
+    }
+}
 /// Backfill acquisitions in flight per pass.
 const BACKFILL_CONCURRENCY: usize = 3;
 /// Backfill passes running at once (each with [`BACKFILL_CONCURRENCY`] acquisitions).

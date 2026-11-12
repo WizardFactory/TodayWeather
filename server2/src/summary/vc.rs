@@ -150,6 +150,7 @@ pub fn summary(cell: Cell, date: u32, fetches: &[RawFetch]) -> Option<Summary> {
     Some(Summary {
         key: SummaryKey::vc(cell),
         date,
+        policy: 0,
         grid: None,
         values,
         inputs: Inputs::of([&id]),

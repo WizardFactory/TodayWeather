@@ -1161,7 +1161,7 @@ fn pty(store: &AsosStore, key: &str) -> Option<f64> {
 }
 
 #[test]
-fn an_uncoded_warm_season_amount_at_wet_bulb_five_or_more_is_rain() {
+fn an_uncoded_amount_at_wet_bulb_five_or_more_is_rain() {
     // R2s (kma-history.v1, fourth held-out sample): temperatures are recorded originals.
     let tm = "2026-10-13 10:00";
     let key = "202610131000";
@@ -1221,16 +1221,42 @@ fn an_uncoded_warm_season_amount_at_wet_bulb_five_or_more_is_rain() {
             .extend(change.as_object().unwrap().clone());
         assert_eq!(pty(&hours_only(&[vec![item.clone()]]), key), None, "{item}");
     }
-    // The season follows each hour's own key.
+    // Every month since AK's 2026-11-08 decision (R2w); April to October before.
     for (tm, key, expected) in [
-        ("2026-03-31 23:00", "202603312300", None),
+        ("2026-03-31 23:00", "202603312300", Some(1.)),
         ("2026-04-01 00:00", "202604010000", Some(1.)),
         ("2026-10-31 23:00", "202610312300", Some(1.)),
-        ("2026-11-01 00:00", "202611010000", None),
+        ("2026-11-01 00:00", "202611010000", Some(1.)),
     ] {
         assert_eq!(
             pty(&hours_only(&[vec![wet_hour(tm, "20", "90", "")]]), key),
             expected,
+            "{tm}"
+        );
+    }
+}
+
+/// AK 2026-11-08: `wet-bulb-rain-v2` types an uncoded amount in every month (R2w). A winter
+/// amount is the three-hour quantity at a mark; below a wet-bulb temperature of 5 °C it stays
+/// unknown, and a recorded code still decides.
+#[test]
+fn an_uncoded_winter_amount_at_wet_bulb_five_or_more_is_rain() {
+    let (tm, key) = ("2026-01-15 09:00", "202601150900");
+    for (ta, hm, code, expected, name) in [
+        ("6.4", "86", "", Some(1.), "wet-bulb 5.01"),
+        ("5.4", "87", "", None, "wet-bulb 4.12"),
+        ("6.4", "86", "05", Some(3.), "recorded snow"),
+    ] {
+        let store = hours_only(&[vec![wet_hour(tm, ta, hm, code)]]);
+        assert_eq!(pty(&store, key), expected, "{name}");
+    }
+    for (tm, key) in [
+        ("2026-11-01 00:00", "202611010000"),
+        ("2026-03-31 21:00", "202603312100"),
+    ] {
+        assert_eq!(
+            pty(&hours_only(&[vec![wet_hour(tm, "20", "90", "")]]), key),
+            Some(1.),
             "{tm}"
         );
     }

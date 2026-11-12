@@ -129,6 +129,7 @@ pub fn grid_summary(date: u32, ta_max: f64, latest: u64) -> Summary {
     Summary {
         key: SummaryKey::Grid { town: town() },
         date,
+        policy: 0,
         grid: Some((60, 127)),
         values: day_row(&format!("{date:08}"), 24., ta_max, 10.),
         inputs: Inputs::of([&input("ultra-srt-ncst", 0, 0, latest)]),
@@ -142,4 +143,34 @@ pub fn kst(date: u32, time: u16) -> f64 {
 }
 pub fn deadline() -> tokio::time::Instant {
     tokio::time::Instant::now() + std::time::Duration::from_secs(5)
+}
+/// Grid summaries of the same originals (newest input t200) for 2026-10-14 under policy
+/// revisions `a` and `b`: as when the source re-summarizes under another policy, the input
+/// digest and the values differ, the newest input time and the input count do not. The first's
+/// revision hash is the greater one when `a_greater`.
+pub fn policy_pair(a: u32, b: u32, a_greater: bool) -> (Summary, Summary) {
+    let make = |policy: u32, ta_max: f64| Summary {
+        key: SummaryKey::Grid { town: town() },
+        date: 20261014,
+        policy,
+        grid: Some((60, 127)),
+        values: day_row("20261014", 24., ta_max, 10.),
+        inputs: Inputs::of([
+            &input("ultra-srt-ncst", 0, 0, 200),
+            &InputId {
+                family: "asos-primary-v1".into(),
+                start_ms: i64::MIN / 2,
+                end_ms: i64::MAX / 2,
+                fetched_at_ms: 0,
+                content_sha256: format!("{policy:064x}"),
+            },
+        ]),
+    };
+    for step in 1..200 {
+        let (x, y) = (make(a, 20.), make(b, 20. + 0.1 * f64::from(step)));
+        if (x.revision_sha256() > y.revision_sha256()) == a_greater {
+            return (x, y);
+        }
+    }
+    panic!("no pair with that hash order")
 }
