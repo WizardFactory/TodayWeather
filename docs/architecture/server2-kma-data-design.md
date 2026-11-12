@@ -376,9 +376,15 @@ hourly precipitation is 0 mm (D1). Both passed held-out validation and AK
 approved them on 2026-10-31. `wet-bulb-rain-v2` types an uncoded amount as
 rain at a wet-bulb temperature of at least 5 °C: April–October (R2s, approved
 2026-11-03 after a fourth held-out sample) and, since AK's 2026-11-08 decision,
-November–March too (R2w, the three-hour amount at a mark). No held-out sample
-covers the winter cutoff; post hoc, the three errors of the third sample lie
-below 5 °C wet-bulb. Below 5 °C the type stays unknown. Hourly rule-derived values stay
+November–March too (R2w, the three-hour amount at a mark). The
+[fifth held-out sample](../evidence/research/kma-history-gap-options-2026-10-30.md#fifth-held-out-sample-50-c-wet-bulb-rule-in-november-march-2026-11-08)
+passed with no errors in 117 scored hours and 160 typed three-hour windows.
+It weakly challenged the cutoff: the warmest snow or mixed hour with an amount
+had a wet-bulb temperature of 2.43 °C. A stricter recheck of the third sample
+found a window counterexample: station 138 at 2026-02-25 03:00 KST had an
+uncoded trace amount at 6.18 °C while its window contained sleet at 01:00.
+The earlier claim that all three errors were below 5 °C applies to hours,
+not that window. Below 5 °C the type stays unknown. Hourly rule-derived values stay
 apart from measured values in the ASOS record's `inferred` field. They fill only
 what measured ASOS, ODAM and VSRT left missing. A derived rain type also replaces
 PTY 0, because the ASOS amount contradicts it, and a recorded type always stays.
