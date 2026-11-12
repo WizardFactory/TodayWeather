@@ -973,8 +973,8 @@
     "android/settings.gradle.kts": "bebd82b1565efeb97319d8d900368f779736fde0c3ddb7a646183f2ff9a86bcf",
     "android/tools/manual/capture.sh": "28ea606533415a98c56881fdd5ac7e1b94fba7d6477f7d22b67ca1b9bafe7ce4"
   },
-  "manual_sha256": "9cdf5590d3ee75e5ec2361e4aab781f378fed9760f715de39068e6004b84f257",
-  "pdf_sha256": "ac00d7d9a153f6d1d1e0920daed71b97f176033d3e61b5da1f864c2fed495cce",
+  "manual_sha256": "0da8cb76d4663c329b62d34d5eb5daf52118dced918872b5c098f5f04c8ece05",
+  "pdf_sha256": "ba5ff71c679d7c2bd6961cc011b49c5701506359e8c3cc9a11cd15578e354e3a",
   "limitations": [
     "API36 emulator captures; not a release APK or physical-device certification",
     "Live values, test advertisements, forecasts, available warning bulletins and Android dialogs vary",

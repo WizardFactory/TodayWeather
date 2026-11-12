@@ -237,14 +237,14 @@
       "title": "Read weather in dark theme",
       "instruction": "Return to the weather tab after selecting the dark theme.",
       "screenshot": "screenshots/33-dark-weather.png",
-      "caption": "The hourly page in dark theme.",
-      "expected": "The same weather information appears with the selected theme colors."
+      "caption": "The hourly page in dark theme. Temperatures remain in °F from step 30.",
+      "expected": "The theme changes the colors, not the temperature unit. This example shows Fahrenheit; change back to C through Units if preferred."
     },
     {
       "title": "Use the photo theme",
       "instruction": "Choose 날씨 사진 테마 (Photo theme) and return to weather. Allow the photo feed and image to load.",
       "screenshot": "screenshots/34-photo-theme.png",
-      "caption": "Photo theme on the weather header.",
+      "caption": "Photo theme on the weather header. Temperatures remain in °F from step 30.",
       "expected": "A photo appears when available. If the feed or image cannot load, the app may show its fallback background."
     },
     {

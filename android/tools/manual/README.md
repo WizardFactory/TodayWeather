@@ -45,3 +45,10 @@ Review every capture for private information and label accuracy before placing
 selected images in `docs/user/android-app/`. Keep raw logs, APKs, rendered QA pages
 and unsuccessful runs under ignored `reports/`. The manual's JSON is editable;
 rebuild instructions and capture provenance accompany its published PDF.
+
+## Verifier regression checks
+
+Run `"$MANUAL_PYTHON" android/tools/manual/test_verify.py` from the repository root,
+using the manual dependency environment described in the user-manual README.
+These disposable-copy checks reject a changed screenshot with a stale PDF, retain
+hash checks under Python `-O`, and accept the current published edition.

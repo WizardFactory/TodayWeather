@@ -55,8 +55,9 @@ pointing to those local prerequisites:
 "$MANUAL_PYTHON" android/tools/manual/verify.py docs/user/android-app
 ```
 
-`verify.py` checks the retained source/image/PDF hashes, exact page count, each
-page's complete instructions/caption/expected result, image dimensions and the
+`verify.py` keeps its checks active under Python optimization (`-O`) and checks the retained source/image/PDF hashes, exact page count, each
+page's complete instructions/caption/expected result, decoded embedded screenshot pixels,
+image dimensions and the
 source files used during capture. Rendering and visual review are additional
 requirements. A fresh PDF may have different metadata bytes; compare its extracted
 page text and rendered pages before intentionally replacing the published edition
