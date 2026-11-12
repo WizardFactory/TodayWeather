@@ -1,6 +1,14 @@
 package net.wizardfactory.todayweather.ui.start
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.dp
+import net.wizardfactory.todayweather.search.PlaceSearch
+import net.wizardfactory.todayweather.search.Prediction
 import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
@@ -25,6 +33,9 @@ import org.robolectric.annotation.GraphicsMode
 abstract class StartFitTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
+    @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f)
+    fun phoneLargeText() = fits()
+
     @Test @Config(qualifiers = "+w832dp-h384dp-land", fontScale = 1.3f)
     fun landscapeLargeText() = fits()
     @Test @Config(qualifiers = "+w320dp-h480dp-port", fontScale = 1.3f)
@@ -46,6 +57,40 @@ abstract class StartFitTest {
     fun splitHalfLargeText() = fits()
     @Test @Config(qualifiers = "+w421dp-h701dp-port", fontScale = 1.3f)
     fun foldableSplitLargeText() = fits()
+
+    @Test @Config(qualifiers = "+w832dp-h384dp-land", fontScale = 1.3f)
+    fun landscapePredictionsAreReachable() = predictionsFit()
+
+    @Test @Config(qualifiers = "+w797dp-h411dp-land", fontScale = 1.3f)
+    fun foldedRotatedPredictionsAreReachable() = predictionsFit()
+
+    private fun predictionsFit() {
+        val predictions = (1..5).map { Prediction("Search result $it", 0) }
+        var selected: Prediction? = null
+        rule.setContent {
+            // Reserve the status/navigation bars as the real StartScreen does.
+            Box(Modifier.fillMaxSize().padding(top = 24.dp, bottom = 24.dp)) {
+                StartContent(PlaceSearch { predictions }, { TownSearch(emptyList()) }, {}, { value, _ -> selected = value }, {}, {})
+            }
+        }
+        rule.onNodeWithTag(StartTags.INPUT).performTextInput("Search")
+        rule.mainClock.advanceTimeBy(400)
+        rule.waitForIdle()
+        val attribution = rule.onNodeWithTag(StartTags.ATTRIBUTION)
+        attribution.performScrollTo().assertIsDisplayed()
+        val shown = attribution.getBoundsInRoot()
+        val whole = attribution.getUnclippedBoundsInRoot()
+        assertEquals("whole attribution reachable", (whole.bottom - whole.top).value, (shown.bottom - shown.top).value, 0.5f)
+        val safe = rule.onNodeWithTag(StartTags.PAGE).fetchSemanticsNode().boundsInRoot
+        val badge = attribution.fetchSemanticsNode().boundsInRoot
+        assertTrue("attribution above navigation bar", badge.bottom <= safe.bottom + 0.5f)
+        assertEquals(emptyList<String>(), ShellFit.texts(rule, "predictions", safe))
+        val last = rule.onNodeWithTag(StartTags.result(4))
+        last.performScrollTo().assertIsDisplayed()
+        assertEquals(last.getUnclippedBoundsInRoot().let { (it.bottom - it.top).value }, last.getBoundsInRoot().let { (it.bottom - it.top).value }, 0.5f)
+        last.performClick()
+        assertEquals("fifth prediction can be selected", predictions.last(), selected)
+    }
 
     private fun fits() {
         var selected = 0

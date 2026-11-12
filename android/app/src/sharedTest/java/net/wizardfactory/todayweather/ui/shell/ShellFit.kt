@@ -125,6 +125,8 @@ object ShellFit {
         var expected = Rect(node.positionInRoot, node.size.toSize())
         var scrolls = false
         for (ancestor in generateSequence(node.parent) { it.parent }) {
+            // Disabled scroll containers expose ranges but no user scroll action.
+            if (SemanticsActions.ScrollBy !in ancestor.config) continue
             val vertical = SemanticsProperties.VerticalScrollAxisRange in ancestor.config
             val horizontal = SemanticsProperties.HorizontalScrollAxisRange in ancestor.config
             if (!vertical && !horizontal) continue

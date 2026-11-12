@@ -8,6 +8,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.test.espresso.Espresso
+import org.junit.Assert.assertTrue
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -108,6 +112,24 @@ internal class ScreenFitWalk(private val rule: AndroidComposeTestRule<*, MainAct
             rule.onNode(okay).performClick()
         }
         check("start")
+        rule.onNodeWithTag(StartTags.LOCATION).performScrollTo().assertIsDisplayed()
+        check("start-location")
+        rule.onNodeWithTag(StartTags.INPUT).performScrollTo().performTextInput("Search")
+        rule.waitUntil(10_000) { rule.onAllNodes(hasTestTag(StartTags.result(4))).fetchSemanticsNodes().isNotEmpty() }
+        Espresso.closeSoftKeyboard()
+        rule.waitForIdle()
+        rule.onNodeWithTag(StartTags.ATTRIBUTION).performScrollTo().assertIsDisplayed()
+        rule.waitForIdle()
+        val viewport = rule.onNodeWithTag(StartTags.PAGE).fetchSemanticsNode().boundsInRoot
+        val safe = ShellFit.safeArea(rule.activity, rule.onRoot().fetchSemanticsNode().boundsInRoot)
+        for (tag in listOf(StartTags.result(4), StartTags.ATTRIBUTION)) {
+            val node = rule.onNodeWithTag(tag).fetchSemanticsNode()
+            val bounds = node.boundsInRoot
+            assertTrue("$tag fully visible above navigation", bounds.top >= viewport.top - 0.5f && bounds.bottom <= minOf(viewport.bottom, safe.bottom) + 0.5f)
+            assertEquals("$tag not clipped", node.size.height.toFloat(), bounds.height, 1f)
+        }
+        check("start-predictions")
+        rule.onNodeWithTag(StartTags.CANCEL).performScrollTo().performClick()
         runBlocking { app.appState.dataStore.updateData { it.afterStart() } }
         rule.waitUntil(10_000) { rule.onAllNodes(hasTestTag(ShellTags.MENU_BUTTON)).fetchSemanticsNodes().isNotEmpty() }
         settleWeather()
