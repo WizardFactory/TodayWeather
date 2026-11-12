@@ -306,7 +306,7 @@ internal fun Bubbles(modifier: Modifier, color: Color = Color.White) {
     }
 }
 
-/** `window.screen` in dp: the display the Cordova app sized its pages by (`initSize`), at the current orientation. */
+/** Chart/header dimensions in dp. Native layout follows the current application window (AN-18, D41). */
 @Composable
 fun rememberScreenMetrics(): ChartMetrics {
     val context = LocalContext.current
@@ -317,10 +317,10 @@ fun rememberScreenMetrics(): ChartMetrics {
 fun screenMetrics(context: Context): ChartMetrics {
     val density = context.resources.displayMetrics.density
     val (w, h) = if (Build.VERSION.SDK_INT >= 30) {
-        context.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds.let { it.width() to it.height() }
+        context.getSystemService(WindowManager::class.java).currentWindowMetrics.bounds.let { it.width() to it.height() }
     } else {
         @Suppress("DEPRECATION")
-        Point().also { context.getSystemService(WindowManager::class.java).defaultDisplay.getRealSize(it) }.let { it.x to it.y }
+        Point().also { context.getSystemService(WindowManager::class.java).defaultDisplay.getSize(it) }.let { it.x to it.y }
     }
     return ChartMetrics((w / density).toDouble(), (h / density).toDouble())
 }

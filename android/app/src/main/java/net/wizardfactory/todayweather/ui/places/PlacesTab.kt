@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -150,6 +152,7 @@ private class PlacesColors(val page: Color, val row: Color, val border: Color, v
 fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme: Theme, page: PlacesPage, host: PlacesHost, onSelect: (Int) -> Unit,
                       onAdded: () -> Unit, onAlarm: (Int) -> Unit = {}): TabContent {
     val colors = PlacesColors.of(theme)
+    var headerHeight by remember { mutableStateOf(44.dp) }
     var editing by rememberSaveable { mutableStateOf(false) }
     var searching by rememberSaveable { mutableStateOf(false) }
     var field by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
@@ -227,7 +230,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
     val images = rememberChartImages()
     return TabContent(
         header = { shell, onMenu ->
-            SearchHeader(shell, field, onChange = { value ->
+            SearchHeader(shell, field, onHeight = { headerHeight = it }, onChange = { value ->
                 if (value.text.trim() != field.text.trim()) {
                     editing = false
                     page.clearFound()
@@ -255,7 +258,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
         },
         page = {
             // The page starts under the header bar, which the shell draws over it.
-            Column(Modifier.fillMaxSize().background(colors.page).verticalScroll(scroll).padding(top = 44.dp)) {
+            Column(Modifier.fillMaxSize().background(colors.page).verticalScroll(scroll).padding(top = headerHeight)) {
                 if (searching) {
                     FindButton(colors) { page.findByLocation() }
                     val shownTowns = towns?.towns.orEmpty()
@@ -311,15 +314,17 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
  * `#444`, the input in 17 sp, the placeholder `#aaa`) and the mode button (17 sp, 8 dp at its sides) 10 dp from the edge.
  */
 @Composable
-private fun SearchHeader(colors: ShellColors, field: TextFieldValue, onChange: (TextFieldValue) -> Unit, modeLabel: String, focus: FocusRequester,
+private fun SearchHeader(colors: ShellColors, field: TextFieldValue, onHeight: (Dp) -> Unit, onChange: (TextFieldValue) -> Unit, modeLabel: String, focus: FocusRequester,
                          onFocus: () -> Unit, onMenu: () -> Unit, onMode: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).drawBehind {
+    val density = LocalDensity.current
+    val largeText = density.fontScale > 1f
+    Box(Modifier.fillMaxWidth().heightIn(min = 44.dp).onSizeChanged { onHeight(with(density) { it.height.toDp() }) }.background(colors.headerBar).drawBehind {
         val h = 0.5.dp.toPx()
         drawRect(colors.headerLine, Offset(0f, size.height - h), Size(size.width, h))
     }) {
         Box(Modifier.padding(start = 5.dp)) { BarButton(Glyphs.NAVICON, colors, onMenu, Modifier.testTag(ShellTags.MENU_BUTTON)) }
-        Row(Modifier.fillMaxWidth().padding(start = 50.dp, end = 10.dp, top = 5.dp).height(33.dp), verticalAlignment = Alignment.CenterVertically) {
-            Row(Modifier.weight(1f).height(33.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFEEEEEE)).padding(horizontal = 8.dp),
+        Row(Modifier.fillMaxWidth().padding(start = 50.dp, end = 10.dp, top = 5.dp, bottom = 6.dp).heightIn(min = 33.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).heightIn(min = 33.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFEEEEEE)).padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Icon { LineText(Glyphs.IOS_SEARCH, line(14.sp, TextUnit.Unspecified, Color(0xFF444444), family = Glyphs.ionicons)) }
                 Spacer(Modifier.width(4.dp))
@@ -328,7 +333,11 @@ private fun SearchHeader(colors: ShellColors, field: TextFieldValue, onChange: (
                     .testTag(PlacesTags.INPUT), singleLine = true, textStyle = style, cursorBrush = SolidColor(Color(0xFF111111)),
                     decorationBox = { inner ->
                         Box(contentAlignment = Alignment.CenterStart) {
-                            if (field.text.isEmpty()) LineText(stringResource(R.string.LOC_ENTER_CITY), style.copy(color = Color(0xFFAAAAAA)))
+                            if (field.text.isEmpty()) {
+                                val hint = stringResource(R.string.LOC_ENTER_CITY)
+                                val hintStyle = style.copy(color = Color(0xFFAAAAAA))
+                                if (largeText) Text(hint, style = hintStyle) else LineText(hint, hintStyle)
+                            }
                             inner()
                         }
                     })
