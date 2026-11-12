@@ -72,6 +72,7 @@ pub fn summaries(station: &str, fetched: &[AsosFetched], dates: &[u32]) -> Vec<S
                 station: station.to_owned(),
             },
             date,
+            policy: 0,
             grid: None,
             values,
             inputs: Inputs::of(ids.iter().filter(|id| id.concerns(date))),

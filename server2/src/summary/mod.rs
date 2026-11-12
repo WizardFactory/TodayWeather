@@ -254,6 +254,10 @@ pub struct Summary {
     pub key: SummaryKey,
     /// KST (grid, ASOS) or provider-local (VC) date `YYYYMMDD`.
     pub date: u32,
+    /// The revision of the derivation policy its values follow (grid summaries of the observed
+    /// source: `OBSERVED_HISTORY_REVISION`); 0 without one, as for every summary stored before
+    /// revisions were recorded.
+    pub policy: u32,
     /// The grid cell of a grid summary.
     pub grid: Option<(u16, u16)>,
     pub values: OrderedJson,
@@ -274,6 +278,9 @@ impl Summary {
                 OrderedJson::String(u(&format!("{:08}", self.date))),
             ),
         ];
+        if self.policy > 0 {
+            members.push((u("policy"), OrderedJson::Number(f64::from(self.policy))));
+        }
         if let Some((nx, ny)) = self.grid {
             members.push((
                 u("grid"),
@@ -293,11 +300,17 @@ impl Summary {
     pub fn values_sha256(&self) -> String {
         crate::storage::sha256(&self.values.to_bytes())
     }
-    /// `{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`: names sort by newest input,
-    /// then input count.
+    /// `[p{policy:04}-]{latestFetchedMs:013}-{count:06}-{revision_sha256}.json`, the policy part
+    /// only with a policy revision: names sort by policy revision, newest input, then input count
+    /// ([`ObjectName`]).
     pub fn object_name(&self) -> String {
+        let policy = if self.policy > 0 {
+            format!("p{:04}-", self.policy.min(9999))
+        } else {
+            String::new()
+        };
         format!(
-            "{:013}-{:06}-{}.json",
+            "{policy}{:013}-{:06}-{}.json",
             self.inputs.latest_fetched_ms.min(9_999_999_999_999),
             self.inputs.count.min(999_999),
             self.revision_sha256()
@@ -322,6 +335,13 @@ impl Summary {
         {
             return None;
         }
+        let policy = match o.get("policy") {
+            None => 0,
+            Some(p) => u32::try_from(p.as_u64()?).ok().filter(|p| *p > 0)?,
+        };
+        if policy != parsed.policy {
+            return None;
+        }
         let grid = match o.get("grid") {
             None => None,
             Some(g) => Some((
@@ -339,6 +359,7 @@ impl Summary {
         let summary = Self {
             key: key.clone(),
             date,
+            policy,
             grid,
             values,
             inputs,
@@ -350,9 +371,13 @@ impl Summary {
         self.values.get(name).and_then(OrderedJson::number)
     }
 }
-/// A parsed object name.
+/// A parsed object name. Names order by policy revision, then newest input, then input count: a
+/// summary of a newer derivation policy supersedes every revision of an older one, whatever its
+/// inputs and revision hash (review AP-summary-policy-compat).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ObjectName {
+    /// The policy revision ([`Summary::policy`]); 0 for a name without one.
+    pub policy: u32,
     pub latest: u64,
     pub count: u64,
     pub revision: String,
@@ -360,13 +385,25 @@ pub struct ObjectName {
 impl ObjectName {
     pub fn parse(name: &str) -> Option<Self> {
         let stem = name.strip_suffix(".json")?;
+        let digits = |s: &str, n: usize| s.len() == n && s.bytes().all(|b| b.is_ascii_digit());
+        let (policy, stem) = match stem.strip_prefix('p') {
+            Some(rest) => {
+                let (p, rest) = rest.split_once('-')?;
+                let policy: u32 = if digits(p, 4) { p.parse().ok()? } else { 0 };
+                if policy == 0 {
+                    return None;
+                }
+                (policy, rest)
+            }
+            None => (0, stem),
+        };
         let mut parts = stem.split('-');
         let (a, b, c) = (parts.next()?, parts.next()?, parts.next()?);
-        let digits = |s: &str, n: usize| s.len() == n && s.bytes().all(|b| b.is_ascii_digit());
         let hex = c.len() == 64
             && c.bytes()
                 .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
         (parts.next().is_none() && digits(a, 13) && digits(b, 6) && hex).then(|| Self {
+            policy,
             latest: a.parse().unwrap_or(0),
             count: b.parse().unwrap_or(0),
             revision: c.to_owned(),

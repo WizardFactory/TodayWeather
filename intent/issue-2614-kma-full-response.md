@@ -6,6 +6,7 @@ AK requested this work between 2026-10-25 and 2026-11-03, and on 2026-11-03 aske
 
 - **HISTORY:** under ASOS-primary, completed days use measured ASOS history through the existing mobile response. Measured precipitation never reads as dry, and an unknown type stays missing.
 - **RULES:** the AK-approved rules R1b, D1 and R2s apply. The rules that failed held-out validation (R2, W1, the all-season wet-bulb variant) do not.
+  - 2026-11-08 note: AK approved applying R2s's 5.0 °C wet-bulb cutoff in every month (`wet-bulb-rain-v2`, [ASOS-primary parity](issue-2614-kma-asos-primary-parity.md)). The all-season variant that failed above used a 2.5 °C cutoff.
 - **PRECEDENCE:** a rule-derived hourly value never replaces a measured value or a recorded precipitation type from ASOS, ODAM or VSRT.
 - **STATION:** a mountain or special-area station is not used as-is. A town reads a station by distance and altitude, or no station.
 - **CLIENT:** a checked contract and automated eval protect the wire format of every API version seen in production traffic.

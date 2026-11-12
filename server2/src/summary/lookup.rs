@@ -173,6 +173,8 @@ pub struct Lookup<T> {
     asos: Option<Arc<dyn AsosOnDemand>>,
     vc: Option<Arc<dyn VcRecords>>,
     attempted: Mutex<HashMap<(String, u32), Slot>>,
+    /// The derivation policy revision of this process's grid summaries; older ones are not read.
+    grid_policy: u32,
 }
 /// The end of a running acquisition: `None` while it runs, `Some(true)` when it finished,
 /// `Some(false)` when it failed or was cancelled (the range is free again).
@@ -227,7 +229,14 @@ impl<T: SummaryTransport> Lookup<T> {
             asos,
             vc,
             attempted: Mutex::new(HashMap::new()),
+            grid_policy: 0,
         }
+    }
+    /// Grid summaries of a policy revision older than `policy` are not read (the observed
+    /// source: `OBSERVED_HISTORY_REVISION`).
+    pub fn with_grid_policy(mut self, policy: u32) -> Self {
+        self.grid_policy = policy;
+        self
     }
     pub fn store(&self) -> &SummaryStore<T> {
         &self.store
@@ -238,8 +247,12 @@ impl<T: SummaryTransport> Lookup<T> {
         date: u32,
         deadline: Instant,
     ) -> Result<Option<Summary>, LookupError> {
+        let policy = match key.source() {
+            Source::Grid => self.grid_policy,
+            Source::Asos | Source::Vc => 0,
+        };
         self.store
-            .newest(key, date, deadline)
+            .newest_from(key, date, policy, deadline)
             .await
             .map(|s| s.map(|s| s.summary))
             .map_err(LookupError::Storage)

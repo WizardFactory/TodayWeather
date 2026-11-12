@@ -21,6 +21,8 @@ pub struct AsosInputs {
 #[derive(Debug, Clone)]
 pub struct GridInputs {
     pub town: [String; 3],
+    /// The derivation policy revision of the source ([`super::Summary::policy`]).
+    pub policy: u32,
     pub grid: (u16, u16),
     pub ids: Vec<InputId>,
     pub asos: Option<AsosInputs>,
@@ -69,6 +71,7 @@ pub fn summaries(inputs: &GridInputs, rows: &[OrderedJson], now_ms: f64) -> Vec<
                 town: inputs.town.clone(),
             },
             date,
+            policy: inputs.policy,
             grid: Some(inputs.grid),
             values: row.clone(),
             inputs: Inputs::of(inputs.ids.iter().filter(|id| id.concerns(date))),

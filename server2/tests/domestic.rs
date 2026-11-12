@@ -16,6 +16,8 @@ mod life;
 mod life_s3;
 #[path = "domestic/nation_city.rs"]
 mod nation_city;
+#[path = "domestic/nowcast_fill.rs"]
+mod nowcast_fill;
 #[path = "domestic/observe.rs"]
 mod observe;
 #[path = "domestic/observe_product.rs"]

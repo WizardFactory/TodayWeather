@@ -5310,7 +5310,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="382.5" y="593" width="177" height="18" rx="3" class="c-mask"/>
           <text x="471" y="603" class="t-edge-emphasis" font-size="11" text-anchor="middle">Pinned full input closure</text>
         </g>
-        <text data-detail="context" x="319.25" y="631" class="t-muted" font-size="7"><tspan x="319.25" dy="0">ASOS primary; ODAM/VSRT cover</tspan><tspan x="319.25" dy="11">elapsed hours. Preserve public 3h</tspan><tspan x="319.25" dy="11">slots; past SHRT/RSS weather is</tspan><tspan x="319.25" dy="11">removed.</tspan></text>
+        <text data-detail="context" x="319.25" y="631" class="t-muted" font-size="7"><tspan x="319.25" dy="0">ASOS primary for observed fields;</tspan><tspan x="319.25" dy="11">past rows keep stored SHRT values</tspan><tspan x="319.25" dy="11">ASOS lacks; ODAM fills unknown</tspan><tspan x="319.25" dy="11">hours within 23 h.</tspan></text>
         </g>
 
         <g data-edge-from="assembly" data-edge-to="owner" data-edge-label="Coverage and value result" data-edge-key="8" data-edge-id="full-ready">
@@ -5734,7 +5734,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>Seven completed days and current public 3h slots stay required; historical numbers may change from acquired ASOS.</li>
           <li>Scripted wet/dry history proves response-before-raw-PUT and replay. Real QC9, winter, pre-release and p95/p99 remain open.</li>
           <li>ASOS normal blanks mean dry; trace0 stays precipitation. Apr-Oct QC9 hours on closed days read dry (dry-closure-v1); winter QC9 and midnight gaps remain.</li>
-          <li>Apr-Oct uncoded rain at wet-bulb 5C or more reads rain; other untyped rain never reads dry: slot PTY -1, AM/PM omitted (history contract v1).</li>
+          <li>Uncoded rain at wet-bulb 5C or more reads rain in every month (wet-bulb-rain-v2); other untyped rain never reads dry: slot PTY -1, AM/PM omitted.</li>
           <li>A town reads a station within 200 m of its elevation, or none (station-altitude-v1); island stations serve only their county.</li>
         </ul>
       </div>

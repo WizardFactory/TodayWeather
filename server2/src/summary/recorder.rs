@@ -7,7 +7,9 @@
 //! (another process may have written a newer revision) and writes a revision when its newest
 //! input is newer than the stored newest revision's (also with equal values, so the stored order
 //! follows the inputs), or as new as it with other values. An older input set never supersedes a
-//! newer one. Record work is serialized in a process and the remembered newest never moves back.
+//! newer one. A newer derivation policy revision comes first: its summary supersedes those of an
+//! older policy, and an older policy's never supersedes it. Record work is serialized in a
+//! process and the remembered newest never moves back.
 use super::grid::{self, GridInputs};
 use super::store::SummaryStore;
 use super::transport::SummaryTransport;
@@ -160,9 +162,10 @@ impl<T: SummaryTransport> Recorder<T> {
                     // Newer inputs are always recorded (also with equal values), so the stored newest
                     // revision carries the newest input time and an older input set, from this or
                     // another process, can never supersede it.
+                    let order = (s.policy, s.inputs.latest_fetched_ms);
                     let keep = newest.as_ref().is_some_and(|(name, digest)| {
-                        name.latest > s.inputs.latest_fetched_ms
-                            || (name.latest == s.inputs.latest_fetched_ms && *digest == values)
+                        (name.policy, name.latest) > order
+                            || ((name.policy, name.latest) == order && *digest == values)
                     });
                     let newest = if keep {
                         report.unchanged += 1;
