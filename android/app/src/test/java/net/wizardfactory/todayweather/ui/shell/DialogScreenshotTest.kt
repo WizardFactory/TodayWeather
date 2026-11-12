@@ -104,6 +104,23 @@ class DialogScreenshotTest {
             }
             val native = popup.captureToImage().asAndroidBitmap().pixels()
             val cordova = ImageIO.read(File(references, "$lang/$name.png")).pixels()
+            // An independent surface sample detects a missing backdrop that a mean-image limit could hide.
+            // CSS: 90% white over 40% black dim, or fully opaque white for pollen. Avoid text/borders.
+            val background = ImageIO.read(File(references, "$lang/background.png"))
+            fun surface(pixels: Pixels, x: Float, y: Float, label: String) {
+                val sampleX = 4
+                val sampleY = 4
+                val under = background.getRGB(kotlin.math.round(x * 2).toInt() + sampleX, kotlin.math.round(y * 2).toInt() + sampleY)
+                val actual = pixels.argb[sampleY * pixels.width + sampleX]
+                for (shift in listOf(0, 8, 16)) {
+                    val channel = (under ushr shift) and 255
+                    val expectedSurface = if (name == "pollen") 255.0 else 255 * 0.9 + channel * 0.6 * 0.1
+                    assertTrue("$name $label surface: ${((actual ushr shift) and 255)} vs $expectedSurface",
+                        kotlin.math.abs(((actual ushr shift) and 255) - expectedSurface) <= 2.0)
+                }
+            }
+            surface(cordova, expected.num("x").toFloat(), expected.num("y").toFloat(), "reference")
+            surface(native, bounds.left.value, bounds.top.value, "native")
             val diff = ImageDiff.of(native, cordova)
             ImageIO.write(native.buffered(), "png", File(output, "$name-native.png"))
             ImageIO.write(ImageDiff.overlay(native, cordova).buffered(), "png", File(output, "$name-diff.png"))

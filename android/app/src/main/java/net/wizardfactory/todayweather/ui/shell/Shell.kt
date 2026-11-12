@@ -243,14 +243,14 @@ fun TodayWeatherShell(
                 MenuPanel(state, navigation, onMenuRow)
                 tab.popups(this)
                 popups()
+                if (exitAsked) {
+                    ExitDialog(onCancel = { exitAsked = false }, onConfirm = { exitAsked = false; onExit() })
+                }
             }
             if (banner != null) {
                 Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).testTag(ShellTags.BANNER)) { banner() }
                 Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
             }
-        }
-        if (exitAsked) {
-            ExitDialog(onCancel = { exitAsked = false }, onConfirm = { exitAsked = false; onExit() })
         }
     }
 }

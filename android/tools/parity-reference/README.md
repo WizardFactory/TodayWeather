@@ -125,3 +125,5 @@ hourly/daily charts, handles a failed refresh and cancels exit. It records actua
 display screenshots in Korean at 320×694 and English at 412×892. The fixture adds
 pollen fields in test code; it does not call a live provider. This supplements
 pixel/fit checks, not a release or physical-device test.
+
+Dialog captures close initial popups through their buttons and keep Ionic's reusable backdrop attached. Each captured popup records and requires an active, visible, full-viewport backdrop at 40% black. Independent corner-surface samples check the expected compositing in both reference and native images, separately from average image tolerance. Exit and retry share the shell's WebView-area modal layer; banner-present tests verify centering, unchanged banner pixels and touch delivery.

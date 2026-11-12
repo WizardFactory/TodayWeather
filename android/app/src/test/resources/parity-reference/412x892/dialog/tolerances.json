@@ -8,22 +8,22 @@
   "strong": 0.002,
   "mean": 0.4
  },
- "recordedOn": "2026-11-13, API36 Cordova vs Robolectric SDK34 native graphics",
- "why": "Native Compose popups reproduce the recorded rectangles and text. Same captured weather background isolates translucent popup comparison. Fractional glyph advances retain Chrome line breaks; remaining differences are font weight/rasterization, fractional centering and at most one physical pixel of Korean line-box rounding. Geometry (0.75dp), full semantic body and scrolling to the pollen source are checked separately. Selected overlays at 384 and 320 inspected.",
+ "recordedOn": "2026-11-13, API36 Cordova with verified active backdrop vs Robolectric SDK34 native graphics",
+ "why": "Native Compose popups reproduce recorded rectangles and text over the same captured weather background. Capture retains and verifies the active 40%-black Ionic backdrop. Independent surface samples check correct dim/translucency in both reference and native (2 channel levels for rounding); mean limits do not absorb missing dim. Remaining differences are fractional glyph rasterization/weight, centering and at most one physical pixel of Korean line-box rounding. Geometry (0.75dp), full semantic body and pollen source reachability are checked separately. Narrow and wide corrected overlays inspected.",
  "cases": {
   "en-US/retry": {
-   "strong": 0.006425,
-   "mean": 8.963,
+   "strong": 0.006395,
+   "mean": 1.666,
    "heightDifference": 0
   },
   "en-US/source-kaq": {
-   "strong": 0.001543,
-   "mean": 9.234,
+   "strong": 0.001527,
+   "mean": 1.677,
    "heightDifference": 0
   },
   "en-US/source-airkorea": {
-   "strong": 0.002055,
-   "mean": 8.702,
+   "strong": 0.002035,
+   "mean": 1.377,
    "heightDifference": 0
   },
   "en-US/pollen": {
@@ -32,23 +32,23 @@
    "heightDifference": 0
   },
   "en-US/exit": {
-   "strong": 0.004634,
-   "mean": 8.182,
+   "strong": 0.004589,
+   "mean": 1.314,
    "heightDifference": 0
   },
   "ko-KR/retry": {
-   "strong": 0.019299,
-   "mean": 12.313,
+   "strong": 0.017377,
+   "mean": 5.197,
    "heightDifference": 1
   },
   "ko-KR/source-kaq": {
-   "strong": 0.023431,
-   "mean": 15.047,
+   "strong": 0.022375,
+   "mean": 7.741,
    "heightDifference": 1
   },
   "ko-KR/source-airkorea": {
-   "strong": 0.019813,
-   "mean": 13.581,
+   "strong": 0.01929,
+   "mean": 6.508,
    "heightDifference": 1
   },
   "ko-KR/pollen": {
@@ -57,8 +57,8 @@
    "heightDifference": 0
   },
   "ko-KR/exit": {
-   "strong": 0.01075,
-   "mean": 9.977,
+   "strong": 0.010588,
+   "mean": 3.064,
    "heightDifference": 1
   }
  }

@@ -23,9 +23,19 @@ await dt.evaluate(`(async function () {
     var city = {name: '회현동', address: '대한민국 서울특별시 중구 회현동', country: 'KR', location: {lat:37.56,long:126.98}, currentPosition:false};
     Object.keys(data).forEach(function(k){city[k]=data[k];});
     wi.addCity(city); wi.setCityIndex(wi.getCityCount()-1);
-    await twBlocks.closePopups();
+    // Preserve Ionic's singleton backdrop. DOM removal detaches the element that
+    // $ionicBackdrop.retain() reuses, silently dropping the dim on later dialogs.
+    async function closeDialogs() {
+        document.querySelectorAll('.popup-container').forEach(function(p) {
+            var cancel = p.querySelector('.popup-buttons button');
+            if (cancel) cancel.click();
+        });
+        await twBlocks.wait(600);
+        if (twBlocks.shown('.popup-container .popup')) throw new Error('Initial popup did not close');
+    }
+    await closeDialogs();
     await inj.get('$state').go('tab.forecast');
-    await twBlocks.wait(2000); await twBlocks.closePopups();
+    await twBlocks.wait(2000); await closeDialogs();
     window.twDialogScope = angular.element(document.querySelector('ion-tabs')).scope();
     window.twDialogTranslate = inj.get('$translate');
 })()`);
@@ -59,7 +69,14 @@ for (const name of ['retry', 'source-kaq', 'source-airkorea', 'pollen', 'exit'])
         function part(e){var s=getComputedStyle(e);return {cls:e.className,text:e.textContent,rect:rect(e),style:{color:s.color,background:s.backgroundColor,fontSize:s.fontSize,lineHeight:s.lineHeight,fontWeight:s.fontWeight,padding:s.padding,margin:s.margin}};}
         var p=twBlocks.shown('.popup-container .popup'); if(!p) throw new Error('Popup missing');
         var body=p.querySelector('.popup-body');
-        return {view:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio,screenHeight:screen.height},popup:part(p),
+        var backdrop=angular.element(document.body).injector().get('$ionicBackdrop').getElement()[0];
+        if (!backdrop.isConnected || !backdrop.classList.contains('active') || !backdrop.classList.contains('visible')) {
+            throw new Error('Popup backdrop is detached or inactive');
+        }
+        var backdropStyle=getComputedStyle(backdrop), backdropRect=rect(backdrop);
+        if (backdropStyle.opacity !== '1' || backdropStyle.backgroundColor !== 'rgba(0, 0, 0, 0.4)' ||
+            backdropRect.w !== innerWidth || backdropRect.h !== innerHeight) throw new Error('Unexpected popup dim or viewport');
+        return {backdrop:part(backdrop),view:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio,screenHeight:screen.height},popup:part(p),
             parts:Array.from(p.querySelectorAll('.popup-head,.popup-title,.popup-body,.popup-buttons,.button,section,p,small')).map(part),
             body:{clientHeight:body.clientHeight,scrollHeight:body.scrollHeight}};
     })()`);
