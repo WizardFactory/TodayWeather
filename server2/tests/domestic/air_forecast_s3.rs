@@ -2419,3 +2419,85 @@ async fn an_unreadable_newest_product_is_made_again() {
     assert_eq!(inputs().produce_images().await, Ok(true));
     assert_eq!(inputs().produce_images().await, Ok(false));
 }
+
+/// LANES (KMA-RESTART-RACE): the scheduled image production, which no request waits for, reads
+/// the images and stores its product on the bulk lane; a request reads the product on the request
+/// lane.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_image_production_uses_the_bulk_lane() {
+    use super::observe::Counted;
+    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let peer = Peer::persistent();
+    let peer_store = store_for(&peer.transport());
+    let now = now_ms();
+    publish_json(
+        &peer_store,
+        "airkorea-station-list",
+        "stations",
+        Period {
+            local_date: 20261015,
+            slot: "0000".into(),
+        },
+        "20261015",
+        now - 3_600_000.,
+        station_page(),
+    )
+    .await;
+    let urls = served_urls("https://www.airkorea.or.kr", "23", now);
+    publish(
+        &peer_store,
+        ("airkorea-image", "airkorea-forecast-image"),
+        ProviderKey::Named {
+            id: "national".into(),
+        },
+        Publication::new(20261015, 2300).unwrap().period(),
+        "20261015",
+        now - 1_800_000.,
+        &image_pages('A', &urls),
+    )
+    .await;
+    let inputs = |counted: &Counted| {
+        AirInputs::new(
+            counted.clone(),
+            Arc::new(CatalogStore::new(counted.clone(), CatalogLimits::default()).unwrap()),
+        )
+        .with_clock(test_clock())
+        .reading_produced_images()
+    };
+    let lanes =
+        |counted: &Counted, what: &str| (counted.get(what), counted.get(&format!("bulk {what}")));
+    const IMAGES: &str = "GET raw/v2/airkorea-image/airkorea-forecast-image";
+    const PRODUCT_PUT: &str = "PUT raw/v2/airkorea-image/airkorea-forecast-hourly";
+    const PRODUCT_GET: &str = "GET raw/v2/airkorea-image/airkorea-forecast-hourly";
+    let counted = Counted::new(peer.transport());
+    assert_eq!(inputs(&counted).produce_images().await, Ok(true));
+    let (images, bulk) = lanes(&counted, IMAGES);
+    assert!(
+        images > 0 && bulk == images,
+        "{bulk} of {images} image reads"
+    );
+    let (puts, bulk) = lanes(&counted, PRODUCT_PUT);
+    assert!(puts > 0 && bulk == puts, "{bulk} of {puts} product writes");
+    // A request of a new process reads the product on the request lane.
+    let counted = Counted::new(peer.transport());
+    let restarted = inputs(&counted);
+    let seoul = town(37.5665, 126.978);
+    let answer = until(
+        || {
+            restarted.load(
+                &seoul,
+                "서울특별시",
+                "중구",
+                false,
+                true,
+                now_ms(),
+                Instant::now() + Duration::from_secs(3),
+            )
+        },
+        |a| a.hourly.as_ref().is_some_and(|h| !h.is_empty()),
+    )
+    .await;
+    assert!(answer.hourly.is_some_and(|h| !h.is_empty()));
+    let (gets, bulk) = lanes(&counted, PRODUCT_GET);
+    assert!(gets > 0 && bulk == 0, "{bulk} of {gets} product reads");
+}

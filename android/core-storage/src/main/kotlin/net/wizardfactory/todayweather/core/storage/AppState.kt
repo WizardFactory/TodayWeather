@@ -68,6 +68,17 @@ data class UnitSettings(
         else -> throw IllegalArgumentException(key)
     }
 
+    /** These units with [key] set to [value] (`Units.setUnit`). */
+    fun with(key: String, value: String): UnitSettings = when (key) {
+        "temperatureUnit" -> copy(temperatureUnit = value)
+        "windSpeedUnit" -> copy(windSpeedUnit = value)
+        "pressureUnit" -> copy(pressureUnit = value)
+        "distanceUnit" -> copy(distanceUnit = value)
+        "precipitationUnit" -> copy(precipitationUnit = value)
+        "airUnit" -> copy(airUnit = value)
+        else -> throw IllegalArgumentException(key)
+    }
+
     companion object {
         val KEYS = listOf("temperatureUnit", "windSpeedUnit", "pressureUnit", "distanceUnit", "precipitationUnit", "airUnit")
 
@@ -99,13 +110,28 @@ data class UnitSettings(
     }
 }
 
-/** Cordova `settingsInfo`: startup page "0" hourly, "1" daily, "2" air, "3" favorites; refresh minutes, "0" manual. */
+/** Cordova `settingsInfo`: startup page "0" hourly, "1" daily, "2" favorites, "3" air; refresh minutes, "0" manual. */
 @Serializable
 data class Settings(
     val startupPage: String = "0",
     val refreshInterval: String = "0",
     val theme: String = "light",
-)
+) {
+    fun value(key: String): String = when (key) {
+        "startupPage" -> startupPage
+        "refreshInterval" -> refreshInterval
+        "theme" -> theme
+        else -> throw IllegalArgumentException(key)
+    }
+
+    /** These settings with [key] set to [value] (`$rootScope.settingsInfo[type] = value`). */
+    fun with(key: String, value: String): Settings = when (key) {
+        "startupPage" -> copy(startupPage = value)
+        "refreshInterval" -> copy(refreshInterval = value)
+        "theme" -> copy(theme = value)
+        else -> throw IllegalArgumentException(key)
+    }
+}
 
 /**
  * Cordova `pushData2`. [records] keep the alert and alarm records as the Cordova app stores them
@@ -129,4 +155,6 @@ data class MigrationInfo(
     val migratedAtMillis: Long,
     /** What happened to each Cordova key: `migrated`, `default`, `malformed`, `legacy`, `absent`. */
     val keys: Map<String, String>,
+    /** The generation of the fallback Cordova build's claim this migration adopted ([CordovaHandBack]); null without one. */
+    val handBackGeneration: Int? = null,
 )

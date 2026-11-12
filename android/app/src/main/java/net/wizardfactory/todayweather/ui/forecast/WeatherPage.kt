@@ -84,6 +84,7 @@ import net.wizardfactory.todayweather.core.domain.forecast.WeatherRow
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.ui.chart.DailyChartView
 import net.wizardfactory.todayweather.ui.chart.HourlyChartView
+import net.wizardfactory.todayweather.ui.chart.rememberOpeningScroll
 import net.wizardfactory.todayweather.ui.chart.rememberChartImages
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.FixedLine
@@ -102,6 +103,8 @@ object ForecastTags {
     const val NEXT = "forecast-next"
     const val SUMMARY_AIR = "forecast-summary-air"
     const val ATTRIBUTION = "forecast-attribution"
+    /** The photo theme's photo box (`[photo-url]`), when it has a picture. */
+    const val PHOTO = "forecast-photo"
     const val POLLEN = "forecast-pollen"
     /** Block [i] of the page as the references number them: 1 the chart, then the cards and the attribution. */
     fun block(i: Int) = if (i == 0) HEADER else "forecast-block-$i"
@@ -114,6 +117,8 @@ class WeatherPageContent(
     val metrics: ChartMetrics,
     val hourly: HourlyChart?,
     val daily: DailyChart?,
+    /** The visit's complete applies ([ForecastScope.scrolls]): each brings the charts back to today's position. */
+    val scrolls: Int = 0,
 )
 
 /**
@@ -148,9 +153,13 @@ fun WeatherPage(
             Box(Modifier.testTag(ForecastTags.block(1))) {
                 Zoomed {
                     if (!daily && page.showChart && content.hourly != null) {
-                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart)
+                        HourlyChartView(content.hourly, expanded, onToggleExpanded, colors = colors.chart,
+                            scrollState = rememberOpeningScroll(content.hourly, content.hourly.openingOffset, content.scrolls))
                     }
-                    if (daily && content.daily != null) DailyChartView(content.daily, colors = colors.chart)
+                    if (daily && content.daily != null) {
+                        DailyChartView(content.daily, colors = colors.chart,
+                            scrollState = rememberOpeningScroll(content.daily, content.daily.openingOffset, content.scrolls))
+                    }
                 }
             }
             Spacer(Modifier.height(10.dp))
@@ -188,7 +197,7 @@ private fun HeaderBlock(
         .testTag(ForecastTags.HEADER)) {
         // Percentages of the block's width, as in CSS.
         val width = maxWidth
-        if (photo != null) PhotoBox(photo, gradient, Modifier.matchParentSize())
+        if (photo != null) PhotoBox(photo, gradient, Modifier.matchParentSize().testTag(ForecastTags.PHOTO))
         Row(
             Modifier.fillMaxWidth().heightIn(min = metrics.headerHeight.dp).padding(top = 44.dp, bottom = colors.headerBottom),
             verticalAlignment = Alignment.CenterVertically,
@@ -203,7 +212,7 @@ private fun HeaderBlock(
 
 /** `.main-box-arrow`: 10 % wide, 7 % of the width above and below a 17 sp chevron; a tap switches the place. */
 @Composable
-private fun Arrow(glyph: String, colors: ForecastColors, width: Dp, onClick: () -> Unit, modifier: Modifier) {
+internal fun Arrow(glyph: String, colors: ForecastColors, width: Dp, onClick: () -> Unit, modifier: Modifier) {
     Box(modifier.width(width * 0.1f).clickable(onClick = onClick).padding(vertical = width * 0.07f), contentAlignment = Alignment.Center) {
         OutlinedText(glyph, line(17.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.ionicons), colors.headerOutline)
     }
@@ -254,7 +263,7 @@ private fun Temperature(value: String, size: Double, color: Color, modifier: Mod
  * WebView (Compose would make a Korean line taller).
  */
 @Composable
-private fun Summary(text: String, colors: ForecastColors, modifier: Modifier) {
+internal fun Summary(text: String, colors: ForecastColors, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
     val style = line(21.sp, TextUnit.Unspecified, colors.headerText).copy(textMotion = TextMotion.Animated)
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -279,16 +288,20 @@ private fun Summary(text: String, colors: ForecastColors, modifier: Modifier) {
  * so they zoom as a whole: their text grows with the scale and keeps its room, and the chart scrolls further.
  */
 @Composable
-private fun Zoomed(content: @Composable () -> Unit) {
+internal fun Zoomed(content: @Composable () -> Unit) {
     val density = LocalDensity.current
     CompositionLocalProvider(LocalDensity provides Density(density.density * density.fontScale, 1f), content = content)
 }
 
-/** `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. */
+/**
+ * `[photo-url]`: the photo under a dark veil fading to white at the bottom, covering the block at 0.8 opacity. The photo
+ * covers the box from its top left (`background-size: cover` at the default `background-position: 0 0`), so a wider
+ * photo is cut at the right.
+ */
 @Composable
 private fun PhotoBox(photo: ImageBitmap, gradient: Boolean, modifier: Modifier) {
     Box(modifier.graphicsLayer(alpha = 0.8f)) {
-        Image(photo, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
+        Image(photo, null, Modifier.matchParentSize(), alignment = Alignment.TopStart, contentScale = ContentScale.Crop, filterQuality = FilterQuality.High)
         if (gradient) {
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
                 0f to Color(0x4D000000), 0.95f to Color(0x4D000000), 1f to Color(0xE6FFFFFF))))
@@ -298,7 +311,7 @@ private fun PhotoBox(photo: ImageBitmap, gradient: Boolean, modifier: Modifier) 
 
 /** A `.card`: white with a soft line under it, 10 dp of padding above and below, a title, and 5 dp to the next. */
 @Composable
-private fun Card(colors: ForecastColors, title: String?, modifier: Modifier, onClick: (() -> Unit)?, body: @Composable ColumnScope.() -> Unit) {
+internal fun Card(colors: ForecastColors, title: String?, modifier: Modifier, onClick: (() -> Unit)?, body: @Composable ColumnScope.() -> Unit) {
     Column(modifier.fillMaxWidth().cardShadow().background(colors.card).padding(vertical = 10.dp)) {
         if (title != null) {
             CssText(AnnotatedString(title), plain(15.sp, colors.cardTitle), Modifier.padding(start = 5.dp, end = 5.dp, bottom = 10.dp))
@@ -313,7 +326,7 @@ private fun Card(colors: ForecastColors, title: String?, modifier: Modifier, onC
  * line, the grade and the value under it. [onAction] null: the table as a whole is the target.
  */
 @Composable
-private fun AqiTable(cells: List<AqiCell>, colors: ForecastColors, onAction: ((PageAction) -> Unit)?, modifier: Modifier = Modifier) {
+internal fun AqiTable(cells: List<AqiCell>, colors: ForecastColors, onAction: ((PageAction) -> Unit)?, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth()) {
         for (cell in cells) {
             val action = cell.action
@@ -338,7 +351,7 @@ private fun AqiTable(cells: List<AqiCell>, colors: ForecastColors, onAction: ((P
  * the glyph on the cell font's baseline, so it reaches the font's descent below the glyph.
  */
 @Composable
-private fun GlyphLine(glyph: String, color: Color) {
+internal fun GlyphLine(glyph: String, color: Color) {
     val density = LocalDensity.current
     // Measured on the Cordova screen: the glyph's box reaches 32.55 dp above the cell font's baseline.
     val descent = with(density) { CssMetrics.robotoDescent(17.sp.toPx()).toDp() }
@@ -387,7 +400,7 @@ private fun PollenButton(row: WeatherRow, theme: Theme, colors: ForecastColors, 
 
 /** `.colgroup-box` of the detail AQI card: the labels' column and the values' column, centered as one table. */
 @Composable
-private fun AirRows(rows: List<AirRow>, colors: ForecastColors, onAction: (PageAction) -> Unit) {
+internal fun AirRows(rows: List<AirRow>, colors: ForecastColors, onAction: (PageAction) -> Unit) {
     val text = colors.forced ?: colors.text
     Layout(
         content = {
@@ -523,7 +536,7 @@ private fun Attribution(attribution: Attribution, colors: ForecastColors, onActi
 
 /** An image of the theme's weather or icon folder (client/www/data/theme.js), [height] high with its own aspect. */
 @Composable
-private fun ThemeImage(image: PageImage, theme: Theme, height: Dp, modifier: Modifier = Modifier) {
+internal fun ThemeImage(image: PageImage, theme: Theme, height: Dp, modifier: Modifier = Modifier) {
     val images = rememberChartImages()
     val bitmap = images[(if (image.weather) theme.weather else theme.icons) + "/" + image.name]
     if (bitmap == null) {
@@ -536,7 +549,7 @@ private fun ThemeImage(image: PageImage, theme: Theme, height: Dp, modifier: Mod
 }
 
 /** A row's runs: the row's font, `<small>` at 0.8 of [base], `.sub-text` at 13 sp, its `<small>` at 10.4 sp, links. */
-private fun runs(runs: List<TextRun>, base: TextUnit, colors: ForecastColors, prefix: String = " "): AnnotatedString = buildAnnotatedString {
+internal fun runs(runs: List<TextRun>, base: TextUnit, colors: ForecastColors, prefix: String = " "): AnnotatedString = buildAnnotatedString {
     // The white space between the image and the text (`<img> <span>`).
     append(prefix)
     for (run in runs) {
@@ -554,20 +567,20 @@ private fun runs(runs: List<TextRun>, base: TextUnit, colors: ForecastColors, pr
 
 private const val INFO_GLYPH = ""
 
-private fun gradeColor(hex: String?): Color? = hex?.let { Color(android.graphics.Color.parseColor(it)) }
+internal fun gradeColor(hex: String?): Color? = hex?.let { Color(android.graphics.Color.parseColor(it)) }
 
 /**
  * Text without font padding, on the line its fonts give it (`line-height: normal`), with unhinted glyph advances: the
  * WebView's text widths, which hinted Compose text falls short of by up to 1 dp in a 17 sp line.
  */
-private fun plain(size: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal) =
+internal fun plain(size: TextUnit, color: Color, weight: FontWeight = FontWeight.Normal) =
     TextStyle(fontSize = size, color = color, fontWeight = weight, textMotion = TextMotion.Animated,
         platformStyle = PlatformTextStyle(includeFontPadding = false))
 
-private fun glyphStyle(size: TextUnit, color: Color, family: FontFamily) = plain(size, color).copy(fontFamily = family, lineHeight = size)
+internal fun glyphStyle(size: TextUnit, color: Color, family: FontFamily) = plain(size, color).copy(fontFamily = family, lineHeight = size)
 
 /** `box-shadow: 0 1px 1px rgba(0, 0, 0, .1)` under a card. */
-private fun Modifier.cardShadow() = drawBehind {
+internal fun Modifier.cardShadow() = drawBehind {
     drawRect(Color(0x14000000), Offset(0f, size.height), Size(size.width, 1.dp.toPx()))
 }
 
@@ -586,7 +599,7 @@ private fun Outlined(outline: Color?, content: @Composable (Color?, Modifier) ->
 
 /** Ionic's swipe on the header block: a horizontal fling of at least 0.4 dp/ms; left shows the next place. */
 @Composable
-private fun Modifier.swipe(onPrevious: () -> Unit, onNext: () -> Unit): Modifier {
+internal fun Modifier.swipe(onPrevious: () -> Unit, onNext: () -> Unit): Modifier {
     val density = LocalDensity.current
     val state = rememberDraggableState { }
     return draggable(state, Orientation.Horizontal, onDragStopped = { velocity ->

@@ -1,7 +1,7 @@
-// The Cordova sources that a set of references was captured from (chart-reference, shell-reference): each file of
-// the APK's www with the matching client/www file, whether Git tracks it and its last commit. Build outputs that
-// Git ignores (gulp sass of client/scss, Bower) name the tracked input they come from, which is recorded instead,
-// so that check-sources.mjs works on a clean checkout.
+// The Cordova sources that a set of references was captured from (chart, shell, forecast, air, settings, nation, privacy,
+// start, places and push references): each file of the APK's www with the matching client/www file, whether Git tracks it and its last
+// commit. Build outputs that Git ignores (gulp sass of client/scss, Bower) name the tracked input they come from,
+// which is recorded instead, so that check-sources.mjs works on a clean checkout.
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
@@ -14,6 +14,13 @@ export const REFERENCE_SETS = [
     {name: 'chart', provenance: 'core-domain/src/test/resources/chart-reference/provenance.json', tool: 'android/tools/chart-reference/capture.sh'},
     {name: 'shell', provenance: 'app/src/test/resources/shell-reference/provenance.json', tool: 'android/tools/shell-reference/capture.sh'},
     {name: 'forecast', provenance: 'app/src/test/resources/forecast-reference/provenance.json', tool: 'android/tools/forecast-reference/capture.sh'},
+    {name: 'air', provenance: 'app/src/test/resources/air-reference/provenance.json', tool: 'android/tools/air-reference/capture.sh'},
+    {name: 'settings', provenance: 'app/src/test/resources/settings-reference/provenance.json', tool: 'android/tools/settings-reference/capture.sh'},
+    {name: 'nation', provenance: 'app/src/test/resources/nation-reference/provenance.json', tool: 'android/tools/nation-reference/capture.sh'},
+    {name: 'privacy', provenance: 'app/src/test/resources/privacy-reference/provenance.json', tool: 'android/tools/privacy-reference/capture.sh'},
+    {name: 'start', provenance: 'app/src/test/resources/start-reference/provenance.json', tool: 'android/tools/start-reference/capture.sh'},
+    {name: 'places', provenance: 'app/src/test/resources/places-reference/provenance.json', tool: 'android/tools/places-reference/capture.sh'},
+    {name: 'push', provenance: 'app/src/test/resources/push-reference/provenance.json', tool: 'android/tools/push-reference/capture.sh'},
 ];
 
 /**

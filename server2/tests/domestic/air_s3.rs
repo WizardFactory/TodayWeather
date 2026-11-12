@@ -446,6 +446,11 @@ struct StubState {
     hours_ago: AtomicUsize,
     /// `hours_ago` applies to the next nationwide call only (later calls answer this hour).
     hours_ago_once: std::sync::atomic::AtomicBool,
+    /// The next this many nationwide answers have 용산구 an hour behind (AirKorea updates it
+    /// later).
+    lagging_answers: AtomicUsize,
+    /// Every nationwide answer has a station out of service, three hours behind.
+    out_of_service: std::sync::atomic::AtomicBool,
     /// Added to every PM10 value (distinguishes a later acquisition).
     pm10_offset: AtomicUsize,
     /// 1: 1,200 rows on two pages, 1,000 of the previous hour then 200 of this hour.
@@ -519,16 +524,26 @@ async fn handle(State(state): State<Arc<StubState>>, uri: Uri) -> impl IntoRespo
                 "body": {"totalCount": total, "items": items, "pageNo": page, "numOfRows": 1000}}});
             return ([("content-type", "application/json")], body.to_string());
         }
+        let lag = state
+            .lagging_answers
+            .try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+            .is_ok();
+        let behind = kst_text(now_ms() - (ago + 1.) * 3_600_000.);
         let items: Vec<serde_json::Value> = STATIONS
             .iter()
             .enumerate()
             .map(|(i, (name, _, _))| {
+                let hour = if lag && i == 2 { &behind } else { &hour };
                 json!({"stationName": name, "sidoName": "서울", "mangName": "도시대기",
                        "dataTime": hour, "pm10Value": format!("{}", 20 + i + offset), "pm25Value": "9",
                        "khaiValue": "50", "khaiGrade": "1", "pm10Grade1h": "1", "pm25Grade1h": "1",
                        "so2Value": "0.003", "coValue": "0.4", "o3Value": "0.03", "no2Value": "0.02"})
             })
             .chain(std::iter::once(json!({"stationName": "점검중", "sidoName": "서울", "dataTime": null})))
+            .chain(state.out_of_service.load(Ordering::SeqCst).then(|| {
+                json!({"stationName": "폐쇄", "sidoName": "서울", "mangName": "도시대기",
+                       "dataTime": kst_text(now_ms() - 3. * 3_600_000.), "pm10Value": "30"})
+            }))
             .collect();
         json!({"response": {"header": {"resultCode": "00", "resultMsg": "NORMAL_CODE"},
                "body": {"totalCount": items.len(), "items": items, "pageNo": 1, "numOfRows": 1000}}})
@@ -937,6 +952,84 @@ async fn the_hourly_capture_acquires_the_current_hour_while_demand_lasts() {
     let calls = stub.state.nationwide.load(Ordering::SeqCst);
     assert!(cold_answer(&transport, &store).await.is_some());
     assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), calls);
+}
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_capture_acquires_the_current_hour_again_while_a_station_lags() {
+    // KMA-AIR-REFRESH: AirKorea updates some stations after the hour's dataset is out. Legacy
+    // collected every 10 minutes; the capture reads the hour's newest stored dataset at each check
+    // and acquires the hour again while a station is an hour behind, without any request, and
+    // stops once every live station is current.
+    let _serial = SERIAL.lock().await;
+    let peer = Peer::new();
+    let transport = peer.transport();
+    let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
+    let stub = stub().await;
+    let inputs = AirInputs::new(transport.clone(), store.clone())
+        .with_acquire(Some(live(&peer, store.clone(), &stub.base)))
+        .with_capture_interval(Duration::from_millis(300));
+    // 용산구 stays an hour behind in the first two datasets; a station out of service (three
+    // hours behind) is in every dataset and never counts.
+    stub.state.lagging_answers.store(2, Ordering::SeqCst);
+    stub.state.out_of_service.store(true, Ordering::SeqCst);
+    let hour = kst(now_ms()).hour_start();
+    // The request acquires the hour; 용산구 is an hour behind in it.
+    let first = yongsan(&inputs).await.expect("an answer");
+    assert_eq!(first, kst_text(now_ms() - 3_600_000.));
+    assert_eq!(stub.state.nationwide.load(Ordering::SeqCst), 1);
+    // Without another request the capture acquires the hour twice more: the second dataset
+    // still lags (a later check, so a later key), the third is current.
+    let started = std::time::Instant::now();
+    while stub.state.nationwide.load(Ordering::SeqCst) < 3 {
+        assert!(
+            started.elapsed() < Duration::from_secs(30),
+            "{} acquisitions: no refresh while a station lags",
+            stub.state.nationwide.load(Ordering::SeqCst)
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    // Complete: ten further capture checks ask nothing more in this hour, although the station
+    // out of service stays behind.
+    tokio::time::sleep(Duration::from_millis(3_000)).await;
+    if kst(now_ms()).hour_start() == hour {
+        assert_eq!(
+            stub.state.nationwide.load(Ordering::SeqCst),
+            3,
+            "no refresh once every live station is current"
+        );
+    }
+    // A request folds the refreshed dataset: 용산구 is current.
+    let refreshed = loop {
+        let answer = yongsan(&inputs).await.expect("an answer");
+        if answer == kst_text(now_ms()) {
+            break answer;
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(60),
+            "the refresh never reached the answer"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    };
+    assert_eq!(refreshed, kst_text(now_ms()));
+}
+/// The `dataTime` of the 용산구 observation `inputs` answers now (None: missing data).
+async fn yongsan(inputs: &AirInputs<BoundedS3<HttpS3Transport>>) -> Option<String> {
+    let answer = inputs
+        .load(
+            &town(37.540033, 127.004850),
+            "서울특별시",
+            "용산구",
+            false,
+            false,
+            now_ms(),
+            deadline(),
+        )
+        .await;
+    let bytes = answer.arpltn.ok()?.to_bytes();
+    let json: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+    json.get("arpltn")?
+        .get("dataTime")?
+        .as_str()
+        .map(str::to_owned)
 }
 /// The merged observation a cold reader without an acquirer answers now (None: missing data).
 async fn cold_answer(

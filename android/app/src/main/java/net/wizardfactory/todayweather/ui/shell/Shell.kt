@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -43,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +64,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -117,10 +121,36 @@ object ShellTags {
     const val MENU = "shell-menu"
     const val MENU_BACK = "shell-menu-back"
     const val EXIT_DIALOG = "shell-exit-dialog"
+    const val BANNER = "shell-banner"
     fun tab(tab: Tab) = "shell-tab-${tab.state}"
     fun page(tab: Tab) = "shell-page-${tab.state}"
     fun row(row: MenuRow) = "shell-menu-${row.name.lowercase()}"
 }
+
+/**
+ * The selected tab and the side menu: the tab bar changes the tab, and so can a page (S03's air cells open the Air tab,
+ * S05's weather opens S03); the menu button opens the menu, and the rows that leave it close it (`toggleLeft`).
+ */
+class ShellNavigation(initial: Tab, menuOpen: Boolean = false) {
+    var selected: Tab by mutableStateOf(initial)
+    var menuOpen: Boolean by mutableStateOf(menuOpen)
+
+    companion object {
+        /** The tab and the menu; a state saved before the menu was kept (the tab's name alone) or with a tab no longer there restores what it can. */
+        val Saver: Saver<ShellNavigation, Any> = Saver(save = { listOf(it.selected.name, it.menuOpen) }, restore = { saved ->
+            val (tab, menu) = when (saved) {
+                is String -> saved to false
+                is List<*> -> saved.getOrNull(0) to (saved.getOrNull(1) == true)
+                else -> null to false
+            }
+            Tab.entries.firstOrNull { it.name == tab }?.let { ShellNavigation(it, menu) }
+        })
+    }
+}
+
+/** The selection, kept across configuration changes and process restores like the shell's other state. */
+@Composable
+fun rememberShellNavigation(startup: Tab): ShellNavigation = rememberSaveable(saver = ShellNavigation.Saver) { ShellNavigation(startup) }
 
 /**
  * What a tab shows: its page, and in the header bar its title with what follows it (the weather pages' location
@@ -128,6 +158,8 @@ object ShellTags {
  */
 class TabContent(
     val title: String = "",
+    /** A header of the tab's own in place of the title bar (S02's search field), given the colors and the menu's opener. */
+    val header: (@Composable (ShellColors, () -> Unit) -> Unit)? = null,
     val afterTitle: @Composable RowScope.(ShellColors) -> Unit = {},
     val actions: @Composable RowScope.(ShellColors) -> Unit = {},
     val scrolled: () -> Float = { 0f },
@@ -136,9 +168,13 @@ class TabContent(
 
 /**
  * The frame every screen shares (gate of AN-07, #2886): the page of the selected tab under its header bar, the
- * bottom tab bar, the full-screen side menu, the exit confirmation and a slot for the bottom banner (AN-15).
+ * bottom tab bar, the full-screen side menu, the exit confirmation and the bottom banner (AN-15).
  * Android back closes the menu, then a dialog, and on a main tab asks before leaving ([onExit]). [content] gives
  * the selected tab's page and bar; it is composed while its tab is selected, so a page starts afresh each time.
+ * [overlay] shows a page over the tab page and the tab bar (the settings pages, #2891): the tab stays as it was
+ * under it, as the Cordova tabs stayed cached under a page outside them. [popups] shows the app's own popups.
+ * Everything but the [banner] is drawn in the area the Cordova WebView had: the AdMob plugin put the banner under it,
+ * above the navigation bar, so the menu, the pages and the popups end at the banner's top edge while it shows.
  */
 @Composable
 fun TodayWeatherShell(
@@ -146,49 +182,70 @@ fun TodayWeatherShell(
     onRefresh: (Tab) -> Unit,
     onMenuRow: (MenuRow) -> Unit,
     onExit: () -> Unit,
-    banner: @Composable () -> Unit = {},
+    /** The banner while it shows (the plugin's `showBannerAd`); null: none, and the app has the whole window. */
+    banner: (@Composable () -> Unit)? = null,
+    navigation: ShellNavigation = rememberShellNavigation(state.startupTab),
+    /** A tab the user selected on the tab bar. */
+    onSelect: (Tab) -> Unit = {},
+    /** A tap on a tab before the shell handles it: true when the app took it (the start choice O02). */
+    onTabTap: (Tab) -> Boolean = { false },
+    overlay: @Composable BoxScope.() -> Unit = {},
+    popups: @Composable BoxScope.() -> Unit = {},
     content: @Composable (Tab) -> TabContent = { TabContent() },
 ) {
-    var selected by rememberSaveable { mutableStateOf(state.startupTab) }
-    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    val selected = navigation.selected
+    val menuOpen = navigation.menuOpen
     var exitAsked by rememberSaveable { mutableStateOf(false) }
     var lastTap by remember { mutableLongStateOf(0L) }
     val colors = ShellColors.of(state.theme, selected)
 
-    BackHandler(enabled = menuOpen) { menuOpen = false }
+    BackHandler(enabled = menuOpen) { navigation.menuOpen = false }
     BackHandler(enabled = !menuOpen && !exitAsked) { exitAsked = true }
 
     Box(Modifier.fillMaxSize().background(colors.page)) {
         Column(Modifier.fillMaxSize()) {
-            Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
-            Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
-                val tab = content(selected)
-                Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
-                    tab.page(this, colors)
-                    HeaderBar(colors, tab.title, onMenu = { menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
-                        scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
-                }
-                TabBar(selected, colors) { tab ->
-                    val now = System.currentTimeMillis()
-                    if (tab == selected) {
-                        // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
-                        if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
-                    } else {
-                        selected = tab
+            // The WebView's area. With a banner under it, the navigation bar is below the banner, not in this area.
+            val web = if (banner != null) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)) else Modifier
+            Box(Modifier.fillMaxWidth().weight(1f).then(web)) {
+                Column(Modifier.fillMaxSize()) {
+                    Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
+                    Box(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
+                        Column(Modifier.fillMaxSize()) {
+                            val tab = content(selected)
+                            Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
+                                tab.page(this, colors)
+                                val header = tab.header
+                                if (header != null) {
+                                    header(colors) { navigation.menuOpen = true }
+                                } else {
+                                    HeaderBar(colors, tab.title, onMenu = { navigation.menuOpen = true }, afterTitle = { tab.afterTitle(this, colors) },
+                                        scrolled = if (state.theme == Theme.PHOTO) tab.scrolled else ({ 0f })) { tab.actions(this, colors) }
+                                }
+                            }
+                            TabBar(selected, colors) { tab ->
+                                val now = System.currentTimeMillis()
+                                if (onTabTap(tab)) {
+                                    // Taken before the tab changes or reloads.
+                                } else if (tab == selected) {
+                                    // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
+                                    if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
+                                } else {
+                                    navigation.selected = tab
+                                    onSelect(tab)
+                                }
+                                lastTap = now
+                            }
+                        }
+                        overlay()
                     }
-                    lastTap = now
+                    Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
                 }
-                banner()
+                MenuPanel(state, navigation, onMenuRow)
+                popups()
             }
-            Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
-        }
-        AnimatedVisibility(
-            visible = menuOpen,
-            enter = slideInHorizontally(tween(200)) { -it },
-            exit = slideOutHorizontally(tween(200)) { -it },
-        ) {
-            SideMenu(state) { row ->
-                if (row == null) menuOpen = false else onMenuRow(row)
+            if (banner != null) {
+                Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).testTag(ShellTags.BANNER)) { banner() }
+                Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
             }
         }
         if (exitAsked) {
@@ -304,6 +361,20 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
     }
 }
 
+/** The side menu sliding in over the page (200 ms). */
+@Composable
+private fun MenuPanel(state: ShellState, navigation: ShellNavigation, onMenuRow: (MenuRow) -> Unit) {
+    AnimatedVisibility(
+        visible = navigation.menuOpen,
+        enter = slideInHorizontally(tween(200)) { -it },
+        exit = slideOutHorizontally(tween(200)) { -it },
+    ) {
+        SideMenu(state) { row ->
+            if (row == null) navigation.menuOpen = false else onMenuRow(row)
+        }
+    }
+}
+
 /**
  * The full-screen side menu (S06): the theme's header with the back arrow and the app name, then the rows. Plain
  * rows (`.item`) share 1 dp borders; the analytics, ad privacy, policy and terms rows are blocks
@@ -314,11 +385,7 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
     val colors = ShellColors.menu(state.theme)
     Column(Modifier.fillMaxSize().background(colors.menuList).testTag(ShellTags.MENU)) {
         Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
-        // A plain `.bar.bar-header`: the title is centered over the whole bar with its 10 dp margins.
-        Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
-            BarTitle(stringResource(R.string.LOC_TODAYWEATHER), colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
-            BarButton(Glyphs.ARROW_BACK, colors, { onRow(null) }, Modifier.padding(start = 5.dp).testTag(ShellTags.MENU_BACK))
-        }
+        PlainHeader(stringResource(R.string.LOC_TODAYWEATHER), colors, { onRow(null) }, Modifier.windowInsetsPadding(WindowInsets.sides), ShellTags.MENU_BACK)
         val rows = MenuRow.entries.filter { !it.krOnly || state.region == "KR" }
         Column(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides).verticalScroll(rememberScrollState())) {
             // Chrome puts each box edge on the device pixel nearest its fractional position; so does this list.
@@ -347,8 +414,20 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
     }
 }
 
+/**
+ * A plain `.bar.bar-header` (the menu, the settings pages): 44 dp in the theme's color with a hairline at the bottom,
+ * the title centered over the whole bar with its 10 dp margins and the back arrow at the left ([onBack]).
+ */
+@Composable
+internal fun PlainHeader(title: String, colors: ShellColors, onBack: () -> Unit, modifier: Modifier = Modifier, backTag: String) {
+    Box(modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
+        BarTitle(title, colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
+        BarButton(Glyphs.ARROW_BACK, colors, onBack, Modifier.padding(start = 5.dp).testTag(backTag))
+    }
+}
+
 /** The side insets the shell keeps clear of: a navigation bar or a camera cutout at the side in landscape. */
-private val WindowInsets.Companion.sides: WindowInsets
+internal val WindowInsets.Companion.sides: WindowInsets
     @Composable get() = safeDrawing.only(WindowInsetsSides.Horizontal)
 
 /** `.item`: a border above, 16 dp padding around a 16 sp line of 22.85 dp, and the value or a chevron at the right. */
@@ -371,7 +450,7 @@ private fun MenuItem(row: MenuRow, state: ShellState, colors: ShellColors, borde
  * leaves no room for both, the value moves under the label, 16 dp from the row's edges, and the row grows.
  */
 @Composable
-private fun LabelAndValue(label: String, value: String?, style: TextStyle, modifier: Modifier) {
+internal fun LabelAndValue(label: String, value: String?, style: TextStyle, modifier: Modifier) {
     Layout(content = { LineText(label, style); if (value != null) LineText(value, style) }, modifier) { parts, constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
         val right = parts.getOrNull(1)?.measure(loose)
@@ -419,11 +498,14 @@ internal fun Icon(content: @Composable () -> Unit) {
 
 /**
  * A CSS line of a fixed [height] (`line-height` in px): its text, which follows the font scale, centered in it as
- * the half-leading centers a line's font box.
+ * the half-leading centers a line's font box. A text taller than the line (a fallback font's box, a larger font scale)
+ * keeps its height and overflows the line equally above and below, as glyphs overflow a CSS line box.
  */
 @Composable
 internal fun FixedLine(height: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Box(modifier.height(height), contentAlignment = Alignment.Center) { content() }
+    Box(modifier.height(height), contentAlignment = Alignment.Center) {
+        Box(Modifier.wrapContentHeight(unbounded = true)) { content() }
+    }
 }
 
 /**
@@ -443,9 +525,14 @@ internal fun line(size: TextUnit, lineHeight: TextUnit, color: Color, weight: Fo
  * baseline. Icon fonts draw their own glyphs; an icon inside a line of text takes the text's baseline.
  */
 @Composable
-internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
+internal fun LineText(text: String, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) =
+    LineText(AnnotatedString(text), style, modifier, baselineOf, maxLines)
+
+/** [LineText] of styled text, such as [net.wizardfactory.todayweather.ui.text.chromeRuns]' font runs. */
+@Composable
+internal fun LineText(text: AnnotatedString, style: TextStyle, modifier: Modifier = Modifier, baselineOf: TextStyle = style, maxLines: Int = 1) {
     val measurer = rememberTextMeasurer()
-    val reference = if (baselineOf.fontFamily == null) "x" else text
+    val reference = if (baselineOf.fontFamily == null) AnnotatedString("x") else text
     val line = remember(baselineOf, reference, measurer) { measurer.measure(reference, baselineOf) }
     Text(text, modifier.layout { measurable, constraints ->
         val placeable = measurable.measure(constraints)

@@ -23,7 +23,13 @@ import net.wizardfactory.todayweather.core.storage.AppState
  * saved applied on top, in order. Since nothing else writes the store, the last saved state is always the newest. A
  * screen change whose save fails stays shown and is saved again with the next write.
  */
-class AppStateHolder(private val store: DataStore<AppState>, private val scope: CoroutineScope, migration: Deferred<AppState>) : StateAccess {
+class AppStateHolder(
+    private val store: DataStore<AppState>,
+    private val scope: CoroutineScope,
+    migration: Deferred<AppState>,
+    /** Each state saved to the store, and the one read after the migration, in order (the hand-back, AN-17). */
+    private val onSaved: (AppState) -> Unit = {},
+) : StateAccess {
     private sealed interface Write {
         /** A screen change, already shown. */
         class Change(val update: (AppState) -> AppState) : Write
@@ -63,6 +69,7 @@ class AppStateHolder(private val store: DataStore<AppState>, private val scope: 
                 saved = initial
                 publish()
             }
+            onSaved(initial)
             for (write in writes) {
                 // Earlier changes whose save failed go first in this one (only this writer changes the list).
                 val retry = synchronized(lock) { failed.toList() }
@@ -75,10 +82,12 @@ class AppStateHolder(private val store: DataStore<AppState>, private val scope: 
                             result.onSuccess { failed.clear(); saved = it }.onFailure { failed += write.update }
                             publish()
                         }
+                        result.onSuccess(onSaved)
                     }
                     is Write.Update -> {
                         val result = save { write.transform(withRetry(it)) }
                         result.onSuccess { synchronized(lock) { failed.clear(); saved = it; publish() } }
+                        result.onSuccess(onSaved)
                         result.fold(write.done::complete, write.done::completeExceptionally)
                     }
                 }

@@ -13,6 +13,7 @@ on:
       - "client/www/js/service.weatherinfo.js"
       - "client/www/templates/tab-forecast.html"
       - "client/www/templates/tab-dailyforecast.html"
+      - "client/www/templates/tab-air.html"
       - "client/www/css/ionic.app.css"
       - "client/www/lib/d3/d3.js"
       - "client/www/data/theme.js"
@@ -28,9 +29,31 @@ on:
       - "client/www/index.html"
       - "client/www/templates/tabs-android.html"
       - "client/www/js/controller.settingctrl.js"
+      - "client/www/js/controller.setting.radio.js"
+      - "client/www/js/service.util.js"
+      - "client/www/templates/units.html"
+      - "client/www/templates/setting-radio.html"
+      - "client/www/templates/nation.html"
+      - "client/www/templates/nation-air.html"
+      - "client/www/templates/kma-special.html"
+      - "client/www/js/service.monetization.js"
+      - "client/www/js/service.admobemi.js"
+      - "client/www/js/service.twads.js"
+      - "client/www/js/controller.start.js"
+      - "client/www/templates/start.html"
+      - "client/www/js/controller.searchctrl.js"
+      - "client/www/templates/tab-search.html"
+      - "client/www/js/controller.push.js"
+      - "client/www/js/service.firebase.js"
+      - "client/www/templates/setting-push.html"
+      - "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js"
+      - "client/bower.json"
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/android/icon/**"
       - "client/tw.resources/android-launcher-icon.png"
+      - "server/app.js"
+      - "server/routes/**"
+      - "server/package-lock.json"
       - ".github/workflows/android.yml"
   push:
     branches: [master]
@@ -46,6 +69,7 @@ on:
       - "client/www/js/service.weatherinfo.js"
       - "client/www/templates/tab-forecast.html"
       - "client/www/templates/tab-dailyforecast.html"
+      - "client/www/templates/tab-air.html"
       - "client/www/css/ionic.app.css"
       - "client/www/lib/d3/d3.js"
       - "client/www/data/theme.js"
@@ -61,9 +85,31 @@ on:
       - "client/www/index.html"
       - "client/www/templates/tabs-android.html"
       - "client/www/js/controller.settingctrl.js"
+      - "client/www/js/controller.setting.radio.js"
+      - "client/www/js/service.util.js"
+      - "client/www/templates/units.html"
+      - "client/www/templates/setting-radio.html"
+      - "client/www/templates/nation.html"
+      - "client/www/templates/nation-air.html"
+      - "client/www/templates/kma-special.html"
+      - "client/www/js/service.monetization.js"
+      - "client/www/js/service.admobemi.js"
+      - "client/www/js/service.twads.js"
+      - "client/www/js/controller.start.js"
+      - "client/www/templates/start.html"
+      - "client/www/js/controller.searchctrl.js"
+      - "client/www/templates/tab-search.html"
+      - "client/www/js/controller.push.js"
+      - "client/www/js/service.firebase.js"
+      - "client/www/templates/setting-push.html"
+      - "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js"
+      - "client/bower.json"
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/android/icon/**"
       - "client/tw.resources/android-launcher-icon.png"
+      - "server/app.js"
+      - "server/routes/**"
+      - "server/package-lock.json"
       - ".github/workflows/android.yml"
 permissions:
   contents: read
@@ -84,10 +130,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Imported client assets and golden corpus are current
+      - name: Imported client assets, golden corpus and server route table are current
         run: |
           python3 android/tools/import_client_assets.py
           node android/tools/corpus/generate.mjs
+          node android/tools/server-routes/generate.mjs
           git diff --exit-code -- android
           test -z "$(git status --porcelain -- android)"
       - name: Chart and shell references match the client sources

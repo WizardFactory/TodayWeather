@@ -328,7 +328,7 @@ mod tests {
         });
         let server =
             crate::observability::spawn(async move { axum::serve(listener, app).await.unwrap() });
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .no_proxy()
             .timeout(Duration::from_secs(2))
             .build()

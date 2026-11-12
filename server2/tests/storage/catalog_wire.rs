@@ -1362,3 +1362,323 @@ async fn repair_scope_foreign_period_partition_cannot_misfile_group() {
     ));
     assert_eq!(peer.puts(&foreign.key()).await, 0);
 }
+/// A targeted read of named members reads the catalog once and then only their groups: one
+/// descriptor and one raw body per member, never the other groups' descriptors.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn targeted_members_read_one_catalog_and_only_their_groups() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let mut members = Vec::new();
+    for fetch in 1..=30 {
+        let (d, raw) = singleton(fetch, 32, None);
+        members.push(raw[0].envelope.identity.clone());
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    let (d, _) = singleton(1, 32, None);
+    let id = d.partitions[0].clone();
+    let named = vec![members[29].clone(), members[3].clone(), members[17].clone()];
+    let before = peer.requests("GET ").await;
+    let PageOutcome::Ready(page) = store.lookup_members(&id, &named, deadline()).await.unwrap()
+    else {
+        panic!("complete members")
+    };
+    assert_eq!(peer.requests("GET ").await - before, 1 + 2 * named.len());
+    let read: Vec<_> = page
+        .acquisitions()
+        .iter()
+        .map(|a| a.records()[0].envelope.identity.clone())
+        .collect();
+    assert_eq!(read, named, "member order");
+    // A member the catalog does not list: nothing is answered.
+    let (_, unknown) = singleton(99, 32, None);
+    assert!(matches!(
+        store
+            .lookup_members(
+                &id,
+                &[members[0].clone(), unknown[0].envelope.identity.clone()],
+                deadline()
+            )
+            .await
+            .unwrap(),
+        PageOutcome::Incomplete
+    ));
+    // A member of another kind is refused.
+    let mut foreign_kind = members[0].clone();
+    foreign_kind.kind = "other".into();
+    assert!(matches!(
+        store.lookup_members(&id, &[foreign_kind], deadline()).await,
+        Err(Error::Invalid(_))
+    ));
+    let (other, foreign) = group(100, 2);
+    store
+        .publish(other.clone(), foreign.clone(), deadline())
+        .await
+        .unwrap();
+    // Both members of one group: the group is read once, its pages in order.
+    let PageOutcome::Ready(page) = store
+        .lookup_members(
+            &other.partitions[0],
+            &[
+                foreign[1].envelope.identity.clone(),
+                foreign[0].envelope.identity.clone(),
+            ],
+            deadline(),
+        )
+        .await
+        .unwrap()
+    else {
+        panic!("complete group")
+    };
+    assert_eq!(page.acquisitions().len(), 1);
+    assert_eq!(page.acquisitions()[0].records().len(), 2);
+    // The store deadline holds across many members.
+    peer.fault("slow-all", "unused").await;
+    let bounded = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            deadline: Duration::from_millis(100),
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let started = std::time::Instant::now();
+    assert!(matches!(
+        bounded.lookup_members(&id, &members, deadline()).await,
+        Err(Error::Timeout)
+    ));
+    assert!(started.elapsed() < Duration::from_secs(1));
+}
+/// The records of a restored set, by acquisition (envelope and bytes).
+fn restored(set: &CompleteSet) -> Vec<Vec<(Envelope, Vec<u8>)>> {
+    set.acquisitions()
+        .iter()
+        .map(|a| {
+            a.records()
+                .iter()
+                .map(|r| (r.envelope.clone(), r.bytes.to_vec()))
+                .collect()
+        })
+        .collect()
+}
+/// A wide lookup (opt-in per call) restores what a lookup restores: the same acquisitions,
+/// exclusions and dependencies, each object read once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_restores_what_a_lookup_restores() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let mut groups = Vec::new();
+    for fetch in 1..=3 {
+        let (d, raw) = group(fetch, fetch as u32);
+        store
+            .publish(d.clone(), raw.clone(), deadline())
+            .await
+            .unwrap();
+        groups.push((d, raw));
+    }
+    let id = groups[0].0.partitions[0].clone();
+    // The second group loses its last page: both lookups exclude it.
+    let lost = groups[1].1[1].envelope.identity.object_key().unwrap();
+    peer.fault("forget", &lost).await;
+    let before = peer.requests("GET ").await;
+    let narrow = ready(store.lookup(&id, deadline()).await.unwrap());
+    let narrow_gets = peer.requests("GET ").await - before;
+    let before = peer.requests("GET ").await;
+    let wide = ready(store.lookup_wide(&id, 4, deadline()).await.unwrap());
+    let wide_gets = peer.requests("GET ").await - before;
+    assert_eq!(narrow.acquisitions().len(), 2);
+    assert_eq!(narrow.excluded_groups(), 1);
+    assert_eq!(restored(&wide), restored(&narrow));
+    assert_eq!(wide.excluded_groups(), narrow.excluded_groups());
+    assert_eq!(wide.excluded_members(), narrow.excluded_members());
+    assert_eq!(wide.dependencies(), narrow.dependencies());
+    assert_eq!(wide.coverage(), narrow.coverage());
+    // Two catalogs, three descriptors and six pages (one missing), each read once.
+    assert_eq!((narrow_gets, wide_gets), (11, 11));
+}
+/// A wide lookup takes the store's further I/O admissions only when they are free: with the
+/// store's other admission held by a slow lookup, it restores one read at a time instead of
+/// waiting for it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_takes_only_free_admissions() {
+    let peer = Peer::new();
+    let store = Arc::new(
+        CatalogStore::new(
+            peer.transport(),
+            CatalogLimits {
+                io: 2,
+                ..CatalogLimits::default()
+            },
+        )
+        .unwrap(),
+    );
+    let (wide, raw) = group(1, 1);
+    store.publish(wide.clone(), raw, deadline()).await.unwrap();
+    let (slow, raw) = singleton(1, 32, None);
+    store.publish(slow.clone(), raw, deadline()).await.unwrap();
+    let slow_id = slow.partitions[0].clone();
+    peer.fault("delay", &slow_id.key()).await;
+    let held = tokio::spawn({
+        let (store, id) = (store.clone(), slow_id.clone());
+        async move { store.lookup(&id, deadline()).await.map(|_| ()) }
+    });
+    // The slow lookup holds its admission while the peer delays its catalog read.
+    let mut waited = 0;
+    while peer.requests(&format!("GET {}", slow_id.key())).await == 0 {
+        assert!(waited < 400, "the slow lookup never read its catalog");
+        tokio::time::sleep(Duration::from_millis(5)).await;
+        waited += 1;
+    }
+    let read = ready(
+        store
+            .lookup_wide(&wide.partitions[0], 2, deadline())
+            .await
+            .unwrap(),
+    );
+    assert!(
+        !held.is_finished(),
+        "the wide lookup waited for the held admission"
+    );
+    assert_eq!(read.acquisitions().len(), 1);
+    assert_eq!(read.acquisitions()[0].records().len(), 2);
+    held.await.unwrap().unwrap();
+}
+/// A wide lookup keeps the control byte budget of a lookup: with descriptors each within the
+/// per-object limit but together over the retained budget, both fail with Capacity at the same
+/// descriptor, and the wide lookup reads (and holds) no descriptor beyond it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_keeps_the_control_budget_of_a_lookup() {
+    let peer = Peer::new();
+    let store = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    for fetch in 1..=12 {
+        let (d, raw) = singleton(fetch, 32, None);
+        store.publish(d, raw, deadline()).await.unwrap();
+    }
+    let (d, _) = singleton(1, 32, None);
+    let id = d.partitions[0].clone();
+    // The catalog's size and its largest descriptor's.
+    let transport = peer.transport();
+    let catalog = transport
+        .get_control(&id.key(), 1 << 20)
+        .await
+        .unwrap()
+        .body;
+    let entries = Catalog::from_bytes(&catalog, &id, &CatalogLimits::default())
+        .unwrap()
+        .entries;
+    assert_eq!(entries.len(), 12);
+    let mut largest = 0;
+    for e in &entries {
+        let key = e.fetch_group.as_ref().unwrap().descriptor_key().unwrap();
+        let body = transport.get_control(&key, 1 << 20).await.unwrap().body;
+        largest = largest.max(body.len());
+    }
+    // Two descriptors fit beside the catalog, a third does not.
+    let tight = CatalogStore::new(
+        peer.transport(),
+        CatalogLimits {
+            control_bytes: catalog.len().max(largest),
+            retained_control_bytes: catalog.len() + 2 * largest + largest / 2,
+            ..CatalogLimits::default()
+        },
+    )
+    .unwrap();
+    let before = peer.requests("GET index/v2/groups/").await;
+    let narrow = tight.lookup(&id, deadline()).await;
+    let narrow_reads = peer.requests("GET index/v2/groups/").await - before;
+    let before = peer.requests("GET index/v2/groups/").await;
+    let wide = tight.lookup_wide(&id, 4, deadline()).await;
+    let wide_reads = peer.requests("GET index/v2/groups/").await - before;
+    assert!(matches!(narrow, Err(Error::Capacity)), "{narrow:?}");
+    assert!(matches!(wide, Err(Error::Capacity)), "{wide:?}");
+    assert_eq!(narrow_reads, 3);
+    assert_eq!(wide_reads, narrow_reads, "descriptors the wide lookup read");
+}
+/// The peer's transport, never answering a GET of `held`.
+struct Holding {
+    inner: HttpS3Transport,
+    held: String,
+}
+impl ObjectTransport for Holding {
+    async fn put(&self, record: &PreparedRecord) -> Result<u16, Error> {
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<Object, Error> {
+        self.inner.head(key).await
+    }
+    async fn get(&self, key: &str, maximum: usize) -> Result<Object, Error> {
+        if key == self.held {
+            std::future::pending::<()>().await;
+        }
+        self.inner.get(key, maximum).await
+    }
+    async fn ready(&self) -> Result<(), Error> {
+        self.inner.ready().await
+    }
+}
+impl CatalogTransport for Holding {
+    async fn get_control(&self, key: &str, maximum: usize) -> Result<ControlObject, Error> {
+        self.inner.get_control(key, maximum).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &WriteCondition,
+    ) -> Result<u16, Error> {
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        maximum_keys: usize,
+        maximum_bytes: usize,
+    ) -> Result<Vec<u8>, Error> {
+        self.inner
+            .list_raw_document(prefix, token, maximum_keys, maximum_bytes)
+            .await
+    }
+}
+/// A wide lookup leaves a group at its first missing page as a lookup does: the healthy group is
+/// restored and the other excluded, also when a later page of that group never answers (the wide
+/// lookup does not wait for it).
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn wide_lookup_leaves_a_group_at_its_first_missing_page() {
+    let peer = Peer::new();
+    let publisher = CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap();
+    let (healthy, raw) = group(1, 1);
+    publisher
+        .publish(healthy.clone(), raw, deadline())
+        .await
+        .unwrap();
+    let (broken, pages) = group(2, 2);
+    publisher
+        .publish(broken, pages.clone(), deadline())
+        .await
+        .unwrap();
+    // The second group's first page is missing and its second never answers.
+    let missing = pages[0].envelope.identity.object_key().unwrap();
+    peer.fault("forget", &missing).await;
+    let store = CatalogStore::new(
+        Holding {
+            inner: peer.transport(),
+            held: pages[1].envelope.identity.object_key().unwrap(),
+        },
+        CatalogLimits::default(),
+    )
+    .unwrap();
+    let id = healthy.partitions[0].clone();
+    let narrow = ready(store.lookup(&id, deadline()).await.unwrap());
+    let wide = match store
+        .lookup_wide(&id, 4, Instant::now() + Duration::from_secs(1))
+        .await
+    {
+        Ok(found) => ready(found),
+        Err(e) => panic!("wide lookup: {e:?}"),
+    };
+    assert_eq!(narrow.acquisitions().len(), 1);
+    assert_eq!(narrow.excluded_groups(), 1);
+    assert_eq!(restored(&wide), restored(&narrow));
+    assert_eq!(wide.excluded_groups(), narrow.excluded_groups());
+    assert_eq!(wide.excluded_members(), narrow.excluded_members());
+}

@@ -183,6 +183,11 @@ impl<T: CatalogTransport> WarningService<T> {
             }
         }
     }
+    /// The zone state memory answers now (a state the collector offered is taken over first).
+    pub(crate) fn ready_state(&self) -> Option<Arc<ZoneState>> {
+        self.adopt_offer();
+        Self::zone_memory(&self.zones, &self.config, true)
+    }
     /// Ends once [`Self::zone_state`] can answer from memory: now, or when the collector offers.
     pub async fn zones_ready(&self) {
         let mut offers = self.store.zone_offers();

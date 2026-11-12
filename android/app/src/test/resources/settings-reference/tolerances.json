@@ -1,0 +1,198 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova block height in device pixels (density 2), after leaving out the pixels a block hides under the tab bar"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in settings-reference/<lang>",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, and the advances of Korean glyphs (the settings rows and the popup use unhinted advances, TextMotion.Animated, which halved the difference). Line boxes follow the WebView: rows of 54.85 dp between shared 1 dp borders on Chrome's device pixels, the popup's body on `line-height: normal` (CssMetrics), its title and button lines on Roboto's baseline, so every comparison has the Cordova height. The S03 blocks are the forecast references' (AN-08) in °F and in the dark and photo themes; the photo covers the header block from its top left.",
+ "sensitivity": "Measured 2026-11-09 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-12/checks/mutations-1.log, mutations-2.log): rows 2 dp taller fail 19 comparisons, choices 4 dp to the right 19, the popup 10 dp wider 2, a lighter backdrop 2, the photo centered as AN-08 had it 1 (hourly-photo-0), the tab page's colors instead of the menu's 4 (photo and old themes). A check mark 4 dp higher and the popup's body on Compose's own line height change too few pixels to fail; SettingsGeometryTest compares the rows, the check mark and the popup's parts with the captured rects within 0.5 dp and fails for both.",
+ "cases": {
+  "en-US/about": {
+   "strong": 0.00266,
+   "mean": 2.152,
+   "heightDifference": 0
+  },
+  "en-US/units": {
+   "strong": 0.00336,
+   "mean": 1.351,
+   "heightDifference": 0
+  },
+  "ko-KR/about": {
+   "strong": 0.00659,
+   "mean": 3.359,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-dark-0": {
+   "strong": 0.00506,
+   "mean": 1.692,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-dark-1": {
+   "strong": 0.00137,
+   "mean": 1.452,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-dark-2": {
+   "strong": 0.00019,
+   "mean": 1.332,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-dark-3": {
+   "strong": 0.00083,
+   "mean": 1.867,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-dark-4": {
+   "strong": 0.00352,
+   "mean": 3.423,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-f-0": {
+   "strong": 0.00583,
+   "mean": 1.876,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-f-1": {
+   "strong": 0.00239,
+   "mean": 1.719,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-f-2": {
+   "strong": 0.00437,
+   "mean": 1.454,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-f-3": {
+   "strong": 0.00253,
+   "mean": 2.368,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-f-4": {
+   "strong": 0.00471,
+   "mean": 3.75,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-photo-0": {
+   "strong": 0.00048,
+   "mean": 2.34,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-photo-1": {
+   "strong": 0.00239,
+   "mean": 1.608,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-photo-2": {
+   "strong": 0.00437,
+   "mean": 1.454,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-photo-3": {
+   "strong": 0.00252,
+   "mean": 2.363,
+   "heightDifference": 0
+  },
+  "ko-KR/hourly-photo-4": {
+   "strong": 0.00471,
+   "mean": 3.75,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-airUnit": {
+   "strong": 0.00285,
+   "mean": 0.962,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-distanceUnit": {
+   "strong": 0.00218,
+   "mean": 0.523,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-precipitationUnit": {
+   "strong": 0.00274,
+   "mean": 0.614,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-pressureUnit": {
+   "strong": 0.00187,
+   "mean": 0.594,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-refreshInterval": {
+   "strong": 0.00329,
+   "mean": 0.732,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-startupPage": {
+   "strong": 0.00238,
+   "mean": 1.048,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-temperatureUnit": {
+   "strong": 0.00259,
+   "mean": 0.619,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-temperatureUnit-f": {
+   "strong": 0.00259,
+   "mean": 0.619,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-theme": {
+   "strong": 0.00307,
+   "mean": 1.019,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-theme-dark": {
+   "strong": 0.00489,
+   "mean": 1.145,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-theme-old": {
+   "strong": 0.00191,
+   "mean": 0.941,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-theme-photo": {
+   "strong": 0.00191,
+   "mean": 0.941,
+   "heightDifference": 0
+  },
+  "ko-KR/radio-windSpeedUnit": {
+   "strong": 0.00196,
+   "mean": 0.639,
+   "heightDifference": 0
+  },
+  "ko-KR/units": {
+   "strong": 0.00208,
+   "mean": 1.05,
+   "heightDifference": 0
+  },
+  "ko-KR/units-dark": {
+   "strong": 0.0047,
+   "mean": 1.222,
+   "heightDifference": 0
+  },
+  "ko-KR/units-f": {
+   "strong": 0.00203,
+   "mean": 1.047,
+   "heightDifference": 0
+  },
+  "ko-KR/units-old": {
+   "strong": 0.00154,
+   "mean": 1.0,
+   "heightDifference": 0
+  },
+  "ko-KR/units-photo": {
+   "strong": 0.00154,
+   "mean": 1.0,
+   "heightDifference": 0
+  }
+ }
+}

@@ -2,6 +2,7 @@
 mod backend;
 mod flight;
 pub mod owned;
+pub mod race;
 use crate::storage::{Error as StorageError, GroupDeclaration, RawRecord};
 pub use backend::{CatalogBackend, CheckedInput, RawView, ReadSelection, ResolutionRequest};
 pub use flight::{DrainReport, Metrics, Resolver, ResolverConfig, Response};

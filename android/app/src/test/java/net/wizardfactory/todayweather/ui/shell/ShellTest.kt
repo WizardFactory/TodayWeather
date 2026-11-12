@@ -1,5 +1,6 @@
 package net.wizardfactory.todayweather.ui.shell
 
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -9,11 +10,20 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.espresso.Espresso
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -127,5 +137,23 @@ class ShellTest {
         rule.waitForIdle()
         assertEquals(1, exits)
         assertTrue(refreshed.isEmpty())
+    }
+
+    /** The Cordova status bar (config.xml `StatusBarBackgroundColor` #111111): drawn edge to edge, light icons, the shell's #111111 behind them. */
+    @Test
+    fun theStatusBarIsDarkWithLightIcons() {
+        rule.runOnUiThread { rule.activity.enableShellSystemBars() }
+        show()
+        val window = rule.activity.window
+        assertEquals(android.graphics.Color.TRANSPARENT, window.statusBarColor)
+        assertFalse("light icons", WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars)
+        rule.runOnUiThread {
+            ViewCompat.dispatchApplyWindowInsets(rule.activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0),
+                WindowInsetsCompat.Builder().setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 48, 0, 0)).build())
+        }
+        rule.waitForIdle()
+        val image = rule.onRoot().captureToImage().asAndroidBitmap()
+        for (y in listOf(0, 47)) assertEquals("row $y", 0xFF111111.toInt(), image.getPixel(image.width / 2, y))
+        assertNotEquals("the header starts under it", 0xFF111111.toInt(), image.getPixel(image.width / 2, 48))
     }
 }

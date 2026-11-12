@@ -52,7 +52,7 @@ impl Client {
             .ok_or(GeocodeError::InvalidConfiguration)?;
         config.google_base_url = super::endpoint_root(&config.google_base_url)
             .ok_or(GeocodeError::InvalidConfiguration)?;
-        let http = reqwest::Client::builder()
+        let http = crate::dns::client()
             .no_proxy()
             .retry(reqwest::retry::never())
             .redirect(reqwest::redirect::Policy::none())

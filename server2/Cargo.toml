@@ -23,6 +23,8 @@ base64 = "0.22"
 flate2 = "1"
 md-5 = "0.10"
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+# KMA-RESTART-CPU: async name resolution for every HTTP client (no getaddrinfo on the blocking pool).
+hickory-resolver = { version = "0.26", default-features = false, features = ["system-config", "tokio"] }
 rusty-s3 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
@@ -39,11 +41,16 @@ hyper = { version = "1", default-features = false, features = ["client", "http1"
 hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
 # S15b-2: EUC-KR (KS X 1001) decoding of KMA AWS/city observation pages, as legacy iconv decodes them.
 encoding_rs = "0.8"
+# KMA-RESTART-BOUND: the global allocator (src/lib.rs). musl's malloc serializes every allocation
+# on one process-wide lock; on EC2 after a restart both vCPUs spent 47-70% of their samples there.
+mimalloc = { version = "0.1.52", default-features = false }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 # S15b-2: paused-clock tests of owned acquisition deadlines.
 tokio = { version = "1", features = ["test-util"] }
+# KMA-RESTART-BOUND: `mi_is_in_heap_region`, to check that heap allocations come from mimalloc.
+libmimalloc-sys = { version = "0.1.49", default-features = false, features = ["extended"] }
 
 [[bin]]
 name = "server2-feasibility"

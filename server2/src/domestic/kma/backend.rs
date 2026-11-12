@@ -37,6 +37,11 @@ pub trait KmaSource: Send + Sync {
     fn narrative_by(&self, deadline: Instant) -> Instant {
         deadline
     }
+    /// KMA-RESTART-RACE: when the narrative's stored read loses its head start (None: the read
+    /// starts when the answer attaches the narrative).
+    fn narrative_race(&self, _deadline: Instant) -> Option<Instant> {
+        None
+    }
 }
 /// Register the v000903 KMA handler with `source` and select it (`SERVER2_NATIVE_FAMILIES`
 /// contains `kma`; the runtime passes the S3 source built from the legacy S3 settings).
@@ -180,12 +185,34 @@ impl KmaBackend {
     /// S17b: assemble a parsed request (a gateway backend or a direct public route) from the
     /// source's snapshot. Async source preparation remaps KR before reads; a source compatibility
     /// marker is a counted dependency failure and cannot cause a legacy hop.
+    ///
+    /// Through the gateway `deadline` is the request's accept instant plus [`Self::request_budget`]
+    /// (KMA-RESTART-BOUND), so the instants the source derives from it (its head start and waits)
+    /// count from the accept, the geocode included; the `min` below only bounds direct callers.
     pub async fn outcome(
         &self,
         request: KmaRequest,
         deadline: Instant,
     ) -> Result<Outcome, GatewayError> {
         let deadline = deadline.min(Instant::now() + self.request_budget());
+        self.outcome_until(request, deadline, deadline).await
+    }
+    /// [`Self::outcome`] for one city of the nation composition (KMA-NATION-DEADLINE): the inputs
+    /// keep the request budget, and the assembly may queue for the CPU admission until `finish`.
+    pub async fn outcome_finishing(
+        &self,
+        request: KmaRequest,
+        finish: Instant,
+    ) -> Result<Outcome, GatewayError> {
+        let inputs = finish.min(Instant::now() + self.request_budget());
+        self.outcome_until(request, inputs, finish).await
+    }
+    async fn outcome_until(
+        &self,
+        request: KmaRequest,
+        deadline: Instant,
+        finish: Instant,
+    ) -> Result<Outcome, GatewayError> {
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
         }
@@ -195,6 +222,13 @@ impl KmaBackend {
         };
         if let Some(reply) = super::chain::preflight(&request) {
             return Ok(reply);
+        }
+        // The narrative's stored read starts with the request, beside the snapshot.
+        if let (Some(reader), Some(race_at)) =
+            (&self.narrative, self.source.narrative_race(deadline))
+            && let Some(office) = request.region.as_deref().and_then(crate::narrative::office)
+        {
+            reader.prefetch(office, race_at);
         }
         let store = match self.source.snapshot(&request, deadline).await {
             SourceAnswer::Snapshot(store) => store,
@@ -206,7 +240,7 @@ impl KmaBackend {
         let config = self.config;
         // S16: only a snapshot whose reads were complete records summaries.
         let inputs = self.summaries.as_ref().and_then(|_| store.summary_inputs());
-        let permit = tokio::time::timeout_at(deadline, self.cpu.clone().acquire_owned())
+        let permit = tokio::time::timeout_at(finish, self.cpu.clone().acquire_owned())
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;

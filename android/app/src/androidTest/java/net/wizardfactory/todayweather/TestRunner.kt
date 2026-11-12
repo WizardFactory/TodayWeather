@@ -5,10 +5,20 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonElement
+import net.wizardfactory.todayweather.core.domain.start.StartGate
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.PushRequest
+import net.wizardfactory.todayweather.ui.start.LocationPopupTags
+import org.junit.rules.TestRule
+import org.junit.runner.Description
+import org.junit.runners.model.Statement
 
 /**
  * Runs device tests with [TestTodayWeatherApp]: the push token comes from the `token` argument and push
@@ -50,6 +60,7 @@ class TestTodayWeatherApp : TodayWeatherApp() {
 
     override fun onEntryIntent(intent: Intent) {
         handled += intent to migration.isCompleted
+        super.onEntryIntent(intent)
     }
 
     /**
@@ -64,6 +75,40 @@ class TestTodayWeatherApp : TodayWeatherApp() {
         if (TestRunner.args.getString("transport") == "hold") kotlinx.coroutines.awaitCancellation()
         200
     }
+}
+
+/** Past the start page (AN-10): `startVersion` stored, as on an install that has added a place. */
+fun AppState.afterStart(): AppState = copy(cordovaExtras = cordovaExtras + ("startVersion" to StartGate.CLOSED))
+
+/**
+ * The saved state a device test of the tabs starts with, written before its activity opens: past the start page, with
+ * [seed] applied (a new install shows S01 instead). Put it outside the compose rule (`RuleChain`).
+ */
+class StateRule(private val seed: (AppState) -> AppState = { it }) : TestRule {
+    override fun apply(base: Statement, description: Description) = object : Statement() {
+        override fun evaluate() {
+            val app = ApplicationProvider.getApplicationContext<TestTodayWeatherApp>()
+            runBlocking {
+                app.migration.await()
+                app.appState.dataStore.updateData { seed(it.afterStart()) }
+            }
+            base.evaluate()
+        }
+    }
+}
+
+/**
+ * Without an enabled place the weather pages ask how to start (O02, AN-10): waits for it, then Android back answers
+ * "search" and the Locations tab shows, so a test of the shell goes on without a place. S02 then focuses its search
+ * field (AN-11); the keyboard is closed.
+ */
+fun AndroidComposeTestRule<*, *>.closeStartChoice() {
+    waitUntil(30_000) { onAllNodes(hasTestTag(LocationPopupTags.START_CHOICE)).fetchSemanticsNodes().isNotEmpty() }
+    Espresso.pressBack()
+    waitForIdle()
+    Thread.sleep(500)
+    Espresso.closeSoftKeyboard()
+    waitForIdle()
 }
 
 /** Body helper for assertions. */

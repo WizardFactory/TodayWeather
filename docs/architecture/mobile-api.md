@@ -87,6 +87,26 @@ See the [selection sequence](diagrams/air-forecast-selection.html),
 
 ## Public API and implemented backend
 
+### Current public-origin check, 2026-11-12 (#2937)
+
+A read-only recheck found CloudFront `weather/*` and `geocode/*` targeting
+`tw-svc-spot.wizardfactory.net` directly. This differs from the timestamped
+2026-09-20 API Gateway observations below; those are historical, not the current
+routing contract. The DNS address was an allocated but unassociated EIP, so the
+public first-launch weather requests timed out before conversion or navigation.
+After AK authorized attaching the existing EIP to the running service, public
+health and Tokyo/Seoul coordinate weather returned HTTP 200. No client/API source,
+DNS record, CloudFront behavior or consent logic changed in that recovery.
+
+The [dated artifact and verification record](../evidence/tasks/issue-2937/README.md)
+separates submitted-archive, isolated native and WKWebView evidence, with remaining
+limits. Use the [first-launch procedure](../operations/ios-first-launch-weather.md)
+for public-path, locale and recovery checks. This current observation does not date
+or establish the cause of the historical AdMob rejection screenshots. Existing
+diagrams retain their dated source/deployment scope; no request-flow redesign is
+claimed by the EIP restoration.
+
+
 Read-only AWS inspection and deployed Lambda code close the earlier missing-gateway gap. See [AWS/code correlation](aws-code-correlation.md) and [request diagram](diagrams/mobile-weather-request.html).
 
 | Boundary | Verified mapping | Remaining limit |

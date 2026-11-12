@@ -165,6 +165,11 @@ struct Capture {
     demand_ms: std::sync::atomic::AtomicI64,
     /// Nationwide hour partitions this process published.
     hours: std::sync::Mutex<HashSet<String>>,
+    /// Hours whose newest stored dataset has every live station current (KMA-AIR-REFRESH).
+    /// Until then the capture reads the hour's newest dataset at each check and acquires the hour
+    /// again while a station is an hour behind (AirKorea updates some stations after the hour's
+    /// dataset is out; legacy collected every 10 minutes).
+    complete: std::sync::Mutex<HashSet<String>>,
     started: std::sync::atomic::AtomicBool,
 }
 impl<T: IndexListing + Clone + 'static> AirInputs<T> {
@@ -269,12 +274,13 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
         if self.capture.started.swap(true, Ordering::AcqRel) {
             return;
         }
-        let (flights, generation, capture, every, clock) = (
+        let (flights, generation, capture, every, clock, reader) = (
             self.flights.clone(),
             self.generation.clone(),
             self.capture.clone(),
             self.capture_every,
             self.clock.clone(),
+            self.reader.clone(),
         );
         crate::observability::spawn(async move {
             // The first check is one interval after the first request (that request already
@@ -295,14 +301,44 @@ impl<T: IndexListing + Clone + 'static> AirInputs<T> {
                     hours.retain(|h| *h >= oldest);
                     hours.contains(&hour)
                 };
-                if !done {
+                let complete = {
+                    let mut complete = capture.complete.lock().unwrap_or_else(|e| e.into_inner());
+                    let oldest = hour_partition(now - 26. * HOUR_MS);
+                    complete.retain(|h| *h >= oldest);
+                    complete.contains(&hour)
+                };
+                let key = if !done {
+                    Some(format!("nationwide-{hour}"))
+                } else if complete {
+                    None
+                } else {
+                    // The hour is stored: read its newest dataset. Again while a station lags,
+                    // with one key per capture interval so the per-key retry throttle does not
+                    // stretch the 10-minute cadence; complete once every live station is current.
+                    match newest_lagging(&reader, &hour, now).await {
+                        Some(true) => {
+                            let window = (now / every.as_millis().max(1) as f64).floor();
+                            Some(format!("nationwide-{hour}-refresh-{window}"))
+                        }
+                        Some(false) => {
+                            capture
+                                .complete
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .insert(hour.clone());
+                            None
+                        }
+                        None => None,
+                    }
+                };
+                if let Some(key) = key {
                     // Start (or join) without waiting: the owned task runs on its own.
                     let _ = start_flight(
                         &flights,
                         acquire.clone(),
                         &generation,
                         &capture,
-                        &format!("nationwide-{hour}"),
+                        &key,
                         AirKoreaRequest::nationwide(),
                         Instant::now(),
                     )
@@ -1062,6 +1098,37 @@ pub async fn cpu_task<R: Send + 'static>(
     })
     .await
     .map_err(|_| "cpu task failed".to_owned())
+}
+/// Whether the newest stored nationwide dataset of `hour` has a station one hour behind (None:
+/// not readable now). Rows further behind are stations out of service and never count.
+async fn newest_lagging<T: IndexListing + Clone + 'static>(
+    reader: &Reader<T>,
+    hour: &str,
+    now: f64,
+) -> Option<bool> {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let fetched = reader
+        .all(
+            SOURCE,
+            "airkorea-station",
+            &key("sido-nationwide"),
+            &[hour.to_owned()],
+            deadline,
+        )
+        .await
+        .ok()?;
+    let newest = fetched.into_iter().max_by_key(|f| f.fetched_at_ms)?;
+    let hour_start = (now / HOUR_MS).floor() * HOUR_MS;
+    // National pages are large (about 335 KB): parse off the reactor.
+    crate::observability::spawn_blocking(move || {
+        page_items(&newest.pages)
+            .map(|items| Observations::parse(&items))
+            .unwrap_or_default()
+            .iter()
+            .any(|r| r.ms < hour_start && r.ms >= hour_start - HOUR_MS)
+    })
+    .await
+    .ok()
 }
 /// Start (or join) one owned acquisition; a published nationwide hour is remembered for the
 /// capture, and any publication advances the generation so readers re-read S3.

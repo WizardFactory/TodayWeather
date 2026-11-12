@@ -1,0 +1,27 @@
+{
+  "released_source": "97b57689",
+  "checkout": "e20c6547e2d90cb52cf018e3f02fec924fac3cd3",
+  "version": "1.1.1",
+  "build": "1",
+  "ipa_sha256": "307f6c5b02127e3168c075385fd7e9d1f371fbaf9896c95be713dcdd11b2a8fb",
+  "core_files": {
+    "js/controller.start.js": {
+      "archive_sha256": "a46f0c5f1c45375008c195fde9c35f74849c7b4173b777354cf61f13097e6f71",
+      "checkout_sha256": "a46f0c5f1c45375008c195fde9c35f74849c7b4173b777354cf61f13097e6f71"
+    },
+    "js/service.weatherutil.js": {
+      "archive_sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+      "checkout_sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+    }
+  },
+  "execution": "archive www in ad-hoc signed custom WKWebView on owned iPhone17 Pro/iOS26.5 simulator; not submitted IPA native execution",
+  "differences": [
+    "neutral generated client config without ads/provider credentials",
+    "simulated deviceready and Places ZERO_RESULTS; no Cordova plugin bridge",
+    "navigator ja-JP override; locale matrix $translate.use followed by recreated controller",
+    "live healthy-origin path via loopback proxy with Host override; no public DNS changed",
+    "preset selection programmatically calls actual StartCtrl handler; no physical taps",
+    "empty saved favorite list between cases, disabled current city retained; unit settings retained"
+  ],
+  "physical_device": "untouched"
+}

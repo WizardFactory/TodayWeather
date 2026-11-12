@@ -300,7 +300,7 @@ impl Geocoder {
         config.validate()?;
         let cache = MemoryCache::new(config.cache_bytes)?;
         let owners = Arc::new(Semaphore::new(config.max_owners));
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .no_proxy()
             .retry(reqwest::retry::never())
             .pool_max_idle_per_host(4)

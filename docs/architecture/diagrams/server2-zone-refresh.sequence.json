@@ -2,18 +2,14 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Proposed forecast-zone failure recovery",
+    "title": "Forecast zones from the newest stored list",
     "output": "docs/architecture/diagrams/server2-zone-refresh.html",
     "quality_profile": "showcase",
     "locale": "en",
-    "viewBox": [
-      1040,
-      665
-    ],
     "column_fit": "spread",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f3883e25e94ac97b9226ba1e99b5a23bccd16ecd",
+      "revision": "9c8d68aa24f6b18b011025aec295dabbd0815caa",
       "link_mode": "local-only"
     }
   },
@@ -26,9 +22,9 @@
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 365,
-          "end_line": 414,
-          "label": "Existing interface / proposed recovery change"
+          "line": 536,
+          "end_line": 555,
+          "label": "zones(): memory, check time, selector"
         }
       ]
     },
@@ -36,13 +32,13 @@
       "id": "source",
       "type": "backend",
       "label": "Zone source",
-      "sublabel": "stored data first",
+      "sublabel": "memory first",
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 365,
-          "end_line": 414,
-          "label": "Existing interface / proposed recovery change"
+          "line": 536,
+          "end_line": 555,
+          "label": "zones(): install only a higher identity"
         }
       ]
     },
@@ -50,41 +46,41 @@
       "id": "owned",
       "type": "backend",
       "label": "Owned flight",
-      "sublabel": "one refresh key",
+      "sublabel": "one acquisition key",
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 382,
-          "end_line": 410,
-          "label": "Existing interface / proposed recovery change"
+          "line": 692,
+          "end_line": 739,
+          "label": "acquire_zones(): 24 h rule, owned flight"
         }
       ]
     },
     {
       "id": "gate",
       "type": "backend",
-      "label": "Retry admission",
-      "sublabel": "existing five minutes",
+      "label": "Catalog index",
+      "sublabel": "control objects only",
       "sources": [
         {
-          "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 198,
-          "end_line": 226,
-          "label": "Existing interface / proposed recovery change"
+          "path": "server2/src/domestic/kma/source/records.rs",
+          "line": 230,
+          "end_line": 278,
+          "label": "listed_groups(): catalog control objects only"
         }
       ]
     },
     {
       "id": "acquire",
       "type": "external",
-      "label": "Published list",
-      "sublabel": "provider + S3",
+      "label": "Provider + S3",
+      "sublabel": "publish, then read",
       "sources": [
         {
           "path": "server2/src/domestic/kma/source/mod.rs",
-          "line": 1348,
-          "end_line": 1361,
-          "label": "Existing interface / proposed recovery change"
+          "line": 605,
+          "end_line": 688,
+          "label": "newest_zone_list(): anchor, members, identity"
         }
       ]
     }
@@ -92,150 +88,130 @@
   "segments": [
     {
       "from": 150,
-      "to": 550,
-      "label": "Proposed demand-triggered recovery"
+      "to": 450,
+      "label": "Request: memory or newest-list selection"
+    },
+    {
+      "from": 460,
+      "to": 640,
+      "label": "Background acquisition when stale"
     }
   ],
   "messages": [
     {
-      "id": "step-0",
+      "id": "step-170",
       "from": "caller",
       "to": "source",
       "y": 170,
       "label": "Read zones",
-      "variant": "default"
+      "variant": "emphasis",
+      "note": "Checked in the last 10 minutes: answer from memory."
     },
     {
-      "id": "step-1",
+      "id": "step-222",
       "from": "source",
-      "to": "owned",
-      "y": 198,
-      "label": "No success: join key",
-      "variant": "emphasis"
+      "to": "gate",
+      "y": 222,
+      "label": "List partitions and groups",
+      "variant": "default",
+      "note": "Completion instant and member raw hashes, no bodies."
     },
     {
-      "id": "step-2",
-      "from": "owned",
-      "to": "gate",
-      "y": 226,
-      "label": "New owner: claim memo",
+      "id": "step-280",
+      "from": "gate",
+      "to": "source",
+      "y": 280,
+      "label": "Candidates, newest key first",
       "variant": "default"
     },
     {
-      "id": "step-3",
-      "from": "gate",
-      "to": "owned",
-      "y": 254,
-      "label": "Due: admit once",
-      "variant": "return"
-    },
-    {
-      "id": "step-4",
-      "from": "owned",
+      "id": "step-325",
+      "from": "source",
       "to": "acquire",
-      "y": 282,
-      "label": "Collect and publish",
-      "variant": "emphasis"
+      "y": 325,
+      "label": "Read the chosen group only",
+      "variant": "default",
+      "note": "One descriptor and its pages; identity rechecked."
     },
     {
-      "id": "step-5",
+      "id": "step-382",
       "from": "acquire",
-      "to": "owned",
-      "y": 310,
-      "label": "Failure: no success latch",
-      "variant": "return"
-    },
-    {
-      "id": "step-6",
-      "from": "owned",
       "to": "source",
-      "y": 338,
-      "label": "Keep last-good memory",
-      "variant": "return"
+      "y": 382,
+      "label": "First eligible list is the anchor",
+      "variant": "default",
+      "note": "Then the previous day; stop."
     },
     {
-      "id": "step-7",
+      "id": "step-428",
       "from": "source",
       "to": "caller",
-      "y": 366,
-      "label": "Stored / partial result",
-      "variant": "return"
+      "y": 428,
+      "label": "Zones of the newest list",
+      "variant": "default",
+      "note": "Installed only when the identity is higher."
     },
     {
-      "id": "step-8",
-      "from": "caller",
-      "to": "source",
-      "y": 394,
-      "label": "Demand after five minutes",
-      "variant": "default"
-    },
-    {
-      "id": "step-9",
+      "id": "step-485",
       "from": "source",
       "to": "owned",
-      "y": 422,
-      "label": "Still no success: join",
-      "variant": "default"
+      "y": 485,
+      "label": "Older than 24 h: join key",
+      "variant": "default",
+      "note": "Not awaited by the request."
     },
     {
-      "id": "step-10",
-      "from": "owned",
-      "to": "gate",
-      "y": 450,
-      "label": "Expired memo: claim",
-      "variant": "default"
-    },
-    {
-      "id": "step-11",
-      "from": "gate",
-      "to": "owned",
-      "y": 478,
-      "label": "Admit next attempt",
-      "variant": "return"
-    },
-    {
-      "id": "step-12",
+      "id": "step-532",
       "from": "owned",
       "to": "acquire",
-      "y": 506,
-      "label": "Complete readable publish",
-      "variant": "emphasis"
+      "y": 532,
+      "label": "Collect and publish",
+      "variant": "default",
+      "note": "Five-minute claim unchanged."
     },
     {
-      "id": "step-13",
+      "id": "step-580",
+      "from": "acquire",
+      "to": "owned",
+      "y": 580,
+      "label": "Complete readable list",
+      "variant": "default"
+    },
+    {
+      "id": "step-622",
       "from": "owned",
       "to": "source",
-      "y": 534,
-      "label": "Invalidate, latch success",
-      "variant": "return"
+      "y": 622,
+      "label": "Install if newer",
+      "variant": "default"
     }
   ],
   "cards": [
     {
-      "dot": "amber",
-      "title": "Proposed contract, not runtime evidence",
+      "dot": "cyan",
+      "title": "Newest list, answer level",
       "items": [
-        "Pinned parent marks requested at start; this design moves success after readable publication.",
-        "Error, None, panic, empty or malformed result leaves retry eligibility.",
-        "No new timer, pre-collection, mode or operating allowance."
+        "Answers use only the newest complete list’s active zones (AK 2026-11-10).",
+        "No fold since 202601, no daily refold, no per-process success latch.",
+        "Corrupt or transport errors keep today’s handling; nothing readable gives the packaged zones."
       ]
     },
     {
       "dot": "emerald",
-      "title": "Preserve the existing owner",
+      "title": "Bounded restart read",
       "items": [
-        "One forecast-zones flight; immediate request wait and original owned lifetime.",
-        "Five-minute monotonic admission is claimed only by the flight creator.",
-        "Caller cancellation does not cancel acquisition; success stops process refresh."
+        "One LIST page per 1,000 partitions, one catalog per partition examined, one descriptor and its pages per tried group.",
+        "Identical lists in older partitions are never read.",
+        "A list of day D−2 or older cannot complete after one of day D (200 s provider budget)."
       ]
     },
     {
-      "dot": "slate",
-      "title": "S3 remains authoritative",
+      "dot": "amber",
+      "title": "Freshness",
       "items": [
-        "Failed refresh retains last-good memory; complete published list invalidates it.",
-        "Existing ten-minute incremental refresh and daily refold are unchanged.",
-        "D2 capacity, live providers, quota, whole-service readiness and shadow are not qualified."
+        "Acquire when the newest identity is older than 24 h or nothing is stored.",
+        "One owned flight and the five-minute claim are unchanged.",
+        "Re-confirming the same identity only updates the check time."
       ]
     }
   ]

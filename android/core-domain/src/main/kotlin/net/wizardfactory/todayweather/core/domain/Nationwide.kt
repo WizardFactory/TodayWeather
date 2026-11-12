@@ -25,6 +25,9 @@ object Nationwide {
     )
     val AIR_TYPES = listOf("pm2.5", "pm10", "o3", "no2", "so2", "co")
 
+    /** The label background without a grade: `.nation-label` in the stylesheet and `grade2Color`'s fallback. */
+    const val NO_GRADE = "rgba(0, 0, 0, 0.4)"
+
     enum class Mode { SKY_TEMPERATURE, RAIN, WIND }
 
     data class WeatherLabel(val icon: String?, val text1: JsonElement?, val text2: JsonElement?)
@@ -58,7 +61,7 @@ object Nationwide {
 
     /** NationAirCtrl `grade2Color`: the grade color at 0.8 alpha, or translucent black without data. */
     fun airColor(nation: NationResponse, type: String, name: String, airUnit: String?): String {
-        val fallback = "rgba(0, 0, 0, 0.4)"
+        val fallback = NO_GRADE
         val city = nation.air.firstOrNull { (it.raw("sidoName") as? JsonPrimitive)?.content == name } ?: return fallback
         val grade = city.raw(airKey(type) + "Grade") ?: return fallback
         val standard = AirQuality.standard(airUnit) ?: return fallback

@@ -94,20 +94,24 @@ object ShellFit {
     private fun Rect.contains(other: Rect) =
         other.left >= left - 0.5f && other.top >= top - 0.5f && other.right <= right + 0.5f && other.bottom <= bottom + 0.5f
 
-    /** Texts that are cut: ellipsized or overflowing their line, or reaching past the sides of [safe]. */
-    fun texts(rule: AndroidComposeTestRule<*, *>, where: String, safe: Rect?): List<String> =
+    /**
+     * Texts that are cut: ellipsized or overflowing their line, or reaching past the sides of [safe]. Texts matching
+     * [designed] are cut by design (S05's gauge bands end with an ellipsis, `text-overflow: ellipsis`) and only checked
+     * against [safe].
+     */
+    fun texts(rule: AndroidComposeTestRule<*, *>, where: String, safe: Rect?, designed: SemanticsMatcher? = null): List<String> =
         rule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes()
-            .mapNotNull { node -> cut(node, safe)?.let { "$where: \"${node.text()}\" $it" } }
+            .mapNotNull { node -> cut(node, safe, designed?.matches(node) == true)?.let { "$where: \"${node.text()}\" $it" } }
 
-    private fun cut(node: SemanticsNode, safe: Rect?): String? {
+    private fun cut(node: SemanticsNode, safe: Rect?, designed: Boolean = false): String? {
         val layouts = mutableListOf<TextLayoutResult>()
         node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
         val layout = layouts.firstOrNull() ?: return "has no text layout"
-        if ((0 until layout.lineCount).any { layout.isLineEllipsized(it) }) return "is ellipsized"
+        if (!designed && (0 until layout.lineCount).any { layout.isLineEllipsized(it) }) return "is ellipsized"
         // The paragraph's width is the width it may take; a cut single line is wider than the size it got. A text
         // that wraps within its lines is whole.
         val width = layout.multiParagraph.intrinsics.maxIntrinsicWidth
-        if (layout.multiParagraph.didExceedMaxLines || layout.didOverflowHeight || (layout.lineCount == 1 && width > layout.size.width + 0.5f)) {
+        if (!designed && (layout.multiParagraph.didExceedMaxLines || layout.didOverflowHeight || (layout.lineCount == 1 && width > layout.size.width + 0.5f))) {
             return "overflows (${width}x${layout.multiParagraph.height} in ${layout.size})"
         }
         // Bounds are clipped to what shows: empty for an empty text or a row scrolled out of view.

@@ -47,7 +47,7 @@ pub struct HttpTransport {
 }
 impl HttpTransport {
     pub fn new() -> Result<Self, Error> {
-        let client = reqwest::Client::builder()
+        let client = crate::dns::client()
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .retry(reqwest::retry::never())

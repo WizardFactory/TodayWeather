@@ -8,7 +8,9 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
 import net.wizardfactory.todayweather.core.domain.AddressFormat
 
 /** One request to the legacy push API; [path] is relative to the server URL. */
@@ -60,6 +62,119 @@ object PushRegistration {
 
     fun postList(state: PushState, ctx: Context) = PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
         JsonArray(state.records.map { postObject(it, state, ctx) }))
+
+    /**
+     * `Push.updateUnits` after a unit change (#1845; S08, #2891): the list as `loadPushInfo` repaired it, posted again
+     * with the new units of [ctx]; nothing without records or a token (`_postPushList` stops without one).
+     */
+    fun onUnitsChanged(push: PushState, places: List<Place>, ctx: Context): Result {
+        val state = push.copy(records = push.records.map { repair(it, places) })
+        if (state.records.isEmpty() || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(postList(state, ctx)), state)
+    }
+
+    /**
+     * `Push.updateCityInfo(cityIndex)`, which `WeatherInfo.updateCity` calls after each update of a place: the records of
+     * [index] take the place's simple info ([CityInfo.simple]). When anything changed, the list is saved and only those
+     * records are posted (with a token; `_postPushList` stops without one). Without simple info, or for a record without
+     * a town when the place has one, the Cordova code throws and nothing is saved or sent.
+     */
+    /**
+     * `Push.removePushListByCityIndex(index)` after S02 deletes a place or turns the current position off (AN-11):
+     * `DELETE /push` with the token, else the registration ID, and the index; the place's records are dropped and no
+     * other record is renumbered (A24, kept). Without a token or a registration ID nothing is sent or removed.
+     */
+    fun onCityRemoved(push: PushState, index: Int, ctx: Context): Result {
+        val credential = when {
+            !push.fcmToken.isNullOrEmpty() -> "fcmToken" to push.fcmToken
+            !push.registrationId.isNullOrEmpty() -> "registrationId" to push.registrationId
+            else -> return Result(emptyList(), push)
+        }
+        val request = PushRequest("DELETE", "${ctx.versionPath}/push", jsonHeaders(ctx, language = false),
+            JsonObject(mapOf("cityIndex" to JsonPrimitive(index), credential.first to JsonPrimitive(credential.second))))
+        val records = push.records.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull != index }
+        return Result(listOf(request), push.copy(records = records))
+    }
+
+    /**
+     * `Push.updatePushListByCityIndex(list, index)`, the S09 save (AN-14): the records of [index] are replaced by [list]
+     * (appended after the others, which keep `loadPushInfo`'s repair as the Cordova list in memory did), and only [list]
+     * is posted (`POST /push-list`; nothing without a token, `_postPushList`). Without a [ctx] (no server) the records are
+     * replaced and nothing is sent.
+     */
+    fun onPlaceSaved(push: PushState, places: List<Place>, list: List<JsonObject>, index: Int, ctx: Context?): Result {
+        val records = push.records.map { repair(it, places) }.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull != index } + list
+        val state = push.copy(records = records)
+        if (ctx == null || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
+            JsonArray(list.map { postObject(it, state, ctx) }))), state)
+    }
+
+    /**
+     * The post of [index]'s list after an S09 save (`_postPushList`, AN-14): its records as stored, where [onPlaceSaved]
+     * appended them, so the request equals the one [onPlaceSaved] builds for the list it stored. Nothing without records
+     * (the place was removed since), a token or a [ctx].
+     */
+    fun placePost(push: PushState, index: Int, ctx: Context?): List<PushRequest> {
+        val list = push.records.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull == index }
+        if (ctx == null || list.isEmpty() || push.fcmToken.isNullOrEmpty()) return emptyList()
+        return listOf(PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
+            JsonArray(list.map { postObject(it, push, ctx) })))
+    }
+
+    /** The post of the whole list after O06's OK (AN-14): the records as stored; nothing without a token or a [ctx]. */
+    fun listPost(push: PushState, ctx: Context?): List<PushRequest> =
+        if (ctx == null || push.fcmToken.isNullOrEmpty()) emptyList() else listOf(postList(push, ctx))
+
+    /**
+     * `Push.enableAlertForOldAlarm(enable)`, the answer to O06 (AN-14): OK ([enable]) turns every alert on and posts the
+     * whole list (with a token); Close changes nothing. Either answer saves the list, which ends the introduction
+     * ([PushState.needsAlertIntro]); Android back answers nothing.
+     */
+    fun onAlertIntro(push: PushState, places: List<Place>, enable: Boolean, ctx: Context?): Result {
+        var state = push.copy(records = push.records.map { repair(it, places) }, needsAlertIntro = false)
+        if (!enable) return Result(emptyList(), state)
+        state = state.copy(records = state.records.map {
+            if ((it["category"] as? JsonPrimitive)?.content == "alert") JsonObject(it + ("enable" to JsonPrimitive(true))) else it
+        })
+        if (ctx == null || state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(postList(state, ctx)), state)
+    }
+
+    fun onCityChanged(push: PushState, places: List<Place>, index: Int, ctx: Context): Result {
+        val unchanged = Result(emptyList(), push)
+        val info = places.getOrNull(index)?.let(CityInfo::simple) ?: return unchanged
+        var changed = false
+        val records = push.records.map { record ->
+            if ((record["cityIndex"] as? JsonPrimitive)?.intOrNull != index) return@map record
+            val out = record.toMutableMap()
+            // `for (var key in city)`: name and source always (an undefined value removes the key), then location and town.
+            for (key in listOf("name", "source")) {
+                val value = info[key]
+                if (out[key] != value) changed = true
+                if (value == null) out.remove(key) else out[key] = value
+            }
+            info["location"]?.let { location ->
+                val old = out["location"] as? JsonObject
+                if (old == null || number(old["lat"]) != number(location.jsonObject["lat"]) || number(old["long"]) != number(location.jsonObject["long"])) changed = true
+                out["location"] = location
+            }
+            info["town"]?.let { town ->
+                val old = out["town"] as? JsonObject ?: return unchanged
+                if (listOf("first", "second", "third").any { old[it] != town.jsonObject[it] }) changed = true
+                out["town"] = town
+            }
+            JsonObject(out)
+        }
+        if (!changed) return unchanged
+        val state = push.copy(records = records)
+        val list = records.filter { (it["cityIndex"] as? JsonPrimitive)?.intOrNull == index }
+        if (state.fcmToken.isNullOrEmpty()) return Result(emptyList(), state)
+        return Result(listOf(PushRequest("POST", "${ctx.versionPath}/push-list", jsonHeaders(ctx, language = true),
+            JsonArray(list.map { postObject(it, state, ctx) }))), state)
+    }
+
+    private fun number(value: JsonElement?): Double? = (value as? JsonPrimitive)?.doubleOrNull
 
     private fun jsonHeaders(ctx: Context, language: Boolean) = buildMap {
         put("Content-Type", "application/json")

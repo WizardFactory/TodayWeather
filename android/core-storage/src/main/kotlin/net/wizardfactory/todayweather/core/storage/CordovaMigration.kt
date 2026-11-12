@@ -75,7 +75,8 @@ object CordovaMigration {
         val push = push(parse("pushData2"), parse("pushData"), places, nowMillis, zone, report)
         val expand = (parse("expandShortChart") as? JsonPrimitive)?.booleanOrNull
         report["expandShortChart"] = if (expand != null) "migrated" else report["expandShortChart"] ?: "default"
-        val extras = EXTRA_KEYS.mapNotNull { k -> parse(k)?.let { k to it } }.toMap()
+        // `_setBackwardCompatibility`: a store with only the old `guideVersion` starts as if `startVersion` had it.
+        val extras = EXTRA_KEYS.mapNotNull { k -> (parse(k) ?: if (k == "startVersion") parse("guideVersion") else null)?.let { k to it } }.toMap()
         extras.keys.forEach { report[it] = "migrated" }
         return AppState(
             places = places, placeIndex = placeIndex, units = units, settings = settings, push = push,
@@ -210,11 +211,7 @@ object CordovaMigration {
         report["pushData"] = "legacy"
         val alerts = alarms.map { a ->
             val cityIndex = (a["cityIndex"] as? JsonPrimitive)?.intOrNull ?: -1
-            newRecord(cityIndex, 1, places) + mapOf(
-                "startTime" to JsonPrimitive(secs2date(7 * 3600, nowMillis, zone)),
-                "endTime" to JsonPrimitive(secs2date(22 * 3600, nowMillis, zone)),
-                "enable" to JsonPrimitive(false), "category" to JsonPrimitive("alert"),
-            )
+            PushRecords.newAlert(1, cityIndex, 7.0, 22.0, places, nowMillis, zone) + ("enable" to JsonPrimitive(false))
         }
         val converted = alarms.map { a ->
             val cityIndex = (a["cityIndex"] as? JsonPrimitive)?.intOrNull ?: -1
@@ -264,13 +261,6 @@ object CordovaMigration {
             } == true
             else -> false
         }
-    }
-
-    /** `newPushAlert` base fields with `_getSimpleCityInfo`; a city without location or town gets only the base. */
-    private fun newRecord(cityIndex: Int, id: Int, places: List<Place>): Map<String, JsonElement> {
-        val base = linkedMapOf<String, JsonElement>("cityIndex" to JsonPrimitive(cityIndex), "id" to JsonPrimitive(id))
-        val info = places.getOrNull(cityIndex)?.let(CityInfo::simple) ?: return base
-        return base + info
     }
 
     /**

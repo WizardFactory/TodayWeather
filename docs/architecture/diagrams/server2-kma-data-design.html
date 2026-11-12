@@ -5431,7 +5431,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="474.475" y="1693" width="163.79999999999998" height="18" rx="3" class="c-mask"/>
           <text x="556.375" y="1703" class="t-muted" font-size="11" text-anchor="middle">Read and bounded repair</text>
         </g>
-        <text data-detail="context" x="319.25" y="1731" class="t-muted" font-size="7"><tspan x="319.25" dy="0">Zone state and KASI restore from</tspan><tspan x="319.25" dy="11">one stored fold; a restore holds</tspan><tspan x="319.25" dy="11">a request at most 500 ms.</tspan></text>
+        <text data-detail="context" x="319.25" y="1731" class="t-muted" font-size="7"><tspan x="319.25" dy="0">Stored folds restore first; at</tspan><tspan x="319.25" dy="11">700 ms providers fill what is</tspan><tspan x="319.25" dy="11">still missing. Other reads use</tspan><tspan x="319.25" dy="11">the bulk lane.</tspan></text>
         </g>
 
         <g data-edge-from="owner" data-edge-to="provider" data-edge-label="If gap: qualified reacquisition" data-edge-key="22" data-edge-id="reacquire">
@@ -5747,7 +5747,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>Writer owns charged raw before Ready; server body end/drop, no waiters, a10s cap or shutdown releases S3 publication.</li>
           <li>Default virtual reservation768MiB, shrunk to actual retained bytes; retries preserve originals. S16 waits for a frozen durability fence after the body.</li>
-          <li>A request stops waiting 2.5 s after it starts and omits what is late. It reads the image forecast the process timer produced and decodes no GIF. Warning zone state reaches it before the collector publishes.</li>
+          <li>A request stops waiting 2.5 s after the request is accepted and omits what is late. It reads the image forecast the process timer produced and decodes no GIF. Warning zone state reaches it before the collector publishes.</li>
         </ul>
       </div>
 
@@ -5758,7 +5758,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </div>
         <ul>
           <li>Canonical v2 raw/catalog/group controls remain the restore authority. Same selected original closure must replay exactly.</li>
-          <li>The collector stores zone-state daily, KASI capture stores kasi-fold and the image timer airkorea-forecast-hourly: folds of raw inputs, never assembled weather.</li>
+          <li>The collector stores zone-state daily, KASI capture stores kasi-fold, folding processes store station-pages per day and the image timer airkorea-forecast-hourly: folds of raw inputs, never assembled weather.</li>
           <li>Per-grid optimal combinations, source plans, day locators, heads and packs remain deferred. Single EC2 runs only: the cold p95 gate is not qualified.</li>
         </ul>
       </div>

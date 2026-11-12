@@ -19,8 +19,9 @@ object WeatherRequests {
      * The URL for [place], or null when it has neither coordinates nor an address (Cordova rejects with
      * `invalid_input`). Coordinates win when the latitude is truthy (A05: latitude 0 falls back to the address). An
      * address gets `대한민국 ` when it lacks it and is split into a KMA town; when no part is left, the free-form route
-     * gets the address as stored, which the gateway answers with 501. Nothing is encoded here, as in Cordova; the
-     * HTTP client encodes spaces and non-ASCII characters as the WebView did.
+     * gets the address as stored, which the legacy server does not serve (its gateway answers 404; the AWS Lambda
+     * answered 501; exception E1 of `RequestPathsTest`). Nothing is encoded here, as in Cordova; the HTTP client
+     * encodes spaces and non-ASCII characters as the WebView did.
      */
     fun url(baseUrl: String, place: Place, units: UnitSettings): String? {
         val location = place.location

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup up to API 30: the same files as data_extraction_rules.xml. -->
+<full-backup-content>
+    <include domain="file" path="app_state.json" />
+    <include domain="root" path="app_webview/Default/Local Storage/" />
+    <include domain="root" path="app_webview/Local Storage/" />
+    <include domain="sharedpref" path="group.net.wizardfactory.todayweather.xml" />
+</full-backup-content>

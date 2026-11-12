@@ -1,0 +1,71 @@
+{
+  "task": "KMA-RESTART-RACE",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Observed KMA path after a restart: when a source's stored restore is not done at a 700 ms head start, start its provider acquisition alongside (station pages, ASOS history with the default station list, life slots, narrative, warnings); fill only absent hours of today and yesterday; reads no request waits for use the bulk lane. No deployment or production mutation.",
+  "server2_paths": [
+    "server2/config/tasks/KMA-RESTART-RACE.json",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/source/forecast_input.rs",
+    "server2/src/domestic/kma/source/life_input.rs",
+    "server2/src/domestic/kma/source/life_live.rs",
+    "server2/src/domestic/kma/source/mod.rs",
+    "server2/src/domestic/kma/source/observe.rs",
+    "server2/src/domestic/kma/source/records.rs",
+    "server2/src/history/transport.rs",
+    "server2/src/narrative/mod.rs",
+    "server2/src/narrative/store.rs",
+    "server2/src/resolver/mod.rs",
+    "server2/src/resolver/race.rs",
+    "server2/src/storage/catalog.rs",
+    "server2/src/warnings/service.rs",
+    "server2/src/warnings/store.rs",
+    "server2/src/world/air_store.rs",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/observe.rs",
+    "server2/tests/domestic/observe_product.rs",
+    "server2/tests/narrative/cache.rs",
+    "server2/tests/resolver.rs",
+    "server2/tests/resolver/race.rs",
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-kma-restart-race.md",
+      "category": "documentation",
+      "reason": "Task intent."
+    },
+    {
+      "path": "specs/issue-2614-kma-restart-race.md",
+      "category": "documentation",
+      "reason": "Acceptance."
+    },
+    {
+      "path": "plans/issue-2614-kma-restart-race.md",
+      "category": "documentation",
+      "reason": "Plan."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Restart race, lanes and fills."
+    },
+    {
+      "path": "docs/architecture/server2-kma-data-design.md",
+      "category": "documentation",
+      "reason": "Restart read order and provider fills."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.json",
+      "category": "documentation",
+      "reason": "Data design diagram source."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-kma-data-design.html",
+      "category": "documentation",
+      "reason": "Regenerated diagram."
+    }
+  ]
+}

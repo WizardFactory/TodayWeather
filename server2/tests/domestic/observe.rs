@@ -80,7 +80,7 @@ pub(super) fn asos_body(items: Vec<serde_json::Value>) -> Vec<u8> {
                  "totalCount": items.len()}}}))
     .unwrap()
 }
-fn asos_hourly() -> Vec<u8> {
+pub(super) fn asos_hourly() -> Vec<u8> {
     let mut items = Vec::new();
     for d in 17..=23 {
         for h in 0..24 {
@@ -93,7 +93,7 @@ fn asos_hourly() -> Vec<u8> {
     }
     asos_body(items)
 }
-fn asos_daily() -> Vec<u8> {
+pub(super) fn asos_daily() -> Vec<u8> {
     asos_body(
         (17..=23)
             .map(|d| {
@@ -331,7 +331,7 @@ fn len(j: &OrderedJson) -> usize {
         _ => panic!("array"),
     }
 }
-fn town(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
+pub(super) fn town(snapshot: &dyn server2::domestic::kma::KmaStore) -> serde_json::Value {
     let towns = snapshot.towns().unwrap();
     let OrderedJson::Array(list) = towns else {
         panic!()
@@ -790,6 +790,71 @@ async fn minute_pages_stay_within_the_readers_reach() {
     );
 }
 
+/// KMA-MINUTE-PAGE: a minute page within the readers' reach answers at once; the next page is
+/// acquired beside the request. On EC2 (2026-11-07) the KMA minute page took 2.1-2.6 s, at the
+/// observed 2.5 s bound, so the request that started it waited and still answered the old page.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_held_minute_page_answers_while_the_next_one_is_acquired() {
+    use server2::domestic::kma::source::observe::Observations;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    let store =
+        Arc::new(CatalogStore::new(peer.transport_limited(4), CatalogLimits::default()).unwrap());
+    // A first process stores the 10:49 minute page with the hourly and city pages.
+    let first = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        store.clone(),
+        Arc::new(Scripted::new(Duration::ZERO)),
+        Arc::new(Table(Mutex::new(0))),
+    ));
+    let now = NOW as i64;
+    let mut stored = false;
+    for _ in 0..40 {
+        let folded = first
+            .stations(now, Instant::now() + Duration::from_secs(3))
+            .await;
+        if folded.is_some_and(|f| !f.minute.docs().is_empty()) {
+            stored = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    assert!(stored, "the 10:49 page");
+    // A restarted process asks three minutes later, when the next page is due; the provider
+    // takes 3 s to answer it.
+    let slow = Arc::new(Scripted::new(Duration::from_secs(3)));
+    let second = Arc::new(Observations::new(
+        peer.transport_limited(4),
+        store,
+        slow.clone(),
+        Arc::new(Table(Mutex::new(0))),
+    ));
+    let later = now + 3 * 60_000;
+    let started = std::time::Instant::now();
+    let folded = second
+        .stations(later, Instant::now() + Duration::from_millis(2_500))
+        .await
+        .expect("a fold");
+    assert!(
+        started.elapsed() < Duration::from_millis(1_500),
+        "the request waited for the next page: {:?}",
+        started.elapsed()
+    );
+    assert!(
+        !folded.minute.docs().is_empty(),
+        "the held 10:49 page answers"
+    );
+    // The next page is acquired beside the request.
+    let asked = std::time::Instant::now();
+    while !slow.calls.lock().unwrap().iter().any(|c| c == "aws-minute") {
+        assert!(
+            asked.elapsed() < Duration::from_secs(10),
+            "the next page was never acquired"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
 /// The carried 2026-10-15 export (`data/kmastninfos.seed.jsonl`) parses with its recorded
 /// counts, and an older imported export does not replace it.
 #[test]
@@ -1044,4 +1109,467 @@ async fn same_hour_aws_and_city_restore_respects_fetched_order_and_field_presenc
         assert_eq!(get(hourly, "weather").string(), Some("맑음".into()));
         assert_eq!(get(hourly, "cloud").to_bytes(), b"3");
     }
+}
+
+/// Counts S3 requests at the transport boundary by method and object class (`raw/v2/source/kind`,
+/// `index/v2/source/kind`, `index/v2/groups` descriptors, `list index/v2/source/kind`); every
+/// request passes through to the S06 loopback peer. A bulk view ([`IndexListing::bulk_view`])
+/// shares the counts and also counts its requests as `bulk ...` (KMA-RESTART-RACE lanes).
+///
+/// [`IndexListing::bulk_view`]: server2::history::IndexListing::bulk_view
+/// Held GETs: the key prefix, how many pass first, the hold and how many were seen.
+type Delay = (String, usize, Duration, usize);
+#[derive(Clone)]
+pub(super) struct Counted {
+    inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>,
+    counts: Arc<Mutex<HashMap<String, usize>>>,
+    /// GETs of keys under a prefix after the first `n` (counted here) are held this long.
+    delay: Arc<Mutex<Option<Delay>>>,
+    /// GETs of keys under this prefix fail.
+    fail: Arc<Mutex<Option<String>>>,
+    /// Requests of stored keys (or LIST prefixes) under a gate's prefixes wait until the test
+    /// opens it: a slow store. Keys written through this transport are not held (a new
+    /// acquisition's publication reads back what it wrote).
+    gates: Arc<Mutex<Vec<Gate>>>,
+    written: Arc<Mutex<std::collections::HashSet<String>>>,
+    /// The bulk lane's view.
+    bulk: bool,
+    /// Bulk-lane requests wait while this is false (a full bulk lane).
+    bulk_open: Arc<tokio::sync::watch::Sender<bool>>,
+}
+impl Counted {
+    pub(super) fn new(inner: server2::world::BoundedS3<server2::storage::HttpS3Transport>) -> Self {
+        Self {
+            inner,
+            counts: Arc::default(),
+            delay: Arc::default(),
+            fail: Arc::default(),
+            gates: Arc::default(),
+            written: Arc::default(),
+            bulk: false,
+            bulk_open: Arc::new(tokio::sync::watch::channel(true).0),
+        }
+    }
+    /// Hold every GET of a key under `prefix` after its first `after` for `hold`.
+    pub(super) fn delay_gets(&self, prefix: &str, after: usize, hold: Duration) {
+        *self.delay.lock().unwrap() = Some((prefix.to_owned(), after, hold, 0));
+    }
+    /// Fail every GET of a key under `prefix` (None: none).
+    pub(super) fn fail_gets(&self, prefix: Option<&str>) {
+        *self.fail.lock().unwrap() = prefix.map(str::to_owned);
+    }
+    /// Hold every request of a stored key or LIST prefix under one of `prefixes` until the
+    /// returned gate opens (KMA-RESTART-RACE: a restore that ends where the test says, not at an
+    /// instant a slow runner can reach late).
+    pub(super) fn hold(&self, prefixes: &[&str]) -> Gate {
+        let gate = Gate {
+            prefixes: prefixes.iter().map(|p| (*p).to_owned()).collect(),
+            open: Arc::new(tokio::sync::watch::channel(false).0),
+            held: Arc::new(tokio::sync::watch::channel(0).0),
+        };
+        self.gates.lock().unwrap().push(gate.clone());
+        gate
+    }
+    /// The bulk lane's view: the same counts, its requests also counted as `bulk ...`.
+    pub(super) fn bulk(&self) -> Self {
+        Self {
+            inner: self.inner.bulk(),
+            bulk: true,
+            ..self.clone()
+        }
+    }
+    /// Hold every bulk-lane request until [`Self::open_bulk`] (a lane full of other work).
+    pub(super) fn close_bulk(&self) {
+        self.bulk_open.send_replace(false);
+    }
+    pub(super) fn open_bulk(&self) {
+        self.bulk_open.send_replace(true);
+    }
+    fn held(&self, key: &str) -> Option<Duration> {
+        let mut delay = self.delay.lock().unwrap();
+        let (prefix, after, hold, seen) = delay.as_mut()?;
+        if !key.starts_with(prefix.as_str()) {
+            return None;
+        }
+        *seen += 1;
+        (*seen > *after).then_some(*hold)
+    }
+    fn failed(&self, key: &str) -> bool {
+        self.fail
+            .lock()
+            .unwrap()
+            .as_deref()
+            .is_some_and(|prefix| key.starts_with(prefix))
+    }
+    fn class(key: &str) -> String {
+        if key.starts_with("index/v2/groups/") {
+            "index/v2/groups".to_owned()
+        } else {
+            key.split('/').take(4).collect::<Vec<_>>().join("/")
+        }
+    }
+    /// Count one request, then wait for the bulk lane and (reads of stored keys) a slow store.
+    async fn admit(&self, method: &str, key: &str) {
+        self.count(method, key);
+        if self.bulk {
+            let mut open = self.bulk_open.subscribe();
+            let _ = open.wait_for(|open| *open).await;
+        }
+        if method == "PUT" {
+            self.written.lock().unwrap().insert(key.to_owned());
+            return;
+        }
+        if self.written.lock().unwrap().contains(key) {
+            return;
+        }
+        let gates: Vec<Gate> = self
+            .gates
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|g| g.prefixes.iter().any(|p| key.starts_with(p.as_str())))
+            .cloned()
+            .collect();
+        for gate in gates {
+            gate.pass().await;
+        }
+    }
+    fn count(&self, method: &str, key: &str) {
+        let class = Self::class(key);
+        let mut counts = self.counts.lock().unwrap();
+        let mut add = |what: String| {
+            if self.bulk {
+                *counts.entry(format!("bulk {what}")).or_default() += 1;
+            }
+            *counts.entry(what).or_default() += 1;
+        };
+        add(format!("{method} {class}"));
+        // Raw records also by KST day (`raw/v2/source/kind/YYYY/MM/DD`).
+        if key.starts_with("raw/") {
+            add(format!(
+                "{method} {}",
+                key.split('/').take(7).collect::<Vec<_>>().join("/")
+            ));
+        }
+    }
+    /// Requests so far of `method` and `class` (for example `GET raw/v2/kma-web/aws-minute`);
+    /// `bulk GET ...` counts those of the bulk lane.
+    pub(super) fn get(&self, what: &str) -> usize {
+        self.counts.lock().unwrap().get(what).copied().unwrap_or(0)
+    }
+    /// Every count so far.
+    pub(super) fn counts(&self) -> HashMap<String, usize> {
+        self.counts.lock().unwrap().clone()
+    }
+}
+impl server2::storage::ObjectTransport for Counted {
+    async fn put(
+        &self,
+        record: &server2::storage::PreparedRecord,
+    ) -> Result<u16, server2::storage::Error> {
+        self.admit("PUT", &record.key).await;
+        self.inner.put(record).await
+    }
+    async fn head(&self, key: &str) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.admit("HEAD", key).await;
+        self.inner.head(key).await
+    }
+    async fn get(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::Object, server2::storage::Error> {
+        self.admit("GET", key).await;
+        if let Some(hold) = self.held(key) {
+            tokio::time::sleep(hold).await;
+        }
+        if self.failed(key) {
+            return Err(server2::storage::Error::Transport);
+        }
+        self.inner.get(key, max).await
+    }
+}
+impl server2::storage::CatalogTransport for Counted {
+    async fn get_control(
+        &self,
+        key: &str,
+        max: usize,
+    ) -> Result<server2::storage::ControlObject, server2::storage::Error> {
+        self.admit("GET", key).await;
+        self.inner.get_control(key, max).await
+    }
+    async fn put_control(
+        &self,
+        key: &str,
+        body: &[u8],
+        condition: &server2::storage::WriteCondition,
+    ) -> Result<u16, server2::storage::Error> {
+        self.admit("PUT", key).await;
+        self.inner.put_control(key, body, condition).await
+    }
+    async fn list_raw_document(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+        keys: usize,
+        bytes: usize,
+    ) -> Result<Vec<u8>, server2::storage::Error> {
+        self.admit("LIST", prefix).await;
+        self.inner
+            .list_raw_document(prefix, token, keys, bytes)
+            .await
+    }
+}
+impl server2::history::IndexListing for Counted {
+    async fn list_index(
+        &self,
+        prefix: &str,
+        token: Option<&str>,
+    ) -> Result<server2::storage::ListPage, server2::storage::Error> {
+        self.admit("LIST", prefix).await;
+        self.inner.list_index(prefix, token).await
+    }
+    fn bulk_view(&self) -> Self {
+        self.bulk()
+    }
+}
+
+/// The raw objects of the station restore (`Flight::Load`): the station pages, the day products and
+/// the station seed. The town RSS, also `kma-web`, is read by every request and is not raced.
+pub(super) const STATION_RAW: [&str; 4] = [
+    "raw/v2/kma-web/aws-",
+    "raw/v2/kma-web/city-obs/",
+    "raw/v2/kma-web/station-pages/",
+    "raw/v2/kma-web/kma-stn-info/",
+];
+/// A test's gate in front of a slow store ([`Counted::hold`]): the reads it holds wait until the
+/// test opens it, so the order of a restore and an answer is the test's. Open it as soon as the
+/// answer it must follow is in: a read held past the 3 s S06 lookup deadline fails.
+#[derive(Clone)]
+pub(super) struct Gate {
+    prefixes: Vec<String>,
+    open: Arc<tokio::sync::watch::Sender<bool>>,
+    /// Reads that arrived while it was closed.
+    held: Arc<tokio::sync::watch::Sender<usize>>,
+}
+impl Gate {
+    async fn pass(&self) {
+        let mut open = self.open.subscribe();
+        if *open.borrow() {
+            return;
+        }
+        self.held.send_modify(|n| *n += 1);
+        let _ = open.wait_for(|open| *open).await;
+    }
+    /// Whether a read was held (the stored read started before the gate opened).
+    pub(super) fn was_reached(&self) -> bool {
+        *self.held.borrow() > 0
+    }
+    /// Let the held reads and every later one through.
+    pub(super) fn open(&self) {
+        self.open.send_replace(true);
+    }
+}
+
+/// A KMA page record as the S13 acquirer stores it.
+pub(super) fn page_record(
+    kind: &str,
+    hour: Publication,
+    fetched_at: u64,
+    body: Vec<u8>,
+) -> RawRecord {
+    let key = server2::storage::ProviderKey::Named {
+        id: if kind == "city-obs" {
+            "city-national"
+        } else {
+            "aws-national"
+        }
+        .into(),
+    };
+    let content = if kind == "city-obs" {
+        "text/html;charset=utf-8"
+    } else {
+        "text/html;charset=euc-kr"
+    };
+    RawRecord::new(
+        "kma-web",
+        kind,
+        &key,
+        hour.period(),
+        fetched_at,
+        200,
+        content,
+        None,
+        body.into(),
+        &CatalogLimits::default().raw,
+    )
+    .unwrap()
+}
+fn one_group(record: &RawRecord) -> GroupDeclaration {
+    let partition = format!("{:08}", record.envelope.identity.period.local_date);
+    let member = GroupMember {
+        envelope: record.envelope.clone(),
+        catalogs: vec![CatalogId::for_record(&record.envelope.identity, &partition).unwrap()],
+    };
+    GroupDeclaration::new(vec![member], &CatalogLimits::default()).unwrap()
+}
+/// Publish one KMA page record as the S13 acquirer does (one group, the day catalog).
+pub(super) async fn publish_record<T: server2::storage::CatalogTransport>(
+    store: &CatalogStore<T>,
+    record: RawRecord,
+) {
+    store
+        .publish(one_group(&record), vec![record], deadline())
+        .await
+        .unwrap();
+}
+/// Store the raw body [`store_pages_without`] left out (a repair of its group).
+pub(super) async fn repair_raw<T>(transport: &T, record: &RawRecord)
+where
+    T: server2::storage::CatalogTransport + Clone,
+{
+    let limits = CatalogLimits::default();
+    let attached = one_group(record)
+        .attach(vec![record.clone()], &limits)
+        .unwrap();
+    server2::storage::RawRecordStore::new(transport.clone(), limits.raw.clone())
+        .unwrap()
+        .publish(attached[0].clone())
+        .await
+        .unwrap();
+}
+/// Store many page groups as their publications leave them (descriptor, raw body, one catalog
+/// entry each), writing each new day catalog once: the S3 test peer keeps 64 revisions of an
+/// object, fewer than the publications of a day.
+pub(super) async fn store_pages<T>(transport: &T, records: Vec<RawRecord>)
+where
+    T: server2::storage::CatalogTransport + Clone,
+{
+    store_pages_without(transport, records, &[]).await;
+}
+/// [`store_pages`], leaving out the raw bodies of `missing` (S06 then excludes their groups).
+pub(super) async fn store_pages_without<T>(
+    transport: &T,
+    records: Vec<RawRecord>,
+    missing: &[server2::storage::RecordId],
+) where
+    T: server2::storage::CatalogTransport + Clone,
+{
+    use server2::storage::{Catalog, RawRecordStore, WriteCondition};
+    let limits = CatalogLimits::default();
+    let raw = RawRecordStore::new(transport.clone(), limits.raw.clone()).unwrap();
+    let mut catalogs: Vec<Catalog> = Vec::new();
+    for record in records {
+        let d = one_group(&record);
+        let reference = d.reference(&limits).unwrap();
+        let attached = d.attach(vec![record], &limits).unwrap();
+        assert_eq!(
+            transport
+                .put_control(
+                    &reference.descriptor_key().unwrap(),
+                    &d.bytes(&limits).unwrap(),
+                    &WriteCondition::Absent
+                )
+                .await
+                .unwrap(),
+            200
+        );
+        if !missing.contains(&attached[0].envelope.identity) {
+            raw.publish(attached[0].clone()).await.unwrap();
+        }
+        let id = d.partitions[0].clone();
+        let at = match catalogs.iter().position(|c| c.identity == id) {
+            Some(at) => at,
+            None => {
+                catalogs.push(Catalog::empty(id));
+                catalogs.len() - 1
+            }
+        };
+        catalogs[at] = catalogs[at]
+            .union(&[attached[0].envelope.clone()], &limits)
+            .unwrap();
+    }
+    for catalog in catalogs {
+        assert_eq!(
+            transport
+                .put_control(
+                    &catalog.identity.key(),
+                    &catalog.bytes(&limits).unwrap(),
+                    &WriteCondition::Absent
+                )
+                .await
+                .unwrap(),
+            200
+        );
+    }
+}
+/// `YYYY.MM.DD.HH:MM` of a publication (the page's own `pubDate`).
+pub(super) fn dotted(p: Publication) -> String {
+    let d = p.date();
+    format!(
+        "{:04}.{:02}.{:02}.{:02}:{:02}",
+        d / 10000,
+        (d / 100) % 100,
+        d % 100,
+        p.hour(),
+        p.minute()
+    )
+}
+
+/// A restart reads the minute pages of the readers' reach without reading the descriptor of every
+/// minute group of the day: the day catalog is listed once and only the newest acquisition of each
+/// minute within 40 minutes is restored (here 20 of 200 stored groups).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_restart_restores_only_the_minute_pages_within_reach() {
+    use server2::domestic::kma::source::observe::Observations;
+    let _peers = super::source_s3::S3_PEERS.lock().await;
+    let peer = Peer::new();
+    // 200 minute pages every two minutes up to 10:49 (legacy cadence), one group each.
+    let last = server2::history::schedule::to_ms(p(20260924, 1049));
+    let pages = (0..200)
+        .map(|i| {
+            let at = last - i * 120_000;
+            let minute = server2::history::schedule::from_ms(at);
+            page_record(
+                "aws-minute",
+                minute,
+                at as u64 + 30_000,
+                aws_page(&dotted(minute), i == 0),
+            )
+        })
+        .collect();
+    store_pages(&peer.transport_limited(4), pages).await;
+    let counted = Counted::new(peer.transport_limited(4));
+    let obs = Arc::new(Observations::new(
+        counted.clone(),
+        Arc::new(CatalogStore::new(counted.clone(), CatalogLimits::default()).unwrap()),
+        Arc::new(Unreachable),
+        Arc::new(Unreachable),
+    ));
+    let folded = obs
+        .stations(NOW as i64, Instant::now() + Duration::from_secs(3))
+        .await
+        .unwrap();
+    assert!(!folded.minute.docs().is_empty(), "the newest minute rows");
+    // Wait for any read the request did not wait for.
+    for _ in 0..40 {
+        if obs.settled(
+            NOW as i64,
+            &obs.stations(NOW as i64, Instant::now()).await.unwrap(),
+        ) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    let descriptors = counted.get("GET index/v2/groups");
+    let raws = counted.get("GET raw/v2/kma-web/aws-minute");
+    assert!(
+        descriptors <= 20 && raws <= 20,
+        "{descriptors} descriptor and {raws} raw GETs for 20 minutes within reach"
+    );
+    // One listing, then one catalog read per targeted read of at most four members.
+    assert!(
+        counted.get("GET index/v2/kma-web/aws-minute") <= 1 + 20 / 4,
+        "the minute catalogs are read a bounded number of times"
+    );
 }

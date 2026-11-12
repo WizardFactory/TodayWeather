@@ -1400,5 +1400,4687 @@
     }
    ]
   }
+ ],
+ "unitsChanged": [
+  {
+   "name": "fahrenheit",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "units": {
+    "temperatureUnit": "F"
+   },
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "F",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "airnow",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "units": {
+    "airUnit": "airnow",
+    "windSpeedUnit": "mph"
+   },
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 4
+      },
+      {
+       "type": "android",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "mph",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airnow",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "no-token",
+   "storedToken": null,
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "units": {
+    "temperatureUnit": "F"
+   },
+   "requests": []
+  },
+  {
+   "name": "no-list",
+   "storedToken": "token-a",
+   "pushList": [],
+   "units": {
+    "temperatureUnit": "F"
+   },
+   "requests": []
+  }
+ ],
+ "cityChanged": [
+  {
+   "name": "current-moved",
+   "storedToken": "token-a",
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.986
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "London",
+     "address": "United Kingdom London",
+     "country": "GB",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "index": 0,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.564,
+        "long": 126.986
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.986
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ]
+  },
+  {
+   "name": "current-unchanged",
+   "storedToken": "token-a",
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "London",
+     "address": "United Kingdom London",
+     "country": "GB",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "index": 0,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [],
+   "saved": null
+  },
+  {
+   "name": "source-changed",
+   "storedToken": "token-a",
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "DSF",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "London",
+     "address": "United Kingdom London",
+     "country": "GB",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "index": 1,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "DSF",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "DSF",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "DSF",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "DSF",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ]
+  },
+  {
+   "name": "moved-no-token",
+   "storedToken": null,
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.986
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "London",
+     "address": "United Kingdom London",
+     "country": "GB",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "index": 0,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.986
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ]
+  },
+  {
+   "name": "no-records",
+   "storedToken": "token-a",
+   "cities": [
+    {
+     "currentPosition": true,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.564,
+      "long": 126.986
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "명동",
+     "address": "대한민국 서울특별시 중구 명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "currentPosition": false,
+     "disable": false,
+     "name": "London",
+     "address": "United Kingdom London",
+     "country": "GB",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "index": 0,
+   "before": [],
+   "requests": [],
+   "saved": null
+  }
+ ],
+ "cityRemoved": [
+  {
+   "name": "place-with-alarms",
+   "storedToken": "token-a",
+   "registrationId": null,
+   "index": 1,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "DELETE",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "device-uuid"
+     },
+     "data": {
+      "cityIndex": 1,
+      "fcmToken": "token-a"
+     }
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ]
+  },
+  {
+   "name": "current-position",
+   "storedToken": "token-a",
+   "registrationId": null,
+   "index": 0,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "DELETE",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "device-uuid"
+     },
+     "data": {
+      "cityIndex": 0,
+      "fcmToken": "token-a"
+     }
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ]
+  },
+  {
+   "name": "disabled-records-only",
+   "storedToken": "token-a",
+   "registrationId": null,
+   "index": 2,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "DELETE",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "device-uuid"
+     },
+     "data": {
+      "cityIndex": 2,
+      "fcmToken": "token-a"
+     }
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ]
+  },
+  {
+   "name": "registration-id",
+   "storedToken": null,
+   "registrationId": "reg-1",
+   "index": 1,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [
+    {
+     "method": "DELETE",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "device-uuid"
+     },
+     "data": {
+      "cityIndex": 1,
+      "registrationId": "reg-1"
+     }
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ]
+  },
+  {
+   "name": "no-token",
+   "storedToken": null,
+   "registrationId": null,
+   "index": 1,
+   "before": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "requests": [],
+   "saved": null
+  }
+ ],
+ "placeSaved": [
+  {
+   "name": "replace-place",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "list": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ],
+   "index": 1,
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 44100,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 3,
+       "category": "alarm",
+       "enable": false,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 40800,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ]
+  },
+  {
+   "name": "new-place",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "list": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ],
+   "index": 1,
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 44100,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 3,
+       "category": "alarm",
+       "enable": false,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 40800,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ]
+  },
+  {
+   "name": "current-position",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "list": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 0,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 0,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ],
+   "index": 0,
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 0,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 44100,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "android",
+       "cityIndex": 0,
+       "id": 3,
+       "category": "alarm",
+       "enable": false,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 40800,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 0,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 0,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ]
+  },
+  {
+   "name": "all-day-alert",
+   "storedToken": "token-a",
+   "pushList": [],
+   "list": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T15:00:00.000Z",
+     "endTime": "2026-11-07T15:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ],
+   "index": 1,
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 54000,
+       "endTime": 53940,
+       "airAlertsBreakPoint": 3
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T15:00:00.000Z",
+     "endTime": "2026-11-07T15:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ]
+  },
+  {
+   "name": "no-token",
+   "storedToken": null,
+   "pushList": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "stale"
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T22:40:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "list": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ],
+   "index": 1,
+   "requests": [],
+   "saved": [
+    {
+     "cityIndex": 0,
+     "id": 1,
+     "startTime": "2026-11-07T22:00:00.000Z",
+     "endTime": "2026-11-08T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "회현동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "회현동"
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 1,
+     "startTime": "2026-11-08T03:00:00.000Z",
+     "endTime": "2026-11-08T03:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 2,
+     "id": 2,
+     "time": "2026-11-07T21:00:00.000Z",
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "London",
+     "source": "VC",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 2,
+     "time": "2026-11-07T12:15:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": true,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "id": 3,
+     "time": "2026-11-06T11:20:00.000Z",
+     "dayOfWeek": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+     ],
+     "enable": false,
+     "category": "alarm",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    }
+   ]
+  }
+ ],
+ "alertIntro": [
+  {
+   "name": "ok",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2026-11-06T22:40:00.000Z",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "answer": "intro-ok",
+   "requests": [
+    {
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "device-uuid"
+     },
+     "data": [
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "android",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "device-uuid",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ]
+    }
+   ],
+   "saved": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2026-11-06T22:40:00.000Z",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ]
+  },
+  {
+   "name": "close",
+   "storedToken": "token-a",
+   "pushList": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2026-11-06T22:40:00.000Z",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "answer": "intro-close",
+   "requests": [],
+   "saved": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2026-11-06T22:40:00.000Z",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ]
+  },
+  {
+   "name": "ok-no-token",
+   "storedToken": null,
+   "pushList": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": false,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2026-11-06T22:40:00.000Z",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ],
+   "answer": "intro-ok",
+   "requests": [],
+   "saved": [
+    {
+     "cityIndex": 1,
+     "id": 1,
+     "startTime": "2026-11-06T22:00:00.000Z",
+     "endTime": "2026-11-07T13:00:00.000Z",
+     "enable": true,
+     "category": "alert",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "town": {
+      "first": "서울특별시",
+      "second": "중구",
+      "third": "명동"
+     }
+    },
+    {
+     "cityIndex": 1,
+     "time": "2026-11-06T22:40:00.000Z",
+     "name": "명동",
+     "source": "KMA",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     },
+     "category": "alarm",
+     "id": 2,
+     "enable": true,
+     "dayOfWeek": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+     ]
+    }
+   ]
+  }
  ]
 }

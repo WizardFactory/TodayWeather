@@ -1,0 +1,19 @@
+{
+  "date": "2026-11-12 KST",
+  "status": "passed",
+  "case": "actual iOS HTTP connection failure then same-city retry",
+  "artifact": "same isolated re-signed archive clone; core controller and WeatherUtil hashes unchanged",
+  "injection": "clone-only client.config.js temporarily selects http://127.0.0.1:9 (unavailable TCP endpoint), restores bundled public API base after22seconds",
+  "observed": [
+    "Japanese error visible",
+    "loading overlay releases: Tokyo chip is hittable after dialog closes",
+    "same Tokyo retry reaches weather after API base restored"
+  ],
+  "limits": [
+    "configuration fault injection; not successful radio-off test",
+    "no device radio settings changed during this case",
+    "does not establish historical rejection cause"
+  ],
+  "test_source_sha256": "1e46c37c4895cd5b11a7d0e9f5c1b3ed3e7d6e4a2baf1ed761d36fc352435364",
+  "test_log_sha256": "8edd05f380a652612b03ce15f5ed02a5437110abc27a17e5fd470f4966614ab3"
+}

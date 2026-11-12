@@ -14,10 +14,14 @@ mod late_publication;
 mod life;
 #[path = "domestic/life_s3.rs"]
 mod life_s3;
+#[path = "domestic/nation_city.rs"]
+mod nation_city;
 #[path = "domestic/nowcast_fill.rs"]
 mod nowcast_fill;
 #[path = "domestic/observe.rs"]
 mod observe;
+#[path = "domestic/observe_product.rs"]
+mod observe_product;
 #[path = "domestic/observed_history.rs"]
 mod observed_history;
 #[path = "domestic/parity.rs"]
@@ -50,6 +54,8 @@ mod support;
 mod switch;
 #[path = "domestic/v8_date.rs"]
 mod v8_date;
+#[path = "domestic/zone_select.rs"]
+mod zone_select;
 
 #[path = "domestic/towns.rs"]
 mod towns;

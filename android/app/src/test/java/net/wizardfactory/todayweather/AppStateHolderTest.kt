@@ -14,7 +14,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import net.wizardfactory.todayweather.core.data.PushSync
+import net.wizardfactory.todayweather.core.data.answerAlertIntro
 import net.wizardfactory.todayweather.core.storage.AppState
+import net.wizardfactory.todayweather.core.storage.PushRegistration
+import net.wizardfactory.todayweather.core.storage.PushRequest
+import net.wizardfactory.todayweather.core.storage.PushState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -118,6 +123,76 @@ class AppStateHolderTest {
         assertEquals(1, holder.current()?.placeIndex)
         assertEquals("r1", holder.current()?.push?.registrationId)
         assertEquals("saved with the next write", 1, store.value.placeIndex)
+        assertEquals(store.value, holder.current())
+    }
+
+    /**
+     * #2915 F1: a unit chosen on S08 while the store cannot be written. The push update reads the state through the
+     * writer, which fails twice (the change, then its own read): it sends nothing and throws nothing, the screens keep
+     * the unit, and once the store works again the next write saves it.
+     */
+    @Test
+    fun aUnitWhoseSaveFailsPostsNothingFailsNothingAndIsSavedLater() = runTest {
+        val store = FailingOnceStore(AppState(placeIndex = 0)).apply { failures = 2 }
+        val holder = AppStateHolder(store, CoroutineScope(StandardTestDispatcher(testScheduler)), CompletableDeferred(AppState()).also { it.complete(AppState()) })
+        runCurrent()
+        val sent = mutableListOf<net.wizardfactory.todayweather.core.storage.PushRequest>()
+        val sync = net.wizardfactory.todayweather.core.data.PushSync(holder.dataStore, { sent += it; 200 }) { state ->
+            net.wizardfactory.todayweather.core.storage.PushRegistration.Context("device", "ko-KR", "2.0.0", state.units, 0, java.util.TimeZone.getTimeZone("Asia/Seoul"))
+        }
+        holder.change { it.copy(units = it.units.with("temperatureUnit", "F")) }
+        val update = async { sync.updateUnits() }
+        runCurrent()
+        assertEquals("nothing sent, nothing thrown", null, update.await())
+        assertEquals(emptyList<Any>(), sent)
+        assertEquals("F", holder.current()?.units?.temperatureUnit)
+        holder.change { it.copy(expandShortChart = true) }
+        runCurrent()
+        assertEquals("saved with the next write", "F", store.value.units.temperatureUnit)
+        assertEquals(store.value, holder.current())
+    }
+
+    /**
+     * AN-14 review F1: an S09 save and an O06 answer are screen changes, shown at once. While the store cannot be written,
+     * their posts read the state through the writer, which fails again: nothing is sent and nothing is thrown, the screens
+     * keep the change, and the next write saves it.
+     */
+    @Test
+    fun anAlarmSaveOrAnIntroAnswerWhoseSaveFailsPostsNothingFailsNothingAndIsSavedLater() = runTest {
+        val alarm = kotlinx.serialization.json.Json.parseToJsonElement(
+            """{"cityIndex":1,"id":2,"category":"alarm","enable":true,"time":"2026-11-07T22:40:00.000Z","dayOfWeek":[false,true,true,true,true,true,false]}""",
+        ) as kotlinx.serialization.json.JsonObject
+        // The place's earlier alarm is stored: a post that read past the failed save would send it.
+        val earlier = kotlinx.serialization.json.JsonObject(alarm + ("id" to kotlinx.serialization.json.JsonPrimitive(1)))
+        val store = FailingOnceStore(AppState(placeIndex = 0, push = PushState(fcmToken = "t", needsAlertIntro = true, records = listOf(earlier))))
+            .apply { failures = 2 }
+        val holder = AppStateHolder(store, CoroutineScope(StandardTestDispatcher(testScheduler)), CompletableDeferred(AppState()).also { it.complete(AppState()) })
+        runCurrent()
+        val sent = mutableListOf<PushRequest>()
+        val sync = PushSync(holder.dataStore, { sent += it; 200 }) { state ->
+            PushRegistration.Context("device", "ko-KR", "2.0.0", state.units, 0, java.util.TimeZone.getTimeZone("Asia/Seoul"))
+        }
+        holder.change { it.copy(push = PushRegistration.onPlaceSaved(it.push, it.places, listOf(alarm), 1, null).state) }
+        val post = async { sync.postPlace(1) }
+        runCurrent()
+        assertEquals("nothing sent, nothing thrown", null, post.await())
+        assertEquals(listOf(alarm), holder.current()?.push?.records)
+        holder.change { it.copy(expandShortChart = true) }
+        runCurrent()
+        assertEquals("saved with the next write", listOf(alarm), store.value.push.records)
+
+        store.failures = 2
+        var posts = 0
+        answerAlertIntro(holder, true) { posts++ }
+        val list = async { sync.postList() }
+        runCurrent()
+        assertEquals(1, posts)
+        assertEquals("nothing sent, nothing thrown", null, list.await())
+        assertEquals(emptyList<Any>(), sent)
+        assertEquals(false, holder.current()?.push?.needsAlertIntro)
+        holder.change { it.copy(expandShortChart = false) }
+        runCurrent()
+        assertEquals("saved with the next write", false, store.value.push.needsAlertIntro)
         assertEquals(store.value, holder.current())
     }
 
