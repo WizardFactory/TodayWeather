@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
@@ -40,6 +41,7 @@ import net.wizardfactory.todayweather.ui.shell.BarButton
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.HeaderBar
 import net.wizardfactory.todayweather.ui.shell.ShellColors
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -63,9 +65,13 @@ class AirScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/air-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val prefix get() = if (matrixSize == null) "" else "$matrixLang/"
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/air" }
+        ?: "src/test/resources/air-reference")
     private val inputs = File(project, "../core-domain/src/test/resources/corpus/inputs")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/air-compare").apply { mkdirs() }
 
     @Test fun overallIndex() = compare("kma-seoul")
@@ -76,15 +82,166 @@ class AirScreenshotTest {
     @Test fun london() = compare("vc-london")
     @Test fun placeWithoutAir() = compare("kma-jeju-no-air")
 
+    private fun matrix(size: String, lang: String, state: String) {
+        matrixSize = size
+        matrixLang = lang
+        compare(state)
+    }
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanKmaSeoul() = matrix("384x832", "ko-KR", "kma-seoul")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanKmaSeoulDark() = matrix("384x832", "ko-KR", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanKmaSeoulOld() = matrix("384x832", "ko-KR", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanKmaSeoulPhoto() = matrix("384x832", "ko-KR", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanVcLondon() = matrix("384x832", "ko-KR", "vc-london")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanKmaJejuNoAir() = matrix("384x832", "ko-KR", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishKmaSeoul() = matrix("384x832", "en-US", "kma-seoul")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishKmaSeoulDark() = matrix("384x832", "en-US", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishKmaSeoulOld() = matrix("384x832", "en-US", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishKmaSeoulPhoto() = matrix("384x832", "en-US", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishVcLondon() = matrix("384x832", "en-US", "vc-london")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishKmaJejuNoAir() = matrix("384x832", "en-US", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanKmaSeoul() = matrix("360x780", "ko-KR", "kma-seoul")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanKmaSeoulDark() = matrix("360x780", "ko-KR", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanKmaSeoulOld() = matrix("360x780", "ko-KR", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanKmaSeoulPhoto() = matrix("360x780", "ko-KR", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanVcLondon() = matrix("360x780", "ko-KR", "vc-london")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanKmaJejuNoAir() = matrix("360x780", "ko-KR", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishKmaSeoul() = matrix("360x780", "en-US", "kma-seoul")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishKmaSeoulDark() = matrix("360x780", "en-US", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishKmaSeoulOld() = matrix("360x780", "en-US", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishKmaSeoulPhoto() = matrix("360x780", "en-US", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishVcLondon() = matrix("360x780", "en-US", "vc-london")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishKmaJejuNoAir() = matrix("360x780", "en-US", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanKmaSeoul() = matrix("412x892", "ko-KR", "kma-seoul")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanKmaSeoulDark() = matrix("412x892", "ko-KR", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanKmaSeoulOld() = matrix("412x892", "ko-KR", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanKmaSeoulPhoto() = matrix("412x892", "ko-KR", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanVcLondon() = matrix("412x892", "ko-KR", "vc-london")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanKmaJejuNoAir() = matrix("412x892", "ko-KR", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishKmaSeoul() = matrix("412x892", "en-US", "kma-seoul")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishKmaSeoulDark() = matrix("412x892", "en-US", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishKmaSeoulOld() = matrix("412x892", "en-US", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishKmaSeoulPhoto() = matrix("412x892", "en-US", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishVcLondon() = matrix("412x892", "en-US", "vc-london")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishKmaJejuNoAir() = matrix("412x892", "en-US", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanKmaSeoul() = matrix("320x694", "ko-KR", "kma-seoul")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanKmaSeoulDark() = matrix("320x694", "ko-KR", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanKmaSeoulOld() = matrix("320x694", "ko-KR", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanKmaSeoulPhoto() = matrix("320x694", "ko-KR", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanVcLondon() = matrix("320x694", "ko-KR", "vc-london")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanKmaJejuNoAir() = matrix("320x694", "ko-KR", "kma-jeju-no-air")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishKmaSeoul() = matrix("320x694", "en-US", "kma-seoul")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishKmaSeoulDark() = matrix("320x694", "en-US", "kma-seoul-dark")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishKmaSeoulOld() = matrix("320x694", "en-US", "kma-seoul-old")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishKmaSeoulPhoto() = matrix("320x694", "en-US", "kma-seoul-photo")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishVcLondon() = matrix("320x694", "en-US", "vc-london")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishKmaJejuNoAir() = matrix("320x694", "en-US", "kma-jeju-no-air")
+
     private fun compare(state: String) {
-        val record = Json.parseToJsonElement(File(references, "$state/air.json").readText()).jsonObject
-        val theme = if (state == "kma-seoul-dark") Theme.DARK else Theme.LIGHT
+        val record = Json.parseToJsonElement(File(references, "$prefix$state/air.json").readText()).jsonObject
+        val theme = when (state.substringAfterLast('-')) { "dark" -> Theme.DARK; "photo" -> Theme.PHOTO; "old" -> Theme.OLD; else -> Theme.LIGHT }
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
-            val metrics = ChartMetrics(384.0, 832.0)
+            val dimensions = matrixSize?.split('x')?.map(String::toDouble) ?: listOf(384.0, 832.0)
+            val metrics = ChartMetrics(dimensions[0], dimensions[1])
             val scope = scope(state, metrics)
             val page = AirPage(scope, texts)
-            Box(Modifier.size(384.dp, 2600.dp)) {
+            Box(Modifier.size(metrics.bodyWidth.toFloat().dp, 2600.dp)) {
                 AirScreen(AirContent(page, metrics, scope.airChart, scope.standard, texts["LOC_HOUR"]), theme,
                     onPrevious = {}, onNext = {}, onCode = {}, onStation = {}, onWeather = {}, onAction = {})
                 val colors = ShellColors.of(theme, Tab.AIR)
@@ -95,18 +252,30 @@ class AirScreenshotTest {
             }
         }
         rule.waitForIdle()
+        if (matrixSize != null && rule.onAllNodesWithTag(AirTags.STATIONS).fetchSemanticsNodes().isNotEmpty()) {
+            val stationBlock = record["blocks"]!!.jsonArray.last().jsonObject
+            val headings = stationBlock["elements"]!!.jsonArray.map { it.jsonObject }.filter { it["tag"]!!.jsonPrimitive.content == "p" }
+            for ((index, heading) in headings.withIndex()) {
+                val rect = heading["rect"]!!.jsonObject
+                val bounds = rule.onNodeWithTag(AirTags.station(index)).fetchSemanticsNode().boundsInRoot
+                // Captured paragraph fills the cell's content width, inside its 1 dp border.
+                assertEquals("station $index left at $matrixSize", rect["x"]!!.jsonPrimitive.double - 1, bounds.left / 2.0, 0.75)
+                assertEquals("station $index width at $matrixSize", rect["w"]!!.jsonPrimitive.double + 2, bounds.width / 2.0, 0.75)
+            }
+        }
         val failures = mutableListOf<String>()
         for (block in record["blocks"]!!.jsonArray.map { it.jsonObject }) {
             val i = block["index"]!!.jsonPrimitive.content.toInt()
             val native = rule.onNodeWithTag(AirTags.block(i)).captureToImage().asAndroidBitmap().toPixels()
-            val cordova = ImageIO.read(File(references, "$state/air-$i.png")).toPixels()
-            val name = "$state-$i"
+            val cordova = ImageIO.read(File(references, "$prefix$state/air-$i.png")).toPixels()
+            val name = "$prefix$state-$i"
+            val outputName = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
             // A block that ends under the tab bar is captured without its last pixels (`hidden`).
             val shown = if (block["hidden"] != null) native.crop(0, 0, native.width, minOf(native.height, cordova.height)) else native
             val diff = ImageDiff.of(shown, cordova)
-            ImageIO.write(shown.toBufferedImage(), "png", File(out, "$name-native.png"))
-            ImageIO.write(ImageDiff.overlay(shown, cordova).toBufferedImage(), "png", File(out, "$name-diff.png"))
-            println("air-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
+            ImageIO.write(shown.toBufferedImage(), "png", File(out, "$outputName-native.png"))
+            ImageIO.write(ImageDiff.overlay(shown, cordova).toBufferedImage(), "png", File(out, "$outputName-diff.png"))
+            println("air-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
             val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
             if (limit == null) {
                 failures += "$name: no recorded tolerance, $diff"

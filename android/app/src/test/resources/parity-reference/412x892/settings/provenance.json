@@ -1,0 +1,540 @@
+{
+ "tool": "android/tools/parity-reference/capture.sh APK settings",
+ "cordovaApk": {
+  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
+  "versionCode": "200100",
+  "versionName": "1.1.1",
+  "sources": [
+   {
+    "file": "client/www/index.html",
+    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "tracked": true,
+    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "matchesClient": true,
+    "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
+   },
+   {
+    "file": "client/www/templates/units.html",
+    "apkSha256": "1209bbb831d4bec9dedaf13a2031b327b215b1a890ddf841923ff8a9ee9f8bcc",
+    "tracked": true,
+    "clientSha256": "1209bbb831d4bec9dedaf13a2031b327b215b1a890ddf841923ff8a9ee9f8bcc",
+    "matchesClient": true,
+    "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+   },
+   {
+    "file": "client/www/templates/setting-radio.html",
+    "apkSha256": "697f51903d69ccaef394a2bcfabed8544b07070854b49905be1a23af7b74997a",
+    "tracked": true,
+    "clientSha256": "697f51903d69ccaef394a2bcfabed8544b07070854b49905be1a23af7b74997a",
+    "matchesClient": true,
+    "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+   },
+   {
+    "file": "client/www/templates/tab-forecast.html",
+    "apkSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
+    "tracked": true,
+    "clientSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/js/controller.settingctrl.js",
+    "apkSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+    "tracked": true,
+    "clientSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+    "matchesClient": true,
+    "lastCommit": "a262c570efab4da418c557a95d036d1177cc5c49"
+   },
+   {
+    "file": "client/www/js/controller.units.js",
+    "apkSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
+    "tracked": true,
+    "clientSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
+    "matchesClient": true,
+    "lastCommit": "71b55e62f3abe5e399d8a7092e86f7c686481c58"
+   },
+   {
+    "file": "client/www/js/controller.setting.radio.js",
+    "apkSha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f",
+    "tracked": true,
+    "clientSha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f",
+    "matchesClient": true,
+    "lastCommit": "7d5659396ed413144cb1ae63980a0b956ccba267"
+   },
+   {
+    "file": "client/www/js/controller.forecastctrl.js",
+    "apkSha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8",
+    "tracked": true,
+    "clientSha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8",
+    "matchesClient": true,
+    "lastCommit": "72536d7d802e67b08fd748c25dd2d1e9436aa2da"
+   },
+   {
+    "file": "client/www/js/controller.tabctrl.js",
+    "apkSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "tracked": true,
+    "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "matchesClient": true,
+    "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+   },
+   {
+    "file": "client/www/js/service.push.js",
+    "apkSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+    "tracked": true,
+    "clientSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+    "matchesClient": true,
+    "lastCommit": "def509aa5737962eb5f408dc127f6674c7869b4a"
+   },
+   {
+    "file": "client/www/js/service.weatherutil.js",
+    "apkSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "tracked": true,
+    "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/service.weatherinfo.js",
+    "apkSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "tracked": true,
+    "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/app.js",
+    "apkSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "tracked": true,
+    "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/locales/ko.json",
+    "apkSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "tracked": true,
+    "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/locales/en.json",
+    "apkSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "tracked": true,
+    "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/data/theme.js",
+    "apkSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "tracked": true,
+    "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "matchesClient": true,
+    "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
+   },
+   {
+    "file": "client/www/css/ionic.app.css",
+    "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "tracked": false,
+    "generatedFrom": "client/scss/ionic.app.scss",
+    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "matchesClient": true
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "file": "client/scss/ionic.app.scss",
+   "sha256": "927bd183ff47493c995577b37cbb4ce427e55b946bd895d9933f14570f95747b",
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "emulator": {
+  "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+  "sdk": "36"
+ },
+ "display": "412x892 dp at density 2; matrix captures record measured viewport.json per language",
+ "language": "ko-KR and en-KR (English folder label en-US), retaining KR units",
+ "images": "cut from the screen (screencap): a settings page from its top to 20 CSS px under its list, the About state whole, the weather page block by block (tools/emulator/page-blocks.mjs)",
+ "server": "a stand-in inside the WebView: corpus fixtures kma-seoul (°C) and kma-seoul-f (°F) by the requested units, photo.png (photo.mjs) for every sky of the feed, 200 for the push list",
+ "place": "kma-seoul (회현동) with an alarm and a token",
+ "files": [
+  {
+   "file": "en-US/about.json",
+   "sha256": "a8ba1984262dadf94d69f8c35855e728b305030d89f7b5067a9eb32be89f7bfc"
+  },
+  {
+   "file": "en-US/about.png",
+   "sha256": "441ccff4e7809032bb255697e3dc1cda9f56b3befc166fa1549aaec0ef03d0b3"
+  },
+  {
+   "file": "en-US/daily-dark/daily-0.png",
+   "sha256": "d26b9adade34e0659f81f72bc4bf84ac72875a0d6082869f8ad9f76795227623"
+  },
+  {
+   "file": "en-US/daily-dark/daily-1.png",
+   "sha256": "7419e35985ed3cf927ea0071ba19cfbbb049e3e26541bbfcd777e3476bcf26a9"
+  },
+  {
+   "file": "en-US/daily-dark/daily-2.png",
+   "sha256": "9b8ec453215128c84fd44fb3b5d165f75b677d0f3f68f8dbebf0abf31522043f"
+  },
+  {
+   "file": "en-US/daily-dark/daily-3.png",
+   "sha256": "4405c57ae8bdf0938d864d3380f2484484f8a7bd3fa1446cbfd33ceaed6a943e"
+  },
+  {
+   "file": "en-US/daily-dark/daily.json",
+   "sha256": "eda96d07f85463bcc2232014aa30ddf84f53b47e914e3bb7d46f61871bbcfa75"
+  },
+  {
+   "file": "en-US/daily-old/daily-0.png",
+   "sha256": "472dae90e9f3734dc294f509235a9111c48902e4c122270838b21a917ef874b2"
+  },
+  {
+   "file": "en-US/daily-old/daily-1.png",
+   "sha256": "8e9fff7629de373bceee20f5583bcd363c07e966c329727204fcff0d5af5b372"
+  },
+  {
+   "file": "en-US/daily-old/daily-2.png",
+   "sha256": "973995de961ce2963598f9b5a70ca93b15d15568051ce3d94add58effab8669c"
+  },
+  {
+   "file": "en-US/daily-old/daily-3.png",
+   "sha256": "7e68b61320a4a592f7bb32fb8b8e05681440124e68e37ffb44486e063d856a7f"
+  },
+  {
+   "file": "en-US/daily-old/daily.json",
+   "sha256": "87c3c150d7d26ca6b45f576c502977c235cfb0f414d7e0c446d9af1a98565772"
+  },
+  {
+   "file": "en-US/daily-photo/daily-0.png",
+   "sha256": "b2690d5b57cf394ee4237e8c04ee9e4a12fd053780db6ad2b686cfd331d942e9"
+  },
+  {
+   "file": "en-US/daily-photo/daily-1.png",
+   "sha256": "48901fad6a463adf333580858ab1d434bf4b88fedbe37e4be796845fd7fc38c7"
+  },
+  {
+   "file": "en-US/daily-photo/daily-2.png",
+   "sha256": "4bfb31c9ffa3ae6f70a1ac4b433f496e9f2298d8a3dba6d8fa9db916310ae00a"
+  },
+  {
+   "file": "en-US/daily-photo/daily-3.png",
+   "sha256": "3f1d957812a5e5aea10603ff8fd010f0b01900a6b534ee86d2fd7206e9329abe"
+  },
+  {
+   "file": "en-US/daily-photo/daily.json",
+   "sha256": "461a41ac78b76999ae358f540ff325d564491939efaa8d23f5a10dac9644fa0e"
+  },
+  {
+   "file": "en-US/hourly-dark/hourly-0.png",
+   "sha256": "d26b9adade34e0659f81f72bc4bf84ac72875a0d6082869f8ad9f76795227623"
+  },
+  {
+   "file": "en-US/hourly-dark/hourly-1.png",
+   "sha256": "de751dc30745484bbbaca1225e984b4fed1ff072a6f69c9296dcb2c77e8b2536"
+  },
+  {
+   "file": "en-US/hourly-dark/hourly-2.png",
+   "sha256": "d31f1fba391a4f51b0ee98c1ad3fae9240e2aae96482dfdd88a26ae0462c6cbf"
+  },
+  {
+   "file": "en-US/hourly-dark/hourly-3.png",
+   "sha256": "66a3871a9ea51a09951088bb3d337c9690dd16fd6665924b5abe83229f88db7d"
+  },
+  {
+   "file": "en-US/hourly-dark/hourly-4.png",
+   "sha256": "e54d4d295359eb1073f2ae3e69a4f68004c0797d1dbd4e3e5de9287339d5f4c8"
+  },
+  {
+   "file": "en-US/hourly-dark/hourly.json",
+   "sha256": "3b398709306afe96ab368a1f199069f0b4f8bbb9cf74d08200d18efe9773d155"
+  },
+  {
+   "file": "en-US/hourly-old/hourly-0.png",
+   "sha256": "0d6d0a350839c3c65a52af9a71f29667a67d32adc2418f3fc0f5c0a6e9ab1ac9"
+  },
+  {
+   "file": "en-US/hourly-old/hourly-1.png",
+   "sha256": "c5de0e40309dbdf61b6d6230aaaa834ccc6c1159f461c85d709339e78adf52d6"
+  },
+  {
+   "file": "en-US/hourly-old/hourly-2.png",
+   "sha256": "f1490ffef80a1206f275c287bad9fadfb4c3a2c9316301a20def5142a635710c"
+  },
+  {
+   "file": "en-US/hourly-old/hourly-3.png",
+   "sha256": "4bd0e72fe31ac867320d6165e5bd96fa9fd22cdb6c1e3820a6278555caff1135"
+  },
+  {
+   "file": "en-US/hourly-old/hourly-4.png",
+   "sha256": "2be23ebeddbf1585eafb5e8f6aec32180453d11de471dcfad8aee71aad2e351f"
+  },
+  {
+   "file": "en-US/hourly-old/hourly.json",
+   "sha256": "0eed2dd712117a2a8339961c440bdf0c8744f78107532fc17e92d9cf19e9804d"
+  },
+  {
+   "file": "en-US/hourly-photo/hourly-0.png",
+   "sha256": "b2690d5b57cf394ee4237e8c04ee9e4a12fd053780db6ad2b686cfd331d942e9"
+  },
+  {
+   "file": "en-US/hourly-photo/hourly-1.png",
+   "sha256": "37b3f4f9329836be856c7ceacb4815fc6c5f726390a4a9b133a234299d0f9bcd"
+  },
+  {
+   "file": "en-US/hourly-photo/hourly-2.png",
+   "sha256": "b0924b81cfd94740e2685df6a8ad0a5033f1796126217962506461e9525b29f9"
+  },
+  {
+   "file": "en-US/hourly-photo/hourly-3.png",
+   "sha256": "e0c989a193864f6f19e71096044f6079b6421d12f97ff425a164d6954647d6aa"
+  },
+  {
+   "file": "en-US/hourly-photo/hourly-4.png",
+   "sha256": "b13ab8cc370c045f60186818316145bf4c480d894d82922d5bebb7a8f104c097"
+  },
+  {
+   "file": "en-US/hourly-photo/hourly.json",
+   "sha256": "f679764c7c257ab321594ec2a4340580d2255eab348c9749b1d16bde13ff2d36"
+  },
+  {
+   "file": "en-US/radio-temperatureUnit.json",
+   "sha256": "5467d3d4e3f878f5c548e7eb9f822fd58a7620e3ccb04d10f75ada26c530fb13"
+  },
+  {
+   "file": "en-US/radio-temperatureUnit.png",
+   "sha256": "20543e52e2130149ee609a1ea76c540522d3a8b287db439de519877935c1d4f0"
+  },
+  {
+   "file": "en-US/requests.json",
+   "sha256": "e993b4fc35e2a295f79cf0f8bb16fe841b2e3eb53c4383b4b53c495ee01a279a"
+  },
+  {
+   "file": "en-US/units-dark.json",
+   "sha256": "42b2863953108222dea94e4c0da526288552f215523c3c832f3aff694703da47"
+  },
+  {
+   "file": "en-US/units-dark.png",
+   "sha256": "0e8703cd44783e89ebd655822cc3b82b3e14849d16244f7ddfd28533399b538b"
+  },
+  {
+   "file": "en-US/units-old.json",
+   "sha256": "fda9c78a99edadf52beb96219eeb2caa2dbd66dd40d4595e29cddcf8086bb320"
+  },
+  {
+   "file": "en-US/units-old.png",
+   "sha256": "9f7ddd987afaacc2680cda2cfaaa6f229f29e721a3f0518e79f1b3cbb3a3e2f5"
+  },
+  {
+   "file": "en-US/units-photo.json",
+   "sha256": "8b4abb8cdcd7903ec6b1054adecfbe22565b15fb42a7a78048d3cd85b1046e0f"
+  },
+  {
+   "file": "en-US/units-photo.png",
+   "sha256": "9f7ddd987afaacc2680cda2cfaaa6f229f29e721a3f0518e79f1b3cbb3a3e2f5"
+  },
+  {
+   "file": "en-US/units.json",
+   "sha256": "21145bb58089b75e2a043ee4f49ac1b12b2af00f91fb2aa3956e4f704fa55d3f"
+  },
+  {
+   "file": "en-US/units.png",
+   "sha256": "666c16e2b91c7749378692e6e57deb1559b1eeb506c18317bf830bef88834e98"
+  },
+  {
+   "file": "en-US/viewport.json",
+   "sha256": "e9ced3bd18532d191ec72a8dfc78a0ee4025dbb554a99a617f8f3f1827c19f20"
+  },
+  {
+   "file": "ko-KR/about.json",
+   "sha256": "4b55835e9d37f89c1b9f2161e5606374bc332e478f846f65eaf7e4dfdd9d8c83"
+  },
+  {
+   "file": "ko-KR/about.png",
+   "sha256": "445fb82ee7146f829721475f814903ed9460901c4f34e6c6b5dc24ab31a51f0e"
+  },
+  {
+   "file": "ko-KR/daily-dark/daily-0.png",
+   "sha256": "d26b9adade34e0659f81f72bc4bf84ac72875a0d6082869f8ad9f76795227623"
+  },
+  {
+   "file": "ko-KR/daily-dark/daily-1.png",
+   "sha256": "41fc2877a80b144607c1e870fd16b9f8569db0d4bed2982ec4aa9b39f2797ec0"
+  },
+  {
+   "file": "ko-KR/daily-dark/daily-2.png",
+   "sha256": "f549e8070b9d7fbc388df45bbecfb00670b71a590837c294a00346f87399f9bb"
+  },
+  {
+   "file": "ko-KR/daily-dark/daily-3.png",
+   "sha256": "7f27f36dd52a5f8b355ad54a07c80e76f419dd4499d282111aa2d7946dbdd578"
+  },
+  {
+   "file": "ko-KR/daily-dark/daily.json",
+   "sha256": "fc592328e3fc9b6917bf85616a1f92a8ec75b53d918a7fcb2814ff6370234603"
+  },
+  {
+   "file": "ko-KR/daily-old/daily-0.png",
+   "sha256": "67e0e38c7d8709ae25843ce50baba2dc862683388434d20dac814048a106a9af"
+  },
+  {
+   "file": "ko-KR/daily-old/daily-1.png",
+   "sha256": "5e9e413547d8e8b6f67b720e8a9a8e1e218ce02331e1839037d5fa198fbf56dc"
+  },
+  {
+   "file": "ko-KR/daily-old/daily-2.png",
+   "sha256": "2802b9d5f262f7da38edb663f699720b93e26064d76f4494f42695e72e14f777"
+  },
+  {
+   "file": "ko-KR/daily-old/daily-3.png",
+   "sha256": "4e8f233ce2e409581b4632283703215d150f436bc2fccd7fa934c93606d374b5"
+  },
+  {
+   "file": "ko-KR/daily-old/daily.json",
+   "sha256": "c50a8aef49d9a3494a2026697d6f0f20c605bf9457a698902f79bb58ef143bb9"
+  },
+  {
+   "file": "ko-KR/daily-photo/daily-0.png",
+   "sha256": "b2690d5b57cf394ee4237e8c04ee9e4a12fd053780db6ad2b686cfd331d942e9"
+  },
+  {
+   "file": "ko-KR/daily-photo/daily-1.png",
+   "sha256": "8dece912e671456737af54cb979c0cef498cf89ebc169bfa3eac4d0a06d335db"
+  },
+  {
+   "file": "ko-KR/daily-photo/daily-2.png",
+   "sha256": "a877d7db0befe6ec40d4f7e58d9472db3801847b92c4322c2a82ddcb0d24bdc3"
+  },
+  {
+   "file": "ko-KR/daily-photo/daily-3.png",
+   "sha256": "aedd6fbe9c75ea3bc508cb5178ff9b1859bb5ba892b346c4b8c8e51901106ad1"
+  },
+  {
+   "file": "ko-KR/daily-photo/daily.json",
+   "sha256": "4f996f0923dec976dfd90028e7e642696d70a7876b95683d9ad9d30d235e1e1d"
+  },
+  {
+   "file": "ko-KR/hourly-dark/hourly-0.png",
+   "sha256": "d26b9adade34e0659f81f72bc4bf84ac72875a0d6082869f8ad9f76795227623"
+  },
+  {
+   "file": "ko-KR/hourly-dark/hourly-1.png",
+   "sha256": "fe5339659bc32c63fe353f0aaea87caede74cc4eab22f4c15ddd23142a9e7e86"
+  },
+  {
+   "file": "ko-KR/hourly-dark/hourly-2.png",
+   "sha256": "00512bb72ff3f73d88b987eb7f36e23eb6d7b9290ed9aff407aa2a60b1a37993"
+  },
+  {
+   "file": "ko-KR/hourly-dark/hourly-3.png",
+   "sha256": "2abb1829c59155fdc0652fff8943cfd08c08c9225bdd136a34bc323fd9440f9b"
+  },
+  {
+   "file": "ko-KR/hourly-dark/hourly-4.png",
+   "sha256": "449bb6e810ca697300476c17324a75e3208e5a8768a82cb97eab8655b4879f3c"
+  },
+  {
+   "file": "ko-KR/hourly-dark/hourly.json",
+   "sha256": "670396e356af0d94253b1ab5141b8a25b74477e3f50c398b7d92aa8b1d9891e8"
+  },
+  {
+   "file": "ko-KR/hourly-old/hourly-0.png",
+   "sha256": "0d6d0a350839c3c65a52af9a71f29667a67d32adc2418f3fc0f5c0a6e9ab1ac9"
+  },
+  {
+   "file": "ko-KR/hourly-old/hourly-1.png",
+   "sha256": "88c8f078d08900dac147cc4f6b711a5bcb6c180151edd4eaf8dfeede2fb7ca4a"
+  },
+  {
+   "file": "ko-KR/hourly-old/hourly-2.png",
+   "sha256": "92f2cb7eca906b48a21dc6db42bb570807daee0dbd7cfd4a9d6ff7e9706f3b93"
+  },
+  {
+   "file": "ko-KR/hourly-old/hourly-3.png",
+   "sha256": "27694aff33737358166316c93201547c22218c1e64a79609504d82dc829f69ae"
+  },
+  {
+   "file": "ko-KR/hourly-old/hourly-4.png",
+   "sha256": "3b25310431f3a32a604f210d9e1a59e09dc41aa895cda9f3302527f996e19954"
+  },
+  {
+   "file": "ko-KR/hourly-old/hourly.json",
+   "sha256": "90e65155a9d9bbc6977aa1a85795b894eb2371cb383ba173f7302f6e4e680fba"
+  },
+  {
+   "file": "ko-KR/hourly-photo/hourly-0.png",
+   "sha256": "76a0a824dd7c20ff91642448a18efb560cb6d20d525e4511c8c6add207a32fe1"
+  },
+  {
+   "file": "ko-KR/hourly-photo/hourly-1.png",
+   "sha256": "4f8c3ca820c983b6dba37c5a7926588c9d4fd8a69e95e1dc7bff661432cd052e"
+  },
+  {
+   "file": "ko-KR/hourly-photo/hourly-2.png",
+   "sha256": "a714bf6f3680c26645bf10c23d0c92493ee106e45fbb12d3fecb520a15a697eb"
+  },
+  {
+   "file": "ko-KR/hourly-photo/hourly-3.png",
+   "sha256": "548148c4faf3f6fd1003d34eb96f0f652d4a1041e7025c5482b52ba546624b43"
+  },
+  {
+   "file": "ko-KR/hourly-photo/hourly-4.png",
+   "sha256": "916a69fccaf773ecff0abcefb62328774286e1c8a744eccccc491b78807f5f4a"
+  },
+  {
+   "file": "ko-KR/hourly-photo/hourly.json",
+   "sha256": "8640eaada06d108d12ff6896cf091d22289a92707922faef32d1fe5ea80dcffb"
+  },
+  {
+   "file": "ko-KR/radio-temperatureUnit.json",
+   "sha256": "ffe53aa853a4ed254e50f82dbcaa256eb20c0737d40770973a942805968c7cb3"
+  },
+  {
+   "file": "ko-KR/radio-temperatureUnit.png",
+   "sha256": "a11b5d293f11ef0afd53a6d1949d0d2db92687dd7a1d823f805de4658646b45e"
+  },
+  {
+   "file": "ko-KR/requests.json",
+   "sha256": "88b4d6010aeee21aca63699488be6c8a8a31ff7897ba7810886d736abc86cc68"
+  },
+  {
+   "file": "ko-KR/units-dark.json",
+   "sha256": "a9cb58fb3fdb447cfe1a84a30ac7e0931bb170adbd7bd7671835841dffdfad54"
+  },
+  {
+   "file": "ko-KR/units-dark.png",
+   "sha256": "e52cfcd4d240e371801f1d7b2f47338a05e9c519672bf8388cb4eacf3b071808"
+  },
+  {
+   "file": "ko-KR/units-old.json",
+   "sha256": "bf54c5f987dd8111825ccfbd779749f4ef4e41e8cf30de756e919bfab5a96e72"
+  },
+  {
+   "file": "ko-KR/units-old.png",
+   "sha256": "641224b068fe5c6335ad11932bef94615078b3978a615c42d6981a6e25710ed2"
+  },
+  {
+   "file": "ko-KR/units-photo.json",
+   "sha256": "da1d5e1a4ea030ada65e69067e3f89191bd2ddfdaff78b13ec7a4645152fb44b"
+  },
+  {
+   "file": "ko-KR/units-photo.png",
+   "sha256": "641224b068fe5c6335ad11932bef94615078b3978a615c42d6981a6e25710ed2"
+  },
+  {
+   "file": "ko-KR/units.json",
+   "sha256": "180c2eb973f4d3c7f3205d071223ccc99a89a22a0b04d1c7cbb40b8ae26ca98c"
+  },
+  {
+   "file": "ko-KR/units.png",
+   "sha256": "0f7a48e07a2b0b914066f640f56e580fb4ffc77580b21cf806cbc97166e12a68"
+  },
+  {
+   "file": "ko-KR/viewport.json",
+   "sha256": "19c9403fbeabca9aeb0b9e5d0c0b55b2a095240e536b08c7d11b2b9998af8b27"
+  }
+ ]
+}

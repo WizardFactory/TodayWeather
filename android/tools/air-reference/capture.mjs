@@ -21,15 +21,17 @@ import path from 'node:path';
 import {connect} from '../emulator/devtools.mjs';
 import {BLOCKS, cutBlocks} from '../emulator/page-blocks.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/air-reference');
+const OUT = process.env.TW_REFERENCE_LANGUAGE ? path.join(referenceRoot(root, 'air'), process.env.TW_REFERENCE_LANGUAGE) : referenceRoot(root, 'air');
 const corpus = path.join(root, 'core-domain/src/test/resources/corpus');
 const input = (name) => JSON.parse(fs.readFileSync(path.join(corpus, 'inputs', `${name}.json`), 'utf8'));
 const screenshots = new Screen(serial);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 await dt.evaluate(BLOCKS);
 await dt.evaluate(`window.twAir = (function () {
     var inj = angular.element(document.body).injector();
@@ -183,12 +185,20 @@ const placesOf = (...list) => list.map((p) => ({fixture: p.fixture, ...p.info, m
 
 await add(SEOUL);
 await capture('kma-seoul', await dt.evaluate('twAir.open()'), placesOf(SEOUL));
+if (!process.env.TW_REFERENCE_SIZE) {
 await capture('kma-seoul-pm25', await dt.evaluate(`twAir.tap('setMainAqiCode', 1)`), placesOf(SEOUL));
 await dt.evaluate('twAir.open()');
 await capture('kma-seoul-station-1', await dt.evaluate(`twAir.tap('setStation', 1)`), placesOf(SEOUL));
 await capture('kma-seoul-o3', await dt.evaluate(`twAir.open('o3')`), placesOf(SEOUL));
+}
 await dt.evaluate(`twAir.theme('dark')`);
 await capture('kma-seoul-dark', await dt.evaluate('twAir.open()'), placesOf(SEOUL));
+if (process.env.TW_REFERENCE_SIZE) {
+    for (const theme of ['old', 'photo']) {
+        await dt.evaluate(`twAir.theme('${theme}')`);
+        await capture(`kma-seoul-${theme}`, await dt.evaluate('twAir.open()'), placesOf(SEOUL));
+    }
+}
 await dt.evaluate(`twAir.theme('light')`);
 await add(LONDON);
 await capture('vc-london', await dt.evaluate('twAir.open()'), placesOf(SEOUL, LONDON));

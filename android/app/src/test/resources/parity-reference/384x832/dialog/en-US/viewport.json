@@ -1,0 +1,18 @@
+{
+  "nominal": {
+    "width": 384,
+    "height": 832
+  },
+  "webView": {
+    "width": 384,
+    "height": 762,
+    "dpr": 2,
+    "screenWidth": 384,
+    "screenHeight": 832,
+    "language": "en-US"
+  },
+  "origin": {
+    "x": 0,
+    "y": 92
+  }
+}

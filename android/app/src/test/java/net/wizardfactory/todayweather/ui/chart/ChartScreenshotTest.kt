@@ -49,10 +49,13 @@ class ChartScreenshotTest {
     @get:Rule val rule = createComposeRule()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val scenes = File(project, "../core-domain/src/test/resources/chart-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val scenes get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/chart" }
+        ?: "../core-domain/src/test/resources/chart-reference")
     private val corpus = File(project, "../core-domain/src/test/resources/corpus")
-    private val references = scenes
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").readText()).jsonObject
+    private val references get() = scenes
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/chart-compare").apply { mkdirs() }
 
     @Test fun hourly384() = compare("384x832", "hourly")
@@ -62,16 +65,71 @@ class ChartScreenshotTest {
     @Test fun daily360() = compare("360x780", "daily")
     @Test fun daily412() = compare("412x892", "daily")
 
+    private fun matrix(size: String, lang: String, chart: String) {
+        matrixSize = size
+        matrixLang = lang
+        compare(size, chart)
+    }
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal384KoreanHourly() = matrix("384x832", "ko-KR", "hourly")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal384KoreanDaily() = matrix("384x832", "ko-KR", "daily")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal384EnglishHourly() = matrix("384x832", "en-US", "hourly")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal384EnglishDaily() = matrix("384x832", "en-US", "daily")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal360KoreanHourly() = matrix("360x780", "ko-KR", "hourly")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal360KoreanDaily() = matrix("360x780", "ko-KR", "daily")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal360EnglishHourly() = matrix("360x780", "en-US", "hourly")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal360EnglishDaily() = matrix("360x780", "en-US", "daily")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal412KoreanHourly() = matrix("412x892", "ko-KR", "hourly")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal412KoreanDaily() = matrix("412x892", "ko-KR", "daily")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal412EnglishHourly() = matrix("412x892", "en-US", "hourly")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal412EnglishDaily() = matrix("412x892", "en-US", "daily")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal320KoreanHourly() = matrix("320x694", "ko-KR", "hourly")
+
+    @Test @Config(qualifiers = "ko-rKR-w420dp-h900dp-xhdpi")
+    fun nominal320KoreanDaily() = matrix("320x694", "ko-KR", "daily")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal320EnglishHourly() = matrix("320x694", "en-US", "hourly")
+
+    @Test @Config(qualifiers = "en-rUS-w420dp-h900dp-xhdpi")
+    fun nominal320EnglishDaily() = matrix("320x694", "en-US", "daily")
+
     private fun compare(size: String, chart: String) {
         val fixture = "kma-seoul"
+        val directory = if (matrixSize == null) size else matrixLang
         val (w, h) = size.split("x").map { it.toDouble() }
-        val record = Json.parseToJsonElement(File(scenes, "$size/$fixture.json").readText()).jsonObject
+        val record = Json.parseToJsonElement(File(scenes, "$directory/$fixture.json").readText()).jsonObject
         val captured = record[chart]!!.jsonObject
         val place = WeatherConverter.convert(input(fixture))!!
         val metrics = ChartMetrics(w, h)
         val texts = chartTexts(ApplicationProvider.getApplicationContext())
         val wrapperWidth = captured["wrapper"]!!.jsonObject["w"]!!.jsonPrimitive.double
-        val margin = tolerances["margin"]!!.jsonObject
+        val margin = tolerances["margin"]?.jsonObject
         val failures = mutableListOf<String>()
         val scroll = ScrollState(0)
         rule.setContent {
@@ -96,14 +154,19 @@ class ChartScreenshotTest {
             // The wrapper inside the capture: the clip is on whole CSS pixels, the wrapper on device pixels.
             val offset = capture["offset"]!!.jsonObject
             val wrapper = capture["size"]!!.jsonObject
-            val cordova = ImageIO.read(File(references, "$size/$fixture/$chart-$position.png")).toPixels()
+            val cordova = ImageIO.read(File(references, "$directory/$fixture/$chart-$position.png")).toPixels()
                 .crop(offset.int("x"), offset.int("y"), wrapper.int("width"), wrapper.int("height"))
             val diff = ImageDiff.of(native, cordova)
-            val name = "$size-$chart-$position"
-            ImageIO.write(native.toBufferedImage(), "png", File(out, "$name-native.png"))
-            ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$name-diff.png"))
-            println("chart-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
-            val limit = tolerances["cases"]!!.jsonObject[name]?.jsonObject ?: error("no recorded tolerance for $name")
+            val name = if (matrixSize == null) "$size-$chart-$position" else "$matrixLang/$chart-$position"
+            val outputName = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
+            ImageIO.write(native.toBufferedImage(), "png", File(out, "$outputName-native.png"))
+            ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$outputName-diff.png"))
+            println("chart-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
+            val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
+            if (limit == null || margin == null) {
+                failures += "$name: no recorded tolerance, $diff"
+                continue
+            }
             if (native.width != cordova.width ||
                 diff.heightDifference > limit.int("heightDifference") + margin.int("heightDifference") ||
                 diff.strong > limit.num("strong") + margin.num("strong") ||

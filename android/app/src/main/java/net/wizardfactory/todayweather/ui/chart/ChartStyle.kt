@@ -54,6 +54,8 @@ data class ChartColors(
     val separator: Color,
     val expander: Color,
     val background: Color,
+    val weatherImages: String = Theme.LIGHT.weather,
+    val iconImages: String = Theme.LIGHT.icons,
 ) {
     companion object {
         val LIGHT = ChartColors(
@@ -68,6 +70,7 @@ data class ChartColors(
         )
 
         private val DARK = LIGHT.copy(
+            iconImages = Theme.DARK.icons,
             label = Color(0xFFDDDDDD), text = Color(0xFFDDDDDD), bar = Color(0xFFDDDDDD),
             guide = Color(0xFFDDDDDD), guideVivid = Color(0xFFDDDDDD),
             lineToday = Color(0xFFFFFFFF), circleToday = Color(0xFFFFFFFF), circleTodayCurrentStroke = Color(0xFFFFFFFF),
@@ -77,6 +80,7 @@ data class ChartColors(
         )
 
         private val OLD = LIGHT.copy(
+            weatherImages = Theme.OLD.weather, iconImages = Theme.OLD.icons,
             label = Color.White, text = Color.White, bar = Color.White, guide = Color.White, guideVivid = Color.White,
             lineToday = Color.White, lineYesterday = Color(0xFFD0D0D0), circleToday = Color.White, circleYesterday = Color(0xFFD0D0D0),
             circleTodayCurrentStroke = Color.White, valueTextCurrent = Color(0xFFFEFEFE),

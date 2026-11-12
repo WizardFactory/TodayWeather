@@ -1,0 +1,37 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13; Robolectric SDK34 native graphics, source 45e616f1 with measured-size test extension; actual API36 Cordova captures.",
+ "why": "Size-specific glyph rasterization and fractional label-width differences. The 360dp layout has six rows of 17 shortcuts in a smaller image, so error fractions exceed the old 384 budget. At 320dp there are 11 shortcuts. Every icon/card/shortcut/location rectangle is independently checked with the unchanged 0.5dp position/height, 1dp button position and 1.5dp text-width limits. Selected overlays inspected at all sizes; no layout displacement or lost content. Existing margin unchanged.",
+ "cases": {
+  "en-US/access": {
+   "strong": 0.0032,
+   "mean": 1.341,
+   "heightDifference": 0
+  },
+  "en-US/start": {
+   "strong": 0.01148,
+   "mean": 2.831,
+   "heightDifference": 0
+  },
+  "ko-KR/access": {
+   "strong": 0.00905,
+   "mean": 3.358,
+   "heightDifference": 0
+  },
+  "ko-KR/start": {
+   "strong": 0.01203,
+   "mean": 3.025,
+   "heightDifference": 0
+  }
+ }
+}

@@ -22,6 +22,16 @@ import org.robolectric.annotation.GraphicsMode
  * rotates, resizes and folds (ShellFitDeviceTest, tools/large-screen/run-shell-fit.sh).
  */
 abstract class ShellFitTest(lang: String, region: String) : ShellFitCase(lang, region) {
+    // AN-18c: all existing states at each parity display size, in both language subclasses.
+    @Test @Config(qualifiers = "+w384dp-h832dp-port", fontScale = 1f)
+    fun parity384() = fits("parity-384x832")
+    @Test @Config(qualifiers = "+w360dp-h780dp-port", fontScale = 1f)
+    fun parity360() = fits("parity-360x780")
+    @Test @Config(qualifiers = "+w412dp-h892dp-port", fontScale = 1f)
+    fun parity412() = fits("parity-412x892")
+    @Test @Config(qualifiers = "+w320dp-h694dp-port", fontScale = 1f)
+    fun parity320() = fits("parity-320x694")
+
     @Test @Config(qualifiers = "+w1280dp-h800dp-land") fun tabletLandscape() = fits("tablet-landscape")
     @Test @Config(qualifiers = "+w800dp-h1280dp-port") fun tabletPortrait() = fits("tablet-portrait")
     @Test @Config(qualifiers = "+w841dp-h701dp-land") fun foldableOpen() = fits("fold-open")

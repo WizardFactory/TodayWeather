@@ -22,9 +22,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import net.wizardfactory.todayweather.ui.shell.IonicPopup
+import net.wizardfactory.todayweather.ui.shell.PopupButton
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.TextUnit
+import net.wizardfactory.todayweather.ui.shell.line
+import net.wizardfactory.todayweather.ui.text.CssText
+import net.wizardfactory.todayweather.ui.text.CssMetrics
+import net.wizardfactory.todayweather.ui.text.chromeLines
+import net.wizardfactory.todayweather.ui.text.chromeRuns
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,12 +46,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextMotion
 import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
@@ -76,7 +84,6 @@ import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.Icon
 import net.wizardfactory.todayweather.ui.shell.OutlinedText
 import net.wizardfactory.todayweather.ui.shell.TabContent
-import net.wizardfactory.todayweather.ui.shell.line
 
 /** What the weather tabs need from the app: texts, photos, and what their buttons and gestures do. */
 class WeatherTabHost(
@@ -213,6 +220,8 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
                     host.onExpand(visit.expand)
                 },
                 onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll)
+        },
+        popups = {
             pollen?.let { rows -> PollenDialog(rows, texts) { pollen = null } }
             source?.let { s -> SourceDialog(s, texts) { source = null } }
         },
@@ -239,34 +248,43 @@ private fun rememberPhoto(visit: ForecastScope, url: String?, photos: PhotoLoade
 
 /** The pollen popup (`showPollenInfo`): each type's grade, what it is and the advice for its grade, and the source. */
 @Composable
-private fun PollenDialog(rows: List<PollenRow>, texts: ChartTexts, onClose: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(texts["LOC_POLLEN_RISK"]) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                for (row in rows) {
-                    Text("${texts[row.labelKey]}: ${row.gradeLabel}", fontWeight = FontWeight.Bold)
-                    Text(texts[row.infoKey])
-                    Text(texts[row.adviceKey], Modifier.padding(bottom = 8.dp))
-                }
-                Text(texts["LOC_POLLEN_SOURCE"], fontSize = 12.sp)
+internal fun PollenDialog(rows: List<PollenRow>, texts: ChartTexts, onClose: () -> Unit) {
+    IonicPopup(texts["LOC_POLLEN_RISK"], emptyList(), listOf(PopupButton(texts["LOC_CLOSE"], positive = true, onTap = onClose)),
+        onBack = onClose, modifier = Modifier.testTag(WeatherTabTags.POLLEN_DIALOG), width = 300.dp,
+        widthFraction = 0.9f, background = Color.White, bodyHeightFraction = 0.6f) {
+        Column(Modifier.fillMaxWidth().padding(10.dp)) {
+            for (row in rows) {
+                PollenParagraph("${texts[row.labelKey]}: ${row.gradeLabel}", bold = true)
+                PollenParagraph(texts[row.infoKey])
+                PollenParagraph(texts[row.adviceKey])
             }
-        },
-        confirmButton = { TextButton(onClick = onClose) { Text(texts["LOC_CLOSE"]) } },
-        modifier = Modifier.testTag(WeatherTabTags.POLLEN_DIALOG),
-    )
+            PollenParagraph(texts["LOC_POLLEN_SOURCE"], small = true)
+        }
+    }
+}
+
+/** The pollen template's p/strong/small elements, including Chrome line breaks. */
+@Composable
+private fun PollenParagraph(text: String, bold: Boolean = false, small: Boolean = false) {
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val style = line((if (small) 11.2f else 14f).sp, TextUnit.Unspecified, Color.Black,
+        if (bold) FontWeight.Bold else FontWeight.Normal).copy(letterSpacing = 0.sp, textMotion = TextMotion.Animated)
+    val strut = line(14.sp, TextUnit.Unspecified, Color.Black)
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(bottom = if (small) 0.dp else 10.dp)) {
+        val width = with(density) { maxWidth.roundToPx() }
+        val broken = remember(text, density, width) { chromeLines(measurer, text, style, width).joinToString("\n") }
+        val height = CssMetrics.heightDp(text, style, density).toFloat() / density.fontScale
+        CssText(chromeRuns(broken), style.copy(lineHeight = height.sp), strut = if (small) strut else style)
+    }
 }
 
 /** `popUpAirForecastInfo`: what the air forecast source is, with a close button. */
 @Composable
 internal fun SourceDialog(source: String, texts: ChartTexts, onClose: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onClose,
-        text = { Text(texts[if (source == "kaq") "LOC_KAQ_DESCRIPTION" else "LOC_AIRKOREA_DESCRIPTION"]) },
-        confirmButton = { TextButton(onClick = onClose) { Text(texts["LOC_CLOSE"]) } },
-        modifier = Modifier.testTag(WeatherTabTags.SOURCE_DIALOG),
-    )
+    IonicPopup("", listOf(texts[if (source == "kaq") "LOC_KAQ_DESCRIPTION" else "LOC_AIRKOREA_DESCRIPTION"]),
+        listOf(PopupButton(texts["LOC_CLOSE"], onTap = onClose)), onBack = onClose,
+        modifier = Modifier.testTag(WeatherTabTags.SOURCE_DIALOG))
 }
 
 /**
@@ -275,14 +293,10 @@ internal fun SourceDialog(source: String, texts: ChartTexts, onClose: () -> Unit
  */
 @Composable
 fun RetryDialog(onClose: () -> Unit, onRetry: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(stringResource(R.string.LOC_ERROR)) },
-        text = { Text(stringResource(R.string.LOC_FAIL_TO_GET_WEATHER_INFO)) },
-        dismissButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.LOC_CLOSE)) } },
-        confirmButton = { TextButton(onClick = onRetry) { Text(stringResource(R.string.LOC_OK)) } },
-        modifier = Modifier.testTag(RETRY_DIALOG),
-    )
+    IonicPopup(stringResource(R.string.LOC_ERROR), listOf(stringResource(R.string.LOC_FAIL_TO_GET_WEATHER_INFO)),
+        listOf(PopupButton(stringResource(R.string.LOC_CLOSE), onTap = onClose),
+            PopupButton(stringResource(R.string.LOC_OK), positive = true, onTap = onRetry)),
+        onBack = onClose, modifier = Modifier.testTag(RETRY_DIALOG))
 }
 
 const val RETRY_DIALOG = "weather-retry-dialog"

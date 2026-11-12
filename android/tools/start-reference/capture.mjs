@@ -12,14 +12,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/start-reference', lang);
+const OUT = path.join(referenceRoot(root, 'start'), lang);
 const screenshots = new Screen(serial);
 const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, screenshots, OUT);
 
 await dt.evaluate(`window.twStart = (function () {
     function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }

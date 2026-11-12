@@ -11,8 +11,17 @@ import {fileURLToPath} from 'node:url';
 import {REFERENCE_SETS, sha256} from './cordova-sources.mjs';
 
 const android = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+// Matrix sets retain their own APK/source provenance rather than inheriting an
+// old baseline's claim. Coverage validation separately requires every manifest entry.
+const matrixRoot = path.join(android, 'app/src/test/resources/parity-reference');
+const matrix = fs.existsSync(matrixRoot) ? fs.readdirSync(matrixRoot, {recursive: true})
+    .filter(f => f.endsWith('/provenance.json')).map(f => ({
+        name: `parity/${f.slice(0, -'/provenance.json'.length)}`,
+        provenance: path.relative(android, path.join(matrixRoot, f)),
+        tool: 'android/tools/parity-reference/capture.sh',
+    })) : [];
 let failed = false;
-for (const set of REFERENCE_SETS) {
+for (const set of [...REFERENCE_SETS, ...matrix]) {
     const provenance = JSON.parse(fs.readFileSync(path.join(android, set.provenance), 'utf8'));
     const checks = [
         ...provenance.cordovaApk.sources.filter((s) => s.tracked).map((s) => ({file: s.file, sha256: s.clientSha256})),

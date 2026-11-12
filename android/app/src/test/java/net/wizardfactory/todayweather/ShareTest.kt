@@ -7,6 +7,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import java.io.File
@@ -135,6 +136,11 @@ class ShareTest {
     fun aPlaceWithoutALocationOpensTheStartChoice() {
         show(listOf(Place(currentPosition = true, disable = false)))
         rule.onNodeWithTag(LocationPopupTags.START_CHOICE).assertDoesNotExist()
+        // INIT cannot load a current place without coordinates. Dismiss its modal error
+        // before pressing the underlying share control, as a user must on device.
+        rule.onNodeWithTag(net.wizardfactory.todayweather.ui.forecast.RETRY_DIALOG).assertExists()
+        rule.onNodeWithText(rule.activity.getString(R.string.LOC_CLOSE)).performClick()
+        rule.waitForIdle()
         rule.onNodeWithTag(WeatherTabTags.SHARE).performClick()
         rule.waitForIdle()
         assertNull(shared())

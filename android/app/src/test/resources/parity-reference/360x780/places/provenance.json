@@ -1,0 +1,204 @@
+{
+ "tool": "android/tools/parity-reference/capture.sh APK places",
+ "cordovaApk": {
+  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
+  "versionCode": "200100",
+  "versionName": "1.1.1",
+  "sources": [
+   {
+    "file": "client/www/index.html",
+    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "tracked": true,
+    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "matchesClient": true,
+    "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
+   },
+   {
+    "file": "client/www/templates/tab-search.html",
+    "apkSha256": "2c37e78a4e3ec2d1378266d0fccb069145e3995606c73c8e1cf8d8d32366651e",
+    "tracked": true,
+    "clientSha256": "2c37e78a4e3ec2d1378266d0fccb069145e3995606c73c8e1cf8d8d32366651e",
+    "matchesClient": true,
+    "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+   },
+   {
+    "file": "client/www/js/controller.searchctrl.js",
+    "apkSha256": "3c9f8969954fa7e895c412c4f1439b08f2d0fcf99fc72abc087b2a9af858b02c",
+    "tracked": true,
+    "clientSha256": "3c9f8969954fa7e895c412c4f1439b08f2d0fcf99fc72abc087b2a9af858b02c",
+    "matchesClient": true,
+    "lastCommit": "92d60a532d1653899ebe4816a6673f34a37bc8c1"
+   },
+   {
+    "file": "client/www/js/controller.tabctrl.js",
+    "apkSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "tracked": true,
+    "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "matchesClient": true,
+    "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+   },
+   {
+    "file": "client/www/js/app.js",
+    "apkSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "tracked": true,
+    "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/service.weatherinfo.js",
+    "apkSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "tracked": true,
+    "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/service.push.js",
+    "apkSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+    "tracked": true,
+    "clientSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+    "matchesClient": true,
+    "lastCommit": "def509aa5737962eb5f408dc127f6674c7869b4a"
+   },
+   {
+    "file": "client/www/locales/ko.json",
+    "apkSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "tracked": true,
+    "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/locales/en.json",
+    "apkSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "tracked": true,
+    "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/data/town.js",
+    "apkSha256": "e1536e6dbb6d18558e6e93bb6e47923a9d90417e6c6a2cf10f7b6cf6a6080f78",
+    "tracked": true,
+    "clientSha256": "e1536e6dbb6d18558e6e93bb6e47923a9d90417e6c6a2cf10f7b6cf6a6080f78",
+    "matchesClient": true,
+    "lastCommit": "52bf022672ddf2414d0cde045b4fffa5e7e96960"
+   },
+   {
+    "file": "client/www/css/ionic.app.css",
+    "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "tracked": false,
+    "generatedFrom": "client/scss/ionic.app.scss",
+    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "matchesClient": true
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "file": "client/scss/ionic.app.scss",
+   "sha256": "927bd183ff47493c995577b37cbb4ce427e55b946bd895d9933f14570f95747b",
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "emulator": {
+  "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+  "sdk": "36"
+ },
+ "display": "360x780 dp at density 2; matrix captures record measured viewport.json per language",
+ "language": "per-app locale ko-KR, then en-US",
+ "install": "new install; the notification and location permissions granted before the first start; geo fix 37.5665, 126.9780",
+ "images": "cut from the screen (screencap): the whole WebView in the four states",
+ "server": "a stand-in inside the WebView: corpus fixtures kma-seoul and vc-london for the weather, geocode-seoul for the coordinates geocode; the emulator is offline",
+ "files": [
+  {
+   "file": "en-US/edit.json",
+   "sha256": "2d88391a3d852d63ff4fd5dd99a2dbd0c8bd49f2375386bd5aa613bc4dfd044f"
+  },
+  {
+   "file": "en-US/edit.png",
+   "sha256": "a3b2aa6e2dcdd732bde8843b6ea25ff61b0129e1149412229e9377ade91fbebe"
+  },
+  {
+   "file": "en-US/favorites-dark.json",
+   "sha256": "d61f2b41a61caa4141410463381a3ecba0f8c781719f3d1782175223eef28e0f"
+  },
+  {
+   "file": "en-US/favorites-dark.png",
+   "sha256": "4f10f9c36d926a996a39ec0e41810e6ef5cab38c4d1bf6404fe41946fe77292a"
+  },
+  {
+   "file": "en-US/favorites.json",
+   "sha256": "ae3f111517071ebe4c1400c4a8f789ab357a961e27755b8acdab633fda625aaf"
+  },
+  {
+   "file": "en-US/favorites.png",
+   "sha256": "75e953d1958cacc493aeb3cbc4f5f3011df3a458f8cd8e0d152c8efeec65bd4d"
+  },
+  {
+   "file": "en-US/location.json",
+   "sha256": "b63a93f269818f63c5a42f2f01ff363e68745a3f6dcefaf6f7a535bdb9907a38"
+  },
+  {
+   "file": "en-US/location.png",
+   "sha256": "3b323eaa8b0c4a80996534e14993487010d33093fe0ec1e2123beaee4c465216"
+  },
+  {
+   "file": "en-US/search.json",
+   "sha256": "a9bcdf660b0374be2a873a90bbe59726362dc2bafe050c72b60c578a7e83c9fc"
+  },
+  {
+   "file": "en-US/search.png",
+   "sha256": "f91df4ac02023cb7ac613ca7d40b239e300456ce497b188c15103c79b6a93541"
+  },
+  {
+   "file": "en-US/viewport.json",
+   "sha256": "77a2781c5e8e49f1d87641d4e0c217d3bd102837e13a3628345a5d52ba134f41"
+  },
+  {
+   "file": "ko-KR/edit.json",
+   "sha256": "d80224b1bf139edc613de153407b96a09c8ff5f1f109abf43966d0d804f49586"
+  },
+  {
+   "file": "ko-KR/edit.png",
+   "sha256": "6f7b2773950fc7204ea9df432c45715ba8d298121442619834023eb5142deb26"
+  },
+  {
+   "file": "ko-KR/favorites-dark.json",
+   "sha256": "782dcf7e5a8088bec6361247a9d5fb32d582f0c9f2c394d419b88f0fabaf2d1f"
+  },
+  {
+   "file": "ko-KR/favorites-dark.png",
+   "sha256": "4e8565a04a1ac2a0e7f3bacb3417f496a87c24deb5494ddb46795438a24b97f2"
+  },
+  {
+   "file": "ko-KR/favorites.json",
+   "sha256": "4107163e8f83f13851be6791a18bd69e99fe4929dded44e34b2e8b7e4135da5e"
+  },
+  {
+   "file": "ko-KR/favorites.png",
+   "sha256": "80945e42470fc990c91e31b648d40a4e69dda6aaa19fb621423ca8bf1e7d727a"
+  },
+  {
+   "file": "ko-KR/location.json",
+   "sha256": "111d3a4eb4d2549646a372c5c6d057492ba43240d5c44e30b60c3eecebf1e490"
+  },
+  {
+   "file": "ko-KR/location.png",
+   "sha256": "4b1dffa99ca66f8e10ec4538c12ec89fc459c45e64d7b4041006fa137caf6f4b"
+  },
+  {
+   "file": "ko-KR/search.json",
+   "sha256": "7410169c1a7343c0294b6c61bcc8bf5bd79139ebde0e6853fd69bf0e086707c2"
+  },
+  {
+   "file": "ko-KR/search.png",
+   "sha256": "bb87cfc82883e14cfd817c248916d27a8c099de1b4d807c99e5eda482b5d0fac"
+  },
+  {
+   "file": "ko-KR/viewport.json",
+   "sha256": "a8d024a124ce1620ed9a31c8dbbd95603d5f167d28e69f10b816e404852db172"
+  }
+ ]
+}

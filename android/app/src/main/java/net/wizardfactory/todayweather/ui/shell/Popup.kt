@@ -56,6 +56,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextMotion
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -95,14 +96,18 @@ fun IonicAlert(title: String, lines: List<String>, button: String, onClose: () -
  * nothing. It covers the area between the system bars, as the WebView did.
  */
 @Composable
-fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, onBack: () -> Unit, modifier: Modifier = Modifier,
+    width: Dp = 250.dp, widthFraction: Float = 1f, background: Color = Color(0xE6FFFFFF),
+    bodyHeightFraction: Float = 1f, body: (@Composable () -> Unit)? = null,
+) {
     BackHandler(onBack = onBack)
     BoxWithConstraints(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).background(Color(0x66000000)).pointerInput(Unit) {},
         contentAlignment = Alignment.Center) {
         // `.popup`: at most 90 % of the area high; the body scrolls (`.popup-body { overflow: auto }`), the head and the
         // buttons keep their height.
-        val popupWidth = min(maxWidth, 250.dp)
-        Column(Modifier.width(250.dp).heightIn(max = maxHeight * 0.9f).background(Color(0xE6FFFFFF)).testTag(PopupTags.POPUP)) {
+        val popupWidth = min(maxWidth * widthFraction, width)
+        val bodyLimit = maxHeight * bodyHeightFraction
+        Column(Modifier.width(popupWidth).heightIn(max = maxHeight * 0.9f).background(background).testTag(PopupTags.POPUP)) {
             // .popup-head: the title on an 18 dp line with 15 dp above and below and 10 dp at the sides, a 1 dp line under it;
             // without a title (`$ionicPopup.alert` with a template only) the empty head keeps its padding.
             FixedLine(if (title.isEmpty()) 0.dp else 18.dp, Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(top = 15.dp)) {
@@ -118,13 +123,16 @@ fun IonicPopup(title: String, lines: List<String>, buttons: List<PopupButton>, o
             val normal = remember(text, density) {
                 CssMetrics.line(AnnotatedString(text), style, style, density).let { (it.ascent + it.descent) / density.density / density.fontScale }
             }
-            Box(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).testTag(PopupTags.BODY)) {
+            Box(Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = bodyLimit)
+                .verticalScroll(rememberScrollState()).testTag(PopupTags.BODY)) {
+                if (body != null) body() else {
                 // Screen readers get the text without the line breaks; the layout stays the drawn one.
                 var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
                 Text(chromeRuns(text), Modifier.fillMaxWidth().padding(10.dp).clearAndSetSemantics {
                     this.text = AnnotatedString(lines.joinToString("\n"))
                     getTextLayoutResult { results -> layout?.let { results.add(it) } != null }
                 }, style = line(14.sp, normal.sp, Color.Black).copy(textMotion = TextMotion.Animated), onTextLayout = { layout = it })
+                }
             }
             // .popup-buttons: 10 dp around the buttons, whose 20 dp lines sit in their middle (a `<button>` centers its content).
             // A label too long for its button wraps there and the buttons grow together (flex row), as `.button` does not

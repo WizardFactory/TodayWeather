@@ -1,0 +1,208 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "All Seoul and London hourly/daily blocks in Korean and English with KR units. Historical margin retained. Selected narrow header, English air detail and wide daily-chart overlays inspected; remaining differences are glyph/icon rasterization and fractional metrics. Server fixture weather/grade descriptions remain Korean in both language captures, as supplied by the fixture. No block height differs by more than one physical pixel; all-state fit passes at all four sizes.",
+ "sensitivity": "Measured 2026-11-08 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-08/checks/forecast-sensitivity.log): card titles 1 dp lower fail 3 comparisons, no grade colors 5, summary lines of 25 sp 4, a regular temperature weight 4, AQI glyph lines 1 dp shorter 3, day cells of 130 dp 2 and hinted text 10. The arrow after the links and 2 dp smaller detail icons pass the screenshots: ForecastPageTest checks the arrow run, and the icon size is not checked.",
+ "cases": {
+  "ko-KR/vc-london-hourly-0": {
+   "heightDifference": 0,
+   "strong": 0.0054,
+   "mean": 1.928
+  },
+  "ko-KR/vc-london-hourly-1": {
+   "heightDifference": 0,
+   "strong": 0.001312,
+   "mean": 1.513
+  },
+  "ko-KR/vc-london-hourly-2": {
+   "heightDifference": 0,
+   "strong": 0.004333,
+   "mean": 2.23
+  },
+  "ko-KR/vc-london-hourly-3": {
+   "heightDifference": 0,
+   "strong": 0.001799,
+   "mean": 1.629
+  },
+  "ko-KR/vc-london-hourly-4": {
+   "heightDifference": 0,
+   "strong": 0.004475,
+   "mean": 3.713
+  },
+  "ko-KR/vc-london-hourly-5": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 5.609
+  },
+  "en-US/vc-london-hourly-0": {
+   "heightDifference": 0,
+   "strong": 0.0054,
+   "mean": 1.928
+  },
+  "en-US/vc-london-hourly-1": {
+   "heightDifference": 0,
+   "strong": 0.006187,
+   "mean": 2.361
+  },
+  "en-US/vc-london-hourly-2": {
+   "heightDifference": 0,
+   "strong": 0.002783,
+   "mean": 1.94
+  },
+  "en-US/vc-london-hourly-3": {
+   "heightDifference": 0,
+   "strong": 0.01451,
+   "mean": 4.321
+  },
+  "en-US/vc-london-hourly-4": {
+   "heightDifference": 0,
+   "strong": 0.012767,
+   "mean": 3.926
+  },
+  "en-US/vc-london-hourly-5": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 5.609
+  },
+  "ko-KR/kma-seoul-hourly-0": {
+   "heightDifference": 0,
+   "strong": 0.004703,
+   "mean": 1.698
+  },
+  "ko-KR/kma-seoul-hourly-1": {
+   "heightDifference": 0,
+   "strong": 0.002387,
+   "mean": 1.603
+  },
+  "ko-KR/kma-seoul-hourly-2": {
+   "heightDifference": 0,
+   "strong": 0.004367,
+   "mean": 1.453
+  },
+  "ko-KR/kma-seoul-hourly-3": {
+   "heightDifference": 0,
+   "strong": 0.002519,
+   "mean": 2.363
+  },
+  "ko-KR/kma-seoul-hourly-4": {
+   "heightDifference": 0,
+   "strong": 0.004704,
+   "mean": 3.75
+  },
+  "ko-KR/vc-london-daily-0": {
+   "heightDifference": 0,
+   "strong": 0.0054,
+   "mean": 1.928
+  },
+  "ko-KR/vc-london-daily-1": {
+   "heightDifference": 0,
+   "strong": 0.003512,
+   "mean": 1.654
+  },
+  "ko-KR/vc-london-daily-2": {
+   "heightDifference": 0,
+   "strong": 0.003989,
+   "mean": 3.169
+  },
+  "ko-KR/vc-london-daily-3": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 5.609
+  },
+  "en-US/kma-seoul-hourly-0": {
+   "heightDifference": 0,
+   "strong": 0.004703,
+   "mean": 1.698
+  },
+  "en-US/kma-seoul-hourly-1": {
+   "heightDifference": 0,
+   "strong": 0.005878,
+   "mean": 2.239
+  },
+  "en-US/kma-seoul-hourly-2": {
+   "heightDifference": 0,
+   "strong": 0.002256,
+   "mean": 1.69
+  },
+  "en-US/kma-seoul-hourly-3": {
+   "heightDifference": 0,
+   "strong": 0.014192,
+   "mean": 4.795
+  },
+  "en-US/kma-seoul-hourly-4": {
+   "heightDifference": 0,
+   "strong": 0.017396,
+   "mean": 4.669
+  },
+  "en-US/vc-london-daily-0": {
+   "heightDifference": 0,
+   "strong": 0.0054,
+   "mean": 1.928
+  },
+  "en-US/vc-london-daily-1": {
+   "heightDifference": 0,
+   "strong": 0.004573,
+   "mean": 1.934
+  },
+  "en-US/vc-london-daily-2": {
+   "heightDifference": 0,
+   "strong": 0.00945,
+   "mean": 4.229
+  },
+  "en-US/vc-london-daily-3": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 5.609
+  },
+  "en-US/kma-seoul-daily-0": {
+   "heightDifference": 0,
+   "strong": 0.004703,
+   "mean": 1.698
+  },
+  "en-US/kma-seoul-daily-1": {
+   "heightDifference": 0,
+   "strong": 0.003821,
+   "mean": 1.878
+  },
+  "en-US/kma-seoul-daily-2": {
+   "heightDifference": 0,
+   "strong": 0.005864,
+   "mean": 1.893
+  },
+  "en-US/kma-seoul-daily-3": {
+   "heightDifference": 0,
+   "strong": 0.007232,
+   "mean": 4.03
+  },
+  "ko-KR/kma-seoul-daily-0": {
+   "heightDifference": 0,
+   "strong": 0.004703,
+   "mean": 1.698
+  },
+  "ko-KR/kma-seoul-daily-1": {
+   "heightDifference": 0,
+   "strong": 0.003061,
+   "mean": 1.639
+  },
+  "ko-KR/kma-seoul-daily-2": {
+   "heightDifference": 0,
+   "strong": 3.7e-05,
+   "mean": 0.607
+  },
+  "ko-KR/kma-seoul-daily-3": {
+   "heightDifference": 0,
+   "strong": 0.002693,
+   "mean": 3.083
+  }
+ }
+}

@@ -12,15 +12,17 @@ import path from 'node:path';
 import {connect} from '../emulator/devtools.mjs';
 import {BLOCKS, cutBlocks} from '../emulator/page-blocks.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/forecast-reference');
+const OUT = process.env.TW_REFERENCE_LANGUAGE ? path.join(referenceRoot(root, 'forecast'), process.env.TW_REFERENCE_LANGUAGE) : referenceRoot(root, 'forecast');
 const corpus = path.join(root, 'core-domain/src/test/resources/corpus');
 const input = (name) => JSON.parse(fs.readFileSync(path.join(corpus, 'inputs', `${name}.json`), 'utf8'));
 const screenshots = new Screen(serial);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 await dt.evaluate(BLOCKS);
 await dt.evaluate(`window.twForecast = (function () {
     var inj = angular.element(document.body).injector();

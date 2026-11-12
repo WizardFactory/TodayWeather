@@ -35,6 +35,7 @@ import net.wizardfactory.todayweather.core.data.cityRecord
 import net.wizardfactory.todayweather.core.domain.WeatherConverter
 import net.wizardfactory.todayweather.core.domain.YesterdayText
 import net.wizardfactory.todayweather.core.domain.chart.ChartMetrics
+import net.wizardfactory.todayweather.core.domain.chart.DailyChart
 import net.wizardfactory.todayweather.core.domain.chart.HourlyChart
 import net.wizardfactory.todayweather.core.domain.forecast.ForecastPage
 import net.wizardfactory.todayweather.core.domain.forecast.ForecastScope
@@ -86,9 +87,18 @@ class SettingsScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/settings-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val dimensions get() = matrixSize?.split('x')?.map(String::toDouble) ?: listOf(384.0, 832.0)
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/settings" }
+        ?: "src/test/resources/settings-reference")
+    private fun bodySize(lang: String): Pair<Float, Float> {
+        if (matrixSize == null) return 384f to 762f
+        val view = Json.parseToJsonElement(File(references, "$lang/viewport.json").readText()).jsonObject["webView"]!!.jsonObject
+        return view.num("width").toFloat() to view.num("height").toFloat()
+    }
     private val inputs = File(project, "../core-domain/src/test/resources/corpus/inputs")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/settings-compare").apply { mkdirs() }
     private val kr = UnitSettings.defaults("KR")
 
@@ -113,6 +123,213 @@ class SettingsScreenshotTest {
     @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
     @Test fun aboutEnglish() = checked { about("en-US", "US") }
 
+    private fun matrix(size: String, lang: String, kind: String, theme: Theme = Theme.LIGHT, type: ForecastType = ForecastType.SHORT) = checked {
+        matrixSize = size
+        matrixLang = lang
+        when (kind) {
+            "pages" -> {
+                page("units", SettingsRoutes.UNITS, lang = lang)
+                page("radio-temperatureUnit", SettingsRoutes.list("temperatureUnit"), lang = lang)
+                listOf("dark", "photo", "old").forEach { page("units-$it", SettingsRoutes.UNITS, theme = it, lang = lang) }
+            }
+            "about" -> about(lang, "KR")
+            "weather" -> weather("${if (type == ForecastType.SHORT) "hourly" else "daily"}-${theme.name.lowercase()}",
+                "kma-seoul", theme, type = type, lang = lang)
+        }
+    }
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanPages() = matrix("384x832", "ko-KR", "pages")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanAbout() = matrix("384x832", "ko-KR", "about")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanDarkShort() = matrix("384x832", "ko-KR", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanDarkMid() = matrix("384x832", "ko-KR", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanPhotoShort() = matrix("384x832", "ko-KR", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanPhotoMid() = matrix("384x832", "ko-KR", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanOldShort() = matrix("384x832", "ko-KR", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384KoreanOldMid() = matrix("384x832", "ko-KR", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishPages() = matrix("384x832", "en-US", "pages")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishAbout() = matrix("384x832", "en-US", "about")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishDarkShort() = matrix("384x832", "en-US", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishDarkMid() = matrix("384x832", "en-US", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishPhotoShort() = matrix("384x832", "en-US", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishPhotoMid() = matrix("384x832", "en-US", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishOldShort() = matrix("384x832", "en-US", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384EnglishOldMid() = matrix("384x832", "en-US", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanPages() = matrix("360x780", "ko-KR", "pages")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanAbout() = matrix("360x780", "ko-KR", "about")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanDarkShort() = matrix("360x780", "ko-KR", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanDarkMid() = matrix("360x780", "ko-KR", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanPhotoShort() = matrix("360x780", "ko-KR", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanPhotoMid() = matrix("360x780", "ko-KR", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanOldShort() = matrix("360x780", "ko-KR", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360KoreanOldMid() = matrix("360x780", "ko-KR", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishPages() = matrix("360x780", "en-US", "pages")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishAbout() = matrix("360x780", "en-US", "about")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishDarkShort() = matrix("360x780", "en-US", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishDarkMid() = matrix("360x780", "en-US", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishPhotoShort() = matrix("360x780", "en-US", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishPhotoMid() = matrix("360x780", "en-US", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishOldShort() = matrix("360x780", "en-US", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360EnglishOldMid() = matrix("360x780", "en-US", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanPages() = matrix("412x892", "ko-KR", "pages")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanAbout() = matrix("412x892", "ko-KR", "about")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanDarkShort() = matrix("412x892", "ko-KR", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanDarkMid() = matrix("412x892", "ko-KR", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanPhotoShort() = matrix("412x892", "ko-KR", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanPhotoMid() = matrix("412x892", "ko-KR", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanOldShort() = matrix("412x892", "ko-KR", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412KoreanOldMid() = matrix("412x892", "ko-KR", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishPages() = matrix("412x892", "en-US", "pages")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishAbout() = matrix("412x892", "en-US", "about")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishDarkShort() = matrix("412x892", "en-US", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishDarkMid() = matrix("412x892", "en-US", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishPhotoShort() = matrix("412x892", "en-US", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishPhotoMid() = matrix("412x892", "en-US", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishOldShort() = matrix("412x892", "en-US", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412EnglishOldMid() = matrix("412x892", "en-US", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanPages() = matrix("320x694", "ko-KR", "pages")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanAbout() = matrix("320x694", "ko-KR", "about")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanDarkShort() = matrix("320x694", "ko-KR", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanDarkMid() = matrix("320x694", "ko-KR", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanPhotoShort() = matrix("320x694", "ko-KR", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanPhotoMid() = matrix("320x694", "ko-KR", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanOldShort() = matrix("320x694", "ko-KR", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320KoreanOldMid() = matrix("320x694", "ko-KR", "weather", Theme.OLD, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishPages() = matrix("320x694", "en-US", "pages")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishAbout() = matrix("320x694", "en-US", "about")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishDarkShort() = matrix("320x694", "en-US", "weather", Theme.DARK, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishDarkMid() = matrix("320x694", "en-US", "weather", Theme.DARK, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishPhotoShort() = matrix("320x694", "en-US", "weather", Theme.PHOTO, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishPhotoMid() = matrix("320x694", "en-US", "weather", Theme.PHOTO, ForecastType.MID)
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishOldShort() = matrix("320x694", "en-US", "weather", Theme.OLD, ForecastType.SHORT)
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320EnglishOldMid() = matrix("320x694", "en-US", "weather", Theme.OLD, ForecastType.MID)
+
     private var state by mutableStateOf(AppState())
     private var route by mutableStateOf("")
 
@@ -123,7 +340,7 @@ class SettingsScreenshotTest {
             route = to
             rule.setContent {
                 val texts = forecastTexts(LocalContext.current)
-                Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
+                Box(Modifier.size(bodySize(lang).first.dp, bodySize(lang).second.dp).testTag(ROOT)) {
                     SettingsScreen(route, state, Theme.of(state.settings.theme), texts, onBack = {}, onUnit = {}, onChoose = { _, _ -> })
                 }
             }
@@ -139,7 +356,7 @@ class SettingsScreenshotTest {
         var open by mutableStateOf(false)
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
-            Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
+            Box(Modifier.size(bodySize(lang).first.dp, bodySize(lang).second.dp).testTag(ROOT)) {
                 SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.1", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
                     MenuRow.ANALYTICS to LocalContext.current.getString(R.string.LOC_ANALYTICS_DISABLED)))) {}
@@ -153,21 +370,25 @@ class SettingsScreenshotTest {
     }
 
     /** Every block of S03 after the settings change, with the shell's bar over the header block, as captured. */
-    private fun weather(name: String, fixture: String, theme: Theme, fahrenheit: Boolean = false) {
-        val record = Json.parseToJsonElement(File(references, "ko-KR/$name/hourly.json").readText()).jsonObject
-        val photo = BitmapFactory.decodeFile(File(references, "photo.png").path).asImageBitmap()
+    private fun weather(name: String, fixture: String, theme: Theme, fahrenheit: Boolean = false,
+        type: ForecastType = ForecastType.SHORT, lang: String = "ko-KR") {
+        val page = if (type == ForecastType.SHORT) "hourly" else "daily"
+        val record = Json.parseToJsonElement(File(references, "$lang/$name/$page.json").readText()).jsonObject
+        val photo = BitmapFactory.decodeFile(File(project, "src/test/resources/settings-reference/photo.png").path).asImageBitmap()
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
-            val metrics = ChartMetrics(384.0, 832.0)
-            val scope = ForecastScope(ForecastType.SHORT, metrics, fahrenheit, theme == Theme.PHOTO,
+            val metrics = ChartMetrics(dimensions[0], dimensions[1])
+            val scope = ForecastScope(type, metrics, fahrenheit, theme == Theme.PHOTO,
                 YesterdayText(texts["LOC_SAME_AS_YESTERDAY"], texts["LOC_THAN_YESTERDAY"]), expandShortChart = false)
             scope.open(city(fixture, photo = theme == Theme.PHOTO), 1, hasPush = true)
             val model = ForecastPage(scope, PageUnits(if (fahrenheit) "F" else "C", "m/s", "hPa", "km", "mm", "airkorea"), texts)
-            val content = WeatherPageContent(ForecastType.SHORT, model, metrics, HourlyChart.build(scope.chartPlace!!, metrics, texts, "mm", "m/s"), null)
-            Box(Modifier.size(384.dp, 2600.dp)) {
+            val content = WeatherPageContent(type, model, metrics,
+                if (type == ForecastType.SHORT) HourlyChart.build(scope.chartPlace!!, metrics, texts, "mm", "m/s") else null,
+                if (type == ForecastType.MID) DailyChart.build(scope.chartPlace!!, metrics, texts, "mm") else null)
+            Box(Modifier.size(dimensions[0].toFloat().dp, 2600.dp)) {
                 WeatherPage(content, theme, photo = if (theme == Theme.PHOTO) photo else null, photoGradient = theme == Theme.PHOTO, expanded = false,
                     onToggleExpanded = {}, onPrevious = {}, onNext = {}, onAction = {})
-                val colors = ShellColors.of(theme, Tab.HOURLY)
+                val colors = ShellColors.of(theme, if (type == ForecastType.SHORT) Tab.HOURLY else Tab.DAILY)
                 HeaderBar(colors, model.title, onMenu = {}) {
                     BarButton(Glyphs.NOTIFICATIONS, colors, {}, padding = 4.dp)
                     BarButton(Glyphs.SHARE, colors, {}, Modifier.padding(end = 4.dp), padding = 4.dp)
@@ -178,7 +399,7 @@ class SettingsScreenshotTest {
         for (block in record["blocks"]!!.jsonArray.map { it.jsonObject }) {
             val i = block["index"]!!.jsonPrimitive.content.toInt()
             val native = rule.onNodeWithTag(ForecastTags.block(i)).captureToImage().asAndroidBitmap().toPixels()
-            compare("ko-KR/$name-$i", "ko-KR/$name/hourly-$i.png", native, crop = block["hidden"] != null)
+            compare("$lang/$name-$i", "$lang/$name/$page-$i.png", native, crop = block["hidden"] != null)
         }
     }
 
@@ -189,10 +410,10 @@ class SettingsScreenshotTest {
         val cordova = ImageIO.read(File(references, file)).toPixels()
         val shown = if (crop) native.crop(0, 0, native.width, minOf(native.height, cordova.height)) else native
         val diff = ImageDiff.of(shown, cordova)
-        val base = name.replace('/', '-')
+        val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(shown.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(shown, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
-        println("settings-compare $name native=${shown.width}x${shown.height} cordova=${cordova.width}x${cordova.height} $diff")
+        println("settings-compare ${matrixSize ?: "historical"}/$name native=${shown.width}x${shown.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
         if (limit == null || margin == null) {

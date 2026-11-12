@@ -1,0 +1,65 @@
+{
+ "metric": {
+  "strong": "fraction with max RGB difference >64 after a 3x3 box blur",
+  "mean": "mean max RGB difference, 0..255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "margin": {
+  "strong": 0.002,
+  "mean": 0.4
+ },
+ "recordedOn": "2026-11-13, API36 Cordova vs Robolectric SDK34 native graphics",
+ "why": "Native Compose popups reproduce the recorded rectangles and text. Same captured weather background isolates translucent popup comparison. Fractional glyph advances retain Chrome line breaks; remaining differences are font weight/rasterization, fractional centering and at most one physical pixel of Korean line-box rounding. Geometry (0.75dp), full semantic body and scrolling to the pollen source are checked separately. Selected overlays at 384 and 320 inspected.",
+ "cases": {
+  "en-US/retry": {
+   "strong": 0.006425,
+   "mean": 8.873,
+   "heightDifference": 0
+  },
+  "en-US/source-kaq": {
+   "strong": 0.001543,
+   "mean": 9.083,
+   "heightDifference": 0
+  },
+  "en-US/source-airkorea": {
+   "strong": 0.002055,
+   "mean": 8.657,
+   "heightDifference": 0
+  },
+  "en-US/pollen": {
+   "strong": 0.005224,
+   "mean": 2.142,
+   "heightDifference": 0
+  },
+  "en-US/exit": {
+   "strong": 0.004619,
+   "mean": 8.1,
+   "heightDifference": 0
+  },
+  "ko-KR/retry": {
+   "strong": 0.019403,
+   "mean": 12.23,
+   "heightDifference": 1
+  },
+  "ko-KR/source-kaq": {
+   "strong": 0.023278,
+   "mean": 15.01,
+   "heightDifference": 1
+  },
+  "ko-KR/source-airkorea": {
+   "strong": 0.019756,
+   "mean": 13.502,
+   "heightDifference": 1
+  },
+  "ko-KR/pollen": {
+   "strong": 0.035009,
+   "mean": 11.229,
+   "heightDifference": 0
+  },
+  "ko-KR/exit": {
+   "strong": 0.010728,
+   "mean": 9.9,
+   "heightDifference": 1
+  }
+ }
+}

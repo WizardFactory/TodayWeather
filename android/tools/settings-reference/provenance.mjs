@@ -6,13 +6,14 @@
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {referenceRoot} from '../emulator/reference-view.mjs';
 import {apkVersion, cordovaSources, sha256} from '../emulator/cordova-sources.mjs';
 
 const [serial, apk, root] = process.argv.slice(2);
 if (!/^emulator-\d+$/.test(serial || '')) throw new Error('pass an emulator serial');
 const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]).toString().trim();
 const repo = path.resolve(root, '..');
-const out = path.join(root, 'app/src/test/resources/settings-reference');
+const out = referenceRoot(root, 'settings');
 
 // The settings pages (S07, S08), the menu and its popup (index.html, SettingCtrl), the weather page they change, the
 // translations, the stylesheet and the image theme map. The stylesheet is a build output Git ignores; its tracked input
@@ -27,12 +28,12 @@ const {sources, inputs} = cordovaSources(apk, repo, SOURCES, GENERATED_FROM);
 const files = fs.readdirSync(out, {recursive: true}).filter((f) => fs.statSync(path.join(out, f)).isFile() &&
     !['provenance.json', 'tolerances.json'].includes(f)).sort();
 const provenance = {
-    tool: 'android/tools/settings-reference/capture.sh',
+    tool: process.env.TW_REFERENCE_SIZE ? 'android/tools/parity-reference/capture.sh APK settings' : 'android/tools/settings-reference/capture.sh',
     cordovaApk: {sha256: sha256(fs.readFileSync(apk)), ...apkVersion(apk), sources},
     inputs,
     emulator: {fingerprint: adb('shell', 'getprop', 'ro.build.fingerprint'), sdk: adb('shell', 'getprop', 'ro.build.version.sdk')},
-    display: '384x832 dp at density 2 (wm size 768x1664, wm density 320)',
-    language: 'per-app locale ko-KR, then en-US',
+    display: `${process.env.TW_REFERENCE_SIZE || '384x832'} dp at density 2; matrix captures record measured viewport.json per language`,
+    language: process.env.TW_REFERENCE_SIZE ? 'ko-KR and en-KR (English folder label en-US), retaining KR units' : 'per-app locale ko-KR, then en-US',
     images: 'cut from the screen (screencap): a settings page from its top to 20 CSS px under its list, the About state whole, ' +
         'the weather page block by block (tools/emulator/page-blocks.mjs)',
     server: 'a stand-in inside the WebView: corpus fixtures kma-seoul (°C) and kma-seoul-f (°F) by the requested units, ' +

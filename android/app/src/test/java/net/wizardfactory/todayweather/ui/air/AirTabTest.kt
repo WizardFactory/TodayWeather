@@ -1,5 +1,8 @@
 package net.wizardfactory.todayweather.ui.air
 
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onRoot
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -210,6 +213,8 @@ class AirTabTest {
         rule.onNodeWithText("AIRKOREA", substring = true, useUnmergedTree = true).performScrollTo().performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(WeatherTabTags.SOURCE_DIALOG).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.SOURCE_DIALOG).assertHeightIsEqualTo(
+            rule.onRoot().getUnclippedBoundsInRoot().let { it.bottom - it.top })
         rule.onNodeWithText(rule.activity.getString(R.string.LOC_AIRKOREA_DESCRIPTION)).assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.LOC_CLOSE)).performClick()
         rule.waitForIdle()

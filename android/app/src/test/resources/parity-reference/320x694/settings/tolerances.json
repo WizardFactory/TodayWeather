@@ -1,0 +1,348 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Four-size Korean/English KR-unit settings, menus and hourly/daily dark/photo/old blocks. Historical margins retained. Inspected narrow old-theme chart and header, wide English unit list, and photo-header overlays. The chart now uses the old theme artwork, independently checked by ChartArtworkTest. Remaining differences follow glyph/icon rasterization and fractional line metrics; no block differs by more than one physical pixel in height. Geometry and all-state fit remain separate checks.",
+ "sensitivity": "Measured 2026-11-09 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-12/checks/mutations-1.log, mutations-2.log): rows 2 dp taller fail 19 comparisons, choices 4 dp to the right 19, the popup 10 dp wider 2, a lighter backdrop 2, the photo centered as AN-08 had it 1 (hourly-photo-0), the tab page's colors instead of the menu's 4 (photo and old themes). A check mark 4 dp higher and the popup's body on Compose's own line height change too few pixels to fail; SettingsGeometryTest compares the rows, the check mark and the popup's parts with the captured rects within 0.5 dp and fails for both.",
+ "cases": {
+  "en-US/hourly-old-0": {
+   "heightDifference": 0,
+   "strong": 0.03535,
+   "mean": 7.162
+  },
+  "en-US/hourly-old-1": {
+   "heightDifference": 1,
+   "strong": 0.015879,
+   "mean": 4.831
+  },
+  "en-US/hourly-old-2": {
+   "heightDifference": 0,
+   "strong": 0.00857,
+   "mean": 2.757
+  },
+  "en-US/hourly-old-3": {
+   "heightDifference": 0,
+   "strong": 0.022296,
+   "mean": 6.139
+  },
+  "en-US/hourly-old-4": {
+   "heightDifference": 0,
+   "strong": 0.027444,
+   "mean": 6.418
+  },
+  "ko-KR/hourly-photo-0": {
+   "heightDifference": 0,
+   "strong": 0.022658,
+   "mean": 5.364
+  },
+  "ko-KR/hourly-photo-1": {
+   "heightDifference": 1,
+   "strong": 0.00516,
+   "mean": 2.802
+  },
+  "ko-KR/hourly-photo-2": {
+   "heightDifference": 0,
+   "strong": 0.00524,
+   "mean": 1.744
+  },
+  "ko-KR/hourly-photo-3": {
+   "heightDifference": 0,
+   "strong": 0.003023,
+   "mean": 2.859
+  },
+  "ko-KR/hourly-photo-4": {
+   "heightDifference": 0,
+   "strong": 0.005645,
+   "mean": 4.5
+  },
+  "en-US/hourly-photo-0": {
+   "heightDifference": 0,
+   "strong": 0.022658,
+   "mean": 5.364
+  },
+  "en-US/hourly-photo-1": {
+   "heightDifference": 1,
+   "strong": 0.013265,
+   "mean": 4.047
+  },
+  "en-US/hourly-photo-2": {
+   "heightDifference": 0,
+   "strong": 0.002708,
+   "mean": 2.028
+  },
+  "en-US/hourly-photo-3": {
+   "heightDifference": 0,
+   "strong": 0.0171,
+   "mean": 5.753
+  },
+  "en-US/hourly-photo-4": {
+   "heightDifference": 0,
+   "strong": 0.020876,
+   "mean": 5.603
+  },
+  "ko-KR/daily-dark-0": {
+   "heightDifference": 0,
+   "strong": 0.02934,
+   "mean": 5.498
+  },
+  "ko-KR/daily-dark-1": {
+   "heightDifference": 1,
+   "strong": 0.001163,
+   "mean": 1.931
+  },
+  "ko-KR/daily-dark-2": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 0.692
+  },
+  "ko-KR/daily-dark-3": {
+   "heightDifference": 0,
+   "strong": 0.003212,
+   "mean": 3.269
+  },
+  "en-US/hourly-dark-0": {
+   "heightDifference": 0,
+   "strong": 0.02934,
+   "mean": 5.498
+  },
+  "en-US/hourly-dark-1": {
+   "heightDifference": 1,
+   "strong": 0.009527,
+   "mean": 3.667
+  },
+  "en-US/hourly-dark-2": {
+   "heightDifference": 0,
+   "strong": 0.003638,
+   "mean": 2.164
+  },
+  "en-US/hourly-dark-3": {
+   "heightDifference": 0,
+   "strong": 0.010389,
+   "mean": 4.793
+  },
+  "en-US/hourly-dark-4": {
+   "heightDifference": 0,
+   "strong": 0.011314,
+   "mean": 4.932
+  },
+  "ko-KR/daily-old-0": {
+   "heightDifference": 0,
+   "strong": 0.035644,
+   "mean": 7.223
+  },
+  "ko-KR/daily-old-1": {
+   "heightDifference": 1,
+   "strong": 0.004229,
+   "mean": 2.507
+  },
+  "ko-KR/daily-old-2": {
+   "heightDifference": 0,
+   "strong": 3.9e-05,
+   "mean": 0.884
+  },
+  "ko-KR/daily-old-3": {
+   "heightDifference": 0,
+   "strong": 0.01159,
+   "mean": 4.255
+  },
+  "ko-KR/hourly-dark-0": {
+   "heightDifference": 0,
+   "strong": 0.02934,
+   "mean": 5.498
+  },
+  "ko-KR/hourly-dark-1": {
+   "heightDifference": 1,
+   "strong": 0.004309,
+   "mean": 2.784
+  },
+  "ko-KR/hourly-dark-2": {
+   "heightDifference": 0,
+   "strong": 0.000223,
+   "mean": 1.598
+  },
+  "ko-KR/hourly-dark-3": {
+   "heightDifference": 0,
+   "strong": 0.00099,
+   "mean": 2.252
+  },
+  "ko-KR/hourly-dark-4": {
+   "heightDifference": 0,
+   "strong": 0.004216,
+   "mean": 4.107
+  },
+  "ko-KR/daily-photo-0": {
+   "heightDifference": 0,
+   "strong": 0.022658,
+   "mean": 5.364
+  },
+  "ko-KR/daily-photo-1": {
+   "heightDifference": 1,
+   "strong": 0.003745,
+   "mean": 2.341
+  },
+  "ko-KR/daily-photo-2": {
+   "heightDifference": 0,
+   "strong": 4.5e-05,
+   "mean": 0.728
+  },
+  "ko-KR/daily-photo-3": {
+   "heightDifference": 0,
+   "strong": 0.002846,
+   "mean": 3.177
+  },
+  "en-US/about": {
+   "heightDifference": 0,
+   "strong": 0.003252,
+   "mean": 1.598
+  },
+  "en-US/units": {
+   "heightDifference": 0,
+   "strong": 0.00385,
+   "mean": 1.528
+  },
+  "en-US/radio-temperatureUnit": {
+   "heightDifference": 0,
+   "strong": 0.007454,
+   "mean": 1.511
+  },
+  "en-US/units-dark": {
+   "heightDifference": 0,
+   "strong": 0.007561,
+   "mean": 1.849
+  },
+  "en-US/units-photo": {
+   "heightDifference": 0,
+   "strong": 0.003699,
+   "mean": 1.507
+  },
+  "en-US/units-old": {
+   "heightDifference": 0,
+   "strong": 0.003699,
+   "mean": 1.507
+  },
+  "en-US/daily-photo-0": {
+   "heightDifference": 0,
+   "strong": 0.022658,
+   "mean": 5.364
+  },
+  "en-US/daily-photo-1": {
+   "heightDifference": 1,
+   "strong": 0.00533,
+   "mean": 2.751
+  },
+  "en-US/daily-photo-2": {
+   "heightDifference": 0,
+   "strong": 0.007037,
+   "mean": 2.271
+  },
+  "en-US/daily-photo-3": {
+   "heightDifference": 0,
+   "strong": 0.007997,
+   "mean": 4.37
+  },
+  "en-US/daily-dark-0": {
+   "heightDifference": 0,
+   "strong": 0.02934,
+   "mean": 5.498
+  },
+  "en-US/daily-dark-1": {
+   "heightDifference": 1,
+   "strong": 0.002301,
+   "mean": 2.215
+  },
+  "en-US/daily-dark-2": {
+   "heightDifference": 0,
+   "strong": 0.00597,
+   "mean": 2.105
+  },
+  "en-US/daily-dark-3": {
+   "heightDifference": 0,
+   "strong": 0.011552,
+   "mean": 4.556
+  },
+  "ko-KR/hourly-old-0": {
+   "heightDifference": 0,
+   "strong": 0.03535,
+   "mean": 7.162
+  },
+  "ko-KR/hourly-old-1": {
+   "heightDifference": 1,
+   "strong": 0.008091,
+   "mean": 3.595
+  },
+  "ko-KR/hourly-old-2": {
+   "heightDifference": 0,
+   "strong": 0.004872,
+   "mean": 2.032
+  },
+  "ko-KR/hourly-old-3": {
+   "heightDifference": 0,
+   "strong": 0.002917,
+   "mean": 2.886
+  },
+  "ko-KR/hourly-old-4": {
+   "heightDifference": 0,
+   "strong": 0.010992,
+   "mean": 5.306
+  },
+  "en-US/daily-old-0": {
+   "heightDifference": 0,
+   "strong": 0.035644,
+   "mean": 7.223
+  },
+  "en-US/daily-old-1": {
+   "heightDifference": 1,
+   "strong": 0.005793,
+   "mean": 2.875
+  },
+  "en-US/daily-old-2": {
+   "heightDifference": 0,
+   "strong": 0.011403,
+   "mean": 2.744
+  },
+  "en-US/daily-old-3": {
+   "heightDifference": 0,
+   "strong": 0.024982,
+   "mean": 5.948
+  },
+  "ko-KR/about": {
+   "heightDifference": 0,
+   "strong": 0.007782,
+   "mean": 3.313
+  },
+  "ko-KR/units": {
+   "heightDifference": 0,
+   "strong": 0.002488,
+   "mean": 1.26
+  },
+  "ko-KR/radio-temperatureUnit": {
+   "heightDifference": 0,
+   "strong": 0.003103,
+   "mean": 0.742
+  },
+  "ko-KR/units-dark": {
+   "heightDifference": 0,
+   "strong": 0.005633,
+   "mean": 1.466
+  },
+  "ko-KR/units-photo": {
+   "heightDifference": 0,
+   "strong": 0.001844,
+   "mean": 1.2
+  },
+  "ko-KR/units-old": {
+   "heightDifference": 0,
+   "strong": 0.001844,
+   "mean": 1.2
+  }
+ }
+}

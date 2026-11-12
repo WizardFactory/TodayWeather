@@ -57,8 +57,15 @@ class PrivacyScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/privacy-reference")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private var matrixSize: String? = null
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/privacy" }
+        ?: "src/test/resources/privacy-reference")
+    private fun bodySize(lang: String): Pair<Float, Float> {
+        if (matrixSize == null) return 384f to 762f
+        val view = Json.parseToJsonElement(File(references, "$lang/viewport.json").readText()).jsonObject["webView"]!!.jsonObject
+        return view.num("width").toFloat() to view.num("height").toFloat()
+    }
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/privacy-compare").apply { mkdirs() }
 
     @Test fun korean() = checked { states("ko-KR", "KR") }
@@ -70,6 +77,35 @@ class PrivacyScreenshotTest {
 
     @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
     @Test fun englishLines() = lines("en-US")
+
+    private fun matrix(size: String, lang: String, region: String) = checked {
+        matrixSize = size
+        states(lang, region)
+    }
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    fun nominal384Korean() = matrix("384x832", "ko-KR", "KR")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    fun nominal384English() = matrix("384x832", "en-US", "US")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    fun nominal360Korean() = matrix("360x780", "ko-KR", "KR")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    fun nominal360English() = matrix("360x780", "en-US", "US")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    fun nominal412Korean() = matrix("412x892", "ko-KR", "KR")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    fun nominal412English() = matrix("412x892", "en-US", "US")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    fun nominal320Korean() = matrix("320x694", "ko-KR", "KR")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    fun nominal320English() = matrix("320x694", "en-US", "US")
 
     /** The popup's body breaks where Chrome broke it: each line of the capture's line boxes, without its trailing space. */
     private fun lines(lang: String) {
@@ -88,7 +124,7 @@ class PrivacyScreenshotTest {
         var popup by mutableStateOf(false)
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
-            Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
+            Box(Modifier.size(bodySize(lang).first.dp, bodySize(lang).second.dp).testTag(ROOT)) {
                 SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.1", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
                     MenuRow.ANALYTICS to stringResource(if (allowed) R.string.LOC_ANALYTICS_ALLOWED else R.string.LOC_ANALYTICS_DISABLED)))) {}
@@ -118,10 +154,10 @@ class PrivacyScreenshotTest {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
         val diff = ImageDiff.of(native, cordova)
-        val base = name.replace('/', '-')
+        val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
-        println("privacy-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
+        println("privacy-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
         if (limit == null || margin == null) {
