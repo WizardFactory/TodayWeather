@@ -36,9 +36,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -163,6 +161,8 @@ class TabContent(
     val afterTitle: @Composable RowScope.(ShellColors) -> Unit = {},
     val actions: @Composable RowScope.(ShellColors) -> Unit = {},
     val scrolled: () -> Float = { 0f },
+    /** Tab-owned modal state, drawn over the whole WebView area, including header and tabs. */
+    val popups: @Composable BoxScope.() -> Unit = {},
     val page: @Composable BoxScope.(ShellColors) -> Unit = {},
 )
 
@@ -207,11 +207,11 @@ fun TodayWeatherShell(
             // The WebView's area. With a banner under it, the navigation bar is below the banner, not in this area.
             val web = if (banner != null) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)) else Modifier
             Box(Modifier.fillMaxWidth().weight(1f).then(web)) {
+                val tab = content(selected)
                 Column(Modifier.fillMaxSize()) {
                     Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(ShellColors.statusBar))
                     Box(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
                         Column(Modifier.fillMaxSize()) {
-                            val tab = content(selected)
                             Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
                                 tab.page(this, colors)
                                 val header = tab.header
@@ -241,21 +241,16 @@ fun TodayWeatherShell(
                     Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
                 }
                 MenuPanel(state, navigation, onMenuRow)
+                tab.popups(this)
                 popups()
+                if (exitAsked) {
+                    ExitDialog(onCancel = { exitAsked = false }, onConfirm = { exitAsked = false; onExit() })
+                }
             }
             if (banner != null) {
                 Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.sides).testTag(ShellTags.BANNER)) { banner() }
                 Spacer(Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(colors.tabBar))
             }
-        }
-        if (exitAsked) {
-            AlertDialog(
-                onDismissRequest = { exitAsked = false },
-                text = { Text(stringResource(R.string.LOC_DO_YOU_WANT_TO_EXIT)) },
-                dismissButton = { TextButton(onClick = { exitAsked = false }) { Text(stringResource(R.string.LOC_CANCEL)) } },
-                confirmButton = { TextButton(onClick = { exitAsked = false; onExit() }) { Text(stringResource(R.string.LOC_OK)) } },
-                modifier = Modifier.testTag(ShellTags.EXIT_DIALOG),
-            )
         }
     }
 }
@@ -286,8 +281,12 @@ fun HeaderBar(
             val y = scrolled()
             if (y >= 44) {
                 val start = minOf(1f, (y - 44) / 88)
-                drawRect(Brush.verticalGradient(0f to Color(0xFF444444).copy(alpha = start), 0.5f to Color(0xFF444444).copy(alpha = start),
-                    1f to Color(0xFF444444).copy(alpha = start / 2)))
+                val gradient = Brush.verticalGradient(0f to Color(0xFF444444).copy(alpha = start),
+                    0.5f to Color(0xFF444444).copy(alpha = start), 1f to Color(0xFF444444).copy(alpha = start / 2))
+                // Android Ionic keeps the cached bar's surface behind the active bar
+                // (only its header items are hidden). barScrolled paints both, so
+                // their translucent gradients compose twice; captured at 88/176dp.
+                repeat(2) { drawRect(gradient) }
             }
         }.hairline(colors.headerLine, bottom = true),
     ) { (menu, buttons, text), constraints ->
@@ -562,4 +561,13 @@ internal fun OutlinedText(text: String, style: TextStyle, outline: Color?, modif
 internal fun Modifier.hairline(color: Color, bottom: Boolean) = drawBehind {
     val h = 0.5.dp.toPx()
     drawRect(color, Offset(0f, if (bottom) size.height - h else h), Size(size.width, h))
+}
+
+/** O15: both buttons use Ionic's default color; back only dismisses. */
+@Composable
+internal fun ExitDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
+    IonicPopup("", listOf(stringResource(R.string.LOC_DO_YOU_WANT_TO_EXIT)),
+        listOf(PopupButton(stringResource(R.string.LOC_CANCEL), onTap = onCancel),
+            PopupButton(stringResource(R.string.LOC_OK), onTap = onConfirm)),
+        onBack = onCancel, modifier = Modifier.testTag(ShellTags.EXIT_DIALOG))
 }

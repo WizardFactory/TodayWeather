@@ -1,0 +1,98 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Four-size Korean/English maps, all warning cards and nationwide-air dark/old themes. Historical margins retained. Inspected narrow old-theme map, narrow Korean warning card and wide English warning page. Remaining differences are glyph rasterization and font advances: Robolectric draws a smaller open-circle glyph (U+25CB) in English warning text, moving some wrap positions. This tolerance explicitly includes that renderer difference; it does not establish pixel equality. Individual card heights differ by at most one physical pixel, and the separate all-state fit tests check text visibility.",
+ "sensitivity": "Measured 2026-11-09 by changing the pages one way at a time and rerunning (reports/sdlc/android-an-13/checks/mutations-1.log to mutations-3.log):\n- labels 2 dp lower fail 18 comparisons; lighter label colors fail 18;\n- a map 4 dp lower fails 9; tabs 4 dp to the right fail 9;\n- card padding 18 dp fails 10; punctuation in the fallback font fails 10;\n- the h2 centered as LineText does fails 8;\n- no space after the image fails 4; no borrowed pixel fails 4; empty comment lines dropped fail 2;\n- the tab page's colors instead of the menu's fail 2; labels without the shrink-to-fit limit fail 1 (nation-wind); a loading box 10 dp wider fails 1.\nChanges too small for the pixels fail NationGeometryTest: labels 1 dp lower, the mode buttons in thirds, the icon line 2 dp taller, the cards without their 1 dp overlap. NationFitTest catches labels past the window and heading lines that do not grow with the text.",
+ "cases": {
+  "ko-KR/nation-weather": {
+   "heightDifference": 0,
+   "strong": 0.000501,
+   "mean": 0.663
+  },
+  "ko-KR/nation-air-pm2.5": {
+   "heightDifference": 0,
+   "strong": 0.000536,
+   "mean": 0.514
+  },
+  "ko-KR/warnings": {
+   "heightDifference": 0,
+   "strong": 0.01124,
+   "mean": 5.25
+  },
+  "ko-KR/warnings-0": {
+   "heightDifference": 0,
+   "strong": 0.001123,
+   "mean": 1.418
+  },
+  "ko-KR/warnings-1": {
+   "heightDifference": 1,
+   "strong": 0.015543,
+   "mean": 6.674
+  },
+  "ko-KR/warnings-2": {
+   "heightDifference": 0,
+   "strong": 9.1e-05,
+   "mean": 0.878
+  },
+  "ko-KR/nation-air-pm2.5-dark": {
+   "heightDifference": 0,
+   "strong": 0.000505,
+   "mean": 0.506
+  },
+  "ko-KR/nation-air-pm2.5-old": {
+   "heightDifference": 0,
+   "strong": 0.000351,
+   "mean": 0.494
+  },
+  "en-US/nation-weather": {
+   "heightDifference": 0,
+   "strong": 0.00117,
+   "mean": 0.797
+  },
+  "en-US/nation-air-pm2.5": {
+   "heightDifference": 0,
+   "strong": 0.000628,
+   "mean": 0.529
+  },
+  "en-US/warnings": {
+   "heightDifference": 0,
+   "strong": 0.028994,
+   "mean": 7.252
+  },
+  "en-US/warnings-0": {
+   "heightDifference": 0,
+   "strong": 0.000834,
+   "mean": 1.289
+  },
+  "en-US/warnings-1": {
+   "heightDifference": 1,
+   "strong": 0.014479,
+   "mean": 6.567
+  },
+  "en-US/warnings-2": {
+   "heightDifference": 0,
+   "strong": 0.005346,
+   "mean": 1.677
+  },
+  "en-US/nation-air-pm2.5-dark": {
+   "heightDifference": 0,
+   "strong": 0.000526,
+   "mean": 0.519
+  },
+  "en-US/nation-air-pm2.5-old": {
+   "heightDifference": 0,
+   "strong": 0.000345,
+   "mean": 0.505
+  }
+ }
+}

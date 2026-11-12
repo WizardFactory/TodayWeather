@@ -29,9 +29,10 @@ import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {BLOCKS} from '../emulator/page-blocks.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/nation-reference', lang);
+const OUT = path.join(referenceRoot(root, 'nation'), lang);
 const corpus = path.join(root, 'core-domain/src/test/resources/corpus');
 const input = (name) => JSON.parse(fs.readFileSync(path.join(corpus, 'inputs', `${name}.json`), 'utf8'));
 const screenshots = new Screen(serial);
@@ -39,6 +40,7 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 
 // The stand-in server: requests to http(s) URLs other than the app's own pages are answered here and recorded, with
 // the server's address left out of the record. window.twAnswer sets how the nation and warning requests are answered.
@@ -354,7 +356,25 @@ await dt.evaluate(`twNation.setup(${JSON.stringify(input('kma-seoul'))}, ${JSON.
 await expectPage('#/tab/forecast');
 const TYPES = ['pm2.5', 'pm10', 'o3', 'no2', 'so2', 'co'];
 
-if (lang === 'ko-KR') {
+if (process.env.TW_REFERENCE_SIZE) {
+    await open('nation', '#/nation');
+    await nation('nation-weather');
+    await back();
+    await open('nation-air', '#/nation-air');
+    await nation('nation-air-pm2.5');
+    await back();
+    await open('kma-special', '#/kma-special');
+    await warnings('warnings');
+    await back();
+    for (const name of ['dark', 'old']) {
+        const key = name === 'dark' ? 'LOC_DARK_THEME' : 'LOC_OLD_THEME';
+        const label = await dt.evaluate(`angular.element(document.body).injector().get('$translate').instant('${key}')`);
+        await theme(label);
+        await open('nation-air', '#/nation-air');
+        await nation(`nation-air-pm2.5-${name}`);
+        await back();
+    }
+} else if (lang === 'ko-KR') {
     // S10 with a late answer: the loading overlay, then the page.
     await step('open nation (late answer)');
     await answer('nation', 'late');

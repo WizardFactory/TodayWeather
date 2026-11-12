@@ -1,0 +1,157 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match.",
+ "cases": {
+  "en-US-dark-tabs": {
+   "heightDifference": 0,
+   "strong": 0.001499,
+   "mean": 2.185
+  },
+  "en-US-dark-header": {
+   "heightDifference": 0,
+   "strong": 0.007991,
+   "mean": 2.132
+  },
+  "en-US-dark-menu": {
+   "heightDifference": 0,
+   "strong": 0.011379,
+   "mean": 2.621
+  },
+  "en-US-light-tabs": {
+   "heightDifference": 0,
+   "strong": 0.001786,
+   "mean": 2.403
+  },
+  "en-US-light-header": {
+   "heightDifference": 0,
+   "strong": 0.010618,
+   "mean": 2.287
+  },
+  "en-US-light-menu": {
+   "heightDifference": 0,
+   "strong": 0.007938,
+   "mean": 2.448
+  },
+  "en-US-photo-tabs": {
+   "heightDifference": 0,
+   "strong": 0.001786,
+   "mean": 2.403
+  },
+  "en-US-photo-header": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 1.805
+  },
+  "en-US-photo-menu": {
+   "heightDifference": 0,
+   "strong": 0.006801,
+   "mean": 2.279
+  },
+  "en-US-photo-scroll-176": {
+   "heightDifference": 0,
+   "strong": 0.001865,
+   "mean": 1.947
+  },
+  "en-US-old-tabs": {
+   "heightDifference": 0,
+   "strong": 0.002121,
+   "mean": 2.413
+  },
+  "en-US-old-header": {
+   "heightDifference": 0,
+   "strong": 0.010334,
+   "mean": 2.353
+  },
+  "en-US-old-menu": {
+   "heightDifference": 0,
+   "strong": 0.007143,
+   "mean": 2.332
+  },
+  "en-US-photo-scroll-88": {
+   "heightDifference": 0,
+   "strong": 0.000462,
+   "mean": 1.94
+  },
+  "ko-KR-dark-tabs": {
+   "heightDifference": 0,
+   "strong": 0.001244,
+   "mean": 2.968
+  },
+  "ko-KR-dark-header": {
+   "heightDifference": 0,
+   "strong": 0.009127,
+   "mean": 2.157
+  },
+  "ko-KR-dark-menu": {
+   "heightDifference": 0,
+   "strong": 0.018529,
+   "mean": 3.605
+  },
+  "ko-KR-light-tabs": {
+   "heightDifference": 0,
+   "strong": 0.001659,
+   "mean": 3.089
+  },
+  "ko-KR-light-header": {
+   "heightDifference": 0,
+   "strong": 0.011773,
+   "mean": 2.335
+  },
+  "ko-KR-light-menu": {
+   "heightDifference": 0,
+   "strong": 0.011774,
+   "mean": 2.957
+  },
+  "ko-KR-photo-tabs": {
+   "heightDifference": 0,
+   "strong": 0.001659,
+   "mean": 3.089
+  },
+  "ko-KR-photo-header": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 1.825
+  },
+  "ko-KR-photo-menu": {
+   "heightDifference": 0,
+   "strong": 0.013565,
+   "mean": 3.123
+  },
+  "ko-KR-photo-scroll-176": {
+   "heightDifference": 0,
+   "strong": 0.0019,
+   "mean": 1.964
+  },
+  "ko-KR-old-tabs": {
+   "heightDifference": 0,
+   "strong": 0.002121,
+   "mean": 3.277
+  },
+  "ko-KR-old-header": {
+   "heightDifference": 0,
+   "strong": 0.011453,
+   "mean": 2.381
+  },
+  "ko-KR-old-menu": {
+   "heightDifference": 0,
+   "strong": 0.011809,
+   "mean": 2.916
+  },
+  "ko-KR-photo-scroll-88": {
+   "heightDifference": 0,
+   "strong": 0.000107,
+   "mean": 1.878
+  }
+ }
+}

@@ -65,9 +65,13 @@ class ForecastScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/forecast-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val prefix get() = if (matrixSize == null) "" else "$matrixLang/"
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/forecast" }
+        ?: "src/test/resources/forecast-reference")
     private val inputs = File(project, "../core-domain/src/test/resources/corpus/inputs")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/forecast-compare").apply { mkdirs() }
 
     @Test fun seoulHourly() = compare("kma-seoul", ForecastType.SHORT)
@@ -75,12 +79,115 @@ class ForecastScreenshotTest {
     @Test fun londonHourly() = compare("vc-london", ForecastType.SHORT)
     @Test fun londonDaily() = compare("vc-london", ForecastType.MID)
 
+    private fun matrix(size: String, lang: String, place: String, type: ForecastType) {
+        matrixSize = size
+        matrixLang = lang
+        compare(place, type)
+    }
+
+    @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384KoreanSeoulShort() = matrix("384x832", "ko-KR", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384KoreanSeoulMid() = matrix("384x832", "ko-KR", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384KoreanLondonShort() = matrix("384x832", "ko-KR", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384KoreanLondonMid() = matrix("384x832", "ko-KR", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384EnglishSeoulShort() = matrix("384x832", "en-US", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384EnglishSeoulMid() = matrix("384x832", "en-US", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384EnglishLondonShort() = matrix("384x832", "en-US", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w384dp-h2600dp-xhdpi")
+    @Test fun nominal384EnglishLondonMid() = matrix("384x832", "en-US", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360KoreanSeoulShort() = matrix("360x780", "ko-KR", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360KoreanSeoulMid() = matrix("360x780", "ko-KR", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360KoreanLondonShort() = matrix("360x780", "ko-KR", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360KoreanLondonMid() = matrix("360x780", "ko-KR", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360EnglishSeoulShort() = matrix("360x780", "en-US", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360EnglishSeoulMid() = matrix("360x780", "en-US", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360EnglishLondonShort() = matrix("360x780", "en-US", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w360dp-h2600dp-xhdpi")
+    @Test fun nominal360EnglishLondonMid() = matrix("360x780", "en-US", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412KoreanSeoulShort() = matrix("412x892", "ko-KR", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412KoreanSeoulMid() = matrix("412x892", "ko-KR", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412KoreanLondonShort() = matrix("412x892", "ko-KR", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412KoreanLondonMid() = matrix("412x892", "ko-KR", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412EnglishSeoulShort() = matrix("412x892", "en-US", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412EnglishSeoulMid() = matrix("412x892", "en-US", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412EnglishLondonShort() = matrix("412x892", "en-US", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w412dp-h2600dp-xhdpi")
+    @Test fun nominal412EnglishLondonMid() = matrix("412x892", "en-US", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320KoreanSeoulShort() = matrix("320x694", "ko-KR", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320KoreanSeoulMid() = matrix("320x694", "ko-KR", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320KoreanLondonShort() = matrix("320x694", "ko-KR", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "ko-rKR-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320KoreanLondonMid() = matrix("320x694", "ko-KR", "vc-london", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320EnglishSeoulShort() = matrix("320x694", "en-US", "kma-seoul", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320EnglishSeoulMid() = matrix("320x694", "en-US", "kma-seoul", ForecastType.MID)
+
+    @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320EnglishLondonShort() = matrix("320x694", "en-US", "vc-london", ForecastType.SHORT)
+
+    @Config(qualifiers = "en-rUS-w320dp-h2600dp-xhdpi")
+    @Test fun nominal320EnglishLondonMid() = matrix("320x694", "en-US", "vc-london", ForecastType.MID)
+
     private fun compare(place: String, type: ForecastType) {
         val page = if (type == ForecastType.SHORT) "hourly" else "daily"
-        val record = Json.parseToJsonElement(File(references, "$place/$page.json").readText()).jsonObject
+        val record = Json.parseToJsonElement(File(references, "$prefix$place/$page.json").readText()).jsonObject
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
-            val metrics = ChartMetrics(384.0, 832.0)
+            val dimensions = matrixSize?.split('x')?.map(String::toDouble) ?: listOf(384.0, 832.0)
+            val metrics = ChartMetrics(dimensions[0], dimensions[1])
             val scope = ForecastScope(type, metrics, fahrenheit = false, photoTheme = false,
                 YesterdayText(texts["LOC_SAME_AS_YESTERDAY"], texts["LOC_THAN_YESTERDAY"]), expandShortChart = false)
             scope.open(city(place), if (place == "kma-seoul") 1 else 2, hasPush = false)
@@ -89,7 +196,7 @@ class ForecastScreenshotTest {
             val content = WeatherPageContent(type, model, metrics,
                 if (type == ForecastType.SHORT) HourlyChart.build(chartPlace, metrics, texts, "mm", "m/s") else null,
                 if (type == ForecastType.MID) DailyChart.build(chartPlace, metrics, texts, "mm") else null)
-            Box(Modifier.size(384.dp, 2600.dp)) {
+            Box(Modifier.size(metrics.bodyWidth.toFloat().dp, 2600.dp)) {
                 WeatherPage(content, Theme.LIGHT, photo = null, photoGradient = false, expanded = false, onToggleExpanded = {},
                     onPrevious = {}, onNext = {}, onAction = {})
                 val colors = ShellColors.of(Theme.LIGHT, if (type == ForecastType.SHORT) Tab.HOURLY else Tab.DAILY)
@@ -105,14 +212,15 @@ class ForecastScreenshotTest {
             val i = block["index"]!!.jsonPrimitive.content.toInt()
             val native = rule.onNodeWithTag(ForecastTags.block(i)).captureToImage().asAndroidBitmap().toPixels()
             val size = block["clip"]!!.jsonObject["size"]!!.jsonObject
-            val cordova = ImageIO.read(File(references, "$place/$page-$i.png")).toPixels()
-            val name = "$place-$page-$i"
+            val cordova = ImageIO.read(File(references, "$prefix$place/$page-$i.png")).toPixels()
+            val name = "$prefix$place-$page-$i"
+            val outputName = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
             // A block that ends under the tab bar is captured without its last pixels (`hidden`).
             val shown = if (block["hidden"] != null) native.crop(0, 0, native.width, cordova.height) else native
             val diff = ImageDiff.of(shown, cordova)
-            ImageIO.write(shown.toBufferedImage(), "png", File(out, "$name-native.png"))
-            ImageIO.write(ImageDiff.overlay(shown, cordova).toBufferedImage(), "png", File(out, "$name-diff.png"))
-            println("forecast-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} " +
+            ImageIO.write(shown.toBufferedImage(), "png", File(out, "$outputName-native.png"))
+            ImageIO.write(ImageDiff.overlay(shown, cordova).toBufferedImage(), "png", File(out, "$outputName-diff.png"))
+            println("forecast-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} " +
                 "(${size["width"]}x${size["height"]}) $diff")
             val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
             if (limit == null) {

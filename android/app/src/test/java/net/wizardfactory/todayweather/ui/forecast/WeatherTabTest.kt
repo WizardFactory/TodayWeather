@@ -1,5 +1,11 @@
 package net.wizardfactory.todayweather.ui.forecast
 
+import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.unit.dp
+import net.wizardfactory.todayweather.ui.shell.PopupTags
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.onRoot
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -190,6 +196,7 @@ class WeatherTabTest {
         var fail = true
         show(answer = { url -> if (fail) throw HttpStatusException(500) else if ("51.51" in url) londonBody else seoulBody })
         rule.onNodeWithTag(RETRY_DIALOG).assertExists()
+        rule.onNodeWithTag(PopupTags.POPUP).assertWidthIsEqualTo(250.dp)
         rule.onNodeWithText(rule.activity.getString(R.string.LOC_FAIL_TO_GET_WEATHER_INFO)).assertExists()
         fail = false
         rule.onNodeWithText(rule.activity.getString(R.string.LOC_OK)).performClick()
@@ -213,6 +220,9 @@ class WeatherTabTest {
         rule.onNodeWithTag(ForecastTags.POLLEN).performScrollTo().performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(WeatherTabTags.POLLEN_DIALOG).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.POLLEN_DIALOG).assertHeightIsEqualTo(
+            rule.onRoot().getUnclippedBoundsInRoot().let { it.bottom - it.top })
+        rule.onNodeWithTag(PopupTags.POPUP).assertWidthIsEqualTo(300.dp)
         rule.onNodeWithText("${rule.activity.getString(R.string.LOC_POLLEN_PINE)}: 높음").assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.LOC_CLOSE)).performClick()
         rule.waitForIdle()
@@ -300,6 +310,9 @@ class WeatherTabTest {
             rule.onNodeWithText("$source ", substring = true, useUnmergedTree = true).performScrollTo().performClick()
             rule.waitForIdle()
             rule.onNodeWithTag(WeatherTabTags.SOURCE_DIALOG).assertExists()
+        rule.onNodeWithTag(WeatherTabTags.SOURCE_DIALOG).assertHeightIsEqualTo(
+            rule.onRoot().getUnclippedBoundsInRoot().let { it.bottom - it.top })
+            rule.onNodeWithTag(PopupTags.POPUP).assertWidthIsEqualTo(250.dp)
             rule.onNodeWithText(rule.activity.getString(text)).assertExists()
             rule.onNodeWithText(rule.activity.getString(R.string.LOC_CLOSE)).performClick()
             rule.waitForIdle()

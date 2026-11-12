@@ -61,6 +61,16 @@ abstract class AirFitTest(private val lang: String) {
     @After fun stop() = scope.cancel()
 
     // AN-18 AC4: window-size coverage; real multi-window is checked separately on device.
+    // AN-18c: all existing states at each parity display size, in both language subclasses.
+    @Test @Config(qualifiers = "+w384dp-h832dp-port", fontScale = 1f)
+    fun parity384() = fits("parity-384x832")
+    @Test @Config(qualifiers = "+w360dp-h780dp-port", fontScale = 1f)
+    fun parity360() = fits("parity-360x780")
+    @Test @Config(qualifiers = "+w412dp-h892dp-port", fontScale = 1f)
+    fun parity412() = fits("parity-412x892")
+    @Test @Config(qualifiers = "+w320dp-h694dp-port", fontScale = 1f)
+    fun parity320() = fits("parity-320x694")
+
     @Test @Config(qualifiers = "+w800dp-h1280dp-port", fontScale = 1.3f) fun tabletPortraitLargeText() = fits("tabletPortraitLargeText")
     @Test @Config(qualifiers = "+w841dp-h701dp-land", fontScale = 1.3f) fun foldableOpenLargeText() = fits("foldableOpenLargeText")
     @Test @Config(qualifiers = "+w701dp-h841dp-port", fontScale = 1.3f) fun foldableOpenRotatedLargeText() = fits("foldableOpenRotatedLargeText")

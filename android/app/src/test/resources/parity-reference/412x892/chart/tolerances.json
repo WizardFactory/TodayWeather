@@ -1,0 +1,77 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Four-size Korean/English hourly and daily chart opening and both scroll ends. Inspected the narrow English hourly opening and wide Korean daily end overlays: plotted lines/bars, icons, values and positions agree; residuals are glyph rasterization/advances and fractional image edges. At most one pixel in measured chart height (CSS fractional extent versus native layout rounding); historical margins retained. Native theme artwork has separate pixel qualification.",
+ "cases": {
+  "en-US/hourly-opening": {
+   "heightDifference": 1,
+   "strong": 0.003462,
+   "mean": 2.264
+  },
+  "en-US/hourly-start": {
+   "heightDifference": 1,
+   "strong": 0.004203,
+   "mean": 2.359
+  },
+  "en-US/hourly-end": {
+   "heightDifference": 1,
+   "strong": 0.003914,
+   "mean": 2.243
+  },
+  "ko-KR/hourly-opening": {
+   "heightDifference": 1,
+   "strong": 0.00218,
+   "mean": 1.984
+  },
+  "ko-KR/hourly-start": {
+   "heightDifference": 1,
+   "strong": 0.001794,
+   "mean": 1.921
+  },
+  "ko-KR/hourly-end": {
+   "heightDifference": 1,
+   "strong": 0.001571,
+   "mean": 1.828
+  },
+  "ko-KR/daily-opening": {
+   "heightDifference": 1,
+   "strong": 0.002723,
+   "mean": 1.153
+  },
+  "ko-KR/daily-start": {
+   "heightDifference": 1,
+   "strong": 0.003158,
+   "mean": 1.147
+  },
+  "ko-KR/daily-end": {
+   "heightDifference": 1,
+   "strong": 0.002648,
+   "mean": 0.971
+  },
+  "en-US/daily-opening": {
+   "heightDifference": 1,
+   "strong": 0.003396,
+   "mean": 1.36
+  },
+  "en-US/daily-start": {
+   "heightDifference": 1,
+   "strong": 0.00383,
+   "mean": 1.353
+  },
+  "en-US/daily-end": {
+   "heightDifference": 1,
+   "strong": 0.003383,
+   "mean": 1.189
+  }
+ }
+}

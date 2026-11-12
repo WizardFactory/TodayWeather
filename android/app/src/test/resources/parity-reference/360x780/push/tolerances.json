@@ -1,0 +1,97 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Four-size Korean/English alarm screens and popups. Inspected narrow light/dark screens and both notification-language overlays after matching the offline Hourly fixture and region settings. Captured descriptions now preserve slash-word line breaks; boxes/buttons/pickers retain independent 0.6dp geometry checks. Remaining differences are glyph rasterization/advances and switch shadows, including the independently compared weather backdrop for notifications. Historical margins retained; dimensions match.",
+ "cases": {
+  "ko-KR/permission": {
+   "heightDifference": 0,
+   "strong": 0.003967,
+   "mean": 2.308
+  },
+  "ko-KR/intro": {
+   "heightDifference": 0,
+   "strong": 0.008949,
+   "mean": 3.224
+  },
+  "ko-KR/foreground": {
+   "heightDifference": 0,
+   "strong": 0.005695,
+   "mean": 2.366
+  },
+  "en-US/equal": {
+   "heightDifference": 0,
+   "strong": 0.001264,
+   "mean": 0.893
+  },
+  "en-US/permission": {
+   "heightDifference": 0,
+   "strong": 0.002768,
+   "mean": 1.148
+  },
+  "en-US/settings-dark": {
+   "heightDifference": 0,
+   "strong": 0.008654,
+   "mean": 2.639
+  },
+  "en-US/settings": {
+   "heightDifference": 0,
+   "strong": 0.005911,
+   "mean": 1.726
+  },
+  "en-US/picker": {
+   "heightDifference": 0,
+   "strong": 0.002717,
+   "mean": 1.199
+  },
+  "en-US/confirm": {
+   "heightDifference": 0,
+   "strong": 0.002187,
+   "mean": 1.046
+  },
+  "ko-KR/settings": {
+   "heightDifference": 0,
+   "strong": 0.003516,
+   "mean": 2.74
+  },
+  "ko-KR/picker": {
+   "heightDifference": 0,
+   "strong": 0.002338,
+   "mean": 1.736
+  },
+  "ko-KR/confirm": {
+   "heightDifference": 0,
+   "strong": 0.002433,
+   "mean": 1.872
+  },
+  "en-US/intro": {
+   "heightDifference": 0,
+   "strong": 0.006271,
+   "mean": 2.37
+  },
+  "en-US/foreground": {
+   "heightDifference": 0,
+   "strong": 0.005362,
+   "mean": 2.333
+  },
+  "ko-KR/settings-dark": {
+   "heightDifference": 0,
+   "strong": 0.007461,
+   "mean": 3.268
+  },
+  "ko-KR/equal": {
+   "heightDifference": 0,
+   "strong": 0.002375,
+   "mean": 1.946
+  }
+ }
+}

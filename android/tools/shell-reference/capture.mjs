@@ -11,15 +11,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/shell-reference', lang);
+const OUT = path.join(referenceRoot(root, 'shell'), lang);
 const corpus = path.join(root, 'core-domain/src/test/resources/corpus');
 const fixture = JSON.parse(fs.readFileSync(path.join(corpus, 'inputs/kma-seoul.json'), 'utf8'));
 const {screen, webViewOrigin, png} = new Screen(serial);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 await dt.evaluate(`window.twShell = (function () {
     var inj = angular.element(document.body).injector();
     var WeatherInfo = inj.get('WeatherInfo'), WeatherUtil = inj.get('WeatherUtil'), TwStorage = inj.get('TwStorage');
@@ -69,6 +71,34 @@ await dt.evaluate(`window.twShell = (function () {
             var bar = shown('ion-side-menu-content .bar-header');
             return {rect: rect(bar), style: style(bar), title: (bar.querySelector('.title') || bar).textContent.trim()};
         },
+        photoPage: function () {
+            return inj.get('$ionicHistory').clearCache().then(function () { return $state.go('tab.forecast', {}, {reload: true}); })
+                .then(function () { return wait(1800); }).then(closePopups);
+        },
+        scrollHeader: function (top) {
+            var content = shown('ion-content[bar-scrolled]');
+            if (!content) throw new Error('missing photo scroll view');
+            content.scrollTop = top;
+            content.dispatchEvent(new Event('scroll'));
+            return wait(500).then(function () {
+                var bar = shown('ion-side-menu-content .bar-header');
+                return {rect: rect(bar), scrollTop: content.scrollTop, backgroundImage: getComputedStyle(bar).backgroundImage,
+                    layers: Array.prototype.map.call(document.querySelectorAll('ion-header-bar'), function (e) {
+                        var css = getComputedStyle(e); return {tag: e.tagName, cls: e.className, rect: rect(e),
+                            visibility: css.visibility, display: css.display, opacity: css.opacity,
+                            background: css.backgroundColor, gradient: css.backgroundImage,
+                            parent: e.parentElement.tagName + '.' + e.parentElement.className,
+                            navBar: e.parentElement.getAttribute('nav-bar'),
+                            parentOpacity: getComputedStyle(e.parentElement).opacity,
+                            parentDisplay: getComputedStyle(e.parentElement).display,
+                            parentVisibility: getComputedStyle(e.parentElement).visibility};
+                    })};
+            });
+        },
+        headerVisible: function (on) {
+            document.querySelectorAll('ion-side-menu-content .bar-header').forEach(function (e) { e.style.visibility = on ? '' : 'hidden'; });
+            return wait(200);
+        },
         openMenu: function () {
             shown('.button.ion-navicon, .ion-navicon').click();
             return wait(700).then(function () {
@@ -106,5 +136,21 @@ for (const theme of ['light', 'dark', 'photo', 'old']) {
     }
     fs.writeFileSync(path.join(OUT, `${theme}.json`), JSON.stringify(record) + '\n');
     console.log(`${lang} ${theme}: ${info.language}, tabs ${record.tabs.items.map((i) => i.text).join('|')}, menu rows ${record.menu.rows.length}`);
+}
+if (process.env.TW_REFERENCE_SIZE) {
+    await dt.evaluate("twShell.theme('photo')");
+    await dt.evaluate('twShell.photoPage()');
+    for (const top of [88, 176]) {
+        const r = await dt.evaluate(`twShell.scrollHeader(${top})`);
+        if (r.scrollTop !== top || !r.backgroundImage.includes('linear-gradient')) throw new Error(`missing scroll gradient: ${JSON.stringify(r)}`);
+        const area = {x: origin.x + Math.round(r.rect.x * dpr), y: origin.y + Math.round(r.rect.y * dpr),
+            width: Math.round(r.rect.w * dpr), height: Math.round(r.rect.h * dpr)};
+        fs.writeFileSync(path.join(OUT, `photo-scroll-${top}.png`), png(screen(), area));
+        await dt.evaluate('twShell.headerVisible(false)');
+        fs.writeFileSync(path.join(OUT, `photo-scroll-${top}-background.png`), png(screen(), area));
+        await dt.evaluate('twShell.headerVisible(true)');
+        fs.writeFileSync(path.join(OUT, `photo-scroll-${top}.json`), JSON.stringify(r) + '\n');
+        console.log(`${lang} photo scroll ${top}: ${r.backgroundImage}`);
+    }
 }
 dt.close();

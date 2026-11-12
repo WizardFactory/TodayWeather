@@ -1,0 +1,712 @@
+{
+  "schema": 1,
+  "sizes": [
+    "384x832",
+    "360x780",
+    "412x892",
+    "320x694"
+  ],
+  "languages": [
+    "ko-KR",
+    "en-US"
+  ],
+  "description": "AN-18c representative pixel comparisons; all historical references and all-state four-size fit tests are retained independently. English forecast/air/settings/nation/chart captures use en-KR for stable KR units and menu entries. Test resources only: no Cordova runtime dependency.",
+  "sets": {
+    "start": {
+      "screens": [
+        "S01",
+        "O01"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/start.png",
+          "tolerance": "{lang}/start"
+        },
+        {
+          "image": "{lang}/access.png",
+          "tolerance": "{lang}/access"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "StartScreenshotTest"
+      ]
+    },
+    "places": {
+      "screens": [
+        "S02"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/favorites.png",
+          "tolerance": "{lang}/favorites"
+        },
+        {
+          "image": "{lang}/favorites-dark.png",
+          "tolerance": "{lang}/favorites-dark"
+        },
+        {
+          "image": "{lang}/search.png",
+          "tolerance": "{lang}/search"
+        },
+        {
+          "image": "{lang}/edit.png",
+          "tolerance": "{lang}/edit"
+        },
+        {
+          "image": "{lang}/location.png",
+          "tolerance": "{lang}/location"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "PlacesScreenshotTest"
+      ]
+    },
+    "dialog": {
+      "screens": [
+        "O03",
+        "O08",
+        "O15",
+        "X2"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/retry.png",
+          "tolerance": "{lang}/retry"
+        },
+        {
+          "image": "{lang}/source-kaq.png",
+          "tolerance": "{lang}/source-kaq"
+        },
+        {
+          "image": "{lang}/source-airkorea.png",
+          "tolerance": "{lang}/source-airkorea"
+        },
+        {
+          "image": "{lang}/pollen.png",
+          "tolerance": "{lang}/pollen"
+        },
+        {
+          "image": "{lang}/exit.png",
+          "tolerance": "{lang}/exit"
+        }
+      ],
+      "supportingFiles": [
+        "{lang}/background.png"
+      ],
+      "testSuites": [
+        "DialogScreenshotTest"
+      ]
+    },
+    "forecast": {
+      "screens": [
+        "S03",
+        "S04"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/kma-seoul/hourly-0.png",
+          "tolerance": "{lang}/kma-seoul-hourly-0"
+        },
+        {
+          "image": "{lang}/kma-seoul/hourly-1.png",
+          "tolerance": "{lang}/kma-seoul-hourly-1"
+        },
+        {
+          "image": "{lang}/kma-seoul/hourly-2.png",
+          "tolerance": "{lang}/kma-seoul-hourly-2"
+        },
+        {
+          "image": "{lang}/kma-seoul/hourly-3.png",
+          "tolerance": "{lang}/kma-seoul-hourly-3"
+        },
+        {
+          "image": "{lang}/kma-seoul/hourly-4.png",
+          "tolerance": "{lang}/kma-seoul-hourly-4"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-0.png",
+          "tolerance": "{lang}/kma-seoul-daily-0"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-1.png",
+          "tolerance": "{lang}/kma-seoul-daily-1"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-2.png",
+          "tolerance": "{lang}/kma-seoul-daily-2"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-3.png",
+          "tolerance": "{lang}/kma-seoul-daily-3"
+        },
+        {
+          "image": "{lang}/vc-london/hourly-0.png",
+          "tolerance": "{lang}/vc-london-hourly-0"
+        },
+        {
+          "image": "{lang}/vc-london/hourly-1.png",
+          "tolerance": "{lang}/vc-london-hourly-1"
+        },
+        {
+          "image": "{lang}/vc-london/hourly-2.png",
+          "tolerance": "{lang}/vc-london-hourly-2"
+        },
+        {
+          "image": "{lang}/vc-london/hourly-3.png",
+          "tolerance": "{lang}/vc-london-hourly-3"
+        },
+        {
+          "image": "{lang}/vc-london/hourly-4.png",
+          "tolerance": "{lang}/vc-london-hourly-4"
+        },
+        {
+          "image": "{lang}/vc-london/hourly-5.png",
+          "tolerance": "{lang}/vc-london-hourly-5"
+        },
+        {
+          "image": "{lang}/vc-london/daily-0.png",
+          "tolerance": "{lang}/vc-london-daily-0"
+        },
+        {
+          "image": "{lang}/vc-london/daily-1.png",
+          "tolerance": "{lang}/vc-london-daily-1"
+        },
+        {
+          "image": "{lang}/vc-london/daily-2.png",
+          "tolerance": "{lang}/vc-london-daily-2"
+        },
+        {
+          "image": "{lang}/vc-london/daily-3.png",
+          "tolerance": "{lang}/vc-london-daily-3"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "ForecastScreenshotTest"
+      ]
+    },
+    "air": {
+      "screens": [
+        "S05"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/kma-seoul/air-0.png",
+          "tolerance": "{lang}/kma-seoul-0"
+        },
+        {
+          "image": "{lang}/kma-seoul/air-1.png",
+          "tolerance": "{lang}/kma-seoul-1"
+        },
+        {
+          "image": "{lang}/kma-seoul/air-2.png",
+          "tolerance": "{lang}/kma-seoul-2"
+        },
+        {
+          "image": "{lang}/kma-seoul/air-3.png",
+          "tolerance": "{lang}/kma-seoul-3"
+        },
+        {
+          "image": "{lang}/kma-seoul/air-4.png",
+          "tolerance": "{lang}/kma-seoul-4"
+        },
+        {
+          "image": "{lang}/kma-seoul/air-5.png",
+          "tolerance": "{lang}/kma-seoul-5"
+        },
+        {
+          "image": "{lang}/kma-seoul/air-6.png",
+          "tolerance": "{lang}/kma-seoul-6"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-0.png",
+          "tolerance": "{lang}/kma-seoul-dark-0"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-1.png",
+          "tolerance": "{lang}/kma-seoul-dark-1"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-2.png",
+          "tolerance": "{lang}/kma-seoul-dark-2"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-3.png",
+          "tolerance": "{lang}/kma-seoul-dark-3"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-4.png",
+          "tolerance": "{lang}/kma-seoul-dark-4"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-5.png",
+          "tolerance": "{lang}/kma-seoul-dark-5"
+        },
+        {
+          "image": "{lang}/kma-seoul-dark/air-6.png",
+          "tolerance": "{lang}/kma-seoul-dark-6"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-0.png",
+          "tolerance": "{lang}/kma-seoul-old-0"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-1.png",
+          "tolerance": "{lang}/kma-seoul-old-1"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-2.png",
+          "tolerance": "{lang}/kma-seoul-old-2"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-3.png",
+          "tolerance": "{lang}/kma-seoul-old-3"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-4.png",
+          "tolerance": "{lang}/kma-seoul-old-4"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-5.png",
+          "tolerance": "{lang}/kma-seoul-old-5"
+        },
+        {
+          "image": "{lang}/kma-seoul-old/air-6.png",
+          "tolerance": "{lang}/kma-seoul-old-6"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-0.png",
+          "tolerance": "{lang}/kma-seoul-photo-0"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-1.png",
+          "tolerance": "{lang}/kma-seoul-photo-1"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-2.png",
+          "tolerance": "{lang}/kma-seoul-photo-2"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-3.png",
+          "tolerance": "{lang}/kma-seoul-photo-3"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-4.png",
+          "tolerance": "{lang}/kma-seoul-photo-4"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-5.png",
+          "tolerance": "{lang}/kma-seoul-photo-5"
+        },
+        {
+          "image": "{lang}/kma-seoul-photo/air-6.png",
+          "tolerance": "{lang}/kma-seoul-photo-6"
+        },
+        {
+          "image": "{lang}/vc-london/air-0.png",
+          "tolerance": "{lang}/vc-london-0"
+        },
+        {
+          "image": "{lang}/vc-london/air-1.png",
+          "tolerance": "{lang}/vc-london-1"
+        },
+        {
+          "image": "{lang}/vc-london/air-2.png",
+          "tolerance": "{lang}/vc-london-2"
+        },
+        {
+          "image": "{lang}/vc-london/air-3.png",
+          "tolerance": "{lang}/vc-london-3"
+        },
+        {
+          "image": "{lang}/kma-jeju-no-air/air-0.png",
+          "tolerance": "{lang}/kma-jeju-no-air-0"
+        },
+        {
+          "image": "{lang}/kma-jeju-no-air/air-1.png",
+          "tolerance": "{lang}/kma-jeju-no-air-1"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "AirScreenshotTest"
+      ]
+    },
+    "settings": {
+      "screens": [
+        "S07",
+        "S08",
+        "O10",
+        "S03 themes",
+        "S04 themes"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/units.png",
+          "tolerance": "{lang}/units"
+        },
+        {
+          "image": "{lang}/radio-temperatureUnit.png",
+          "tolerance": "{lang}/radio-temperatureUnit"
+        },
+        {
+          "image": "{lang}/units-dark.png",
+          "tolerance": "{lang}/units-dark"
+        },
+        {
+          "image": "{lang}/units-photo.png",
+          "tolerance": "{lang}/units-photo"
+        },
+        {
+          "image": "{lang}/units-old.png",
+          "tolerance": "{lang}/units-old"
+        },
+        {
+          "image": "{lang}/about.png",
+          "tolerance": "{lang}/about"
+        },
+        {
+          "image": "{lang}/hourly-dark/hourly-0.png",
+          "tolerance": "{lang}/hourly-dark-0"
+        },
+        {
+          "image": "{lang}/hourly-dark/hourly-1.png",
+          "tolerance": "{lang}/hourly-dark-1"
+        },
+        {
+          "image": "{lang}/hourly-dark/hourly-2.png",
+          "tolerance": "{lang}/hourly-dark-2"
+        },
+        {
+          "image": "{lang}/hourly-dark/hourly-3.png",
+          "tolerance": "{lang}/hourly-dark-3"
+        },
+        {
+          "image": "{lang}/hourly-dark/hourly-4.png",
+          "tolerance": "{lang}/hourly-dark-4"
+        },
+        {
+          "image": "{lang}/daily-dark/daily-0.png",
+          "tolerance": "{lang}/daily-dark-0"
+        },
+        {
+          "image": "{lang}/daily-dark/daily-1.png",
+          "tolerance": "{lang}/daily-dark-1"
+        },
+        {
+          "image": "{lang}/daily-dark/daily-2.png",
+          "tolerance": "{lang}/daily-dark-2"
+        },
+        {
+          "image": "{lang}/daily-dark/daily-3.png",
+          "tolerance": "{lang}/daily-dark-3"
+        },
+        {
+          "image": "{lang}/hourly-photo/hourly-0.png",
+          "tolerance": "{lang}/hourly-photo-0"
+        },
+        {
+          "image": "{lang}/hourly-photo/hourly-1.png",
+          "tolerance": "{lang}/hourly-photo-1"
+        },
+        {
+          "image": "{lang}/hourly-photo/hourly-2.png",
+          "tolerance": "{lang}/hourly-photo-2"
+        },
+        {
+          "image": "{lang}/hourly-photo/hourly-3.png",
+          "tolerance": "{lang}/hourly-photo-3"
+        },
+        {
+          "image": "{lang}/hourly-photo/hourly-4.png",
+          "tolerance": "{lang}/hourly-photo-4"
+        },
+        {
+          "image": "{lang}/daily-photo/daily-0.png",
+          "tolerance": "{lang}/daily-photo-0"
+        },
+        {
+          "image": "{lang}/daily-photo/daily-1.png",
+          "tolerance": "{lang}/daily-photo-1"
+        },
+        {
+          "image": "{lang}/daily-photo/daily-2.png",
+          "tolerance": "{lang}/daily-photo-2"
+        },
+        {
+          "image": "{lang}/daily-photo/daily-3.png",
+          "tolerance": "{lang}/daily-photo-3"
+        },
+        {
+          "image": "{lang}/hourly-old/hourly-0.png",
+          "tolerance": "{lang}/hourly-old-0"
+        },
+        {
+          "image": "{lang}/hourly-old/hourly-1.png",
+          "tolerance": "{lang}/hourly-old-1"
+        },
+        {
+          "image": "{lang}/hourly-old/hourly-2.png",
+          "tolerance": "{lang}/hourly-old-2"
+        },
+        {
+          "image": "{lang}/hourly-old/hourly-3.png",
+          "tolerance": "{lang}/hourly-old-3"
+        },
+        {
+          "image": "{lang}/hourly-old/hourly-4.png",
+          "tolerance": "{lang}/hourly-old-4"
+        },
+        {
+          "image": "{lang}/daily-old/daily-0.png",
+          "tolerance": "{lang}/daily-old-0"
+        },
+        {
+          "image": "{lang}/daily-old/daily-1.png",
+          "tolerance": "{lang}/daily-old-1"
+        },
+        {
+          "image": "{lang}/daily-old/daily-2.png",
+          "tolerance": "{lang}/daily-old-2"
+        },
+        {
+          "image": "{lang}/daily-old/daily-3.png",
+          "tolerance": "{lang}/daily-old-3"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "SettingsScreenshotTest"
+      ]
+    },
+    "nation": {
+      "screens": [
+        "S10",
+        "S11",
+        "S12"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/nation-weather.png",
+          "tolerance": "{lang}/nation-weather"
+        },
+        {
+          "image": "{lang}/nation-air-pm2.5.png",
+          "tolerance": "{lang}/nation-air-pm2.5"
+        },
+        {
+          "image": "{lang}/nation-air-pm2.5-dark.png",
+          "tolerance": "{lang}/nation-air-pm2.5-dark"
+        },
+        {
+          "image": "{lang}/nation-air-pm2.5-old.png",
+          "tolerance": "{lang}/nation-air-pm2.5-old"
+        },
+        {
+          "image": "{lang}/warnings.png",
+          "tolerance": "{lang}/warnings"
+        },
+        {
+          "image": "{lang}/warnings-0.png",
+          "tolerance": "{lang}/warnings-0"
+        },
+        {
+          "image": "{lang}/warnings-1.png",
+          "tolerance": "{lang}/warnings-1"
+        },
+        {
+          "image": "{lang}/warnings-2.png",
+          "tolerance": "{lang}/warnings-2"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "NationScreenshotTest"
+      ]
+    },
+    "privacy": {
+      "screens": [
+        "S06",
+        "X3"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/menu-off.png",
+          "tolerance": "{lang}/menu-off"
+        },
+        {
+          "image": "{lang}/menu-allowed.png",
+          "tolerance": "{lang}/menu-allowed"
+        },
+        {
+          "image": "{lang}/analytics-popup.png",
+          "tolerance": "{lang}/analytics-popup"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "PrivacyScreenshotTest"
+      ]
+    },
+    "push": {
+      "screens": [
+        "S09",
+        "O06",
+        "O07",
+        "O11",
+        "O12",
+        "O13",
+        "O14"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/settings.png",
+          "tolerance": "{lang}/settings"
+        },
+        {
+          "image": "{lang}/settings-dark.png",
+          "tolerance": "{lang}/settings-dark"
+        },
+        {
+          "image": "{lang}/picker.png",
+          "tolerance": "{lang}/picker"
+        },
+        {
+          "image": "{lang}/confirm.png",
+          "tolerance": "{lang}/confirm"
+        },
+        {
+          "image": "{lang}/equal.png",
+          "tolerance": "{lang}/equal"
+        },
+        {
+          "image": "{lang}/permission.png",
+          "tolerance": "{lang}/permission"
+        },
+        {
+          "image": "{lang}/intro.png",
+          "tolerance": "{lang}/intro"
+        },
+        {
+          "image": "{lang}/foreground.png",
+          "tolerance": "{lang}/foreground"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "AlarmsScreenshotTest"
+      ]
+    },
+    "shell": {
+      "screens": [
+        "S06",
+        "X1",
+        "X8"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/light-header.png",
+          "tolerance": "{lang}-light-header"
+        },
+        {
+          "image": "{lang}/light-tabs.png",
+          "tolerance": "{lang}-light-tabs"
+        },
+        {
+          "image": "{lang}/light-menu.png",
+          "tolerance": "{lang}-light-menu"
+        },
+        {
+          "image": "{lang}/dark-header.png",
+          "tolerance": "{lang}-dark-header"
+        },
+        {
+          "image": "{lang}/dark-tabs.png",
+          "tolerance": "{lang}-dark-tabs"
+        },
+        {
+          "image": "{lang}/dark-menu.png",
+          "tolerance": "{lang}-dark-menu"
+        },
+        {
+          "image": "{lang}/old-header.png",
+          "tolerance": "{lang}-old-header"
+        },
+        {
+          "image": "{lang}/old-tabs.png",
+          "tolerance": "{lang}-old-tabs"
+        },
+        {
+          "image": "{lang}/old-menu.png",
+          "tolerance": "{lang}-old-menu"
+        },
+        {
+          "image": "{lang}/photo-header.png",
+          "tolerance": "{lang}-photo-header"
+        },
+        {
+          "image": "{lang}/photo-tabs.png",
+          "tolerance": "{lang}-photo-tabs"
+        },
+        {
+          "image": "{lang}/photo-menu.png",
+          "tolerance": "{lang}-photo-menu"
+        },
+        {
+          "image": "{lang}/photo-scroll-88.png",
+          "tolerance": "{lang}-photo-scroll-88"
+        },
+        {
+          "image": "{lang}/photo-scroll-176.png",
+          "tolerance": "{lang}-photo-scroll-176"
+        }
+      ],
+      "supportingFiles": [
+        "{lang}/photo-scroll-88-background.png",
+        "{lang}/photo-scroll-176-background.png"
+      ],
+      "testSuites": [
+        "ShellScreenshotKoTest",
+        "ShellScreenshotEnTest"
+      ]
+    },
+    "chart": {
+      "screens": [
+        "S03 chart",
+        "S04 chart"
+      ],
+      "cases": [
+        {
+          "image": "{lang}/kma-seoul/hourly-opening.png",
+          "tolerance": "{lang}/hourly-opening"
+        },
+        {
+          "image": "{lang}/kma-seoul/hourly-start.png",
+          "tolerance": "{lang}/hourly-start"
+        },
+        {
+          "image": "{lang}/kma-seoul/hourly-end.png",
+          "tolerance": "{lang}/hourly-end"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-opening.png",
+          "tolerance": "{lang}/daily-opening"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-start.png",
+          "tolerance": "{lang}/daily-start"
+        },
+        {
+          "image": "{lang}/kma-seoul/daily-end.png",
+          "tolerance": "{lang}/daily-end"
+        }
+      ],
+      "supportingFiles": [],
+      "testSuites": [
+        "ChartScreenshotTest"
+      ]
+    }
+  }
+}

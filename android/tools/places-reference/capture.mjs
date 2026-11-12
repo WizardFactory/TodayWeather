@@ -16,9 +16,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/places-reference', lang);
+const OUT = path.join(referenceRoot(root, 'places'), lang);
 const inputs = path.join(root, 'core-domain/src/test/resources/corpus/inputs');
 const fixture = (name) => JSON.parse(fs.readFileSync(path.join(inputs, `${name}.json`), 'utf8'));
 const screenshots = new Screen(serial);
@@ -26,6 +27,7 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 
 // The stand-in server (the privacy reference's, with the geocode).
 await dt.evaluate(`(function (seoul, london, geocode) {
@@ -221,6 +223,15 @@ await dt.evaluate(`twPlaces.add(${JSON.stringify(fixture('kma-seoul'))}, ${JSON.
 const hash = await dt.evaluate('twPlaces.open()');
 if (hash !== '#/tab/search') fail('open', hash);
 await capture('favorites', (s) => { if (s.editing || s.searching || s.popups) fail('favorites', s); });
+if (process.env.TW_REFERENCE_SIZE) {
+    for (const theme of ['dark', 'light']) {
+        await dt.evaluate(`(function(){var i=angular.element(document.body).injector(), r=i.get('$rootScope');
+            r.settingsInfo.theme=${JSON.stringify(theme)}; i.get('TwStorage').set('settingsInfo',r.settingsInfo); r.$apply();})()`);
+        await sleep(800);
+        if (theme === 'dark') await capture('favorites-dark', s => { if (s.editing || s.searching || s.popups) fail('dark favorites', s); });
+    }
+}
+
 
 await dt.evaluate(`twPlaces.search('부산')`);
 await capture('search', (s) => { if (!s.searching || s.towns !== 10) fail('search', s); });

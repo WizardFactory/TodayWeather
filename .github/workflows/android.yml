@@ -137,11 +137,17 @@ jobs:
           node android/tools/server-routes/generate.mjs
           git diff --exit-code -- android
           test -z "$(git status --porcelain -- android)"
-      - name: Chart and shell references match the client sources
-        run: node android/tools/emulator/check-sources.mjs
+      - name: Captured references match their sources and declared matrix
+        run: |
+          node android/tools/emulator/check-sources.mjs
+          node --test android/tools/emulator/reference-view.test.mjs android/tools/parity-reference/check.test.mjs
+          python3 android/tools/parity-reference/test_check_results.py
+          node android/tools/parity-reference/check.mjs
       - name: Build and unit tests
         working-directory: android
-        run: ./gradlew assembleDebug test
+        run: |
+          ./gradlew assembleDebug test
+          python3 tools/parity-reference/check-results.py
       - name: Upgrade test cleanup (adb test double)
         run: sh android/tools/upgrade/test-cleanup.sh
   without-client:
@@ -159,4 +165,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and unit tests
         working-directory: android
-        run: ./gradlew assembleDebug test
+        run: |
+          ./gradlew assembleDebug test
+          python3 tools/parity-reference/check-results.py

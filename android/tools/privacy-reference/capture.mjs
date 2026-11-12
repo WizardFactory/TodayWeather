@@ -17,9 +17,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/privacy-reference', lang);
+const OUT = path.join(referenceRoot(root, 'privacy'), lang);
 const corpus = path.join(root, 'core-domain/src/test/resources/corpus');
 const fixture = fs.readFileSync(path.join(corpus, 'inputs', 'kma-seoul.json'), 'utf8');
 const screenshots = new Screen(serial);
@@ -27,6 +28,7 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 
 // The stand-in server: requests to http(s) URLs other than the app's own pages are answered here (the weather fixture
 // for the coordinates route, 200 for the push list, 404 otherwise).
@@ -179,7 +181,7 @@ await dt.evaluate(`window.twPrivacy = (function () {
 const origin = screenshots.webViewOrigin();
 const dpr = await dt.evaluate('devicePixelRatio');
 const view = await dt.evaluate('({width: innerWidth, height: innerHeight})');
-if (view.width !== 384 || view.height !== 762) throw new Error(`the WebView is ${view.width}x${view.height}, not the tests' 384x762`);
+if (!process.env.TW_REFERENCE_SIZE && (view.width !== 384 || view.height !== 762)) throw new Error(`the WebView is ${view.width}x${view.height}, not the tests' 384x762`);
 fs.mkdirSync(OUT, {recursive: true});
 
 /** A real tap at the center of the rect [x, y, w, h] (CSS px) the expression gives, then a wait. */

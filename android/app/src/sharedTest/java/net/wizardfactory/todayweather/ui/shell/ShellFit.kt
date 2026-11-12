@@ -13,7 +13,6 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -81,9 +80,9 @@ object ShellFit {
         rule.waitForIdle()
         rule.runOnUiThread { activity.onBackPressedDispatcher.onBackPressed() }
         rule.waitForIdle()
-        problems += texts(rule, "exit question", null)
-        capture("exit", rule.onNode(isDialog()).captureToImage())
-        rule.onNode(hasText(activity.getString(R.string.LOC_CANCEL)) and hasAnyAncestor(isDialog())).performClick()
+        problems += texts(rule, "exit question", currentSafeArea())
+        capture("exit", rule.onNode(hasTestTag(PopupTags.POPUP)).captureToImage())
+        rule.onNode(hasText(activity.getString(R.string.LOC_CANCEL)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP))).performClick()
         rule.waitForIdle()
         return problems
     }

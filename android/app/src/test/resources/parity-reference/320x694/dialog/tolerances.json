@@ -1,0 +1,65 @@
+{
+ "metric": {
+  "strong": "fraction with max RGB difference >64 after a 3x3 box blur",
+  "mean": "mean max RGB difference, 0..255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "margin": {
+  "strong": 0.002,
+  "mean": 0.4
+ },
+ "recordedOn": "2026-11-13, API36 Cordova with verified active backdrop vs Robolectric SDK34 native graphics",
+ "why": "Native Compose popups reproduce recorded rectangles and text over the same captured weather background. Capture retains and verifies the active 40%-black Ionic backdrop. Independent surface samples check correct dim/translucency in both reference and native (2 channel levels for rounding); mean limits do not absorb missing dim. Remaining differences are fractional glyph rasterization/weight, centering and at most one physical pixel of Korean line-box rounding. Geometry (0.75dp), full semantic body and pollen source reachability are checked separately. Narrow and wide corrected overlays inspected.",
+ "cases": {
+  "en-US/retry": {
+   "strong": 0.006389,
+   "mean": 1.665,
+   "heightDifference": 0
+  },
+  "en-US/source-kaq": {
+   "strong": 0.001527,
+   "mean": 1.676,
+   "heightDifference": 0
+  },
+  "en-US/source-airkorea": {
+   "strong": 0.002035,
+   "mean": 1.38,
+   "heightDifference": 0
+  },
+  "en-US/pollen": {
+   "strong": 0.005224,
+   "mean": 2.142,
+   "heightDifference": 0
+  },
+  "en-US/exit": {
+   "strong": 0.004589,
+   "mean": 1.314,
+   "heightDifference": 0
+  },
+  "ko-KR/retry": {
+   "strong": 0.017487,
+   "mean": 5.209,
+   "heightDifference": 1
+  },
+  "ko-KR/source-kaq": {
+   "strong": 0.022287,
+   "mean": 7.732,
+   "heightDifference": 1
+  },
+  "ko-KR/source-airkorea": {
+   "strong": 0.019148,
+   "mean": 6.498,
+   "heightDifference": 1
+  },
+  "ko-KR/pollen": {
+   "strong": 0.035009,
+   "mean": 11.229,
+   "heightDifference": 0
+  },
+  "ko-KR/exit": {
+   "strong": 0.010654,
+   "mean": 3.07,
+   "heightDifference": 1
+  }
+ }
+}

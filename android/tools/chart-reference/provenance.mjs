@@ -17,7 +17,7 @@ const repo = path.resolve(root, '..');
 // stylesheet and D3 are build outputs that Git ignores; their tracked inputs are recorded instead.
 const SOURCES = ['js/app.js', 'js/controller.forecastctrl.js', 'js/controller.tabctrl.js', 'js/service.weatherutil.js',
     'js/service.weatherinfo.js', 'templates/tab-forecast.html', 'templates/tab-dailyforecast.html', 'css/ionic.app.css',
-    'lib/d3/d3.js', 'data/theme.js'];
+    'lib/d3/d3.js', 'data/theme.js', ...(process.env.TW_REFERENCE_SIZE ? ['locales/ko.json', 'locales/en.json'] : [])];
 const GENERATED_FROM = {'css/ionic.app.css': 'client/scss/ionic.app.scss', 'lib/d3/d3.js': 'client/bower.json'};
 const {sources, inputs} = cordovaSources(apk, repo, SOURCES, GENERATED_FROM);
 const d3Version = (execFileSync('unzip', ['-p', apk, 'assets/www/lib/d3/d3.js'], {maxBuffer: 1 << 26}).toString()
@@ -26,12 +26,12 @@ const d3Version = (execFileSync('unzip', ['-p', apk, 'assets/www/lib/d3/d3.js'],
 const version = apkVersion(apk);
 
 const files = (dir) => fs.readdirSync(dir, {recursive: true}).filter((f) => !fs.statSync(path.join(dir, f)).isDirectory()).sort();
-const sceneRoot = path.join(root, 'core-domain/src/test/resources/chart-reference');
-const sizes = fs.readdirSync(sceneRoot).filter((d) => /^\d+x\d+$/.test(d)).sort();
-const captured = files(sceneRoot).filter((f) => /^\d+x\d+\//.test(f));
+const sceneRoot = process.env.TW_REFERENCE_ROOT || path.join(root, 'core-domain/src/test/resources/chart-reference');
+const sizes = fs.readdirSync(sceneRoot).filter((d) => process.env.TW_REFERENCE_SIZE ? /^(ko-KR|en-US)$/.test(d) : /^\d+x\d+$/.test(d)).sort();
+const captured = files(sceneRoot).filter((f) => process.env.TW_REFERENCE_SIZE ? /^(ko-KR|en-US)\//.test(f) : /^\d+x\d+\//.test(f));
 
 const provenance = {
-    tool: 'android/tools/chart-reference/capture.sh',
+    tool: process.env.TW_REFERENCE_SIZE ? 'android/tools/parity-reference/capture.sh' : 'android/tools/chart-reference/capture.sh',
     capturedAt: sizes.map((s) => JSON.parse(fs.readFileSync(path.join(sceneRoot, s, 'capture.json'), 'utf8')).capturedAt).sort()[0],
     cordovaApk: {sha256: sha(fs.readFileSync(apk)), ...version, d3Version, sources},
     inputs,

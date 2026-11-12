@@ -255,11 +255,12 @@ class SettingsTest {
         menu(MenuRow.THEME)
         rule.onNodeWithTag(SettingsTags.row(2)).performClick()
         rule.waitForIdle()
+        // A failed reload opens a modal above settings; dismiss it before navigating back.
+        rule.onNodeWithTag(net.wizardfactory.todayweather.ui.forecast.RETRY_DIALOG).assertExists()
+        rule.onNode(hasText(string(R.string.LOC_CLOSE))).performClick()
+        rule.waitForIdle()
         back()
-        rule.onAllNodes(hasText(string(R.string.LOC_CLOSE)), useUnmergedTree = true).fetchSemanticsNodes().takeIf { it.isNotEmpty() }?.let {
-            rule.onNode(hasText(string(R.string.LOC_CLOSE))).performClick()
-            rule.waitForIdle()
-        }
+        rule.onNodeWithTag(SettingsTags.PAGE).assertDoesNotExist()
         assertEquals("the failed reload's apply brought it back", hourly, chartScroll(), 0.5f)
 
         failing = false

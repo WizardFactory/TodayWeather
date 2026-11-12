@@ -33,6 +33,16 @@ import org.robolectric.annotation.GraphicsMode
 /** Actual O01/O02/O03/O04/O08 components; behavior tests separately verify their app entry points. */
 abstract class DialogsFitTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
+    // AN-18c: all existing states at each parity display size, in both language subclasses.
+    @Test @Config(qualifiers = "+w384dp-h832dp-port", fontScale = 1f)
+    fun parity384() = fits()
+    @Test @Config(qualifiers = "+w360dp-h780dp-port", fontScale = 1f)
+    fun parity360() = fits()
+    @Test @Config(qualifiers = "+w412dp-h892dp-port", fontScale = 1f)
+    fun parity412() = fits()
+    @Test @Config(qualifiers = "+w320dp-h694dp-port", fontScale = 1f)
+    fun parity320() = fits()
+
     @Test @Config(qualifiers = "+w360dp-h640dp-port", fontScale = 1.3f)
     fun phoneLargeText() = fits()
 

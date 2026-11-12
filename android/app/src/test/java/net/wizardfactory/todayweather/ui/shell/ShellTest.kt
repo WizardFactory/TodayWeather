@@ -1,5 +1,7 @@
 package net.wizardfactory.todayweather.ui.shell
 
+import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.unit.dp
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
@@ -125,6 +127,7 @@ class ShellTest {
         show()
         back()
         rule.onNodeWithText("종료하시겠습니까?").assertIsDisplayed()
+        rule.onNodeWithTag(PopupTags.POPUP).assertWidthIsEqualTo(250.dp)
         back() // closes the dialog without an answer
         rule.onNodeWithText("종료하시겠습니까?").assertDoesNotExist()
         assertEquals(0, exits)

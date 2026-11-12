@@ -1,0 +1,47 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate.",
+ "cases": {
+  "en-US/menu-off": {
+   "heightDifference": 0,
+   "strong": 0.005077,
+   "mean": 1.628
+  },
+  "en-US/analytics-popup": {
+   "heightDifference": 0,
+   "strong": 0.003082,
+   "mean": 1.623
+  },
+  "en-US/menu-allowed": {
+   "heightDifference": 0,
+   "strong": 0.00593,
+   "mean": 1.732
+  },
+  "ko-KR/menu-off": {
+   "heightDifference": 0,
+   "strong": 0.009307,
+   "mean": 2.291
+  },
+  "ko-KR/analytics-popup": {
+   "heightDifference": 0,
+   "strong": 0.013222,
+   "mean": 4.664
+  },
+  "ko-KR/menu-allowed": {
+   "heightDifference": 0,
+   "strong": 0.008822,
+   "mean": 2.273
+  }
+ }
+}

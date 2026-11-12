@@ -1,0 +1,18 @@
+{
+  "nominal": {
+    "width": 412,
+    "height": 892
+  },
+  "webView": {
+    "width": 412,
+    "height": 819,
+    "dpr": 2,
+    "screenWidth": 412,
+    "screenHeight": 892,
+    "language": "ko-KR"
+  },
+  "origin": {
+    "x": 0,
+    "y": 98
+  }
+}

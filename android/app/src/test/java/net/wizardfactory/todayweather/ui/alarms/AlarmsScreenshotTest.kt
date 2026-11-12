@@ -42,6 +42,7 @@ import net.wizardfactory.todayweather.core.data.StateAccess
 import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.domain.shell.Tab
+import net.wizardfactory.todayweather.core.storage.Settings
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
@@ -82,9 +83,17 @@ class AlarmsScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/push-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/push" }
+        ?: "src/test/resources/push-reference")
+    private fun bodySize(): Pair<Float, Float> {
+        if (matrixSize == null) return 384f to 762f
+        val view = Json.parseToJsonElement(File(references, "$matrixLang/viewport.json").readText()).jsonObject["webView"]!!.jsonObject
+        return view.num("width").toFloat() to view.num("height").toFloat()
+    }
     private val inputs = File(project, "../core-domain/src/test/resources/corpus/inputs")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/push-compare").apply { mkdirs() }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val seoulZone = TimeZone.getTimeZone("Asia/Seoul")
@@ -128,13 +137,151 @@ class AlarmsScreenshotTest {
     @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
     @Test fun englishStored() = checked { stored("en-US") }
 
+    private fun matrix(size: String, lang: String, kind: String) = checked {
+        matrixSize = size
+        matrixLang = lang
+        when (kind) {
+            "defaults" -> defaults(lang)
+            "stored" -> stored(lang)
+            "permission" -> permission(lang)
+            "notifications" -> notifications(lang)
+            "dark" -> {
+                show(PushState(fcmToken = "t"), theme = "dark")
+                openS09()
+                compare("$lang/settings-dark")
+                boxes("$lang/settings-dark")
+            }
+        }
+    }
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    fun nominal384KoreanDefaults() = matrix("384x832", "ko-KR", "defaults")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    fun nominal384KoreanStored() = matrix("384x832", "ko-KR", "stored")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    fun nominal384KoreanDark() = matrix("384x832", "ko-KR", "dark")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    fun nominal384EnglishDefaults() = matrix("384x832", "en-US", "defaults")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    fun nominal384EnglishStored() = matrix("384x832", "en-US", "stored")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    fun nominal384EnglishDark() = matrix("384x832", "en-US", "dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    fun nominal360KoreanDefaults() = matrix("360x780", "ko-KR", "defaults")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    fun nominal360KoreanStored() = matrix("360x780", "ko-KR", "stored")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    fun nominal360KoreanDark() = matrix("360x780", "ko-KR", "dark")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    fun nominal360EnglishDefaults() = matrix("360x780", "en-US", "defaults")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    fun nominal360EnglishStored() = matrix("360x780", "en-US", "stored")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    fun nominal360EnglishDark() = matrix("360x780", "en-US", "dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    fun nominal412KoreanDefaults() = matrix("412x892", "ko-KR", "defaults")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    fun nominal412KoreanStored() = matrix("412x892", "ko-KR", "stored")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    fun nominal412KoreanDark() = matrix("412x892", "ko-KR", "dark")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    fun nominal412EnglishDefaults() = matrix("412x892", "en-US", "defaults")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    fun nominal412EnglishStored() = matrix("412x892", "en-US", "stored")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    fun nominal412EnglishDark() = matrix("412x892", "en-US", "dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    fun nominal320KoreanDefaults() = matrix("320x694", "ko-KR", "defaults")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    fun nominal320KoreanStored() = matrix("320x694", "ko-KR", "stored")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    fun nominal320KoreanDark() = matrix("320x694", "ko-KR", "dark")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    fun nominal320EnglishDefaults() = matrix("320x694", "en-US", "defaults")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    fun nominal320EnglishStored() = matrix("320x694", "en-US", "stored")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    fun nominal320EnglishDark() = matrix("320x694", "en-US", "dark")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    fun nominal384KoreanPermission() = matrix("384x832", "ko-KR", "permission")
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    fun nominal384KoreanNotifications() = matrix("384x832", "ko-KR", "notifications")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    fun nominal384EnglishPermission() = matrix("384x832", "en-US", "permission")
+
+    @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    fun nominal384EnglishNotifications() = matrix("384x832", "en-US", "notifications")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    fun nominal360KoreanPermission() = matrix("360x780", "ko-KR", "permission")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    fun nominal360KoreanNotifications() = matrix("360x780", "ko-KR", "notifications")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    fun nominal360EnglishPermission() = matrix("360x780", "en-US", "permission")
+
+    @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    fun nominal360EnglishNotifications() = matrix("360x780", "en-US", "notifications")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    fun nominal412KoreanPermission() = matrix("412x892", "ko-KR", "permission")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    fun nominal412KoreanNotifications() = matrix("412x892", "ko-KR", "notifications")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    fun nominal412EnglishPermission() = matrix("412x892", "en-US", "permission")
+
+    @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    fun nominal412EnglishNotifications() = matrix("412x892", "en-US", "notifications")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    fun nominal320KoreanPermission() = matrix("320x694", "ko-KR", "permission")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    fun nominal320KoreanNotifications() = matrix("320x694", "ko-KR", "notifications")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    fun nominal320EnglishPermission() = matrix("320x694", "en-US", "permission")
+
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    fun nominal320EnglishNotifications() = matrix("320x694", "en-US", "notifications")
+
     /** An alert from [start] to [end] and an alarm at 07:40 on weekdays for 서울, as the capture seeded them. */
     private fun records(start: Double, end: Double) = listOf(
         PushRecords.newAlert(1, 1, start, end, places, System.currentTimeMillis(), seoulZone),
         PushRecords.newAlarm(2, 1, 7 * 3600 + 40 * 60, listOf(false, true, true, true, true, true, false), places, System.currentTimeMillis(), seoulZone))
 
-    private fun show(push: PushState, intro: Boolean = false) {
-        val memory = Memory(AppState(places = places, placeIndex = 1, units = UnitSettings.defaults("KR"), push = push).closeStart().copy(placeIndex = 1))
+    private fun show(push: PushState, intro: Boolean = false, theme: String = "light") {
+        val region = if (intro && matrixSize != null && matrixLang == "en-US") "US" else "KR"
+        val memory = Memory(AppState(places = places, placeIndex = 1, units = UnitSettings.defaults(region), settings = Settings(theme = theme), push = push).closeStart().copy(placeIndex = 1))
         val http = HttpGet { _, _ -> File(inputs, "kma-seoul.json").readText() }
         val repository = WeatherRepository("https://server.test.invalid", null, http, io = Dispatchers.Unconfined)
         val session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
@@ -150,11 +297,14 @@ class AlarmsScreenshotTest {
             val retry by session.retry.collectAsState()
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
-            Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
+            Box(Modifier.size(bodySize().first.dp, bodySize().second.dp).testTag(ROOT)) {
                 AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, startTab = Tab.HOURLY, alarms = alarms,
                     messages = messages, alertIntro = alertIntro)
             }
         }
+        // The notification captures show Hourly beneath the translucent popup.
+        // Load the same offline weather fixture before comparing that composition.
+        if (intro && matrixSize != null) session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
     }
 
@@ -190,28 +340,34 @@ class AlarmsScreenshotTest {
 
     /** O11 over the stored 07–22 alert after Save, with notifications off. */
     @Test
-    fun koreanPermission() = checked {
+    fun koreanPermission() = checked { permission("ko-KR") }
+
+    private fun permission(lang: String) {
         show(PushState(fcmToken = "t", records = records(7.0, 22.0)))
         openS09()
         access.on = false
         rule.onNodeWithTag(AlarmsTags.SAVE).performClick()
         rule.waitForIdle()
-        compare("ko-KR/permission")
-        popupBoxes("ko-KR/permission")
+        compare("$lang/permission")
+        popupBoxes("$lang/permission")
     }
 
     /** O06 and O07 over Hourly: the popup, its title, lines and buttons where the capture has them. */
     @Test
-    fun koreanIntroAndForeground() = checked {
+    fun koreanIntroAndForeground() = checked { notifications("ko-KR") }
+
+    private fun notifications(lang: String) {
         show(PushState(fcmToken = "t", records = records(7.0, 22.0), needsAlertIntro = true), intro = true)
         rule.mainClock.advanceTimeBy(600)
         rule.waitForIdle()
-        popupBoxes("ko-KR/intro")
+        popupBoxes("$lang/intro")
+        if (matrixSize != null) compare("$lang/intro")
         rule.onAllNodesWithTag(PopupTags.BUTTON)[0].performClick()
         rule.waitForIdle()
         messages.tryEmit(PushMessage("서울 맑음 3˚", "내일 아침 -1˚, 낮 9˚", emptyMap(), "1", false))
         rule.waitForIdle()
-        popupBoxes("ko-KR/foreground")
+        popupBoxes("$lang/foreground")
+        if (matrixSize != null) compare("$lang/foreground")
     }
 
     private fun rect(o: JsonObject) = o["rect"]!!.jsonObject.let { r -> listOf("x", "y", "w", "h").map { r[it]!!.jsonPrimitive.double.toFloat() } }
@@ -272,10 +428,10 @@ class AlarmsScreenshotTest {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
         val diff = ImageDiff.of(native, cordova)
-        val base = name.replace('/', '-')
+        val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
-        println("push-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
+        println("push-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
         if (limit == null || margin == null) {

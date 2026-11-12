@@ -18,9 +18,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/push-reference', lang);
+const OUT = path.join(referenceRoot(root, 'push'), lang);
 const inputs = path.join(root, 'core-domain/src/test/resources/corpus/inputs');
 const fixture = (name) => JSON.parse(fs.readFileSync(path.join(inputs, `${name}.json`), 'utf8'));
 const screenshots = new Screen(serial);
@@ -28,6 +29,7 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 
 // The stand-in server: the weather of 서울 for any coordinates, 200 for push requests (recorded without the token).
 await dt.evaluate(`(function (seoul) {
@@ -246,6 +248,15 @@ if (!added.added) fail('add 서울', added);
 await dt.evaluate('twPush.seed(null, null)');
 if ((await dt.evaluate('twPush.open(1)')) !== '#/setting-push?fav=1') fail('open', await state());
 await capture('settings', (s) => { if (s.popups) fail('settings', s); });
+if (process.env.TW_REFERENCE_SIZE) {
+    for (const theme of ['dark', 'light']) {
+        await dt.evaluate(`(function(){var i=angular.element(document.body).injector(), r=i.get('$rootScope');
+            r.settingsInfo.theme=${JSON.stringify(theme)}; i.get('TwStorage').set('settingsInfo',r.settingsInfo); r.$apply();})()`);
+        await sleep(800);
+        if (theme === 'dark') await capture('settings-dark', s => { if (s.popups) fail('dark settings', s); });
+    }
+}
+
 
 // Page 22: the picker on the add row; its Close.
 await tap('twPush.addRow()', 1200);

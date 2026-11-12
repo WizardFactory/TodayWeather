@@ -1,0 +1,172 @@
+{
+ "tool": "android/tools/parity-reference/capture.sh APK privacy",
+ "cordovaApk": {
+  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
+  "versionCode": "200100",
+  "versionName": "1.1.1",
+  "sources": [
+   {
+    "file": "client/www/index.html",
+    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "tracked": true,
+    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "matchesClient": true,
+    "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
+   },
+   {
+    "file": "client/www/js/controller.settingctrl.js",
+    "apkSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+    "tracked": true,
+    "clientSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+    "matchesClient": true,
+    "lastCommit": "a262c570efab4da418c557a95d036d1177cc5c49"
+   },
+   {
+    "file": "client/www/js/service.monetization.js",
+    "apkSha256": "239fa7b10b109c726b8ea1410376fa0a8e5b99d1ea728dafcc48588bb4a44b7d",
+    "tracked": true,
+    "clientSha256": "239fa7b10b109c726b8ea1410376fa0a8e5b99d1ea728dafcc48588bb4a44b7d",
+    "matchesClient": true,
+    "lastCommit": "bfcaebbf0f86228df1e53013f2632c417c8f4086"
+   },
+   {
+    "file": "client/www/js/service.admobemi.js",
+    "apkSha256": "7f516ea8707661b42ba22f35791761ef0df917d83e29eae1c83c9fdf9a178a2e",
+    "tracked": true,
+    "clientSha256": "7f516ea8707661b42ba22f35791761ef0df917d83e29eae1c83c9fdf9a178a2e",
+    "matchesClient": true,
+    "lastCommit": "7543f541a75d091095bf60dc9c01aa7df5f6a554"
+   },
+   {
+    "file": "client/www/js/service.twads.js",
+    "apkSha256": "755777edd3bd7b80bba49acb12f268aa42008ae95e0199433828df15399b35fd",
+    "tracked": true,
+    "clientSha256": "755777edd3bd7b80bba49acb12f268aa42008ae95e0199433828df15399b35fd",
+    "matchesClient": true,
+    "lastCommit": "bd508bfc603a53150770182fdadbb2b338ed1ce8"
+   },
+   {
+    "file": "client/www/js/service.util.js",
+    "apkSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+    "tracked": true,
+    "clientSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+    "matchesClient": true,
+    "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+   },
+   {
+    "file": "client/www/js/app.js",
+    "apkSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "tracked": true,
+    "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/locales/ko.json",
+    "apkSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "tracked": true,
+    "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/locales/en.json",
+    "apkSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "tracked": true,
+    "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/css/ionic.app.css",
+    "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "tracked": false,
+    "generatedFrom": "client/scss/ionic.app.scss",
+    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "matchesClient": true
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "file": "client/scss/ionic.app.scss",
+   "sha256": "927bd183ff47493c995577b37cbb4ce427e55b946bd895d9933f14570f95747b",
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "emulator": {
+  "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+  "sdk": "36"
+ },
+ "display": "412x892 dp at density 2; measured viewport.json per language",
+ "language": "per-app locale ko-KR, then en-US",
+ "images": "cut from the screen (screencap): the whole WebView with the analytics popup over the menu, and with the menu after the opt-in",
+ "server": "a stand-in inside the WebView: corpus fixture kma-seoul for the weather; the emulator is offline",
+ "place": "kma-seoul (회현동)",
+ "files": [
+  {
+   "file": "en-US/actions.json",
+   "sha256": "2a680807ccca295f510ebe58d5b4f8e98cbffcf4af154b58e3543874e7943391"
+  },
+  {
+   "file": "en-US/analytics-popup.json",
+   "sha256": "cf8703508e58661e1811a91eea05637c6d4f1826e8a61c3a92db7cb721392c24"
+  },
+  {
+   "file": "en-US/analytics-popup.png",
+   "sha256": "7c08a9efd174c89e746c837e9d41f0d407bd02244aae33a1b711e545a09ebd43"
+  },
+  {
+   "file": "en-US/menu-allowed.json",
+   "sha256": "b4962b3f0993dee05c95ea8d019ea1168ba7e0eee9840ea786b20849bb0026fe"
+  },
+  {
+   "file": "en-US/menu-allowed.png",
+   "sha256": "b62dfb104d0201b768151052ca8e8592442accedb826dd601d7c82e1a5954de3"
+  },
+  {
+   "file": "en-US/menu-off.json",
+   "sha256": "ad63c2078c8f015e605c219f46330830ff531df5a4d280365cca15657abdfacc"
+  },
+  {
+   "file": "en-US/menu-off.png",
+   "sha256": "cdf6ec6126717a0f4f9a0aa9f6099ee3428217783b7f6037f673c846e4424a58"
+  },
+  {
+   "file": "en-US/viewport.json",
+   "sha256": "08dd6c5e03a7defe13d51aa31d36a400c6f527f399cef26a76a95c0745eb84d0"
+  },
+  {
+   "file": "ko-KR/actions.json",
+   "sha256": "254c7af5b00fbf476695cc35e2bf568aa7c1aaf8102939aa3cb6b961eb86a70e"
+  },
+  {
+   "file": "ko-KR/analytics-popup.json",
+   "sha256": "9bbd79453a8c9afd930ac520fd7b714cd79f4a511cac8fe797b3b1fcef1b7c5f"
+  },
+  {
+   "file": "ko-KR/analytics-popup.png",
+   "sha256": "3b51aaf642e3523dcf6ab2b1736be9bb296e036344c808ff4570b26d212b2b1a"
+  },
+  {
+   "file": "ko-KR/menu-allowed.json",
+   "sha256": "a878634bfeeea9a69ad7290276050c9b84271c60c4bd12b4d234f402c5d508e4"
+  },
+  {
+   "file": "ko-KR/menu-allowed.png",
+   "sha256": "80315bc2302c6067c4d69746733b1d9bba14b8937f66faa55450eeebdc9abd72"
+  },
+  {
+   "file": "ko-KR/menu-off.json",
+   "sha256": "6c09ec6625f3695a85a643c5478d1139e8f75bac8dfc4f1e4cfd1dada426a095"
+  },
+  {
+   "file": "ko-KR/menu-off.png",
+   "sha256": "ebf8e901dfe3d81962918ee675ad3541f025c72c51490084607e847c341e33c4"
+  },
+  {
+   "file": "ko-KR/viewport.json",
+   "sha256": "19c9403fbeabca9aeb0b9e5d0c0b55b2a095240e536b08c7d11b2b9998af8b27"
+  }
+ ]
+}

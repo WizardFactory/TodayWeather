@@ -1,0 +1,358 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
+ "why": "Korean/English with KR air units, domestic/world/no-air and all four themes. Historical margins retained. Narrow English information rows and narrow station/large old-theme header overlays inspected. Station preferred-width layout now follows the captured table; independent cell-left/width assertions allow at most 0.75dp. Remaining raster/advance differences occur around glyphs and icons. Blocks hidden under tabs are cropped only when capture metadata records that occlusion; all remaining compared heights match.",
+ "sensitivity": "Measured 2026-11-08 by changing the page one way at a time and rerunning (reports/sdlc/android-an-09/checks/air-sensitivity.log): the label placed with the 52 dp fallback width fails 5 comparisons, cells without grade colors 11, no selected cell background 10, the other hours' bars opaque 5, the overall grade at the full big size 4, the face on the text baseline 6, cells 1 dp narrower 6. Half a dp on the gauge's text and the empty label's place (white on the light card) do not change the screen enough to fail; the page model and the gauge's line height (the block height) cover them.",
+ "cases": {
+  "en-US/kma-seoul-photo-0": {
+   "heightDifference": 0,
+   "strong": 0.007757,
+   "mean": 1.873
+  },
+  "en-US/kma-seoul-photo-1": {
+   "heightDifference": 0,
+   "strong": 0.000988,
+   "mean": 1.549
+  },
+  "en-US/kma-seoul-photo-2": {
+   "heightDifference": 0,
+   "strong": 0.000436,
+   "mean": 0.983
+  },
+  "en-US/kma-seoul-photo-3": {
+   "heightDifference": 0,
+   "strong": 0.005466,
+   "mean": 1.764
+  },
+  "en-US/kma-seoul-photo-4": {
+   "heightDifference": 0,
+   "strong": 0.001818,
+   "mean": 1.416
+  },
+  "en-US/kma-seoul-photo-5": {
+   "heightDifference": 0,
+   "strong": 0.031005,
+   "mean": 6.182
+  },
+  "en-US/kma-seoul-photo-6": {
+   "heightDifference": 0,
+   "strong": 0.001628,
+   "mean": 1.344
+  },
+  "en-US/vc-london-0": {
+   "heightDifference": 0,
+   "strong": 0.008351,
+   "mean": 2.006
+  },
+  "en-US/vc-london-1": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 1.211
+  },
+  "en-US/vc-london-2": {
+   "heightDifference": 0,
+   "strong": 0.0023,
+   "mean": 1.725
+  },
+  "en-US/vc-london-3": {
+   "heightDifference": 0,
+   "strong": 0.029162,
+   "mean": 5.564
+  },
+  "ko-KR/kma-seoul-photo-0": {
+   "heightDifference": 0,
+   "strong": 0.005748,
+   "mean": 1.526
+  },
+  "ko-KR/kma-seoul-photo-1": {
+   "heightDifference": 0,
+   "strong": 0.000924,
+   "mean": 1.41
+  },
+  "ko-KR/kma-seoul-photo-2": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 0.639
+  },
+  "ko-KR/kma-seoul-photo-3": {
+   "heightDifference": 0,
+   "strong": 3.5e-05,
+   "mean": 0.565
+  },
+  "ko-KR/kma-seoul-photo-4": {
+   "heightDifference": 0,
+   "strong": 0.004176,
+   "mean": 1.558
+  },
+  "ko-KR/kma-seoul-photo-5": {
+   "heightDifference": 0,
+   "strong": 0.005208,
+   "mean": 3.239
+  },
+  "ko-KR/kma-seoul-photo-6": {
+   "heightDifference": 0,
+   "strong": 0.001382,
+   "mean": 1.146
+  },
+  "en-US/kma-seoul-dark-0": {
+   "heightDifference": 0,
+   "strong": 0.008312,
+   "mean": 1.94
+  },
+  "en-US/kma-seoul-dark-1": {
+   "heightDifference": 0,
+   "strong": 0.001247,
+   "mean": 1.33
+  },
+  "en-US/kma-seoul-dark-2": {
+   "heightDifference": 0,
+   "strong": 0.00195,
+   "mean": 1.15
+  },
+  "en-US/kma-seoul-dark-3": {
+   "heightDifference": 0,
+   "strong": 0.004637,
+   "mean": 1.635
+  },
+  "en-US/kma-seoul-dark-4": {
+   "heightDifference": 0,
+   "strong": 0.003825,
+   "mean": 1.484
+  },
+  "en-US/kma-seoul-dark-5": {
+   "heightDifference": 0,
+   "strong": 0.013609,
+   "mean": 4.677
+  },
+  "en-US/kma-seoul-dark-6": {
+   "heightDifference": 0,
+   "strong": 0.003177,
+   "mean": 1.358
+  },
+  "ko-KR/kma-jeju-no-air-0": {
+   "heightDifference": 0,
+   "strong": 0.003891,
+   "mean": 0.748
+  },
+  "ko-KR/kma-jeju-no-air-1": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 1.23
+  },
+  "en-US/kma-seoul-old-0": {
+   "heightDifference": 0,
+   "strong": 0.007701,
+   "mean": 1.874
+  },
+  "en-US/kma-seoul-old-1": {
+   "heightDifference": 0,
+   "strong": 0.000988,
+   "mean": 1.549
+  },
+  "en-US/kma-seoul-old-2": {
+   "heightDifference": 0,
+   "strong": 0.000436,
+   "mean": 0.983
+  },
+  "en-US/kma-seoul-old-3": {
+   "heightDifference": 0,
+   "strong": 0.005466,
+   "mean": 1.764
+  },
+  "en-US/kma-seoul-old-4": {
+   "heightDifference": 0,
+   "strong": 0.001818,
+   "mean": 1.416
+  },
+  "en-US/kma-seoul-old-5": {
+   "heightDifference": 0,
+   "strong": 0.031005,
+   "mean": 6.182
+  },
+  "en-US/kma-seoul-old-6": {
+   "heightDifference": 0,
+   "strong": 0.001628,
+   "mean": 1.344
+  },
+  "ko-KR/kma-seoul-0": {
+   "heightDifference": 0,
+   "strong": 0.006587,
+   "mean": 1.577
+  },
+  "ko-KR/kma-seoul-1": {
+   "heightDifference": 0,
+   "strong": 0.000924,
+   "mean": 1.41
+  },
+  "ko-KR/kma-seoul-2": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 0.639
+  },
+  "ko-KR/kma-seoul-3": {
+   "heightDifference": 0,
+   "strong": 3.5e-05,
+   "mean": 0.565
+  },
+  "ko-KR/kma-seoul-4": {
+   "heightDifference": 0,
+   "strong": 0.004176,
+   "mean": 1.558
+  },
+  "ko-KR/kma-seoul-5": {
+   "heightDifference": 0,
+   "strong": 0.005208,
+   "mean": 3.239
+  },
+  "ko-KR/kma-seoul-6": {
+   "heightDifference": 0,
+   "strong": 0.001382,
+   "mean": 1.146
+  },
+  "ko-KR/kma-seoul-dark-0": {
+   "heightDifference": 0,
+   "strong": 0.006295,
+   "mean": 1.579
+  },
+  "ko-KR/kma-seoul-dark-1": {
+   "heightDifference": 0,
+   "strong": 0.001166,
+   "mean": 1.195
+  },
+  "ko-KR/kma-seoul-dark-2": {
+   "heightDifference": 0,
+   "strong": 0.000124,
+   "mean": 0.694
+  },
+  "ko-KR/kma-seoul-dark-3": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 0.538
+  },
+  "ko-KR/kma-seoul-dark-4": {
+   "heightDifference": 0,
+   "strong": 0.003517,
+   "mean": 1.404
+  },
+  "ko-KR/kma-seoul-dark-5": {
+   "heightDifference": 0,
+   "strong": 0.00089,
+   "mean": 2.46
+  },
+  "ko-KR/kma-seoul-dark-6": {
+   "heightDifference": 0,
+   "strong": 0.002331,
+   "mean": 1.117
+  },
+  "ko-KR/vc-london-0": {
+   "heightDifference": 0,
+   "strong": 0.006354,
+   "mean": 1.656
+  },
+  "ko-KR/vc-london-1": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 1.094
+  },
+  "ko-KR/vc-london-2": {
+   "heightDifference": 0,
+   "strong": 0.008215,
+   "mean": 2.237
+  },
+  "ko-KR/vc-london-3": {
+   "heightDifference": 0,
+   "strong": 0.004705,
+   "mean": 3.089
+  },
+  "en-US/kma-seoul-0": {
+   "heightDifference": 0,
+   "strong": 0.008596,
+   "mean": 1.924
+  },
+  "en-US/kma-seoul-1": {
+   "heightDifference": 0,
+   "strong": 0.000988,
+   "mean": 1.549
+  },
+  "en-US/kma-seoul-2": {
+   "heightDifference": 0,
+   "strong": 0.000436,
+   "mean": 0.983
+  },
+  "en-US/kma-seoul-3": {
+   "heightDifference": 0,
+   "strong": 0.005466,
+   "mean": 1.764
+  },
+  "en-US/kma-seoul-4": {
+   "heightDifference": 0,
+   "strong": 0.001818,
+   "mean": 1.416
+  },
+  "en-US/kma-seoul-5": {
+   "heightDifference": 0,
+   "strong": 0.031005,
+   "mean": 6.182
+  },
+  "en-US/kma-seoul-6": {
+   "heightDifference": 0,
+   "strong": 0.001628,
+   "mean": 1.344
+  },
+  "en-US/kma-jeju-no-air-0": {
+   "heightDifference": 0,
+   "strong": 0.003891,
+   "mean": 0.748
+  },
+  "en-US/kma-jeju-no-air-1": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 1.379
+  },
+  "ko-KR/kma-seoul-old-0": {
+   "heightDifference": 0,
+   "strong": 0.005692,
+   "mean": 1.527
+  },
+  "ko-KR/kma-seoul-old-1": {
+   "heightDifference": 0,
+   "strong": 0.000924,
+   "mean": 1.41
+  },
+  "ko-KR/kma-seoul-old-2": {
+   "heightDifference": 0,
+   "strong": 0.0,
+   "mean": 0.639
+  },
+  "ko-KR/kma-seoul-old-3": {
+   "heightDifference": 0,
+   "strong": 3.5e-05,
+   "mean": 0.565
+  },
+  "ko-KR/kma-seoul-old-4": {
+   "heightDifference": 0,
+   "strong": 0.004176,
+   "mean": 1.558
+  },
+  "ko-KR/kma-seoul-old-5": {
+   "heightDifference": 0,
+   "strong": 0.005208,
+   "mean": 3.239
+  },
+  "ko-KR/kma-seoul-old-6": {
+   "heightDifference": 0,
+   "strong": 0.001382,
+   "mean": 1.146
+  }
+ }
+}

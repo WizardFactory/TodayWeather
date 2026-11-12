@@ -175,7 +175,7 @@ fun AirScreen(
             val tag = AirTags.block(block++)
             Column(Modifier.testTag(AirTags.STATIONS)) {
                 Card(colors.page, page.stationsTitle, Modifier.testTag(tag), null) {
-                    Cells(cells, colors, minWidth = 110.dp, tag = AirTags::station, onTap = onStation)
+                    Cells(cells, colors, minWidth = 0.dp, preferredWidth = 110.dp, tag = AirTags::station, onTap = onStation)
                 }
             }
         }
@@ -361,11 +361,12 @@ private fun Label(text: String, color: Color, modifier: Modifier) {
 /**
  * `.card-scroll` with `.rowgroup-hspacing-box`: cells 10 dp apart and from the edges, each at least [minWidth] (its
  * border included) and wider for longer texts, stretched to the card when they do not fill it (`min-width: 100%`),
- * scrolling sideways otherwise. A cell has a 1 dp rounded border, a gray background when selected, and the heading
+ * scrolling sideways otherwise. Stations use [preferredWidth] instead: they can shrink to their intrinsic content.
+ * A cell has a 1 dp rounded border, a gray background when selected, and the heading
  * (15 sp), the face and the text (17 sp) in the grade color, centered on the row's height (`vertical-align: middle`).
  */
 @Composable
-private fun Cells(cells: List<AirCell>, colors: AirColors, minWidth: Dp, tag: (Int) -> String, onTap: (Int) -> Unit) {
+private fun Cells(cells: List<AirCell>, colors: AirColors, minWidth: Dp, preferredWidth: Dp? = null, tag: (Int) -> String, onTap: (Int) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val available = constraints.maxWidth
         Box(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
@@ -380,10 +381,17 @@ private fun Cells(cells: List<AirCell>, colors: AirColors, minWidth: Dp, tag: (I
             }) { measurables, _ ->
                 val n = measurables.size
                 val spacing = 10.dp.toPx()
-                val natural = measurables.map { max(minWidth.toPx(), it.maxIntrinsicWidth(Constraints.Infinity).toFloat()) }
+                // Pollutants have CSS min-width:110px; stations have width:110px, which
+                // auto table layout can shrink toward each cell's intrinsic width plus borders.
+                val minimum = measurables.map {
+                    max(minWidth.toPx(), it.maxIntrinsicWidth(Constraints.Infinity).toFloat() + if (preferredWidth != null) 2.dp.toPx() else 0f)
+                }
+                val natural = minimum.map { max(it, preferredWidth?.toPx() ?: 0f) }
                 val total = natural.sum() + spacing * (n + 1)
-                val extra = if (total < available) (available - total) / n else 0f
-                val widths = natural.map { it + extra }
+                val extra = if (total < available && n > 0) (available - total) / n else 0f
+                val capacity = natural.sum() - minimum.sum()
+                val shrink = if (capacity > 0f) ((total - available) / capacity).coerceIn(0f, 1f) else 0f
+                val widths = natural.mapIndexed { i, width -> width + extra - (width - minimum[i]) * shrink }
                 val height = measurables.zip(widths).maxOfOrNull { (m, w) -> m.minIntrinsicHeight(w.roundToInt()) } ?: 0
                 var x = spacing
                 val placed = measurables.zip(widths).map { (m, w) ->

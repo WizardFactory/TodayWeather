@@ -78,9 +78,12 @@ class PlacesScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/places-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/places" }
+        ?: "src/test/resources/places-reference")
     private val inputs = File(project, "../core-domain/src/test/resources/corpus/inputs")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/places-compare").apply { mkdirs() }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -114,8 +117,119 @@ class PlacesScreenshotTest {
     @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
     @Test fun englishEdit() = checked { editAndLocation("en-US") }
 
-    private fun show(places: List<Place>) {
-        val memory = Memory(AppState(places = places, placeIndex = 1, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = "2")).closeStart()
+    private fun matrix(size: String, lang: String, state: String) {
+        matrixSize = size
+        matrixLang = lang
+        when (state) {
+            "list" -> checked { listAndSearch(lang) }
+            "edit" -> checked { editAndLocation(lang) }
+            "boxes" -> boxes(lang)
+            "dark" -> checked {
+                show(listOf(Place.currentPositionPlaceholder(), seoul), theme = "dark")
+                compare("$lang/favorites-dark")
+            }
+        }
+    }
+
+    @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    @Test fun nominal384KoreanList() = matrix("384x832", "ko-KR", "list")
+
+    @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    @Test fun nominal384KoreanEdit() = matrix("384x832", "ko-KR", "edit")
+
+    @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    @Test fun nominal384KoreanBoxes() = matrix("384x832", "ko-KR", "boxes")
+
+    @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    @Test fun nominal384EnglishList() = matrix("384x832", "en-US", "list")
+
+    @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    @Test fun nominal384EnglishEdit() = matrix("384x832", "en-US", "edit")
+
+    @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    @Test fun nominal384EnglishBoxes() = matrix("384x832", "en-US", "boxes")
+
+    @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    @Test fun nominal360KoreanList() = matrix("360x780", "ko-KR", "list")
+
+    @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    @Test fun nominal360KoreanEdit() = matrix("360x780", "ko-KR", "edit")
+
+    @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    @Test fun nominal360KoreanBoxes() = matrix("360x780", "ko-KR", "boxes")
+
+    @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    @Test fun nominal360EnglishList() = matrix("360x780", "en-US", "list")
+
+    @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    @Test fun nominal360EnglishEdit() = matrix("360x780", "en-US", "edit")
+
+    @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    @Test fun nominal360EnglishBoxes() = matrix("360x780", "en-US", "boxes")
+
+    @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    @Test fun nominal412KoreanList() = matrix("412x892", "ko-KR", "list")
+
+    @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    @Test fun nominal412KoreanEdit() = matrix("412x892", "ko-KR", "edit")
+
+    @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    @Test fun nominal412KoreanBoxes() = matrix("412x892", "ko-KR", "boxes")
+
+    @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    @Test fun nominal412EnglishList() = matrix("412x892", "en-US", "list")
+
+    @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    @Test fun nominal412EnglishEdit() = matrix("412x892", "en-US", "edit")
+
+    @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    @Test fun nominal412EnglishBoxes() = matrix("412x892", "en-US", "boxes")
+
+    @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    @Test fun nominal320KoreanList() = matrix("320x694", "ko-KR", "list")
+
+    @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    @Test fun nominal320KoreanEdit() = matrix("320x694", "ko-KR", "edit")
+
+    @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    @Test fun nominal320KoreanBoxes() = matrix("320x694", "ko-KR", "boxes")
+
+    @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    @Test fun nominal320EnglishList() = matrix("320x694", "en-US", "list")
+
+    @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    @Test fun nominal320EnglishEdit() = matrix("320x694", "en-US", "edit")
+
+    @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    @Test fun nominal320EnglishBoxes() = matrix("320x694", "en-US", "boxes")
+
+    @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    @Test fun nominal384KoreanDark() = matrix("384x832", "ko-KR", "dark")
+
+    @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    @Test fun nominal384EnglishDark() = matrix("384x832", "en-US", "dark")
+
+    @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    @Test fun nominal360KoreanDark() = matrix("360x780", "ko-KR", "dark")
+
+    @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    @Test fun nominal360EnglishDark() = matrix("360x780", "en-US", "dark")
+
+    @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    @Test fun nominal412KoreanDark() = matrix("412x892", "ko-KR", "dark")
+
+    @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    @Test fun nominal412EnglishDark() = matrix("412x892", "en-US", "dark")
+
+    @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    @Test fun nominal320KoreanDark() = matrix("320x694", "ko-KR", "dark")
+
+    @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    @Test fun nominal320EnglishDark() = matrix("320x694", "en-US", "dark")
+
+    private fun show(places: List<Place>, theme: String = "light") {
+        val view = Json.parseToJsonElement(File(references, "$matrixLang/favorites.json").readText()).jsonObject["view"]!!.jsonObject
+        val memory = Memory(AppState(places = places, placeIndex = 1, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = "2", theme = theme)).closeStart()
             .copy(placeIndex = 1))
         val http = HttpGet { url, _ ->
             when {
@@ -137,7 +251,7 @@ class PlacesScreenshotTest {
                 PlacesPage(memory, repository, session, StartFlow(memory, repository, GeocodeClient("https://server.test.invalid", http), Device,
                     { listOf("ko-KR") }), Device, s, removeAlarms = {})
             }
-            Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
+            Box(Modifier.size(view.num("width").toFloat().dp, view.num("height").toFloat().dp).testTag(ROOT)) {
                 AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places)
             }
         }
@@ -170,8 +284,10 @@ class PlacesScreenshotTest {
      * 1 dp (the first row includes its top border, as the capture's item does), the button within 0.5 dp.
      */
     @Test
-    fun koreanBoxes() {
-        val capture = Json.parseToJsonElement(File(references, "ko-KR/edit.json").readText()).jsonObject
+    fun koreanBoxes() = boxes("ko-KR")
+
+    private fun boxes(lang: String) {
+        val capture = Json.parseToJsonElement(File(references, "$lang/edit.json").readText()).jsonObject
         show(listOf(Place.currentPositionPlaceholder(), seoul, busan, london))
         rule.onNodeWithTag(PlacesTags.MODE).performClick()
         rule.waitForIdle()
@@ -182,7 +298,7 @@ class PlacesScreenshotTest {
             assertEquals("row $i height", want["h"]!!.jsonPrimitive.double.toFloat(), r.bottom.value - r.top.value, 1f)
             assertEquals("row $i left", want["x"]!!.jsonPrimitive.double.toFloat(), r.left.value, 0.5f)
         }
-        val search = Json.parseToJsonElement(File(references, "ko-KR/search.json").readText()).jsonObject
+        val search = Json.parseToJsonElement(File(references, "$lang/search.json").readText()).jsonObject
         rule.onNodeWithTag(PlacesTags.MODE).performClick()
         rule.onNodeWithTag(PlacesTags.INPUT).performClick()
         rule.waitForIdle()
@@ -198,10 +314,10 @@ class PlacesScreenshotTest {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
         val diff = ImageDiff.of(native, cordova)
-        val base = name.replace('/', '-')
+        val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
-        println("places-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
+        println("places-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
         if (limit == null || margin == null) {

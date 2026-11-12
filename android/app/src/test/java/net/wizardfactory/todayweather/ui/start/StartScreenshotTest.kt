@@ -56,8 +56,10 @@ class StartScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/start-reference")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private var matrixSize: String? = null
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/start" }
+        ?: "src/test/resources/start-reference")
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/start-compare").apply { mkdirs() }
 
     @Test fun korean() = checked { states("ko-KR") }
@@ -74,6 +76,39 @@ class StartScreenshotTest {
 
     @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
     @Test fun englishBoxes() = boxes("en-US")
+
+    // New nominal-display captures coexist with the historical 384x762 body.
+    private fun matrix(size: String, lang: String) {
+        matrixSize = size
+        checked {
+            states(lang)
+            boxes(lang, alreadyShown = true)
+        }
+    }
+
+    @Config(qualifiers = "ko-rKR-w384dp-h832dp-xhdpi")
+    @Test fun nominal384Korean() = matrix("384x832", "ko-KR")
+
+    @Config(qualifiers = "en-rUS-w384dp-h832dp-xhdpi")
+    @Test fun nominal384English() = matrix("384x832", "en-US")
+
+    @Config(qualifiers = "ko-rKR-w360dp-h780dp-xhdpi")
+    @Test fun nominal360Korean() = matrix("360x780", "ko-KR")
+
+    @Config(qualifiers = "en-rUS-w360dp-h780dp-xhdpi")
+    @Test fun nominal360English() = matrix("360x780", "en-US")
+
+    @Config(qualifiers = "ko-rKR-w412dp-h892dp-xhdpi")
+    @Test fun nominal412Korean() = matrix("412x892", "ko-KR")
+
+    @Config(qualifiers = "en-rUS-w412dp-h892dp-xhdpi")
+    @Test fun nominal412English() = matrix("412x892", "en-US")
+
+    @Config(qualifiers = "ko-rKR-w320dp-h694dp-xhdpi")
+    @Test fun nominal320Korean() = matrix("320x694", "ko-KR")
+
+    @Config(qualifiers = "en-rUS-w320dp-h694dp-xhdpi")
+    @Test fun nominal320English() = matrix("320x694", "en-US")
 
     /** O01's body breaks where Chrome broke it: each line of the capture's line boxes, without its trailing space. */
     private fun lines(lang: String) {
@@ -94,9 +129,9 @@ class StartScreenshotTest {
      * widths come from Robolectric's fonts, not the emulator's: the Korean bold label of 현재위치 날씨보기 is 1.4 dp wider
      * here.
      */
-    private fun boxes(lang: String) {
+    private fun boxes(lang: String, alreadyShown: Boolean = false) {
         val capture = capture(lang, "start")
-        show()
+        if (!alreadyShown) show(lang = lang)
         fun rect(o: JsonObject) = o["rect"]!!.jsonObject.let { r -> listOf("x", "y", "w", "h").map { r[it]!!.jsonPrimitive.double.toFloat() } }
         fun check(name: String, tag: String, want: List<Float>, position: Float = 0.5f, width: Float = 0.5f) {
             val r = rule.onNodeWithTag(tag).getUnclippedBoundsInRoot()
@@ -120,9 +155,12 @@ class StartScreenshotTest {
         check("location", StartTags.LOCATION, rect(capture["location"]!!.jsonObject), position = 1f, width = 1.5f)
     }
 
-    private fun show(notice: () -> Boolean = { false }) {
+    private fun show(lang: String, notice: () -> Boolean = { false }) {
+        val view = capture(lang, "start")["view"]!!.jsonObject
+        val width = view.num("width").toFloat()
+        val height = view.num("height").toFloat()
         rule.setContent {
-            Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
+            Box(Modifier.size(width.dp, height.dp).testTag(ROOT)) {
                 StartContent(null, { TownSearch(emptyList()) }, onShortcut = {}, onPrediction = { _, _ -> }, onTown = {}, onLocation = {})
                 if (notice()) AccessNotice {}
             }
@@ -132,7 +170,7 @@ class StartScreenshotTest {
 
     private fun states(lang: String) {
         var notice by mutableStateOf(true)
-        show { notice }
+        show(lang) { notice }
         compare("$lang/access")
         notice = false
         rule.waitForIdle()
@@ -148,10 +186,10 @@ class StartScreenshotTest {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
         val diff = ImageDiff.of(native, cordova)
-        val base = name.replace('/', '-')
+        val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
-        println("start-compare $name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
+        println("start-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
         if (limit == null || margin == null) {

@@ -1,0 +1,190 @@
+{
+ "lang": "ko-KR",
+ "languages": {
+  "navigator": "ko-KR",
+  "util": "ko-KR"
+ },
+ "steps": [
+  {
+   "step": "menu",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": null,
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "popup",
+   "page": "#/tab/forecast",
+   "popups": 1,
+   "menu": true,
+   "choice": false,
+   "stored": null,
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": [
+    "선택적 이용 통계앱 개선을 위해 Google Firebase Analytics로 화면 이용, 날씨 조회 결과, 앱·기기·설치 정보를 수집하는 데 동의하시겠습니까? 실제 위치·주소·푸시 토큰·기기 UUID는 사용자 정의 통계에 보내지 않습니다. 동의하지 않아도 날씨 조회를 사용할 수 있으며, 이 메뉴에서 언제든 철회할 수 있습니다. 통계의 광고 활용은 허용하지 않습니다. 광고·오류 진단·알림은 별도로 처리됩니다.거부 / 철회동의"
+   ]
+  },
+  {
+   "step": "back",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": false,
+   "choice": false,
+   "stored": null,
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": [],
+   "early": {
+    "popups": 0,
+    "menu": false
+   }
+  },
+  {
+   "step": "allow",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": true,
+   "stored": "true",
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "deny",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "privacy policy",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "terms",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [],
+   "popupTexts": []
+  },
+  {
+   "step": "ad privacy",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [
+    "called",
+    "success"
+   ],
+   "popupTexts": []
+  },
+  {
+   "step": "about",
+   "page": "#/tab/forecast",
+   "popups": 1,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [
+    "called",
+    "success"
+   ],
+   "popupTexts": [
+    "오늘날씨기상정보 : 기상청대기오염정보 : 환경부/한국환경공단인증되지 않은 실시간 자료이므로 자료 오류가 있을 수 있습니다.확인"
+   ]
+  },
+  {
+   "step": "about back",
+   "page": "#/tab/forecast",
+   "popups": 0,
+   "menu": true,
+   "choice": false,
+   "stored": "false",
+   "opened": [
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/privacy.en.html",
+     "target": "_system"
+    },
+    {
+     "via": "InAppBrowser",
+     "url": "https://todayweather.ai/mobile/terms.en.html",
+     "target": "_system"
+    }
+   ],
+   "adPrivacy": [
+    "called",
+    "success"
+   ],
+   "popupTexts": [],
+   "early": {
+    "popups": 0,
+    "menu": true
+   }
+  }
+ ]
+}

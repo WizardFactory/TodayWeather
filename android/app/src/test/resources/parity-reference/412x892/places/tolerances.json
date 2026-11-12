@@ -1,0 +1,67 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native/Cordova height difference in device pixels (density 2)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, Robolectric SDK34 and API36 Cordova measured nominal display",
+ "why": "Same S02 fixtures and historical comparison margin, with added dark favorites. Selected 320 dark,360 English search and412 edit overlays inspected: differences stay in glyph rasterization/weights, icons and fractional corners; list/card and toolbar placement is retained. All eight size/language geometry checks independently pass.",
+ "cases": {
+  "en-US/favorites-dark": {
+   "heightDifference": 0,
+   "strong": 0.004321,
+   "mean": 0.961
+  },
+  "en-US/edit": {
+   "heightDifference": 0,
+   "strong": 0.006229,
+   "mean": 1.509
+  },
+  "en-US/location": {
+   "heightDifference": 0,
+   "strong": 0.005176,
+   "mean": 1.442
+  },
+  "en-US/favorites": {
+   "heightDifference": 0,
+   "strong": 0.003067,
+   "mean": 0.846
+  },
+  "en-US/search": {
+   "heightDifference": 0,
+   "strong": 0.016002,
+   "mean": 3.645
+  },
+  "ko-KR/favorites-dark": {
+   "heightDifference": 0,
+   "strong": 0.004054,
+   "mean": 1.132
+  },
+  "ko-KR/edit": {
+   "heightDifference": 0,
+   "strong": 0.005434,
+   "mean": 1.632
+  },
+  "ko-KR/location": {
+   "heightDifference": 0,
+   "strong": 0.007199,
+   "mean": 1.869
+  },
+  "ko-KR/favorites": {
+   "heightDifference": 0,
+   "strong": 0.002772,
+   "mean": 1.02
+  },
+  "ko-KR/search": {
+   "heightDifference": 0,
+   "strong": 0.018031,
+   "mean": 4.092
+  }
+ }
+}

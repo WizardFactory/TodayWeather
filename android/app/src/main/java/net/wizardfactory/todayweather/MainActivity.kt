@@ -494,6 +494,7 @@ fun AppContent(
                     }
                 }
             }
+            if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
         },
     ) { tab ->
         when (tab) {
@@ -513,7 +514,6 @@ fun AppContent(
             } ?: TabContent()
         }
     }
-    if (retry) RetryDialog(onClose = session::closeRetry, onRetry = session::confirmRetry)
 }
 
 /**

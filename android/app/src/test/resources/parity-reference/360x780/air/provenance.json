@@ -1,0 +1,472 @@
+{
+ "tool": "android/tools/parity-reference/capture.sh",
+ "cordovaApk": {
+  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
+  "versionCode": "200100",
+  "versionName": "1.1.1",
+  "sources": [
+   {
+    "file": "client/www/templates/tab-air.html",
+    "apkSha256": "4d68ccf085abf78aeebcf2f1ecc5effa14d6343c154cd374f0bce6665a29ee81",
+    "tracked": true,
+    "clientSha256": "4d68ccf085abf78aeebcf2f1ecc5effa14d6343c154cd374f0bce6665a29ee81",
+    "matchesClient": true,
+    "lastCommit": "86efb3189ddf3e7bd86b0211b7e5b05a8faea1e3"
+   },
+   {
+    "file": "client/www/templates/tabs-android.html",
+    "apkSha256": "43e099cc0be44f9a64785c669ca08ff6f363ac9d2b826407173551e32b0de33c",
+    "tracked": true,
+    "clientSha256": "43e099cc0be44f9a64785c669ca08ff6f363ac9d2b826407173551e32b0de33c",
+    "matchesClient": true,
+    "lastCommit": "7ab2daded80b1e1ff61fe0e35a5177590731fa61"
+   },
+   {
+    "file": "client/www/js/controller.air.js",
+    "apkSha256": "760b7e32832cc12d49c063b044a48f0726aa6460b744bae7c6a809418c04af6e",
+    "tracked": true,
+    "clientSha256": "760b7e32832cc12d49c063b044a48f0726aa6460b744bae7c6a809418c04af6e",
+    "matchesClient": true,
+    "lastCommit": "f0a744f1964e601237f6be31a78916a3b545edf4"
+   },
+   {
+    "file": "client/www/js/controller.tabctrl.js",
+    "apkSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "tracked": true,
+    "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+    "matchesClient": true,
+    "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+   },
+   {
+    "file": "client/www/js/app.js",
+    "apkSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "tracked": true,
+    "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/service.weatherutil.js",
+    "apkSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "tracked": true,
+    "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/service.weatherinfo.js",
+    "apkSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "tracked": true,
+    "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+    "matchesClient": true,
+    "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+   },
+   {
+    "file": "client/www/js/controller.units.js",
+    "apkSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
+    "tracked": true,
+    "clientSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
+    "matchesClient": true,
+    "lastCommit": "71b55e62f3abe5e399d8a7092e86f7c686481c58"
+   },
+   {
+    "file": "client/www/locales/ko.json",
+    "apkSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "tracked": true,
+    "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/locales/en.json",
+    "apkSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "tracked": true,
+    "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+    "matchesClient": true,
+    "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+   },
+   {
+    "file": "client/www/data/theme.js",
+    "apkSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "tracked": true,
+    "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+    "matchesClient": true,
+    "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
+   },
+   {
+    "file": "client/www/css/ionic.app.css",
+    "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "tracked": false,
+    "generatedFrom": "client/scss/ionic.app.scss",
+    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+    "matchesClient": true
+   },
+   {
+    "file": "client/www/lib/d3/d3.js",
+    "apkSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
+    "tracked": false,
+    "generatedFrom": "client/bower.json",
+    "clientSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
+    "matchesClient": true
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "file": "client/scss/ionic.app.scss",
+   "sha256": "927bd183ff47493c995577b37cbb4ce427e55b946bd895d9933f14570f95747b",
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  },
+  {
+   "file": "client/bower.json",
+   "sha256": "2b844fe0fb5ef0b2be2af18b6a407b7e9ca2c0e5bc4b8fa325edc9141382e22c",
+   "lastCommit": "31867aa17886861b57463bb0084db017790cb241"
+  }
+ ],
+ "emulator": {
+  "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
+  "sdk": "36"
+ },
+ "display": "360x780 dp at density 2; matrix captures record measured viewport.json per language",
+ "language": "ko-KR and en-KR (English text with KR units), stored as ko-KR/en-US",
+ "images": "cut from the screen (screencap) at the block rects of <state>/air.json",
+ "places": "kma-seoul (회현동), then vc-london (런던) and kma-jeju without air data (연동) added and selected: AN-02 corpus inputs",
+ "files": [
+  {
+   "file": "en-US/kma-jeju-no-air/air-0.png",
+   "sha256": "38a55efc292602fffb086b17e9dc4a6c3d656c22b1e537797e211b8f73064317"
+  },
+  {
+   "file": "en-US/kma-jeju-no-air/air-1.png",
+   "sha256": "02c16b2e11c33952d001604843343a0dcbc34233771437e698b3b56c63cb0546"
+  },
+  {
+   "file": "en-US/kma-jeju-no-air/air.json",
+   "sha256": "a79884eb7b8e9b53e56fc98107b8dade068aff363918679293e881f921d2f97b"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-0.png",
+   "sha256": "76ee1ea71f87cdca5e0267c01ce367ac335e33cff1b4d61df65fd313a7602338"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-1.png",
+   "sha256": "8da8f0c7bb6b95cdc2904ccffb7793c1795e9d4d209a1eafa7542f00311f6098"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-2.png",
+   "sha256": "14c3414909384dd686743e2e0cabc7a51105d21f9340075ac3e32e84313b6103"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-3.png",
+   "sha256": "81ec942b3c6f9f78f3e7ad9d1d6fa403afe0fe2db2a385797a7cdad38eaa240e"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-4.png",
+   "sha256": "20942d56898e5024f51b1fce53dd5e723fe34dde6b7f267045354a914a70d59a"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-5.png",
+   "sha256": "0b61c06d804083e7b4d66fd8dadef80589b1e81ebf76577e2bb4d0edf55b576a"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air-6.png",
+   "sha256": "d8bbec163ee07adabf658b509fe3e6f9177c61e69ec8030a352863ec7c2aadef"
+  },
+  {
+   "file": "en-US/kma-seoul-dark/air.json",
+   "sha256": "b4de0afdd8793f42c162d30de9983da46a5ecc21bc95fd096d88063f45d9c3a9"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-0.png",
+   "sha256": "ba3202ac8d53e7129623744cd41ebc3bce62bb82ddbb9d103d20e01613f46d18"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-1.png",
+   "sha256": "17a6bf53aaea3f25803cc814429dd2044fd6d5e1b0ebdcf1d08673b6bb4250b5"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-2.png",
+   "sha256": "544067adbf8091b8892576c04d3a9c004f34a5e8e925bd21da6d3b030de1b22d"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-3.png",
+   "sha256": "acf9b1d22af6329b2788ee32c80f701cf668ebb793484167b644988169f9ef6a"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-4.png",
+   "sha256": "47668c876223ef3fc7d9f342ff43d775e502b043a7110f998d165efd50c54eef"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-5.png",
+   "sha256": "ca36462bff784c8aa2e8b016bb9650b98f916ad6323426e7f9a649df355645a4"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air-6.png",
+   "sha256": "05b4c20fc7ac47845fc8885a732ab48f9fa861a335cf02a0bb991716664163b8"
+  },
+  {
+   "file": "en-US/kma-seoul-old/air.json",
+   "sha256": "2b1e750e5989104c4a77f1eed1b56a3ce66134b66c5012a8d1733f6ffef916c5"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-0.png",
+   "sha256": "974ff2eacdff502e04fe63dd1a4886b7a1dde9288125d9d2f5e4ba1c472f89e9"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-1.png",
+   "sha256": "17a6bf53aaea3f25803cc814429dd2044fd6d5e1b0ebdcf1d08673b6bb4250b5"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-2.png",
+   "sha256": "544067adbf8091b8892576c04d3a9c004f34a5e8e925bd21da6d3b030de1b22d"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-3.png",
+   "sha256": "acf9b1d22af6329b2788ee32c80f701cf668ebb793484167b644988169f9ef6a"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-4.png",
+   "sha256": "47668c876223ef3fc7d9f342ff43d775e502b043a7110f998d165efd50c54eef"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-5.png",
+   "sha256": "ca36462bff784c8aa2e8b016bb9650b98f916ad6323426e7f9a649df355645a4"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air-6.png",
+   "sha256": "05b4c20fc7ac47845fc8885a732ab48f9fa861a335cf02a0bb991716664163b8"
+  },
+  {
+   "file": "en-US/kma-seoul-photo/air.json",
+   "sha256": "16a50fcf711507f44ef99a04d5134376e15907ce6226799d56d84067d0ef77f6"
+  },
+  {
+   "file": "en-US/kma-seoul/air-0.png",
+   "sha256": "9bc7de0b9b8895193fbbdfd86f58e19d59d895b076631908ad9181448cc1c8d4"
+  },
+  {
+   "file": "en-US/kma-seoul/air-1.png",
+   "sha256": "17a6bf53aaea3f25803cc814429dd2044fd6d5e1b0ebdcf1d08673b6bb4250b5"
+  },
+  {
+   "file": "en-US/kma-seoul/air-2.png",
+   "sha256": "544067adbf8091b8892576c04d3a9c004f34a5e8e925bd21da6d3b030de1b22d"
+  },
+  {
+   "file": "en-US/kma-seoul/air-3.png",
+   "sha256": "acf9b1d22af6329b2788ee32c80f701cf668ebb793484167b644988169f9ef6a"
+  },
+  {
+   "file": "en-US/kma-seoul/air-4.png",
+   "sha256": "47668c876223ef3fc7d9f342ff43d775e502b043a7110f998d165efd50c54eef"
+  },
+  {
+   "file": "en-US/kma-seoul/air-5.png",
+   "sha256": "ca36462bff784c8aa2e8b016bb9650b98f916ad6323426e7f9a649df355645a4"
+  },
+  {
+   "file": "en-US/kma-seoul/air-6.png",
+   "sha256": "05b4c20fc7ac47845fc8885a732ab48f9fa861a335cf02a0bb991716664163b8"
+  },
+  {
+   "file": "en-US/kma-seoul/air.json",
+   "sha256": "083347f32b1d5ac6e91161da5980323661df6620e8801ee8b2a7806957b89ee6"
+  },
+  {
+   "file": "en-US/navigation.json",
+   "sha256": "26b764c4f93c08b7723dffb782ea46e4a5f4d0c34fdcc448d285c8510402a014"
+  },
+  {
+   "file": "en-US/vc-london/air-0.png",
+   "sha256": "6b89af448e59ade1830cc3851ad66f4a12338d1e6d4e3b2d398fe17e7a1455c0"
+  },
+  {
+   "file": "en-US/vc-london/air-1.png",
+   "sha256": "96e904a8b685e8b3cb3da3b506a7ee9b7f023af2f158ce9cc5de59e297f6e9f1"
+  },
+  {
+   "file": "en-US/vc-london/air-2.png",
+   "sha256": "a4bca332399c48beb50344246bbb7f555b3611a977b381eb619c089cca23f386"
+  },
+  {
+   "file": "en-US/vc-london/air-3.png",
+   "sha256": "a88f9f8f8a6ea0acbd82df450e089cb91137d48f3fb4df1cef24c4a8e642e8e1"
+  },
+  {
+   "file": "en-US/vc-london/air.json",
+   "sha256": "ac607cc1f8b868925f23d47beab407e4a0b00b73b520d4a09c79991001afc81b"
+  },
+  {
+   "file": "en-US/viewport.json",
+   "sha256": "460df66471b7f95a5861f516f730a89260126d082a91cd5c07c19fcce8da5984"
+  },
+  {
+   "file": "ko-KR/kma-jeju-no-air/air-0.png",
+   "sha256": "38a55efc292602fffb086b17e9dc4a6c3d656c22b1e537797e211b8f73064317"
+  },
+  {
+   "file": "ko-KR/kma-jeju-no-air/air-1.png",
+   "sha256": "74023b0f40074d43e37e178b70d80e7fb369fe7baacdb569fbe935bdf20e167b"
+  },
+  {
+   "file": "ko-KR/kma-jeju-no-air/air.json",
+   "sha256": "09939d8d1a9734563d1f86353856dff1852ce37094388f1295cf8f57328d9681"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-0.png",
+   "sha256": "fbf7381a88dbb2f9edbebc70795e81fed67bf54a29c5975b7edd39a0b7f65980"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-1.png",
+   "sha256": "001834d95098a002f718252fe601f951a3e0bee4aa5670f880393921fbc470f4"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-2.png",
+   "sha256": "215f0662ff5f6420c85e76803cfa04b13a4f78745f69c6272f8aeb71b697f032"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-3.png",
+   "sha256": "57fb6af403ad382b2ecf47c0d30e758f8cad8ee43751ed01cccd639c6dd7d4fd"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-4.png",
+   "sha256": "2b6070be0f6888f4ba52567ae7662c16f0a436c950b71bbcd03f37966f9b94ad"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-5.png",
+   "sha256": "7d347f8c827df9d7864fb999688929f4cd3672a59cdde23af08e2521d8e268f0"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air-6.png",
+   "sha256": "c15a220d00d045dfe12b3459ddcbc075aa32d4b09cfc091433382334c61695a2"
+  },
+  {
+   "file": "ko-KR/kma-seoul-dark/air.json",
+   "sha256": "37409e059da950d9a6d0d826ceb92c8dcaa52af85a7ef7bc3204610300fd19cf"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-0.png",
+   "sha256": "2e892f24fc35ad548418bcf644a253b72b36f99893162b55a027e8c84c903bb1"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-1.png",
+   "sha256": "7b71791a59a2836887d8d1d2e1664f2fb95321bbc9c00a4db4ab0da4d89efe7c"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-2.png",
+   "sha256": "56f03e0547ad0531a6e79fb3c8be8fde467aa9765854bb91878a83b94f0c926a"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-3.png",
+   "sha256": "1e28ee101622ad9248d52b187bbfb7be1c487bc30bfecaacc7a4a5abba27fc5a"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-4.png",
+   "sha256": "a95eaa140d52142103179a10f81f7477a9de7a9e9a2f3f42c21486bc5cc19631"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-5.png",
+   "sha256": "d444c0623e02f92b3188eedb7414bbd5cafc2f820744b0b282cf7c24218f4459"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air-6.png",
+   "sha256": "1d99d766e166da8582e5fda63a7b5f303e3b6c2f0c25bb7b6a6802e985fc7f93"
+  },
+  {
+   "file": "ko-KR/kma-seoul-old/air.json",
+   "sha256": "3b4d945031f54912706645aa9b27350fe09f9b48368eca69b0daf40862d9c9f5"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-0.png",
+   "sha256": "18d0349c7b7b51faaaecf58882ee0b8c9c509676c73db2c6f68989ccaa4a0dfe"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-1.png",
+   "sha256": "7b71791a59a2836887d8d1d2e1664f2fb95321bbc9c00a4db4ab0da4d89efe7c"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-2.png",
+   "sha256": "56f03e0547ad0531a6e79fb3c8be8fde467aa9765854bb91878a83b94f0c926a"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-3.png",
+   "sha256": "1e28ee101622ad9248d52b187bbfb7be1c487bc30bfecaacc7a4a5abba27fc5a"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-4.png",
+   "sha256": "a95eaa140d52142103179a10f81f7477a9de7a9e9a2f3f42c21486bc5cc19631"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-5.png",
+   "sha256": "d444c0623e02f92b3188eedb7414bbd5cafc2f820744b0b282cf7c24218f4459"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air-6.png",
+   "sha256": "1d99d766e166da8582e5fda63a7b5f303e3b6c2f0c25bb7b6a6802e985fc7f93"
+  },
+  {
+   "file": "ko-KR/kma-seoul-photo/air.json",
+   "sha256": "36decfd97eab1d809c01b08dd13309b36df230bb4d656e2b711bc974235b8d8d"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-0.png",
+   "sha256": "aac56217df0fd56a2d2efb8ac5f21d2e924a61bd3761a67f664153a3509b2428"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-1.png",
+   "sha256": "7b71791a59a2836887d8d1d2e1664f2fb95321bbc9c00a4db4ab0da4d89efe7c"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-2.png",
+   "sha256": "56f03e0547ad0531a6e79fb3c8be8fde467aa9765854bb91878a83b94f0c926a"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-3.png",
+   "sha256": "1e28ee101622ad9248d52b187bbfb7be1c487bc30bfecaacc7a4a5abba27fc5a"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-4.png",
+   "sha256": "a95eaa140d52142103179a10f81f7477a9de7a9e9a2f3f42c21486bc5cc19631"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-5.png",
+   "sha256": "d444c0623e02f92b3188eedb7414bbd5cafc2f820744b0b282cf7c24218f4459"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air-6.png",
+   "sha256": "1d99d766e166da8582e5fda63a7b5f303e3b6c2f0c25bb7b6a6802e985fc7f93"
+  },
+  {
+   "file": "ko-KR/kma-seoul/air.json",
+   "sha256": "190c56a10c0ae7bf3255bcff109248cd1856d2ec001a554fcbcb9807bd70cf1b"
+  },
+  {
+   "file": "ko-KR/navigation.json",
+   "sha256": "26b764c4f93c08b7723dffb782ea46e4a5f4d0c34fdcc448d285c8510402a014"
+  },
+  {
+   "file": "ko-KR/vc-london/air-0.png",
+   "sha256": "7bb544cd63fdcd54f1897575a562d1da211f5232fe38a68aebe49e4d068fafe6"
+  },
+  {
+   "file": "ko-KR/vc-london/air-1.png",
+   "sha256": "2b785715f86e3fabdb69d152e4ca0d35aa7e6e52387a0fac15ca3c57afc4f5c5"
+  },
+  {
+   "file": "ko-KR/vc-london/air-2.png",
+   "sha256": "96b68342b00d5d9e5043d25587ea473b7784ea2a32ba32faf28ecf9018141db2"
+  },
+  {
+   "file": "ko-KR/vc-london/air-3.png",
+   "sha256": "f0d5b8de9708b8ef8a40c5280fca85a61cad32236c1257815cd36b8f59fd25df"
+  },
+  {
+   "file": "ko-KR/vc-london/air.json",
+   "sha256": "2e348d0cc3ab94a8fe65b09f0943b8b699ac4384e527621e584cb3ee87f7d0a2"
+  },
+  {
+   "file": "ko-KR/viewport.json",
+   "sha256": "a8d024a124ce1620ed9a31c8dbbd95603d5f167d28e69f10b816e404852db172"
+  }
+ ]
+}

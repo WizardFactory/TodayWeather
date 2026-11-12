@@ -371,3 +371,33 @@ The Korean/English fit suites cover phone and tablet windows, open/closed foldab
 Chart and header metrics use the activity's current window (API 30+) or application display size (older Android), rather than the full display. `WindowMetricsTest` distinguishes the two on API 24 and 34. S02's search hint wraps at enlarged font scales; its header and page offset grow together. S01 scrolls whenever its content exceeds the window, including shortcuts and Google predictions, and recomputes shortcut counts after configuration changes (`StartConfigurationTest`). Default-font Cordova references remain regression checks. This implements AN-18 AC4's window support (D41); the chart's initial column A49 remains unchanged.
 
 See [window verification](tools/large-screen/README.md) for the offline emulator runner, coverage and limitations. `WindowFitDeviceTest` checks actual multi-window state and current/maximum bounds, rotation, fold/unfold, font scale, saved-place retention and real screen navigation. Nationwide content is fixture-tested on the JVM; the device traversal checks its offline screens. System-owned surfaces and Cordova pixel equivalence are separate from app fit.
+
+### AN-18 four-size screenshot comparisons
+
+The native Kotlin/Jetpack Compose screens are compared with offline captures of
+Cordova at 384×832, 360×780, 412×892 and 320×694 dp in Korean and English. The
+[comparison manifest](tools/parity-reference/coverage.json) names representative
+screen, popup and theme states. Historical reference suites remain, and the fit
+suites traverse their other states at each nominal size. See the
+[capture and verification procedure](tools/parity-reference/README.md).
+
+The new runner preserves the nominal display size and records the actual WebView
+bounds. Tests consume those measured bounds instead of assuming the historical
+status-bar height. English weather-related captures use en-KR to retain KR units
+and menu entries while translating UI text. These tools and references are test
+inputs; the native app has no Ionic or Cordova runtime dependency.
+
+Weather retry, source information, pollen and exit use native Compose popups with
+the original app's appearance and actions. Charts choose weather and detail-icon
+assets from the selected theme. Air station cards reproduce the original table's
+preferred widths, which can shrink to their content on narrow screens; pollutant
+cards retain their explicit minimum width.
+
+Each comparison has a recorded image tolerance, supplemented by text, geometry
+and fit checks. The API36 WebView and SDK34 Robolectric renderer have glyph and
+font-advance differences, including the open-circle glyph in English warning
+paragraphs; recorded tolerances state those limits rather than claiming pixel
+equality. CI checks source provenance and reference integrity before the build,
+then requires all declared comparisons in successful JUnit results. Missing
+images, wrong viewport metadata, omitted execution and failed/skipped comparisons
+are qualified failure cases. The actual native manual/PDF remains AN-18 PR4.

@@ -63,9 +63,17 @@ class NationScreenshotTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val project = File(System.getProperty("tw.projectDir")!!)
-    private val references = File(project, "src/test/resources/nation-reference")
+    private var matrixSize: String? = null
+    private var matrixLang = "ko-KR"
+    private val references get() = File(project, matrixSize?.let { "src/test/resources/parity-reference/$it/nation" }
+        ?: "src/test/resources/nation-reference")
+    private fun bodySize(): Pair<Float, Float> {
+        if (matrixSize == null) return 384f to 762f
+        val view = Json.parseToJsonElement(File(references, "$matrixLang/viewport.json").readText()).jsonObject["webView"]!!.jsonObject
+        return view.num("width").toFloat() to view.num("height").toFloat()
+    }
     private val inputs = File(project, "../core-domain/src/test/resources/corpus/inputs")
-    private val tolerances = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
+    private val tolerances get() = Json.parseToJsonElement(File(references, "tolerances.json").takeIf { it.isFile }?.readText() ?: "{}").jsonObject
     private val out = File(project, "build/nation-compare").apply { mkdirs() }
     private val kr = UnitSettings.defaults("KR")
     private val nation = NationPageState.Nation(NationResponse(Json.parseToJsonElement(File(inputs, "nation.json").readText()).jsonObject))
@@ -137,6 +145,46 @@ class NationScreenshotTest {
         cards("en-KR")
     }
 
+    private fun matrix(size: String, lang: String) = checked {
+        matrixSize = size
+        matrixLang = lang
+        page(NationRoutes.NATION, nation)
+        compare("$lang/nation-weather")
+        page(NationRoutes.NATION_AIR, nation)
+        compare("$lang/nation-air-pm2.5")
+        page(NationRoutes.WARNINGS, warnings(lang))
+        compare("$lang/warnings", crop = false)
+        cards(lang)
+        for (t in listOf(Theme.DARK, Theme.OLD)) {
+            page(NationRoutes.NATION_AIR, nation, t)
+            compare("$lang/nation-air-pm2.5-${t.key}")
+        }
+    }
+
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h4400dp-xhdpi")
+    fun nominal384Korean() = matrix("384x832", "ko-KR")
+
+    @Test @Config(qualifiers = "en-rKR-w384dp-h4400dp-xhdpi")
+    fun nominal384English() = matrix("384x832", "en-US")
+
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h4400dp-xhdpi")
+    fun nominal360Korean() = matrix("360x780", "ko-KR")
+
+    @Test @Config(qualifiers = "en-rKR-w360dp-h4400dp-xhdpi")
+    fun nominal360English() = matrix("360x780", "en-US")
+
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h4400dp-xhdpi")
+    fun nominal412Korean() = matrix("412x892", "ko-KR")
+
+    @Test @Config(qualifiers = "en-rKR-w412dp-h4400dp-xhdpi")
+    fun nominal412English() = matrix("412x892", "en-US")
+
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h4400dp-xhdpi")
+    fun nominal320Korean() = matrix("320x694", "ko-KR")
+
+    @Test @Config(qualifiers = "en-rKR-w320dp-h4400dp-xhdpi")
+    fun nominal320English() = matrix("320x694", "en-US")
+
     private fun warnings(lang: String) = NationPageState.Warnings(WarningCards.cards(
         Warnings.parse(Json.parseToJsonElement(File(inputs, "special.json").readText()), lang, "Asia/Seoul")))
 
@@ -158,9 +206,9 @@ class NationScreenshotTest {
                 key(generation) {
                     val shown = card
                     if (shown != null) {
-                        Box(Modifier.width(384.dp).testTag(ROOT)) { WarningCardBox(shown, texts["LOC_SPECIAL_WEATHER_NOTE"], Modifier) }
+                        Box(Modifier.width(bodySize().first.dp).testTag(ROOT)) { WarningCardBox(shown, texts["LOC_SPECIAL_WEATHER_NOTE"], Modifier) }
                     } else {
-                        Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) { NationScreen(route, state, theme, "KR", units, texts, onBack = {}) }
+                        Box(Modifier.size(bodySize().first.dp, bodySize().second.dp).testTag(ROOT)) { NationScreen(route, state, theme, "KR", units, texts, onBack = {}) }
                     }
                 }
             }
@@ -206,10 +254,10 @@ class NationScreenshotTest {
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
         val shown = if (crop) native.crop(0, 0, native.width, minOf(native.height, cordova.height)) else native
         val diff = ImageDiff.of(shown, cordova)
-        val base = name.replace('/', '-')
+        val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(shown.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(shown, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
-        println("nation-compare $name native=${shown.width}x${shown.height} cordova=${cordova.width}x${cordova.height} $diff")
+        println("nation-compare ${matrixSize ?: "historical"}/$name native=${shown.width}x${shown.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
         if (limit == null || margin == null) {

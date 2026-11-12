@@ -64,7 +64,13 @@ private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, 
             drawLine(color, Offset(x(node.x1), y(node.y1)), Offset(x(node.x2), y(node.y2)), strokeWidth = 1 * density, alpha = alpha)
         }
         is SvgImage -> {
-            val image = images[node.href] ?: return
+            // Scene geometry is theme-independent; artwork follows the page's theme.
+            val href = when {
+                node.href.startsWith("img/weather_default/") -> colors.weatherImages + node.href.removePrefix("img/weather_default")
+                node.href.startsWith("img/icons_default/") -> colors.iconImages + node.href.removePrefix("img/icons_default")
+                else -> node.href
+            }
+            val image = images[href] ?: return
             if (listOf(node.x, node.y, node.width, node.height).any { it.isNaN() }) return
             // Fractional position and size, as SVG images have; mipmapped bitmaps scale down smoothly.
             val draw: DrawScope.() -> Unit = {

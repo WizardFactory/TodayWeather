@@ -23,9 +23,10 @@ import path from 'node:path';
 import {connect, sleep} from '../emulator/devtools.mjs';
 import {BLOCKS, cutBlocks} from '../emulator/page-blocks.mjs';
 import {Screen} from '../emulator/screen.mjs';
+import {referenceRoot, recordView} from '../emulator/reference-view.mjs';
 
 const [serial, lang, root] = process.argv.slice(2);
-const OUT = path.join(root, 'app/src/test/resources/settings-reference', lang);
+const OUT = path.join(referenceRoot(root, 'settings'), lang);
 const corpus = path.join(root, 'core-domain/src/test/resources/corpus');
 const input = (name) => JSON.parse(fs.readFileSync(path.join(corpus, 'inputs', `${name}.json`), 'utf8'));
 const photo = fs.readFileSync(path.join(root, 'app/src/test/resources/settings-reference/photo.png'));
@@ -34,6 +35,7 @@ const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]);
 
 const dt = await connect(serial);
 await dt.settled();
+await recordView(dt, new Screen(serial), OUT);
 
 // The stand-in server: requests to http(s) URLs other than the app's own pages are answered here and recorded, with
 // the server's address, the device id and the token left out of the record.
@@ -249,10 +251,10 @@ async function page(state) {
     fs.writeFileSync(path.join(OUT, `${state}.json`), JSON.stringify({state, lang, ...p, clip}) + '\n');
     console.log(`${lang} ${state}: ${p.title.text}, ${p.items.map((i) => i.text + (i.checked ? ' ✓' : '')).join(' | ')}`);
 }
-async function weather(state) {
-    const shown = await dt.evaluate(`twSettings.weather('tab.forecast')`);
-    const blocks = await cutBlocks(dt, screenshots, origin, dpr, path.join(OUT, state), 'hourly', shown.count, `${lang} ${state}`);
-    fs.writeFileSync(path.join(OUT, state, 'hourly.json'), JSON.stringify({state, body: shown.body, blocks}) + '\n');
+async function weather(state, page = 'hourly') {
+    const shown = await dt.evaluate(`twSettings.weather('${page === 'hourly' ? 'tab.forecast' : 'tab.dailyforecast'}')`);
+    const blocks = await cutBlocks(dt, screenshots, origin, dpr, path.join(OUT, state), page, shown.count, `${lang} ${state}`);
+    fs.writeFileSync(path.join(OUT, state, `${page}.json`), JSON.stringify({state, body: shown.body, blocks}) + '\n');
     console.log(`${lang} ${state}: ${blocks.length} blocks`);
 }
 const openMenu = () => tap('twSettings.navicon()', 900);
@@ -270,7 +272,26 @@ await step('setup');
 await dt.evaluate(`twSettings.setup(${JSON.stringify(input('kma-seoul'))}, ${JSON.stringify(SEOUL)})`);
 await expectPage('#/tab/forecast');
 
-if (lang === 'ko-KR') {
+if (process.env.TW_REFERENCE_SIZE) {
+    // Added sizes use representative settings states; historical capture keeps its full matrix below.
+    await openMenu();
+    await menuRow(`clickMenu('units')`);
+    await page('units');
+    await tap('twSettings.item(0)');
+    await page('radio-temperatureUnit');
+    await back();
+    await back();
+    for (const [theme, index] of [['dark', 2], ['photo', 0], ['old', 3]]) {
+        await chooseInMenu(`settingRadio('theme')`, index);
+        await weather(`hourly-${theme}`);
+        await weather(`daily-${theme}`, 'daily');
+        await openMenu();
+        await menuRow(`clickMenu('units')`);
+        await page(`units-${theme}`);
+        await back();
+    }
+    await chooseInMenu(`settingRadio('theme')`, 1);
+} else if (lang === 'ko-KR') {
     const UNITS = ['temperatureUnit', 'windSpeedUnit', 'pressureUnit', 'distanceUnit', 'precipitationUnit', 'airUnit'];
     await step('open units');
     await openMenu();

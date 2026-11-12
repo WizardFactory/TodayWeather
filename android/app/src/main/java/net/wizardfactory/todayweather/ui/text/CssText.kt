@@ -116,7 +116,8 @@ private fun cjkLetter(c: Char): Boolean = c.code in 0xAC00..0xD7A3 || c.code in 
 
 /**
  * [text] with a zero-width space wherever Chrome may break a line between letters: between two Korean, Chinese or
- * Japanese letters, before an opening bracket after one and after a closing bracket before one. Android allows these
+ * Japanese letters, before an opening bracket after one and after a closing bracket before one. A word joiner
+ * suppresses Android-only breaks inside Latin slash words. Android allows the CJK breaks
  * too, but Samsung's keeps Korean words whole (seen on a Galaxy S21+, Android 15); the spaces give the breaks back.
  * [source] maps each index of [text], and its end, to the index in the original text.
  */
@@ -129,6 +130,12 @@ internal fun chromeBreaks(text: String): ChromeBreaks {
         if (i > 0) {
             val a = text[i - 1]
             val b = text[i]
+            // Chrome keeps Latin slash words (snow/rain, km/h) together; Android's
+            // simple line breaker otherwise inserts an opportunity after the slash.
+            if (a == '/' && i > 1 && text[i - 2].isLetter() && !cjkLetter(text[i - 2]) && b.isLetter() && !cjkLetter(b)) {
+                out.append('\u2060')
+                source += i
+            }
             if (cjkLetter(a) && cjkLetter(b) || cjkLetter(a) && b in "([{" || a in ")]}" && cjkLetter(b)) {
                 out.append('\u200B')
                 source += i

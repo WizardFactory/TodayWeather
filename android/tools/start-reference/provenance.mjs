@@ -7,12 +7,13 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {apkVersion, cordovaSources, sha256} from '../emulator/cordova-sources.mjs';
+import {referenceRoot} from '../emulator/reference-view.mjs';
 
 const [serial, apk, root] = process.argv.slice(2);
 if (!/^emulator-\d+$/.test(serial || '')) throw new Error('pass an emulator serial');
 const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]).toString().trim();
 const repo = path.resolve(root, '..');
-const out = path.join(root, 'app/src/test/resources/start-reference');
+const out = referenceRoot(root, 'start');
 
 // The start page (template, StartCtrl), its route and the popup service, the translations, the icon and the
 // stylesheet. The stylesheet is a build output Git ignores; its tracked input is recorded.
@@ -24,11 +25,11 @@ const {sources, inputs} = cordovaSources(apk, repo, SOURCES, GENERATED_FROM);
 const files = fs.readdirSync(out, {recursive: true}).filter((f) => fs.statSync(path.join(out, f)).isFile() &&
     !['provenance.json', 'tolerances.json'].includes(f)).sort();
 const provenance = {
-    tool: 'android/tools/start-reference/capture.sh',
+    tool: process.env.TW_REFERENCE_SIZE ? 'android/tools/parity-reference/capture.sh APK start' : 'android/tools/start-reference/capture.sh',
     cordovaApk: {sha256: sha256(fs.readFileSync(apk)), ...apkVersion(apk), sources},
     inputs,
     emulator: {fingerprint: adb('shell', 'getprop', 'ro.build.fingerprint'), sdk: adb('shell', 'getprop', 'ro.build.version.sdk')},
-    display: '384x832 dp at density 2 (wm size 768x1664, wm density 320)',
+    display: `${process.env.TW_REFERENCE_SIZE || '384x832'} dp at density 2; matrix captures record measured viewport.json per language`,
     language: 'per-app locale ko-KR, then en-US',
     install: 'new install; the notification permission granted before the first start, location not',
     images: 'cut from the screen (screencap): the whole WebView with the access notice over the start page, then the start page',

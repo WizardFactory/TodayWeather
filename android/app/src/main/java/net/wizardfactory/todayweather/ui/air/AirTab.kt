@@ -132,7 +132,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
                     }
                 },
                 scrollState = scroll)
-            source?.let { s -> SourceDialog(s, texts) { source = null } }
         },
+        popups = { source?.let { s -> SourceDialog(s, texts) { source = null } } },
     )
 }

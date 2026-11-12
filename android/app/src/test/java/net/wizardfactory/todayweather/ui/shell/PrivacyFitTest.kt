@@ -72,10 +72,28 @@ class PrivacyFitTest {
 
     @After fun stop() = scope.cancel()
 
+    // AN-18c: all existing states at each parity display size, in both language subclasses.
+    @Test @Config(qualifiers = "ko-rKR-w384dp-h832dp-port-xhdpi", fontScale = 1f)
+    fun parity384Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "en-rUS-w384dp-h832dp-port-xhdpi", fontScale = 1f)
+    fun parity384English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "ko-rKR-w360dp-h780dp-port-xhdpi", fontScale = 1f)
+    fun parity360Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "en-rUS-w360dp-h780dp-port-xhdpi", fontScale = 1f)
+    fun parity360English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "ko-rKR-w412dp-h892dp-port-xhdpi", fontScale = 1f)
+    fun parity412Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "en-rUS-w412dp-h892dp-port-xhdpi", fontScale = 1f)
+    fun parity412English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "ko-rKR-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun parity320Korean() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+    @Test @Config(qualifiers = "en-rUS-w320dp-h694dp-port-xhdpi", fontScale = 1f)
+    fun parity320English() = fits(R.string.LOC_ANALYTICS_ALLOW, mustScroll = false)
+
     @Test @Config(qualifiers = "ko-rKR-w320dp-h480dp-port", fontScale = 1.3f) fun koreanSmallWindowLargeText() = fits(R.string.LOC_ANALYTICS_ALLOW)
     @Test @Config(qualifiers = "en-rUS-w320dp-h480dp-port", fontScale = 1.3f) fun englishSmallWindowLargeText() = fits(R.string.LOC_ANALYTICS_ALLOW)
 
-    private fun fits(allow: Int) {
+    private fun fits(allow: Int, mustScroll: Boolean = true) {
         val seoul = Place(false, false, "회현동", "대한민국 서울특별시 중구 회현동", "KR", Location(37.56, 126.98))
         val memory = object : StateAccess {
             val flow = MutableStateFlow(AppState(places = listOf(seoul), placeIndex = 0, units = UnitSettings.defaults("KR")))
@@ -114,12 +132,15 @@ class PrivacyFitTest {
         }
         val body = rule.onNodeWithTag(PopupTags.BODY).fetchSemanticsNode()
         val range = body.config[SemanticsProperties.VerticalScrollAxisRange]
-        assertTrue(range.maxValue() > 0f && SemanticsActions.ScrollBy in body.config, "the body scrolls")
+        assertTrue(SemanticsActions.ScrollBy in body.config, "body scrolling is enabled")
+        if (mustScroll) assertTrue(range.maxValue() > 0f, "the small-window body needs scrolling")
         val safe = ShellFit.safeArea(rule.activity, rule.onRoot().fetchSemanticsNode().boundsInRoot)
         assertEquals(emptyList(), ShellFit.texts(rule, "popup", safe))
-        rule.onNodeWithTag(PopupTags.BODY).performTouchInput { swipeUp() }
-        rule.waitForIdle()
-        assertTrue(range.value() > 0f, "the body scrolled")
+        if (range.maxValue() > 0f) {
+            rule.onNodeWithTag(PopupTags.BODY).performTouchInput { swipeUp() }
+            rule.waitForIdle()
+            assertTrue(range.value() > 0f, "the body scrolled")
+        }
         rule.onNode(hasText(rule.activity.getString(allow)) and hasAnyAncestor(hasTestTag(PopupTags.POPUP)), useUnmergedTree = true).performClick()
         rule.waitForIdle()
         assertEquals(listOf(true), chosen)

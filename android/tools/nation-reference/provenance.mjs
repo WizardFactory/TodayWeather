@@ -9,13 +9,14 @@
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {referenceRoot} from '../emulator/reference-view.mjs';
 import {apkVersion, cordovaSources, sha256} from '../emulator/cordova-sources.mjs';
 
 const [serial, apk, root] = process.argv.slice(2);
 if (!/^emulator-\d+$/.test(serial || '')) throw new Error('pass an emulator serial');
 const adb = (...args) => execFileSync('adb', ['-s', serial, ...args]).toString().trim();
 const repo = path.resolve(root, '..');
-const out = path.join(root, 'app/src/test/resources/nation-reference');
+const out = referenceRoot(root, 'nation');
 
 // The sources recorded:
 // - the three pages (templates and controllers) and their request (service.weatherutil.js);
@@ -33,11 +34,11 @@ const {sources, inputs} = cordovaSources(apk, repo, SOURCES, GENERATED_FROM);
 const files = fs.readdirSync(out, {recursive: true}).filter((f) => fs.statSync(path.join(out, f)).isFile() &&
     !['provenance.json', 'tolerances.json'].includes(f)).sort();
 const provenance = {
-    tool: 'android/tools/nation-reference/capture.sh',
+    tool: process.env.TW_REFERENCE_SIZE ? 'android/tools/parity-reference/capture.sh APK nation' : 'android/tools/nation-reference/capture.sh',
     cordovaApk: {sha256: sha256(fs.readFileSync(apk)), ...apkVersion(apk), sources},
     inputs,
     emulator: {fingerprint: adb('shell', 'getprop', 'ro.build.fingerprint'), sdk: adb('shell', 'getprop', 'ro.build.version.sdk')},
-    display: '384x832 dp at density 2 (wm size 768x1664, wm density 320)',
+    display: `${process.env.TW_REFERENCE_SIZE || '384x832'} dp at density 2; matrix captures record measured viewport.json per language`,
     language: 'per-app locale ko-KR, then en-KR (English with the region Korea, so the Korean menu rows show)',
     images: 'cut from the screen (screencap): S10 and S11 from the top of the page to 20 CSS px under the map; S12 and the ' +
         'loading, empty and failed states as the screen shows them; each S12 card whole (stitched when taller than the ' +

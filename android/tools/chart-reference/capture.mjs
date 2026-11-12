@@ -11,13 +11,15 @@
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import {recordView} from '../emulator/reference-view.mjs';
+import {Screen} from '../emulator/screen.mjs';
 
 const [serial, size, root] = process.argv.slice(2);
 if (!/^emulator-\d+$/.test(serial || '')) throw new Error('pass an emulator serial; physical devices are not allowed');
 if (!/^\d+x\d+$/.test(size || '') || !root) throw new Error('usage: capture.mjs <emulator-serial> <WxH> <android-dir>');
 
 const CORPUS = path.join(root, 'core-domain/src/test/resources/corpus');
-const OUT_SCENES = path.join(root, 'core-domain/src/test/resources/chart-reference', size);
+const OUT_SCENES = process.env.TW_REFERENCE_ROOT ? path.join(process.env.TW_REFERENCE_ROOT, process.env.TW_REFERENCE_LANGUAGE) : path.join(root, 'core-domain/src/test/resources/chart-reference', size);
 const OUT_PNG = OUT_SCENES;
 const BASE_SIZE = '384x832';
 
@@ -258,6 +260,7 @@ await evaluate(`window.twCapture = (function () {
     };
 })()`);
 
+await recordView({evaluate}, new Screen(serial), OUT_SCENES);
 const env = await evaluate('twCapture.env()');
 if (`${env.screen.width}x${env.screen.height}` !== size || env.devicePixelRatio !== 2) {
     throw new Error(`unexpected display ${JSON.stringify(env)}`);
@@ -282,7 +285,7 @@ fs.mkdirSync(OUT_SCENES, {recursive: true});
 const capturedAt = new Date().toISOString();
 const captured = [];
 for (const fixture of FIXTURES) {
-    if (!fixture.allSizes && size !== BASE_SIZE) continue;
+    if (!fixture.allSizes && (size !== BASE_SIZE || process.env.TW_REFERENCE_SIZE)) continue;
     const data = input(fixture);
     const record = {fixture: fixture.name, from: fixture.from || fixture.name, patched: Boolean(fixture.patch)};
     await evaluate(`twCapture.show(${JSON.stringify(data)}, ${JSON.stringify(fixture.name)}, 'tab.forecast')`);

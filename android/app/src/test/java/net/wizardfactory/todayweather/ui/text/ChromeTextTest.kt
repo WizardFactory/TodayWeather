@@ -3,6 +3,9 @@ package net.wizardfactory.todayweather.ui.text
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextMotion
+import java.io.File
+import kotlinx.serialization.json.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.unit.Density
@@ -32,17 +35,17 @@ class ChromeTextTest {
     @Test
     fun breaksGoBetweenKoreanLettersAndAroundBrackets() {
         val b = chromeBreaks("경상북도(울진평지), 1.6km/h")
-        assertEquals("경\u200B상\u200B북\u200B도\u200B(울\u200B진\u200B평\u200B지), 1.6km/h", b.text)
+        assertEquals("경\u200B상\u200B북\u200B도\u200B(울\u200B진\u200B평\u200B지), 1.6km/\u2060h", b.text)
         // Each index of the text with breaks stands for the original character it precedes, and the end for the end.
         assertEquals("경상북도(울진평지), 1.6km/h".length, b.source.last())
         assertEquals(b.text.length + 1, b.source.size)
-        b.text.forEachIndexed { i, c -> if (c != '\u200B') assertEquals(c, "경상북도(울진평지), 1.6km/h"[b.source[i]]) }
+        b.text.forEachIndexed { i, c -> if (c != '\u200B' && c != '\u2060') assertEquals(c, "경상북도(울진평지), 1.6km/h"[b.source[i]]) }
     }
 
     @Test
     fun noBreakBeforePunctuationOrInsideLatin() {
         assertEquals("다, 동", chromeBreaks("다, 동").text)
-        assertEquals("1.6km/h", chromeBreaks("1.6km/h").text)
+        assertEquals("1.6km/\u2060h", chromeBreaks("1.6km/h").text)
         assertEquals("<참\u200B고\u200B사\u200B항>", chromeBreaks("<참고사항>").text)
     }
 
@@ -61,6 +64,22 @@ class ChromeTextTest {
         val syllable = measurer.measure("북", style).size.width
         assertTrue(chromeMinWidth(measurer, "북북서", style) <= syllable + 1)
         assertEquals(measurer.measure("1.6km/h", style).size.width, chromeMinWidth(measurer, "1.6km/h", style))
+    }
+
+
+    @Test
+    fun englishAlarmDescriptionKeepsTheCapturedSlashWordsWhole() {
+        val root = File(System.getProperty("tw.projectDir")!!, "src/test/resources/parity-reference")
+        val textStyle = TextStyle(fontSize = 14.sp, fontFamily = FontFamily.SansSerif,
+            letterSpacing = 0.sp, textMotion = TextMotion.Animated)
+        for (size in listOf("384x832", "360x780", "412x892", "320x694")) {
+            val capture = Json.parseToJsonElement(File(root, "$size/push/en-US/settings.json").readText()).jsonObject
+            val description = capture["page"]!!.jsonObject["descriptions"]!!.jsonArray[0].jsonObject
+            val expected = description["lines"]!!.jsonArray.map { it.jsonObject["text"]!!.jsonPrimitive.content.trim() }
+            val text = description["text"]!!.jsonPrimitive.content
+            val width = (size.substringBefore('x').toInt() - 32) * 2
+            assertEquals(size, expected, chromeLines(measurer, text, textStyle, width).map(String::trim))
+        }
     }
 
     @Test
