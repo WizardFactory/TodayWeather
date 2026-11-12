@@ -84,3 +84,12 @@ class GuardTests(unittest.TestCase):
             ec2.owner='i-abcdef12'
             return (200,b'OK') if path=='/health' else (200,BODY)
         self.assertEqual({'status':'refused'},self.run_handle(ec2,http));self.assertEqual([],ec2.associations)
+
+class SocketTimeoutTests(unittest.TestCase):
+    def test_socket_timeout_classified_across_local_runtimes(self):
+        import socket
+        def http(ip,path):raise socket.timeout('TOP_SECRET')
+        events=[]
+        self.assertFalse(checker.ready('8.8.8.8',http,NOW,emit=events.append))
+        self.assertEqual('timeout',events[0]['reason'])
+        self.assertNotIn('TOP_SECRET',str(events))

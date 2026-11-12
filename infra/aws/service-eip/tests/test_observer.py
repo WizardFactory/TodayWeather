@@ -32,3 +32,17 @@ class ObserverTests(unittest.TestCase):
   with self.assertRaisesRegex(RuntimeError,'notification-configuration'):
    observer.handle(EVENT,env={},publish=lambda **x:None,emit=logs.append)
   self.assertEqual('configuration',logs[-1]['reason'])
+ def test_terminal_preserves_status_and_original_event_id(self):
+  e=copy.deepcopy(EVENT);e['requestPayload']['id']='event-original'
+  e['responsePayload']['errorMessage']=json.dumps({'reason':'candidate-not-ready','last_probe':{'stage':'weather','reason':'http-error','http_status':503}})
+  calls=[];observer.handle(e,env=ENV,publish=lambda **x:calls.append(x),emit=lambda x:None)
+  self.assertEqual(503,json.loads(calls[-1]['Message'])['last_probe'].get('http_status'))
+  self.assertEqual('event-original',json.loads(calls[-1]['Message'])['event_id'])
+  e['responsePayload']['errorMessage']='time-budget'
+  observer.handle(e,env=ENV,publish=lambda **x:calls.append(x),emit=lambda x:None)
+  self.assertEqual('event-original',json.loads(calls[-1]['Message'])['event_id'])
+ def test_untrusted_status_is_not_copied(self):
+  for value in [True,'TOP_SECRET',99,600]:
+   e=copy.deepcopy(EVENT);summary=json.loads(e['responsePayload']['errorMessage']);summary['last_probe']['http_status']=value;e['responsePayload']['errorMessage']=json.dumps(summary)
+   calls=[];observer.handle(e,env=ENV,publish=lambda **x:calls.append(x),emit=lambda x:None)
+   self.assertNotIn('http_status',json.loads(calls[-1]['Message'])['last_probe'])

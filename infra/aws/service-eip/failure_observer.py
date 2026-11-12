@@ -63,6 +63,7 @@ def handle(event, *, env, publish, emit=emit_event):
                'manual_reference': MANUAL_REFERENCE}
     for name in ('fleet_id', 'event_id'):
         message[name] = identifier(diagnostic.get(name))
+    message['event_id'] = message['event_id'] or identifier(request.get('id'))
     probe = diagnostic.get('last_probe')
     if isinstance(probe, dict):
         clean = {}
@@ -70,6 +71,9 @@ def handle(event, *, env, publish, emit=emit_event):
             clean['stage'] = probe['stage']
         if isinstance(probe.get('reason'), str) and probe.get('reason') in PROBE_REASONS:
             clean['reason'] = probe['reason']
+        status = probe.get('http_status')
+        if type(status) is int and 100 <= status <= 599:
+            clean['http_status'] = status
         for key in ('elapsed_ms', 'socket_timeout_ms', 'deadline_ms'):
             n = probe.get(key)
             if type(n) in (int, float) and math.isfinite(n) and 0 <= n <= 3600000:

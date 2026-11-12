@@ -7,6 +7,7 @@ import math
 import http.client
 from http.client import HTTPException
 import signal
+import socket
 import time
 
 HTTP_DEADLINE = 3
@@ -95,7 +96,7 @@ def ready(ip, http, now, *, trace=None, emit=emit_event, monotonic=time.monotoni
                 record['reason'] = 'invalid-response'
             failed = record['reason'] != 'ok'
             return status, body
-        except TimeoutError:
+        except (TimeoutError, socket.timeout):
             failed = True
             record['reason'] = 'timeout'
             raise
