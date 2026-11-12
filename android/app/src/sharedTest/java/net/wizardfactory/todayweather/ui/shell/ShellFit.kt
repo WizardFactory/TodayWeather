@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.toSize
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import net.wizardfactory.todayweather.R
@@ -119,16 +120,33 @@ object ShellFit {
         }
         // Bounds are clipped to what shows: empty for an empty text or a row scrolled out of view.
         val bounds = node.boundsInRoot
-        // Scrolled content may intentionally be partially visible. Fixed content must remain whole even
-        // when its own text layout fits but an ancestor clips it.
-        val scrolls = generateSequence(node.parent) { it.parent }.any {
-            SemanticsProperties.VerticalScrollAxisRange in it.config || SemanticsProperties.HorizontalScrollAxisRange in it.config
+        // Only the viewport's own scroll-axis clipping is expected. An inner fixed-height
+        // parent can permanently clip text even while the text has a scroll ancestor.
+        var expected = Rect(node.positionInRoot, node.size.toSize())
+        var scrolls = false
+        for (ancestor in generateSequence(node.parent) { it.parent }) {
+            val vertical = SemanticsProperties.VerticalScrollAxisRange in ancestor.config
+            val horizontal = SemanticsProperties.HorizontalScrollAxisRange in ancestor.config
+            if (!vertical && !horizontal) continue
+            scrolls = true
+            val viewport = Rect(ancestor.positionInRoot, ancestor.size.toSize())
+            expected = Rect(
+                if (horizontal) maxOf(expected.left, viewport.left) else expected.left,
+                if (vertical) maxOf(expected.top, viewport.top) else expected.top,
+                if (horizontal) minOf(expected.right, viewport.right) else expected.right,
+                if (vertical) minOf(expected.bottom, viewport.bottom) else expected.bottom,
+            )
         }
-        if (!scrolls && !designed && node.text().isNotBlank()) {
-            if (bounds.width + 0.5f < node.size.width || bounds.height + 0.5f < node.size.height) {
-                return "is clipped by an ancestor (${node.size} shown in $bounds)"
+        if (!designed && node.text().isNotBlank()) {
+            // CssText uses Chrome's rounded line metrics; Compose's text box can extend
+            // one device pixel beyond that line (CssMetrics). Safe-area checks stay stricter.
+            val clipped = expected.left < bounds.left - 1f || expected.top < bounds.top - 1f ||
+                expected.right > bounds.right + 1f || expected.bottom > bounds.bottom + 1f ||
+                expected.width > bounds.width + 1f || expected.height > bounds.height + 1f
+            if (!expected.isEmpty && clipped) {
+                return "is clipped by an ancestor (expected $expected shown in $bounds)"
             }
-            if (safe != null && !safe.contains(bounds)) return "at $bounds reaches past the safe area $safe"
+            if (!scrolls && safe != null && !safe.contains(bounds)) return "at $bounds reaches past the safe area $safe"
         }
         if (safe != null && !bounds.isEmpty && (bounds.left < safe.left - 0.5f || bounds.right > safe.right + 0.5f)) {
             return "at $bounds reaches past the safe area $safe"
