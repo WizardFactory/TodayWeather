@@ -147,8 +147,20 @@ class Aws:
         try:
             with os.fdopen(input_fd,'w') as stream:
                 stream.write(request_json);stream.flush();os.fsync(stream.fileno())
-            argv += [service,command,'--cli-input-json','file://'+str(Path(input_name).absolute())]
-            if output is not None: argv.append(str(output))
+            argv += [service,command]
+            if output is not None:
+                # AWS CLI's customized get-object parser has no cli-input-json.
+                # Exact argv values preserve the pinned identity and byte range.
+                require({'Bucket','Key','VersionId'}<=set(params)<=
+                        {'Bucket','Key','VersionId','Range'},'object request fields')
+                for field,flag in [('Bucket','--bucket'),('Key','--key'),
+                                   ('VersionId','--version-id'),('Range','--range')]:
+                    if field in params:
+                        require(type(params[field]) is str,'object request value')
+                        argv += [flag,params[field]]
+                argv.append(str(output))
+            else:
+                argv += ['--cli-input-json','file://'+str(Path(input_name).absolute())]
             environment=dict(os.environ, AWS_MAX_ATTEMPTS='1', AWS_RETRY_MODE='standard', AWS_PAGER='')
             completed=subprocess.run(argv,stdin=subprocess.DEVNULL,text=True,capture_output=True,
                                      env=environment,timeout=30,check=False)

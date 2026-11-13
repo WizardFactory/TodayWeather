@@ -204,7 +204,12 @@ def paired_evidence(directory,files):
             require(files[meta_name]['size']<=65536,'oversized metadata')
             metadata=json.loads((directory/meta_name).read_text())
             body=files[body_name]
-            if (metadata!=result or body['size']!=result.get('body_bytes')
+            # The sampler adds timing to its ledger after the worker has
+            # durably written response metadata. Only that field may differ.
+            elapsed=result.get('elapsed_ms')
+            require(type(elapsed) is int and elapsed>=0,'invalid elapsed time')
+            response={key:value for key,value in result.items() if key!='elapsed_ms'}
+            if (metadata!=response or body['size']!=result.get('body_bytes')
                     or body['sha256']!=result.get('body_sha256')):missing.append(attempt)
         return {'complete':not missing,'attempts':len(rows),'missing_or_mismatched':missing,'qualification':'not_assessed'}
     except (StateError,OSError,ValueError,KeyError,TypeError,sqlite3.Error):

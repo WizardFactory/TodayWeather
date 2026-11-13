@@ -478,6 +478,33 @@ class OperatorTests(unittest.TestCase):
                 self.assertEqual(j.reserve_control(),spent)
                 self.assertEqual(list(j.directory.glob('.aws-input-*')),[])
 
+    def test_get_object_passes_cli_flags_with_pinned_version_and_range(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);executable=root/'fixture-aws'
+            executable.write_text('#!'+sys.executable+'\n'+"""
+import json,sys
+from pathlib import Path
+if 'get-caller-identity' in sys.argv:
+    print(json.dumps({'Account':'123456789012'}))
+else:
+    assert '--cli-input-json' not in sys.argv
+    assert sys.argv[sys.argv.index('--bucket')+1]=='server2-shadow-test1-raw'
+    assert sys.argv[sys.argv.index('--key')+1]=='key with spaces'
+    assert sys.argv[sys.argv.index('--version-id')+1]=='v1'
+    assert sys.argv[sys.argv.index('--range')+1]=='bytes=0-2'
+    Path(sys.argv[-1]).write_bytes(b'raw')
+    print(json.dumps({'VersionId':'v1','ContentLength':3,'ContentRange':'bytes 0-2/3'}))
+""")
+            executable.chmod(0o700)
+            with J(root/'state',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                adapter=operator.Aws(j,owned_resources(),executable=str(executable))
+                answer=adapter.call('GetObject',dict(Bucket=owned_resources()['buckets'][0],
+                    Key='key with spaces',VersionId='v1',Range='bytes=0-2'),output=root/'body')
+                self.assertEqual(answer.kind,'json')
+                self.assertEqual((root/'body').read_bytes(),b'raw')
+                self.assertEqual(j.reserve_control()['reads'],2)
+                self.assertEqual(list(j.directory.glob('.aws-input-*')),[])
+
     def test_reserved_operator_budget_is_durable_and_atomic(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/'journal'
@@ -1143,8 +1170,8 @@ class RemoteTests(unittest.TestCase):
 
     def test_stop_download_ledger_body_binding_and_no_duplicate_export(self):
         import shutil
-        for missing in (False,True):
-            with self.subTest(missing_body=missing),tempfile.TemporaryDirectory() as temp:
+        for missing,drift in ((False,None),(True,None),(False,'header'),(False,'elapsed')):
+            with self.subTest(missing_body=missing,drift=drift),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp);host=root/'host';(host/'state').mkdir(parents=True);(host/'data/paired').mkdir(parents=True)
                 launch=dict(plan=dict(port=3000,artifacts={'server2':'a'*64,'paired_read.py':'b'*64}))
                 reader={'candidate_sha256':'a'*64}
@@ -1159,7 +1186,10 @@ class RemoteTests(unittest.TestCase):
                 db.execute('CREATE TABLE meta(key TEXT,value TEXT)');db.execute('CREATE TABLE attempts(id INTEGER,result TEXT)')
                 identity=dict(manifest=reader,candidate='http://127.0.0.1:3000',production='https://todayweather.wizardfactory.net',loopback_test=False,sampler_sha256='b'*64)
                 db.execute('INSERT INTO meta VALUES (?,?)',('identity',json.dumps(identity)))
-                db.execute('INSERT INTO attempts VALUES (?,?)',(1,json.dumps(result)));db.commit();db.close()
+                recorded=dict(result,elapsed_ms=123)
+                if drift=='header':recorded['headers']={'content-type':'changed'}
+                if drift=='elapsed':recorded['elapsed_ms']=True
+                db.execute('INSERT INTO attempts VALUES (?,?)',(1,json.dumps(recorded)));db.commit();db.close()
                 archive=root/'fixture.tar'
                 with remote.tarfile.open(archive,'w') as tar:
                     for path in host.rglob('*'):
@@ -1178,7 +1208,7 @@ class RemoteTests(unittest.TestCase):
                             shutil.copyfile(archive,kwargs['destination'])
                             return cloud_json('HostEvidence',{'archive_bytes':archive.stat().st_size})
                     transport=Transport();report=remote.retain_host_evidence(transport,j,root/'retained')
-                    self.assertEqual(report['complete'],not missing)
+                    self.assertEqual(report['complete'],not missing and drift is None)
                     self.assertEqual(report['qualification'],'not_assessed')
                     self.assertEqual(transport.calls,['stop','inspect','export'])
                     if not missing:self.assertEqual((root/'retained/files/data/paired/1.body').read_bytes(),body)
