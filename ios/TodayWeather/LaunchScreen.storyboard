@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The launch screen of the Cordova iOS build (IN-07, #2956): the layout of cordova-ios 8.1.1
+    CordovaLib/../CDVLaunchScreen.storyboard (Apache License 2.0, the Apache Software Foundation), which the Cordova
+    app shows: the launch image `Splash` (IN-01's copy of client/tw.resources/ios/splash/Default@2x~universal~anyany.png)
+    filling the screen with aspect fill over a white background (`SplashScreenBackgroundColor`, white). The app keeps
+    the same image in `SplashView` until the migration has finished, as the Cordova splash stayed until the first view.
+-->
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15705" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15706"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <scene sceneID="EHf-IW-A2E">
+            <objects>
+                <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="Llm-lL-Icb"/>
+                        <viewControllerLayoutGuide type="bottom" id="xb3-aO-Qok"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Splash" translatesAutoresizingMaskIntoConstraints="NO" id="2ns-9I-Qjs">
+                                <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                            </imageView>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstAttribute="trailing" secondItem="2ns-9I-Qjs" secondAttribute="trailing" id="FZL-3Z-NFz"/>
+                            <constraint firstItem="2ns-9I-Qjs" firstAttribute="bottom" secondItem="Ze5-6b-2t3" secondAttribute="bottom" id="L9l-pw-wXj"/>
+                            <constraint firstItem="2ns-9I-Qjs" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="oGN-hc-Uzj"/>
+                            <constraint firstItem="2ns-9I-Qjs" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="rS9-Wd-zY4"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="53" y="375"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="Splash" width="1366" height="1366"/>
+    </resources>
+</document>

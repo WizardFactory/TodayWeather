@@ -16,8 +16,11 @@ final class AppStartup {
     private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "startup")
     private var waiting: NSObjectProtocol?
 
-    /// The app state after the migration; nil until it ran.
-    private(set) var state: AppState?
+    /// The app state after the migration; nil until it ran. IN-07: the shell (`AppLaunch`) takes it over, and the
+    /// entry events held until then are handled.
+    private(set) var state: AppState? {
+        didSet { if let state { AppLaunch.shared.migrationFinished(state) } }
+    }
     /// The `Device-Id` for the legacy server (`CDVUUID`).
     private(set) var deviceId: String?
 
