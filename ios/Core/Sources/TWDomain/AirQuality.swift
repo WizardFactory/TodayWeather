@@ -64,7 +64,7 @@ public enum AirQuality {
 
     /// `setAirUnit`: nil for an unknown or missing standard (the Cordova code then leaves the scope unset).
     public static func standard(_ airUnit: String?) -> AirStandard? {
-        guard let airUnit, let std = standards[airUnit] else { return nil }
+        guard let airUnit, let std = standards.first(where: { JSString.equal($0.key, airUnit) })?.value else { return nil }
         let grades = std.colors.indices.map { i in
             AirGrade(color: std.colors[i], str: std.strs[i],
                      upperBound: Dictionary(uniqueKeysWithValues: codes.map { ($0, std.values[$0]![i + 1]) }))
@@ -96,7 +96,7 @@ public enum AirQuality {
     /// `$scope.getSentimentIcon(grade)`: Material icon code points as HTML entities. Strict equality on numbers.
     public static func sentimentIcon(_ airUnit: String?, _ grade: JSONValue?) -> String {
         guard case .number(let n) = grade else { return "&#xE814;" }
-        let korean = airUnit == "airkorea" || airUnit == "airkorea_who"
+        let korean = airUnit.map { JSString.equal($0, "airkorea") || JSString.equal($0, "airkorea_who") } ?? false
         let icons: [Double: String] = korean
             ? [1: "&#xE815;", 2: "&#xE812;", 3: "&#xE811;", 4: "&#xE814;"]
             : [1: "&#xE815;", 2: "&#xE812;", 3: "&#xE811;", 4: "&#xE811;", 5: "&#xE7F3;", 6: "&#xE814;"]
@@ -111,10 +111,10 @@ public enum AirQuality {
         let gradeW = width / Double(standard.grades.count) + 2
         var start = 0.0
         if grade >= 2 {
-            guard let s = standard.grades[grade - 2].upperBound[code] else { return 0 }
+            guard let s = bound(standard.grades[grade - 2], code) else { return 0 }
             start = s
         }
-        guard let end = standard.grades[grade - 1].upperBound[code] else { return 0 }
+        guard let end = bound(standard.grades[grade - 1], code) else { return 0 }
         let diff = (value - start) / (end - start)
         var x = gradeW * Double(grade - 1) + diff * gradeW
         x -= labelWidth / 2
@@ -123,27 +123,23 @@ public enum AirQuality {
         return x
     }
 
+    /// A grade's upper bound for [code], matched by code units as a JavaScript property is.
+    private static func bound(_ grade: AirGrade, _ code: String) -> Double? {
+        grade.upperBound.first { JSString.equal($0.key, code) }?.value
+    }
+
     /// `$scope.getAirCodeUnit(code)`.
     public static func codeUnit(_ code: String) -> String {
-        switch code {
-        case "pm25", "pm10": return "㎍/㎥"
-        case "o3", "no2", "co", "so2": return "ppm"
-        default: return ""
-        }
+        if ["pm25", "pm10"].contains(where: { JSString.equal($0, code) }) { return "㎍/㎥" }
+        if ["o3", "no2", "co", "so2"].contains(where: { JSString.equal($0, code) }) { return "ppm" }
+        return ""
     }
 
     /// `_getAQIname`.
     public static func codeName(_ code: String) -> String {
-        switch code {
-        case "pm25": return "LOC_PM25"
-        case "pm10": return "LOC_PM10"
-        case "o3": return "LOC_O3"
-        case "no2": return "LOC_NO2"
-        case "co": return "LOC_CO"
-        case "so2": return "LOC_SO2"
-        case "aqi": return "LOC_AQI"
-        default: return ""
-        }
+        let names = [("pm25", "LOC_PM25"), ("pm10", "LOC_PM10"), ("o3", "LOC_O3"), ("no2", "LOC_NO2"), ("co", "LOC_CO"),
+                     ("so2", "LOC_SO2"), ("aqi", "LOC_AQI")]
+        return names.first { JSString.equal($0.0, code) }?.1 ?? ""
     }
 
     /// `_getAQIList(airInfo, pollutants)`: the pollutant cards, "-" for a pollutant with no current value.
@@ -174,10 +170,10 @@ public enum AirQuality {
             if !Js.greaterOrEqual(d["fromToday"], 0) || !d.contains("dustForecast") { return nil }
             var obj = d
             if case .object(let forecast) = d["dustForecast"] {
-                for (key, value) in forecast where key.contains(code) {
-                    if key.contains("Grade") {
+                for (key, value) in forecast where JSString.includes(key, code) {
+                    if JSString.includes(key, "Grade") {
                         obj = obj.setting("grade", value)
-                    } else if key.contains("Str") {
+                    } else if JSString.includes(key, "Str") {
                         obj = obj.setting("str", value)
                     }
                 }

@@ -11,6 +11,15 @@ public struct Town: Hashable, Sendable {
         self.second = second
         self.third = third
     }
+
+    /// Equal parts by UTF-16 code units, as the Cordova code compares strings.
+    public static func == (a: Town, b: Town) -> Bool {
+        JSString.equal(a.first, b.first) && JSString.equal(a.second, b.second) && JSString.equal(a.third, b.third)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        for s in [first, second, third] { JSString.hash(s, into: &hasher) }
+    }
 }
 
 /// Translated LOC_SAME_AS_YESTERDAY and LOC_THAN_YESTERDAY (with one `%s`).
@@ -23,27 +32,19 @@ public struct YesterdayText: Hashable, Sendable {
     }
 }
 
-extension String {
-    /// Kotlin's `replaceFirst(old, new)`: the first occurrence only.
-    func replacingFirst(_ target: String, with replacement: String) -> String {
-        guard let r = range(of: target, options: .literal) else { return self }
-        return replacingCharacters(in: r, with: replacement)
-    }
-}
-
 /// Korean address helpers of `WeatherUtil` (getShortenAddress, getTownFromFullAddress, convertAddressArray).
 public enum AddressFormat {
     public static func split(_ fullAddress: String?) -> [String] {
         guard let fullAddress, !fullAddress.isEmpty else { return [] }
-        return fullAddress.components(separatedBy: " ")
+        return JSString.split(fullAddress, " ")
     }
 
     private static let siDo = ["특별시", "광역시", "특별자치시", "특별자치도"]
 
     /// `_getShortSiDoName`: 서울특별시 → 서울시, 제주특별자치도 → 제주도.
     private static func shortSiDo(_ name: String) -> String {
-        for (i, suffix) in siDo.enumerated() where name.hasSuffix(suffix) {
-            return name.replacingFirst(suffix, with: i == siDo.count - 1 ? "도" : "시")
+        for (i, suffix) in siDo.enumerated() where JSString.endsWith(name, suffix) {
+            return JSString.replaceFirst(name, suffix, i == siDo.count - 1 ? "도" : "시")
         }
         return name
     }
@@ -52,7 +53,7 @@ public enum AddressFormat {
         let p = split(fullAddress)
         switch p.count {
         case 5: return shortSiDo(p[2]) + "," + p[4]
-        case 4: return p[1].hasSuffix("도") ? shortSiDo(p[2]) + "," + p[3] : shortSiDo(p[1]) + "," + p[3]
+        case 4: return JSString.endsWith(p[1], "도") ? shortSiDo(p[2]) + "," + p[3] : shortSiDo(p[1]) + "," + p[3]
         case 3: return shortSiDo(p[1]) + "," + p[2]
         case 2: return shortSiDo(p[1])
         default: return ""
@@ -62,9 +63,9 @@ public enum AddressFormat {
     public static func town(_ parts: [String]) -> Town {
         switch parts.count {
         case 5: return Town(parts[1], parts[2] + parts[3], parts[4])
-        case 4: return parts[3].hasSuffix("구") ? Town(parts[1], parts[2] + parts[3], "") : Town(parts[1], parts[2], parts[3])
+        case 4: return JSString.endsWith(parts[3], "구") ? Town(parts[1], parts[2] + parts[3], "") : Town(parts[1], parts[2], parts[3])
         case 3:
-            if parts[2].hasSuffix("읍") || parts[2].hasSuffix("면") || parts[2].hasSuffix("동") {
+            if ["읍", "면", "동"].contains(where: { JSString.endsWith(parts[2], $0) }) {
                 return Town(parts[1], parts[1], parts[2])
             }
             return Town(parts[1], parts[2], "")
@@ -78,12 +79,13 @@ public enum AddressFormat {
 public enum ForecastText {
     /// `getWeatherEmoji`, used by sharing.
     public static func weatherEmoji(_ skyIcon: String) -> String {
-        if skyIcon.contains("lightning") { return "⛈" }
-        if skyIcon.contains("rainsnow") { return "☔☃" }
-        if skyIcon.contains("rain") { return "☔" }
-        if skyIcon.contains("snow") { return "☃" }
-        if skyIcon.contains("cloud") { return skyIcon.contains("sun") || skyIcon.contains("moon") ? "⛅" : "☁" }
-        if skyIcon.contains("sun") || skyIcon.contains("moon") { return "🌞" }
+        func has(_ s: String) -> Bool { JSString.includes(skyIcon, s) }
+        if has("lightning") { return "⛈" }
+        if has("rainsnow") { return "☔☃" }
+        if has("rain") { return "☔" }
+        if has("snow") { return "☃" }
+        if has("cloud") { return has("sun") || has("moon") ? "⛅" : "☁" }
+        if has("sun") || has("moon") { return "🌞" }
         return ""
     }
 
@@ -96,7 +98,7 @@ public enum ForecastText {
         let diff = fahrenheit ? Js.round(raw) : Js.toFixedNumber(raw, 1)
         if diff == 0 { return text.same }
         let str = (diff > 0 ? "+" : "") + Js.numberToString(diff)
-        return text.than.replacingFirst("%s", with: str)
+        return JSString.replaceFirst(text.than, "%s", str)
     }
 
     /// `$scope.getRainSnowFall`: the amount to show, rounded from 10 up, or "0". Keeps the JSON type.

@@ -30,17 +30,15 @@ public enum Js {
     static func stringToNumber(_ s: String) -> Double {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty { return 0 }
-        if t.hasPrefix("0x") || t.hasPrefix("0X") {
-            return Int64(t.dropFirst(2), radix: 16).map(Double.init) ?? .nan
+        if t.utf16.starts(with: "0x".utf16) || t.utf16.starts(with: "0X".utf16) {
+            let digits = String(decoding: Array(t.utf16.dropFirst(2)), as: UTF16.self)
+            return Int64(digits, radix: 16).map(Double.init) ?? .nan
         }
-        switch t {
-        case "Infinity", "+Infinity": return .infinity
-        case "-Infinity": return -.infinity
-        default:
-            if t.contains(where: { $0.isLetter && $0 != "e" && $0 != "E" }) { return .nan }
-            guard t.unicodeScalars.allSatisfy({ "0123456789+-.eE".unicodeScalars.contains($0) }) else { return .nan }
-            return Double(t) ?? .nan
-        }
+        if JSString.equal(t, "Infinity") || JSString.equal(t, "+Infinity") { return .infinity }
+        if JSString.equal(t, "-Infinity") { return -.infinity }
+        if t.contains(where: { $0.isLetter && $0 != "e" && $0 != "E" }) { return .nan }
+        guard t.unicodeScalars.allSatisfy({ "0123456789+-.eE".unicodeScalars.contains($0) }) else { return .nan }
+        return Double(t) ?? .nan
     }
 
     /// JavaScript ToBoolean.
@@ -82,7 +80,7 @@ public enum Js {
         if aNullish || bNullish { return aNullish && bNullish }
         let a = a!, b = b!
         if isPrimitive(a) && isPrimitive(b) {
-            if case .string(let x) = a, case .string(let y) = b { return x == y }
+            if case .string(let x) = a, case .string(let y) = b { return JSString.equal(x, y) }
             return number(a) == number(b)
         }
         return false
@@ -182,7 +180,7 @@ public enum Js {
     /// `a >= b` of two values: strings by UTF-16 code units, anything else as numbers (NaN is never greater or equal).
     public static func greaterOrEqual(_ a: JSONValue?, _ b: JSONValue?) -> Bool {
         let x = primitive(a), y = primitive(b)
-        if case .string(let sx) = x, case .string(let sy) = y { return !sx.utf16.lexicographicallyPrecedes(sy.utf16) }
+        if case .string(let sx) = x, case .string(let sy) = y { return !JSString.less(sx, sy) }
         func num(_ p: Primitive) -> Double {
             switch p {
             case .string(let s): return stringToNumber(s)
@@ -197,5 +195,5 @@ public enum Js {
     public static func json(_ d: Double) -> JSONValue { .number(d) }
 
     /// `a > b` of two strings by UTF-16 code units (JavaScript's string comparison).
-    static func stringGreater(_ a: String, _ b: String) -> Bool { b.utf16.lexicographicallyPrecedes(a.utf16) }
+    static func stringGreater(_ a: String, _ b: String) -> Bool { JSString.less(b, a) }
 }

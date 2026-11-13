@@ -33,6 +33,33 @@ struct JavaScriptCoreDateTests {
         #expect(millis.map(isoString) == iso, "\(input)")
     }
 
+    /// A local time without an offset in a daylight-saving gap or overlap (CODEX-IN02-1), as ECMAScript's
+    /// LocalTime→UTC rule gives and JavaScriptCore prints: a time in a gap uses the offset before the transition (it
+    /// moves forward); a time in an overlap is the earlier instant. Recorded with
+    /// `TZ=<zone> /System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc dst.js -- <strings>`
+    /// (`new Date(s).toISOString()`; JavaScriptCore 21624.5.1.11.3, macOS 26.6.2) on 2026-11-13.
+    @Test(arguments: [
+        // New York: spring gap 02:00–03:00 EST→EDT on 2026-03-08, fall overlap 01:00–02:00 on 2026-11-01.
+        ("America/New_York", "2026-03-08T02:30:00", "2026-03-08T07:30:00.000Z"),
+        ("America/New_York", "2026-03-08T02:00:00", "2026-03-08T07:00:00.000Z"),
+        ("America/New_York", "2026-03-08T03:00:00", "2026-03-08T07:00:00.000Z"),
+        ("America/New_York", "2026-03-08T02:30", "2026-03-08T07:30:00.000Z"),
+        ("America/New_York", "2026-11-01T01:30:00", "2026-11-01T05:30:00.000Z"),
+        ("America/New_York", "2026-11-01T01:00:00", "2026-11-01T05:00:00.000Z"),
+        ("America/New_York", "2026-11-01T02:00:00", "2026-11-01T07:00:00.000Z"),
+        // Paris: spring gap 02:00–03:00 CET→CEST on 2026-03-29, fall overlap 02:00–03:00 on 2026-10-25.
+        ("Europe/Paris", "2026-03-29T02:30:00", "2026-03-29T01:30:00.000Z"),
+        ("Europe/Paris", "2026-10-25T02:30:00", "2026-10-25T00:30:00.000Z"),
+        ("Europe/Paris", "2026-10-25T02:00:00", "2026-10-25T00:00:00.000Z"),
+        ("Europe/Paris", "2026-10-25T02:59:59", "2026-10-25T00:59:59.000Z"),
+        ("Europe/Paris", "2026-10-25T03:00:00", "2026-10-25T02:00:00.000Z"),
+        ("Europe/Paris", "2026-11-01T01:30:00", "2026-11-01T00:30:00.000Z"),
+    ])
+    func localTimesAroundDaylightSavingChanges(zone: String, input: String, iso: String) {
+        let millis = Warnings.jsDate(.string(input), zone: TimeZone(identifier: zone)!)
+        #expect(millis.map(isoString) == iso, "\(zone) \(input)")
+    }
+
     private func isoString(_ millis: Int64) -> String {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

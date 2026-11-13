@@ -17,15 +17,15 @@ struct ModelsTests {
             #expect(Double(s(place.json["currentWeather"]?["t1h"])!) == current.t1h, "\(name)")
             #expect(place.json["timeTable"]?.arrayValue?.count == place.timeTable.count, "\(name)")
             #expect(place.timeChart.count == 2, "\(name)")
-            #expect(place.timeChart[1].name == "today")
+            #expect(sameText(place.timeChart[1].name, "today"))
             #expect(!place.dayTable.isEmpty, "\(name)")
             let todayIndex = place.dayTable.firstIndex { $0.fromToday == 0 }.map(Double.init) ?? -1
             #expect(current.today?.index == todayIndex, "\(name)")
             #expect(!place.airStations.isEmpty, "\(name)")
             #expect(place.location?.lat != nil && place.location?.long != nil, "\(name)")
         }
-        #expect(try place(Corpus.read("inputs/kma-seoul.json")).source == "KMA")
-        #expect(try place(Corpus.read("inputs/vc-london.json")).source == "VC")
+        #expect(sameText(try place(Corpus.read("inputs/kma-seoul.json")).source, "KMA"))
+        #expect(sameText(try place(Corpus.read("inputs/vc-london.json")).source, "VC"))
     }
 
     @Test func rawValuesKeepCordovaSemantics() throws {
@@ -50,7 +50,7 @@ struct ModelsTests {
         let warnings = try #require(try Corpus.read("inputs/special.json").arrayValue).compactMap { $0.objectValue.map(WeatherWarning.init(json:)) }
         #expect(!warnings.isEmpty && warnings.allSatisfy { $0.announcement != nil && $0.comment != nil })
         let geo = GeocodeResponse(json: try #require(try Corpus.read("inputs/geocode-seoul.json").objectValue))
-        #expect(geo.address == "서울특별시 중구 회현동")
+        #expect(sameText(geo.address, "서울특별시 중구 회현동"))
         #expect(geo.location?.lat == 37.56)
     }
 }

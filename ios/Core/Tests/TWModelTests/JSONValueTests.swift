@@ -37,6 +37,45 @@ struct JSONValueTests {
         #expect(v.jsonText == #"{"s":"a\"b\\c\né🌧/","t":true,"f":false,"n":null,"e":[],"o":{}}"#)
     }
 
+    /// Swift strings compare by canonical equivalence; JavaScript compares UTF-16 code units (CODEX-IN02-2). In
+    /// JavaScriptCore, `JSON.parse('{"é":1,"é":2}')` has the two keys `["é","é"]`.
+    @Test func canonicallyEquivalentKeysStayApart() throws {
+        let composed = "\u{E9}", decomposed = "e\u{301}"
+        let v = try JSONValue.parse(#"{"é":1,"é":2,"K":3,"K":4}"#)
+        let o = try #require(v.objectValue)
+        #expect(o.count == 4)
+        #expect(o.keys.map { Array($0.utf16) } == [composed, decomposed, "\u{212A}", "K"].map { Array($0.utf16) })
+        #expect(o[composed] == 1 && o[decomposed] == 2 && o["\u{212A}"] == 3 && o["K"] == 4)
+        #expect(Array(v.jsonText.utf16) == Array("{\"\u{E9}\":1,\"e\u{301}\":2,\"\u{212A}\":3,\"K\":4}".utf16))
+        var changed = o
+        changed[decomposed] = nil
+        #expect(changed.count == 3 && changed[composed] == 1 && changed[decomposed] == nil)
+        #expect(JSONValue.string(composed) != JSONValue.string(decomposed))
+        #expect(Set([JSONValue.string(composed), .string(decomposed)]).count == 2)
+        let a = JSONObject([(composed, 1)]), b = JSONObject([(decomposed, 1)])
+        #expect(a != b)
+    }
+
+    /// JavaScriptCore's `JSON.parse` rejects `"\u+001"`, `"\u-000"`, `"\u 123"` ("is not a valid unicode escape") and
+    /// `"\u12"` ("\u must be followed by 4 hex digits") (CODEX-IN02-3).
+    @Test(arguments: [#""\u+001""#, #""\u-000""#, #""\u 123""#, #""\u12""#, #""\u12g4""#, #""\u+1234""#])
+    func unicodeEscapesNeedFourHexDigits(text: String) {
+        #expect(throws: JSONParseError.self, "\(text)") { try JSONValue.parse(text) }
+    }
+
+    /// Invalid UTF-8 inside a string is an error, not a replacement character (CODEX-IN02-3): an overlong form
+    /// (C0 AF), an encoded surrogate (ED A0 80), a byte above F4, a truncated sequence and a stray continuation byte.
+    @Test(arguments: [[0xC0, 0xAF], [0xED, 0xA0, 0x80], [0xF5, 0x80, 0x80, 0x80], [0xE2, 0x82], [0x80], [0x61, 0xFF, 0x62]] as [[UInt8]])
+    func invalidUTF8IsRejected(bytes: [UInt8]) {
+        #expect(throws: JSONParseError.self, "\(bytes)") { try JSONValue.parse(Data([0x22] + bytes + [0x22])) }
+        #expect(throws: JSONParseError.self, "key \(bytes)") { try JSONValue.parse(Data([0x7B, 0x22] + bytes + [0x22, 0x3A, 0x31, 0x7D])) }
+    }
+
+    @Test func validUTF8StillParses() throws {
+        let v = try JSONValue.parse(Data([0x22, 0x61, 0xC3, 0xA9, 0xE2, 0x82, 0xAC, 0xF0, 0x9F, 0x8C, 0xA7, 0x22]))
+        #expect(v == .string("aé€🌧"))
+    }
+
     @Test func invalidJSONThrows() {
         for text in ["", "{", "[1,]", #"{"a" 1}"#, "01", "1.", "-", "tru", #""\x""#, "[1] 2", "\"a\u{01}\""] {
             #expect(throws: JSONParseError.self, "\(text)") { try JSONValue.parse(text) }

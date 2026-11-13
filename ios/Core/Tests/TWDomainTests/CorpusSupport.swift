@@ -100,13 +100,28 @@ func arg(_ e: JSONValue?) -> JSONValue? { e?.isNull == false ? e : nil }
 func double(_ e: JSONValue?) -> Double { e?.numberValue?.double ?? .nan }
 func int(_ e: JSONValue?) -> Int { Int(double(e)) }
 
+/// String equality as JavaScript's `===`: by UTF-16 code units (Swift's `==` treats canonically equivalent strings as
+/// equal).
+func sameText(_ a: String?, _ b: String?) -> Bool {
+    switch (a, b) {
+    case (nil, nil): return true
+    case let (a?, b?): return a.utf16.elementsEqual(b.utf16)
+    default: return false
+    }
+}
+
+func sameText(_ a: [String]?, _ b: [String]?) -> Bool {
+    guard let a, let b else { return a == nil && b == nil }
+    return a.count == b.count && zip(a, b).allSatisfy { sameText($0, $1) }
+}
+
 /// The first difference between two JSON trees: member names and their order, array lengths, value types, strings
 /// and number texts (so integers and fractional numbers stay apart). nil when the trees are the same.
 func jsonDifference(_ expected: JSONValue?, _ actual: JSONValue?, _ path: String) -> String? {
     switch (expected, actual) {
     case (nil, nil): return nil
     case (.object(let e)?, .object(let a)?):
-        if e.keys != a.keys { return "\(path): keys \(e.keys) != \(a.keys)" }
+        if !sameText(e.keys, a.keys) { return "\(path): keys \(e.keys) != \(a.keys)" }
         for k in e.keys {
             if let d = jsonDifference(e[k], a[k], "\(path).\(k)") { return d }
         }
@@ -119,7 +134,7 @@ func jsonDifference(_ expected: JSONValue?, _ actual: JSONValue?, _ path: String
         return nil
     default:
         let et = expected?.jsonText ?? "undefined", at = actual?.jsonText ?? "undefined"
-        return et == at ? nil : "\(path): \(et) != \(at)"
+        return sameText(et, at) ? nil : "\(path): \(et) != \(at)"
     }
 }
 

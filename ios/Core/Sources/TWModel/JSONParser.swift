@@ -122,25 +122,39 @@ struct JSONParser {
         return JSONNumber(text: String(decoding: bytes[start..<i], as: UTF8.self))
     }
 
+    private static func hexValue(_ b: UInt8) -> UInt16? {
+        switch b {
+        case 0x30...0x39: return UInt16(b - 0x30)
+        case 0x41...0x46: return UInt16(b - 0x41 + 10)
+        case 0x61...0x66: return UInt16(b - 0x61 + 10)
+        default: return nil
+        }
+    }
+
     private mutating func parseString() throws -> String {
         i += 1
         var units: [UInt16] = []
         var runStart = i
-        func flushRun() {
-            if runStart < i { units.append(contentsOf: String(decoding: bytes[runStart..<i], as: UTF8.self).utf16) }
+        // Text between escapes, as UTF-16; invalid UTF-8 (overlong forms, encoded surrogates, bytes above F4,
+        // truncated sequences) is an error, not a replacement character.
+        func flushRun() throws {
+            guard runStart < i else { return }
+            let failed = transcode(bytes[runStart..<i].makeIterator(), from: UTF8.self, to: UTF16.self,
+                                   stoppingOnError: true) { units.append($0) }
+            if failed { throw JSONParseError(offset: runStart, message: "invalid UTF-8 in a string") }
         }
         while true {
             guard i < bytes.count else { throw error("unterminated string") }
             let b = bytes[i]
             if b == UInt8(ascii: "\"") {
-                flushRun()
+                try flushRun()
                 i += 1
                 // Lone surrogates from \u escapes become U+FFFD (Swift strings hold Unicode scalars only).
                 return String(decoding: units, as: UTF16.self)
             }
             if b < 0x20 { throw error("control character in a string") }
             if b == UInt8(ascii: "\\") {
-                flushRun()
+                try flushRun()
                 i += 1
                 guard i < bytes.count else { throw error("unterminated escape") }
                 let e = bytes[i]
@@ -155,8 +169,13 @@ struct JSONParser {
                 case UInt8(ascii: "r"): units.append(0x0D)
                 case UInt8(ascii: "t"): units.append(0x09)
                 case UInt8(ascii: "u"):
-                    guard i + 4 <= bytes.count, let v = UInt16(String(decoding: bytes[i..<i + 4], as: UTF8.self), radix: 16)
-                    else { throw error("invalid \\u escape") }
+                    // Exactly four ASCII hex digits (UInt16(_:radix:) would also take a sign).
+                    guard i + 4 <= bytes.count else { throw error("\\u must be followed by 4 hex digits") }
+                    var v: UInt16 = 0
+                    for b in bytes[i..<i + 4] {
+                        guard let digit = Self.hexValue(b) else { throw error("invalid \\u escape") }
+                        v = v << 4 | digit
+                    }
                     units.append(v)
                     i += 4
                 default: throw error("invalid escape")
