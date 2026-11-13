@@ -90,7 +90,8 @@ iPhone the explainer came before the system prompt, the prompt showed the Korean
 and a 1.1.1 build without a purpose string showed no prompt and kept running.
 
 Remaining gates: a direct "Ask App Not to Track" answer in the prompt; a fresh-install run; whether the ATT alert
-follows a refused GDPR message; the App Store privacy answers. The updated policy pages were uploaded on 2026-11-13.
+follows a refused GDPR message; the App Store privacy answers. The updated policy pages were uploaded on 2026-11-13
+([record](../evidence/tasks/issue-2945/README.md#policy-page-upload-2026-11-13)).
 
 ## Decisions and remaining publication gates
 

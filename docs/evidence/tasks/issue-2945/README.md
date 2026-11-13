@@ -38,3 +38,18 @@ Screenshots of the explainer, the prompt and the setting are in the [iOS manual]
 - Another automation used the same phone during the run and brought another app to the front once; it did not change the recorded results.
 
 The raw console logs and full-size captures stay outside the repository, because the logs contain the push token.
+
+## Policy page upload (2026-11-13)
+
+AK approved the upload. The three privacy policy pages changed by #2949 were uploaded from master `c8b7f8c8` to the landing site with the [runbook procedure](../../../operations/cordova-store-release.md#privacysupport-hosting-on-the-landing-site): one S3 `put-object` per file with the bucket-owner check, content type `text/html; charset=utf-8`, cache control `public, max-age=300`, then a CloudFront invalidation of the three paths, which completed.
+
+| Public URL | Source | Source SHA-256 | Public check after the upload |
+| --- | --- | --- | --- |
+| https://todayweather.ai/mobile/privacy.html | `client/fastlane/privacy/privacy.html` | `8291260388a00c55bc6956b671ee26f47ca4c49d5f12a29ac3ad564efcb61904` | HTTP 200, `text/html; charset=utf-8`, body hash equal |
+| https://todayweather.ai/mobile/privacy.en.html | `client/fastlane/privacy/privacy.en.html` | `2479a6be187c6c21495abeac0c82c12304f747ef4a9c3a193ae536a28974ca2a` | HTTP 200, `text/html; charset=utf-8`, body hash equal |
+| https://todayweather.ai/mobile/privacy.ja.html | `client/fastlane/privacy/privacy.ja.html` | `110d2fb68019aaf52024c3f3846bd5e942ce551e580d7221fba8ff02f3718841` | HTTP 200, `text/html; charset=utf-8`, body hash equal |
+
+- Before the upload the three public bodies differed from these sources; the terms, support and stylesheet objects already matched and were not written.
+- The landing root page had the same body hash before and after.
+- The previous object versions remain in the versioned bucket. Bucket, distribution and version identifiers stay in private receipts.
+- Limits: checked with HTTPS requests from one network; no browser rendering check after this upload. The pages still carry their review-draft notice.
