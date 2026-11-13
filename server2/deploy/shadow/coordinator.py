@@ -8,6 +8,8 @@ accepted. Successful absence is distinct from an unavailable observation.
 """
 from __future__ import annotations
 import argparse
+import base64
+import datetime
 import hashlib
 import json
 import itertools
@@ -20,7 +22,7 @@ import tempfile
 
 # Executing a script sets its own directory first; tests import the same module.
 from state import (CloudResult, Journal, StateError, absence, canonical, decode_cloud,
-                   sync_directory, validate_cost_policy, validate_paid_policy, PAID_PROVIDERS)
+                   sync_directory, validate_cost_policy, validate_paid_policy, PAID_PROVIDERS, launch_expiry_units)
 
 OPERATIONS = {
     'GetCallerIdentity': ('sts','get-caller-identity','read'),
@@ -227,6 +229,39 @@ def versions(cloud,bucket):
     raise StateError('version pagination exhausted')
 
 
+def source_headers(payload, key, digest):
+    """Retain the bounded original AWS representation, including raw-codec metadata.
+
+    This is an evidence validation limit after receipt, not a wire byte cap.
+    Canonical raw decoding remains the existing Rust codec's responsibility.
+    """
+    require(type(payload) is dict and len(canonical(payload).encode())<=64*1024,'source headers limit')
+    metadata=payload.get('Metadata');stamp=payload.get('LastModified')
+    require(type(metadata) is dict and all(type(k) is str and type(v) is str for k,v in metadata.items()),
+            'source metadata missing')
+    require(sum(len(k.encode())+len(v.encode()) for k,v in metadata.items())<=2048,'source metadata limit')
+    require(type(stamp) is str and 0<len(stamp)<=64,'source timestamp missing')
+    try:
+        require(datetime.datetime.fromisoformat(stamp.replace('Z','+00:00')).utcoffset() is not None,
+                'source timestamp timezone')
+        if key.startswith('raw/v2/'):
+            require(set(metadata)=={'s2-record','s2-gzip-sha256'},'raw metadata fields')
+            require(metadata['s2-gzip-sha256']==digest,'raw compressed hash')
+            encoded=metadata['s2-record']
+            require(len(encoded)<=1900,'raw envelope limit')
+            envelope=json.loads(base64.b64decode(encoded,validate=True))
+            require(envelope['schema']==2,'raw envelope schema')
+            identity=envelope['identity'];period=identity['period'];date=period['local_date']
+            require(type(date) is int and type(identity['fetched_at_ms']) is int,'raw identity types')
+            expected=(f"raw/v2/{identity['source']}/{identity['kind']}/{date//10000:04}/"
+                      f"{date//100%100:02}/{date%100:02}/{period['slot']}/{identity['key_sha256']}/"
+                      f"{identity['fetched_at_ms']}-{identity['raw_sha256']}.raw.gz")
+            require(expected==key,'raw envelope/key disagreement')
+    except (ValueError,KeyError,TypeError,UnicodeError) as error:
+        raise StateError('invalid original source metadata') from error
+    return payload
+
+
 def export_sources(cloud,journal,resources,destination):
     """Retain original version bytes, never reconstruction; no dependency-closure claim.
 
@@ -235,7 +270,7 @@ def export_sources(cloud,journal,resources,destination):
     """
     r=frozen_resources(resources); destination=Path(destination)
     destination.mkdir(mode=0o700)
-    manifest={'schema':1,'complete':False,'dependency_closure':'unproven','objects':[]}
+    manifest={'schema':2,'complete':False,'dependency_closure':'unproven','objects':[]}
     def persist():
         fd,temporary=tempfile.mkstemp(prefix='.manifest-',dir=destination)
         try:
@@ -274,7 +309,9 @@ def export_sources(cloud,journal,resources,destination):
                 with path.open('rb') as stream:
                     for block in iter(lambda:stream.read(1024**2),b''): digest.update(block)
                     os.fsync(stream.fileno())
-                manifest['objects'].append(dict(identity,size=item['Size'],sha256=digest.hexdigest(),file=filename))
+                headers=source_headers(answer.payload,item['Key'],digest.hexdigest())
+                manifest['objects'].append(dict(identity,size=item['Size'],sha256=digest.hexdigest(),
+                                               file=filename,headers=headers))
                 persist()
         manifest['complete']=True;persist()
     except Exception:
@@ -741,6 +778,15 @@ def check_reader_binding(path,launch):
     # its ledger or sending. The independent host timer shortens a delayed start.
 
 
+def verify_launch_expiry(run_id, epoch, unit_dir, system):
+    for unit,content in launch_expiry_units(run_id,epoch).items():
+        path=Path(unit_dir)/unit
+        require(not path.is_symlink() and path.is_file() and path.read_text()==content,'launch expiry missing or changed')
+        if unit.endswith('.timer'):
+            require(system.run('is-enabled',unit)=='enabled','launch expiry not enabled')
+            require(system.run('show','--property=ActiveState','--value',unit)=='active','launch expiry inactive')
+
+
 def install_host_tree(bundle,root,unit_dir,system,*,now):
     """Initial-only installation transaction; caller supplies the fixed host paths.
 
@@ -753,6 +799,7 @@ def install_host_tree(bundle,root,unit_dir,system,*,now):
     require(launch['generation']=='initial','host restart connector unavailable')
     require(type(now) is int and launch['epoch']<=now<launch['epoch']+168*3600,'original install deadline')
     require(not root.exists() and not root.is_symlink(),'existing installation')
+    verify_launch_expiry(launch['plan']['run_id'],launch['epoch'],unit_dir,system)
     check_reader_binding(bundle/'reader.json',launch)
     units=host_units(launch)
     require(not unit_dir.is_symlink(),'unit directory symlink')

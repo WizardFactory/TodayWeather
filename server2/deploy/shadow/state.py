@@ -8,6 +8,8 @@ An existing directory is never treated as a new run, even after partial creation
 from __future__ import annotations
 
 import argparse
+import base64
+import datetime
 from contextlib import contextmanager
 from dataclasses import dataclass
 import fcntl
@@ -121,6 +123,43 @@ def absence(result: CloudResult, *, name: str | None = None) -> bool:
                 and instances[0].get('InstanceId') == name
                 and instances[0].get('State') == {'Code': 48, 'Name': 'terminated'})
     return False
+
+
+def launch_expiry_units(run_id, epoch):
+    """Immutable launch-time safety net, independent of the SSH installation."""
+    if type(run_id) is not str or not re.fullmatch('[a-z0-9-]{1,30}',run_id):
+        raise StateError('expiry run identity')
+    integer(epoch,253400000000)
+    deadline=datetime.datetime.fromtimestamp(epoch+170*3600,datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    name='server2-shadow-'+run_id+'-launch-expiry'
+    return {
+        name+'.service':('[Unit]\nDescription=Original shadow host expiry\n'
+                         '[Service]\nType=oneshot\nExecStart=/usr/bin/systemctl --no-block poweroff\n'),
+        name+'.timer':('[Unit]\nDescription=Immutable shadow launch deadline\n'
+                       '[Timer]\nOnCalendar='+deadline+'\nAccuracySec=1s\nPersistent=true\n'
+                       'Unit='+name+'.service\n[Install]\nWantedBy=timers.target\n')}
+
+
+def launch_user_data(run_id, epoch):
+    """Nonsecret first-boot expiry travels with the sole RunInstances attempt.
+
+    A failed bootstrap powers off; no SSH operator is needed to arm the timer.
+    Enabled persistent units keep the original deadline across OS reboots.
+    """
+    deadline=epoch+170*3600
+    lines=['#!/bin/bash','set -euo pipefail',
+           "trap '/usr/bin/systemctl --no-block poweroff' ERR",
+           f'deadline={deadline}',
+           'if [ "$(date +%s)" -ge "$deadline" ]; then /usr/bin/systemctl --no-block poweroff; exit 1; fi']
+    for unit,content in launch_expiry_units(run_id,epoch).items():
+        lines.append("printf '%s' '"+base64.b64encode(content.encode()).decode()+"' | base64 --decode > /etc/systemd/system/"+unit)
+        lines.append('chmod 644 /etc/systemd/system/'+unit)
+    timer='server2-shadow-'+run_id+'-launch-expiry.timer'
+    lines += ['sync','timeout 20 /usr/bin/systemctl daemon-reload',
+              'timeout 20 /usr/bin/systemctl enable --now '+timer,
+              '/usr/bin/systemctl is-active --quiet '+timer,
+              '/usr/bin/systemctl is-enabled --quiet '+timer]
+    return base64.b64encode(('\n'.join(lines)+'\n').encode()).decode()
 
 
 class Journal:
@@ -294,14 +333,19 @@ class Journal:
 
         Caller validates the operation-specific request. Credential material and
         host configuration never belong in AWS request parameters/UserData.
+        Only the exact nonsecret original-epoch expiry script is permitted.
         An interrupted request is reconciled by identity, never prepared again.
         """
         label(intent); label(operation); label(token)
         if type(params) is not dict:
             raise StateError('request parameters must be an object')
         encoded=canonical(params)
-        if len(encoded.encode())>65536 or any(key in params for key in ('UserData','SecretAccessKey','SessionToken')):
+        if len(encoded.encode())>65536 or any(key in params for key in ('SecretAccessKey','SessionToken')):
             raise StateError('unsupported request parameters')
+        if 'UserData' in params:
+            frozen=self.snapshot()
+            if operation!='RunInstances' or params['UserData']!=launch_user_data(frozen['run_id'],frozen['epoch']):
+                raise StateError('only nonsecret immutable expiry UserData permitted')
         digest=hashlib.sha256(encoded.encode()).hexdigest()
         if cleanup:
             if operation!='HostEvidence' or intent!='host-evidence':

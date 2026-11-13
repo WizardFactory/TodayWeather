@@ -24,7 +24,9 @@
     "server2/src/observability.rs",
     "server2/src/budget/qualification.rs",
     "server2/src/budget/mod.rs",
-    "server2/src/budget/store.rs"
+    "server2/src/budget/store.rs",
+    "server2/tests/storage/codec.rs",
+    "server2/tests/storage/shadow_export_fixture.py"
   ],
   "outside": [
     {

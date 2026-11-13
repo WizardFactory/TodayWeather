@@ -39,7 +39,7 @@
       "col": 1,
       "type": "cloud",
       "label": "One host",
-      "sublabel": "intent before AWS"
+      "sublabel": "expiry at first boot"
     },
     {
       "id": "bind",
@@ -71,7 +71,7 @@
       "col": 2,
       "type": "database",
       "label": "Export originals",
-      "sublabel": "bytes and hashes"
+      "sublabel": "bytes + metadata"
     },
     {
       "id": "clean",

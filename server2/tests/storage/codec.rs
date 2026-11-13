@@ -251,3 +251,65 @@ fn absurd_record_keys_are_refused() {
     let id = server2::storage::RecordId::from_object_key(&good).unwrap();
     assert_eq!(id.object_key().unwrap(), good);
 }
+
+#[test]
+fn shadow_export_decodes_after_original_version_is_removed() {
+    use std::{fs, process::Command};
+    struct Scratch(std::path::PathBuf);
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+    let root = Scratch(std::env::temp_dir().join(format!("shadow-export-{}", std::process::id())));
+    fs::create_dir(&root.0).unwrap();
+    let record = record(b"original provider response\x00\xff");
+    let prepared = record.prepare(&Limits::default()).unwrap();
+    let fixture = root.0.join("original.json");
+    fs::write(
+        &fixture,
+        serde_json::to_vec(&serde_json::json!({
+            "key":prepared.key,"body":prepared.body,"metadata":prepared.metadata
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let output = Command::new("python3")
+        .arg(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/storage/shadow_export_fixture.py"),
+        )
+        .arg(&root.0)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!fixture.exists());
+    let manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(root.0.join("export/manifest.json")).unwrap()).unwrap();
+    let entry = &manifest["objects"][0];
+    assert_eq!(
+        entry["headers"]["LastModified"],
+        "2026-11-13T07:00:00+00:00"
+    );
+    assert_eq!(entry["headers"]["ContentType"], "application/gzip");
+    let body = fs::read(root.0.join("export").join(entry["file"].as_str().unwrap())).unwrap();
+    assert_eq!(entry["sha256"], sha256(&body));
+    let restored = decode(
+        entry["key"].as_str().unwrap(),
+        Object {
+            metadata: serde_json::from_value(entry["headers"]["Metadata"].clone()).unwrap(),
+            length: body.len(),
+            body,
+        },
+        &record.envelope.identity,
+        &Limits::default(),
+    )
+    .unwrap();
+    assert_eq!(restored.envelope, record.envelope);
+    assert_eq!(restored.bytes, record.bytes);
+}

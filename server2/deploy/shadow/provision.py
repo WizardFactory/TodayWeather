@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from coordinator import (require, dispatch_recorded, bind_resources, frozen_resources,
                          has_run_tag, delete_versions, inventory, cleanup, CleanupCloud)
-from state import CloudResult, StateError, canonical, absence, Journal
+from state import CloudResult, StateError, canonical, absence, Journal, launch_user_data
 
 
 def cloud_plan(value):
@@ -160,6 +160,7 @@ def provision_resources(cloud,journal,plan,*,now=None):
     token='shadow-'+p['run_id']+'-initial'
     params={'ClientToken':token,'ImageId':p['image'],'InstanceType':'t3.small','MinCount':1,'MaxCount':1,
         'KeyName':p['key_name'],'IamInstanceProfile':{'Name':prefix},
+        'UserData':launch_user_data(p['run_id'],journal.snapshot()['epoch']),
         'NetworkInterfaces':[{'DeviceIndex':0,'SubnetId':p['subnet'],'Groups':[sg],'AssociatePublicIpAddress':True,'DeleteOnTermination':True}],
         'BlockDeviceMappings':[{'DeviceName':p['root_device'],'Ebs':{'VolumeSize':32,'VolumeType':'gp3','Encrypted':True,'DeleteOnTermination':True}}],
         'MetadataOptions':{'HttpTokens':'required','HttpEndpoint':'enabled'},'Monitoring':{'Enabled':False},

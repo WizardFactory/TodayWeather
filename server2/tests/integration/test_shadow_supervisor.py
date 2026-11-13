@@ -79,6 +79,14 @@ class JournalTests(unittest.TestCase):
             j.db.execute("UPDATE requests SET params='{}' WHERE id='bucket'")
             with self.assertRaises(E):j.request('bucket')
 
+    def test_only_exact_original_epoch_expiry_userdata_can_be_journaled(self):
+        with self.create() as j:
+            for script in ('secret material',state.launch_user_data('qualification-1',1001)):
+                with self.assertRaises(E):
+                    j.prepare_request('launch','RunInstances',{'UserData':script},'fixed-token',now=1001)
+            self.assertIsNone(j.request('launch'))
+            j.prepare_request('launch','RunInstances',{'UserData':state.launch_user_data('qualification-1',1000)},'fixed-token',now=1001)
+
     def test_compound_reservation_rejects_all_dimensions_without_partial_spend(self):
         with self.create() as j:
             j.reserve_generation('initial', self.allocation(put_bytes=J.CAPS['put_bytes']), now=1000)
@@ -501,13 +509,34 @@ class OperatorTests(unittest.TestCase):
         self.assertFalse(operator.inventory(cloud,owned_resources())['complete'])
         self.assertEqual(cloud.calls[-1][1]['ContinuationToken'],'next')
 
+    def test_export_retains_original_headers_after_source_removed(self):
+        raw=b'original provider bytes'; headers={'VersionId':'v1','ContentLength':len(raw),
+            'ContentRange':f'bytes 0-{len(raw)-1}/{len(raw)}',
+            'LastModified':'2026-11-13T07:00:00+00:00','ContentType':'application/gzip',
+            'Metadata':{'original':'retained verbatim'}}
+        def body(params,kwargs):
+            kwargs['output'].write_bytes(raw)
+            return cloud_json('GetObject',headers)
+        cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',
+            {'IsTruncated':False,'Versions':[{'Key':'raw/a','VersionId':'v1','Size':len(raw)}]})),
+            ('GetObject',body),('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False}))])
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                operator.export_sources(cloud,j,owned_resources(),root/'evidence')
+            cloud.replies.clear()
+            manifest=json.loads((root/'evidence/manifest.json').read_text())
+            self.assertTrue(manifest['complete'])
+            self.assertEqual(manifest['objects'][0]['headers'],headers)
+            self.assertEqual((root/'evidence'/manifest['objects'][0]['file']).read_bytes(),raw)
+
     def test_export_keeps_original_bytes_and_exact_versions(self):
         raw=b'\x00original\xffprovider body\n';r=owned_resources()
         item={'Key':'raw/a','VersionId':'original-v1','Size':len(raw)}
         def body(params,kwargs):
             self.assertEqual(params,{'Bucket':r['buckets'][0],'Key':'raw/a','VersionId':'original-v1','Range':f'bytes=0-{len(raw)-1}'})
             kwargs['output'].write_bytes(raw)
-            return cloud_json('GetObject',{'VersionId':'original-v1','ContentLength':len(raw),'ContentRange':f'bytes 0-{len(raw)-1}/{len(raw)}'})
+            return cloud_json('GetObject',{'Metadata':{},'LastModified':'2026-11-13T07:00:00Z','VersionId':'original-v1','ContentLength':len(raw),'ContentRange':f'bytes 0-{len(raw)-1}/{len(raw)}'})
         cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[item]})),
                             ('GetObject',body),('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False}))])
         with tempfile.TemporaryDirectory() as temp:
@@ -539,13 +568,44 @@ class OperatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[{'Key':'raw/empty','VersionId':'empty-v1','Size':0}]})),
-                ('HeadObject',cloud_json('HeadObject',{'VersionId':'empty-v1','ContentLength':0})),
+                ('HeadObject',cloud_json('HeadObject',{'Metadata':{},'LastModified':'2026-11-13T07:00:00Z','VersionId':'empty-v1','ContentLength':0})),
                 ('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False}))])
             with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
                 result=operator.export_sources(cloud,j,owned_resources(),root/'evidence')
                 self.assertTrue(result['complete']);self.assertEqual(result['objects'][0]['size'],0)
                 self.assertEqual((root/'evidence'/result['objects'][0]['file']).read_bytes(),b'')
                 self.assertEqual([call[0] for call in cloud.calls],['ListObjectVersions','HeadObject','ListObjectVersions'])
+
+    def test_missing_or_corrupt_original_metadata_cannot_be_complete(self):
+        import base64,copy
+        identity=dict(source='kma',kind='current',key_sha256='a'*64,
+            period=dict(local_date=20260131,slot='2300'),fetched_at_ms=1000,raw_sha256='b'*64)
+        key='raw/v2/kma/current/2026/01/31/2300/'+'a'*64+'/1000-'+'b'*64+'.raw.gz'
+        metadata={'s2-record':base64.b64encode(json.dumps(dict(schema=2,identity=identity)).encode()).decode(),
+                  's2-gzip-sha256':operator.hashlib.sha256(b'raw').hexdigest()}
+        valid=dict(VersionId='v1',ContentLength=3,ContentRange='bytes 0-2/3',
+                   LastModified='2026-11-13T07:00:00Z',Metadata=metadata)
+        for mode in ('missing','timestamp','timezone','hash','base64','key','oversized'):
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
+                answer=copy.deepcopy(valid)
+                if mode=='missing':answer.pop('Metadata')
+                elif mode=='timestamp':answer.pop('LastModified')
+                elif mode=='timezone':answer['LastModified']='2026-11-13T07:00:00'
+                elif mode=='hash':answer['Metadata']['s2-gzip-sha256']='0'*64
+                elif mode=='base64':answer['Metadata']['s2-record']='%'
+                elif mode=='key':
+                    changed=copy.deepcopy(identity);changed['fetched_at_ms']=1001
+                    answer['Metadata']['s2-record']=base64.b64encode(json.dumps(dict(schema=2,identity=changed)).encode()).decode()
+                else:answer['Metadata']['s2-record']='a'*2049
+                def body(params,kwargs):
+                    kwargs['output'].write_bytes(b'raw');return cloud_json('GetObject',answer)
+                cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',
+                    dict(IsTruncated=False,Versions=[dict(Key=key,VersionId='v1',Size=3)]))),('GetObject',body)])
+                root=Path(temp)
+                with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                    with self.assertRaises(E):operator.export_sources(cloud,j,owned_resources(),root/'export')
+                    self.assertEqual(j.reserve_control()['export_bytes'],3)
+                self.assertFalse(json.loads((root/'export/manifest.json').read_text())['complete'])
 
     def test_export_cannot_accept_a_prefix_as_the_complete_source(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -863,11 +923,16 @@ class HostInstallTests(unittest.TestCase):
         def run(self,*args):
             self.calls.append(args)
             if args==self.fail:raise E('injected service failure')
+            if args[0]=='is-enabled':return 'enabled'
             if args[:2]==('show','--property=LoadState'):return 'not-found'
             if args[:2]==('show','--property=ActiveState'):return 'active'
             return ''
 
     def install(self, source, root, system, now=1001):
+        launch=operator.verify_bundle(source)
+        (root/'units').mkdir(exist_ok=True)
+        for unit,content in operator.launch_expiry_units(launch['plan']['run_id'],launch['epoch']).items():
+            (root/'units'/unit).write_text(content)
         return operator.install_host_tree(source,root/'host',root/'units',system,now=now)
 
     def test_install_starts_timers_before_candidate_and_reader_last(self):
@@ -885,6 +950,25 @@ class HostInstallTests(unittest.TestCase):
             before=list(system.calls)
             with self.assertRaises(E):self.install(source,root,system)
             self.assertEqual(system.calls,before)
+
+    def test_install_refuses_missing_changed_or_inactive_launch_expiry(self):
+        for mode in ('missing','changed','inactive','disabled'):
+            with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);source,launch=self.bundle(root);units=root/'units';units.mkdir()
+                if mode!='missing':
+                    for unit,content in operator.launch_expiry_units('test1',1000).items():
+                        (units/unit).write_text(content+('# changed' if mode=='changed' else ''))
+                class System(self.System):
+                    def run(inner,*args):
+                        if args[-1]=='server2-shadow-test1-launch-expiry.timer':
+                            if mode=='inactive' and args[0]=='show':return 'inactive'
+                            if mode=='disabled' and args[0]=='is-enabled':return 'disabled'
+                        return super().run(*args)
+                system=System()
+                with self.assertRaises(E):
+                    operator.install_host_tree(source,root/'host',units,system,now=1001)
+                self.assertFalse((root/'host').exists())
+                self.assertFalse(any(call[0]=='start' for call in system.calls))
 
     def test_failure_retains_exclusive_install_and_stops_all_acquisition(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1305,13 +1389,30 @@ class ProvisionTests(unittest.TestCase):
             self.assertEqual(params['InstanceInitiatedShutdownBehavior'],'terminate')
             self.assertEqual(params['MetadataOptions']['HttpTokens'],'required')
             self.assertEqual(params['NetworkInterfaces'][0]['AssociatePublicIpAddress'],True)
-            self.assertNotIn('UserData',params)
+            self.assertIn('UserData',params)
             policy=json.loads([p for op,p in cloud.calls if op=='PutRolePolicy'][0]['PolicyDocument'])
             self.assertTrue(all('server2-shadow-test1-' in resource for s in policy['Statement'] for resource in s['Resource']))
             self.assertEqual([p for op,p in cloud.calls if op=='AuthorizeSecurityGroupIngress'][0]['IpPermissions'][0]['IpRanges'],[{'CidrIp':'8.8.8.8/32'}])
             before=[op for op,_ in cloud.calls if op in ('CreateBucket','CreateRole','RunInstances')]
             self.assertEqual(provision.provision_resources(cloud,j,provisioning_plan(),now=1002)['status'],'bound')
             self.assertEqual([op for op,_ in cloud.calls if op in ('CreateBucket','CreateRole','RunInstances')],before)
+
+    def test_launch_lost_before_ssh_already_carries_original_expiry(self):
+        import base64
+        with tempfile.TemporaryDirectory() as temp,self.journal(Path(temp)/'journal') as j:
+            cloud=ProvisionCloud(j,failure=('RunInstances','after'));cloud.hidden_instance=True
+            result=provision.provision_resources(cloud,j,provisioning_plan(),now=1001)
+            self.assertEqual(result['reason'],'uncertain_launch')
+            request=j.request('launch')['params']
+            script=base64.b64decode(request['UserData']).decode()
+            self.assertTrue(script.startswith('#!/bin/bash\n'))
+            self.assertIn(str(1000+170*3600),script)
+            self.assertIn('systemctl',script)
+            self.assertIn('poweroff',script)
+            self.assertEqual(subprocess.run(['bash','-n'],input=script,text=True,capture_output=True).returncode,0)
+            # The complete launch request is durable even without any SSH effect.
+            self.assertIsNone(j.request('host-install'))
+            self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
 
     def test_profile_propagation_wait_does_not_reset_plan_or_repeat_creations(self):
         with tempfile.TemporaryDirectory() as temp,self.journal(Path(temp)/'journal') as j:
