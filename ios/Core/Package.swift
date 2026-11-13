@@ -25,5 +25,12 @@ let package = Package(
         // treat the bundle as the old layout and move its resource URL into that folder.
         .target(name: "TWResources", resources: [.copy("Client")]),
         .testTarget(name: "TWResourcesTests", dependencies: ["TWResources"]),
+        .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
+        // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
+        // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by
+        // ios/tools/corpus/compare_jsc.py; for those the iOS expectation is the JavaScriptCore output. The yesterday
+        // texts come from the imported catalogs in TWResources, as the app reads them.
+        .testTarget(name: "TWDomainTests", dependencies: ["TWDomain", "TWModel", "TWResources"],
+                    resources: [.copy("Corpus"), .copy("JavaScriptCore")]),
     ]
 )
