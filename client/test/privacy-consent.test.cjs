@@ -76,27 +76,7 @@ test('native install defaults deny collection and advertising, with iOS Analytic
     assert.equal(p.FIREBASE_ANALYTICS_WITHOUT_ADS,'true');
 });
 
-test('iOS preparation enforces nonpersonalized requests and fails on unsupported plugin drift', () => {
-    const os=require('node:os'); const hook=require('../scripts/ios-no-tracking.js');
-    const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tw-privacy-hook-'));
-    try {
-        const app=path.join(dir,'platforms/ios/App'); fs.mkdirSync(path.join(app,'Plugins/emi-indo-cordova-plugin-admob'),{recursive:true});
-        const plist=path.join(app,'App-Info.plist'), native=path.join(app,'Plugins/emi-indo-cordova-plugin-admob/emiAdmobPlugin.m');
-        fs.writeFileSync(plist,'<plist><dict><key>NSUserTrackingUsageDescription</key><string>Tracking</string></dict></plist>');
-        fs.writeFileSync(native,'- (void)setAdRequest {\n    if (isUsingAdManagerRequest) {\n        self.globalRequest = [GAMRequest request];\n    } else {\n        self.globalRequest = [GADRequest request];\n    }\n\n    if (isEnabledKeyword && setKeyword.length > 0) {\n    }\n}');
-        const pkg=path.join(dir,'platforms/ios/packages/cordova-plugin-firebasex-analytics/Package.swift');
-        fs.mkdirSync(path.dirname(pkg),{recursive:true});
-        fs.writeFileSync(pkg,'let analyticsSPMVariant = "core"\n.product(name: "GoogleTagManager", package: "google-tag-manager-ios-sdk"),');
-        hook({opts:{platforms:['ios'],projectRoot:dir}});
-        assert.doesNotMatch(fs.readFileSync(pkg,'utf8'),/\.product\(name: "GoogleTagManager"/);
-        const first=fs.readFileSync(native,'utf8');
-        assert.match(first,/setPublisherFirstPartyIDEnabled:NO/); assert.match(first,/@"npa"\s*:\s*@"1"/);
-        assert.doesNotMatch(fs.readFileSync(plist,'utf8'),/NSUserTrackingUsageDescription/);
-        hook({opts:{platforms:['ios'],projectRoot:dir}}); assert.equal(fs.readFileSync(native,'utf8'),first);
-        fs.writeFileSync(native,'unknown updated plugin'); assert.throws(()=>hook({opts:{platforms:['ios'],projectRoot:dir}}),/privacy.*anchor/i);
-    } finally { fs.rmSync(dir,{recursive:true,force:true}); }
-});
-
+// The iOS prepare hook (request rule, purpose strings, GTM removal) is covered in ios-ad-privacy.test.cjs.
 test('iOS collection and consent defaults are explicit even when plugin installation ignores them', () => {
     const xml=fs.readFileSync(path.join(root,'config.xml'),'utf8');
     for (const key of ['FIREBASE_ANALYTICS_COLLECTION_ENABLED','GOOGLE_ANALYTICS_DEFAULT_ALLOW_ANALYTICS_STORAGE',

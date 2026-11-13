@@ -33,7 +33,7 @@
    "step": "back",
    "page": "#/tab/forecast",
    "popups": 0,
-   "menu": true,
+   "menu": false,
    "choice": false,
    "stored": null,
    "opened": [],
@@ -41,7 +41,7 @@
    "popupTexts": [],
    "early": {
     "popups": 0,
-    "menu": true
+    "menu": false
    }
   },
   {
@@ -161,7 +161,7 @@
    "step": "about back",
    "page": "#/tab/forecast",
    "popups": 0,
-   "menu": true,
+   "menu": false,
    "choice": false,
    "stored": "false",
    "opened": [
@@ -183,7 +183,7 @@
    "popupTexts": [],
    "early": {
     "popups": 0,
-    "menu": true
+    "menu": false
    }
   }
  ]

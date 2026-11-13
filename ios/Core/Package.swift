@@ -34,8 +34,10 @@ let package = Package(
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
         // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by
         // ios/tools/corpus/compare_jsc.py; for those the iOS expectation is the JavaScriptCore output. The yesterday
-        // texts come from the imported catalogs in TWResources, as the app reads them.
+        // texts come from the imported catalogs in TWResources, as the app reads them. ChartReference: the Cordova chart
+        // scenes, copied from android/ by ios/tools/import_chart_reference.py and captured on iOS Simulators by
+        // ios/tools/chart-reference.
         .testTarget(name: "TWDomainTests", dependencies: ["TWDomain", "TWModel", "TWResources"],
-                    resources: [.copy("Corpus"), .copy("JavaScriptCore")]),
+                    resources: [.copy("Corpus"), .copy("JavaScriptCore"), .copy("ChartReference")]),
     ]
 )

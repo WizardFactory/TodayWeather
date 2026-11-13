@@ -24,7 +24,7 @@ Weather/geocoding can be served through AWS and forwarded to provider services. 
 - Analytics native defaults and all four consent categories start disabled/denied. `Monetization` reads only the dedicated `twAnalyticsConsentV1` explicit choice, never treating prior SDK defaults as consent. The settings menu offers optional Allow and Decline/withdraw; malformed/missing choices remain off. JS events stop immediately on withdrawal, and native consent/collection updates guard stale callbacks. Advertising storage/user data/personalization remain denied even after analytics consent. Historical events are not automatically purged by withdrawal.
 - FirebaseX2.0.2 install variables do not write iOS collection/consent Info.plist defaults. `config.xml` explicitly supplies them. Verify the built plist, not only package options. Existing SDK runtime preferences can override defaults on upgrades; validate the currently published app's upgrade path on physical devices before asserting absence of pre-JS traffic.
 - Android requests disabled Analytics ad-ID collection. That setting covers Analytics only: the Google Mobile Ads SDK still merges `com.google.android.gms.permission.AD_ID`, even with `ADD_AD_ID=false` (observed in debug and development APKs on 2026-11-07, #2871; the release AAB was not inspected). Declare advertising-ID use for ads in the Play data-safety and advertising-ID forms, and inspect the release manifest and actual AdMob processing. Denied Analytics is not a claim that Ads, Crashlytics, Messaging or Remote Config collect no data.
-- iOS selects Core Analytics, disables Analytics IDFV/ad-network registration and requests no ATT. The guarded `ios-no-tracking.js` prepare hook removes unused GTM from the generated Analytics package (it otherwise pulls IdentitySupport back in) and enforces nonpersonalized AdMob requests plus publisher first-party-ID off. A GTM container or unsupported plugin request/dependency anchor fails the build. This is current source/build intent, not a whole-app tracking certification; final archive/network/SDK manifest review remains required.
+- iOS selects Core Analytics and disables Analytics IDFV/ad-network registration; Analytics does not use IDFA. Since #2945 the app asks for App Tracking Transparency through UMP (see [iOS App Tracking Transparency](#ios-app-tracking-transparency-2945)). The guarded `ios-ad-privacy.js` prepare hook removes unused GTM from the generated Analytics package (it otherwise pulls IdentitySupport back in), applies the AdMob request rule and checks the purpose strings. A GTM container or unsupported plugin request/dependency anchor fails the build. This is current source/build intent, not a whole-app tracking certification; final archive/network/SDK manifest review remains required.
 - iOS location purpose strings: App Review rejected the 1.1.0 submission for `cordova.plugins.diagnostic`'s placeholder Always-location text (#2855). The app requests only when-in-use authorization, but the plugin still injects the Always keys and compiles code that requests Always authorization, so `config.xml` overrides all three location keys with a foreground-only description instead of deleting them. [ios-location-purpose.test.cjs](../../client/test/ios-location-purpose.test.cjs) guards the overrides. Re-check the generated `App-Info.plist` after plugin upgrades or when adding a diagnostic module, because each module injects its own placeholder.
 - App privacy manifest now marks location/device ID linked because push associates coordinates with UUID/token. SDK manifests remain separate evidence and must be reconciled for final declarations.
 - No universal schema TTL exists. Source-only tracing also found 60-day cleanup for selected alarms in a send pipeline; it does not establish deployed cleanup for all alarm/alert records, optional SQLite/S3 storage or logs. See the [retention/deletion controls](store-data-retention.md). No customer record deletion or retention setting was applied in this phase.
@@ -45,7 +45,7 @@ These are candidate selections, not submitted answers. Collection includes SDK b
 | Crash/performance diagnostics | Collected by enabled SDKs | Final archive privacy report and account retention |
 | Support contact/content | Review optional-disclosure criteria before selection | Final inbox and support process; no in-app account registration |
 | Linked to user (Apple) | Include data associated with device identifiers; lack of login is insufficient | Final per-data-type treatment |
-| Tracking (Apple) | Unresolved | Choose and verify SDK configuration/consent before selecting yes/no |
+| Tracking (Apple) | Yes, after ATT permission: Device ID (advertising identifier) used by AdMob for third-party advertising and measurement | Device evidence for allow and decline; Xcode privacy report of the final archive (#2945) |
 | Shared (Play) | AdMob sharing must be included | Assess service-provider exceptions per recipient instead of applying them to every SDK |
 | Ephemeral-only location | Not established | URL logs, caches and stored push coordinates prevent a blanket assertion |
 | All data encrypted in transit | Not verified | Recheck every user-data network hop |
@@ -53,6 +53,40 @@ These are candidate selections, not submitted answers. Collection includes SDK b
 | Account creation | No current weather-app account flow found | Correct old App Review `demoAccountRequired=true` in the next version |
 
 Age-rating draft: advertising is present; no chat/social-network/user-generated-content feature was found in the inspected weather flow. Air-quality health guidance exists, so review the health/wellness question explicitly. New null fields are unanswered, not “No.” Do not automatically reuse the old rating.
+
+## iOS App Tracking Transparency (#2945)
+
+AK approved ATT on 2026-11-13 ([#2660 decision](https://github.com/WizardFactory/TodayWeather/issues/2660#issuecomment-6841327261)).
+It replaces the 2026-10-01 "no ATT request" direction for iOS. Purpose: personalized advertising and ad measurement
+through AdMob only. Firebase Analytics may not use IDFA. Android is unchanged.
+
+Source behaviour (not yet device evidence):
+
+- UMP shows the GDPR message where it applies, then the AdMob IDFA explainer or the system ATT prompt. The app code
+  never requests ATT itself ([adapter](../../client/www/js/service.admobemi.js)). The adapter starts banner requests only
+  after the SDK started and the consent call answered.
+- The [prepare hook](../../client/scripts/ios-ad-privacy.js) copies the [request rule](../../client/scripts/ios-ad-request-rule.h)
+  into the generated plugin source. A request is personalized only when ATT is authorized and, where
+  `IABTCF_gdprApplies` is 1, TCF purposes 1, 3 and 4 are consented. Denied, restricted, not determined and unavailable
+  keep `npa=1` and the publisher first-party ID off.
+- Purpose strings for ko, en, ja, zh-Hans and zh-Hant are in `client/resources/ios/tracking/`. The build fails when one
+  is missing. [Tests](../../client/test/ios-ad-privacy.test.cjs) run the rule for every status and each guard.
+- For Analytics opt-in users the app sets the user property `att_status`. No advertising identifier is sent to Analytics.
+- The Google Mobile Ads SDK 13.3 privacy manifest in the build marks only Device ID as used for tracking. The app-level
+  manifest in `config.xml` covers the app's own code, which does not track; check the aggregated Xcode privacy report
+  of the final archive.
+
+App Store Connect answers to submit with the release (AK-owned, not submitted by this change):
+
+| Question | Answer to submit |
+| --- | --- |
+| Data used to track you | Identifiers: Device ID |
+| Device ID purposes | Third-party advertising; keep the existing app functionality and analytics answers |
+| Advertising data, product interaction, coarse location, diagnostics | Collected by the Ads SDK, not used for tracking per its manifest; keep as collected data |
+
+Remaining gates: publish the IDFA explainer message in AdMob Privacy & messaging; device evidence for the prompt order,
+the single prompt and the allow/decline request modes; behaviour of shipped builds without a purpose string after the
+message is published; whether the ATT alert follows a refused GDPR message; upload of the updated policy pages.
 
 ## Decisions and remaining publication gates
 

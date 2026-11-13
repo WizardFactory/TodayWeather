@@ -28,7 +28,7 @@
     <preference name="cordova.plugins.diagnostic.modules" value="LOCATION" />
     <!-- Real AdMob app IDs come from client/.env at prepare time; package.json keeps Google's sample IDs. -->
     <hook type="after_prepare" src="scripts/admob-app-id.js" />
-    <hook type="after_prepare" src="scripts/ios-no-tracking.js" />
+    <hook type="after_prepare" src="scripts/ios-ad-privacy.js" />
     <platform name="android">
         <!-- Ionic routes own screen_view; suppress automatic Activity-level duplicates. -->
         <config-file target="AndroidManifest.xml" parent="application">
@@ -100,7 +100,9 @@
         <!--
           App-level privacy manifest. Firebase and Google Mobile Ads ship their own manifests for what they collect.
           The app sends the device position (rounded to 3 decimals) for weather and a device/push identifier for
-          push settings; location is linked to the device record, without an app login or tracking use. The plugins compiled into the app
+          push settings; location is linked to the device record, without an app login or tracking use. Tracking with the
+          advertising identifier happens only inside the Ads SDK after ATT permission and is declared by its manifest
+          (#2945). The plugins compiled into the app
           (firebasex, emi admob, app-preferences) use NSUserDefaults, including the App Group suite.
         -->
         <privacy-manifest>
@@ -161,5 +163,15 @@
         <edit-config file="*-Info.plist" mode="merge" target="NSLocationAlwaysUsageDescription">
             <string>TodayWeather uses your location only while you use the app, to show the current weather and forecast where you are. For example, it shows the hourly forecast and air quality for your current neighborhood.</string>
         </edit-config>
+        <!--
+          App Tracking Transparency (#2945): the purpose string in every App Store locale. iOS reads it from these
+          folders; scripts/ios-ad-privacy.js writes the English text into App-Info.plist and fails the build when one
+          is missing. The folders also make iOS show system dialogs in these languages.
+        -->
+        <resource-file src="resources/ios/tracking/ko.lproj" target="ko.lproj" />
+        <resource-file src="resources/ios/tracking/en.lproj" target="en.lproj" />
+        <resource-file src="resources/ios/tracking/ja.lproj" target="ja.lproj" />
+        <resource-file src="resources/ios/tracking/zh-Hans.lproj" target="zh-Hans.lproj" />
+        <resource-file src="resources/ios/tracking/zh-Hant.lproj" target="zh-Hant.lproj" />
     </platform>
 </widget>

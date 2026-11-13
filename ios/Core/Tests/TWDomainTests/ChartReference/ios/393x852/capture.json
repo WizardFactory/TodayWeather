@@ -1,0 +1,63 @@
+{
+ "size": "393x852",
+ "capturedAt": "2026-11-13T08:10:41Z",
+ "env": {
+  "screen": {
+   "width": 393,
+   "height": 852
+  },
+  "viewport": {
+   "width": 393,
+   "height": 852
+  },
+  "devicePixelRatio": 3,
+  "language": "ko-KR",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+  "theme": "light"
+ },
+ "device": {
+  "name": "tw_cap_16",
+  "udid": "9CAAD5CA-A41F-4C19-808E-907D3E1F6F48",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+ },
+ "webViewOrigins": [
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "fixtures": [
+  "kma-seoul",
+  "vc-london",
+  "kma-jeju",
+  "vc-newyork",
+  "vc-sydney",
+  "vc-tokyo",
+  "kma-seoul-fahrenheit",
+  "kma-rain-everywhere",
+  "kma-current-index-first",
+  "kma-midnight-today-first-day",
+  "kma-seoul-sharp"
+ ]
+}

@@ -144,6 +144,31 @@ claim restoration until each AK step below is recorded in #2871:
    in their own columns, not in client metrics. `ad_load_error` codes from consenting
    Analytics users show the client-side no-fill/network mix; they are not fill rate.
 
+## iOS App Tracking Transparency measurement (#2945)
+
+The app asks for ATT through UMP from the release that contains #2945. Report its effect with two sources and keep
+them in separate tables.
+
+1. **AdMob report (authoritative for requests, match rate, show rate and eCPM).** Filter platform iOS and the weather
+   app. Dimensions: date, app version (`APP_VERSION_NAME`) and serving restriction (`SERVING_RESTRICTION`). Metrics: ad
+   requests, matched requests, match rate, show rate, impressions and impression RPM (eCPM), as defined by the
+   [AdMob report API](https://developers.google.com/admob/api/reference/rest/v1/accounts.networkReport/generate).
+   AdMob has no ATT status dimension, and serving restriction is not ATT status. Personalized rows come only from
+   users who allowed tracking. Non-personalized rows mix every other ATT status with users who allowed tracking but
+   whose stored consent does not permit personalization (where GDPR applies). The personalized share is therefore a
+   lower bound of the ATT allow rate; take the status mix from the Analytics query below. Keep match rate
+   (matched/requests) and show rate (impressions/matched) in separate columns.
+2. **Analytics query (ATT status detail).** [ios-att-monetization.sql](../../client/analytics/ios-att-monetization.sql)
+   groups iOS active installations, initial banner requests, load failures, impressions, estimated revenue and eCPM by
+   date, app version and the `att_status` user property. It covers only installations that opted in to Analytics, so
+   use it for the status mix and per-status eCPM, not for totals. It cannot give match rate or show rate.
+
+Before/after comparison: use the last full 14 days of the previous iOS version and the first full 14 days after the ATT
+release reaches most active users, same weekdays, same countries, same ad unit. State the date range and timezone, app
+versions, GMA SDK version and the consent-message state (IDFA message published or not). Report the share of
+personalized requests next to match rate and eCPM, and do not label it as the ATT allow rate. The device console line
+`{"component":"admob","operation":"request_policy",...}` shows the status and request mode of one installation.
+
 ## Verification commands and remaining gates
 
 ```sh

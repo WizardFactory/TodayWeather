@@ -1,0 +1,234 @@
+{
+ "source": "ios/tools/chart-reference/capture.py manifest, from Core/Tests/TWDomainTests/ChartReference/ios",
+ "input": "kma-seoul.input.json: the response served for kma-seoul (Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul.json)",
+ "language": "ko",
+ "units": {
+  "precip": "mm",
+  "wind": "m/s"
+ },
+ "theme": "light",
+ "sizes": {
+  "375x667": {
+   "devicePixelRatio": 2,
+   "fixture": "kma-seoul",
+   "hourly": {
+    "wrapperHeight": 384.421875,
+    "positions": {
+     "opening": {
+      "scrollLeft": 375,
+      "file": "375x667-hourly-opening.png",
+      "pixels": {
+       "x": 0,
+       "y": 212,
+       "width": 750,
+       "height": 769
+      }
+     },
+     "start": {
+      "scrollLeft": 0,
+      "file": "375x667-hourly-start.png",
+      "pixels": {
+       "x": 0,
+       "y": 212,
+       "width": 750,
+       "height": 769
+      }
+     },
+     "end": {
+      "scrollLeft": 1393,
+      "file": "375x667-hourly-end.png",
+      "pixels": {
+       "x": 0,
+       "y": 212,
+       "width": 750,
+       "height": 769
+      }
+     }
+    }
+   },
+   "daily": {
+    "wrapperHeight": 265.78125,
+    "positions": {
+     "opening": {
+      "scrollLeft": 267,
+      "file": "375x667-daily-opening.png",
+      "pixels": {
+       "x": 0,
+       "y": 350,
+       "width": 750,
+       "height": 532
+      }
+     },
+     "start": {
+      "scrollLeft": 0,
+      "file": "375x667-daily-start.png",
+      "pixels": {
+       "x": 0,
+       "y": 350,
+       "width": 750,
+       "height": 532
+      }
+     },
+     "end": {
+      "scrollLeft": 536,
+      "file": "375x667-daily-end.png",
+      "pixels": {
+       "x": 0,
+       "y": 350,
+       "width": 750,
+       "height": 532
+      }
+     }
+    }
+   }
+  },
+  "393x852": {
+   "devicePixelRatio": 3,
+   "fixture": "kma-seoul",
+   "hourly": {
+    "wrapperHeight": 396.234375,
+    "positions": {
+     "opening": {
+      "scrollLeft": 393,
+      "file": "393x852-hourly-opening.png",
+      "pixels": {
+       "x": 0,
+       "y": 636,
+       "width": 1179,
+       "height": 1189
+      }
+     },
+     "start": {
+      "scrollLeft": 0,
+      "file": "393x852-hourly-start.png",
+      "pixels": {
+       "x": 0,
+       "y": 636,
+       "width": 1179,
+       "height": 1189
+      }
+     },
+     "end": {
+      "scrollLeft": 1460,
+      "file": "393x852-hourly-end.png",
+      "pixels": {
+       "x": 0,
+       "y": 636,
+       "width": 1179,
+       "height": 1189
+      }
+     }
+    }
+   },
+   "daily": {
+    "wrapperHeight": 274.265625,
+    "positions": {
+     "opening": {
+      "scrollLeft": 280,
+      "file": "393x852-daily-opening.png",
+      "pixels": {
+       "x": 0,
+       "y": 738,
+       "width": 1179,
+       "height": 823
+      }
+     },
+     "start": {
+      "scrollLeft": 0,
+      "file": "393x852-daily-start.png",
+      "pixels": {
+       "x": 0,
+       "y": 738,
+       "width": 1179,
+       "height": 823
+      }
+     },
+     "end": {
+      "scrollLeft": 561,
+      "file": "393x852-daily-end.png",
+      "pixels": {
+       "x": 0,
+       "y": 738,
+       "width": 1179,
+       "height": 823
+      }
+     }
+    }
+   }
+  },
+  "440x956": {
+   "devicePixelRatio": 3,
+   "fixture": "kma-seoul",
+   "hourly": {
+    "wrapperHeight": 422,
+    "positions": {
+     "opening": {
+      "scrollLeft": 420,
+      "file": "440x956-hourly-opening.png",
+      "pixels": {
+       "x": 0,
+       "y": 595,
+       "width": 1320,
+       "height": 1266
+      }
+     },
+     "start": {
+      "scrollLeft": 0,
+      "file": "440x956-hourly-start.png",
+      "pixels": {
+       "x": 0,
+       "y": 595,
+       "width": 1320,
+       "height": 1266
+      }
+     },
+     "end": {
+      "scrollLeft": 1540,
+      "file": "440x956-hourly-end.png",
+      "pixels": {
+       "x": 0,
+       "y": 595,
+       "width": 1320,
+       "height": 1266
+      }
+     }
+    }
+   },
+   "daily": {
+    "wrapperHeight": 293,
+    "positions": {
+     "opening": {
+      "scrollLeft": 300,
+      "file": "440x956-daily-opening.png",
+      "pixels": {
+       "x": 0,
+       "y": 868,
+       "width": 1320,
+       "height": 879
+      }
+     },
+     "start": {
+      "scrollLeft": 0,
+      "file": "440x956-daily-start.png",
+      "pixels": {
+       "x": 0,
+       "y": 868,
+       "width": 1320,
+       "height": 879
+      }
+     },
+     "end": {
+      "scrollLeft": 580,
+      "file": "440x956-daily-end.png",
+      "pixels": {
+       "x": 0,
+       "y": 868,
+       "width": 1320,
+       "height": 879
+      }
+     }
+    }
+   }
+  }
+ }
+}
