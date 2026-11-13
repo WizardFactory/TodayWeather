@@ -96,6 +96,17 @@ public final class PushReplacementLog: @unchecked Sendable {
         }
     }
 
+    /// Clears the acknowledgement of the entries `ids` (a new process replays them all again: an entry an earlier
+    /// process saw answered behind an unanswered one must be applied again after it).
+    public func reopen(_ ids: Set<Int>) throws {
+        try Self.lock.withLock {
+            var c = try read()
+            guard c.entries.contains(where: { ids.contains($0.id) && $0.acked }) else { return }
+            c.entries = c.entries.map { ids.contains($0.id) ? Entry(id: $0.id, old: $0.old, new: $0.new) : $0 }
+            try write(c)
+        }
+    }
+
     /// A missing file is an empty log, and so is a file that is not a log (it is replaced by the next write). A file
     /// that exists but cannot be read now (data protection) throws.
     private func read() throws -> Contents {

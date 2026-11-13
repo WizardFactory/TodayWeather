@@ -4,79 +4,66 @@ import TWData
 import TWModel
 import TWStorage
 
-/// Counts the steps of a `PushSync` and ends the process after step `crashAt` (nil: never).
-final class CrashPlan: @unchecked Sendable {
-    private let lock = NSLock()
-    private var count = 0
-    let crashAt: Int?
-
-    init(crashAt: Int?) { self.crashAt = crashAt }
-
-    var steps: Int { lock.withLock { count } }
-
-    func hook(_ step: PushSync.Step) -> Bool {
-        lock.withLock {
-            count += 1
-            return count == crashAt
-        }
-    }
-}
-
-/// Crash recovery of token replacements against a model of the legacy server (IN-04 review round 3,
-/// CODEX-IN04-4..5): the oracle is the server's records, not the requests alone.
+/// Crash recovery of token replacements against a model of the legacy server (IN-04 review rounds 3–4,
+/// CODEX-IN04-4..7): the oracle is the server's records. Requests reach the server only when the test delivers them;
+/// a process ends through its dependencies (`ProcessEnd`), and a new `PushSync` then runs over the same files.
 struct PushRecoveryTests {
-    enum Replies: String, CaseIterable, Sendable {
-        /// Each reply at once.
-        case atOnce
-        /// Every reply held until the end of process 1, then answered newest first.
-        case newestFirst
-        /// The first replacement reaches the server but its reply is lost (nil); the others answer in order.
-        case firstReplyLost
-    }
-
     struct Run {
         let server: ServerModel
         let files: Files
-        let steps: Int
+        let operations: Int
     }
 
-    /// Process 1 on the Cordova timeline: the app was stored with token A and the server holds its records under A;
-    /// the open at 0 s gets token B from FCM, token C arrives at 1 s, the list post at 3 s, token B again at 4 s.
-    /// It ends after step `crashAt` (nil: it does not). Process 2 then starts and opens with FCM's token B, and every
-    /// reply arrives.
-    static func run(crashAt: Int?, replies: Replies) async throws -> Run {
+    /// Process 1 on the Cordova timeline: stored token A, the server's records under A; the open at 0 s gets token B
+    /// from FCM, token C arrives at 1 s, the list post at 3 s, token B again at 4 s. Its requests reach the server in
+    /// the order they were sent (without `seed` all at once after each event, with `seed` a random number of them
+    /// after each event). It ends at operation `endAt` (nil: never); requests it sent and the server has not got are
+    /// then delivered or lost (without `seed` lost). Process 2 then starts, opens with FCM's token B, and its requests
+    /// are delivered (with `seed` in a random order among those waiting).
+    static func run(endAt: Int?, seed: UInt64?) async throws -> Run {
         let files = Files()
         try files.seed(token: "token-a")
         let server = seededServer(token: "token-a")
-        let plan = CrashPlan(crashAt: crashAt)
+        var rng = SeededRandom(seed: seed ?? 0)
         let clock = VirtualClock()
-        let first = ScriptedServerTransport(server: server, answerAtOnce: { _ in replies == .atOnce })
-        let p1 = PushSync(store: files.store, log: files.log, transport: first, clock: clock,
-                          crash: { plan.hook($0) }, context: Files.context)
+        let first = DeliveredServerTransport(server: server)
+        let end = ProcessEnd.at(endAt)
+        let p1 = files.process(first, end: end, clock: clock)
+        func deliverSome() {
+            let pending = first.pending
+            let n = seed == nil ? pending.count : Int.random(in: 0...pending.count, using: &rng)
+            for i in pending.prefix(n) { first.deliver(i) }
+        }
         let open = Task { await p1.open { "token-b" } }
-        _ = await eventually { let started = await p1.openStarts == 1; let stopped = await p1.stopped; return started || stopped }
+        _ = await eventually { let started = await p1.openStarts == 1; return started || end.hasEnded }
+        deliverSome()
         clock.advance(to: .seconds(1))
         await p1.tokenArrived("token-c")
+        deliverSome()
         clock.advance(to: .seconds(3))
-        _ = await eventually { let posted = await p1.reposts == 1; let stopped = await p1.stopped; return posted || stopped }
+        _ = await eventually { let posted = await p1.reposts == 1; return posted || end.hasEnded }
+        deliverSome()
         clock.advance(to: .seconds(4))
         await p1.tokenArrived("token-b")
-        switch replies {
-        case .atOnce: break
-        case .newestFirst:
-            for i in first.requests.indices.reversed() { first.answer(i) }
-        case .firstReplyLost:
-            for i in first.requests.indices { first.answer(i, status: i == 0 ? .some(nil) : .none) }
+        if end.hasEnded {
+            for i in first.pending {
+                if seed != nil && Bool.random(using: &rng) { first.deliver(i) } else { first.drop(i) }
+            }
+        } else {
+            for i in first.pending { first.deliver(i) }
         }
-        #expect(await eventually { await p1.pendingReplies == 0 })
+        _ = await eventually { await p1.pendingReplies == 0 }
+        clock.advance(to: .seconds(60))
         _ = await open.value
 
-        let second = ScriptedServerTransport(server: server)
+        let second = DeliveredServerTransport(server: server)
         let p2 = files.sync(second)
         await p2.start()
-        _ = await p2.open { "token-b" }
-        #expect(await eventually { await p2.pendingReplies == 0 })
-        return Run(server: server, files: files, steps: plan.steps)
+        var pickRng = SeededRandom(seed: (seed ?? 0) &+ 1)
+        await openPumped(p2, second, token: "token-b") { pending in
+            seed == nil ? pending[0] : pending.randomElement(using: &pickRng)!
+        }
+        return Run(server: server, files: files, operations: end.operations)
     }
 
     static func expectConverged(_ run: Run, _ label: String) {
@@ -86,61 +73,75 @@ struct PushRecoveryTests {
         #expect(run.files.storedToken == "token-b", "\(label): state token")
     }
 
-    /// For every step boundary of process 1 (log append, state write, send, reply, list post) and each reply
-    /// pattern: ending the process there, restarting and letting every reply arrive gives the outcome without the
-    /// crash, every record once under the final token, an empty log and the final token in the state.
-    @Test(arguments: Replies.allCases)
-    func everyCrashPointConverges(replies: Replies) async throws {
-        let clean = try await Self.run(crashAt: nil, replies: replies)
-        Self.expectConverged(clean, "\(replies) without a crash")
-        #expect(clean.steps >= 10, "the timeline has its steps: \(clean.steps)")
-        for k in 1...clean.steps {
-            Self.expectConverged(try await Self.run(crashAt: k, replies: replies), "\(replies), crash after step \(k)")
+    /// Ending process 1 at every operation on its state store, log and transport (reads, the log append, the state
+    /// write, each send, each acknowledgement), restarting and delivering everything gives the outcome without the
+    /// crash: every record once under the final token, an empty log and the final token in the state.
+    @Test func everyCrashPointConverges() async throws {
+        let clean = try await Self.run(endAt: nil, seed: nil)
+        Self.expectConverged(clean, "without a crash")
+        #expect(clean.operations >= 20, "operations: \(clean.operations)")
+        for k in 1...clean.operations {
+            Self.expectConverged(try await Self.run(endAt: k, seed: nil), "ended at operation \(k)")
         }
     }
 
-    // MARK: - The reviewer's reproductions (round 3)
+    /// Random crash points, random delivery timing in process 1 (in send order), random loss of what process 1 sent
+    /// before it ended, and random delivery order in process 2: the server always converges.
+    @Test func randomCrashesAndDeliveryOrdersConverge() async throws {
+        let bound = try await Self.run(endAt: nil, seed: nil).operations
+        var rng = SeededRandom(seed: 2953)
+        for _ in 0..<150 {
+            let seed = rng.next()
+            let k = Int.random(in: 1...(bound + 5), using: &rng)
+            Self.expectConverged(try await Self.run(endAt: k, seed: seed), "seed \(seed), ended at operation \(k)")
+        }
+    }
 
-    /// CODEX-IN04-4: the process ends after the log took B←A and before the state did. The next process completes
-    /// the transition (state B), sends B←A again, and the next token C is sent over B, so the list post finds the
-    /// records under C only.
-    @Test func codexIn04_4_crashBetweenLogAndStateCompletesTheTransition() async throws {
+    // MARK: - The reviewer's reproductions
+
+    /// CODEX-IN04-6: the server holds the records under B, the log A→B, B→C, C→B. The replay sends one entry at a
+    /// time, the next when the previous reply arrived, so the server applies them in order and the records stay under
+    /// B; with all three at once the server could apply 1, 3, 2 and end at C.
+    @Test func codexIn04_6_replayIsSequential() async throws {
         let files = Files()
-        try files.seed(token: "token-a")
-        let server = seededServer(token: "token-a")
-        let p1 = PushSync(store: files.store, log: files.log, transport: ScriptedServerTransport(server: server),
-                          clock: ContinuousClock(), crash: { $0 == .logAppended }, context: Files.context)
-        #expect(await p1.tokenArrived("token-b").isEmpty, "nothing sent before the crash")
-        #expect(files.storedToken == "token-a")
-        let transport = ScriptedServerTransport(server: server)
-        let p2 = files.sync(transport)
-        await p2.start()
-        #expect(files.storedToken == "token-b", "the state completes the transition")
-        await p2.tokenArrived("token-c")
-        _ = await p2.open { "token-c" }
-        #expect(await eventually { await p2.pendingReplies == 0 })
-        #expect(transport.requests.map { replacement($0.request) }.filter { !$0.isEmpty } ==
-                [["token-b", "token-a"], ["token-c", "token-b"]])
-        #expect(server.tokens == ["token-c"], "\(server.keys)")
+        try files.seed(token: "token-b")
+        let server = seededServer(token: "token-b")
+        try files.log.append(old: "token-a", new: "token-b")
+        try files.log.append(old: "token-b", new: "token-c")
+        try files.log.append(old: "token-c", new: "token-b")
+        let transport = DeliveredServerTransport(server: server)
+        let sync = files.sync(transport)
+        await sync.start()
+        var order: [[String?]] = []
+        for _ in 0..<10 {
+            _ = await eventually { if !transport.pending.isEmpty { return true }; return await !sync.isReplaying }
+            let pending = transport.pending
+            if pending.isEmpty { break }
+            #expect(pending.count == 1, "one replacement in flight at a time: \(pending.count)")
+            order.append(replacement(transport.requests[pending.last!].request))
+            transport.deliver(pending.last!)
+        }
+        #expect(order == [["token-b", "token-a"], ["token-c", "token-b"], ["token-b", "token-c"]])
+        #expect(server.tokens == ["token-b"], "\(server.keys)")
         #expect(server.records == ["ios/1/1", "ios/1/2"])
         #expect(files.logEntries.isEmpty)
     }
 
-    /// CODEX-IN04-4: a first token B; the process ends after its replacement was sent and before its list post. The
-    /// next process sends the replacement again and its open posts the list under B.
-    @Test func codexIn04_4_firstTokenCrashBeforeItsListPost() async throws {
+    /// CODEX-IN04-4: a first token B was logged and stored, and the process ended before its list post. A process
+    /// start alone (no open) replays it as Cordova's first-token path does: the replacement, then the list with B.
+    @Test func codexIn04_4_firstTokenReplayPostsTheListWithoutAnOpen() async throws {
         let files = Files()
         try files.seed(token: nil)
         let server = ServerModel()
-        let p1 = PushSync(store: files.store, log: files.log, transport: ScriptedServerTransport(server: server),
-                          clock: ContinuousClock(), crash: { $0 == .requestStarted }, context: Files.context)
-        #expect(await p1.tokenArrived("token-b").map(\.method) == ["PUT"], "the list post never left")
-        #expect(server.keys.isEmpty)
-        let transport = ScriptedServerTransport(server: server)
+        let first = DeliveredServerTransport(server: server)
+        let p1 = files.process(first, end: ProcessEnd { op, _ in op == .send("POST") }, clock: ContinuousClock())
+        await p1.tokenArrived("token-b")
+        #expect(first.requests.map(\.request.method) == ["PUT"], "the list post never left")
+        first.dropAll()
+        let transport = DeliveredServerTransport(server: server)
         let p2 = files.sync(transport)
         await p2.start()
-        _ = await p2.open { "token-b" }
-        #expect(await eventually { await p2.pendingReplies == 0 })
+        #expect(await pump(transport, p2))
         #expect(transport.requests.map(\.request.method) == ["PUT", "POST"])
         #expect(server.tokens == ["token-b"])
         #expect(server.records == ["ios/1/1", "ios/1/2"])
@@ -148,34 +149,82 @@ struct PushRecoveryTests {
         #expect(files.logEntries.isEmpty)
     }
 
-    /// CODEX-IN04-5: B←A (lost on the way), C←B and B←C in flight; B←C answers first and the process ends. The reply
-    /// acknowledged its own entry (3), not the oldest entry of token B, and entries leave only as an acknowledged
-    /// prefix, so the next process replays B←A, C←B and B←C and the records end under B once.
+    /// CODEX-IN04-4 (round 3): the process ends after the log took B←A and before the state did. The next process
+    /// derives B, replays B←A, and the next token C is sent over B.
+    @Test func codexIn04_4_endBetweenLogAndStateCompletesTheTransition() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let server = seededServer(token: "token-a")
+        let p1 = files.process(DeliveredServerTransport(server: server), end: ProcessEnd { op, _ in op == .save },
+                               clock: ContinuousClock())
+        #expect(await p1.tokenArrived("token-b").isEmpty, "nothing sent")
+        #expect(files.storedToken == "token-a")
+        let transport = DeliveredServerTransport(server: server)
+        let p2 = files.sync(transport)
+        await p2.start()
+        #expect(files.storedToken == "token-b", "the state completes the transition")
+        await p2.tokenArrived("token-c")
+        await openPumped(p2, transport, token: "token-c")
+        #expect(transport.requests.map { replacement($0.request) }.filter { !$0.isEmpty } ==
+                [["token-b", "token-a"], ["token-c", "token-b"]])
+        #expect(server.tokens == ["token-c"], "\(server.keys)")
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(files.logEntries.isEmpty)
+    }
+
+    /// CODEX-IN04-5: B←A (lost), C←B and B←C in flight; B←C answers first and the process ends. Its reply
+    /// acknowledged its own entry and entries leave only as an acknowledged prefix, so the next process replays all
+    /// three in order and the records end under B once.
     @Test func codexIn04_5_repliesAcknowledgeTheirOwnEntry() async throws {
         let files = Files()
         try files.seed(token: "token-a")
         let server = seededServer(token: "token-a")
-        let first = ScriptedServerTransport(server: server, deliver: { r in
-            !(r.method == "PUT" && r.body["oldToken"]?.stringValue == "token-a")
-        }, answerAtOnce: { _ in false })
+        let first = DeliveredServerTransport(server: server)
         let p1 = files.sync(first)
         for token in ["token-b", "token-c", "token-b"] { await p1.tokenArrived(token) }
-        first.answer(2)
+        first.deliver(2) // B←C answers first
         #expect(await eventually { files.logEntries.map(\.acked) == [false, false, true] })
-        // Process 1 ends here; its other replies never reach it.
-        let second = ScriptedServerTransport(server: server)
+        // Process 1 ends here: B←A never reaches the server and its other replies never reach process 1.
+        let second = DeliveredServerTransport(server: server)
         let p2 = files.sync(second)
         await p2.start()
+        #expect(await pump(second, p2))
         #expect(second.requests.map { replacement($0.request) } ==
                 [["token-b", "token-a"], ["token-c", "token-b"], ["token-b", "token-c"]])
-        _ = await p2.open { "token-b" }
-        #expect(await eventually { await p2.pendingReplies == 0 })
+        await openPumped(p2, second, token: "token-b")
         #expect(server.tokens == ["token-b"], "\(server.keys)")
         #expect(server.records == ["ios/1/1", "ios/1/2"])
         #expect(files.logEntries.isEmpty)
         #expect(files.storedToken == "token-b")
-        first.answerAll() // the simulated process 1 is still in memory: no task stays suspended
+        first.dropAll() // the simulated process 1 is still in memory: no task stays suspended
         #expect(await eventually { await p1.pendingReplies == 0 })
+    }
+
+    /// While a replay runs, a new token is logged and sent by the replay after the entries before it, and the list
+    /// post that falls due waits for the replay.
+    @Test func eventsDuringAReplayWaitTheirTurn() async throws {
+        let files = Files()
+        try files.seed(token: "token-b")
+        let server = seededServer(token: "token-a")
+        try files.log.append(old: "token-a", new: "token-b")
+        let transport = DeliveredServerTransport(server: server)
+        let sync = files.sync(transport)
+        await sync.start()
+        #expect(await eventually { transport.pending.count == 1 })
+        #expect(await sync.tokenArrived("token-c").isEmpty, "sent by the replay in its turn")
+        let open = Task { await sync.open { "token-c" } }
+        _ = await eventually { await sync.reposts == 1 }
+        #expect(transport.pending.count == 1, "still only the first replacement")
+        for _ in 0..<50 {
+            #expect(await pump(transport, sync))
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        _ = await open.value
+        #expect(transport.requests.map { "\($0.request.method) \(replacement($0.request))" } ==
+                [#"PUT [Optional("token-b"), Optional("token-a")]"#, #"PUT [Optional("token-c"), Optional("token-b")]"#,
+                 "POST []"])
+        #expect(server.tokens == ["token-c"])
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
         #expect(files.logEntries.isEmpty)
     }
 }

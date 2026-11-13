@@ -89,7 +89,7 @@ struct PushSyncTests {
         let transport = RecordingTransport()
         let sync = files.sync(transport) { _ in nil }
         #expect(await sync.open { "token-c" } == nil)
-        #expect(await sync.start().isEmpty)
+        await sync.start()
         #expect(await sync.tokenArrived("token-d").isEmpty)
         #expect(transport.requests.isEmpty)
         #expect(files.storedToken == "token-a")
@@ -138,9 +138,10 @@ struct PushSyncTests {
         #expect(await eventually { await sync.pendingReplies == 0 })
     }
 
-    /// The process start sends again, in `id` order, every entry an earlier process left, each with its own tokens;
-    /// a second start of the same process sends nothing again.
-    @Test func theProcessStartReplaysTheLeftEntriesInOrder() async throws {
+    /// The process start sends again, in `id` order, every entry an earlier process left, each with its own tokens,
+    /// one at a time (the next when the previous reply arrived); a second start of the same process sends nothing
+    /// again.
+    @Test func theProcessStartReplaysTheLeftEntriesOneAtATime() async throws {
         let files = Files()
         try files.seed(token: "token-c")
         try files.log.append(old: "token-a", new: "token-b")
@@ -149,9 +150,14 @@ struct PushSyncTests {
         let sync = files.sync(transport)
         await sync.start()
         await sync.start()
+        #expect(await eventually { transport.requests.count == 1 })
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(transport.requests.map(replacement) == [["token-b", "token-a"]])
+        transport.answerAll(200)
+        #expect(await eventually { transport.requests.count == 2 })
         #expect(transport.requests.map(replacement) == [["token-b", "token-a"], ["token-c", "token-b"]])
         transport.answerAll(200)
-        #expect(await eventually { await sync.pendingReplies == 0 })
+        #expect(await eventually { await !sync.isReplaying })
         #expect(files.logEntries.isEmpty)
     }
 }
