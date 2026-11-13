@@ -142,3 +142,40 @@ Design skipped: there is no new system flow. The port follows the Android core m
 ### Checks
 
 Test-first: the tests ran first against stubs of the `TWDomain` API and a stubbed number formatter; every corpus test failed on assertions, and the IN-01 tests passed. The JavaScriptCore expectations went through the same cycle: `warningsMatchCordova` failed on the 7 affected cases until `Warnings.jsDate` followed JavaScriptCore. Green runs: `swift test` on macOS and the scheme's tests on the owned `tw_dev_in02` simulator. Smoke checks: both import tools run twice with no tree change; `swift test` in a copy of `ios/` alone; `compare_jsc.py` (exit 0, differences as recorded); the artifact checker on the staged tree.
+
+## IN-05 — hourly and daily charts in SwiftUI (#2954)
+
+Design skipped: no new system flow. The scenes follow the Android AN-05 port element by element, and the Cordova iOS build decides the drawing. Archify not applicable (no route, collector or storage change).
+
+- **Scenes (`TWDomain/Chart/`):** a Swift port of `D3.kt`, `Svg.kt`, `ChartMetrics.kt`, `HourlyChart.kt` and `DailyChart.kt`. `ChartMetrics` adds the iOS branch of `initSize` (20 pt status bar). It changes nothing on phones, where the width bounds the header font, but it does on a landscape iPad. Where the Kotlin code throws (no `timeChart` or `dayChart`), `build` returns nil. Series names compare with `JSString`.
+- **References:** `ios/tools/import_chart_reference.py` copies the Android scene JSON with provenance. It leaves out the Android WebView PNGs and the Android tolerances, and lists both. `ios/tools/chart-reference` builds the Cordova 1.1.1 simulator app with the IN-03 recipe, using a local fixture server and a dummy Firebase project, and captures on the three owned simulators. The fixtures go through the app's own request path, so the server answers `/weather/v000903/coord/…` with corpus responses. The scenes use the Android capture shape. The wrapper screenshots are cropped by a calibration marker drawn in each screenshot. One run showed the WebView 54 pt lower for the hourly chart at 393×852.
+- **Drawing (`TodayWeather/Chart/`):** SwiftUI `Canvas` draws the shapes and images. CoreText draws the text in the system UI font, matching WebKit's `-apple-system` with fallback fonts. Row heights use `line-height: normal`: each font's ascent and descent rounded up, measured as 19 and 22 pt in the captures. The expander glyph comes from the imported Material Icons font. The colors are the SCSS colors of all four themes.
+- **Screenshot hosting:** the tests render `HourlyChartFrame` and `DailyChartFrame` with `ImageRenderer` in the app-hosted test target. These frames hold the same content and pinned views as the live views, at a given offset. This adds no app mode or preview entry, and the render depends on the requested scale, not on the simulator model. So CI's iPhone 17 compares all three sizes against the committed references, and no per-model split is needed. The live scroll views are checked separately in a window (`ChartScrollTests`). iOS 17 has no offset scroll position, so the opening offset is a marker view's position.
+- **Tolerances:** these use the AN-05 metric and the Android margins. The recorded values and the reasons are in `ios/TodayWeatherTests/ChartReference/tolerances.json`. Strong differences are 0.0010–0.0069 and mean differences 1.07–2.29, with heights equal. A second capture of all sizes gave the same values. What remains is glyph rasterization and image filtering. Snapping baselines to device pixels was tried and made 375×667 worse.
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| IN05-US1 | User reads the hourly chart | Converted place weather | Open the chart; scroll to both ends; tap the expander | The Cordova scene: header, lines, current point, labels, icons, pinned legend, detail rows; opens one column before the current hour | No `timeChart`: no chart instead of a crash | AC1, AC2 |
+| IN05-US2 | User reads the daily chart | Converted place weather | Open the chart; scroll to both ends | The Cordova bars, icons, texts and today circle; today in the third column | No `dayChart`: no chart | AC1, AC2 |
+| IN05-US3 | Developer checks the scenes | Xcode 27.2 or 26.6 | `swift test`; the scheme's tests | Every element of the Android and iOS reference scenes within 0.02 pt | A differing element fails with its path, class and attribute | AC1 |
+| IN05-US4 | Developer checks the screenshots in CI | CI simulator, no `client/` or `android/` | The scheme's tests | All 18 comparisons within their recorded tolerances | A changed drawing exceeds the tolerance; renders and differences in `tmp/chart-compare/` | AC2 |
+| IN05-US5 | Maintainer recaptures after a Cordova chart change | Mac with Xcode, Node and the owned simulators | `build-cordova.sh`, `capture.py run` per simulator, `capture.py provenance` | New references with provenance; no request left the Mac | A request for another host or a bar over the chart stops the run | AC2 |
+
+### Acceptance (from #2954)
+
+- AC1: The Swift chart scenes equal the copied Cordova scenes element by element. Both the Android set and the iOS set are checked.
+- AC2: The screenshot comparisons with the Cordova iOS captures pass at 375×667, 393×852 and 440×956 pt within the recorded tolerances, at the opening position and at both scroll ends.
+- AC3: README, artifact checker, review PASS and CI before merge.
+
+### Checks
+
+Test-first: `ChartSceneTests` ran first against stub builders that returned empty scenes and labels. It failed on assertions: 152 issues, plus the then-missing iOS set. It passed after the port. The screenshot tests went through two fixes. The first render was 10–13 % strong because the frame took the content's width. After that fix, the measured values were recorded.
+
+Mutation checks of the tolerances, run once and reverted:
+
+- A today line 1 pt wide instead of 2 fails at 375×667 and 393×852 at every position. At 440×956 it stays within the margin.
+- Moving the daily chart down 1 pt fails at every size, on height and strong.
+
+Green runs: `swift test` on macOS, the scheme's tests on `tw_cap_16`, and `swift test` in a `git archive` copy of `ios/` alone. Smoke checks: both import tools run twice with no tree change, and the artifact checker on the staged tree.

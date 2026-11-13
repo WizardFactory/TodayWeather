@@ -14,6 +14,8 @@ on:
       - "android/app/provenance/cordova-fonts.json"
       # Source of ios/tools/import_corpus.py (the golden corpus copy).
       - "android/core-domain/src/test/resources/corpus/**"
+      # Source of ios/tools/import_chart_reference.py (the Cordova chart scenes captured for Android).
+      - "android/core-domain/src/test/resources/chart-reference/**"
       - ".github/workflows/ios.yml"
   push:
     branches: [master]
@@ -28,6 +30,7 @@ on:
       - "android/app/src/main/res/font/ionicons.ttf"
       - "android/app/provenance/cordova-fonts.json"
       - "android/core-domain/src/test/resources/corpus/**"
+      - "android/core-domain/src/test/resources/chart-reference/**"
       - ".github/workflows/ios.yml"
 
 # Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
@@ -45,10 +48,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets and golden corpus are current
+      - name: Imported client assets, golden corpus and chart scenes are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
+          python3 ios/tools/import_chart_reference.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
       - name: Core package tests (macOS)
