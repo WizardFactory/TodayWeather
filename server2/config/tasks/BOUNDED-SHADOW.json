@@ -1,0 +1,48 @@
+{
+  "task": "BOUNDED-SHADOW",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "Bounded paired GET/HEAD capture, persistent attempt ledger and evidence. No runtime behavior, provisioning, deployment, key changes or production writes. Separate cloud lifecycle/source-retention qualification remains required before a seven-day run.",
+  "server2_paths": [
+    "server2/config/tasks/BOUNDED-SHADOW.json",
+    "server2/tools/shadow/paired_read.py",
+    "server2/tests/integration/test_paired_read.py",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-bounded-shadow.md",
+      "category": "documentation",
+      "reason": "Scoped sampler requirements, verification plan and operator usage."
+    },
+    {
+      "path": "specs/issue-2614-bounded-shadow.md",
+      "category": "documentation",
+      "reason": "Scoped sampler requirements, verification plan and operator usage."
+    },
+    {
+      "path": "plans/issue-2614-bounded-shadow.md",
+      "category": "documentation",
+      "reason": "Scoped sampler requirements, verification plan and operator usage."
+    },
+    {
+      "path": "docs/operations/server2-paired-reads.md",
+      "category": "documentation",
+      "reason": "Scoped sampler requirements, verification plan and operator usage."
+    },
+    {
+      "path": "docs/operations/server2-paired-reads/manual.json",
+      "category": "documentation",
+      "reason": "CLI operator manual with actual local call/results capture and verified PDF, required by SDLC new-feature documentation."
+    },
+    {
+      "path": "docs/operations/server2-paired-reads/manual.pdf",
+      "category": "documentation",
+      "reason": "CLI operator manual with actual local call/results capture and verified PDF, required by SDLC new-feature documentation."
+    },
+    {
+      "path": "docs/operations/server2-paired-reads/cli-output.png",
+      "category": "documentation",
+      "reason": "CLI operator manual with actual local call/results capture and verified PDF, required by SDLC new-feature documentation."
+    }
+  ]
+}
