@@ -113,3 +113,28 @@ Design skipped: no system flow; the layout follows #2948 and the Android module 
 ### Checks
 
 Test-first: `ImportedClientAssetsTests` failed before the import (no provenance, no copies) and passed after it. The first simulator run then failed where macOS passed (the `Resources` folder layout), which led to the `Client` folder. Smoke: import tool run twice with no tree change; install and launch on owned `tw_iphone16` and `tw_ipadpro13` simulators; build and test a copy of `ios/` alone.
+
+## IN-03 — Cordova data migration and simulator upgrade test (#2952)
+
+Design note: the per-key rules port the Android `CordovaMigration` (AN-03) to Swift in `TWStorage`, which uses Foundation and SQLite only and runs under `swift test`. iOS differs in where the data lives. `localStorage` is read from WebKit's files, not through a `WKWebView` serving `app://localhost`: a web view needs the main thread and a web content process, which a background start may not get, and WebKit would open, and could migrate, the files it serves. The database and its write-ahead log are copied and the copy is read, so the source stays byte-identical. On the iOS 26.5 simulator the newest writes were only in the `-wal` file, and the layout was `Library/WebKit/<bundle id>/WebsiteData/Default/<hash>/<hash>/LocalStorage/localstorage.sqlite3`, located through WebKit's `origin` file. The device path without the bundle ID and the older single-directory file are supported from WebKit's source, not observed. The App Group suite is read through `UserDefaults`, typed as the plugin stores values. Analytics: Firebase 13.1.1 `FirebaseAnalyticsCore` (the Cordova build's variant without ad-ID and on-device conversion), pinned by the committed `Package.resolved`. Collection is disabled and consent denied before `FirebaseApp.configure()`, which runs only with a `GoogleService-Info.plist` in the bundle; on the simulator the persisted flag changed from 1 (Cordova opt-in) to 2 before `configure`. The upgrade test needs the App Group entitlement, which simulator builds carry in the executable when signed for the simulator; CI builds keep `CODE_SIGNING_ALLOWED=NO` and do not run it. Archify not applicable (no service flow change; the app's start only).
+
+### User scenarios
+
+| ID | User and goal | Prerequisites | Steps | Expected | Failure path | AC |
+| --- | --- | --- | --- | --- | --- | --- |
+| IN03-US1 | Cordova 1.1.1 user updates to the native app | Places, units, settings, alarms and an analytics opt-in in 1.1.1 | Install the native update; open it; reopen it | Same places, selection, units, settings and alarms; `Device-Id` = `CDVUUID`; analytics off, no event; Cordova storage unchanged | A missing or broken key takes the Cordova default, recorded in `MigrationInfo` | AC1, AC2 |
+| IN03-US2 | User updating straight from 1.0.10 | State only in the App Group suite | Update; open | The suite's state; defaults for `startupPage`, `refreshInterval` and `guideVersion` | Empty suite: a new install's state | AC1, AC3 |
+| IN03-US3 | User of a version before `pushData2` | Legacy `pushData` only | Update | Alarms converted as `loadOldPushInfo`; alert introduction pending | – | AC1 |
+| IN03-US4 | iOS starts the updated app in the background before the first unlock | Data protection active | Background launch, later unlock | The migration waits and runs once protected data is available; nothing empty is stored | A source that cannot be read stops the run without writing | AC1 |
+| IN03-US5 | Maintainer runs the upgrade test | Xcode 27, a `tw_*` simulator, Node and CocoaPods | `build-cordova.sh`; `run-upgrade-test.sh … localStorage` and `… suite` | Both pass; no request for a production host | Another simulator: refused; a request for a TodayWeather host or an API path elsewhere: fail | AC2, AC3 |
+
+### Acceptance (from #2952)
+
+- AC1: Unit tests cover valid, partial, malformed, suite-only and legacy-`pushData` inputs and a fixture of each supported storage layout, and a second migration run changes nothing.
+- AC2: The simulator upgrade test passes: places, `cityIndex`, units, settings and alarms match the Cordova state; `Device-Id` equals the stored `CDVUUID`; after a restart analytics collection is disabled and no event is sent, although the Cordova opt-in was present; the source storage still exists; no request reached a production host.
+- AC3: The same test passes from a state that exists only in the App Group suite.
+- AC4: README, artifact checker, review PASS and CI before merge.
+
+### Checks
+
+Test-first in a modified form: the rules were drafted before their tests, so the red run used compiling stubs (the migration, the readers, `Device-Id` and the runner returning empty results) and failed 23 of 31 `TWStorageTests` with assertion failures (the 8 others test parts that were not stubbed, such as the JSON parser, or hold for an empty result); the same tests passed against the implementation. Simulator: the scheme runs the app-hosted tests (`AppBundleTests`, `AnalyticsDefaultsTests`, `CordovaUpgradeTests`, which are skipped without a seed) and both package test targets. Smoke: `run-upgrade-test.sh` in `localStorage` and `suite` mode on the owned `tw_dev_in03` simulator (iOS 26.5) with a Cordova 1.1.1 build from `build-cordova.sh`; a copy of `ios/` alone builds and passes `swift test`; the artifact checker on the staged change.

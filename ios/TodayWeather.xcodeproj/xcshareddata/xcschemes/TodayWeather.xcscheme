@@ -48,6 +48,16 @@
                ReferencedContainer = "container:Core">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TWStorageTests"
+               BuildableName = "TWStorageTests"
+               BlueprintName = "TWStorageTests"
+               ReferencedContainer = "container:Core">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

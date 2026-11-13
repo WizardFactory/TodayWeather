@@ -25,5 +25,7 @@ let package = Package(
         // treat the bundle as the old layout and move its resource URL into that folder.
         .target(name: "TWResources", resources: [.copy("Client")]),
         .testTarget(name: "TWResourcesTests", dependencies: ["TWResources"]),
+        // The Cordova migration rules and readers, with a fixture of each storage layout.
+        .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
     ]
 )
