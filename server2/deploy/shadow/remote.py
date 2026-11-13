@@ -120,7 +120,7 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|') as archive:
    while block:=source.read(1024**2):output.write(block)
    output.flush();os.fsync(output.fileno())
 assert seen==expected
-os.execv('/usr/bin/python3',['/usr/bin/python3',str(stage/'coordinator.py'),'install-host','--bundle',str(stage)])
+os.execv('/usr/bin/python3',['/usr/bin/python3','-B',str(stage/'coordinator.py'),'install-host','--bundle',str(stage)])
 '''
 
 EVIDENCE_BYTES=2*1024**3

@@ -1117,6 +1117,30 @@ class RemoteTests(unittest.TestCase):
                 self.assertNotEqual(again.returncode,0)
                 self.assertIn(b'FileExistsError',again.stderr)
 
+    def test_actual_receiver_child_import_preserves_private_bundle(self):
+        import io
+        with tempfile.TemporaryDirectory() as temp:
+            parent=Path(temp)/'stage'
+            script=remote.RECEIVER.replace("Path('/opt/server2-shadow-stage')",'Path('+repr(str(parent))+')')
+            script=script.replace('st.st_uid==0','st.st_uid==os.geteuid()')
+            script=script.replace("'/usr/bin/python3'",repr(sys.executable))
+            files={name:b'fixture' for name in operator.HOST_ARTIFACTS|{'launch.json'}}
+            files['state.py']=SOURCE.read_bytes()
+            files['coordinator.py']=b"import state,sys\nassert sys.argv[1]=='install-host'\nprint('child imported state')\n"
+            archive=io.BytesIO()
+            with remote.tarfile.open(fileobj=archive,mode='w') as tar:
+                for name,data in files.items():
+                    item=remote.tarfile.TarInfo(name);item.size=len(data)
+                    tar.addfile(item,io.BytesIO(data))
+            env={k:v for k,v in os.environ.items() if not k.startswith('PYTHON')}
+            result=subprocess.run([sys.executable,'-c',script,'test1'],input=archive.getvalue(),
+                                  capture_output=True,env=env,umask=0o022,timeout=5)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn(b'child imported state',result.stdout)
+            stage=parent/'test1'
+            self.assertEqual({p.name for p in stage.iterdir()},set(files))
+            self.assertTrue(all(p.stat().st_mode&0o077==0 for p in stage.iterdir()))
+
     def test_stop_download_ledger_body_binding_and_no_duplicate_export(self):
         import shutil
         for missing in (False,True):
