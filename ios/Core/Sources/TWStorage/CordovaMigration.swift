@@ -372,8 +372,11 @@ public enum CordovaMigration {
         }
     }
 
-    private static let isoInstant = try! NSRegularExpression(pattern: #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$"#)
-    private static let isoLike = try! NSRegularExpression(pattern: #"^\d{4}-\d{2}-\d{2}T.*Z$"#)
+    // ASCII digits only (CODEX-IN03-2): ICU's `\d` also matches other decimal digits (Arabic-Indic, fullwidth), which
+    // Kotlin's (Java's) `\d` in the Android port does not.
+    private static let isoInstant = try! NSRegularExpression(
+        pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,3})?Z$"#)
+    private static let isoLike = try! NSRegularExpression(pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*Z$"#)
 
     /// A match over the whole text (`NSRegularExpression` works on UTF-16 code units).
     static func matches(_ regex: NSRegularExpression, _ text: String) -> Bool {
@@ -385,6 +388,7 @@ public enum CordovaMigration {
         guard matches(isoInstant, text) else { return false }
         let n = text.utf8.split(whereSeparator: { $0 < 0x30 || $0 > 0x39 })
             .compactMap { Int(String(decoding: $0, as: UTF8.self)) }
+        guard n.count == 6 || n.count == 7 else { return false }
         let (year, month, day, hour, minute, second) = (n[0], n[1], n[2], n[3], n[4], n[5])
         guard year >= 1, (1...12).contains(month), hour <= 23, minute <= 59, second <= 59 else { return false }
         var utc = Calendar(identifier: .gregorian)
