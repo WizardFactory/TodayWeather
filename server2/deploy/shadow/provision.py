@@ -17,6 +17,9 @@ from coordinator import (require, dispatch_recorded, bind_resources, frozen_reso
 from state import CloudResult, StateError, canonical, absence, Journal, launch_user_data
 
 
+IAM_PROPAGATION_SECONDS = 300
+STARTUP_SECONDS = 600
+
 def cloud_plan(value):
     fields={'schema','run_id','account','region','image','vpc','subnet','key_name','operator_cidr','root_device'}
     require(type(value) is dict and set(value)==fields,'cloud plan fields')
@@ -157,6 +160,29 @@ def provision_resources(cloud,journal,plan,*,now=None):
     if not (isinstance(obj,dict) and obj.get('InstanceProfileName')==prefix
             and isinstance(obj.get('Roles'),list) and len(obj['Roles'])==1 and obj['Roles'][0].get('RoleName')==prefix):
         return {'status':'pending','reason':'instance_profile_propagation','launch_dispatched':False}
+    # IAM visibility does not establish EC2 propagation. Persist the first
+    # attached-profile observation so process restarts cannot refresh this wait.
+    # This is a bounded settling delay, not proof of cross-service readiness.
+    if journal.request('launch') is None:
+        observed=journal.request('profile-settle')
+        if observed is None:
+            journal.prepare_request('profile-settle','ObserveProfileAttachment',
+                {'profile':prefix,'observed_at':moment()},prefix,now=moment())
+            observed=journal.request('profile-settle')
+        recorded=observed['params']
+        require(observed['operation']=='ObserveProfileAttachment'
+                and set(recorded)=={'profile','observed_at'} and recorded['profile']==prefix
+                and type(recorded['observed_at']) is int
+                and journal.snapshot()['epoch']<=recorded['observed_at']<=moment(),
+                'profile propagation observation')
+        # This local observation has no external effect; finish the same exact
+        # receipt after interruption instead of starting another timer.
+        if observed['receipt'] is None:
+            journal.record_receipt('profile-settle',CloudResult('json','ObserveProfileAttachment',{'observed':True}))
+        require(receipt_result(journal.request('profile-settle')).payload=={'observed':True},
+                'profile propagation receipt')
+        if moment()<recorded['observed_at']+IAM_PROPAGATION_SECONDS:
+            return {'status':'pending','reason':'instance_profile_settling','launch_dispatched':False}
     token='shadow-'+p['run_id']+'-initial'
     params={'ClientToken':token,'ImageId':p['image'],'InstanceType':'t3.small','MinCount':1,'MaxCount':1,
         'KeyName':p['key_name'],'IamInstanceProfile':{'Name':prefix},
@@ -385,7 +411,7 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     try:
         # Each resumed call reconciles exact original requests; elapsed run time
         # and generation grants are never refreshed by this startup allowance.
-        until=min(int(clock())+180,journal.snapshot()['collection_until'])
+        until=min(int(clock())+STARTUP_SECONDS,journal.snapshot()['collection_until'])
         while True:
             journal.active(int(clock()))
             provisioned=provision_resources(cloud,journal,plan,now=int(clock()))

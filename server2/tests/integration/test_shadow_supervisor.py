@@ -1270,6 +1270,13 @@ class ProvisionCloud:
 
 
 class LifecycleTests(unittest.TestCase):
+    def setUp(self):
+        # Existing ownership/cleanup scenarios isolate their behavior from the
+        # settling delay. ProfileDelayTests exercises the production delay.
+        from unittest.mock import patch
+        delay=patch.object(provision,'IAM_PROPAGATION_SECONDS',0)
+        delay.start();self.addCleanup(delay.stop)
+
     def test_one_host_install_monitor_and_cleanup_across_failure_paths(self):
         for mode in ('deadline','lost_install_ack','ssh_timeout','guard_stop','termination_delay'):
             with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
@@ -1348,7 +1355,51 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(list(root.iterdir()),[])
 
 
+class ProfileDelayTests(unittest.TestCase):
+    def test_profile_never_visible_times_out_and_cleans_without_launch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);source,host=HostBundleTests.files(self,root)
+            plan=dict(host=host,cloud=provisioning_plan(),allowance=dict(reads=10,writes=20,put_bytes=30))
+            provision.prepare_run(plan,source,root/'run',root/'bundle',now=1000)
+            with J(root/'run') as j:
+                cloud=ProvisionCloud(j);cloud.profile_ready=False;moment=[1001]
+                def pause(seconds):moment[0]+=seconds
+                result=provision.lifecycle(cloud,j,plan['cloud'],root/'bundle',root/'result',
+                    lambda *a,**k: self.fail('SSH before launch'),clock=lambda:moment[0],sleep=pause)
+                self.assertEqual(moment[0],1601)
+                self.assertEqual(result['stop_reason'],'acquisition_failed')
+                self.assertTrue(result['cleanup']['complete'])
+                self.assertFalse(any(op=='RunInstances' for op,_ in cloud.calls))
+                self.assertEqual(j.snapshot()['epoch'],1000)
+
+    def test_attached_profile_wait_survives_reopen_and_does_not_relaunch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'journal'
+            with J(path,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                cloud=ProvisionCloud(j)
+                first=provision.provision_resources(cloud,j,provisioning_plan(),now=1001)
+                self.assertEqual(first['status'],'pending')
+                self.assertFalse(any(op=='RunInstances' for op,_ in cloud.calls))
+            with J(path) as j:
+                cloud.journal=j
+                early=provision.provision_resources(cloud,j,provisioning_plan(),now=1300)
+                self.assertEqual(early['status'],'pending')
+                self.assertFalse(any(op=='RunInstances' for op,_ in cloud.calls))
+                self.assertEqual(provision.provision_resources(cloud,j,provisioning_plan(),now=1301)['status'],'bound')
+                self.assertEqual(provision.provision_resources(cloud,j,provisioning_plan(),now=1302)['status'],'bound')
+                self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
+                self.assertEqual(sum(op=='CreateRole' for op,_ in cloud.calls),1)
+                self.assertEqual(j.snapshot()['epoch'],1000)
+
+
 class ProvisionTests(unittest.TestCase):
+    def setUp(self):
+        # Existing ownership/cleanup scenarios isolate their behavior from the
+        # settling delay. ProfileDelayTests exercises the production delay.
+        from unittest.mock import patch
+        delay=patch.object(provision,'IAM_PROPAGATION_SECONDS',0)
+        delay.start();self.addCleanup(delay.stop)
+
     def journal(self,root):return J(root,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000)
     def test_finish_still_cleans_when_host_evidence_cannot_be_retrieved(self):
         with tempfile.TemporaryDirectory() as temp,self.journal(Path(temp)/'journal') as j:

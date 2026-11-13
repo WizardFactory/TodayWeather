@@ -150,7 +150,7 @@ python3 server2/deploy/shadow/provision.py finish --execute --state private-run 
 
 `run` provisions only the frozen one-host plan, authenticates SSH against the EC2
 console key, installs once, and observes the same install until the original
-expiry. Startup waiting is bounded to three minutes. A lost installation reply
+expiry. Startup waiting is bounded to ten minutes, capped by the original collection deadline. Before the sole launch, a durable first attached-profile observation starts a five-minute settling delay for IAM-to-EC2 propagation. Restarting the coordinator does not refresh that delay. The delay reduces the observed race; it is not a cross-service readiness guarantee. A rejected or uncertain launch still fails closed without an automatic replacement. A lost installation reply
 causes inspection, never another upload. A guard stop, missing observation,
 interrupt or acquisition error enters evidence retention and exact cleanup.
 Termination propagation gets at most three additional cleanup-only checks; the
