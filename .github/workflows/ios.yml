@@ -1,0 +1,79 @@
+name: iOS
+on:
+  pull_request:
+    paths:
+      - "ios/**"
+      # Sources of ios/tools/import_client_assets.py, so a change there shows up as a stale copy.
+      - "client/www/img/**"
+      - "client/www/locales/**"
+      - "client/www/data/town.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/icon.png"
+      - "client/tw.resources/ios/splash/**"
+      - "android/app/src/main/res/font/ionicons.ttf"
+      - "android/app/provenance/cordova-fonts.json"
+      # Source of ios/tools/import_corpus.py (the golden corpus copy).
+      - "android/core-domain/src/test/resources/corpus/**"
+      - ".github/workflows/ios.yml"
+  push:
+    branches: [master]
+    paths:
+      - "ios/**"
+      - "client/www/img/**"
+      - "client/www/locales/**"
+      - "client/www/data/town.js"
+      - "client/www/fonts/MaterialIcons-Regular.ttf"
+      - "client/tw.resources/icon.png"
+      - "client/tw.resources/ios/splash/**"
+      - "android/app/src/main/res/font/ionicons.ttf"
+      - "android/app/provenance/cordova-fonts.json"
+      - "android/core-domain/src/test/resources/corpus/**"
+      - ".github/workflows/ios.yml"
+
+# Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
+# Xcode 27 (ios/README.md); both build the iOS 17.0 deployment target.
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  SIMULATOR: "platform=iOS Simulator,name=iPhone 17,OS=26.5"
+
+jobs:
+  build:
+    name: Build and test (with client import check)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Imported client assets and golden corpus are current
+        run: |
+          python3 ios/tools/import_client_assets.py
+          python3 ios/tools/import_corpus.py
+          git diff --exit-code -- ios
+          test -z "$(git status --porcelain -- ios)"
+      - name: Core package tests (macOS)
+        working-directory: ios/Core
+        run: swift test
+      - name: App build and tests (iOS Simulator)
+        working-directory: ios
+        run: >
+          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+  standalone:
+    name: Build and test without client/, android/ and the legacy iOS directories
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove the directories the iOS build must not read
+        run: |
+          rm -rf client android tw.ios ta.ios applewatch
+          for d in client android tw.ios ta.ios applewatch; do test ! -e "$d"; done
+      - name: Core package tests (macOS)
+        working-directory: ios/Core
+        run: swift test
+      - name: App build and tests (iOS Simulator)
+        working-directory: ios
+        run: >
+          xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
+          -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test

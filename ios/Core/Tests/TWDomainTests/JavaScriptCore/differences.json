@@ -1,0 +1,289 @@
+{
+ "tool": "ios/tools/corpus/compare_jsc.py",
+ "generator": "android/tools/corpus/generate.mjs",
+ "environment": {
+  "macOS": "26.6.2",
+  "JavaScriptCore.framework": "21624 (21624.5.1.11.3)",
+  "macOS build": "25G83"
+ },
+ "zones": [
+  "Asia/Seoul",
+  "America/New_York",
+  "UTC"
+ ],
+ "differences": [
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 1,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"2026. 3. 2. 오전 9:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 1,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"2026. 5. 1. 오전 9:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 1,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"2026. 11. 8. 오전 9:00:00\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 4,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"3/2/2026 9:00:00 AM\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 4,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"5/1/2026 9:00:00 AM\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 4,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"11/8/2026 9:00:00 AM\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 7,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"2026/3/2 9:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 7,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"2026/5/1 9:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 7,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"2026/11/8 9:00:00\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 10,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"2.3.2026 09:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 10,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"1.5.2026 09:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 10,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"8.11.2026 09:00:00\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 13,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"2026/3/2 09:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 13,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"2026/5/1 09:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 13,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"2026/11/8 09:00:00\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 16,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"2026/3/2 上午9:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 16,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"2026/5/1 上午9:00:00\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 16,
+   "zone": "Asia/Seoul",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"2026/11/8 上午9:00:00\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 19,
+   "zone": "America/New_York",
+   "path": [
+    "expected",
+    12,
+    "announcement"
+   ],
+   "node": "\"3/1/2026 7:00:00 PM\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 19,
+   "zone": "America/New_York",
+   "path": [
+    "expected",
+    13,
+    "announcement"
+   ],
+   "node": "\"4/30/2026 8:00:00 PM\"",
+   "javaScriptCore": "\"Invalid Date Invalid Date\""
+  },
+  {
+   "file": "special.json",
+   "section": null,
+   "index": 19,
+   "zone": "America/New_York",
+   "path": [
+    "expected",
+    18,
+    "announcement"
+   ],
+   "node": "\"Invalid Date Invalid Date\"",
+   "javaScriptCore": "\"11/7/2026 7:00:00 PM\""
+  }
+ ]
+}

@@ -1,0 +1,462 @@
+{
+ "tool": "ios/tools/import_corpus.py",
+ "generator": "android/tools/corpus/generate.mjs",
+ "license": "Same repository and license as android/ and client/ (TodayWeather, WizardFactory)",
+ "files": [
+  {
+   "source": "android/core-domain/src/test/resources/corpus/air.json",
+   "commit": "8dc18b794628d7f3845c05326dd8aee53e2c5361",
+   "source_sha256": "ac9d770573c7f7250ad394206ea2ffb637a69fc669f94c61bb61d17a6979d6af",
+   "output": "Core/Tests/TWDomainTests/Corpus/air.json",
+   "output_sha256": "ac9d770573c7f7250ad394206ea2ffb637a69fc669f94c61bb61d17a6979d6af"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/alarms.json",
+   "commit": "598e3f278109bbeaaaa5870b04c1e78e36506abc",
+   "source_sha256": "08b135124df7e8c90e86d17008cfc4298cd3d45c7ae2e82205b70239e32453bb",
+   "output": "Core/Tests/TWDomainTests/Corpus/alarms.json",
+   "output_sha256": "08b135124df7e8c90e86d17008cfc4298cd3d45c7ae2e82205b70239e32453bb"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/empty-object.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "3c4aefb3f6ae18df9c03b30fa0c483a96198d0f3fa7d3f06d83d47d6f7e966a1",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/empty-object.json",
+   "output_sha256": "3c4aefb3f6ae18df9c03b30fa0c483a96198d0f3fa7d3f06d83d47d6f7e966a1"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/html-error-body.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "6996c5dc3182265f36921ed0e24eaf6c9f57a9381704f717195326abb63e087c",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/html-error-body.json",
+   "output_sha256": "6996c5dc3182265f36921ed0e24eaf6c9f57a9381704f717195326abb63e087c"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-address-only.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "77d08e4b5fca4efa80b6a374361b465188ac4c9364fa66cef2eaf89bd1b85e07",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-address-only.json",
+   "output_sha256": "77d08e4b5fca4efa80b6a374361b465188ac4c9364fa66cef2eaf89bd1b85e07"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-current-index-first.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "7954ef28ca476b08248267ceff0d94aee434241b8987a52a7a5e9bebd1010e76",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-current-index-first.json",
+   "output_sha256": "7954ef28ca476b08248267ceff0d94aee434241b8987a52a7a5e9bebd1010e76"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-empty-air-list.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "f77451dfd1f3fe173f5226c60ad25c759d533127275f66c90e29631fa48c2cfa",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-empty-air-list.json",
+   "output_sha256": "f77451dfd1f3fe173f5226c60ad25c759d533127275f66c90e29631fa48c2cfa"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-jeju.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "72ac2b981ce0a7117e2ff1c9a6678fc3b4943622922b473ecb565a5cd237dd69",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-jeju.json",
+   "output_sha256": "72ac2b981ce0a7117e2ff1c9a6678fc3b4943622922b473ecb565a5cd237dd69"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-midnight-today-first-day.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "58cd5a302aad5b58f6c93fa238d48348f90841e91d1c896f5f1e3ae02c501f5e",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-midnight-today-first-day.json",
+   "output_sha256": "58cd5a302aad5b58f6c93fa238d48348f90841e91d1c896f5f1e3ae02c501f5e"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-missing-current.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "8736df980970489a79ae1474d0f8953e5d56836e2771b9a0f580b2e4a92d1f75",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-missing-current.json",
+   "output_sha256": "8736df980970489a79ae1474d0f8953e5d56836e2771b9a0f580b2e4a92d1f75"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-missing-mid.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "2e2b84d8f17e4524a5eec1fccd06db9ce8d6042db82c585043e26a0eb05c236f",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-missing-mid.json",
+   "output_sha256": "2e2b84d8f17e4524a5eec1fccd06db9ce8d6042db82c585043e26a0eb05c236f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-missing-short.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "5a53720540ae8aa54669b501f092f71eebff74226a95c06db80746ca0d442b42",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-missing-short.json",
+   "output_sha256": "5a53720540ae8aa54669b501f092f71eebff74226a95c06db80746ca0d442b42"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-no-air.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "1f9f7b4cc8dafef725a86f618fd240205a305d849d2e714870366398b511baed",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-no-air.json",
+   "output_sha256": "1f9f7b4cc8dafef725a86f618fd240205a305d849d2e714870366398b511baed"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-no-current-index.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "4f79ce2810faf41bf0855d4a5d14c1bef2fce12ad216cde3a82312d6e2a29236",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-no-current-index.json",
+   "output_sha256": "4f79ce2810faf41bf0855d4a5d14c1bef2fce12ad216cde3a82312d6e2a29236"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-null-daily-row.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "60cbb674f0dfa1841808358bce18e533d9dba9004668dd2e4765428767576fd4",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-null-daily-row.json",
+   "output_sha256": "60cbb674f0dfa1841808358bce18e533d9dba9004668dd2e4765428767576fd4"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-null-short-row.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "29776585483f17f1d60c5994169ce9aec92a4543b4a3de0ebf7045e96894fa03",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-null-short-row.json",
+   "output_sha256": "29776585483f17f1d60c5994169ce9aec92a4543b4a3de0ebf7045e96894fa03"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-number-row.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "7abd601c3d69d344cd256cd316c6d7d99399833002e92271a0e51370b9675523",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-number-row.json",
+   "output_sha256": "7abd601c3d69d344cd256cd316c6d7d99399833002e92271a0e51370b9675523"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-rain-everywhere.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "02c169deffce9adb860d96cc72c8b80e71492f6b7f22c3d951eb7885a9d65113",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-rain-everywhere.json",
+   "output_sha256": "02c169deffce9adb860d96cc72c8b80e71492f6b7f22c3d951eb7885a9d65113"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-sentinels.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "6afa58af0faf06ab86e4a280e70995b2892f85f9b3ec46b2c4eedb4579630a7e",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-sentinels.json",
+   "output_sha256": "6afa58af0faf06ab86e4a280e70995b2892f85f9b3ec46b2c4eedb4579630a7e"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-seoul-aqicn.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "d9d30fd7f057417a2d281da7d59eae6258ab4392b5f96f96840ff892999702cb",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-seoul-aqicn.json",
+   "output_sha256": "d9d30fd7f057417a2d281da7d59eae6258ab4392b5f96f96840ff892999702cb"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-seoul-en.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "69f0b095c32303e9f9340d6162aac0b58ec455fb033df37c966b020410c6e31f",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-seoul-en.json",
+   "output_sha256": "69f0b095c32303e9f9340d6162aac0b58ec455fb033df37c966b020410c6e31f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-seoul-fahrenheit.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "4f2d271558635f93551cb2f523cdf3aef718609f93eb3533ea01925b0cf41fd1",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-seoul-fahrenheit.json",
+   "output_sha256": "4f2d271558635f93551cb2f523cdf3aef718609f93eb3533ea01925b0cf41fd1"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-seoul-imperial.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "27d9f5d5c69b214b2eac6023b401a71065fbf23d0a38a3b7865102e09cb3f7cb",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-seoul-imperial.json",
+   "output_sha256": "27d9f5d5c69b214b2eac6023b401a71065fbf23d0a38a3b7865102e09cb3f7cb"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-seoul-who.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "549867bee26c597875741e9e91d00a899be66607775beab41f71d4f4724a133b",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-seoul-who.json",
+   "output_sha256": "549867bee26c597875741e9e91d00a899be66607775beab41f71d4f4724a133b"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-seoul.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "eb116d46f319be2cf7febd4a6ca451d0086d3c312e02447a8d50ba37f9fe90f4",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-seoul.json",
+   "output_sha256": "eb116d46f319be2cf7febd4a6ca451d0086d3c312e02447a8d50ba37f9fe90f4"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-string-values.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "9cae6520aec700d4ffe29d56e82174276ee02dadd6a4f4c247ea60c59c2f667c",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-string-values.json",
+   "output_sha256": "9cae6520aec700d4ffe29d56e82174276ee02dadd6a4f4c247ea60c59c2f667c"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/kma-zero-precipitation.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "44350391d467a521c186a669682fdc2126f145662e0e167b14e5715c53cc2f43",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/kma-zero-precipitation.json",
+   "output_sha256": "44350391d467a521c186a669682fdc2126f145662e0e167b14e5715c53cc2f43"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/unknown-source.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "0a0d3fc4cdb012efb9b707486662c146eba65e4e2bfc27ef9244a8edf25a59af",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/unknown-source.json",
+   "output_sha256": "0a0d3fc4cdb012efb9b707486662c146eba65e4e2bfc27ef9244a8edf25a59af"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-london-fahrenheit.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "cf962cb8b8dce7e664213043fd9bc27259755547062cf097edcfc7a3c4f462d9",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-london-fahrenheit.json",
+   "output_sha256": "cf962cb8b8dce7e664213043fd9bc27259755547062cf097edcfc7a3c4f462d9"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-london.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "de40b3a53bffbc3ecf04a79417fe8a5bb756604998bc04b4ce4b625ef3141ad9",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-london.json",
+   "output_sha256": "de40b3a53bffbc3ecf04a79417fe8a5bb756604998bc04b4ce4b625ef3141ad9"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-newyork.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "6563dbff6f3aa603297b8a276a014466c8407c0744dcceaf69caef9d33ef26e3",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-newyork.json",
+   "output_sha256": "6563dbff6f3aa603297b8a276a014466c8407c0744dcceaf69caef9d33ef26e3"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-no-current-index.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "f068937262a436fc5f285f88a63d03e030246c2cb73e90bd4c1caa81324e8f55",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-no-current-index.json",
+   "output_sha256": "f068937262a436fc5f285f88a63d03e030246c2cb73e90bd4c1caa81324e8f55"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-no-pubdate.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "efdd1aa3352610ffd67f5ccf38e6fbb0dddf3d9d061ad85197fae0d7baeb21a4",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-no-pubdate.json",
+   "output_sha256": "efdd1aa3352610ffd67f5ccf38e6fbb0dddf3d9d061ad85197fae0d7baeb21a4"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-no-units.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "86ae9b5c6ecba6584fa14461ed826afe1f9bda528a47b6c4150d01c2353d598f",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-no-units.json",
+   "output_sha256": "86ae9b5c6ecba6584fa14461ed826afe1f9bda528a47b6c4150d01c2353d598f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-null-daily-row.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "d25fffa3317918c7336a1f9fd1c7338daf9da1277af81b2745074da2b0b07b53",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-null-daily-row.json",
+   "output_sha256": "d25fffa3317918c7336a1f9fd1c7338daf9da1277af81b2745074da2b0b07b53"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-null-hourly-row.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "32bec7cd4b85da32ef2c1aefbf92b6469f156023c2d6586cb5624eaed0513a10",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-null-hourly-row.json",
+   "output_sha256": "32bec7cd4b85da32ef2c1aefbf92b6469f156023c2d6586cb5624eaed0513a10"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-sydney.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "35d8d05880b377a77b736fca6ab6f03f57820959ca4d1c04bbe75bfe09e28b1c",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-sydney.json",
+   "output_sha256": "35d8d05880b377a77b736fca6ab6f03f57820959ca4d1c04bbe75bfe09e28b1c"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/vc-tokyo.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "841de068673951646378d3838018150776d09401eb0e08b788ca0cb7fa2370a2",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/vc-tokyo.json",
+   "output_sha256": "841de068673951646378d3838018150776d09401eb0e08b788ca0cb7fa2370a2"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/world-missing-daily.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "3885e43c5d8178bca4caa2fedf9d3a3b7b579eed46cc3677f02ced76d450324d",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/world-missing-daily.json",
+   "output_sha256": "3885e43c5d8178bca4caa2fedf9d3a3b7b579eed46cc3677f02ced76d450324d"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/conversion/world-missing-thistime.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "3801f22e982b17e8c2e5885a2017965ec36698467a7e28c6b0a4dc7f0a67c6e2",
+   "output": "Core/Tests/TWDomainTests/Corpus/conversion/world-missing-thistime.json",
+   "output_sha256": "3801f22e982b17e8c2e5885a2017965ec36698467a7e28c6b0a4dc7f0a67c6e2"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/forecast.json",
+   "commit": "76c94e717006b238af2d7944de3d33235e5c47e4",
+   "source_sha256": "12eaabd5a15b700bbd4782927cbd57fa1459e929f1f37fd13c4aecd22cfac5e9",
+   "output": "Core/Tests/TWDomainTests/Corpus/forecast.json",
+   "output_sha256": "12eaabd5a15b700bbd4782927cbd57fa1459e929f1f37fd13c4aecd22cfac5e9"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/functions.json",
+   "commit": "17ba97a4ee7e1b383469e570b5f8227fdb064124",
+   "source_sha256": "4723f684cb0404fc3e60b7e4c9792ab891f71489ee6d49233144bd946f1c897d",
+   "output": "Core/Tests/TWDomainTests/Corpus/functions.json",
+   "output_sha256": "4723f684cb0404fc3e60b7e4c9792ab891f71489ee6d49233144bd946f1c897d"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/geocode-seoul.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "702cfbafc3496faef4b9f4ab96aba4ee9c044cfbdc44ef87295b8720eabf2d78",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/geocode-seoul.json",
+   "output_sha256": "702cfbafc3496faef4b9f4ab96aba4ee9c044cfbdc44ef87295b8720eabf2d78"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-jeju.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "3c4a92f8b40c3545f067bd54ea7fee461a8c889b30fd1fb0f9fb43627f85924a",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-jeju.json",
+   "output_sha256": "3c4a92f8b40c3545f067bd54ea7fee461a8c889b30fd1fb0f9fb43627f85924a"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-seoul-aqicn.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "deb812fa8d38acaac28929a8b438109dee17159c036a1afbc036ac78324ffb5d",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul-aqicn.json",
+   "output_sha256": "deb812fa8d38acaac28929a8b438109dee17159c036a1afbc036ac78324ffb5d"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-seoul-en.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "ce96767395b02d489db345d4dd53305b9a57268d596b8eb715c8ad04c6de6635",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul-en.json",
+   "output_sha256": "ce96767395b02d489db345d4dd53305b9a57268d596b8eb715c8ad04c6de6635"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-seoul-f.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "e1899638c40d8aa70defc60ec7d9dd7cb2be12f22c281477c05dbe725057ec28",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul-f.json",
+   "output_sha256": "e1899638c40d8aa70defc60ec7d9dd7cb2be12f22c281477c05dbe725057ec28"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-seoul-imperial.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "90062d522028e0d9fbbb3e744b9b88477ce9f9f08b708ad4ea72dfdfaef99bb6",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul-imperial.json",
+   "output_sha256": "90062d522028e0d9fbbb3e744b9b88477ce9f9f08b708ad4ea72dfdfaef99bb6"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-seoul-who.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "eb39c612a0e51619c3a3d845fb91b8fb184fbf9f9b01144a0c4fb6677cc8d9c9",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul-who.json",
+   "output_sha256": "eb39c612a0e51619c3a3d845fb91b8fb184fbf9f9b01144a0c4fb6677cc8d9c9"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/kma-seoul.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "75b92bbcfca72d79438021b4245c4efab4502f5954ba991d3b8c9e70d9578b17",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul.json",
+   "output_sha256": "75b92bbcfca72d79438021b4245c4efab4502f5954ba991d3b8c9e70d9578b17"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/nation.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "a85f60adce75d424bce398ae14e80b2dc194fe9f767f3cae8969522dfeeb8024",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/nation.json",
+   "output_sha256": "a85f60adce75d424bce398ae14e80b2dc194fe9f767f3cae8969522dfeeb8024"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/special.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "33b58ab38e72047160f98ea548280b727346b2a14b6904a8853603c40283ea9a",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/special.json",
+   "output_sha256": "33b58ab38e72047160f98ea548280b727346b2a14b6904a8853603c40283ea9a"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/vc-london-f.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "68e705004be6b42ab7f8df00f7ba7ccc3d15ee71062893fda59e69fdcf9dc07c",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/vc-london-f.json",
+   "output_sha256": "68e705004be6b42ab7f8df00f7ba7ccc3d15ee71062893fda59e69fdcf9dc07c"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/vc-london.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "9cf2af74931fac468eff165adbae38e33200faa99c142820d9fa0ddc0b247611",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/vc-london.json",
+   "output_sha256": "9cf2af74931fac468eff165adbae38e33200faa99c142820d9fa0ddc0b247611"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/vc-newyork.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "7897c52da7d6193142d64d39aff787a07995d25ba21e9cf8414c05191217ce1d",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/vc-newyork.json",
+   "output_sha256": "7897c52da7d6193142d64d39aff787a07995d25ba21e9cf8414c05191217ce1d"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/vc-sydney.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "4f6811ad32d27684234b8d51499623ca9d828fa848303a4c8c915e43a5be4ed3",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/vc-sydney.json",
+   "output_sha256": "4f6811ad32d27684234b8d51499623ca9d828fa848303a4c8c915e43a5be4ed3"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/inputs/vc-tokyo.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "1366262305a9a6a5a100a0597e061488b125c3e5be4c0c805cf07093705d4b39",
+   "output": "Core/Tests/TWDomainTests/Corpus/inputs/vc-tokyo.json",
+   "output_sha256": "1366262305a9a6a5a100a0597e061488b125c3e5be4c0c805cf07093705d4b39"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/nation.json",
+   "commit": "fcd7c6ee7caa829c38730611131dc95b252fcd34",
+   "source_sha256": "6fd9e6d47b0090286d3b64cc2bc5a0a80bfe51e6668a9770c03de0f225ae766e",
+   "output": "Core/Tests/TWDomainTests/Corpus/nation.json",
+   "output_sha256": "6fd9e6d47b0090286d3b64cc2bc5a0a80bfe51e6668a9770c03de0f225ae766e"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/photos.json",
+   "commit": "3bcbbbd80ad83af81ba556418214b05612fe9dd6",
+   "source_sha256": "4c9fbbc0e3f0ba24bf5dc14b22b3c8a819a1a679d876f1ad2e4acdae1270a940",
+   "output": "Core/Tests/TWDomainTests/Corpus/photos.json",
+   "output_sha256": "4c9fbbc0e3f0ba24bf5dc14b22b3c8a819a1a679d876f1ad2e4acdae1270a940"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/requests.json",
+   "commit": "a5476fceabe32258b3c736bd6e8b10f1df22742b",
+   "source_sha256": "dcd777d4004df216f1e6167af823843da73b712d310510b9103790c14ae699af",
+   "output": "Core/Tests/TWDomainTests/Corpus/requests.json",
+   "output_sha256": "dcd777d4004df216f1e6167af823843da73b712d310510b9103790c14ae699af"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/settings.json",
+   "commit": "4516ce7464b34da5aa933d1707800d3d2ea2aee2",
+   "source_sha256": "c3e470c1ce9c20a78e7e417dc0fdc74cedccff558aa3ef85b3985d7c8b494584",
+   "output": "Core/Tests/TWDomainTests/Corpus/settings.json",
+   "output_sha256": "c3e470c1ce9c20a78e7e417dc0fdc74cedccff558aa3ef85b3985d7c8b494584"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/source.json",
+   "commit": "598e3f278109bbeaaaa5870b04c1e78e36506abc",
+   "source_sha256": "89d2a6183c77bbd1d6e3c2271d397e04089ba3452340ec9625503bc3951087c5",
+   "output": "Core/Tests/TWDomainTests/Corpus/source.json",
+   "output_sha256": "89d2a6183c77bbd1d6e3c2271d397e04089ba3452340ec9625503bc3951087c5"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/special.json",
+   "commit": "94e1bbef06d0dabbce7c7837e4dcc81f3ce7a28e",
+   "source_sha256": "b69c660c86d5b1f907d1a5906d486f0f28b9245ce816cbf68a9e96d2fcfa07d9",
+   "output": "Core/Tests/TWDomainTests/Corpus/special.json",
+   "output_sha256": "b69c660c86d5b1f907d1a5906d486f0f28b9245ce816cbf68a9e96d2fcfa07d9"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/units.json",
+   "commit": "94e1bbef06d0dabbce7c7837e4dcc81f3ce7a28e",
+   "source_sha256": "662cc3aefdfc6af49dcae5e24c0b1c6d62c0f688c2fda0c1f08ac4b27b37291f",
+   "output": "Core/Tests/TWDomainTests/Corpus/units.json",
+   "output_sha256": "662cc3aefdfc6af49dcae5e24c0b1c6d62c0f688c2fda0c1f08ac4b27b37291f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/corpus/weather-info.json",
+   "commit": "687b26f34f18397989c8e7c57200a26092e74c2e",
+   "source_sha256": "a5a5569cfbd067085610ac88160943e454aa56df1d5811291c6600767cfbec84",
+   "output": "Core/Tests/TWDomainTests/Corpus/weather-info.json",
+   "output_sha256": "a5a5569cfbd067085610ac88160943e454aa56df1d5811291c6600767cfbec84"
+  }
+ ]
+}
