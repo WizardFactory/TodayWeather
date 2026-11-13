@@ -34,8 +34,9 @@ struct ImportedClientAssetsTests {
         SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
     }
 
+    /// ASCII `0-9a-f` only, checked on UTF-8 bytes: `Character` ranges would also admit graphemes such as `1️⃣`.
     func isLowercaseHex(_ text: String, length: Int) -> Bool {
-        text.count == length && text.allSatisfy { ("0"..."9").contains($0) || ("a"..."f").contains($0) }
+        text.utf8.count == length && text.utf8.allSatisfy { (0x30...0x39).contains($0) || (0x61...0x66).contains($0) }
     }
 
     func bundledFiles() -> Set<String> {
@@ -56,6 +57,14 @@ struct ImportedClientAssetsTests {
             #expect(isLowercaseHex(r.source_sha256, length: 64) && isLowercaseHex(r.output_sha256, length: 64), "\(r.output)")
         }
         #expect(Set(records.map(\.output)).count == records.count, "duplicate outputs")
+    }
+
+    @Test func hexCheckRejectsNonHexText() {
+        #expect(isLowercaseHex(String(repeating: "0a", count: 20), length: 40))
+        #expect(!isLowercaseHex(String(repeating: "x", count: 40), length: 40))
+        #expect(!isLowercaseHex(String(repeating: "A", count: 40), length: 40))
+        #expect(!isLowercaseHex(String(repeating: "1\u{FE0F}\u{20E3}", count: 40), length: 40))  // keycap 1️⃣
+        #expect(!isLowercaseHex(String(repeating: "a", count: 39), length: 40))
     }
 
     @Test func bundledResourcesMatchTheRecord() throws {
