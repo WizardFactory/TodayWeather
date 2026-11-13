@@ -34,6 +34,10 @@ struct ImportedClientAssetsTests {
         SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
     }
 
+    func isLowercaseHex(_ text: String, length: Int) -> Bool {
+        text.count == length && text.allSatisfy { ("0"..."9").contains($0) || ("a"..."f").contains($0) }
+    }
+
     func bundledFiles() -> Set<String> {
         let root = TWResources.root.standardizedFileURL
         var files = Set<String>()
@@ -48,8 +52,8 @@ struct ImportedClientAssetsTests {
         let records = try provenance().files
         #expect(records.count > 300)
         for r in records {
-            #expect(r.commit.count == 40, "\(r.output)")
-            #expect(r.source_sha256.count == 64 && r.output_sha256.count == 64, "\(r.output)")
+            #expect(isLowercaseHex(r.commit, length: 40), "\(r.output)")
+            #expect(isLowercaseHex(r.source_sha256, length: 64) && isLowercaseHex(r.output_sha256, length: 64), "\(r.output)")
         }
         #expect(Set(records.map(\.output)).count == records.count, "duplicate outputs")
     }
