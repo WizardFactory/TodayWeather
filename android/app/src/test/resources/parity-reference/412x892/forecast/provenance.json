@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -89,9 +89,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -113,11 +111,11 @@
  "files": [
   {
    "file": "en-US/kma-seoul/daily-0.png",
-   "sha256": "b2fca48659a560a3b6753aea7dfee4bb89888f8b9a16ce435b6d5e3544ab595d"
+   "sha256": "c779431a97ce6f3b49f9df3c13985b69dd7cd988b6bc60f1e66d7033ba143849"
   },
   {
    "file": "en-US/kma-seoul/daily-1.png",
-   "sha256": "48901fad6a463adf333580858ab1d434bf4b88fedbe37e4be796845fd7fc38c7"
+   "sha256": "dcf572795d56e6b693001f3649791aca7b16428d2285bba69a83c74c45c96ff8"
   },
   {
    "file": "en-US/kma-seoul/daily-2.png",
@@ -125,7 +123,7 @@
   },
   {
    "file": "en-US/kma-seoul/daily-3.png",
-   "sha256": "3f1d957812a5e5aea10603ff8fd010f0b01900a6b534ee86d2fd7206e9329abe"
+   "sha256": "2f1e9628f6b4dc7e78715539f04a1cf8a64257265c64169de9bd670df09b56cf"
   },
   {
    "file": "en-US/kma-seoul/daily.json",
@@ -133,11 +131,11 @@
   },
   {
    "file": "en-US/kma-seoul/hourly-0.png",
-   "sha256": "b2fca48659a560a3b6753aea7dfee4bb89888f8b9a16ce435b6d5e3544ab595d"
+   "sha256": "c779431a97ce6f3b49f9df3c13985b69dd7cd988b6bc60f1e66d7033ba143849"
   },
   {
    "file": "en-US/kma-seoul/hourly-1.png",
-   "sha256": "37b3f4f9329836be856c7ceacb4815fc6c5f726390a4a9b133a234299d0f9bcd"
+   "sha256": "d92957e675c80003cdf28fc527db52b1ac1b6e048985e3d8af40e4a4c0704012"
   },
   {
    "file": "en-US/kma-seoul/hourly-2.png",
@@ -145,7 +143,7 @@
   },
   {
    "file": "en-US/kma-seoul/hourly-3.png",
-   "sha256": "e0c989a193864f6f19e71096044f6079b6421d12f97ff425a164d6954647d6aa"
+   "sha256": "ce954287e93ac0180f07ffa8e49962966301514fb26fd54e0968700eb11cbbdc"
   },
   {
    "file": "en-US/kma-seoul/hourly-4.png",
@@ -157,15 +155,15 @@
   },
   {
    "file": "en-US/vc-london/daily-0.png",
-   "sha256": "be59192551d69e9309c33127e64e1e3dbb47287556d9cc396ed7b9bbf2ec277c"
+   "sha256": "958711197a0650d3a1b0e5d6a9afc02178cc4986fab4131c78d107fb14324aff"
   },
   {
    "file": "en-US/vc-london/daily-1.png",
-   "sha256": "5571f417620bfdba1fb7af0da79d4e1a4ce562a427c123769d022ff441d56d24"
+   "sha256": "7a186a2a57c0f10e8236af562502ec7b0b7ed7d35f2b6a91c44965f3c5324e30"
   },
   {
    "file": "en-US/vc-london/daily-2.png",
-   "sha256": "0353cba29834c87740e36ce1b17234a42270fd25e746c18db7a61eeab4eb24b3"
+   "sha256": "8f0602a687df3965332af8fa0e4108fe6614a4b88ae02b8e8cab33162ea2996f"
   },
   {
    "file": "en-US/vc-london/daily-3.png",
@@ -177,11 +175,11 @@
   },
   {
    "file": "en-US/vc-london/hourly-0.png",
-   "sha256": "be59192551d69e9309c33127e64e1e3dbb47287556d9cc396ed7b9bbf2ec277c"
+   "sha256": "d8c97f344ae554e9188a1a74bf90e339df7f84c537cc0a5b9277948cb0dffad2"
   },
   {
    "file": "en-US/vc-london/hourly-1.png",
-   "sha256": "187f67c1665bf160b4acb2c44add66c42d88f3cd86dce353d6f83eb1cc84aee9"
+   "sha256": "4df77a4d4b39e4f89fa9a32c70a936d74d403c7e005285ab2580dbc549f383fe"
   },
   {
    "file": "en-US/vc-london/hourly-2.png",
@@ -189,7 +187,7 @@
   },
   {
    "file": "en-US/vc-london/hourly-3.png",
-   "sha256": "5ef1aff824c86eee75b4c1b34532468aec689fbb88284ecfb54556c1d8bc5796"
+   "sha256": "d9c856d8a17b3d1bda56bf011b0f98ea04a6de667ce4f6b441026125a1160c19"
   },
   {
    "file": "en-US/vc-london/hourly-4.png",
@@ -209,11 +207,11 @@
   },
   {
    "file": "ko-KR/kma-seoul/daily-0.png",
-   "sha256": "0b60061683a373ecd8cc7d065c47fb44e0fdd2562ebaab3f109bf147445c80d8"
+   "sha256": "c779431a97ce6f3b49f9df3c13985b69dd7cd988b6bc60f1e66d7033ba143849"
   },
   {
    "file": "ko-KR/kma-seoul/daily-1.png",
-   "sha256": "8dece912e671456737af54cb979c0cef498cf89ebc169bfa3eac4d0a06d335db"
+   "sha256": "d42d0ad88e7beade96b7090d68c742e9868d7f3c7d6486f03e46ac16c382140a"
   },
   {
    "file": "ko-KR/kma-seoul/daily-2.png",
@@ -221,7 +219,7 @@
   },
   {
    "file": "ko-KR/kma-seoul/daily-3.png",
-   "sha256": "aedd6fbe9c75ea3bc508cb5178ff9b1859bb5ba892b346c4b8c8e51901106ad1"
+   "sha256": "6e6e90c6130e9cbdae9beabdb31a6853f19ed6b7705e1956d30d1a9231d11066"
   },
   {
    "file": "ko-KR/kma-seoul/daily.json",
@@ -229,11 +227,11 @@
   },
   {
    "file": "ko-KR/kma-seoul/hourly-0.png",
-   "sha256": "b2fca48659a560a3b6753aea7dfee4bb89888f8b9a16ce435b6d5e3544ab595d"
+   "sha256": "c779431a97ce6f3b49f9df3c13985b69dd7cd988b6bc60f1e66d7033ba143849"
   },
   {
    "file": "ko-KR/kma-seoul/hourly-1.png",
-   "sha256": "4f8c3ca820c983b6dba37c5a7926588c9d4fd8a69e95e1dc7bff661432cd052e"
+   "sha256": "6b3f28c28837d60237b5a1552ccf968c16f3c3ec9c4244550f62d3e94e73418d"
   },
   {
    "file": "ko-KR/kma-seoul/hourly-2.png",
@@ -241,7 +239,7 @@
   },
   {
    "file": "ko-KR/kma-seoul/hourly-3.png",
-   "sha256": "548148c4faf3f6fd1003d34eb96f0f652d4a1041e7025c5482b52ba546624b43"
+   "sha256": "ee8e1b80fec74eaf81ad71299fed8bbd53295ebca820cf790d3c66bca71c5efc"
   },
   {
    "file": "ko-KR/kma-seoul/hourly-4.png",
@@ -253,15 +251,15 @@
   },
   {
    "file": "ko-KR/vc-london/daily-0.png",
-   "sha256": "be59192551d69e9309c33127e64e1e3dbb47287556d9cc396ed7b9bbf2ec277c"
+   "sha256": "958711197a0650d3a1b0e5d6a9afc02178cc4986fab4131c78d107fb14324aff"
   },
   {
    "file": "ko-KR/vc-london/daily-1.png",
-   "sha256": "ae79c32acb3b94e1c5756208586a1cf028f1cfd595d8ca91913d810c5b4a4f22"
+   "sha256": "dcfb1ca5f1615a92e10a06396aab56ec9d124372dc77130c8525623684701602"
   },
   {
    "file": "ko-KR/vc-london/daily-2.png",
-   "sha256": "0fe1b2582416f218fed162e4de19f1dd31e1fe85f3a3188a76589ab07f63df85"
+   "sha256": "c154c6691a3a2984fad62478a57e9913a79f09e68e99504c7376c7292a96ace1"
   },
   {
    "file": "ko-KR/vc-london/daily-3.png",
@@ -273,11 +271,11 @@
   },
   {
    "file": "ko-KR/vc-london/hourly-0.png",
-   "sha256": "be59192551d69e9309c33127e64e1e3dbb47287556d9cc396ed7b9bbf2ec277c"
+   "sha256": "958711197a0650d3a1b0e5d6a9afc02178cc4986fab4131c78d107fb14324aff"
   },
   {
    "file": "ko-KR/vc-london/hourly-1.png",
-   "sha256": "b01bf45d89941ffacd7fb94dff66d9e94d91bfecb035ae77a3c9cf40f5f0144a"
+   "sha256": "513cfc300353276f9c4cdf00519e427bcf64ae2fb173afcefcb1971a8f54b671"
   },
   {
    "file": "ko-KR/vc-london/hourly-2.png",
@@ -285,7 +283,7 @@
   },
   {
    "file": "ko-KR/vc-london/hourly-3.png",
-   "sha256": "79df2fd94f9097958b9512520f6f91c6ef2bc6cf9682ed828691b0b801263073"
+   "sha256": "10e0c070ecb31176b607502f8b5984e52b8c548c7dab9bee9a1ec93ffd392021"
   },
   {
    "file": "ko-KR/vc-london/hourly-4.png",

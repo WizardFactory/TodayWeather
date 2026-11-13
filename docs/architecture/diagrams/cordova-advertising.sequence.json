@@ -6,10 +6,7 @@
     "locale": "en",
     "quality_profile": "showcase",
     "column_fit": "spread",
-    "viewBox": [
-      1080,
-      705
-    ]
+    "output": "docs/architecture/diagrams/cordova-advertising.html"
   },
   "participants": [
     {
@@ -81,7 +78,7 @@
       "from": "adapter",
       "to": "native",
       "y": 345,
-      "label": "Existing UMP consent",
+      "label": "UMP: GDPR, IDFA, ATT prompt",
       "variant": "security"
     },
     {
@@ -89,7 +86,7 @@
       "from": "adapter",
       "to": "ads",
       "y": 390,
-      "label": "Ready: load banner",
+      "label": "Ready after consent settles",
       "variant": "return"
     },
     {
@@ -121,7 +118,7 @@
       "from": "adapter",
       "to": "native",
       "y": 570,
-      "label": "Native banner operation",
+      "label": "Request: npa unless ATT allowed",
       "variant": "default"
     },
     {
@@ -136,7 +133,7 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Policy \u00b7 issue #2654",
+      "title": "Policy · issue #2654",
       "items": [
         "First show waits for config finish (max 12 seconds)",
         "Cache survives offline; screen hiding / consent win"
@@ -144,10 +141,18 @@
     },
     {
       "dot": "amber",
-      "title": "Separate consent gates \u00b7 #2660",
+      "title": "Separate consent gates · #2660",
       "items": [
         "Analytics off until opt-in; advertising uses denied",
         "UMP controls ads; withdrawal stops future analytics"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "iOS tracking · #2945",
+      "items": [
+        "UMP owns the ATT prompt; the app never asks",
+        "Personalized only if ATT and consent allow"
       ]
     }
   ]

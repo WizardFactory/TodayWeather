@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK places",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -89,9 +89,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -118,7 +116,7 @@
   },
   {
    "file": "en-US/edit.png",
-   "sha256": "5983e4e3793fb0c81411dfe9ab7c720d0c9428bbf15ffb9cf68518dc8ccea44f"
+   "sha256": "e7914158051b33f6f179e740603b531711561b48646c11ca2da11aa3f623aeee"
   },
   {
    "file": "en-US/favorites-dark.json",
@@ -126,7 +124,7 @@
   },
   {
    "file": "en-US/favorites-dark.png",
-   "sha256": "aa091cea0e8dd741d81ea401c44de8f68e8f28e3f975b99d79617ac3d3c06a2d"
+   "sha256": "65f0e4727bb86936b58ba5f68e75a8c0c959921e1064986daffb596f0bd7aa39"
   },
   {
    "file": "en-US/favorites.json",
@@ -134,7 +132,7 @@
   },
   {
    "file": "en-US/favorites.png",
-   "sha256": "3a1d5b72f3ef16a8225731dd46733ad86042897d63a61cf5a947e7b890be6b16"
+   "sha256": "b36a4590bdc7a72e617b4528776aa332d297dda8f61c225d0999445861fb0319"
   },
   {
    "file": "en-US/location.json",
@@ -142,7 +140,7 @@
   },
   {
    "file": "en-US/location.png",
-   "sha256": "7380e56ad1d2546b20de5a68706488c10c85a575fbf2872a458a5be580b554d3"
+   "sha256": "2b1aeef6f30c26ef90f4f9d1436e5ce1c3a157fdd7e4e6fcfd6852a55da42167"
   },
   {
    "file": "en-US/search.json",
@@ -150,7 +148,7 @@
   },
   {
    "file": "en-US/search.png",
-   "sha256": "e32549d3d0b4d9166f91d1fdc33f0ed5af99e4f3e5f364142afed3d77da675b8"
+   "sha256": "d9e9b544a0837f3d24b01acdf214aed3857ecc989d39aed548918bff1f853069"
   },
   {
    "file": "en-US/viewport.json",
@@ -162,7 +160,7 @@
   },
   {
    "file": "ko-KR/edit.png",
-   "sha256": "5c1421e894c04644f75dda045b31e806a8bbd7fc5e4efbe42539c244f4ce9e70"
+   "sha256": "10a28c4125ef2b07c4619b9203fddc124df71989d432904f76d7416944c40495"
   },
   {
    "file": "ko-KR/favorites-dark.json",
@@ -170,7 +168,7 @@
   },
   {
    "file": "ko-KR/favorites-dark.png",
-   "sha256": "5c12f91aab515ac14963c354131c2d5f81326547961bd2057eee4a197a52ea5a"
+   "sha256": "a0753bbbe55f656ebeb682acc082ee6cfac2952cd0cf1654b6bdef41492d0f4f"
   },
   {
    "file": "ko-KR/favorites.json",
@@ -178,7 +176,7 @@
   },
   {
    "file": "ko-KR/favorites.png",
-   "sha256": "2982912329019166766c9e27f999c7d698641d7f7094c5171020dc7b2f5c56b3"
+   "sha256": "9fe46fd2fdc9f78ee3f5a86de9c1248c790204eb276a8db65b75dd7775f4e1e4"
   },
   {
    "file": "ko-KR/location.json",
@@ -186,7 +184,7 @@
   },
   {
    "file": "ko-KR/location.png",
-   "sha256": "7fa1434991eca551d7d50d61e24123f19371bb9d28841758afc53576188a32ab"
+   "sha256": "8b782d8f20ccb2ee28694e1e3cfe92b265234382e658b1e2d639866695419ea2"
   },
   {
    "file": "ko-KR/search.json",
@@ -194,7 +192,7 @@
   },
   {
    "file": "ko-KR/search.png",
-   "sha256": "d107417aace44313d6a87aa784de4f6e7e2fb8ba80bd3724310b688c40dc1583"
+   "sha256": "2b98f61195db1f25eab70043ee2601b6a7ded826d0b7fcf314788b10e29ecd1b"
   },
   {
    "file": "ko-KR/viewport.json",

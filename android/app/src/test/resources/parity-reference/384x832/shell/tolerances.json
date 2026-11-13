@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match.",
+ "why": "Four-size Korean/English header, tabs, menu and partial/full photo scroll gradient. Inspected narrow Korean dark menu, wide English old tabs and photo scroll overlays. Text, rows, hairlines and artwork align; residuals are glyph rasterization/advances and fractional outline edges. The gradient independently matches glyph-free edge colors within 3 channel levels after reproducing active/cached surfaces; captured backdrop is explicitly component input. Historical margins retained; dimensions match. 2026-11-13 recapture from the #2945 Cordova build: en-US-light-menu re-measured (was strong 0.005004, mean 1.628); the capture shows the same menu, and 1.5% of its pixels changed at Latin glyph edges.",
  "cases": {
   "en-US-dark-tabs": {
    "heightDifference": 0,
@@ -45,8 +45,8 @@
   },
   "en-US-light-menu": {
    "heightDifference": 0,
-   "strong": 0.005004,
-   "mean": 1.628
+   "strong": 0.00655,
+   "mean": 1.813
   },
   "en-US-photo-tabs": {
    "heightDifference": 0,
