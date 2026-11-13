@@ -156,8 +156,11 @@ Keep provider review and source/caution notices current; do not represent an unr
 
 ## iOS App Tracking Transparency release steps (#2945)
 
-The build asks for ATT only when the AdMob IDFA explainer message is published. These steps are AK-owned; none of them
-is performed by a build or a merge. Record each result in #2945.
+The build asks for ATT only when the AdMob IDFA explainer message is published. None of these steps is performed by a
+build or a merge; each needs AK's approval. Record each result in #2945.
+
+State on 2026-11-13: steps 1 to 3 are done except the fresh-install and EEA checks; see the
+[device evidence](../evidence/tasks/issue-2945/README.md). The message is published and live.
 
 1. In AdMob Privacy & messaging, create the IDFA explainer message for the iOS app and publish it. Keep the existing
    GDPR message. Unpublishing the message is the switch that stops new ATT prompts without a release.
@@ -167,7 +170,7 @@ is performed by a build or a merge. Record each result in #2945.
    second prompt after a relaunch, and the device console line `request_policy` for "Allow" (`authorized`,
    `personalized: true`) and for "Ask App Not to Track" (`denied`, `personalized: false`). With the EEA debug
    geography, record that the GDPR message comes first and what follows a refused GDPR message.
-   Add these captures as iOS pages to the [user manual](../user/cordova-app/README.md) and keep selected evidence under
+   Keep the captures in the [iOS manual](../user/cordova-ios/README.md) and selected evidence under
    `docs/evidence/tasks/issue-2945/`. Until the message is published the build shows no new screen.
 4. Submit the App Store privacy answers from the [privacy review](store-privacy-review.md#ios-app-tracking-transparency-2945)
    and upload the updated policy pages with the procedure above.
