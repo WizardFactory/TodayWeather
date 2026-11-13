@@ -52,6 +52,16 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TWStorageTests"
+               BuildableName = "TWStorageTests"
+               BlueprintName = "TWStorageTests"
+               ReferencedContainer = "container:Core">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "TWModelTests"
                BuildableName = "TWModelTests"
                BlueprintName = "TWModelTests"
