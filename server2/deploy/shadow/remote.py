@@ -199,6 +199,7 @@ def paired_evidence(directory,files):
             if raw is None:missing.append(attempt);continue
             require(len(raw)<=65536,'oversized result')
             result=json.loads(raw)
+            require(type(result) is dict,'invalid result shape')
             meta_name=f'data/paired/{attempt}.json';body_name=f'data/paired/{attempt}.body'
             if meta_name not in files or body_name not in files:missing.append(attempt);continue
             require(files[meta_name]['size']<=65536,'oversized metadata')

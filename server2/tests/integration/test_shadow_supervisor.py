@@ -1170,7 +1170,8 @@ class RemoteTests(unittest.TestCase):
 
     def test_stop_download_ledger_body_binding_and_no_duplicate_export(self):
         import shutil
-        for missing,drift in ((False,None),(True,None),(False,'header'),(False,'elapsed')):
+        for missing,drift in ((False,None),(True,None),(False,'header'),(False,'elapsed'),
+                              (False,'array'),(False,'null'),(False,'scalar'),(False,'string')):
             with self.subTest(missing_body=missing,drift=drift),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp);host=root/'host';(host/'state').mkdir(parents=True);(host/'data/paired').mkdir(parents=True)
                 launch=dict(plan=dict(port=3000,artifacts={'server2':'a'*64,'paired_read.py':'b'*64}))
@@ -1189,6 +1190,10 @@ class RemoteTests(unittest.TestCase):
                 recorded=dict(result,elapsed_ms=123)
                 if drift=='header':recorded['headers']={'content-type':'changed'}
                 if drift=='elapsed':recorded['elapsed_ms']=True
+                if drift=='array':recorded=[]
+                if drift=='null':recorded=None
+                if drift=='scalar':recorded=1
+                if drift=='string':recorded='invalid'
                 db.execute('INSERT INTO attempts VALUES (?,?)',(1,json.dumps(recorded)));db.commit();db.close()
                 archive=root/'fixture.tar'
                 with remote.tarfile.open(archive,'w') as tar:
