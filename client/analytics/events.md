@@ -18,6 +18,11 @@ in downstream queries, not just individual custom events.
 | `ad_policy_exposure` | TwAds first eligible display opportunity | `delay_seconds` integer 0..120 | Once per WebView lifetime after bounded config completion; before the delay expires if eligible. Describes retained/fetched local policy. Native Firebase A/B membership is authoritative. |
 | `ad_impression` | Firebase/AdMob SDK automatic integration | Native ad platform/source/unit, currency/value where provided | App JS must not manually log this event. Confirm account linkage and value coverage on devices/export. |
 
+User property `att_status` (iOS, #2945): `authorized|denied|restricted|not_determined|unavailable`, the App Tracking
+Transparency status read after the consent flow. It is set through `Monetization.setAdTrackingStatus` only while
+Analytics collection is enabled, and again after a later opt-in. It carries no identifier. Automatic `ad_impression`
+rows inherit it, so [ios-att-monetization.sql](ios-att-monetization.sql) can split impressions and revenue by status.
+
 Durations are integer milliseconds in 0..600000. Unknown parameters, event names,
 enum values and invalid durations are rejected/dropped. No precise coordinates,
 address/city labels, raw errors, URLs, tokens, device UUIDs or user IDs are sent
