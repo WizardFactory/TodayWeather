@@ -434,6 +434,44 @@ class GuardTests(unittest.TestCase):
         s=host_sample();del s['diagnostics']
         self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'metrics_unavailable')
 
+    def test_diagnostic_vocabulary_equals_rust_serialization(self):
+        import re
+        src=SOURCE.parents[2]/'src'
+        obs=(src/'observability.rs').read_text();model=(src/'budget/model.rs').read_text()
+        def snake(name):return re.sub(r'(?<!^)([A-Z])',r'_\1',name).lower()
+        def variants(enum):
+            body=re.search(r'vocabulary!\('+enum+r' \{(.*?)\}\);',obs,re.S).group(1)
+            return {snake(v.strip()) for v in body.split(',') if v.strip()}
+        self.assertEqual(guard.VOCABULARY['component'],variants('Component'))
+        self.assertEqual(guard.VOCABULARY['stage'],variants('Stage'))
+        self.assertLessEqual(guard.VOCABULARY['cause'],variants('Cause'))
+        paths=set(re.findall(r'Self::[A-Za-z]+ => "([a-z0-9_]+)"',model))
+        self.assertEqual(guard.VOCABULARY['provider'],paths|{'none'})
+
+    def test_provider_http_and_s3_origins_parse(self):
+        for component,stage in (('provider','provider_http'),('s3','restore'),('quota','reserve'),('gateway','publish')):
+            text=('server2_runtime_local_paid_exhaustions_total 0\n'
+                  'server2_runtime_first_rejection_info{cause="auth",origin="event",component="%s",stage="%s",provider="data_go_kr",status="403"} 1\n'%(component,stage))
+            first=guard.diagnostic_values(text)['first_rejection']
+            self.assertEqual((first['component'],first['stage'],first['status']),(component,stage,403))
+
+    def test_stored_diagnostics_are_fully_validated(self):
+        m=host_manifest();prior=guard.evaluate(m,host_sample(),None,1001)
+        self.assertIsNotNone(prior['diagnostics'])
+        bad=[{'message':'free text'},dict(prior['diagnostics'],extra=1),dict(prior['diagnostics'],auth_failures=-1),
+             dict(prior['diagnostics'],first_rejection=dict(cause='quota',origin='event',component='provider',stage='acquire',provider='https://x',status=None))]
+        for diagnostics in bad:
+            for stop in (None,'observation_unavailable'):
+                tampered=dict(prior,diagnostics=diagnostics,stop=stop)
+                with self.assertRaises(guard.GuardError):guard.evaluate(m,host_sample(),tampered,1002)
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);mf=root/'manifest.json';sample=root/'sample.json';st=root/'guard.json'
+            mf.write_text(json.dumps(m));sample.write_text(json.dumps(host_sample()))
+            st.write_text(json.dumps(dict(prior,diagnostics={'message':'free text'})))
+            p=subprocess.run([sys.executable,str(GUARD_SOURCE),'check','--manifest',str(mf),'--sample',str(sample),'--state',str(st),'--now','1002'],capture_output=True,text=True,timeout=5)
+            self.assertEqual(p.returncode,2,p.stdout+p.stderr)
+            self.assertIn('guard_failed',p.stdout)
+
     def test_actual_offline_cli_persists_terminal_stop(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);m=root/'manifest.json';sample=root/'sample.json';st=root/'guard.json'

@@ -108,7 +108,7 @@ def evaluate(manifest, sample, previous, now):
         require(previous['manifest_sha256']==fingerprint,'state_identity')
         require(previous['schema']==3 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu']),'state_values')
         require(previous['stop'] is None or isinstance(previous['stop'],str),'state_stop')
-        require(previous['diagnostics'] is None or type(previous['diagnostics']) is dict,'state_diagnostics')
+        if previous['diagnostics'] is not None:checked_stored_diagnostics(previous['diagnostics'])
         result.update(previous)
         result['last_seen']=max(now,previous['last_seen'])
         if previous['stop'] is not None:
@@ -171,11 +171,15 @@ VOCABULARY=dict(cause={'auth','quota'},origin={'event','local_paid_allowance'},
     component={'http','gateway','geocode','world','domestic','provider','quota','s3','resolver','cache','history',
                'summary','warnings','push_state','delivery','notice','process','listener','logging'},
     stage={'request','lifecycle','startup','bind','shutdown','runtime_teardown','admission','lookup','restore',
-           'acquire','head','post','put','delete','options','other'},
+           'acquire','provider_http','reserve','publish','reconcile','void','writer','queue','worker','claim','send',
+           'oauth','record_result','submission','translate','snapshot','shared_work','maintenance'},
     provider={'none','data_go_kr','visual_crossing','kakao','google','google_air_quality','openweather','waqi'})
-FIRST=re.compile(r'server2_runtime_first_rejection_info\{cause="([a-z_]+)",origin="([a-z_]+)",component="([a-z_]+)",'
-                 r'stage="([a-z_]+)",provider="([a-z_]+)",status="(none|[1-5][0-9][0-9])"\} 1')
-PAID=re.compile(r'server2_shadow_paid_units_(initial|remaining)\{provider="([a-z_]+)"\} ([0-9]{1,7})')
+# Label values are Rust enum names (snake_case, may contain digits such as s3);
+# membership is then checked against VOCABULARY, which a test derives from the Rust source.
+FIRST=re.compile(r'server2_runtime_first_rejection_info\{cause="([a-z0-9_]{1,32})",origin="([a-z0-9_]{1,32})",'
+                 r'component="([a-z0-9_]{1,32})",stage="([a-z0-9_]{1,32})",provider="([a-z0-9_]{1,32})",'
+                 r'status="(none|[1-5][0-9][0-9])"\} 1')
+PAID=re.compile(r'server2_shadow_paid_units_(initial|remaining)\{provider="([a-z0-9_]{1,32})"\} ([0-9]{1,7})')
 
 
 def checked_diagnostics(value):
@@ -193,6 +197,15 @@ def checked_diagnostics(value):
         for units in paid.values():
             require(type(units) is dict and set(units)=={'initial','remaining'} and integer(units['initial'],0,1000000)
                     and integer(units['remaining'],0,units['initial']),'diagnostic_units')
+    return value
+
+
+def checked_stored_diagnostics(value):
+    """A persisted snapshot: the fixed diagnostics plus the sample time and guard counts."""
+    extra={'observed_at','auth_failures','quota_failures'}
+    require(type(value) is dict and set(value)=={'local_paid_exhaustions','first_rejection','paid_units'}|extra,'state_diagnostics')
+    require(all(integer(value[k]) for k in extra),'state_diagnostics')
+    checked_diagnostics({k:v for k,v in value.items() if k not in extra})
     return value
 
 
