@@ -84,7 +84,7 @@ final class FIFONetwork: @unchecked Sendable {
                     let r = sent[i].request
                     if r.method == "POST", let token = r.body[0]?["fcmToken"]?.stringValue,
                        sent.contains(where: { $0.replied && $0.request.method == "PUT"
-                           && $0.request.body["oldToken"] == .null && $0.request.body["newToken"]?.stringValue == token }) {
+                           && ($0.request.body["oldToken"] == .null || $0.request.body["oldToken"] == "") && $0.request.body["newToken"]?.stringValue == token }) {
                         firstTokenPostLostAfterItsReplacement = true
                     }
                     out.append(sent[i].reply)
@@ -138,8 +138,9 @@ final class Flag: @unchecked Sendable {
     func set() { lock.withLock { value = true } }
 }
 
-/// The property test over every event source (IN-04 review round 5): token changes and their callbacks at any time
-/// (also during the open's token read and during a replay), the open's read latency, first tokens and replacements,
+/// The property test over every event source (IN-04 review rounds 5–6): token changes and their callbacks at any time
+/// (also during the open's token read and during a replay), a launch with or without FCM's callback, blank callbacks
+/// and reads (ignored by Cordova), the open's read latency, first tokens over nil or "" and replacements,
 /// replies in any order (lost ones and the 403 of a replacement without an old token), and process ends at any
 /// operation, over up to three processes; the last one runs until nothing moves (it may never be opened). Oracle:
 /// every record once on the server under the newest token FCM gave, an empty log, and that token in the state.
@@ -151,6 +152,9 @@ struct PushPropertyTests {
         let firstTokenPostLost: Bool
         let trace: [String]
     }
+
+    /// Token values the Cordova callback ignores (`token.trim().length === 0`).
+    static let blanks = ["", " \t", "\u{3000}", "\n"]
 
     static func settle(_ sync: PushSync) async {
         for _ in 0..<4 {
@@ -165,35 +169,56 @@ struct PushPropertyTests {
         var trace: [String] = []
         let files = Files()
         let firstToken = Bool.random(using: &rng)
-        try files.seed(token: firstToken ? nil : "token-a")
+        // No token is nil or "" (Cordova's `!fcmToken`; a migrated "" stays "", CODEX-IN04-9).
+        let initial: String? = firstToken ? (Bool.random(using: &rng) ? nil : "") : "token-a"
+        try files.seed(token: initial)
         let server = firstToken ? ServerModel() : seededServer(token: "token-a")
         let network = FIFONetwork(server: server)
         var fcm: String? = firstToken ? nil : "token-a"
         var changes = 0
         var race = false
         let processes = Int.random(in: 1...3, using: &rng)
-        trace.append("first token: \(firstToken), processes: \(processes)")
+        trace.append("first token: \(firstToken) (stored \(initial.map { "\"\($0)\"" } ?? "nil")), processes: \(processes)")
         for p in 0..<processes {
             let last = p == processes - 1
             let end = last ? ProcessEnd() : ProcessEnd.at(Int.random(in: 1...80, using: &rng))
             let clock = VirtualClock()
             var now = Duration.zero
             let sync = files.process(network.transport(p), end: end, clock: clock)
-            // FCM calls the token callback with its current token at each launch.
-            var callbacks: [String] = fcm.map { [$0] } ?? []
+            // FCM may call the token callback with its current token at a launch; otherwise only the open's read
+            // gives it (Cordova's `getToken`), so then the last process opens and its read returns a token.
+            let launchCallback = Bool.random(using: &rng)
+            var callbacks: [String] = launchCallback ? fcm.map { [$0] } ?? [] : []
+            let readMayBeBlank = !last || launchCallback
             var read: ProviderRead?
             var openTask: Task<PushSync.Outcome?, Never>?
             let openDone = Flag()
             // The SDK's value is taken somewhere between the start and the end of the read: FCM's token then.
             var tokenAtReadStart: String?
             func readValue(_ rng: inout SeededRandom) -> String? {
-                Bool.random(using: &rng) ? tokenAtReadStart : fcm
+                switch Int.random(in: readMayBeBlank ? 0..<5 : 1..<5, using: &rng) {
+                case 0: Self.blanks.randomElement(using: &rng)
+                case 1, 2: tokenAtReadStart
+                default: fcm
+                }
             }
-            let opens = Bool.random(using: &rng)
+            let opens = Bool.random(using: &rng) || (last && !launchCallback)
+            func startOpen() async {
+                let r = ProviderRead()
+                read = r
+                tokenAtReadStart = fcm
+                openTask = Task {
+                    let o = await sync.open { await r.value() }
+                    openDone.set()
+                    return o
+                }
+                _ = await eventually(seconds: 2) { r.isWaiting || openDone.isSet }
+                trace.append("p\(p): open, reading the token")
+            }
             await sync.start()
-            trace.append("p\(p): start (opens: \(opens))")
+            trace.append("p\(p): start (opens: \(opens), launch callback: \(launchCallback))")
             for _ in 0..<Int.random(in: 6...28, using: &rng) where !end.hasEnded {
-                switch Int.random(in: 0..<9, using: &rng) {
+                switch Int.random(in: 0..<10, using: &rng) {
                 case 0 where changes < 4:
                     let pool: [String] = ["token-b", "token-c", "token-d", "token-a"]
                     let next: String = pool.filter { $0 != fcm }.randomElement(using: &rng)!
@@ -209,20 +234,16 @@ struct PushPropertyTests {
                     trace.append("p\(p): callback \(token)\(duringRead ? " during the open's read" : "")")
                     await sync.tokenArrived(token)
                 case 2 where opens && openTask == nil:
-                    let r = ProviderRead()
-                    read = r
-                    tokenAtReadStart = fcm
-                    openTask = Task {
-                        let o = await sync.open { await r.value() }
-                        openDone.set()
-                        return o
-                    }
-                    _ = await eventually(seconds: 2) { r.isWaiting || openDone.isSet }
-                    trace.append("p\(p): open, reading the token")
+                    await startOpen()
                 case 3 where read?.isDone == false:
                     let value = readValue(&rng)
                     trace.append("p\(p): the read returns \(value ?? "nil")")
                     read?.resolve(value)
+                case 8:
+                    // A blank token callback, which Cordova ignores (CODEX-IN04-10).
+                    let blank = Self.blanks.randomElement(using: &rng)!
+                    callbacks.append(blank)
+                    trace.append("p\(p): FCM blank \(blank.debugDescription)")
                 case 4:
                     now += .milliseconds(Int.random(in: 300...2500, using: &rng))
                     clock.advance(to: now)
@@ -248,7 +269,8 @@ struct PushPropertyTests {
                 if let openTask { _ = await openTask.value }
                 continue
             }
-            // The last process runs until nothing moves.
+            // The last process runs until nothing moves; one that opens and has not yet opens now.
+            if opens && openTask == nil { await startOpen() }
             for _ in 0..<400 {
                 read?.resolve(readValue(&rng))
                 while !callbacks.isEmpty {
@@ -281,7 +303,10 @@ struct PushPropertyTests {
             failures.append("records without a token \(server.keys)")
         }
         if !files.logEntries.isEmpty { failures.append("log \(files.logEntries.map { "\($0.id):\($0.old ?? "-")→\($0.new)" })") }
-        if files.storedToken != fcm { failures.append("state token \(files.storedToken ?? "nil"), expected \(fcm ?? "nil")") }
+        let expected = fcm ?? initial
+        if files.storedToken != expected {
+            failures.append("state token \(files.storedToken ?? "nil"), expected \(expected ?? "nil")")
+        }
         return Outcome(seed: seed, failures: failures, raceDuringOpenRead: race,
                        firstTokenPostLost: network.firstTokenPostLostAfterItsReplacement, trace: trace)
     }

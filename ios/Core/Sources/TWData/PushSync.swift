@@ -100,7 +100,8 @@ public actor PushSync {
     /// while a replay runs: the replay sends them in turn).
     @discardableResult
     public func tokenArrived(_ token: String) -> [PushRequest] {
-        observations += 1
+        // A blank token is ignored by the callback, so it is no observation (CODEX-IN04-10).
+        if PushRegistration.accepts(token) { observations += 1 }
         guard let (state, ctx) = reconciled() else { return [] }
         recover()
         return replace(token, state: state, ctx: ctx).map(\.0)
@@ -115,13 +116,14 @@ public actor PushSync {
     /// The token is read from `token` (the SDK's current token) while the actor runs other events. A token the callback
     /// delivered meanwhile (`tokenArrived`) is newer than any value the read can still return late, or as new, and FCM
     /// delivers every later change through the callback, so a value whose read overlapped another observation is
-    /// dropped: observations count on the actor when the read starts and are compared when it ends.
+    /// dropped: observations count on the actor when the read starts and are compared when it ends. Only accepted
+    /// tokens are observations; a blank value is ignored, as by the Cordova callback.
     public func open(token: @escaping @Sendable () async -> String?) async -> Outcome? {
         let due = timer(repostDelay)
         let seen = observations
         let read = await token()
         let current = observations == seen ? read : nil
-        if current != nil { observations += 1 }
+        if PushRegistration.accepts(current) { observations += 1 }
         guard let (state, ctx) = reconciled() else { return nil }
         recover()
         openStarts += 1
@@ -194,7 +196,7 @@ public actor PushSync {
     }
 
     /// Sends the waiting entries one after another in `id` order, each as one unit: the replacement and, for an entry
-    /// without `old`, the list post with its token (Cordova's first-token path). A unit is complete when all its
+    /// without `old` (nil or "", `PushRegistration.isFirst`), the list post with its token (Cordova's first-token path). A unit is complete when all its
     /// requests replied; then its entry is acknowledged and the next unit starts (CODEX-IN04-4). Then the list post
     /// that fell due meanwhile.
     private func replayEntries() async {
@@ -214,7 +216,7 @@ public actor PushSync {
               let entry = (try? log.entries())?.first(where: { !sentHere.contains($0.id) }) else { return nil }
         sentHere.insert(entry.id)
         var replies = [transport.start(PushRegistration.replacement(entry.new, over: entry.old, context: ctx))]
-        if entry.old == nil {
+        if PushRegistration.isFirst(over: entry.old) {
             var push = state.push
             push.fcmToken = entry.new
             replies += start(PushRegistration.onStart(push, places: state.places, token: nil, context: ctx).requests)

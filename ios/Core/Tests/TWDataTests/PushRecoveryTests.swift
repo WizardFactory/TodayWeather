@@ -257,6 +257,58 @@ struct PushRecoveryTests {
         #expect(files.logEntries.isEmpty)
     }
 
+    /// CODEX-IN04-9: a stored token "" is no token (Cordova's `!fcmToken`), in a replay as on the normal path. The
+    /// first token B over "" was logged and the process ended before its list post; a start alone replays the
+    /// replacement over "" and then the list with B.
+    @Test func codexIn04_9_anEmptyStoredTokenReplaysAsAFirstToken() async throws {
+        let files = Files()
+        try files.seed(token: "")
+        let server = ServerModel()
+        let first = DeliveredServerTransport(server: server)
+        let p1 = files.process(first, end: ProcessEnd { op, _ in op == .send("POST") }, clock: ContinuousClock())
+        await p1.tokenArrived("token-b")
+        #expect(first.requests.map { replacement($0.request) } == [["token-b", ""]], "the list post never left")
+        first.dropAll()
+        let transport = DeliveredServerTransport(server: server)
+        let p2 = files.sync(transport)
+        await p2.start()
+        #expect(await pump(transport, p2))
+        #expect(transport.requests.map(\.request.method) == ["PUT", "POST"])
+        #expect(replacement(transport.requests[0].request) == ["token-b", ""])
+        #expect(server.tokens == ["token-b"])
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(files.storedToken == "token-b")
+        #expect(files.logEntries.isEmpty)
+    }
+
+    /// CODEX-IN04-10: a blank token callback is ignored (Cordova's `token.trim().length === 0`), so it is no
+    /// observation either: the open's SDK read B that overlapped it is kept.
+    @Test func codexIn04_10_aBlankCallbackDoesNotDropTheRead() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let server = seededServer(token: "token-a")
+        let transport = DeliveredServerTransport(server: server)
+        let sync = files.sync(transport)
+        let read = ProviderRead()
+        let open = Task { await sync.open { await read.value() } }
+        #expect(await eventually { read.isWaiting })
+        #expect(await sync.tokenArrived(" \t").isEmpty)
+        read.resolve("token-b")
+        for _ in 0..<20 {
+            #expect(await pump(transport, sync))
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        _ = await open.value
+        #expect(transport.requests.compactMap { r -> [String?]? in
+            let x = replacement(r.request)
+            return x.isEmpty ? nil : x
+        } == [["token-b", "token-a"]])
+        #expect(server.tokens == ["token-b"])
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(files.storedToken == "token-b")
+        #expect(files.logEntries.isEmpty)
+    }
+
     /// While a replay runs, a new token is logged and sent by the replay after the entries before it, and the list
     /// post that falls due waits for the replay.
     @Test func eventsDuringAReplayWaitTheirTurn() async throws {

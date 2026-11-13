@@ -71,8 +71,8 @@ public enum PushRegistration {
         state.records = records
         state.type = platformType
         var requests: [PushRequest] = []
-        if let token, !isBlank(token), !JSString.same(token, state.fcmToken) {
-            let first = state.fcmToken?.isEmpty ?? true
+        if let token, accepts(token), !JSString.same(token, state.fcmToken) {
+            let first = isFirst(over: state.fcmToken)
             requests.append(replacement(token, over: state.fcmToken, context: context))
             state.fcmToken = token
             if first && !records.isEmpty { requests.append(postList(state, context: context)) }
@@ -106,6 +106,18 @@ public enum PushRegistration {
         var h = ["Content-Type": "application/json", "Device-Id": context.deviceId]
         if language { h["Accept-Language"] = context.language }
         return h
+    }
+
+    /// A token replacing `old` is a first token (Cordova's `!self.pushData.fcmToken`: null and "" alike); its
+    /// replacement is followed by the list post. Every path decides this here, the replay included (CODEX-IN04-9).
+    public static func isFirst(over old: String?) -> Bool {
+        old?.isEmpty ?? true
+    }
+
+    /// The token callback takes `token` (it ignores a blank one). An ignored value is no observation of the token
+    /// either: every path decides this here (CODEX-IN04-10).
+    public static func accepts(_ token: String?) -> Bool {
+        token.map { !isBlank($0) } ?? false
     }
 
     /// The token callback's test: `typeof token !== 'string' || token.trim().length === 0` ignores the token.
