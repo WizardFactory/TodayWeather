@@ -61,14 +61,17 @@ struct DailyChartFrame: View {
 }
 
 /// The daily forecast chart of the daily tab (gate G2, #2954): scrolls horizontally and opens at the Cordova scroll
-/// position (today in the third column, snapped down to a whole point).
+/// position (today in the third column, snapped down to a whole point). Each change of `applyCount` (one per weather
+/// apply of the page, also with the same data) scrolls back to that position (``OpeningScrollView``).
 struct DailyChartView: View {
     let chart: DailyChart
+    var applyCount = 0
     var colors: ChartColors = .light
 
     var body: some View {
         let layout = DailyChartLayout(chart)
-        OpeningScrollView(width: chart.width, height: layout.contentHeight, opening: chart.openingOffset) {
+        OpeningScrollView(width: chart.width, height: layout.contentHeight, opening: chart.openingOffset,
+                          applyCount: applyCount) {
             DailyChartContent(chart: chart, colors: colors)
         }
         .frame(height: layout.contentHeight)

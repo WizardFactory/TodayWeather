@@ -123,10 +123,13 @@ struct HourlyChartFrame: View {
 /// The hourly forecast chart of the forecast tab (gate G2, #2954): scrolls horizontally and opens at the Cordova
 /// scroll position (one column before the current hour, snapped down to a whole point as WebKit's `scrollLeft`); the
 /// legend and the expander stay in place. The detail rows show when `expanded`; a tap on the expander row calls
-/// `onToggleExpanded` (Cordova `clickExpander`, which also stores `expandShortChart`).
+/// `onToggleExpanded` (Cordova `clickExpander`, which also stores `expandShortChart`) and keeps the scroll position.
+/// `applyCount` counts the page's weather applies: each change, also with the same data, scrolls back to the opening
+/// position (``OpeningScrollView``).
 struct HourlyChartView: View {
     let chart: HourlyChart
     let expanded: Bool
+    var applyCount = 0
     var colors: ChartColors = .light
     var onToggleExpanded: () -> Void = {}
 
@@ -134,7 +137,8 @@ struct HourlyChartView: View {
         let layout = HourlyChartLayout(chart, expanded: expanded)
         ZStack(alignment: .topLeading) {
             colors.background.color
-            OpeningScrollView(width: chart.width, height: layout.contentHeight, opening: chart.openingOffset) {
+            OpeningScrollView(width: chart.width, height: layout.contentHeight, opening: chart.openingOffset,
+                              applyCount: applyCount) {
                 HourlyChartContent(chart: chart, expanded: expanded, colors: colors)
             }
             HourlyChartPinned(chart: chart, expanded: expanded, colors: colors)
@@ -153,14 +157,17 @@ struct HourlyChartView: View {
     }
 }
 
-/// A horizontal scroll view whose content starts at `opening` points, snapped down to a whole point as WebKit's
-/// `scrollLeft` is (and limited by the content's end, as the browser limits it). A new `opening` scrolls again, as the
-/// Cordova app sets `scrollLeft` after every apply. iOS 17 has no offset-based scroll position, so a marker view at the
+/// A horizontal scroll view that goes to `opening` points, snapped down to a whole point as WebKit's `scrollLeft` is
+/// (and limited by the content's end, as the browser limits it), when it appears and whenever `applyCount` changes.
+/// The Cordova app sets `scrollLeft` after every `applyWeatherData` (controller.forecastctrl.js), also for the same
+/// place or unchanged data, and at no other time: a user's scroll position stays until the next apply, and toggling
+/// the hourly expander (`clickExpander`) keeps it. iOS 17 has no offset-based scroll position, so a marker view at the
 /// offset is the scroll target.
 struct OpeningScrollView<Content: View>: View {
     let width: Double
     let height: Double
     let opening: Double
+    let applyCount: Int
     @ViewBuilder let content: () -> Content
 
     static func scrollPosition(_ opening: Double) -> Double { max(0, floor(opening)) }
@@ -178,7 +185,7 @@ struct OpeningScrollView<Content: View>: View {
                 .frame(width: width, height: height, alignment: .topLeading)
             }
             .onAppear { proxy.scrollTo(Marker.opening, anchor: .leading) }
-            .onChange(of: opening) { proxy.scrollTo(Marker.opening, anchor: .leading) }
+            .onChange(of: applyCount) { proxy.scrollTo(Marker.opening, anchor: .leading) }
         }
     }
 
