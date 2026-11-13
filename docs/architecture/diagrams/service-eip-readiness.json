@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed Spot readiness failure notification",
+    "subtitle": "Local design; production wiring is not deployed",
+    "output": "docs/architecture/diagrams/service-eip-readiness.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      680
+    ]
+  },
+  "participants": [
+    {
+      "id": "runtime",
+      "type": "cloud",
+      "label": "Lambda runtime",
+      "sublabel": "Owns async retry budget"
+    },
+    {
+      "id": "checker",
+      "type": "backend",
+      "label": "EIP checker",
+      "sublabel": "Retains existing guards"
+    },
+    {
+      "id": "candidate",
+      "type": "backend",
+      "label": "Spot candidate",
+      "sublabel": "Health + weather probes"
+    },
+    {
+      "id": "observer",
+      "type": "backend",
+      "label": "Failure observer",
+      "sublabel": "No EC2 permission"
+    },
+    {
+      "id": "topic",
+      "type": "messagebus",
+      "label": "Operator SNS",
+      "sublabel": "Allowlisted summary"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m0",
+      "from": "runtime",
+      "to": "checker",
+      "y": 170,
+      "label": "Invoke candidate event",
+      "variant": "default"
+    },
+    {
+      "id": "m1",
+      "from": "checker",
+      "to": "candidate",
+      "y": 215,
+      "label": "Guarded health + weather probes",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "candidate",
+      "to": "checker",
+      "y": 260,
+      "label": "Failure: classified stage + duration",
+      "variant": "return"
+    },
+    {
+      "id": "m3",
+      "from": "checker",
+      "to": "runtime",
+      "y": 305,
+      "label": "Sanitized invocation failure",
+      "variant": "return"
+    },
+    {
+      "id": "m4",
+      "from": "runtime",
+      "to": "checker",
+      "y": 350,
+      "label": "Up to two configured retries",
+      "variant": "dashed"
+    },
+    {
+      "id": "m5",
+      "from": "runtime",
+      "to": "observer",
+      "y": 395,
+      "label": "OnFailure after exhaustion / event age",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m6",
+      "from": "observer",
+      "to": "topic",
+      "y": 440,
+      "label": "Validated diagnostic summary",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Retained safety",
+      "items": [
+        "Health alone never authorizes association.",
+        "No timeout increase or periodic recheck."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Delivery failures",
+      "items": [
+        "Monitor destination-delivery failures and observer errors.",
+        "Observer cannot move an EIP; duplicate alerts retain correlation."
+      ]
+    }
+  ]
+}

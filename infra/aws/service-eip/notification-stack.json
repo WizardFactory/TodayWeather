@@ -1,0 +1,252 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Prepared notification wiring for issue 2938; deployment requires separate authorization. Does not update checker code, Fleet or AMI.",
+  "Parameters": {
+    "OperatorTopicArn": {
+      "Type": "String"
+    },
+    "SourceRoleName": {
+      "Type": "String"
+    },
+    "ObserverName": {
+      "Type": "String",
+      "Default": "ServiceEIPFailureObserver",
+      "AllowedPattern": "[A-Za-z0-9_-]+"
+    },
+    "ArtifactBucket": {
+      "Type": "String"
+    },
+    "ObserverArtifactKey": {
+      "Type": "String"
+    },
+    "ObserverArtifactVersion": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "ObserverLogs": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/${ObserverName}"
+        },
+        "RetentionInDays": 30
+      }
+    },
+    "ObserverRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "bounded-logs-and-alerts",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ObserverName}:*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "sns:Publish",
+                  "Resource": {
+                    "Ref": "OperatorTopicArn"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "Observer": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": "ObserverLogs",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ObserverName"
+        },
+        "Runtime": "python3.13",
+        "Handler": "failure_observer.lambda_handler",
+        "Timeout": 15,
+        "Role": {
+          "Fn::GetAtt": [
+            "ObserverRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ArtifactBucket"
+          },
+          "S3Key": {
+            "Ref": "ObserverArtifactKey"
+          },
+          "S3ObjectVersion": {
+            "Ref": "ObserverArtifactVersion"
+          }
+        },
+        "Environment": {
+          "Variables": {
+            "SOURCE_FUNCTION_ARN": {
+              "Fn::Sub": "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:AttachEIPToSpot"
+            },
+            "ALERT_TOPIC_ARN": {
+              "Ref": "OperatorTopicArn"
+            }
+          }
+        }
+      }
+    },
+    "SourceInvokePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AttachEIPToSpot-terminal-observer",
+        "Roles": [
+          {
+            "Ref": "SourceRoleName"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "lambda:InvokeFunction",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "Observer",
+                  "Arn"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SourceFailureDestination": {
+      "Type": "AWS::Lambda::EventInvokeConfig",
+      "DependsOn": "SourceInvokePolicy",
+      "Properties": {
+        "FunctionName": "AttachEIPToSpot",
+        "Qualifier": "$LATEST",
+        "MaximumRetryAttempts": 2,
+        "MaximumEventAgeInSeconds": 1800,
+        "DestinationConfig": {
+          "OnFailure": {
+            "Destination": {
+              "Fn::GetAtt": [
+                "Observer",
+                "Arn"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "DestinationFailures": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Namespace": "AWS/Lambda",
+        "MetricName": "DestinationDeliveryFailures",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": "AttachEIPToSpot"
+          }
+        ],
+        "Statistic": "Sum",
+        "Period": 60,
+        "EvaluationPeriods": 1,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching",
+        "AlarmActions": [
+          {
+            "Ref": "OperatorTopicArn"
+          }
+        ]
+      }
+    },
+    "ObserverErrors": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Namespace": "AWS/Lambda",
+        "MetricName": "Errors",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "ObserverName"
+            }
+          }
+        ],
+        "Statistic": "Sum",
+        "Period": 60,
+        "EvaluationPeriods": 1,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching",
+        "AlarmActions": [
+          {
+            "Ref": "OperatorTopicArn"
+          }
+        ]
+      }
+    },
+    "ObserverDropped": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "Namespace": "AWS/Lambda",
+        "MetricName": "AsyncEventsDropped",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "ObserverName"
+            }
+          }
+        ],
+        "Statistic": "Sum",
+        "Period": 60,
+        "EvaluationPeriods": 1,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching",
+        "AlarmActions": [
+          {
+            "Ref": "OperatorTopicArn"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "ObserverArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Observer",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "FunctionName": "AttachEIPToSpot",
+  "Runtime": "python3.13",
+  "Handler": "lambda_function.lambda_handler",
+  "CodeSha256": "qr8eyUhSkNAmMYSw4FS2hmeMrZv+J5ycLUATQCK9/1Q=",
+  "LastModified": "2026-10-16T11:26:24.000+0000",
+  "Timeout": 360,
+  "RevisionId": "1f6346b3-b01f-49a6-a5c5-c741b9884871",
+  "source_sha256": "268a4ba76e309e293588ca33b34313a6b36c4c9340da7f7e206fc5d067dc1112",
+  "async_config": {
+    "MaximumRetryAttempts": 2,
+    "MaximumEventAgeInSeconds": 1800,
+    "DestinationConfig": {
+      "OnSuccess": {},
+      "OnFailure": {}
+    }
+  },
+  "observed_at": "2026-11-12T09:59:24.975019+00:00",
+  "observation": "Read-only AWS CLI; named profile 141248341265; no mutation or invocation"
+}
