@@ -39,7 +39,7 @@ The rewrite package describes the older baseline `bd6640f2`. The manual follows 
 - The ad privacy form: on the Korean emulator, neither a form nor the "cannot open" message appeared within four seconds of tapping 광고 개인정보 선택 (two runs).
 - The O11 permission dialog and the O13 equal-time message: the manual quotes their text from the source. The capture tool grants notification permission and cannot drag the hour bar.
 - Notification delivery and real ad units. The debug build shows Google test ads ("테스트 광고") at the bottom.
-- iOS.
+- iOS. The iOS tracking permission has its own [manual](../cordova-ios/README.md).
 
 ## Reproduce
 
