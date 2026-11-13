@@ -16,7 +16,7 @@ public enum WeatherConverter {
         if response.isNull { throw NullWeatherData() }
         let data: JSONObject
         do {
-            if case .object(let o) = response, case .string("KMA") = o["source"] {
+            if case .object(let o) = response, case .string(let source) = o["source"], JSString.equal(source, "KMA") {
                 data = try parseKma(o)
             } else {
                 data = try parseWorld(response)

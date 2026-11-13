@@ -50,7 +50,12 @@ The corpus differences led to a direct probe of JavaScriptCore and Node with `ne
 - **Second 60:** the next minute. Its fraction is ignored: `23:59:60.500Z` gives `00:00:00.000Z`.
 - **Hour 24:** accepted only at minute 0 and second 0, but with a fraction: `24:00:00.001Z` gives `00:00:00.001Z`, which V8 rejects.
 
-`JavaScriptCoreDateTests` pins these 19 results. Not probed further: string forms the server does not send (non-ISO formats), years outside 0000–9999, and dates before the Gregorian calendar.
+- **Local time without an offset in a daylight-saving gap:** it moves forward by the gap. With TZ=America/New_York, `2026-03-08T02:30:00` gives `07:30Z`; with TZ=Europe/Paris, `2026-03-29T02:30:00` gives `01:30Z`.
+- **Local time without an offset in an overlap:** the earlier instant. New York `2026-11-01T01:30:00` gives `05:30Z`; Paris `2026-10-25T02:30:00` gives `00:30Z`.
+
+The daylight-saving rule is ECMAScript's LocalTime→UTC rule. These local-time results were added after review finding CODEX-IN02-1 and come from the same jsc, run with the TZ of each zone.
+
+`JavaScriptCoreDateTests` pins these 19 results and 13 local times around the New York and Paris changes. Not probed further: string forms the server does not send (non-ISO formats), years outside 0000–9999, and dates before the Gregorian calendar.
 
 ## Not compared
 

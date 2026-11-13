@@ -36,8 +36,16 @@ public struct JSONNumber: Sendable, Hashable, CustomStringConvertible {
 /// An object whose members keep JavaScript's order: array-index keys first in ascending order, then the other
 /// keys in insertion order. Replacing a member keeps its position, as assignment does in JavaScript.
 public struct JSONObject: Sendable, Hashable, Sequence {
+    /// A member name compared and hashed by UTF-16 code units, as JavaScript property keys are: canonically
+    /// equivalent names (`"\u{E9}"`, `"e\u{301}"`) are two members.
+    private struct Key: Hashable, Sendable {
+        let name: String
+        static func == (a: Key, b: Key) -> Bool { JSString.equal(a.name, b.name) }
+        func hash(into hasher: inout Hasher) { JSString.hash(name, into: &hasher) }
+    }
+
     private var order: [String] = []
-    private var storage: [String: JSONValue] = [:]
+    private var storage: [Key: JSONValue] = [:]
 
     public init() {}
 
@@ -56,17 +64,17 @@ public struct JSONObject: Sendable, Hashable, Sequence {
     public var isEmpty: Bool { order.isEmpty }
 
     public subscript(key: String) -> JSONValue? {
-        get { storage[key] }
+        get { storage[Key(name: key)] }
         set {
             if let newValue {
-                if storage.updateValue(newValue, forKey: key) == nil { order.append(key) }
-            } else if storage.removeValue(forKey: key) != nil {
-                order.removeAll { $0 == key }
+                if storage.updateValue(newValue, forKey: Key(name: key)) == nil { order.append(key) }
+            } else if storage.removeValue(forKey: Key(name: key)) != nil {
+                order.removeAll { JSString.equal($0, key) }
             }
         }
     }
 
-    public func contains(_ key: String) -> Bool { storage[key] != nil }
+    public func contains(_ key: String) -> Bool { storage[Key(name: key)] != nil }
 
     /// A copy with [key] set (kept in place when it exists), like Kotlin's `map + (key to value)`.
     public func setting(_ key: String, _ value: JSONValue) -> JSONObject {
@@ -85,7 +93,7 @@ public struct JSONObject: Sendable, Hashable, Sequence {
     public func makeIterator() -> AnyIterator<(key: String, value: JSONValue)> {
         var it = keys.makeIterator()
         let storage = storage
-        return AnyIterator { it.next().map { ($0, storage[$0]!) } }
+        return AnyIterator { it.next().map { ($0, storage[Key(name: $0)]!) } }
     }
 
     /// Equality ignores member order, as JSON object equality does; use ``JSONValue/sameText(_:)`` for order.
@@ -155,7 +163,32 @@ public enum JSONValue: Sendable, Hashable, CustomStringConvertible {
     public var description: String { jsonText }
 
     /// True when both trees have the same members in the same order and the same number texts.
-    public func sameText(_ other: JSONValue) -> Bool { jsonText == other.jsonText }
+    public func sameText(_ other: JSONValue) -> Bool { JSString.equal(jsonText, other.jsonText) }
+
+    /// Equality as JSON values: strings by UTF-16 code units (JavaScript's `===`), numbers by their text, objects by
+    /// their members regardless of order.
+    public static func == (a: JSONValue, b: JSONValue) -> Bool {
+        switch (a, b) {
+        case (.null, .null): return true
+        case let (.bool(x), .bool(y)): return x == y
+        case let (.number(x), .number(y)): return x == y
+        case let (.string(x), .string(y)): return JSString.equal(x, y)
+        case let (.array(x), .array(y)): return x == y
+        case let (.object(x), .object(y)): return x == y
+        default: return false
+        }
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        switch self {
+        case .null: hasher.combine(0)
+        case .bool(let b): hasher.combine(1); hasher.combine(b)
+        case .number(let n): hasher.combine(2); hasher.combine(n)
+        case .string(let s): hasher.combine(3); JSString.hash(s, into: &hasher)
+        case .array(let a): hasher.combine(4); hasher.combine(a)
+        case .object(let o): hasher.combine(5); hasher.combine(o)
+        }
+    }
 
     private func write(to out: inout String, sortedKeys: Bool) {
         switch self {

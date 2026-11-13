@@ -18,7 +18,7 @@ public enum Warnings {
             var updated = o.setting("announcement", .string(text))
             out[i] = .object(updated)
             guard case .string(let comment) = o["comment"] else { break }
-            updated = updated.setting("comment", .string(comment.replacingOccurrences(of: "\n", with: "<br>")))
+            updated = updated.setting("comment", .string(JSString.replaceAll(comment, "\n", "<br>")))
             out[i] = .object(updated)
         }
         return .array(out)
@@ -29,8 +29,8 @@ public enum Warnings {
     /// `new Date(value)` as JavaScriptCore (the Cordova iOS app's engine) reads the forms the server could send; nil
     /// for an Invalid Date. ISO strings: month 1–12, day 1 to the month's last day, hour 0–24 (24 only at 24:00:00,
     /// a fraction allowed), minute 0–59, second 0–60 (60 is the next minute; its fraction is ignored), offsets up to
-    /// ±23:59. A date alone is UTC; a date and time without an offset is local time in [zone]. Numbers are
-    /// milliseconds within ±8.64e15.
+    /// ±23:59. A date alone is UTC; a date and time without an offset is local time in [zone] (gaps and overlaps as
+    /// ``localToUTC(_:zone:)`` resolves them). Numbers are milliseconds within ±8.64e15.
     ///
     /// V8 (the Node corpus and the Android port) differs in two rules, recorded by ios/tools/corpus/compare_jsc.py in
     /// ios/tools/corpus/differences.md: it rolls days past the month's end over to the next month and rejects
@@ -116,15 +116,22 @@ public enum Warnings {
         return abs(t) <= maxTime ? t : nil
     }
 
-    /// Local wall-clock milliseconds in [zone] to a time value: the offset at the guessed instant, checked once more
-    /// at the result (times in a spring-forward gap move forward, as V8 and java.util.Calendar do).
-    private static func localToUTC(_ local: Int64, zone: TimeZone) -> Int64 {
+    /// Local wall-clock milliseconds in [zone] to a time value, by ECMAScript's LocalTime→UTC rule (as JavaScriptCore
+    /// applies it): of the instants whose local time is [local], the earliest (a time in a fall-back overlap is read
+    /// with the offset before the change); when there is none (a spring-forward gap), the offset in effect before the
+    /// transition, so the time moves forward by the gap.
+    static func localToUTC(_ local: Int64, zone: TimeZone) -> Int64 {
         func offset(_ t: Int64) -> Int64 {
             Int64(zone.secondsFromGMT(for: Date(timeIntervalSince1970: Double(t) / 1000))) * 1000
         }
-        let first = local - offset(local)
-        let second = local - offset(first)
-        return second
+        // The offsets around [local]: zone transitions are far more than a day apart, so the offsets a day before
+        // and after (and at [local] itself) include every offset that can apply to this wall-clock time.
+        let day: Int64 = 86_400_000
+        let before = offset(local - day)
+        let candidates: Set<Int64> = [before, offset(local), offset(local + day)]
+        let instants = candidates.map { local - $0 }.filter { offset($0) == local - $0 }
+        if let earliest = instants.min() { return earliest }
+        return local - before
     }
 
     static func daysInMonth(year: Int, month: Int) -> Int {

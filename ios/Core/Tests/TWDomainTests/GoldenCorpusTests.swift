@@ -30,17 +30,17 @@ struct GoldenCorpusTests {
         func str(_ e: JSONValue) -> String { s(e)! }
 
         for (args, expected) in cases(functions["shortenAddress"]) {
-            #expect(AddressFormat.shorten(str(args[0])) == str(expected), "shortenAddress \(args)")
+            #expect(sameText(AddressFormat.shorten(str(args[0])), str(expected)), "shortenAddress \(args)")
         }
         for (args, expected) in cases(functions["addressArray"]) {
-            #expect(AddressFormat.split(str(args[0])) == expected.arrayValue!.map(str), "addressArray \(args)")
+            #expect(sameText(AddressFormat.split(str(args[0])), expected.arrayValue!.map(str)), "addressArray \(args)")
         }
         for (args, expected) in cases(functions["townFromAddress"]) {
             let town = AddressFormat.town(AddressFormat.split(str(args[0])))
             #expect(town == Town(str(expected["first"]!), str(expected["second"]!), str(expected["third"]!)), "townFromAddress \(args)")
         }
         for (args, expected) in cases(functions["weatherEmoji"]) {
-            #expect(ForecastText.weatherEmoji(str(args[0])) == str(expected), "weatherEmoji \(args)")
+            #expect(sameText(ForecastText.weatherEmoji(str(args[0])), str(expected)), "weatherEmoji \(args)")
         }
         for (args, expected) in cases(functions["geolocationNormalize"]) {
             let n = GeoLocation.normalize(lat: double(args[0]["lat"]), long: double(args[0]["long"]))
@@ -53,17 +53,17 @@ struct GoldenCorpusTests {
             let text = str(args[0]) == "ko" ? ko : en
             let current = args[2]["t1h"]
             let yesterday = args[3].objectValue
-            #expect(ForecastText.diffTodayYesterday(current, yesterday, fahrenheit: str(args[1]) == "F", text: text) == str(expected),
+            #expect(sameText(ForecastText.diffTodayYesterday(current, yesterday, fahrenheit: str(args[1]) == "F", text: text), str(expected)),
                     "diff \(args)")
         }
         for (args, expected) in cases(functions["rainSnowFall"]) {
             expectJSON(expected, ForecastText.rainSnowFall(args[0].objectValue!), "rainSnowFall \(args)")
         }
         for (args, expected) in cases(functions["rainSnowFallSymbol"]) {
-            #expect(ForecastText.rainSnowFallSymbol(args[0].objectValue!) == str(expected), "symbol \(args)")
+            #expect(sameText(ForecastText.rainSnowFallSymbol(args[0].objectValue!), str(expected)), "symbol \(args)")
         }
         for (args, expected) in cases(functions["updateTime"]) {
-            #expect(UpdateTime.of(args[0]) == (expected.isNull ? nil : str(expected)), "updateTime \(args)")
+            #expect(sameText(UpdateTime.of(args[0]), (expected.isNull ? nil : str(expected))), "updateTime \(args)")
         }
         for (args, expected) in cases(functions["todayPosition"]) {
             let city = try #require(try WeatherConverter.convert(Corpus.read("inputs/\(str(args[0])).json")))
@@ -85,7 +85,7 @@ struct GoldenCorpusTests {
             let actual = try WeatherConverter.convert(.object(input))
             if let expected = c["expectedSha256"], !expected.isNull {
                 let a = try #require(actual, "\(name): Swift returned nil")
-                #expect(sha256(JSONValue.object(a).canonicalText) == s(expected), "\(name)")
+                #expect(sameText(sha256(JSONValue.object(a).canonicalText), s(expected)), "\(name)")
             } else {
                 #expect(actual == nil, "\(name)")
             }

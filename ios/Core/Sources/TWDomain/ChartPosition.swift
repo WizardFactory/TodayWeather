@@ -14,7 +14,7 @@ public enum ChartPosition {
     public static func todayOffset(_ chartType: String, bodyWidth: Double, city: JSONObject) -> Double {
         let colWidth = columnWidth(bodyWidth)
         var index = 0.0
-        if chartType == "short" {
+        if JSString.equal(chartType, "short") {
             guard case .array(let timeChart) = city["timeChart"], timeChart.count > 1 else { return 0 }
             // The Cordova code compares timeChart[1].length (undefined for an object) with the tablet width, which is
             // never true, so it always continues here (anomaly A49).
@@ -22,7 +22,7 @@ public enum ChartPosition {
             index = index >= 1 ? index - 1 : 0
             return colWidth * index
         }
-        if chartType == "mid" {
+        if JSString.equal(chartType, "mid") {
             if bodyWidth >= tabletWidth { return 0 }
             guard case .array(let dayChart) = city["dayChart"], let first = dayChart.first?.objectValue,
                   case .array(let values) = first["values"] else { return 0 }

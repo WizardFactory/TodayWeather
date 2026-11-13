@@ -11,6 +11,15 @@ public struct MapLabel: Hashable, Sendable {
         self.top = top
         self.left = left
     }
+
+    /// Equal names by UTF-16 code units, as the Cordova code compares strings.
+    public static func == (a: MapLabel, b: MapLabel) -> Bool { JSString.equal(a.name, b.name) && a.top == b.top && a.left == b.left }
+
+    public func hash(into hasher: inout Hasher) {
+        JSString.hash(name, into: &hasher)
+        hasher.combine(top)
+        hasher.combine(left)
+    }
 }
 
 /// Nationwide weather (S10, NationCtrl) and air (S11, NationAirCtrl); port of Kotlin `Nationwide`.
@@ -45,7 +54,7 @@ public enum Nationwide {
     /// NationCtrl `getIcon`/`getText1`/`getText2` for the first city whose region/city/town contains [name].
     public static func weatherLabel(_ nation: NationResponse, mode: Mode, name: String) -> WeatherLabel {
         let city = nation.weather.first { c in
-            ["regionName", "cityName", "townName"].map { Js.string(c.raw($0)) }.joined(separator: "/").contains(name)
+            JSString.includes(["regionName", "cityName", "townName"].map { Js.string(c.raw($0)) }.joined(separator: "/"), name)
         }
         guard let current = city?.current else { return WeatherLabel(icon: nil, text1: nil, text2: nil) }
         switch mode {
@@ -64,14 +73,14 @@ public enum Nationwide {
         }
     }
 
-    private static func airKey(_ type: String) -> String { type == "pm2.5" ? "pm25" : type }
+    private static func airKey(_ type: String) -> String { JSString.equal(type, "pm2.5") ? "pm25" : type }
 
     private static func province(_ nation: NationResponse, _ name: String) -> AirMeasurement? {
         nation.air.first { m in
             switch m.raw("sidoName") {
-            case .string(let s): return s == name
-            case .number(let n): return n.text == name
-            case .bool(let b): return (b ? "true" : "false") == name
+            case .string(let s): return JSString.equal(s, name)
+            case .number(let n): return JSString.equal(n.text, name)
+            case .bool(let b): return JSString.equal(b ? "true" : "false", name)
             default: return false
             }
         }

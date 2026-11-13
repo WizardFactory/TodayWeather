@@ -19,8 +19,8 @@ struct GoldenCorpusDisplayTests {
             #expect(list.count == standard.grades.count, "grades \(args)")
             guard list.count == standard.grades.count else { continue }
             for (i, g) in list.enumerated() {
-                #expect(s(g["color"]) == standard.grades[i].color, "\(args) \(i)")
-                #expect(s(g["str"]) == standard.grades[i].str, "\(args) \(i)")
+                #expect(sameText(s(g["color"]), standard.grades[i].color), "\(args) \(i)")
+                #expect(sameText(s(g["str"]), standard.grades[i].str), "\(args) \(i)")
                 let values = try #require(g["value"]?.objectValue)
                 #expect(values.count == standard.grades[i].upperBound.count, "\(args) \(i) codes")
                 for (code, v) in values {
@@ -32,13 +32,13 @@ struct GoldenCorpusDisplayTests {
             for (code, v) in max { #expect(standard.maxValue[code] == double(v), "max \(args) \(code)") }
         }
         for (args, expected) in cases(air["gradeColor"]) {
-            #expect(AirQuality.gradeColor(AirQuality.standard(s(args[0])), arg(args[1]), s(args[2])) == s(expected), "gradeColor \(args)")
+            #expect(sameText(AirQuality.gradeColor(AirQuality.standard(s(args[0])), arg(args[1]), s(args[2])), s(expected)), "gradeColor \(args)")
         }
         for (args, expected) in cases(air["airkoreaGradeColor"]) {
-            #expect(AirQuality.airkoreaGradeColor(arg(args[0])) == s(expected), "airkoreaGradeColor \(args)")
+            #expect(sameText(AirQuality.airkoreaGradeColor(arg(args[0])), s(expected)), "airkoreaGradeColor \(args)")
         }
         for (args, expected) in cases(air["sentimentIcon"]) {
-            #expect(AirQuality.sentimentIcon(s(args[0]), arg(args[1])) == s(expected), "icon \(args)")
+            #expect(sameText(AirQuality.sentimentIcon(s(args[0]), arg(args[1])), s(expected)), "icon \(args)")
         }
         let labels = cases(air["labelPosition"])
         #expect(!labels.isEmpty)
@@ -49,7 +49,7 @@ struct GoldenCorpusDisplayTests {
             #expect(abs(x - double(expected)) <= 1e-9, "labelPosition \(args)")
         }
         for (args, expected) in cases(air["airCodeUnit"]) {
-            #expect(AirQuality.codeUnit(s(args[0])!) == s(expected), "airCodeUnit \(args)")
+            #expect(sameText(AirQuality.codeUnit(s(args[0])!), s(expected)), "airCodeUnit \(args)")
         }
     }
 
@@ -96,18 +96,18 @@ struct GoldenCorpusDisplayTests {
         for (args, e) in weather {
             let mode = try #require(Nationwide.Mode(rawValue: int(args[0])))
             let label = Nationwide.weatherLabel(nation, mode: mode, name: s(args[1])!)
-            #expect(s(e["icon"]) == label.icon, "icon \(args)")
+            #expect(sameText(s(e["icon"]), label.icon), "icon \(args)")
             expectJSON(e["text1"], label.text1 ?? .null, "text1 \(args)")
             expectJSON(e["text2"], label.text2 ?? .null, "text2 \(args)")
             let (u1, u2) = Nationwide.unitKeys(mode)
-            #expect(s(e["text1Unit"]) == u1.flatMap { units[$0] }, "unit1 \(args)")
-            #expect(s(e["text2Unit"]) == u2.flatMap { units[$0] }, "unit2 \(args)")
+            #expect(sameText(s(e["text1Unit"]), u1.flatMap { units[$0] }), "unit1 \(args)")
+            #expect(sameText(s(e["text2Unit"]), u2.flatMap { units[$0] }), "unit2 \(args)")
         }
         let air = cases(nationJSON["air"])
         #expect(air.count == 6 * 17 * 2)
         for (args, e) in air {
             expectJSON(e["text1"], Nationwide.airValue(nation, type: s(args[1])!, name: s(args[2])!) ?? .null, "air \(args)")
-            #expect(s(e["color"]) == Nationwide.airColor(nation, type: s(args[1])!, name: s(args[2])!, airUnit: s(args[0])), "color \(args)")
+            #expect(sameText(s(e["color"]), Nationwide.airColor(nation, type: s(args[1])!, name: s(args[2])!, airUnit: s(args[0]))), "color \(args)")
         }
     }
 
