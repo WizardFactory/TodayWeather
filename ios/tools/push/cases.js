@@ -102,9 +102,10 @@
     // Push.init on a virtual clock (IN-04 review, CODEX-IN04-1): the service's own setTimeout calls run when the clock
     // reaches them (loadPushInfo's list post at 3000 ms), and each token of `events` ({at: ms, token}) is delivered
     // through the plugin's onTokenRefresh callback at its time (before a timer due at the same time). `fail` lists
-    // the methods whose $http calls fail (the error callback runs; the Cordova code stores the token anyway). Every
-    // request is returned with the time it was sent.
-    function runTimed(storedToken, events, airUnit, list, fail) {
+    // the methods whose $http calls fail (the error callback runs; the Cordova code stores the token anyway), `delays`
+    // the time in ms after which each method's response arrives (its callback runs then, as an event of the clock).
+    // Every request is returned with the time it was sent.
+    function runTimed(storedToken, events, airUnit, list, fail, delays) {
         var now = 0;
         var timers = [];
         var calls = [];
@@ -112,9 +113,17 @@
             var failed = fail.indexOf(cfg.method) >= 0;
             calls.push(clone({at: now, method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data,
                 failed: failed}));
+            var delay = delays[cfg.method] || 0;
+            var answer = function (fn, args) {
+                if (delay > 0) {
+                    timers.push({at: now + delay, fn: function () { fn.apply(null, args); }});
+                } else {
+                    fn.apply(null, args);
+                }
+            };
             return {
-                success: function (fn) { if (!failed) { fn({}); } return this; },
-                error: function (fn) { if (failed) { fn(null, 0); } return this; },
+                success: function (fn) { if (!failed) { answer(fn, [{}]); } return this; },
+                error: function (fn) { if (failed) { answer(fn, [null, 0]); } return this; },
             };
         };
         var units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm',
@@ -160,7 +169,7 @@
     var cases = [];
     var timed = [];
     if (zone === 'Asia/Seoul') {
-        // [name, stored token, token events, methods that fail]
+        // [name, stored token, token events, methods that fail, response delays in ms]
         [['token-at-start', 'token-a', [{at: 0, token: 'token-b'}], []],
             ['token-before-post', 'token-a', [{at: 1000, token: 'token-b'}], []],
             ['token-after-post', 'token-a', [{at: 4000, token: 'token-b'}], []],
@@ -171,9 +180,18 @@
             ['failed-put-before-post', 'token-a', [{at: 1000, token: 'token-b'}], ['PUT']],
             ['failed-requests', 'token-a', [{at: 1000, token: 'token-b'}], ['PUT', 'POST']],
             ['no-token-events', 'token-a', [], []],
+            // Slow replies hold nothing back: the post is due 3 s after Push.init whatever is in flight.
+            ['slow-put-token-after-post', 'token-a', [{at: 0, token: 'token-b'}, {at: 4000, token: 'token-c'}], [],
+                {PUT: 2000}],
+            ['slow-put-tokens-before-post', 'token-a', [{at: 500, token: 'token-b'}, {at: 1500, token: 'token-c'}], [],
+                {PUT: 4000}],
+            ['slow-post-token-after-post', 'token-a', [{at: 4000, token: 'token-b'}], [], {POST: 5000}],
+            ['slow-first-token', null, [{at: 1000, token: 'token-b'}], [], {PUT: 3000, POST: 3000}],
+            ['slow-failed-put', 'token-a', [{at: 1000, token: 'token-b'}], ['PUT'], {PUT: 6000}],
         ].forEach(function (c) {
-            timed.push({name: c[0], zone: zone, storedToken: c[1], events: c[2], fail: c[3], airUnit: 'airkorea',
-                requests: runTimed(c[1], c[2], 'airkorea', LIST, c[3])});
+            var delays = c[4] || {};
+            timed.push({name: c[0], zone: zone, storedToken: c[1], events: c[2], fail: c[3], delays: delays,
+                airUnit: 'airkorea', requests: runTimed(c[1], c[2], 'airkorea', LIST, c[3], delays)});
         });
         // [name, stored token, token at the start, token while running, air unit]
         [['first-token', null, 'token-b', null, 'airkorea'],

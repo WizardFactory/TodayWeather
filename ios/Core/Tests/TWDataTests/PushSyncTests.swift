@@ -4,55 +4,6 @@ import TWData
 import TWModel
 import TWStorage
 
-/// Records the requests it is given; answers `status` (nil: no answer, as a failed request).
-final class RecordingTransport: PushTransport, @unchecked Sendable {
-    private let lock = NSLock()
-    private var sent: [PushRequest] = []
-    let status: Int?
-
-    init(status: Int? = 200) { self.status = status }
-
-    var requests: [PushRequest] { lock.withLock { sent } }
-
-    func send(_ request: PushRequest) async -> Int? {
-        lock.withLock { sent.append(request) }
-        return status
-    }
-}
-
-/// Takes a request and never answers: the process "ends" with the request in flight.
-final class HangingTransport: PushTransport, @unchecked Sendable {
-    private let lock = NSLock()
-    private var sent: [PushRequest] = []
-
-    var requests: [PushRequest] { lock.withLock { sent } }
-
-    func send(_ request: PushRequest) async -> Int? {
-        lock.withLock { sent.append(request) }
-        await withCheckedContinuation { (_: CheckedContinuation<Void, Never>) in } // never resumed
-        return nil
-    }
-}
-
-/// Answers after 20 ms and counts the requests in flight.
-final class SlowTransport: PushTransport, @unchecked Sendable {
-    private let lock = NSLock()
-    private var inFlight = 0
-    private(set) var maxInFlight = 0
-    private(set) var count = 0
-
-    func send(_ request: PushRequest) async -> Int? {
-        lock.withLock {
-            inFlight += 1
-            count += 1
-            maxInFlight = max(maxInFlight, inFlight)
-        }
-        try? await Task.sleep(for: .milliseconds(20))
-        lock.withLock { inFlight -= 1 }
-        return 200
-    }
-}
-
 /// A process's view of the app's files: a new instance per simulated process.
 struct Files {
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-push-\(UUID().uuidString)")
@@ -100,7 +51,7 @@ extension Array {
     subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }
 
-/// `PushSync` runs one registration at a time over the stored state and the token queue.
+/// `PushSync` handles each event on one actor over the stored state and the token queue.
 struct PushSyncTests {
     @Test func openPostsTheListWithTheStoredToken() async throws {
         let files = Files()
@@ -136,11 +87,11 @@ struct PushSyncTests {
         #expect(await sync.drain().isEmpty)
         #expect(transport.requests.isEmpty)
         #expect(files.storedToken == "token-a")
-        #expect(try files.queue.pending() == ["token-b"])
+        #expect(try files.queue.entries() == [PushTokenQueue.Entry(token: "token-b")])
     }
 
-    /// Tokens B then C: replaced A→B, then B→C, one registration at a time, in order of arrival. An open registers
-    /// queued tokens first, so its current token is compared with the newest stored one, whichever call comes first.
+    /// Tokens B then C: replaced A→B, then B→C, in order of arrival, whichever call comes first; the open's token is
+    /// compared with the newest stored one.
     @Test func queuedTokensAreReplacedInOrder() async throws {
         let files = Files()
         try files.seed(token: "token-a")
@@ -156,25 +107,28 @@ struct PushSyncTests {
         #expect(replacement(transport.requests[safe: 1]) == ["token-c", "token-b"])
         #expect(methods.count == 3 && methods.last == "POST /v000903/push-list", "\(methods)")
         #expect(files.storedToken == "token-c")
-        #expect(try files.queue.pending().isEmpty)
+        #expect(await eventually { (try? files.queue.pending().isEmpty) == true })
     }
 
-    /// Registrations started together never overlap: at most one request is in flight.
-    @Test func registrationsRunOneAtATime() async throws {
+    /// A reply that has not arrived holds nothing back: the next token's replacement is sent at once, over the token
+    /// stored when the first was sent (as the Cordova token callback stores it).
+    @Test func aSlowReplyHoldsNothingBack() async throws {
         let files = Files()
         try files.seed(token: "token-a")
-        let transport = SlowTransport()
+        let transport = HangingTransport()
         let sync = files.sync(transport)
         try files.queue.append("token-b")
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { _ = await sync.drain() }
-            group.addTask { _ = await sync.open { "token-b" } }
-            group.addTask { _ = await sync.open { "token-b" } }
-            group.addTask { _ = await sync.drain() }
-        }
-        #expect(transport.maxInFlight == 1)
-        #expect(transport.count == 3, "PUT a→b, then a POST for each open")
-        #expect(files.storedToken == "token-b")
+        await sync.handleQueuedTokens()
+        try files.queue.append("token-c")
+        await sync.handleQueuedTokens()
+        await sync.handleQueuedTokens() // in flight: not sent again
+        #expect(transport.requests.map(replacement) == [["token-b", "token-a"], ["token-c", "token-b"]])
+        #expect(files.storedToken == "token-c")
+        #expect(try files.queue.entries() == [PushTokenQueue.Entry(token: "token-b", sent: .over("token-a")),
+                                              PushTokenQueue.Entry(token: "token-c", sent: .over("token-b"))])
+        transport.answerAll(200)
+        #expect(await eventually { await sync.pendingReplies == 0 })
+        #expect(try files.queue.entries().isEmpty, "removed when the replies arrived")
     }
 
     /// As in the Cordova app a failed request is not retried; the token is stored anyway and the next open posts
@@ -183,52 +137,63 @@ struct PushSyncTests {
         let files = Files()
         try files.seed(token: "token-a")
         try files.queue.append("token-b")
-        let outcomes = await files.sync(RecordingTransport(status: nil)).drain()
+        let sync = files.sync(RecordingTransport(status: nil))
+        let outcomes = await sync.drain()
         #expect(outcomes.map(\.statuses) == [[nil]])
         #expect(files.storedToken == "token-b")
+        #expect(await eventually { await sync.pendingReplies == 0 })
         #expect(try files.queue.pending().isEmpty)
     }
 
-    /// The process ends after the token was stored in the queue and before it was sent: the next process sends
+    /// The process ends after the token was stored in the queue and before it was handled: the next process sends
     /// the replacement and stores the token.
     @Test func aTokenStoredBeforeTheProcessEndedIsRegisteredByTheNextProcess() async throws {
         let files = Files()
         try files.seed(token: "token-a")
         try files.queue.append("token-c") // process 1 ends here
         let transport = RecordingTransport()
-        let outcomes = await files.sync(transport).drain() // process 2
+        let sync = files.sync(transport) // process 2
+        let outcomes = await sync.drain()
         #expect(outcomes.count == 1)
         #expect(transport.requests.count == 1)
         #expect(replacement(transport.requests.first) == ["token-c", "token-a"])
         #expect(transport.requests.first?.headers["Device-Id"] == "DEVICE")
         #expect(files.storedToken == "token-c")
+        #expect(await eventually { await sync.pendingReplies == 0 })
         #expect(try files.queue.pending().isEmpty)
     }
 
-    /// The process ends while the replacement is in flight: nothing was stored, so the next process sends it again
-    /// (the server's replacement of an old token it no longer has changes nothing) and stores the token.
+    /// The process ends while the replacement is in flight: the state already holds the token (stored when it was
+    /// sent, as in Cordova) and the queue entry says over which token it was sent, so the next process sends the
+    /// replacement again (the server's replacement of a token it no longer has changes nothing) and removes the entry
+    /// when the reply arrives.
     @Test func aReplacementInFlightWhenTheProcessEndedIsCompletedByTheNextProcess() async throws {
         let files = Files()
         try files.seed(token: "token-a")
         let hanging = HangingTransport()
         let process1 = files.sync(hanging)
         try files.queue.append("token-c")
-        let task = Task { await process1.drain() }
-        for _ in 0..<200 where hanging.requests.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
-        #expect(replacement(hanging.requests.first) == ["token-c", "token-a"])
-        #expect(files.storedToken == "token-a", "stored only after the request returns")
-        #expect(try files.queue.pending() == ["token-c"])
-        _ = task // process 1 ends: its task never continues
+        await process1.handleQueuedTokens()
+        #expect(hanging.requests.map(replacement) == [["token-c", "token-a"]])
+        #expect(files.storedToken == "token-c")
+        #expect(try files.queue.entries() == [PushTokenQueue.Entry(token: "token-c", sent: .over("token-a"))])
+        // Process 1 ends here: its reply never arrives for it.
 
         let transport = RecordingTransport()
-        let outcomes = await files.sync(transport).drain() // process 2, same files
+        let process2 = files.sync(transport)
+        let outcomes = await process2.drain()
         #expect(outcomes.count == 1)
-        #expect(replacement(transport.requests.first) == ["token-c", "token-a"])
+        #expect(transport.requests.map(replacement) == [["token-c", "token-a"]])
         #expect(files.storedToken == "token-c")
+        #expect(await eventually { await process2.pendingReplies == 0 })
+        #expect(try files.queue.pending().isEmpty)
+        // The simulated process 1 is still in memory here; answer its request so none of its tasks stays suspended.
+        hanging.answerAll(nil)
+        #expect(await eventually { await process1.pendingReplies == 0 })
         #expect(try files.queue.pending().isEmpty)
     }
 
-    /// A queued token the state already holds (the process ended after storing it) sends nothing and leaves the queue.
+    /// A queued token the state already holds sends nothing and leaves the queue.
     @Test func aTokenAlreadyStoredIsDequeuedWithoutRequests() async throws {
         let files = Files()
         try files.seed(token: "token-c")

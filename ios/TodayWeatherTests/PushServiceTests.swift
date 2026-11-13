@@ -18,9 +18,9 @@ final class RecordingPushTransport: PushTransport, @unchecked Sendable {
     private var sent: [PushRequest] = []
     var requests: [PushRequest] { lock.withLock { sent } }
 
-    func send(_ request: PushRequest) async -> Int? {
+    func start(_ request: PushRequest) -> PushReply {
         lock.withLock { sent.append(request) }
-        return 200
+        return .finished(200)
     }
 }
 

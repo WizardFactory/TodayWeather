@@ -73,10 +73,7 @@ public enum PushRegistration {
         var requests: [PushRequest] = []
         if let token, !isBlank(token), !JSString.same(token, state.fcmToken) {
             let first = state.fcmToken?.isEmpty ?? true
-            requests.append(PushRequest(
-                method: "PUT", path: context.versionPath + "/push", headers: headers(context, language: false),
-                body: .object(JSONObject([("newToken", .string(token)),
-                                          ("oldToken", state.fcmToken.map(JSONValue.string) ?? .null)]))))
+            requests.append(replacement(token, over: state.fcmToken, context: context))
             state.fcmToken = token
             if first && !records.isEmpty { requests.append(postList(state, context: context)) }
         }
@@ -90,6 +87,12 @@ public enum PushRegistration {
     /// a first token, the list; the start's repost does not apply.
     public static func onTokenRefresh(_ push: PushState, places: [Place], token: String, context: Context) -> Result {
         onStart(push, places: places, token: token, context: context, repost: false)
+    }
+
+    /// `_updateFcmToken(token)`: `PUT /push` replacing `old` (null when none was stored).
+    public static func replacement(_ token: String, over old: String?, context: Context) -> PushRequest {
+        PushRequest(method: "PUT", path: context.versionPath + "/push", headers: headers(context, language: false),
+                    body: .object(JSONObject([("newToken", .string(token)), ("oldToken", old.map(JSONValue.string) ?? .null)])))
     }
 
     /// `_postPushList(pushList)` with a token.

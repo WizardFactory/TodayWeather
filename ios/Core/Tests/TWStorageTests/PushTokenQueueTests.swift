@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TWStorage
 
-/// The durable queue of FCM tokens not yet registered.
+/// The durable queue of FCM tokens until their replacement is answered.
 struct PushTokenQueueTests {
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-queue-\(UUID().uuidString)")
 
@@ -16,10 +16,20 @@ struct PushTokenQueueTests {
         try queue.append("token-b")
         // A new instance (a later process) reads the same file.
         #expect(try PushTokenQueue(url: url).pending() == ["token-b", "token-c", "token-b"])
-        try queue.removeFirst("token-c") // only the head is removed
-        #expect(try queue.pending() == ["token-b", "token-c", "token-b"])
-        try queue.removeFirst("token-b")
-        #expect(try PushTokenQueue(url: url).pending() == ["token-c", "token-b"])
+        try queue.markSent("token-b", over: "token-a") // the oldest unsent entry of the token
+        try queue.markSent("token-c", over: "token-b")
+        #expect(try PushTokenQueue(url: url).entries() == [
+            .init(token: "token-b", sent: .over("token-a")), .init(token: "token-c", sent: .over("token-b")),
+            .init(token: "token-b"),
+        ])
+        try queue.remove("token-b", sent: true)
+        #expect(try queue.entries() == [.init(token: "token-c", sent: .over("token-b")), .init(token: "token-b")])
+        try queue.remove("token-b", sent: true) // no sent entry of token-b left: nothing removed
+        try queue.markSent("token-b", over: nil)
+        #expect(try PushTokenQueue(url: url).entries() == [.init(token: "token-c", sent: .over("token-b")),
+                                                           .init(token: "token-b", sent: .over(nil))])
+        let text = try String(contentsOf: url, encoding: .utf8)
+        #expect(text == #"{"tokens":[{"token":"token-c","sentOver":"token-b"},{"token":"token-b","sentOver":null}]}"#)
     }
 
     @Test func aCorruptFileCountsAsEmptyAndIsReplaced() throws {
@@ -38,7 +48,7 @@ struct PushTokenQueueTests {
         try queue.append("\u{E9}")
         try queue.append("e\u{301}")
         #expect(try queue.pending().count == 2)
-        try queue.removeFirst("e\u{301}")
-        #expect(try queue.pending().count == 2)
+        try queue.remove("e\u{301}", sent: false)
+        #expect(try queue.pending() == ["\u{E9}"])
     }
 }

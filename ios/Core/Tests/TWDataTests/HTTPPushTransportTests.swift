@@ -53,13 +53,13 @@ struct HTTPPushTransportTests {
         let transport = HTTPPushTransport(baseURL: "http://push.test.invalid:8080/", session: session)
         let body: JSONValue = .array([.object(JSONObject([("type", "ios"), ("lat", .number(JSONNumber(text: "37.560"))),
                                                           ("name", "명동")]))])
-        let status = await transport.send(PushRequest(
+        let status = await transport.start(PushRequest(
             method: "POST", path: "/v000903/push-list",
-            headers: ["Content-Type": "application/json", "Accept-Language": "ko-KR", "Device-Id": "DEVICE"], body: body))
+            headers: ["Content-Type": "application/json", "Accept-Language": "ko-KR", "Device-Id": "DEVICE"], body: body)).status
         #expect(status == 200)
-        let put = await transport.send(PushRequest(method: "PUT", path: "/v000903/push",
+        let put = await transport.start(PushRequest(method: "PUT", path: "/v000903/push",
                                                    headers: ["Content-Type": "application/json", "Device-Id": "DEVICE"],
-                                                   body: .object(JSONObject([("newToken", "b"), ("oldToken", .null)]))))
+                                                   body: .object(JSONObject([("newToken", "b"), ("oldToken", .null)])))).status
         #expect(put == 404)
         let (seen, bodies) = StubProtocol.lock.withLock { (StubProtocol.seen, StubProtocol.bodies) }
         try #require(seen.count == 2)
@@ -80,8 +80,8 @@ struct HTTPPushTransportTests {
     /// A request that cannot complete gives nil (not retried).
     @Test func anUnreachableServerGivesNil() async {
         let transport = HTTPPushTransport(baseURL: "http://127.0.0.1:9")
-        let status = await transport.send(PushRequest(method: "PUT", path: "/v000903/push",
-                                                      headers: ["Content-Type": "application/json"], body: .null))
+        let status = await transport.start(PushRequest(method: "PUT", path: "/v000903/push",
+                                                      headers: ["Content-Type": "application/json"], body: .null)).status
         #expect(status == nil)
     }
 }
