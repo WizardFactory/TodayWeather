@@ -36,6 +36,8 @@ final class AppStartup {
     /// Firebase token, `PushService.production`).
     var migrate: () throws -> AppState = { try AppStartup.migratedState() }
     var makePush: (String) -> PushService? = { PushService.production(deviceId: $0) }
+    /// Tokens FCM delivered before the push service existed, in order of arrival.
+    private var tokensBeforePush: [String] = []
     /// The open registration of this process, once it started.
     private(set) var openTask: Task<PushSync.Outcome?, Never>?
 
@@ -112,6 +114,8 @@ final class AppStartup {
             push = makePush(deviceId)
             if push == nil { log.info("no server URL: push registration off") }
             push?.resume()
+            for token in tokensBeforePush { push?.receive(token: token) }
+            tokensBeforePush = []
             if openRequested { openPush() }
         }
     }
@@ -129,15 +133,14 @@ final class AppStartup {
         if let task = push?.open() { openTask = task }
     }
 
-    /// A token from FCM: stored in the token queue first (also before the migration ran), then registered.
+    /// A token from FCM (the Cordova token callback). Before the push service exists (the migration still waits, or no
+    /// server URL) it waits in memory; if the process ends first, the next open reads the current token from FCM.
     func receive(token: String) {
-        do {
-            try PushTokenQueue.standard().append(token)
-        } catch {
-            log.error("token not queued: \(String(describing: error), privacy: .public)")
-            return
+        if let push {
+            push.receive(token: token)
+        } else {
+            tokensBeforePush.append(token)
         }
-        push?.resume()
     }
 }
 

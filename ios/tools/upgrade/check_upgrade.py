@@ -231,9 +231,9 @@ def push(c, out, data, seed, token):
     state = json.load(open(os.path.join(data, "Library/Application Support/TodayWeather/app_state.json")))
     c.check("the token is stored", state["push"]["fcmToken"] == token, state["push"]["fcmToken"])
     c.check("the records are kept", sorted(key(r) for r in state["push"]["records"]) == seeded_keys)
-    queue_path = os.path.join(data, "Library/Application Support/TodayWeather/push_tokens.json")
-    queue = json.load(open(queue_path))["tokens"] if os.path.exists(queue_path) else []
-    c.check("no token waits in the queue", queue == [], queue)
+    log_path = os.path.join(data, "Library/Application Support/TodayWeather/push_replacements.json")
+    entries = json.load(open(log_path))["entries"] if os.path.exists(log_path) else []
+    c.check("every token replacement answered (the replacement log is empty)", entries == [], entries)
 
 
 def main():

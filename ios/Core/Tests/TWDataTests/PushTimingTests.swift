@@ -42,13 +42,13 @@ struct PushTimingTests {
     }
 
     /// Each case on a virtual clock: the open at 0 ms with the token of an event at 0 ms as the token FCM holds;
-    /// later tokens arrive through the token queue at their times; replies come after their scripted delays.
+    /// later tokens arrive through the token callback at their times; replies come after their scripted delays.
     @Test(arguments: golden["cases"]!.arrayValue!.map { $0["name"]!.stringValue! })
     func requestsFollowTheCordovaTimeline(name: String) async throws {
         let c = try #require(Self.golden["cases"]!.arrayValue!.first { $0["name"]!.stringValue! == name })
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-timing-\(UUID().uuidString)")
         let store = AppStateStore(url: dir.appendingPathComponent("app_state.json"))
-        let queue = PushTokenQueue(url: dir.appendingPathComponent("push_tokens.json"))
+        let log = PushReplacementLog(url: dir.appendingPathComponent("push_replacements.json"))
         let stored = c["storedToken"]?.stringValue
         try store.save(AppState(places: Self.places, placeIndex: 1,
                                 push: PushState(type: "ios", fcmToken: stored,
@@ -61,7 +61,7 @@ struct PushTimingTests {
         let transport = TimedTransport(clock: clock, fail: Set(c["fail"]!.arrayValue!.map { $0.stringValue! }),
                                        delays: delays)
         let ctx = Self.context(c)
-        let sync = PushSync(store: store, queue: queue, transport: transport, clock: clock, context: { _ in ctx })
+        let sync = PushSync(store: store, log: log, transport: transport, clock: clock, context: { _ in ctx })
 
         let atOpen = events.first { $0.at == .zero }?.token
         let open = Task { await sync.open { atOpen } }
@@ -74,8 +74,7 @@ struct PushTimingTests {
                 #expect(await eventually { await sync.reposts == 1 }, "\(name): the post ran")
             }
             clock.advance(to: event.at)
-            try queue.append(event.token)
-            await sync.handleQueuedTokens()
+            await sync.tokenArrived(event.token)
         }
         if await sync.reposts == 0 {
             clock.advance(to: repostAt)
@@ -102,28 +101,27 @@ struct PushTimingTests {
                     "\(name) \(a.request.method) body:\n\(a.request.body.jsonText)\nexpected:\n\(e["data"]!.jsonText)")
         }
         #expect(try store.load()?.push.fcmToken == (events.last?.token ?? stored), "\(name): stored token")
-        #expect(try queue.pending().isEmpty, "\(name): queue")
+        #expect(try log.entries().isEmpty, "\(name): every replacement answered")
     }
 
-    /// A token queued while the post is pending whose own handling has not run yet is replaced first when the post
-    /// is due, so the post carries it (as the Cordova token callback runs before the timer).
-    @Test func aTokenQueuedBeforeThePostIsReplacedFirst() async throws {
+    /// A token that arrives while the post is pending is replaced at its arrival, so the post carries it.
+    @Test func aTokenDuringTheWaitIsReplacedAtOnce() async throws {
         let files = Files()
         try files.seed(token: "token-a")
         let clock = VirtualClock()
         let transport = TimedTransport(clock: clock)
-        let sync = PushSync(store: files.store, queue: files.queue, transport: transport, clock: clock,
+        let sync = PushSync(store: files.store, log: files.log, transport: transport, clock: clock,
                             context: Files.context)
         let open = Task { await sync.open { nil } }
         #expect(await eventually { await sync.openStarts == 1 })
         #expect(transport.requests.isEmpty, "nothing before the post without a new token")
         clock.advance(to: .seconds(1))
-        try files.queue.append("token-b")
+        await sync.tokenArrived("token-b")
         clock.advance(to: .seconds(3))
         let outcome = try #require(await open.value)
         #expect(outcome.requests.map(\.method) == ["POST"])
         #expect(transport.requests.map(\.request.method) == ["PUT", "POST"])
-        #expect(transport.requests.map(\.at) == [.seconds(3), .seconds(3)])
+        #expect(transport.requests.map(\.at) == [.seconds(1), .seconds(3)])
         #expect(replacement(transport.requests.first?.request) == ["token-b", "token-a"])
         #expect(transport.requests.last?.request.body[0]?["fcmToken"] == "token-b")
         #expect(files.storedToken == "token-b")

@@ -52,14 +52,14 @@ struct PushServiceTests {
     @Test func theFirstActivationRunsTheOpenRegistration() async throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-push-\(UUID().uuidString)")
         let store = AppStateStore(url: dir.appendingPathComponent("app_state.json"))
-        let queue = PushTokenQueue(url: dir.appendingPathComponent("push_tokens.json"))
+        let replacements = PushReplacementLog(url: dir.appendingPathComponent("push_replacements.json"))
         try store.save(Self.state(token: "token-a"))
         let transport = RecordingPushTransport()
         let startup = AppStartup()
         startup.migrate = { Self.state(token: "token-a") }
         startup.makePush = { id in
             PushService(serverURL: "https://push.test.invalid", deviceId: id, tokenProvider: FixedTokenProvider(token: "token-b"),
-                        store: store, queue: queue, transport: transport, repostDelay: .milliseconds(50))
+                        store: store, log: replacements, transport: transport, repostDelay: .milliseconds(50))
         }
         startup.start(UIApplication.shared)
         #expect(startup.push != nil)
@@ -101,7 +101,7 @@ struct PushServiceTests {
         let transport = RecordingPushTransport()
         let service = PushService(serverURL: "https://push.test.invalid", deviceId: "DEVICE",
                                   tokenProvider: FixedTokenProvider(token: "token-b"), store: store,
-                                  queue: PushTokenQueue(url: dir.appendingPathComponent("push_tokens.json")),
+                                  log: PushReplacementLog(url: dir.appendingPathComponent("push_replacements.json")),
                                   transport: transport, repostDelay: .zero)
         let outcome = try #require(await service.open()?.value)
         #expect(service.open() == nil, "once")
