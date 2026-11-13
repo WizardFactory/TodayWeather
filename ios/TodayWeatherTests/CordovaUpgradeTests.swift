@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TWModel
 import TWStorage
 @testable import TodayWeather
 
@@ -19,7 +20,7 @@ struct UpgradeSeed: Decodable {
     }
 
     func json(_ key: String) throws -> JSONValue {
-        try #require((storage[key] ?? nil).flatMap(JSONValue.parse), "seeded \(key)")
+        try #require((storage[key] ?? nil).flatMap { try? JSONValue.parse($0) }, "seeded \(key)")
     }
 }
 
@@ -41,15 +42,15 @@ struct CordovaUpgradeTests {
         let cities = try #require(seed.json("cities").arrayValue)
         try #require(state.places.count == cities.count)
         for (place, city) in zip(state.places, cities) {
-            #expect(place.name == city["name"]?.stringValue)
-            #expect(place.address == city["address"]?.stringValue)
+            #expect(same(place.name, city["name"]?.stringValue))
+            #expect(same(place.address, city["address"]?.stringValue))
             #expect(place.currentPosition == (city["currentPosition"]?.boolValue == true))
             #expect(place.disable == (city["disable"]?.boolValue ?? false))
             let loc = city["location"]?.objectValue
-            #expect(place.location?.lat == loc?["lat"]?.doubleValue)
-            #expect(place.location?.long == loc?["long"]?.doubleValue)
+            #expect(place.location?.lat == loc?["lat"]?.numberValue?.double)
+            #expect(place.location?.long == loc?["long"]?.numberValue?.double)
         }
-        #expect(state.placeIndex == (try seed.json("cityIndex").int32Value))
+        #expect(state.placeIndex == (try seed.json("cityIndex").numberValue.flatMap { Int($0.text) }))
         let units = try #require(seed.json("units").objectValue)
         for key in UnitSettings.keys {
             #expect(state.units.value(key) == units[key]?.stringValue, "\(key)")
@@ -93,8 +94,9 @@ struct CordovaUpgradeTests {
             #expect(database == nil)
         } else {
             let items = try WebKitLocalStorage.readItems(at: try #require(database).url)
-            #expect(items["cities"] == (seed.storage["cities"] ?? nil))
-            #expect(items["twAnalyticsConsentV1"] == "true")
+            func item(_ key: String) -> String? { items.first { JSString.equal($0.key, key) }?.value }
+            #expect(same(item("cities"), seed.storage["cities"] ?? nil))
+            #expect(item("twAnalyticsConsentV1") == "true")
         }
     }
 
@@ -120,5 +122,14 @@ struct CordovaUpgradeTests {
         #expect(flag != nil && flag != 1, "persisted collection flag: \(String(describing: flag))")
         let consent = UserDefaults(suiteName: "APMAnalyticsSuiteName")?.dictionary(forKey: "consent_settings_3p")
         #expect(consent?["analytics_storage"] as? String == "denied")
+    }
+}
+
+/// Code-unit equality of two optional texts, as the Cordova code compares strings.
+private func same(_ a: String?, _ b: String?) -> Bool {
+    switch (a, b) {
+    case (nil, nil): true
+    case let (a?, b?): JSString.equal(a, b)
+    default: false
     }
 }

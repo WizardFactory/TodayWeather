@@ -1,4 +1,5 @@
 import Foundation
+import TWModel
 
 /// The app state file, `Library/Application Support/TodayWeather/app_state.json`. Every save replaces the whole
 /// file atomically (written to a temporary file, then renamed), so a reader sees the old or the new state.
@@ -33,7 +34,7 @@ public struct AppStateStore: Sendable {
             throw .unavailable("\(error)")
         }
         do {
-            return try JSONDecoder().decode(AppState.self, from: data)
+            return try AppState(json: JSONValue.parse(data))
         } catch {
             throw .corrupt("\(error)")
         }
@@ -44,11 +45,15 @@ public struct AppStateStore: Sendable {
         try Self.encode(state).write(to: url, options: .atomic)
     }
 
-    /// The file contents for `state`: sorted keys, so the same state always gives the same bytes.
-    public static func encode(_ state: AppState) throws -> Data {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]
-        return try encoder.encode(state)
+    /// The file contents for `state`: compact JSON with members in a fixed order and the Cordova values in their
+    /// own order and number texts, so the same state always gives the same bytes.
+    public static func encode(_ state: AppState) -> Data {
+        Data(state.json.jsonText.utf8)
+    }
+
+    /// The state in `data` (the inverse of `encode`).
+    public static func decode(_ data: Data) throws -> AppState {
+        try AppState(json: JSONValue.parse(data))
     }
 }
 
@@ -97,7 +102,11 @@ extension CordovaSources {
         guard let database = WebKitLocalStorage.locate(dataContainer: dataContainer) else { return sources }
         sources.localStorageFile = database.relativePath
         do {
-            sources.local = try WebKitLocalStorage.readItems(at: database.url)
+            // Only the keys the migration reads, matched by UTF-16 code units as localStorage keys are.
+            let wanted = suiteKeys + ["startupPage", "refreshInterval"]
+            for (key, value) in try WebKitLocalStorage.readItems(at: database.url) {
+                if let name = wanted.first(where: { JSString.equal($0, key) }) { sources.local[name] = value }
+            }
         } catch WebKitLocalStorage.ReadError.unreadable(let reason) {
             sources.localStorageFile = "\(database.relativePath) (unreadable: \(reason))"
         }

@@ -31,7 +31,7 @@ struct CordovaMigrationTests {
                                             distanceUnit: "km", precipitationUnit: "mm", airUnit: "airnow"))
         #expect(state.settings == Settings(startupPage: "1", refreshInterval: "30", theme: "dark"))
         #expect(state.expandShortChart)
-        #expect(state.cordovaExtras == ["startVersion": .int(1)])
+        #expect(state.cordovaExtras == Fixtures.obj(["startVersion": .number(1)]))
         #expect(state.push.type == "ios")
         #expect(state.push.fcmToken == "token-a")
         #expect(state.push.needsAlertIntro == false)
@@ -100,7 +100,7 @@ struct CordovaMigrationTests {
         #expect(state.units == UnitSettings(temperatureUnit: "F", windSpeedUnit: "mph", pressureUnit: "inHg",
                                             distanceUnit: "mi", precipitationUnit: "in", airUnit: "airnow"))
         #expect(state.settings == Settings(startupPage: "0", refreshInterval: "15", theme: "light"))
-        #expect(state.push.records.map { $0["id"] } == [.int(1), .int(2)])
+        #expect(state.push.records.map { $0["id"] } == [.number(1), .number(2)])
         let keys = try #require(state.migration?.keys)
         #expect(keys["cities"] == "partial")
         #expect(keys["cityIndex"] == "malformed")
@@ -179,7 +179,7 @@ struct CordovaMigrationTests {
         #expect(state.units == UnitSettings(temperatureUnit: "F", windSpeedUnit: "kt", pressureUnit: "inHg",
                                             distanceUnit: "mi", precipitationUnit: "in", airUnit: "aqicn"))
         #expect(state.settings == Settings(startupPage: "3", refreshInterval: "0", theme: "photo"))
-        #expect(state.cordovaExtras == ["startVersion": .double(1.5)])
+        #expect(state.cordovaExtras == Fixtures.obj(["startVersion": .number(1.5)]))
         let keys = try #require(state.migration?.keys)
         #expect(keys["pushData2"] == "malformed") // data that is not UTF-8
         #expect(keys["appVersion"] == "malformed") // an array the plugin never writes
@@ -200,7 +200,7 @@ struct CordovaMigrationTests {
         #expect(state.placeIndex == 1)
         // The standalone startupPage/refreshInterval and guideVersion lived only in localStorage.
         #expect(state.settings == Settings(startupPage: "0", refreshInterval: "0", theme: "light"))
-        #expect(state.cordovaExtras == ["startVersion": .int(1)])
+        #expect(state.cordovaExtras == Fixtures.obj(["startVersion": .number(1)]))
         #expect(state.units == UnitSettings.defaults(region: "KR"))
         #expect(state.push.needsAlertIntro)
         #expect(state.push.registrationId == "legacy-registration")
@@ -228,7 +228,7 @@ struct CordovaMigrationTests {
         #expect(state.settings == Settings(startupPage: "2", refreshInterval: "60", theme: "light"))
         try #require(state.places.count == 2)
         #expect(state.migration?.keys["settingsInfo"] == "legacy")
-        #expect(state.cordovaExtras == ["startVersion": .int(1)]) // from guideVersion
+        #expect(state.cordovaExtras == Fixtures.obj(["startVersion": .number(1)])) // from guideVersion
         #expect(state.places[0].location == Location(lat: 37.5636, long: 126.9826))
         #expect(state.places[0].cordova?["currentWeather"] == nil)
         #expect(state.push.needsAlertIntro)
@@ -241,22 +241,22 @@ struct CordovaMigrationTests {
         let state = Fixtures.migrate(CordovaSources(local: ["cities": cities, "pushData": legacy]))
         let r = state.push.records
         try #require(r.count == 6)
-        #expect(r[0] == [
-            "cityIndex": .int(1), "id": .int(1), "category": .string("alert"), "enable": .bool(false),
+        #expect(r[0] == Fixtures.obj([
+            "cityIndex": .number(1), "id": .number(1), "category": .string("alert"), "enable": .bool(false),
             "startTime": .string("2026-11-12T22:00:00.000Z"), "endTime": .string("2026-11-13T13:00:00.000Z"),
             "name": .string("명동"), "source": .string("KMA"),
-            "location": .object(["lat": .double(37.56), "long": .double(126.98)]),
-            "town": .object(["first": .string("서울특별시"), "second": .string("중구"), "third": .string("명동")]),
-        ])
+            "location": .object(Fixtures.obj(["lat": .number(37.56), "long": .number(126.98)])),
+            "town": .object(Fixtures.obj(["first": .string("서울특별시"), "second": .string("중구"), "third": .string("명동")])),
+        ]))
         #expect(r[1]["name"] == nil) // a place without location or town keeps the base fields
-        #expect(r[1]["cityIndex"] == .int(2))
-        #expect(r[2]["cityIndex"] == .int(9))
-        #expect(r[3] == [
-            "cityIndex": .int(1), "id": .int(2), "category": .string("alarm"), "enable": .bool(true),
+        #expect(r[1]["cityIndex"] == .number(2))
+        #expect(r[2]["cityIndex"] == .number(9))
+        #expect(r[3] == Fixtures.obj([
+            "cityIndex": .number(1), "id": .number(2), "category": .string("alarm"), "enable": .bool(true),
             "time": .string("2017-03-01T22:30:00.000Z"), "name": .string("명동"),
             "dayOfWeek": .array(Array(repeating: .bool(true), count: 7)),
-        ])
-        #expect(r[4]["id"] == .int(3))
+        ]))
+        #expect(r[4]["id"] == .number(3))
         #expect(r[4]["time"] == .string("2017-03-01T22:30:00.000Z"))
         #expect(r[5]["time"] == .null)
         #expect(state.push.needsAlertIntro)
@@ -301,9 +301,9 @@ struct CordovaMigrationTests {
         let first = Fixtures.migrate(sources)
         let second = Fixtures.migrate(sources)
         #expect(first == second)
-        #expect(try AppStateStore.encode(first) == AppStateStore.encode(second))
+        #expect(AppStateStore.encode(first) == AppStateStore.encode(second))
         // The stored state reads back equal.
-        let decoded = try JSONDecoder().decode(AppState.self, from: AppStateStore.encode(first))
+        let decoded = try AppStateStore.decode(AppStateStore.encode(first))
         #expect(decoded == first)
     }
 }

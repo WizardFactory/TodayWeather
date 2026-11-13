@@ -2,6 +2,7 @@
 """Host-side checks of run-upgrade-test.sh (simulator containers, Firebase SDK files, recorder log).
 
     check_upgrade.py dummy-plist <path>
+    check_upgrade.py event-stored <data-container>
     check_upgrade.py before <out> <data-container> <group-container> <localStorage|suite>
     check_upgrade.py after  <out> <data-container> <group-container> <localStorage|suite> <first|restart>
     check_upgrade.py final  <out> <data-container> <group-container> <localStorage|suite>
@@ -73,10 +74,14 @@ def measurement(data):
         if os.path.exists(src + "-wal"):
             shutil.copy(src + "-wal", dst + "-wal")
         db = sqlite3.connect(dst)
-        events = {name: [count, last] for name, count, last in
-                  db.execute("SELECT name, lifetime_count, last_fire_timestamp FROM events ORDER BY name")}
-        raw = [list(r) for r in db.execute("SELECT name, timestamp FROM raw_events ORDER BY timestamp")]
-        db.close()
+        try:
+            events = {name: [count, last] for name, count, last in
+                      db.execute("SELECT name, lifetime_count, last_fire_timestamp FROM events ORDER BY name")}
+            raw = [list(r) for r in db.execute("SELECT name, timestamp FROM raw_events ORDER BY timestamp")]
+        except sqlite3.Error:
+            return None  # copied while the SDK was creating or writing it; read again
+        finally:
+            db.close()
         return {"events": events, "raw_events": raw}
     finally:
         shutil.rmtree(tmp)
@@ -130,25 +135,30 @@ def main():
     stage = sys.argv[1]
     if stage == "dummy-plist":
         return dummy_plist(sys.argv[2])
+    if stage == "event-stored":  # exit 0 once the SDK stored the seed's event (the app keeps running)
+        m = measurement(sys.argv[2])
+        sys.exit(0 if m is not None and "favorite_change" in m["events"] else 1)
     out, data, shared, source = sys.argv[2:6]
     phase = sys.argv[6] if len(sys.argv) > 6 else None
     c = Checks(out, stage if stage != "after" else f"after-{phase}")
     seed = json.load(open(os.path.join(out, "recorder", "seeded.json")))
     # cfprefsd writes the preference files some time after the app changed them (the app's own reads see the new
-    # values at once): wait until the files hold the values of this stage, at most 60 s, then check what they hold.
+    # values at once), and the SDK's database can be caught while it is written: wait until the files hold the
+    # values of this stage, at most 60 s, then check what they hold.
     for _ in range(60):
         standard = plist(os.path.join(data, "Library/Preferences/net.wizardfactory.todayweather.plist"))
         group = plist(os.path.join(shared, "Library/Preferences/group.net.wizardfactory.todayweather.plist"))
         apm = plist(os.path.join(data, "Library/Preferences/APMAnalyticsSuiteName.plist"))
+        m = measurement(data)
         if stage == "before":
-            settled = "cities" in group and "/google/measurement/measurement_enabled_state" in standard
+            settled = ("cities" in group and "/google/measurement/measurement_enabled_state" in standard and
+                       m is not None and "favorite_change" in m["events"])
         else:
             settled = (standard.get("/google/measurement/measurement_enabled_state") not in (None, 1) and
-                       (apm.get("consent_settings_3p") or {}).get("analytics_storage") == "denied")
+                       (apm.get("consent_settings_3p") or {}).get("analytics_storage") == "denied" and m is not None)
         if settled:
             break
         time.sleep(1)
-    m = measurement(data)
     c.record("measurement_enabled_state", standard.get("/google/measurement/measurement_enabled_state"))
     c.record("consent_settings_3p", apm.get("consent_settings_3p"))
     c.record("measurement", m)
@@ -200,16 +210,18 @@ def main():
     else:
         c.check("WebKit localStorage files unchanged", files == before["webkit_files"], files)
     if stage == "final":
-        log = open(os.path.join(out, "debug-launch.log"), encoding="utf-8", errors="replace").read()
-        firebase_lines = [line for line in log.splitlines() if "Firebase" in line or "I-ACS" in line]
-        c.record("firebase_debug_lines", firebase_lines[:80])
+        launches = sorted(glob.glob(os.path.join(out, "debug-launch-*.log")))
+        lines = {os.path.basename(p): [line for line in open(p, encoding="utf-8", errors="replace").read().splitlines()
+                                       if "Firebase" in line or "I-ACS" in line] for p in launches}
+        c.record("debug_launches", len(launches))
+        c.record("firebase_debug_lines", {name: found[:40] for name, found in lines.items()})
+        last = lines[os.path.basename(launches[-1])] if launches else []
         # With -FIRAnalyticsDebugEnabled the SDK logs every event it accepts ("Logging event: ...").
-        c.check("Analytics debug logging was on in the debug launch",
-                any("To disable debug logging" in line for line in firebase_lines))
-        c.check("the SDK reported collection disabled",
-                any("Analytics collection disabled" in line for line in firebase_lines))
-        logged = [line for line in firebase_lines if "Logging event" in line]
-        c.check("no event logged in the debug launch", not logged, logged)
+        c.check("Analytics debug logging was on in the last debug launch",
+                any("To disable debug logging" in line for line in last))
+        c.check("the SDK reported collection disabled", any("Analytics collection disabled" in line for line in last))
+        logged = [line for found in lines.values() for line in found if "Logging event" in line]
+        c.check("no event logged in any debug launch", not logged, logged)
     requests(c, out)
     c.finish()
 

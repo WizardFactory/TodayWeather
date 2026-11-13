@@ -1,6 +1,8 @@
 import CryptoKit
 import Foundation
+import SQLite3
 import Testing
+import TWModel
 @testable import TWStorage
 
 /// Reading the WebKit `localStorage` files (each layout), the state file and `Device-Id`.
@@ -9,7 +11,7 @@ struct WebKitLocalStorageTests {
         let db = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("simulator")))
         #expect(db.layout == .origins)
         #expect(db.relativePath.hasPrefix("Library/WebKit/net.wizardfactory.todayweather/WebsiteData/Default/"))
-        let items = try WebKitLocalStorage.readItems(at: db.url)
+        let items = try Fixtures.items(db.url)
         // The newest writes are only in the write-ahead log of the captured database.
         #expect(Set(items.keys) == ["cities", "cityIndex", "cityList", "daumServiceKeys", "units", "settingsInfo",
                                     "expandShortChart", "startVersion", "pushData2", "twAnalyticsConsentV1"])
@@ -22,13 +24,13 @@ struct WebKitLocalStorageTests {
         let db = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("device")))
         #expect(db.layout == .origins)
         #expect(db.relativePath.hasPrefix("Library/WebKit/WebsiteData/Default/"))
-        #expect(try WebKitLocalStorage.readItems(at: db.url)["cityIndex"] == "2")
+        #expect(try Fixtures.items(db.url)["cityIndex"] == "2")
     }
 
     @Test func singleDirectoryLayout() throws {
         let db = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("legacy")))
         #expect(db.layout == .legacy)
-        let items = try WebKitLocalStorage.readItems(at: db.url)
+        let items = try Fixtures.items(db.url)
         #expect(items["guideVersion"] == "1")
         #expect(items["startupPage"] == "2")
         #expect(items["cities"]?.contains("부산") == true)
@@ -176,19 +178,3 @@ struct DeviceIdentityTests {
     }
 }
 
-struct JSONValueTests {
-    @Test func parsesAsJSONParseDoes() {
-        #expect(JSONValue.parse(" 2 ") == .int(2))
-        #expect(JSONValue.parse("2.0") == .int(2))
-        #expect(JSONValue.parse("-0.13") == .double(-0.13))
-        #expect(JSONValue.parse("1e400") == nil)
-        #expect(JSONValue.parse("\"\\ud83c\\udf27 \\u00e9\"") == .string("🌧 é"))
-        #expect(JSONValue.parse("\"\\ud83c\"") == .string("\u{FFFD}"))
-        #expect(JSONValue.parse(#"{"a":1,"a":2}"#) == .object(["a": .int(2)]))
-        #expect(JSONValue.parse("[1,]") == nil)
-        #expect(JSONValue.parse("") == nil)
-        #expect(JSONValue.parse("01") == nil)
-        #expect(JSONValue.parse("undefined") == nil)
-        #expect(JSONValue.parse("2147483648")?.int32Value == nil)
-    }
-}

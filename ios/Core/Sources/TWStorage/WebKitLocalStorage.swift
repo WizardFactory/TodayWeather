@@ -1,5 +1,6 @@
 import Foundation
 import SQLite3
+import TWModel
 
 /// Reads the `localStorage` of the Cordova app's WKWebView (origin `app://localhost`) from WebKit's files in the
 /// app's data container, without a web view and without opening WebKit's own files: the database and its
@@ -75,8 +76,9 @@ public enum WebKitLocalStorage {
         return nil
     }
 
-    /// All items of the database at `url`, read from a temporary copy of the file and its write-ahead log.
-    public static func readItems(at url: URL) throws -> [String: String] {
+    /// All items of the database at `url`, read from a temporary copy of the file and its write-ahead log. A list,
+    /// not a dictionary: keys are distinct by UTF-16 code units, which Swift `String` keys would not keep apart.
+    public static func readItems(at url: URL) throws -> [(key: String, value: String)] {
         let fm = FileManager.default
         let dir = fm.temporaryDirectory.appendingPathComponent("tw-localstorage-\(UUID().uuidString)", isDirectory: true)
         defer { try? fm.removeItem(at: dir) }
@@ -96,7 +98,7 @@ public enum WebKitLocalStorage {
         return try query(copy)
     }
 
-    private static func query(_ file: URL) throws -> [String: String] {
+    private static func query(_ file: URL) throws -> [(key: String, value: String)] {
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
         guard sqlite3_open_v2(file.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
@@ -107,7 +109,7 @@ public enum WebKitLocalStorage {
         guard sqlite3_prepare_v2(db, "SELECT key, value FROM ItemTable", -1, &statement, nil) == SQLITE_OK else {
             throw ReadError.unreadable(String(cString: sqlite3_errmsg(db)))
         }
-        var items: [String: String] = [:]
+        var items: [(key: String, value: String)] = []
         while true {
             let step = sqlite3_step(statement)
             if step == SQLITE_DONE { break }
@@ -118,9 +120,9 @@ public enum WebKitLocalStorage {
             case SQLITE_BLOB:
                 let count = Int(sqlite3_column_bytes(statement, 1))
                 let bytes = sqlite3_column_blob(statement, 1).map { Data(bytes: $0, count: count) } ?? Data()
-                items[key] = String(data: bytes, encoding: .utf16LittleEndian) ?? ""
+                items.append((key, String(data: bytes, encoding: .utf16LittleEndian) ?? ""))
             case SQLITE_TEXT:
-                items[key] = sqlite3_column_text(statement, 1).map { String(cString: $0) } ?? ""
+                items.append((key, sqlite3_column_text(statement, 1).map { String(cString: $0) } ?? ""))
             default:
                 continue
             }
@@ -137,6 +139,11 @@ enum OriginFile {
         var scheme: String
         var host: String
         var port: UInt16?
+
+        /// WebKit compares origins by code units.
+        static func == (a: Origin, b: Origin) -> Bool {
+            JSString.equal(a.scheme, b.scheme) && JSString.equal(a.host, b.host) && a.port == b.port
+        }
     }
 
     static func parse(_ data: Data) -> [Origin]? {

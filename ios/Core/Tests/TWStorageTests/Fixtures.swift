@@ -1,4 +1,5 @@
 import Foundation
+import TWModel
 @testable import TWStorage
 
 /// The storage fixtures (README of ios/tools/upgrade/make_fixtures.py and "Data migration from the Cordova app").
@@ -22,6 +23,12 @@ enum Fixtures {
         suite(name).filter { CordovaSources.suiteKeys.contains($0.key) }
     }
 
+    /// The `localStorage` items of a database as a dictionary (the fixtures have no keys that differ only by
+    /// normalization).
+    static func items(_ url: URL) throws -> [String: String] {
+        Dictionary(try WebKitLocalStorage.readItems(at: url).map { ($0.key, $0.value) }) { first, _ in first }
+    }
+
     static let seoul = TimeZone(identifier: "Asia/Seoul")!
     /// 2026-11-13 15:00 KST.
     static let now = Date(timeIntervalSince1970: 1_794_549_600)
@@ -31,5 +38,10 @@ enum Fixtures {
         CordovaMigration.migrate(sources, region: region, now: now, zone: zone)
     }
 
-    static func json(_ text: String) -> JSONValue { JSONValue.parse(text)! }
+    static func json(_ text: String) -> JSONValue { try! JSONValue.parse(text) }
+
+    /// An object with the members in the literal's order.
+    static func obj(_ members: KeyValuePairs<String, JSONValue>) -> JSONObject {
+        JSONObject(members.map { ($0.key, $0.value) })
+    }
 }

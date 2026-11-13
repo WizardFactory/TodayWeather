@@ -11,7 +11,7 @@
 #     from 1.0.10 has no app://localhost storage);
 #  4. builds the native app for testing, ad hoc signed with its App Group entitlement, adds a dummy
 #     GoogleService-Info.plist to a copy of the products and runs TodayWeatherTests over the Cordova install
-#     (first start), then again (restart), then launches the app once more with Firebase debug logging;
+#     (first start), then again (restart), then launches it with Firebase debug logging (until the SDK takes it);
 #  5. fails unless the migrated state matches, the state file is unchanged by the restarts, the SDK's event
 #     counters are unchanged and no event is logged, and no request of the Cordova app went to a host other than
 #     this Mac (the seed script redirects such requests to the recorder; any API path elsewhere fails too).
@@ -64,13 +64,19 @@ i=0
 until [ -s "$OUT/recorder/seeded.json" ]; do
     i=$((i + 1)); [ $i -le 120 ] || fail "no seed after 240 s"; sleep 2
 done
-sleep 2
-xcrun simctl terminate "$UDID" $BUNDLE
 # The containers move to new paths when an app is installed over another; look them up before each check.
 containers() {
     DATA=$(xcrun simctl get_app_container "$UDID" $BUNDLE data)
     SHARED=$(xcrun simctl get_app_container "$UDID" $BUNDLE $GROUP)
 }
+containers
+# The SDK stores the event counted under the opt-in asynchronously: keep the app running until it is stored
+# (at most 120 s), or a stop would lose it.
+i=0
+until python3 "$HERE/check_upgrade.py" event-stored "$DATA"; do
+    i=$((i + 1)); [ $i -le 60 ] || break; sleep 2
+done
+xcrun simctl terminate "$UDID" $BUNDLE
 containers
 python3 "$HERE/check_upgrade.py" before "$OUT" "$DATA" "$SHARED" "$SOURCE" || fail "state before the update"
 
@@ -109,13 +115,18 @@ for PHASE in first restart; do
     python3 "$HERE/check_upgrade.py" after "$OUT" "$DATA" "$SHARED" "$SOURCE" "$PHASE" || fail "state after the $PHASE start"
 done
 
-log "launch once more with Firebase Analytics debug logging"
-SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" $BUNDLE \
-    -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/debug-launch.log" 2>&1 &
-LAUNCH_PID=$!
-sleep 20
-xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
-kill $LAUNCH_PID 2>/dev/null || true
+# The SDK does not always take the debug arguments on the launch that first passes them (seen on the simulator),
+# so launch up to three times until its log says debug logging is on; check_upgrade.py reads every launch's log.
+for N in 1 2 3; do
+    log "launch once more with Firebase Analytics debug logging ($N)"
+    SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" $BUNDLE \
+        -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/debug-launch-$N.log" 2>&1 &
+    LAUNCH_PID=$!
+    sleep 20
+    xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
+    kill $LAUNCH_PID 2>/dev/null || true
+    grep -q "To disable debug logging" "$OUT/debug-launch-$N.log" && break
+done
 containers
 python3 "$HERE/check_upgrade.py" final "$OUT" "$DATA" "$SHARED" "$SOURCE" || fail "after the debug launch"
 log "PASS ($SOURCE)"

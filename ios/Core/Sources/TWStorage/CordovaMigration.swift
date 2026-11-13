@@ -1,4 +1,5 @@
 import Foundation
+import TWModel
 
 /// A value of the App Group suite as cordova-plugin-app-preferences stored it on iOS (`AppPreferences.m`).
 /// `TwStorage.set` passes JSON text as a JavaScript string, which the plugin stores as an `NSString`; values of
@@ -43,6 +44,8 @@ public enum SuiteValue: Hashable, Sendable {
 /// What the migration reads: the WebView `localStorage` items of origin `app://localhost` and the App Group
 /// suite `group.net.wizardfactory.todayweather`. Either can be empty.
 public struct CordovaSources: Hashable, Sendable {
+    /// The `localStorage` items the migration reads, under their exact names (`CordovaSources.read` matches the
+    /// stored keys by UTF-16 code units).
     public var local: [String: String]
     public var suite: [String: SuiteValue]
     /// The database `local` was read from, relative to the data container (recorded in `MigrationInfo`).
@@ -65,7 +68,7 @@ public struct CordovaSources: Hashable, Sendable {
 public enum CordovaRegion {
     public static func from(preferredLanguages: [String]) -> String {
         for tag in preferredLanguages {
-            let parts = tag.components(separatedBy: "-")
+            let parts = JSString.split(tag, "-")
             if parts.count > 1 { return parts[parts.count - 1] }
         }
         return "KR"
@@ -76,14 +79,16 @@ public enum CordovaRegion {
 /// (AN-03, android/README.md "Data migration from the Cordova app"), which port the Cordova restore code.
 ///
 /// Each key is read from `localStorage` first, then from the suite; a value that does not parse falls back to the
-/// next source, and a key that parses nowhere takes the Cordova default. Pure function of its inputs: the same
-/// sources, region, time and zone give the same state.
+/// next source, and a key that parses nowhere takes the Cordova default. Stored texts are parsed by
+/// `TWModel.JSONValue` (strict JSON, as `JSON.parse`), and stored strings and keys are compared by UTF-16 code
+/// units (`JSString`), as the Cordova code compares them. Pure function of its inputs: the same sources, region,
+/// time and zone give the same state.
 public enum CordovaMigration {
     public static let suiteName = "group.net.wizardfactory.todayweather"
 
     /// Weather caches are fetched again; `location` lives in `Place.location`.
-    static let cacheKeys: Set<String> = ["currentWeather", "timeTable", "timeChart", "dayTable", "dayChart",
-                                         "airInfo", "airInfoList", "loadTime", "location"]
+    static let cacheKeys = ["currentWeather", "timeTable", "timeChart", "dayTable", "dayChart", "airInfo",
+                            "airInfoList", "loadTime", "location"]
     static let extraKeys = ["startVersion", "appVersion", "disableUpdateInfo"]
 
     public static func migrate(_ sources: CordovaSources, region: String?, now: Date, zone: TimeZone) -> AppState {
@@ -100,7 +105,7 @@ public enum CordovaMigration {
                 return nil
             }
             for (source, text) in present {
-                if let text, let parsed = JSONValue.parse(text) {
+                if let text, let parsed = try? JSONValue.parse(text) {
                     if let i = sourceOrder.firstIndex(where: { $0.0 == key }) {
                         sourceOrder[i].1 = source
                     } else {
@@ -121,7 +126,7 @@ public enum CordovaMigration {
         let expand = parse("expandShortChart")?.boolValue
         report["expandShortChart"] = expand != nil ? "migrated" : report["expandShortChart"] ?? "default"
         // `_setBackwardCompatibility`: a store with only the old `guideVersion` starts as if `startVersion` had it.
-        var extras: [String: JSONValue] = [:]
+        var extras = JSONObject()
         for key in extraKeys {
             if let value = parse(key) ?? (key == "startVersion" ? parse("guideVersion") : nil) {
                 extras[key] = value
@@ -140,6 +145,23 @@ public enum CordovaMigration {
                                      localStorageFile: sources.localStorageFile))
     }
 
+    // MARK: - Views of stored values (the kotlinx `JsonPrimitive` accessors of the Android port)
+
+    /// `intOrNull` of a non-string primitive: a number whose text is a 32-bit integer (`1`, not `1.0`).
+    static func int32(_ value: JSONValue?) -> Int? {
+        guard let n = value?.numberValue, let i = Int32(n.text) else { return nil }
+        return Int(i)
+    }
+
+    /// `doubleOrNull` of a non-string primitive.
+    static func double(_ value: JSONValue?) -> Double? { value?.numberValue?.double }
+
+    /// The entry of `options` equal to `text` by UTF-16 code units (`indexOf(text) !== -1` in the Cordova code).
+    static func choice(_ text: String?, _ options: [String]) -> String? {
+        guard let text else { return nil }
+        return options.first { JSString.equal($0, text) }
+    }
+
     // MARK: - Places
 
     /// `WeatherInfo.loadCities`: restore defaults; a missing or broken list starts like a new install.
@@ -152,6 +174,8 @@ public enum CordovaMigration {
         // `cityIndex` still point at the same places.
         let out = list.enumerated().map { index, item -> Place in
             guard let city = item.objectValue else { return Place(currentPosition: index == 0, disable: true) }
+            var kept = JSONObject()
+            for (key, value) in city where choice(key, cacheKeys) == nil { kept[key] = value }
             return Place(
                 currentPosition: city["currentPosition"]?.boolValue == true,
                 disable: city["disable"]?.boolValue ?? false, // createCity: a missing disable means enabled
@@ -161,7 +185,7 @@ public enum CordovaMigration {
                 location: location(city["location"]),
                 source: city["source"]?.stringValue,
                 photo: city["photo"]?.stringValue,
-                cordova: city.filter { !cacheKeys.contains($0.key) })
+                cordova: kept)
         }
         report["cities"] = list.allSatisfy { $0.objectValue != nil } && !out.isEmpty ? "migrated" : "partial"
         return out.isEmpty ? [.currentPositionPlaceholder] : out
@@ -169,7 +193,7 @@ public enum CordovaMigration {
 
     /// Finite coordinates within ±90/±180, or nil (the place is then address-only, as old favorites are).
     static func location(_ value: JSONValue?) -> Location? {
-        guard let loc = value?.objectValue, let lat = loc["lat"]?.doubleValue, let long = loc["long"]?.doubleValue,
+        guard let loc = value?.objectValue, let lat = double(loc["lat"]), let long = double(loc["long"]),
               lat.isFinite, long.isFinite, (-90.0...90.0).contains(lat), (-180.0...180.0).contains(long) else {
             return nil
         }
@@ -178,7 +202,7 @@ public enum CordovaMigration {
 
     /// `loadCities` index rules; `setFirstCityIndex` when absent, out of range or invalid.
     static func placeIndex(_ index: JSONValue?, _ places: [Place], _ report: inout [String: String]) -> Int {
-        if let i = index?.int32Value, places.indices.contains(i) {
+        if let i = int32(index), places.indices.contains(i) {
             report["cityIndex"] = "migrated"
             return i
         }
@@ -196,8 +220,8 @@ public enum CordovaMigration {
         var replaced = false
         var values: [String: String] = [:]
         for key in UnitSettings.keys {
-            if let v = obj?[key]?.stringValue, UnitSettings.options[key]!.contains(v) {
-                values[key] = v
+            if let option = choice(obj?[key]?.stringValue, UnitSettings.options[key]!) {
+                values[key] = option
             } else {
                 values[key] = defaults.value(key)
                 replaced = true
@@ -215,9 +239,10 @@ public enum CordovaMigration {
         return UnitSettings.of(values)
     }
 
-    static let startupPages: Set<String> = ["0", "1", "2", "3"]
-    static let themes: Set<String> = ["light", "dark", "photo", "old"]
+    static let startupPages = ["0", "1", "2", "3"]
+    static let themes = ["light", "dark", "photo", "old"]
 
+    /// Kotlin `toIntOrNull() >= 0`: an optional sign and ASCII digits within 32 bits.
     static func validRefresh(_ text: String?) -> String? {
         guard let text, let minutes = Int32(text), minutes >= 0 else { return nil }
         return text
@@ -228,7 +253,7 @@ public enum CordovaMigration {
     /// `refreshInterval` (raw strings, not JSON), which never reach the suite.
     static func settings(_ saved: JSONValue?, local: [String: String], _ report: inout [String: String]) -> Settings {
         guard let obj = saved?.objectValue else {
-            let legacyStartup = local["startupPage"].flatMap { startupPages.contains($0) ? $0 : nil }
+            let legacyStartup = choice(local["startupPage"], startupPages)
             let legacyRefresh = validRefresh(local["refreshInterval"])
             if saved == nil && (legacyStartup != nil || legacyRefresh != nil) {
                 report["settingsInfo"] = "legacy"
@@ -238,9 +263,9 @@ public enum CordovaMigration {
             return Settings()
         }
         let d = Settings()
-        let startup = obj["startupPage"]?.stringValue.flatMap { startupPages.contains($0) ? $0 : nil }
+        let startup = choice(obj["startupPage"]?.stringValue, startupPages)
         let refresh = validRefresh(obj["refreshInterval"]?.stringValue)
-        let theme = obj["theme"]?.stringValue.flatMap { themes.contains($0) ? $0 : nil }
+        let theme = choice(obj["theme"]?.stringValue, themes)
         report["settingsInfo"] = startup != nil && refresh != nil && theme != nil ? "migrated" : "partial"
         return Settings(startupPage: startup ?? d.startupPage, refreshInterval: refresh ?? d.refreshInterval,
                         theme: theme ?? d.theme)
@@ -252,8 +277,8 @@ public enum CordovaMigration {
                      _ report: inout [String: String]) -> PushState {
         if let obj = current?.objectValue {
             let list = obj["pushList"]?.arrayValue
-            let records = (list ?? []).compactMap { $0.objectValue }.filter(validRecord)
-            let orphans = records.filter { !places.indices.contains($0["cityIndex"]!.int32Value!) }.count
+            let records = (list ?? []).compactMap(\.objectValue).filter(validRecord)
+            let orphans = records.filter { !places.indices.contains(int32($0["cityIndex"])!) }.count
             report["pushData2"] = list != nil && records.count == list!.count ? "migrated" : "partial"
             report["pushData2.records"] = "\((list?.count ?? 0) - records.count) dropped, \(orphans) orphan"
             return PushState(registrationId: obj["registrationId"]?.stringValue,
@@ -268,18 +293,16 @@ public enum CordovaMigration {
             return PushState()
         }
         report["pushData"] = "legacy"
-        let alerts = alarms.map { a -> [String: JSONValue] in
-            var alert = newAlert(id: 1, cityIndex: looseInt(a["cityIndex"]) ?? -1, startHour: 7, endHour: 22,
-                                 places: places, now: now, zone: zone)
-            alert["enable"] = .bool(false)
-            return alert
+        let alerts = alarms.map { a -> JSONObject in
+            newAlert(id: 1, cityIndex: looseInt(a["cityIndex"]) ?? -1, startHour: 7, endHour: 22,
+                     places: places, now: now, zone: zone).setting("enable", .bool(false))
         }
-        let converted = alarms.map { a -> [String: JSONValue] in
+        let converted = alarms.map { a -> JSONObject in
             let cityIndex = looseInt(a["cityIndex"]) ?? -1
             var alarm = a
             alarm["time"] = jsDateISO(a["time"]).map(JSONValue.string) ?? .null
             alarm["category"] = .string("alarm")
-            alarm["id"] = .int(cityIndex + 1)
+            alarm["id"] = .number(cityIndex + 1)
             alarm["enable"] = .bool(true)
             alarm["dayOfWeek"] = .array(Array(repeating: .bool(true), count: 7))
             return alarm
@@ -291,7 +314,7 @@ public enum CordovaMigration {
 
     /// Kotlin `JsonPrimitive.intOrNull`: a 32-bit integer number, or a string holding one.
     static func looseInt(_ value: JSONValue?) -> Int? {
-        if let i = value?.int32Value { return i }
+        if let i = int32(value) { return i }
         if let text = value?.stringValue, let i = Int32(text) { return Int(i) }
         return nil
     }
@@ -299,50 +322,51 @@ public enum CordovaMigration {
     /// `newPushAlert(id, cityIndex, startHour, endHour)`: enabled, the hours as local wall times of the migration
     /// day, the city info.
     static func newAlert(id: Int, cityIndex: Int, startHour: Int, endHour: Int, places: [Place], now: Date,
-                         zone: TimeZone) -> [String: JSONValue] {
-        var record: [String: JSONValue] = [
-            "cityIndex": .int(cityIndex), "id": .int(id),
-            "startTime": .string(secs2date(startHour * 3600, now: now, zone: zone)),
-            "endTime": .string(secs2date(endHour * 3600, now: now, zone: zone)),
-            "enable": .bool(true), "category": .string("alert"),
-        ]
+                         zone: TimeZone) -> JSONObject {
+        var record = JSONObject([
+            ("cityIndex", .number(cityIndex)), ("id", .number(id)),
+            ("startTime", .string(secs2date(startHour * 3600, now: now, zone: zone))),
+            ("endTime", .string(secs2date(endHour * 3600, now: now, zone: zone))),
+            ("enable", .bool(true)), ("category", .string("alert")),
+        ])
         if places.indices.contains(cityIndex), let info = simpleCityInfo(places[cityIndex]) {
-            record.merge(info) { _, new in new }
+            for (key, value) in info { record[key] = value }
         }
         return record
     }
 
     /// `_getSimpleCityInfo`; nil where the Cordova code throws (no location and no town), so the record keeps its
     /// base fields.
-    static func simpleCityInfo(_ city: Place) -> [String: JSONValue]? {
-        var info: [String: JSONValue] = [:]
+    static func simpleCityInfo(_ city: Place) -> JSONObject? {
+        var info = JSONObject()
         if let name = city.name { info["name"] = .string(name) }
         if let source = city.source { info["source"] = .string(source) }
         if let loc = city.location, loc.lat != 0 {
-            info["location"] = .object(["lat": JSONValue.number(loc.lat), "long": JSONValue.number(loc.long)])
+            info["location"] = .object(JSONObject([("lat", .number(loc.lat)), ("long", .number(loc.long))]))
         }
-        if city.source == "KMA", let address = city.address {
-            let full = address.contains("대한민국") ? address : "대한민국 " + address
-            let town = town(full.isEmpty ? [] : full.components(separatedBy: " "))
+        if let source = city.source, JSString.equal(source, "KMA"), let address = city.address {
+            let full = JSString.includes(address, "대한민국") ? address : "대한민국 " + address
+            let town = town(full.isEmpty ? [] : JSString.split(full, " "))
             if !town.first.isEmpty {
-                info["town"] = .object(["first": .string(town.first), "second": .string(town.second),
-                                        "third": .string(town.third)])
-                if info["name"] == nil {
+                info["town"] = .object(JSONObject([("first", .string(town.first)), ("second", .string(town.second)),
+                                                   ("third", .string(town.third))]))
+                if !info.contains("name") {
                     info["name"] = .string(!town.third.isEmpty ? town.third : !town.second.isEmpty ? town.second : town.first)
                 }
             }
         }
-        return info["location"] != nil || info["town"] != nil ? info : nil
+        return info.contains("location") || info.contains("town") ? info : nil
     }
 
     /// `WeatherUtil.getTownFromFullAddress` over `convertAddressArray`.
     static func town(_ parts: [String]) -> (first: String, second: String, third: String) {
+        func ends(_ s: String, _ suffix: String) -> Bool { JSString.endsWith(s, suffix) }
         switch parts.count {
         case 5: return (parts[1], parts[2] + parts[3], parts[4])
-        case 4: return parts[3].hasSuffix("구") ? (parts[1], parts[2] + parts[3], "") : (parts[1], parts[2], parts[3])
+        case 4: return ends(parts[3], "구") ? (parts[1], parts[2] + parts[3], "") : (parts[1], parts[2], parts[3])
         case 3:
             let p = parts[2]
-            return p.hasSuffix("읍") || p.hasSuffix("면") || p.hasSuffix("동") ? (parts[1], parts[1], p) : (parts[1], p, "")
+            return ends(p, "읍") || ends(p, "면") || ends(p, "동") ? (parts[1], parts[1], p) : (parts[1], p, "")
         case 2: return (parts[1], "", "")
         default: return ("", "", "")
         }
@@ -351,14 +375,16 @@ public enum CordovaMigration {
     private static let isoInstant = try! NSRegularExpression(pattern: #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$"#)
     private static let isoLike = try! NSRegularExpression(pattern: #"^\d{4}-\d{2}-\d{2}T.*Z$"#)
 
+    /// A match over the whole text (`NSRegularExpression` works on UTF-16 code units).
     static func matches(_ regex: NSRegularExpression, _ text: String) -> Bool {
-        regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+        regex.firstMatch(in: text, range: NSRange(location: 0, length: text.utf16.count)) != nil
     }
 
     /// An ISO instant (`Date.toISOString()` form) naming a real date and time: no rollover, hours 0–23.
     static func validInstant(_ text: String) -> Bool {
         guard matches(isoInstant, text) else { return false }
-        let n = text.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        let n = text.utf8.split(whereSeparator: { $0 < 0x30 || $0 > 0x39 })
+            .compactMap { Int(String(decoding: $0, as: UTF8.self)) }
         let (year, month, day, hour, minute, second) = (n[0], n[1], n[2], n[3], n[4], n[5])
         guard year >= 1, (1...12).contains(month), hour <= 23, minute <= 59, second <= 59 else { return false }
         var utc = Calendar(identifier: .gregorian)
@@ -372,18 +398,18 @@ public enum CordovaMigration {
     /// `startTime`/`endTime`, for an alarm an ISO `time` and seven booleans in `dayOfWeek`; times must name real
     /// dates and times. Other records are dropped. Records whose `cityIndex` names no place are kept (the Cordova
     /// app keeps them too, anomaly A24) and counted.
-    static func validRecord(_ r: [String: JSONValue]) -> Bool {
+    static func validRecord(_ r: JSONObject) -> Bool {
         func iso(_ key: String) -> Bool { r[key]?.stringValue.map(validInstant) == true }
-        guard r["cityIndex"]?.int32Value != nil, r["id"]?.int32Value != nil, r["enable"]?.boolValue != nil else {
+        guard int32(r["cityIndex"]) != nil, int32(r["id"]) != nil, r["enable"]?.boolValue != nil,
+              let category = r["category"]?.stringValue else {
             return false
         }
-        switch r["category"]?.stringValue {
-        case "alert": return iso("startTime") && iso("endTime")
-        case "alarm":
+        if JSString.equal(category, "alert") { return iso("startTime") && iso("endTime") }
+        if JSString.equal(category, "alarm") {
             guard iso("time"), let days = r["dayOfWeek"]?.arrayValue else { return false }
             return days.count == 7 && days.allSatisfy { $0.boolValue != nil }
-        default: return false
         }
+        return false
     }
 
     /// `secs2date`: `setHours(0,0,0,0)` then `setSeconds(secs)` on the migration day, which sets local wall time
@@ -400,13 +426,17 @@ public enum CordovaMigration {
         return iso(millis(calendar.date(from: day)!))
     }
 
-    /// `new Date(time)` of a legacy alarm as `toISOString()`; nil for anything else.
+    /// `new Date(time).toISOString()` of a legacy alarm time (Kotlin `doubleOrNull?.toLong()` of a number, or an
+    /// ISO-like string as it is); nil for anything else and for times outside JavaScript's date range.
     static func jsDateISO(_ value: JSONValue?) -> String? {
         switch value {
-        case .int(let millis): return iso(Int64(millis))
-        case .double(let millis): return iso(Int64(millis))
-        case .string(let text): return matches(isoLike, text) ? text : nil
-        default: return nil
+        case .number(let n):
+            guard n.double.isFinite, abs(n.double) <= 8.64e15 else { return nil }
+            return iso(Int64(n.double))
+        case .string(let text):
+            return matches(isoLike, text) ? text : nil
+        default:
+            return nil
         }
     }
 
@@ -422,7 +452,7 @@ public enum CordovaMigration {
         let ms = Int(millis - seconds * 1000)
         let c = utc.dateComponents([.year, .month, .day, .hour, .minute, .second],
                                    from: Date(timeIntervalSince1970: TimeInterval(seconds)))
-        return String(format: "%04ld-%02ld-%02ldT%02ld:%02ld:%02ld.%03ldZ", c.year!, c.month!, c.day!, c.hour!, c.minute!,
-                      c.second!, ms)
+        return String(format: "%04ld-%02ld-%02ldT%02ld:%02ld:%02ld.%03ldZ", c.year!, c.month!, c.day!, c.hour!,
+                      c.minute!, c.second!, ms)
     }
 }
