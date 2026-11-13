@@ -1,6 +1,6 @@
 #!/bin/sh
-# Simulator upgrade test (IN-03, #2952): Cordova 1.1.1 test build -> native debug build.
-#   run-upgrade-test.sh <simulator-udid> <cordova-app> <out-dir> [localStorage|suite]
+# Simulator upgrade test (IN-03, #2952; push: IN-04, #2953): Cordova 1.1.1 test build -> native debug build.
+#   run-upgrade-test.sh <simulator-udid> <cordova-app> <out-dir> [localStorage|suite] [token-a|token-b]
 #
 # <cordova-app> comes from build-cordova.sh (server URL = this recorder, dummy Firebase project). The script:
 #  1. starts recorder.py on 127.0.0.1:18452 and erases the simulator (only a simulator named tw_*);
@@ -14,14 +14,22 @@
 #     (first start), then again (restart), then launches it with Firebase debug logging (until the SDK takes it);
 #  5. fails unless the migrated state matches, the state file is unchanged by the restarts, the SDK's event
 #     counters are unchanged and no event is logged, and no request of the Cordova app went to a host other than
-#     this Mac (the seed script redirects such requests to the recorder; any API path elsewhere fails too).
+#     this Mac (the seed script redirects such requests to the recorder; any API path elsewhere fails too);
+#  6. push (IN-04): the native build has no server URL (TW_SERVER_URL is forced empty), so its own starts send
+#     nothing. PushUpgradeTests then runs the app's open registration twice (two processes) with the FCM token
+#     from a test double (token-a, the token the seed stored, or token-b) and the recorder as server; check_upgrade.py
+#     requires every migrated alarm and alert registered once per open with the same Device-Id and type ios, the
+#     token replaced once (token-b), the posts equal to the Cordova app's post of the same records (the seed's
+#     reference request) but for appVersion and fcmToken, and the token stored.
 # Results: <out-dir>/summary.json and the logs next to it.
 set -eu
 UDID=$1
 CORDOVA_APP=$2
 OUT=$3
 SOURCE=${4:-localStorage}
+TOKEN=${5:-token-a}
 case "$SOURCE" in localStorage|suite) ;; *) echo "source must be localStorage or suite" >&2; exit 2 ;; esac
+case "$TOKEN" in token-a|token-b) ;; *) echo "token must be token-a or token-b" >&2; exit 2 ;; esac
 PORT=18452
 RECORDER=http://127.0.0.1:$PORT
 BUNDLE=net.wizardfactory.todayweather
@@ -89,7 +97,7 @@ log "build the native app for testing"
 DERIVED="$IOS/build/DerivedData"
 (cd "$IOS" && xcodebuild build-for-testing -project TodayWeather.xcodeproj -scheme TodayWeather \
     -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$DERIVED" \
-    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM= \
+    CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM= TW_SERVER_URL= \
     > "$OUT/build-for-testing.log" 2>&1) || fail "build-for-testing (see build-for-testing.log)"
 XCTESTRUN=$(ls "$DERIVED"/Build/Products/TodayWeather_*iphonesimulator*.xctestrun | head -1)
 mkdir -p "$OUT/products"
@@ -97,6 +105,9 @@ cp -R "$DERIVED/Build/Products/Debug-iphonesimulator" "$OUT/products/"
 cp "$XCTESTRUN" "$OUT/products/TodayWeather.xctestrun"
 APP="$OUT/products/Debug-iphonesimulator/TodayWeather.app"
 python3 "$HERE/check_upgrade.py" dummy-plist "$APP/GoogleService-Info.plist"
+# No server URL in the native build (a Private.xcconfig of this checkout must not reach the test): its own starts
+# send nothing; only PushUpgradeTests sends, to the recorder.
+[ -z "$(/usr/libexec/PlistBuddy -c 'Print :TWServerURL' "$APP/Info.plist")" ] || fail "the native build has a server URL"
 codesign --force --sign - --timestamp=none --preserve-metadata=entitlements "$APP" 2> /dev/null
 # Simulator builds carry their entitlements in the executable's __TEXT,__entitlements section.
 xcrun segedit "$APP/TodayWeather" -extract __TEXT __entitlements "$OUT/native-entitlements.plist"
@@ -129,4 +140,17 @@ for N in 1 2 3; do
 done
 containers
 python3 "$HERE/check_upgrade.py" final "$OUT" "$DATA" "$SHARED" "$SOURCE" || fail "after the debug launch"
-log "PASS ($SOURCE)"
+
+for RUN in first again; do
+    log "push: open registration ($RUN) with $TOKEN from the test double, to the recorder"
+    TEST_RUNNER_TW_UPGRADE_SEED="$SEED" TEST_RUNNER_TW_UPGRADE_SOURCE="$SOURCE" TEST_RUNNER_TW_UPGRADE_TOKEN="$TOKEN" \
+        TEST_RUNNER_TW_UPGRADE_RECORDER="$RECORDER" TEST_RUNNER_TW_UPGRADE_PUSH_RUN="$RUN" \
+        xcodebuild test-without-building -xctestrun "$OUT/products/TodayWeather.xctestrun" \
+        -destination "platform=iOS Simulator,id=$UDID" -only-testing:TodayWeatherTests/PushUpgradeTests \
+        -resultBundlePath "$OUT/push-$RUN.xcresult" > "$OUT/test-push-$RUN.log" 2>&1 || fail "PushUpgradeTests ($RUN, see test-push-$RUN.log)"
+    grep -q "migratedAlarmsAndAlertsAreRegisteredAgain() passed" "$OUT/test-push-$RUN.log" || fail "PushUpgradeTests did not run ($RUN)"
+    xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
+done
+containers
+python3 "$HERE/check_upgrade.py" push "$OUT" "$DATA" "$SHARED" "$SOURCE" "$TOKEN" || fail "push re-registration"
+log "PASS ($SOURCE, $TOKEN)"

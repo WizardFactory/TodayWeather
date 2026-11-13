@@ -97,9 +97,12 @@
             Push.updatePushListByCityIndex([Push.newPushAlert(1, 1, 7, 22),
                 Push.newPushAlarm(2, 1, 7 * 3600 + 40 * 60, week), Push.newPushAlarm(3, 1, 20 * 3600 + 20 * 60, week)], 1);
             Push.updatePushListByCityIndex([Push.newPushAlarm(2, 2, 6 * 3600, [true, true, true, true, true, true, true])], 2);
-            // A stored FCM token, as an install with push has (the dummy Firebase project gives none).
-            Push.pushData.fcmToken = 'token-a';
+            // A stored FCM token, as an install with push has (the dummy Firebase project gives none). It is set as
+            // the token callback sets a first token, and the list is posted with it; both requests go to the recorder
+            // and are the Cordova iOS references check_upgrade.py compares the native requests with (IN-04).
+            Push._updateFcmToken('token-a');
             Push.savePushInfo();
+            Push._postPushList(Push.pushData.pushList);
             return new Promise(function (resolve) { Monetization.setCollectionEnabled(true, resolve); }).then(function (ok) {
                 // An event through the app's own path while the opt-in holds.
                 Monetization.track('favorite_change', {action: 'add'});

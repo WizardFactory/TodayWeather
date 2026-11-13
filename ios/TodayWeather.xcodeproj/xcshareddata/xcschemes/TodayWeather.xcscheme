@@ -78,6 +78,16 @@
                ReferencedContainer = "container:Core">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TWDataTests"
+               BuildableName = "TWDataTests"
+               BlueprintName = "TWDataTests"
+               ReferencedContainer = "container:Core">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

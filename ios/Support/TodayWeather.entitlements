@@ -3,6 +3,9 @@
 <plist version="1.0">
 <dict>
 	<!-- The Cordova app's App Group: its suite holds the native copy of the Cordova state (a migration source). -->
+	<!-- APNs for Firebase Cloud Messaging (IN-04). Development for debug builds; IN-19 sets production for release. -->
+	<key>aps-environment</key>
+	<string>development</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.net.wizardfactory.todayweather</string>
