@@ -114,13 +114,16 @@ xcrun segedit "$APP/TodayWeather" -extract __TEXT __entitlements "$OUT/native-en
 grep -q "$GROUP" "$OUT/native-entitlements.plist" || fail "native app lacks the App Group entitlement"
 
 SEED=$(base64 < "$OUT/recorder/seeded.json" | tr -d '\n')
+[ -n "$SEED" ] || fail "no seed to deliver"
 for PHASE in first restart; do
     log "native app: $PHASE start and TodayWeatherTests"
     TEST_RUNNER_TW_UPGRADE_SEED="$SEED" TEST_RUNNER_TW_UPGRADE_SOURCE="$SOURCE" TEST_RUNNER_TW_UPGRADE_PHASE="$PHASE" \
         xcodebuild test-without-building -xctestrun "$OUT/products/TodayWeather.xctestrun" \
         -destination "platform=iOS Simulator,id=$UDID" -only-testing:TodayWeatherTests \
         -resultBundlePath "$OUT/$PHASE.xcresult" > "$OUT/test-$PHASE.log" 2>&1 || fail "TodayWeatherTests ($PHASE, see test-$PHASE.log)"
-    grep -q "CordovaUpgradeTests" "$OUT/test-$PHASE.log" || fail "CordovaUpgradeTests did not run ($PHASE)"
+    # The upgrade tests are skipped without the seed: require each of them passed in the result bundle.
+    python3 "$HERE/check_upgrade.py" tests-passed "$OUT" "$PHASE" "$OUT/$PHASE.xcresult" ||
+        fail "CordovaUpgradeTests did not all run and pass ($PHASE)"
     xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
     containers
     python3 "$HERE/check_upgrade.py" after "$OUT" "$DATA" "$SHARED" "$SOURCE" "$PHASE" || fail "state after the $PHASE start"
@@ -148,7 +151,9 @@ for RUN in first again; do
         xcodebuild test-without-building -xctestrun "$OUT/products/TodayWeather.xctestrun" \
         -destination "platform=iOS Simulator,id=$UDID" -only-testing:TodayWeatherTests/PushUpgradeTests \
         -resultBundlePath "$OUT/push-$RUN.xcresult" > "$OUT/test-push-$RUN.log" 2>&1 || fail "PushUpgradeTests ($RUN, see test-push-$RUN.log)"
-    grep -q "migratedAlarmsAndAlertsAreRegisteredAgain() passed" "$OUT/test-push-$RUN.log" || fail "PushUpgradeTests did not run ($RUN)"
+    # Skipped without the token and the recorder: require it passed in the result bundle.
+    python3 "$HERE/check_upgrade.py" tests-passed "$OUT" "push-$RUN" "$OUT/push-$RUN.xcresult" PushUpgradeTests ||
+        fail "PushUpgradeTests did not run and pass ($RUN)"
     xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
 done
 containers

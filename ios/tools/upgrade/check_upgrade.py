@@ -3,6 +3,7 @@
 
     check_upgrade.py dummy-plist <path>
     check_upgrade.py event-stored <data-container>
+    check_upgrade.py tests-passed <out> <phase> <xcresult> [CordovaUpgradeTests|PushUpgradeTests]
     check_upgrade.py before <out> <data-container> <group-container> <localStorage|suite>
     check_upgrade.py after  <out> <data-container> <group-container> <localStorage|suite> <first|restart>
     check_upgrade.py final  <out> <data-container> <group-container> <localStorage|suite>
@@ -24,6 +25,7 @@ import os
 import plistlib
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import time
@@ -34,6 +36,39 @@ from urllib.parse import urlparse
 PRODUCTION_HOSTS = {"todayweather.wizardfactory.net", "tw-wzdfac.rhcloud.com",
                     "todayweather-wizardfactory.rhcloud.com", "todayweather.ai"}
 LOCAL_HOSTS = {"127.0.0.1", "localhost"}
+# The in-app tests that compare the migrated state with the seed (TodayWeatherTests/CordovaUpgradeTests.swift).
+# They are skipped without the seed, so each must be reported as passed, not merely present.
+UPGRADE_TESTS = ["migratedStateMatchesTheCordovaState()", "deviceIdIsTheCordovaValue()", "sourcesAreKept()",
+                 "aSecondRunChangesNothing()", "analyticsIsOffAlthoughCordovaOptedIn()"]
+# The push test (IN-04, TodayWeatherTests/PushUpgradeTests.swift), skipped without the token and the recorder.
+SUITE_TESTS = {"CordovaUpgradeTests": UPGRADE_TESTS,
+               "PushUpgradeTests": ["migratedAlarmsAndAlertsAreRegisteredAgain()"]}
+
+
+def test_results(xcresult, suite="CordovaUpgradeTests"):
+    """{test case name: result} of `suite` in an .xcresult (`xcresulttool`, Xcode 16+)."""
+    out = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", "tests", "--path", xcresult],
+                         check=True, capture_output=True, text=True).stdout
+    found = {}
+
+    def walk(node, suites):
+        if node.get("nodeType") == "Test Case" and suite in suites:
+            found[node.get("name")] = node.get("result")
+        for child in node.get("children", []):
+            walk(child, suites + [node.get("name", "")])
+
+    for node in json.loads(out).get("testNodes", []):
+        walk(node, [])
+    return found
+
+
+def tests_passed(out, phase, xcresult, suite="CordovaUpgradeTests"):
+    c = Checks(out, f"tests-{phase}")
+    results = test_results(xcresult, suite)
+    c.record("upgrade_tests", results)
+    for name in SUITE_TESTS[suite]:
+        c.check(f"{name} ran and passed", results.get(name) == "Passed", results.get(name))
+    c.finish()
 
 
 def dummy_plist(path):
@@ -205,6 +240,8 @@ def main():
     stage = sys.argv[1]
     if stage == "dummy-plist":
         return dummy_plist(sys.argv[2])
+    if stage == "tests-passed":
+        return tests_passed(*sys.argv[2:6])
     if stage == "event-stored":  # exit 0 once the SDK stored the seed's event (the app keeps running)
         m = measurement(sys.argv[2])
         sys.exit(0 if m is not None and "favorite_change" in m["events"] else 1)
@@ -225,7 +262,7 @@ def main():
         apm = plist(os.path.join(data, "Library/Preferences/APMAnalyticsSuiteName.plist"))
         m = measurement(data)
         if stage == "before":
-            settled = ("cities" in group and "/google/measurement/measurement_enabled_state" in standard and
+            settled = ("cities" in group and standard.get("/google/measurement/measurement_enabled_state") == 1 and
                        m is not None and "favorite_change" in m["events"])
         else:
             settled = (standard.get("/google/measurement/measurement_enabled_state") not in (None, 1) and

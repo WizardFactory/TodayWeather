@@ -8,7 +8,7 @@ import TWModel
 /// Reading the WebKit `localStorage` files (each layout), the state file and `Device-Id`.
 struct WebKitLocalStorageTests {
     @Test func perOriginLayoutOnTheSimulator() throws {
-        let db = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("simulator")))
+        let db = try #require(try WebKitLocalStorage.locate(dataContainer: Fixtures.container("simulator")))
         #expect(db.layout == .origins)
         #expect(db.relativePath.hasPrefix("Library/WebKit/net.wizardfactory.todayweather/WebsiteData/Default/"))
         let items = try Fixtures.items(db.url)
@@ -21,14 +21,14 @@ struct WebKitLocalStorageTests {
     }
 
     @Test func perOriginLayoutOnADevice() throws {
-        let db = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("device")))
+        let db = try #require(try WebKitLocalStorage.locate(dataContainer: Fixtures.container("device")))
         #expect(db.layout == .origins)
         #expect(db.relativePath.hasPrefix("Library/WebKit/WebsiteData/Default/"))
         #expect(try Fixtures.items(db.url)["cityIndex"] == "2")
     }
 
     @Test func singleDirectoryLayout() throws {
-        let db = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("legacy")))
+        let db = try #require(try WebKitLocalStorage.locate(dataContainer: Fixtures.container("legacy")))
         #expect(db.layout == .legacy)
         let items = try Fixtures.items(db.url)
         #expect(items["guideVersion"] == "1")
@@ -36,13 +36,13 @@ struct WebKitLocalStorageTests {
         #expect(items["cities"]?.contains("부산") == true)
     }
 
-    @Test func anotherOriginIsNotRead() {
-        #expect(WebKitLocalStorage.locate(dataContainer: Fixtures.container("other-origin")) == nil)
-        #expect(WebKitLocalStorage.locate(dataContainer: Fixtures.container("none")) == nil)
+    @Test func anotherOriginIsNotRead() throws {
+        #expect(try WebKitLocalStorage.locate(dataContainer: Fixtures.container("other-origin")) == nil)
+        #expect(try WebKitLocalStorage.locate(dataContainer: Fixtures.container("none")) == nil)
     }
 
     @Test func originFile() throws {
-        let simulator = try #require(WebKitLocalStorage.locate(dataContainer: Fixtures.container("simulator")))
+        let simulator = try #require(try WebKitLocalStorage.locate(dataContainer: Fixtures.container("simulator")))
         let data = try Data(contentsOf: simulator.url.deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("origin"))
         let app = OriginFile.Origin(scheme: "app", host: "localhost", port: nil)
@@ -146,34 +146,37 @@ struct MigrationRunnerTests {
 }
 
 struct DeviceIdentityTests {
+    /// A standard preferences file that does not exist (genuine absence).
+    static let noFile = FileManager.default.temporaryDirectory.appendingPathComponent("tw-no-prefs-\(UUID().uuidString).plist")
+
     private func defaults() -> (UserDefaults, String) {
         let name = "TWStorageTests.\(UUID().uuidString)"
         return (UserDefaults(suiteName: name)!, name)
     }
 
-    @Test func theStoredCordovaValueIsKept() {
+    @Test func theStoredCordovaValueIsKept() throws {
         let (d, name) = defaults()
         defer { d.removePersistentDomain(forName: name) }
         d.set("2DB8F90F-9B44-4F2C-8DF8-5403EE530A0E", forKey: "CDVUUID")
         var asked = false
-        let id = DeviceIdentity.deviceId(defaults: d) { asked = true; return UUID() }
+        let id = try DeviceIdentity.deviceId(defaults: d, preferencesFile: Self.noFile) { asked = true; return UUID() }
         #expect(id == "2DB8F90F-9B44-4F2C-8DF8-5403EE530A0E")
         #expect(!asked)
     }
 
-    @Test func anAbsentValueIsCreatedFromTheVendorIdentifier() {
+    @Test func anAbsentValueIsCreatedFromTheVendorIdentifier() throws {
         let (d, name) = defaults()
         defer { d.removePersistentDomain(forName: name) }
         let vendor = UUID()
-        #expect(DeviceIdentity.deviceId(defaults: d) { vendor } == vendor.uuidString)
+        #expect(try DeviceIdentity.deviceId(defaults: d, preferencesFile: Self.noFile) { vendor } == vendor.uuidString)
         #expect(d.string(forKey: "CDVUUID") == vendor.uuidString)
-        #expect(DeviceIdentity.deviceId(defaults: d) { UUID() } == vendor.uuidString)
+        #expect(try DeviceIdentity.deviceId(defaults: d, preferencesFile: Self.noFile) { UUID() } == vendor.uuidString)
     }
 
-    @Test func withoutAVendorIdentifierNothingIsStored() {
+    @Test func withoutAVendorIdentifierNothingIsStored() throws {
         let (d, name) = defaults()
         defer { d.removePersistentDomain(forName: name) }
-        #expect(DeviceIdentity.deviceId(defaults: d) { nil } == nil)
+        #expect(try DeviceIdentity.deviceId(defaults: d, preferencesFile: Self.noFile) { nil } == nil)
         #expect(d.object(forKey: "CDVUUID") == nil)
     }
 }

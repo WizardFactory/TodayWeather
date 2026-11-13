@@ -31,36 +31,35 @@ public enum WebKitLocalStorage {
     }
 
     public enum ReadError: Error, Equatable {
-        /// The file exists but could not be copied (for example data protection before the first unlock).
-        case unavailable(String)
-        /// The copy is not a readable `localStorage` database.
+        /// The copy is not a readable `localStorage` database (not SQLite, corrupt, no `ItemTable`): it cannot become
+        /// readable later, so the migration records it and goes on with the suite.
         case unreadable(String)
     }
 
-    /// The `localStorage` database of `scheme://host` in `dataContainer`, preferring the per-origin layout.
-    public static func locate(dataContainer: URL, scheme: String = "app", host: String = "localhost") -> Database? {
-        let fm = FileManager.default
+    /// The `localStorage` database of `scheme://host` in `dataContainer`, preferring the per-origin layout; nil when
+    /// there is none. A directory, `origin` file or database that exists but cannot be read now throws
+    /// `CordovaSources.SourceError.unavailable` (CODEX-IN03-1): that is not absence, and the migration must wait.
+    public static func locate(dataContainer: URL, scheme: String = "app", host: String = "localhost") throws -> Database? {
         let webKit = dataContainer.appendingPathComponent("Library/WebKit", isDirectory: true)
+        guard try FileProbe.exists(webKit) else { return nil } // no WebKit storage at all (an update from 1.0.10)
         var roots = [webKit.appendingPathComponent("WebsiteData", isDirectory: true)]
-        let children = (try? fm.contentsOfDirectory(at: webKit, includingPropertiesForKeys: nil)) ?? []
-        for child in children.sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
-        where child.lastPathComponent != "WebsiteData" {
-            roots.append(child.appendingPathComponent("WebsiteData", isDirectory: true))
+        for child in try FileProbe.list(webKit) where child.lastPathComponent != "WebsiteData" {
+            if try FileProbe.isDirectory(child) { roots.append(child.appendingPathComponent("WebsiteData", isDirectory: true)) }
         }
         func relative(_ url: URL) -> String {
             String(url.standardizedFileURL.path.dropFirst(dataContainer.standardizedFileURL.path.count + 1))
         }
+        let wanted = OriginFile.Origin(scheme: scheme, host: host, port: nil)
         for root in roots {
             let defaultDir = root.appendingPathComponent("Default", isDirectory: true)
-            let tops = (try? fm.contentsOfDirectory(at: defaultDir, includingPropertiesForKeys: nil)) ?? []
-            for top in tops.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-                let frames = (try? fm.contentsOfDirectory(at: top, includingPropertiesForKeys: nil)) ?? []
-                for frame in frames.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            guard try FileProbe.exists(defaultDir) else { continue }
+            for top in try FileProbe.list(defaultDir) where try FileProbe.isDirectory(top) {
+                for frame in try FileProbe.list(top) where try FileProbe.isDirectory(frame) {
                     let db = frame.appendingPathComponent("LocalStorage/localstorage.sqlite3")
-                    guard fm.fileExists(atPath: db.path),
-                          let data = try? Data(contentsOf: frame.appendingPathComponent("origin")),
-                          let origins = OriginFile.parse(data),
-                          origins.allSatisfy({ $0 == OriginFile.Origin(scheme: scheme, host: host, port: nil) }) else {
+                    let originFile = frame.appendingPathComponent("origin")
+                    guard try FileProbe.exists(db), try FileProbe.exists(originFile) else { continue }
+                    guard let origins = OriginFile.parse(try FileProbe.read(originFile)),
+                          origins.allSatisfy({ $0 == wanted }) else {
                         continue
                     }
                     return Database(url: db, relativePath: relative(db), layout: .origins)
@@ -69,7 +68,7 @@ public enum WebKitLocalStorage {
         }
         for root in roots {
             let db = root.appendingPathComponent("LocalStorage/\(scheme)_\(host)_0.localstorage")
-            if fm.fileExists(atPath: db.path) {
+            if try FileProbe.exists(db) {
                 return Database(url: db, relativePath: relative(db), layout: .legacy)
             }
         }
@@ -78,49 +77,62 @@ public enum WebKitLocalStorage {
 
     /// All items of the database at `url`, read from a temporary copy of the file and its write-ahead log. A list,
     /// not a dictionary: keys are distinct by UTF-16 code units, which Swift `String` keys would not keep apart.
+    /// A database or log that cannot be copied now throws `CordovaSources.SourceError.unavailable`; a copy that is
+    /// no `localStorage` database throws `ReadError.unreadable`.
     public static func readItems(at url: URL) throws -> [(key: String, value: String)] {
         let fm = FileManager.default
         let dir = fm.temporaryDirectory.appendingPathComponent("tw-localstorage-\(UUID().uuidString)", isDirectory: true)
         defer { try? fm.removeItem(at: dir) }
         let copy = dir.appendingPathComponent("db.sqlite3")
+        // The log holds the recent writes (WebKit keeps the database in WAL mode). The index (-shm) is not copied:
+        // SQLite rebuilds it from the log.
+        let wal = URL(fileURLWithPath: url.path + "-wal")
+        let hasLog = try FileProbe.exists(wal)
         do {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
             try fm.copyItem(at: url, to: copy)
-            // The log holds the recent writes (WebKit keeps the database in WAL mode). The index (-shm) is not
-            // copied: SQLite rebuilds it from the log.
-            let wal = URL(fileURLWithPath: url.path + "-wal")
-            if fm.fileExists(atPath: wal.path) {
-                try fm.copyItem(at: wal, to: URL(fileURLWithPath: copy.path + "-wal"))
-            }
+            if hasLog { try fm.copyItem(at: wal, to: URL(fileURLWithPath: copy.path + "-wal")) }
         } catch {
-            throw ReadError.unavailable("\(error)")
+            throw CordovaSources.SourceError.unavailable("\(url.path): \(error.localizedDescription)")
         }
         return try query(copy)
+    }
+
+    /// SQLite results that mean the copy is no `localStorage` database, as opposed to a failure to read it now.
+    private static let notADatabase: Set<Int32> = [SQLITE_NOTADB, SQLITE_CORRUPT, SQLITE_ERROR, SQLITE_FORMAT, SQLITE_EMPTY]
+
+    private static func failure(_ db: OpaquePointer?, _ code: Int32) -> Error {
+        let message = db.map { String(cString: sqlite3_errmsg($0)) } ?? String(cString: sqlite3_errstr(code))
+        return notADatabase.contains(code & 0xFF) ? ReadError.unreadable(message)
+            : CordovaSources.SourceError.unavailable("localStorage copy: \(message)")
     }
 
     private static func query(_ file: URL) throws -> [(key: String, value: String)] {
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
-        guard sqlite3_open_v2(file.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
-            throw ReadError.unreadable(db.map { String(cString: sqlite3_errmsg($0)) } ?? "open")
-        }
+        let opened = sqlite3_open_v2(file.path, &db, SQLITE_OPEN_READWRITE, nil)
+        guard opened == SQLITE_OK else { throw failure(db, opened) }
         var statement: OpaquePointer?
         defer { sqlite3_finalize(statement) }
-        guard sqlite3_prepare_v2(db, "SELECT key, value FROM ItemTable", -1, &statement, nil) == SQLITE_OK else {
-            throw ReadError.unreadable(String(cString: sqlite3_errmsg(db)))
-        }
+        let prepared = sqlite3_prepare_v2(db, "SELECT key, value FROM ItemTable", -1, &statement, nil)
+        guard prepared == SQLITE_OK else { throw failure(db, prepared) }
         var items: [(key: String, value: String)] = []
         while true {
             let step = sqlite3_step(statement)
             if step == SQLITE_DONE { break }
-            guard step == SQLITE_ROW else { throw ReadError.unreadable(String(cString: sqlite3_errmsg(db))) }
+            guard step == SQLITE_ROW else { throw failure(db, step) }
             guard let keyText = sqlite3_column_text(statement, 0) else { continue }
             let key = String(cString: keyText)
             switch sqlite3_column_type(statement, 1) {
             case SQLITE_BLOB:
-                let count = Int(sqlite3_column_bytes(statement, 1))
-                let bytes = sqlite3_column_blob(statement, 1).map { Data(bytes: $0, count: count) } ?? Data()
-                items.append((key, String(data: bytes, encoding: .utf16LittleEndian) ?? ""))
+                // UTF-16LE code units; a lone surrogate (JavaScript strings can hold one) becomes U+FFFD, as in
+                // `TWModel`'s parser, instead of losing the whole value.
+                let count = Int(sqlite3_column_bytes(statement, 1)) / 2
+                let units = sqlite3_column_blob(statement, 1).map {
+                    Array(UnsafeBufferPointer(start: $0.assumingMemoryBound(to: UInt8.self), count: count * 2))
+                } ?? []
+                let utf16 = stride(from: 0, to: units.count, by: 2).map { UInt16(units[$0]) | UInt16(units[$0 + 1]) << 8 }
+                items.append((key, String(decoding: utf16, as: UTF16.self)))
             case SQLITE_TEXT:
                 items.append((key, sqlite3_column_text(statement, 1).map { String(cString: $0) } ?? ""))
             default:

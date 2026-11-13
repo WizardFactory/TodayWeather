@@ -26,7 +26,12 @@ public struct AppStateStore: Sendable {
 
     /// The stored state, or nil when none was saved yet.
     public func load() throws(LoadError) -> AppState? {
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        // Absent only when the file or its directory does not exist; an unreadable directory is not absence.
+        do {
+            guard try FileProbe.exists(url) else { return nil }
+        } catch {
+            throw .unavailable("\(error)")
+        }
         let data: Data
         do {
             data = try Data(contentsOf: url)
@@ -94,12 +99,13 @@ public struct MigrationRunner: Sendable {
 
 extension CordovaSources {
     /// Reads the Cordova storage of the app whose data container is `dataContainer`: the `localStorage` database
-    /// of `app://localhost` and `suite` (the App Group suite). An existing database that cannot be copied throws
-    /// (`WebKitLocalStorage.ReadError.unavailable`), so the migration waits; an unreadable copy counts as no
-    /// `localStorage` and is recorded.
+    /// of `app://localhost` and `suite` (the App Group suite, `suiteValues(_:groupContainer:)`). A WebKit
+    /// directory, `origin` file or database that exists but cannot be read now throws `SourceError.unavailable`, so
+    /// the migration waits; a database copy that is no `localStorage` database counts as no `localStorage` and is
+    /// recorded.
     public static func read(dataContainer: URL, suite: [String: Any]) throws -> CordovaSources {
         var sources = CordovaSources(suite: suite.mapValues(SuiteValue.from))
-        guard let database = WebKitLocalStorage.locate(dataContainer: dataContainer) else { return sources }
+        guard let database = try WebKitLocalStorage.locate(dataContainer: dataContainer) else { return sources }
         sources.localStorageFile = database.relativePath
         do {
             // Only the keys the migration reads, matched by UTF-16 code units as localStorage keys are.
@@ -113,8 +119,25 @@ extension CordovaSources {
         return sources
     }
 
-    /// The suite's values for `suiteKeys`, from `UserDefaults(suiteName: CordovaMigration.suiteName)`.
-    public static func suiteValues(_ defaults: UserDefaults) -> [String: Any] {
+    /// A source that exists but cannot be read now: the migration stops without writing and runs again later.
+    public enum SourceError: Error, Equatable {
+        case unavailable(String)
+    }
+
+    /// The suite's values for `suiteKeys`, from `defaults` (`UserDefaults(suiteName: CordovaMigration.suiteName)`)
+    /// in the App Group container `groupContainer`. `UserDefaults` answers "no value" when it cannot read its file,
+    /// so the file is checked first: without the App Group container (no entitlement), or with a preferences file
+    /// that exists but cannot be read now, this throws `SourceError.unavailable`. No file is an empty suite.
+    public static func suiteValues(_ defaults: UserDefaults, groupContainer: URL?) throws -> [String: Any] {
+        guard let groupContainer else {
+            throw SourceError.unavailable("no App Group container for \(CordovaMigration.suiteName)")
+        }
+        let file = groupContainer.appendingPathComponent("Library/Preferences/\(CordovaMigration.suiteName).plist")
+        if try FileProbe.exists(file) { try FileProbe.checkReadable(file) }
+        return values(in: defaults)
+    }
+
+    private static func values(in defaults: UserDefaults) -> [String: Any] {
         var values: [String: Any] = [:]
         for key in suiteKeys {
             if let value = defaults.object(forKey: key) { values[key] = value }

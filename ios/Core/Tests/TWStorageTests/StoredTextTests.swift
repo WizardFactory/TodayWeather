@@ -84,7 +84,28 @@ struct StoredTextTests {
         #expect(Fixtures.migrate(sources).placeIndex == 0)
     }
 
+    /// A value with a lone surrogate (JavaScript strings can hold one) keeps the rest of its text, with U+FFFD in
+    /// place of the surrogate, as `TWModel`'s parser does for an escaped one; it used to become an empty value.
+    @Test func aLoneSurrogateInAStoredValueKeepsTheValue() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-ls-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appendingPathComponent("Library/WebKit/WebsiteData/LocalStorage/app_localhost_0.localstorage")
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let text = Array(#"[{"currentPosition":true,"disable":true},{"name":"A"#.utf16) + [0xD800]
+            + Array(#"","address":"a"}]"#.utf16)
+        try writeItems(file, [("cities", text)])
+        let sources = try CordovaSources.read(dataContainer: dir, suite: [:])
+        let state = Fixtures.migrate(sources)
+        #expect(state.migration?.keys["cities"] == "migrated")
+        try #require(state.places.count == 2)
+        #expect(state.places[1].name == "A\u{FFFD}")
+    }
+
     private func writeItems(_ file: URL, _ items: [(String, String)]) throws {
+        try writeItems(file, items.map { ($0.0, Array($0.1.utf16)) })
+    }
+
+    private func writeItems(_ file: URL, _ items: [(String, [UInt16])]) throws {
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
         try #require(sqlite3_open(file.path, &db) == SQLITE_OK)
@@ -92,7 +113,7 @@ struct StoredTextTests {
         for (key, value) in items {
             var statement: OpaquePointer?
             try #require(sqlite3_prepare_v2(db, "INSERT INTO ItemTable VALUES (?, ?)", -1, &statement, nil) == SQLITE_OK)
-            let units = Array(value.utf16)
+            let units = value
             let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
             sqlite3_bind_text16(statement, 1, Array(key.utf16), Int32(key.utf16.count * 2), transient)
             units.withUnsafeBytes { _ = sqlite3_bind_blob(statement, 2, $0.baseAddress, Int32($0.count), transient) }

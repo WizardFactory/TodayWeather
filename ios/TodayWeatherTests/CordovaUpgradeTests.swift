@@ -89,7 +89,7 @@ struct CordovaUpgradeTests {
         let suite = try #require(UserDefaults(suiteName: CordovaMigration.suiteName))
         #expect(suite.string(forKey: "cities") == (seed.suite["cities"] ?? nil))
         #expect(suite.string(forKey: "twAnalyticsConsentV1") == "true")
-        let database = WebKitLocalStorage.locate(dataContainer: home)
+        let database = try WebKitLocalStorage.locate(dataContainer: home)
         if source == "suite" {
             #expect(database == nil)
         } else {
@@ -104,7 +104,9 @@ struct CordovaUpgradeTests {
         let store = try AppStateStore.standard()
         let bytes = try Data(contentsOf: store.url)
         let runner = MigrationRunner(store: store, sources: {
-            let suite = UserDefaults(suiteName: CordovaMigration.suiteName).map(CordovaSources.suiteValues) ?? [:]
+            let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: CordovaMigration.suiteName)
+            let suite = try CordovaSources.suiteValues(try #require(UserDefaults(suiteName: CordovaMigration.suiteName)),
+                                                       groupContainer: group)
             return try CordovaSources.read(dataContainer: URL(fileURLWithPath: NSHomeDirectory()), suite: suite)
         }, now: { Date().addingTimeInterval(86_400) }, region: { "US" })
         let again = try runner.runIfNeeded()
