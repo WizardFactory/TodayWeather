@@ -6,8 +6,9 @@
 Runs the Cordova `Push` service (client/www/js/service.push.js, with service.weatherutil.js for the town of a
 Korean address) in the macOS JavaScriptCore shell, the engine of the Cordova iOS app, with the platform reporting
 iOS (cases.js). One jsc process runs per time zone, because jsc takes its zone from TZ. The requests of every case
-are written to ios/Core/Tests/TWStorageTests/Fixtures/push/push.json with the source files' last commit and
-SHA-256. Only this tool reads client/; the iOS build and tests read the written file. The output is deterministic:
+are written to ios/Core/Tests/TWStorageTests/Fixtures/push/push.json, and the timed cases (tokens delivered at
+given times around the 3-second list post, failing requests; IN-04 review) to
+ios/Core/Tests/TWDataTests/Golden/push-timed.json, each with the source files' last commit and SHA-256. Only this tool reads client/; the iOS build and tests read the written file. The output is deterministic:
 running it again without source changes changes nothing (CI checks that).
 """
 import argparse
@@ -22,6 +23,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 SOURCES = ["client/www/js/service.push.js", "client/www/js/service.weatherutil.js"]
 OUT = ROOT / "ios" / "Core" / "Tests" / "TWStorageTests" / "Fixtures" / "push" / "push.json"
+TIMED_OUT = ROOT / "ios" / "Core" / "Tests" / "TWDataTests" / "Golden" / "push-timed.json"
 DEFAULT_JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
 ZONES = ["Asia/Seoul", "America/New_York"]
 
@@ -49,9 +51,9 @@ def main():
     if not os.access(args.jsc, os.X_OK):
         sys.exit(f"no JavaScriptCore shell at {args.jsc}")
     runs = [run_zone(args.jsc, zone) for zone in ZONES]
-    doc = {k: v for k, v in runs[0].items() if k != "cases"}
+    doc = {k: v for k, v in runs[0].items() if k not in ("cases", "timed")}
     for run in runs[1:]:
-        if {k: v for k, v in run.items() if k != "cases"} != doc:
+        if {k: v for k, v in run.items() if k not in ("cases", "timed")} != doc:
             sys.exit("the zones disagree on the shared inputs")
     sources = []
     for s in SOURCES:
@@ -67,13 +69,27 @@ def main():
         **doc,
         "cases": [c for run in runs for c in run["cases"]],
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(out, ensure_ascii=False, indent=1) + "\n"
-    if OUT.exists() and OUT.read_text(encoding="utf-8") == text:
-        print(f"unchanged: {OUT.relative_to(ROOT)} ({len(out['cases'])} cases)")
+    timed = {
+        "generator": out["generator"],
+        "sources": sources,
+        "note": "Requests of the Cordova Push service on iOS on a virtual clock: `at` is the time in ms after Push.init "
+                "when the request was sent; tokens of `events` arrive through the token callback at their time; "
+                "`fail` lists the methods whose requests fail. Paths carry /v000902; the native app sends /v000903.",
+        **doc,
+        "cases": [c for run in runs for c in run.get("timed", [])],
+    }
+    write(OUT, out)
+    write(TIMED_OUT, timed)
+
+
+def write(path, doc):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(doc, ensure_ascii=False, indent=1) + "\n"
+    if path.exists() and path.read_text(encoding="utf-8") == text:
+        print(f"unchanged: {path.relative_to(ROOT)} ({len(doc['cases'])} cases)")
     else:
-        OUT.write_text(text, encoding="utf-8")
-        print(f"wrote {OUT.relative_to(ROOT)} ({len(out['cases'])} cases)")
+        path.write_text(text, encoding="utf-8")
+        print(f"wrote {path.relative_to(ROOT)} ({len(doc['cases'])} cases)")
 
 
 if __name__ == "__main__":

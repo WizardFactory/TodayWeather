@@ -1,7 +1,8 @@
 // Push registration requests of the Cordova Push service (client/www/js/service.push.js) with the platform
 // reporting iOS, run in the macOS JavaScriptCore shell (the engine of the Cordova iOS app) by generate.py:
 //   TZ=<zone> jsc cases.js -- <service.push.js> <service.weatherutil.js> <zone>
-// It prints one JSON document with the cases of <zone>. The cases follow android/tools/corpus/generate.mjs
+// It prints one JSON document with the cases of <zone>, and for Asia/Seoul the timed cases (`runTimed`: Push.init on a
+// virtual clock with tokens at given times; IN-04 review). The cases follow android/tools/corpus/generate.mjs
 // (pushCases): the same places, records, device values and fixed clock, so the two corpora differ only in `type`.
 // Only the services are real; $http, TwStorage, Firebase, the timers and the clock are recorders or fixed values.
 (function (args) {
@@ -98,8 +99,82 @@
         return calls;
     }
 
+    // Push.init on a virtual clock (IN-04 review, CODEX-IN04-1): the service's own setTimeout calls run when the clock
+    // reaches them (loadPushInfo's list post at 3000 ms), and each token of `events` ({at: ms, token}) is delivered
+    // through the plugin's onTokenRefresh callback at its time (before a timer due at the same time). `fail` lists
+    // the methods whose $http calls fail (the error callback runs; the Cordova code stores the token anyway). Every
+    // request is returned with the time it was sent.
+    function runTimed(storedToken, events, airUnit, list, fail) {
+        var now = 0;
+        var timers = [];
+        var calls = [];
+        var $http = function (cfg) {
+            var failed = fail.indexOf(cfg.method) >= 0;
+            calls.push(clone({at: now, method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data,
+                failed: failed}));
+            return {
+                success: function (fn) { if (!failed) { fn({}); } return this; },
+                error: function (fn) { if (failed) { fn(null, 0); } return this; },
+            };
+        };
+        var units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm',
+            airUnit: airUnit};
+        var Util = {ga: {trackEvent: function () {}, trackException: function () {}}, uuid: DEVICE.deviceId,
+            language: DEVICE.language, version: DEVICE.appVersion};
+        var utilFactory = load(utilSource, {console: quiet, clientConfig: {debug: false}, window: {}, alert: function () {},
+            setTimeout: function () {}, Date: FixedDate});
+        var weatherUtil = utilFactory({}, function () { throw new Error('no network'); }, Util,
+            {getUnit: function (n) { return units[n]; }}, {track: function () {}});
+        var pushFactory = load(pushSource, {console: quiet, window: {},
+            clientConfig: {package: 'todayWeather', serverUrl: 'https://server'},
+            ionic: {Platform: {isIOS: function () { return true; }, isAndroid: function () { return false; }}},
+            setTimeout: function (fn, ms) { timers.push({at: now + (ms || 0), fn: fn}); }, Date: FixedDate});
+        var stored = {pushData2: {registrationId: null, type: 'ios', category: '', fcmToken: storedToken, pushList: list}};
+        var TwStorage = {get: function (k) { return clone(stored[k] === undefined ? null : stored[k]); }, set: function () {}};
+        var Units = {getAllUnits: function () { return clone(units); }};
+        var WeatherInfo = {getCityOfIndex: function (i) { return clone(CITIES[i]); }};
+        var tokenCallback;
+        var Firebase = {init: function (t) { tokenCallback = t; }, inited: true};
+        var push = pushFactory($http, TwStorage, Util, weatherUtil, WeatherInfo, Units, {$broadcast: function () {}}, Firebase);
+        push.init();
+        if (push.pushData.type !== 'ios') { throw new Error('platform is not iOS: ' + push.pushData.type); }
+        var pending = events.slice().sort(function (a, b) { return a.at - b.at; });
+        for (;;) {
+            var timer = timers.reduce(function (m, t) { return m === null || t.at < m.at ? t : m; }, null);
+            var event = pending.length ? pending[0] : null;
+            if (event !== null && (timer === null || event.at <= timer.at)) {
+                pending.shift();
+                now = event.at;
+                tokenCallback(undefined, event.token);
+            } else if (timer !== null) {
+                timers.splice(timers.indexOf(timer), 1);
+                now = timer.at;
+                timer.fn();
+            } else {
+                break;
+            }
+        }
+        return calls;
+    }
+
     var cases = [];
+    var timed = [];
     if (zone === 'Asia/Seoul') {
+        // [name, stored token, token events, methods that fail]
+        [['token-at-start', 'token-a', [{at: 0, token: 'token-b'}], []],
+            ['token-before-post', 'token-a', [{at: 1000, token: 'token-b'}], []],
+            ['token-after-post', 'token-a', [{at: 4000, token: 'token-b'}], []],
+            ['first-token-before-post', null, [{at: 1000, token: 'token-b'}], []],
+            ['first-token-after-post', null, [{at: 4000, token: 'token-b'}], []],
+            ['two-tokens-before-post', 'token-a', [{at: 500, token: 'token-b'}, {at: 2000, token: 'token-c'}], []],
+            ['tokens-around-post', 'token-a', [{at: 1000, token: 'token-b'}, {at: 5000, token: 'token-c'}], []],
+            ['failed-put-before-post', 'token-a', [{at: 1000, token: 'token-b'}], ['PUT']],
+            ['failed-requests', 'token-a', [{at: 1000, token: 'token-b'}], ['PUT', 'POST']],
+            ['no-token-events', 'token-a', [], []],
+        ].forEach(function (c) {
+            timed.push({name: c[0], zone: zone, storedToken: c[1], events: c[2], fail: c[3], airUnit: 'airkorea',
+                requests: runTimed(c[1], c[2], 'airkorea', LIST, c[3])});
+        });
         // [name, stored token, token at the start, token while running, air unit]
         [['first-token', null, 'token-b', null, 'airkorea'],
             ['unchanged-token', 'token-a', 'token-a', null, 'airkorea'],
@@ -121,5 +196,5 @@
         throw new Error('no cases for ' + zone);
     }
     print(JSON.stringify({cities: CITIES, pushList: LIST, deviceId: DEVICE.deviceId, language: DEVICE.language,
-        appVersion: DEVICE.appVersion, now: NOW, cases: cases}));
+        appVersion: DEVICE.appVersion, now: NOW, cases: cases, timed: timed}));
 })(typeof scriptArgs !== 'undefined' ? scriptArgs : arguments);

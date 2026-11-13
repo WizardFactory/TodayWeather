@@ -3,15 +3,19 @@ import Testing
 import TWData
 import TWModel
 import TWStorage
+import UIKit
 @testable import TodayWeather
 
 /// Gate G1 of #2948, push part (IN-04, #2953), run on a simulator by ios/tools/upgrade/run-upgrade-test.sh after the
 /// IN-03 upgrade checks: the open registration of the updated app, with the token from a test double
 /// (`TW_UPGRADE_TOKEN`: `token-a`, the token the Cordova app stored, or `token-b`) and the requests sent over HTTP to
-/// the local recorder (`TW_UPGRADE_RECORDER`). The test build has no server URL, so the app's own starts sent nothing;
-/// this test runs the same `PushService.open()` the app runs when it is opened, over the app's own state, token queue
-/// and `Device-Id`. `TW_UPGRADE_PUSH_RUN` is `first` (the first open after the update) or `again` (the next one).
-/// The host side (check_upgrade.py `push`) checks the recorded requests. Skipped without the variables.
+/// the local recorder (`TW_UPGRADE_RECORDER`). The test build has no server URL, so the app's own starts sent nothing.
+/// The test goes through the app's start path (IN-04 review, CODEX-IN04-2): an `AppStartup` whose push service the test
+/// builds (`makePush`: the recorder, the fixed token, the app's own state file and token queue) runs the migration
+/// and `Device-Id` read, sends nothing at its start, and runs the open registration when the process becomes active
+/// (`UIApplication.didBecomeActiveNotification`, posted by the test). `TW_UPGRADE_PUSH_RUN` is `first` (the first
+/// open after the update) or `again` (the next one). The host side (check_upgrade.py `push`) checks the recorded
+/// requests. Skipped without the variables; the script requires it passed.
 @MainActor
 struct PushUpgradeTests {
     nonisolated static let environment = ProcessInfo.processInfo.environment
@@ -31,9 +35,20 @@ struct PushUpgradeTests {
         let records = state.push.records
         #expect(records.count == 4)
 
-        let service = PushService(serverURL: recorder, deviceId: deviceId, tokenProvider: FixedTokenProvider(token: token),
-                                  store: try AppStateStore.standard(), queue: try PushTokenQueue.standard())
-        let outcome = try #require(await service.open()?.value)
+        let store = try AppStateStore.standard()
+        let queue = try PushTokenQueue.standard()
+        let startup = AppStartup()
+        startup.makePush = { id in
+            PushService(serverURL: recorder, deviceId: id, tokenProvider: FixedTokenProvider(token: token), store: store,
+                        queue: queue)
+        }
+        startup.start(UIApplication.shared)
+        #expect(startup.deviceId == deviceId)
+        #expect(startup.push != nil)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(startup.openTask == nil, "the start alone opens nothing")
+        NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: UIApplication.shared)
+        let outcome = try #require(await startup.openTask?.value)
         let changed = run == "first" && token != seededToken
         #expect(outcome.requests.map(\.method) == (changed ? ["PUT", "POST"] : ["POST"]))
         #expect(outcome.statuses.allSatisfy { $0 == 200 }, "every request reached the recorder: \(outcome.statuses)")

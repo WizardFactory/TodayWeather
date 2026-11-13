@@ -14,10 +14,11 @@ enum AnalyticsGuard {
         .analyticsStorage: .denied, .adStorage: .denied, .adUserData: .denied, .adPersonalization: .denied,
     ]
 
-    /// Runs first in `application(_:didFinishLaunchingWithOptions:)`.
+    /// Runs first in `application(_:didFinishLaunchingWithOptions:)`. Firebase is configured once per process (a
+    /// second start, as an app-hosted test's `AppStartup`, only disables again).
     static func start(bundle: Bundle = .main) {
         disable()
-        guard let path = bundle.path(forResource: "GoogleService-Info", ofType: "plist"),
+        guard FirebaseApp.app() == nil, let path = bundle.path(forResource: "GoogleService-Info", ofType: "plist"),
               let options = FirebaseOptions(contentsOfFile: path) else {
             return
         }

@@ -33,12 +33,15 @@ final class PushService {
     private var opened = false
     private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "push")
 
-    /// `serverURL`: the legacy server; `deviceId`: the `CDVUUID` (`DeviceIdentity`).
+    /// `serverURL`: the legacy server; `deviceId`: the `CDVUUID` (`DeviceIdentity`); `repostDelay`: the wait before the
+    /// list post of an open (the Cordova 3-second timer).
     init(serverURL: String, deviceId: String, tokenProvider: any PushTokenProvider, store: AppStateStore,
-         queue: PushTokenQueue, transport: (any PushTransport)? = nil, bundle: Bundle = .main) {
+         queue: PushTokenQueue, transport: (any PushTransport)? = nil, repostDelay: Duration = .seconds(3),
+         bundle: Bundle = .main) {
         self.tokenProvider = tokenProvider
         let appVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-        sync = PushSync(store: store, queue: queue, transport: transport ?? HTTPPushTransport(baseURL: serverURL)) { state in
+        sync = PushSync(store: store, queue: queue, transport: transport ?? HTTPPushTransport(baseURL: serverURL),
+                        repostDelay: repostDelay) { state in
             PushRegistration.Context(deviceId: deviceId, language: CordovaLanguage.navigatorLanguage(),
                                      appVersion: appVersion, units: state.units, now: Date(), zone: .current)
         }

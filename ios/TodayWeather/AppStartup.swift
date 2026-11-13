@@ -1,5 +1,6 @@
 import Foundation
 import os
+import TWData
 import TWStorage
 import UIKit
 
@@ -30,14 +31,21 @@ final class AppStartup {
     private(set) var openRequested = false
     private let messaging = MessagingBridge()
     private var activeObserver: NSObjectProtocol?
+    /// The app's dependencies, replaced only by app-hosted tests on their own instances (the app has no test mode):
+    /// the migrated state (`migratedState()`), and the push service for a `Device-Id` (the build's server and the
+    /// Firebase token, `PushService.production`).
+    var migrate: () throws -> AppState = { try AppStartup.migratedState() }
+    var makePush: (String) -> PushService? = { PushService.production(deviceId: $0) }
+    /// The open registration of this process, once it started.
+    private(set) var openTask: Task<PushSync.Outcome?, Never>?
 
     func start(_ application: UIApplication) {
         AnalyticsGuard.start()
         messaging.start(application)
         activeObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-        ) { _ in
-            MainActor.assumeIsolated { AppStartup.shared.didBecomeActive() }
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.didBecomeActive() }
         }
         guard application.isProtectedDataAvailable else {
             log.info("protected data unavailable; the migration waits")
@@ -51,9 +59,9 @@ final class AppStartup {
         guard waiting == nil else { return }
         waiting = NotificationCenter.default.addObserver(
             forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: .main
-        ) { _ in
+        ) { [weak self] _ in
             MainActor.assumeIsolated {
-                let startup = AppStartup.shared
+                guard let startup = self else { return }
                 if let waiting = startup.waiting { NotificationCenter.default.removeObserver(waiting) }
                 startup.waiting = nil
                 startup.loadState()
@@ -61,22 +69,28 @@ final class AppStartup {
         }
     }
 
-    private func loadState() {
+    /// The state after the Cordova migration (`MigrationRunner` over the data container and the App Group); throws
+    /// while a source or the state file cannot be read, and without the App Group container.
+    static func migratedState() throws -> AppState {
         let home = URL(fileURLWithPath: NSHomeDirectory())
+        let runner = MigrationRunner(
+            store: try AppStateStore.standard(),
+            sources: {
+                let group = FileManager.default
+                    .containerURL(forSecurityApplicationGroupIdentifier: CordovaMigration.suiteName)
+                guard let defaults = UserDefaults(suiteName: CordovaMigration.suiteName) else {
+                    throw CordovaSources.SourceError.unavailable("suite \(CordovaMigration.suiteName)")
+                }
+                let suite = try CordovaSources.suiteValues(defaults, groupContainer: group)
+                return try CordovaSources.read(dataContainer: home, suite: suite)
+            },
+            region: { CordovaRegion.from(preferredLanguages: Locale.preferredLanguages) })
+        return try runner.runIfNeeded()
+    }
+
+    private func loadState() {
         do {
-            let runner = MigrationRunner(
-                store: try AppStateStore.standard(),
-                sources: {
-                    let group = FileManager.default
-                        .containerURL(forSecurityApplicationGroupIdentifier: CordovaMigration.suiteName)
-                    guard let defaults = UserDefaults(suiteName: CordovaMigration.suiteName) else {
-                        throw CordovaSources.SourceError.unavailable("suite \(CordovaMigration.suiteName)")
-                    }
-                    let suite = try CordovaSources.suiteValues(defaults, groupContainer: group)
-                    return try CordovaSources.read(dataContainer: home, suite: suite)
-                },
-                region: { CordovaRegion.from(preferredLanguages: Locale.preferredLanguages) })
-            let state = try runner.runIfNeeded()
+            let state = try migrate()
             self.state = state
             log.info("state ready: \(state.places.count) places, migration \(state.migration?.source ?? "none", privacy: .public)")
         } catch {
@@ -95,10 +109,10 @@ final class AppStartup {
     /// Push registration once the state and the `Device-Id` are loaded (a later retry of `loadState` creates it).
     private func startPush() {
         if push == nil, state != nil, let deviceId {
-            push = PushService.production(deviceId: deviceId)
+            push = makePush(deviceId)
             if push == nil { log.info("no server URL: push registration off") }
             push?.resume()
-            if openRequested { push?.open() }
+            if openRequested { openPush() }
         }
     }
 
@@ -108,7 +122,11 @@ final class AppStartup {
         activeObserver = nil
         guard !openRequested else { return }
         openRequested = true
-        push?.open()
+        openPush()
+    }
+
+    private func openPush() {
+        if let task = push?.open() { openTask = task }
     }
 
     /// A token from FCM: stored in the token queue first (also before the migration ran), then registered.

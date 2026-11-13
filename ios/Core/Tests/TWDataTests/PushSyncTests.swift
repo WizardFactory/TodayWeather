@@ -86,7 +86,7 @@ struct Files {
 
     func sync(_ transport: any PushTransport,
               context: @escaping @Sendable (AppState) -> PushRegistration.Context? = Files.context) -> PushSync {
-        PushSync(store: store, queue: queue, transport: transport, context: context)
+        PushSync(store: store, queue: queue, transport: transport, repostDelay: .zero, context: context)
     }
 }
 

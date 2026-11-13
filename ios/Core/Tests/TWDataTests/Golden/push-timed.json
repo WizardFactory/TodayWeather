@@ -1,0 +1,2574 @@
+{
+ "generator": "ios/tools/push/generate.py (cases.js in the macOS JavaScriptCore shell)",
+ "sources": [
+  {
+   "path": "client/www/js/service.push.js",
+   "commit": "def509aa5737962eb5f408dc127f6674c7869b4a",
+   "sha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140"
+  },
+  {
+   "path": "client/www/js/service.weatherutil.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+  }
+ ],
+ "note": "Requests of the Cordova Push service on iOS on a virtual clock: `at` is the time in ms after Push.init when the request was sent; tokens of `events` arrive through the token callback at their time; `fail` lists the methods whose requests fail. Paths carry /v000902; the native app sends /v000903.",
+ "cities": [
+  {
+   "currentPosition": true,
+   "disable": false,
+   "name": "회현동",
+   "address": "대한민국 서울특별시 중구 회현동",
+   "source": "KMA",
+   "location": {
+    "lat": 37.56,
+    "long": 126.98
+   }
+  },
+  {
+   "currentPosition": false,
+   "disable": false,
+   "name": "명동",
+   "address": "대한민국 서울특별시 중구 명동",
+   "source": "KMA",
+   "location": {
+    "lat": 37.56,
+    "long": 126.98
+   }
+  },
+  {
+   "currentPosition": false,
+   "disable": false,
+   "name": "London",
+   "address": "United Kingdom London",
+   "country": "GB",
+   "source": "VC",
+   "location": {
+    "lat": 51.51,
+    "long": -0.13
+   }
+  }
+ ],
+ "pushList": [
+  {
+   "cityIndex": 0,
+   "id": 1,
+   "startTime": "2026-11-07T22:00:00.000Z",
+   "endTime": "2026-11-08T13:00:00.000Z",
+   "enable": true,
+   "category": "alert",
+   "name": "stale"
+  },
+  {
+   "cityIndex": 1,
+   "id": 1,
+   "startTime": "2026-11-07T22:00:00.000Z",
+   "endTime": "2026-11-08T13:00:00.000Z",
+   "enable": true,
+   "category": "alert",
+   "name": "명동",
+   "source": "KMA",
+   "location": {
+    "lat": 37.56,
+    "long": 126.98
+   },
+   "town": {
+    "first": "서울특별시",
+    "second": "중구",
+    "third": "명동"
+   }
+  },
+  {
+   "cityIndex": 1,
+   "id": 2,
+   "time": "2026-11-07T22:40:00.000Z",
+   "dayOfWeek": [
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false
+   ],
+   "enable": true,
+   "category": "alarm",
+   "name": "명동",
+   "source": "KMA",
+   "location": {
+    "lat": 37.56,
+    "long": 126.98
+   },
+   "town": {
+    "first": "서울특별시",
+    "second": "중구",
+    "third": "명동"
+   }
+  },
+  {
+   "cityIndex": 2,
+   "id": 1,
+   "startTime": "2026-11-08T03:00:00.000Z",
+   "endTime": "2026-11-08T03:00:00.000Z",
+   "enable": false,
+   "category": "alert",
+   "name": "London",
+   "source": "VC",
+   "location": {
+    "long": -0.13
+   }
+  },
+  {
+   "cityIndex": 2,
+   "id": 2,
+   "time": "2026-11-07T21:00:00.000Z",
+   "dayOfWeek": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "enable": false,
+   "category": "alarm",
+   "name": "London",
+   "source": "VC",
+   "location": {
+    "lat": 51.51,
+    "long": -0.13
+   }
+  }
+ ],
+ "deviceId": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+ "language": "ko-KR",
+ "appVersion": "1.1.1",
+ "now": 1794020400000,
+ "cases": [
+  {
+   "name": "token-at-start",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 0,
+     "token": "token-b"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 0,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": false
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "token-before-post",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 1000,
+     "token": "token-b"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 1000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": false
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "token-after-post",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 4000,
+     "token": "token-b"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    },
+    {
+     "at": 4000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "first-token-before-post",
+   "zone": "Asia/Seoul",
+   "storedToken": null,
+   "events": [
+    {
+     "at": 1000,
+     "token": "token-b"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 1000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": null
+     },
+     "failed": false
+    },
+    {
+     "at": 1000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "first-token-after-post",
+   "zone": "Asia/Seoul",
+   "storedToken": null,
+   "events": [
+    {
+     "at": 4000,
+     "token": "token-b"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 4000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": null
+     },
+     "failed": false
+    },
+    {
+     "at": 4000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "two-tokens-before-post",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 500,
+     "token": "token-b"
+    },
+    {
+     "at": 2000,
+     "token": "token-c"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 500,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": false
+    },
+    {
+     "at": 2000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-c",
+      "oldToken": "token-b"
+     },
+     "failed": false
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-c",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-c",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-c",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-c",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-c",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "tokens-around-post",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 1000,
+     "token": "token-b"
+    },
+    {
+     "at": 5000,
+     "token": "token-c"
+    }
+   ],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 1000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": false
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    },
+    {
+     "at": 5000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-c",
+      "oldToken": "token-b"
+     },
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "failed-put-before-post",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 1000,
+     "token": "token-b"
+    }
+   ],
+   "fail": [
+    "PUT"
+   ],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 1000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": true
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  },
+  {
+   "name": "failed-requests",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [
+    {
+     "at": 1000,
+     "token": "token-b"
+    }
+   ],
+   "fail": [
+    "PUT",
+    "POST"
+   ],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 1000,
+     "method": "PUT",
+     "url": "https://server/v000902/push",
+     "headers": {
+      "Content-Type": "application/json",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": {
+      "newToken": "token-b",
+      "oldToken": "token-a"
+     },
+     "failed": true
+    },
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-b",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": true
+    }
+   ]
+  },
+  {
+   "name": "no-token-events",
+   "zone": "Asia/Seoul",
+   "storedToken": "token-a",
+   "events": [],
+   "fail": [],
+   "airUnit": "airkorea",
+   "requests": [
+    {
+     "at": 3000,
+     "method": "POST",
+     "url": "https://server/v000902/push-list",
+     "headers": {
+      "Content-Type": "application/json",
+      "Accept-Language": "ko-KR",
+      "Device-Id": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F"
+     },
+     "data": [
+      {
+       "type": "ios",
+       "cityIndex": 0,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "회현동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "회현동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 1,
+       "category": "alert",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 79200,
+       "endTime": 46800,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 1,
+       "id": 2,
+       "category": "alarm",
+       "enable": true,
+       "name": "명동",
+       "location": {
+        "lat": 37.56,
+        "long": 126.98
+       },
+       "town": {
+        "first": "서울특별시",
+        "second": "중구",
+        "third": "명동"
+       },
+       "source": "KMA",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 81600,
+       "dayOfWeek": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+       ]
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 1,
+       "category": "alert",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "startTime": 10800,
+       "endTime": 10740,
+       "airAlertsBreakPoint": 3
+      },
+      {
+       "type": "ios",
+       "cityIndex": 2,
+       "id": 2,
+       "category": "alarm",
+       "enable": false,
+       "name": "London",
+       "location": {
+        "lat": 51.51,
+        "long": -0.13
+       },
+       "source": "VC",
+       "units": {
+        "temperatureUnit": "C",
+        "windSpeedUnit": "m/s",
+        "pressureUnit": "hPa",
+        "distanceUnit": "km",
+        "precipitationUnit": "mm",
+        "airUnit": "airkorea",
+        "airForecastSource": "kaq"
+       },
+       "timezoneOffset": 540,
+       "package": "todayWeather",
+       "uuid": "0F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F",
+       "appVersion": "1.1.1",
+       "fcmToken": "token-a",
+       "pushTime": 75600,
+       "dayOfWeek": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+       ]
+      }
+     ],
+     "failed": false
+    }
+   ]
+  }
+ ]
+}

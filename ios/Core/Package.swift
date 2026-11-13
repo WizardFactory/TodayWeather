@@ -29,8 +29,10 @@ let package = Package(
         // the Cordova iOS requests (Fixtures/push/push.json, written by ios/tools/push/generate.py).
         .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
-        // Push registration runs (PushSync: order, interrupted processes) and the HTTP transport (IN-04).
-        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel"]),
+        // Push registration runs (PushSync: order, timing, interrupted processes) and the HTTP transport (IN-04).
+        // Golden: the Cordova requests on a virtual clock, written by ios/tools/push/generate.py.
+        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel"],
+                    resources: [.copy("Golden")]),
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
         // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by
         // ios/tools/corpus/compare_jsc.py; for those the iOS expectation is the JavaScriptCore output. The yesterday

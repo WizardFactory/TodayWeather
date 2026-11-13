@@ -26,24 +26,47 @@ public actor PushSync {
     /// The registration that runs last; the next one waits for it.
     private var tail: Task<Void, Never>?
 
+    private let repostDelay: Duration
+    private let sleep: @Sendable (Duration) async -> Void
+
     public init(store: AppStateStore, queue: PushTokenQueue, transport: any PushTransport,
+                repostDelay: Duration = .seconds(3),
+                sleep: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) },
                 context: @escaping @Sendable (AppState) -> PushRegistration.Context?) {
+        self.repostDelay = repostDelay
+        self.sleep = sleep
         self.store = store
         self.queue = queue
         self.transport = transport
         self.context = context
     }
 
-    /// What the Cordova `Push.init` does when the app is opened: queued tokens first, then the repair, the
-    /// replacement of a changed token and the post of the list (when a token exists). `token` (the current FCM token,
-    /// if one is known) is read when this registration's turn comes. Nil when no request can be built.
+    /// What the Cordova `Push.init` does when the app is opened, on its timeline. At once: queued tokens, then the
+    /// repair and the token callback for `token` (the current FCM token, if one is known; read when this registration's
+    /// turn comes): the replacement of a changed token, and the list for a first token. `repostDelay` (3 s, the
+    /// `setTimeout` of `loadPushInfo`) later, as one more registration: tokens queued meanwhile, each replaced as the
+    /// token callback does, then the list with the token stored then, when there is one. Registrations that start
+    /// during the wait (`drain()`) run before the post. Nil when no request can be built; the outcome holds the
+    /// requests of both steps (not those of queued tokens).
     public func open(token: @escaping @Sendable () async -> String?) async -> Outcome? {
-        await serialized { [self] in
+        let start: Outcome? = await serialized { [self] in
             _ = await self.registerQueued()
             guard let state = try? self.store.load(), let ctx = self.context(state) else { return nil }
-            let result = PushRegistration.onStart(state.push, places: state.places, token: await token(), context: ctx)
+            let result = PushRegistration.onStart(state.push, places: state.places, token: await token(), context: ctx,
+                                                  repost: false)
             return await self.send(result, over: state)
         }
+        guard let start else { return nil }
+        await sleep(repostDelay)
+        let post: Outcome? = await serialized { [self] in
+            _ = await self.registerQueued()
+            guard let state = try? self.store.load(), let ctx = self.context(state) else { return nil }
+            // `_postPushList` with the token current at the timer.
+            let result = PushRegistration.onStart(state.push, places: state.places, token: nil, context: ctx)
+            return await self.send(result, over: state)
+        }
+        guard let post else { return start }
+        return Outcome(requests: start.requests + post.requests, statuses: start.statuses + post.statuses)
     }
 
     /// Registers the queued tokens in order of arrival (each like the Cordova token callback while the app runs).
