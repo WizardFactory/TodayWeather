@@ -72,10 +72,39 @@ pub(crate) fn admit(provider: Provider, units: u64) -> Result<(), BudgetError> {
         && let Err(error) = allowance.admit(provider, units)
     {
         // This is local funding exhaustion, not an HTTP/provider 429 count.
-        crate::storage::allowance::observe_rejection(crate::observability::Cause::Quota);
+        crate::storage::allowance::observe_rejection(
+            crate::observability::Cause::Quota,
+            crate::storage::allowance::Origin::LocalPaidAllowance(provider),
+        );
         return Err(error);
     }
     Ok(())
+}
+/// Conservative admitted-unit snapshot for the guard: initial and remaining
+/// process allocation, not billed provider usage. Empty when not installed.
+pub(crate) fn render_metrics() -> String {
+    let Some(Some(allowance)) = PROCESS.get() else {
+        return String::new();
+    };
+    // A poisoned owner cannot be trusted; report zero remaining.
+    let left = allowance.left.lock().map(|l| *l).unwrap_or([0; 4]);
+    let mut out = String::new();
+    for (i, provider) in [
+        Provider::VisualCrossing,
+        Provider::Google,
+        Provider::GoogleAirQuality,
+        Provider::OpenWeather,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let name = provider.path();
+        out += &format!(
+            "server2_shadow_paid_units_initial{{provider=\"{name}\"}} {}\nserver2_shadow_paid_units_remaining{{provider=\"{name}\"}} {}\n",
+            allowance.initial[i], left[i]
+        );
+    }
+    out
 }
 
 #[cfg(test)]

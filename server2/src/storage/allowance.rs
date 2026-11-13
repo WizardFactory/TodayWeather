@@ -98,9 +98,25 @@ pub(crate) fn process() -> Option<&'static Arc<Allowance>> {
 
 static AUTH_FAILURES: AtomicU64 = AtomicU64::new(0);
 static QUOTA_FAILURES: AtomicU64 = AtomicU64::new(0);
+static LOCAL_PAID_EXHAUSTIONS: AtomicU64 = AtomicU64::new(0);
+/// Where a counted auth/quota signal came from. Fixed vocabulary only: no URL,
+/// key, message or free text is retained.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Origin {
+    /// An observability record; provider/status are present only when the record had them.
+    Event {
+        component: crate::observability::Component,
+        stage: crate::observability::Stage,
+        provider: Option<crate::budget::Provider>,
+        status: Option<u16>,
+    },
+    /// Local qualification funding exhaustion; no provider request was sent.
+    LocalPaidAllowance(crate::budget::Provider),
+}
+static FIRST_REJECTION: OnceLock<(crate::observability::Cause, Origin)> = OnceLock::new();
 /// Sticky stop signals, recorded before best-effort logging can discard an event.
 /// These count classified events, not provider requests or billable usage.
-pub(crate) fn observe_rejection(cause: crate::observability::Cause) {
+pub(crate) fn observe_rejection(cause: crate::observability::Cause, origin: Origin) {
     if process().is_none() {
         return;
     }
@@ -109,9 +125,53 @@ pub(crate) fn observe_rejection(cause: crate::observability::Cause) {
         crate::observability::Cause::Quota => &QUOTA_FAILURES,
         _ => return,
     };
-    let _ = counter.try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-        Some(n.saturating_add(1))
-    });
+    let _ = FIRST_REJECTION.set((cause, origin));
+    let bump = |counter: &AtomicU64| {
+        let _ = counter.try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+            Some(n.saturating_add(1))
+        });
+    };
+    bump(counter);
+    if matches!(origin, Origin::LocalPaidAllowance(_)) {
+        bump(&LOCAL_PAID_EXHAUSTIONS);
+    }
+}
+fn label<T: serde::Serialize>(value: T) -> String {
+    // Unit enum variants serialize to their fixed snake_case names.
+    match serde_json::to_value(value) {
+        Ok(serde_json::Value::String(name)) => name,
+        _ => "unknown".into(),
+    }
+}
+fn first_rejection_metric() -> String {
+    let Some((cause, origin)) = FIRST_REJECTION.get() else {
+        return String::new();
+    };
+    let (kind, component, stage, provider, status) = match *origin {
+        Origin::Event {
+            component,
+            stage,
+            provider,
+            status,
+        } => (
+            "event",
+            label(component),
+            label(stage),
+            provider.map_or("none", |p| p.path()),
+            status.map_or("none".into(), |s| s.to_string()),
+        ),
+        Origin::LocalPaidAllowance(provider) => (
+            "local_paid_allowance",
+            "quota".into(),
+            "admission".into(),
+            provider.path(),
+            "none".into(),
+        ),
+    };
+    format!(
+        "server2_runtime_first_rejection_info{{cause=\"{}\",origin=\"{kind}\",component=\"{component}\",stage=\"{stage}\",provider=\"{provider}\",status=\"{status}\"}} 1\n",
+        label(*cause)
+    )
 }
 pub(crate) fn render_metrics() -> String {
     let Some(allowance) = process() else {
@@ -130,7 +190,11 @@ pub(crate) fn render_metrics() -> String {
         left.put_bytes,
         AUTH_FAILURES.load(Ordering::Relaxed),
         QUOTA_FAILURES.load(Ordering::Relaxed)
-    )
+    ) + &format!(
+        "server2_runtime_local_paid_exhaustions_total {}\n",
+        LOCAL_PAID_EXHAUSTIONS.load(Ordering::Relaxed)
+    ) + &first_rejection_metric()
+        + &crate::budget::qualification::render_metrics()
 }
 
 #[cfg(test)]
@@ -341,6 +405,108 @@ mod wire_tests {
             String::from_utf8_lossy(&result.stdout),
             String::from_utf8_lossy(&result.stderr)
         );
+    }
+
+    #[test]
+    fn diagnostic_metrics_case() {
+        use crate::budget::{Provider, qualification};
+        use crate::observability::{
+            self as obs, Action, Cause, Component, Details, Outcome, Stage,
+        };
+        let Ok(mode) = std::env::var("SHADOW_DIAGNOSTIC_CHILD") else {
+            return;
+        };
+        super::install_process(&|_| Some("2,3,8".into())).unwrap();
+        qualification::install_process(&|key| {
+            (key == qualification::SETTING).then(|| "1,2,0,0".into())
+        })
+        .unwrap();
+        obs::init(&|key| (key == "SERVER2_LOG_LEVEL").then(|| "error".into()));
+        let provider_event = || {
+            obs::event(
+                Component::Provider,
+                Stage::Acquire,
+                Cause::Quota,
+                Action::DoNotRetry,
+                Outcome::Failed,
+                Details {
+                    provider: Some(Provider::DataGoKr),
+                    status: Some(429),
+                    ..Details::default()
+                },
+            )
+        };
+        let local = || {
+            assert!(qualification::admit(Provider::GoogleAirQuality, 1).is_err());
+        };
+        if mode == "event" {
+            provider_event();
+            local();
+        } else {
+            local();
+            provider_event();
+        }
+        obs::event(
+            Component::Geocode,
+            Stage::Lookup,
+            Cause::Auth,
+            Action::DoNotRetry,
+            Outcome::Failed,
+            Details::default(),
+        );
+        qualification::admit(Provider::VisualCrossing, 1).unwrap();
+        let first = if mode == "event" {
+            r#"server2_runtime_first_rejection_info{cause="quota",origin="event",component="provider",stage="acquire",provider="data_go_kr",status="429"} 1"#
+        } else {
+            r#"server2_runtime_first_rejection_info{cause="quota",origin="local_paid_allowance",component="quota",stage="admission",provider="google_air_quality",status="none"} 1"#
+        };
+        let metrics = obs::render_metrics();
+        for line in [
+            first,
+            "server2_runtime_auth_failures_total 1",
+            "server2_runtime_quota_failures_total 2",
+            "server2_runtime_local_paid_exhaustions_total 1",
+            r#"server2_shadow_paid_units_initial{provider="visual_crossing"} 1"#,
+            r#"server2_shadow_paid_units_remaining{provider="visual_crossing"} 0"#,
+            r#"server2_shadow_paid_units_initial{provider="google"} 2"#,
+            r#"server2_shadow_paid_units_remaining{provider="google"} 2"#,
+            r#"server2_shadow_paid_units_initial{provider="google_air_quality"} 0"#,
+            r#"server2_shadow_paid_units_remaining{provider="google_air_quality"} 0"#,
+            r#"server2_shadow_paid_units_initial{provider="openweather"} 0"#,
+            r#"server2_shadow_paid_units_remaining{provider="openweather"} 0"#,
+        ] {
+            assert!(
+                metrics.lines().any(|got| got == line),
+                "missing {line}: {metrics}"
+            );
+        }
+        assert_eq!(
+            metrics
+                .lines()
+                .filter(|l| l.starts_with("server2_runtime_first_rejection_info"))
+                .count(),
+            1
+        );
+    }
+    #[test]
+    fn diagnostic_metrics_retain_first_origin_and_paid_units() {
+        for mode in ["event", "local"] {
+            let result = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "storage::allowance::wire_tests::diagnostic_metrics_case",
+                    "--nocapture",
+                ])
+                .env("SHADOW_DIAGNOSTIC_CHILD", mode)
+                .output()
+                .unwrap();
+            assert!(
+                result.status.success(),
+                "{mode}: {} {}",
+                String::from_utf8_lossy(&result.stdout),
+                String::from_utf8_lossy(&result.stderr)
+            );
+        }
     }
 
     #[tokio::test]

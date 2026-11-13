@@ -297,7 +297,8 @@ def host_sample(m=None):
     s={k:m[k] for k in ('pid','start_ticks','boot_id','binary_sha256','environment_sha256','config_sha256','config_directory','cgroup')}
     s.update(observed_at=1001,listeners=[['127.0.0.1',3000],['127.0.0.1',3001]],
              tx_bytes=1000,free_bytes=10*guard.GiB,accounting_valid=True,cpu_seconds=0,
-             metrics=dict(s3_reads=90,s3_writes=90,s3_put_bytes=900,auth_failures=0,quota_failures=0))
+             metrics=dict(s3_reads=90,s3_writes=90,s3_put_bytes=900,auth_failures=0,quota_failures=0),
+             diagnostics=dict(local_paid_exhaustions=0,first_rejection=None,paid_units=None))
     return s
 
 
@@ -385,6 +386,53 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(len(guard.metric_values(text)),5)
         with self.assertRaises(guard.GuardError):guard.metric_values(text.splitlines()[0])
         with self.assertRaises(guard.GuardError):guard.metric_values(text+text.splitlines()[0])
+
+    DIAGNOSTIC_TEXT=(
+        'server2_runtime_local_paid_exhaustions_total 1\n'
+        'server2_runtime_first_rejection_info{cause="quota",origin="local_paid_allowance",component="quota",stage="admission",provider="google_air_quality",status="none"} 1\n'
+        + ''.join('server2_shadow_paid_units_%s{provider="%s"} %d\n'%(kind,p,n)
+                  for p,i,r in [('visual_crossing',25000,24990),('google',100,100),('google_air_quality',400,0),('openweather',0,0)]
+                  for kind,n in (('initial',i),('remaining',r))))
+
+    def test_diagnostics_parse_fixed_vocabulary_only(self):
+        d=guard.diagnostic_values('server2_logging_filtered_total 3\n'+self.DIAGNOSTIC_TEXT)
+        self.assertEqual(d['local_paid_exhaustions'],1)
+        self.assertEqual(d['first_rejection'],dict(cause='quota',origin='local_paid_allowance',component='quota',
+                         stage='admission',provider='google_air_quality',status=None))
+        self.assertEqual(d['paid_units']['google_air_quality'],dict(initial=400,remaining=0))
+        self.assertEqual(guard.diagnostic_values('server2_runtime_local_paid_exhaustions_total 0\n'),
+                         dict(local_paid_exhaustions=0,first_rejection=None,paid_units=None))
+        bad=[self.DIAGNOSTIC_TEXT.replace('google_air_quality"} 400','google_air_quality"} x'),
+             self.DIAGNOSTIC_TEXT.replace('provider="google_air_quality",status','provider="https://x",status'),
+             self.DIAGNOSTIC_TEXT.replace('status="none"','status="99"'),
+             self.DIAGNOSTIC_TEXT+self.DIAGNOSTIC_TEXT.splitlines()[1]+'\n',
+             self.DIAGNOSTIC_TEXT.replace('server2_shadow_paid_units_remaining{provider="openweather"} 0\n',''),
+             self.DIAGNOSTIC_TEXT.replace('server2_runtime_local_paid_exhaustions_total 1\n',''),
+             self.DIAGNOSTIC_TEXT.replace('} 1\n','} 2\n',1)]
+        for text in bad:
+            with self.assertRaises(guard.GuardError):guard.diagnostic_values(text)
+
+    def test_stop_decision_retains_distinguishing_diagnostics(self):
+        m=host_manifest();decisions=[]
+        first=guard.diagnostic_values(self.DIAGNOSTIC_TEXT)
+        for key in ('auth_failures','quota_failures'):
+            s=host_sample();s['metrics'][key]=1;s['diagnostics']=first
+            d=guard.evaluate(m,s,None,1001)
+            self.assertEqual(d['stop'],'provider_auth_or_quota')
+            self.assertEqual(d['diagnostics']['observed_at'],1001)
+            self.assertEqual(d['diagnostics'][key],1)
+            self.assertEqual(d['diagnostics']['first_rejection']['origin'],'local_paid_allowance')
+            self.assertEqual(d['diagnostics']['paid_units']['visual_crossing'],dict(initial=25000,remaining=24990))
+            decisions.append(d)
+        self.assertNotEqual(decisions[0],decisions[1])
+        latched=guard.evaluate(m,host_sample(),decisions[1],1002)
+        self.assertEqual(latched['diagnostics'],decisions[1]['diagnostics'])
+        healthy=guard.evaluate(m,host_sample(),None,1001)
+        self.assertIsNone(healthy['stop'])
+        self.assertEqual(healthy['diagnostics']['paid_units'],None)
+        self.assertEqual(guard.evaluate(m,None,healthy,1002)['diagnostics'],healthy['diagnostics'])
+        s=host_sample();del s['diagnostics']
+        self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'metrics_unavailable')
 
     def test_actual_offline_cli_persists_terminal_stop(self):
         with tempfile.TemporaryDirectory() as temp:

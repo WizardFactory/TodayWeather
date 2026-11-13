@@ -763,7 +763,15 @@ fn record(
     details: Details,
 ) -> Record {
     let (cause, action, outcome) = decision;
-    crate::storage::allowance::observe_rejection(cause);
+    crate::storage::allowance::observe_rejection(
+        cause,
+        crate::storage::allowance::Origin::Event {
+            component,
+            stage,
+            provider: details.provider,
+            status: details.status,
+        },
+    );
     Record {
         schema: 1,
         build_revision: option_env!("SERVER2_BUILD_REVISION")

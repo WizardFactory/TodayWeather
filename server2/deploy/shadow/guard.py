@@ -101,13 +101,14 @@ def evaluate(manifest, sample, previous, now):
     validate(manifest)
     require(integer(now),'now')
     fingerprint = hashlib.sha256(canonical(manifest).encode()).hexdigest()
-    result = {'schema':2,'manifest_sha256':fingerprint,'last_seen':now,
-              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None}
+    result = {'schema':3,'manifest_sha256':fingerprint,'last_seen':now,
+              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None}
     if previous is not None:
         require(type(previous) is dict and set(previous)==set(result),'state_fields')
         require(previous['manifest_sha256']==fingerprint,'state_identity')
-        require(previous['schema']==2 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu']),'state_values')
+        require(previous['schema']==3 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu']),'state_values')
         require(previous['stop'] is None or isinstance(previous['stop'],str),'state_stop')
+        require(previous['diagnostics'] is None or type(previous['diagnostics']) is dict,'state_diagnostics')
         result.update(previous)
         result['last_seen']=max(now,previous['last_seen'])
         if previous['stop'] is not None:
@@ -144,6 +145,12 @@ def evaluate(manifest, sample, previous, now):
     required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures'}
     if type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values()):
         return stop('metrics_unavailable')
+    try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
+    except GuardError:return stop('metrics_unavailable')
+    # Latest validated snapshot; latched with any stop so evidence distinguishes
+    # auth from quota, the first origin and conservative paid admissions.
+    result['diagnostics']=dict(diagnostics,observed_at=sample['observed_at'],
+                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'])
     if metrics['auth_failures'] or metrics['quota_failures']:
         return stop('provider_auth_or_quota')
     for metric,allocation in [('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes')]:
@@ -157,6 +164,60 @@ def evaluate(manifest, sample, previous, now):
     if cost['stop']:
         return stop(cost['stop'])
     return result
+
+
+PAID_PROVIDERS=('visual_crossing','google','google_air_quality','openweather')
+VOCABULARY=dict(cause={'auth','quota'},origin={'event','local_paid_allowance'},
+    component={'http','gateway','geocode','world','domestic','provider','quota','s3','resolver','cache','history',
+               'summary','warnings','push_state','delivery','notice','process','listener','logging'},
+    stage={'request','lifecycle','startup','bind','shutdown','runtime_teardown','admission','lookup','restore',
+           'acquire','head','post','put','delete','options','other'},
+    provider={'none','data_go_kr','visual_crossing','kakao','google','google_air_quality','openweather','waqi'})
+FIRST=re.compile(r'server2_runtime_first_rejection_info\{cause="([a-z_]+)",origin="([a-z_]+)",component="([a-z_]+)",'
+                 r'stage="([a-z_]+)",provider="([a-z_]+)",status="(none|[1-5][0-9][0-9])"\} 1')
+PAID=re.compile(r'server2_shadow_paid_units_(initial|remaining)\{provider="([a-z_]+)"\} ([0-9]{1,7})')
+
+
+def checked_diagnostics(value):
+    """Fixed-vocabulary diagnostic snapshot; never URLs, keys or free text."""
+    require(type(value) is dict and set(value)=={'local_paid_exhaustions','first_rejection','paid_units'},'diagnostic_fields')
+    require(integer(value['local_paid_exhaustions']),'diagnostic_local')
+    first=value['first_rejection']
+    if first is not None:
+        require(type(first) is dict and set(first)==set(VOCABULARY)|{'status'},'diagnostic_first')
+        require(all(first[k] in v for k,v in VOCABULARY.items()),'diagnostic_vocabulary')
+        require(first['status'] is None or integer(first['status'],100,599),'diagnostic_status')
+    paid=value['paid_units']
+    if paid is not None:
+        require(type(paid) is dict and set(paid)==set(PAID_PROVIDERS),'diagnostic_paid')
+        for units in paid.values():
+            require(type(units) is dict and set(units)=={'initial','remaining'} and integer(units['initial'],0,1000000)
+                    and integer(units['remaining'],0,units['initial']),'diagnostic_units')
+    return value
+
+
+def diagnostic_values(text):
+    local=None;first=None;paid={}
+    for line in text.splitlines():
+        if line.startswith('server2_runtime_local_paid_exhaustions_total'):
+            fields=line.split()
+            require(local is None and len(fields)==2 and fields[0]=='server2_runtime_local_paid_exhaustions_total'
+                    and fields[1].isascii() and fields[1].isdigit(),'diagnostic_shape')
+            local=int(fields[1])
+        elif line.startswith('server2_runtime_first_rejection_info'):
+            match=FIRST.fullmatch(line)
+            require(first is None and match is not None,'diagnostic_shape')
+            cause,origin,component,stage,provider,status=match.groups()
+            first=dict(cause=cause,origin=origin,component=component,stage=stage,provider=provider,
+                       status=None if status=='none' else int(status))
+        elif line.startswith('server2_shadow_paid_units_'):
+            match=PAID.fullmatch(line)
+            require(match is not None,'diagnostic_shape')
+            kind,provider,units=match.groups()
+            require(provider in PAID_PROVIDERS and kind not in paid.setdefault(provider,{}),'diagnostic_shape')
+            paid[provider][kind]=int(units)
+    require(local is not None,'missing_metrics')
+    return checked_diagnostics(dict(local_paid_exhaustions=local,first_rejection=first,paid_units=paid or None))
 
 
 def process_stat(raw):
@@ -251,7 +312,9 @@ def collect(manifest):
         require(response.status==200,'metrics_status')
         body=response.read(65537)
         require(len(body)<=65536,'metrics_size')
-        metrics=metric_values(body.decode('ascii'))
+        text=body.decode('ascii')
+        metrics=metric_values(text)
+        diagnostics=diagnostic_values(text)
     finally:
         conn.close()
     require(start==process_stat((proc/'stat').read_text()),'process_reused')
@@ -260,7 +323,7 @@ def collect(manifest):
                 binary_sha256=exe,environment_sha256=env,config_sha256=config_sha256,
                 config_directory=config_directory,cgroup=groups[0][3:],
                 listeners=sockets,free_bytes=stat.f_bavail*stat.f_frsize,tx_bytes=tx,
-                accounting_valid=True,metrics=metrics,
+                accounting_valid=True,metrics=metrics,diagnostics=diagnostics,
                 cpu_seconds=host_cpu_seconds(Path('/proc/stat').read_text(),os.sysconf('SC_CLK_TCK')))
 
 
