@@ -29,6 +29,7 @@ Screenshots of the explainer, the prompt and the setting are in the [iOS manual]
 
 ## Limits
 
+- The prompt was answered with Allow only. A direct "Ask App Not to Track" answer was not run; the `denied` state was reached by switching tracking off in Settings after Allow.
 - No fresh install on this phone: it would delete the saved place and alarms. The run started from an updated install whose tracking status was not determined.
 - The order with the European consent message, and what follows a refused consent message, were not run.
 - The request mode comes from the console line of the same native function that builds the request; the network request was not captured.
