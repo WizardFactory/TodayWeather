@@ -5050,3 +5050,9 @@ were current in the 2026-10-20 local audit after whole-record requalification;
 that dated result is not a promise about later legacy edits or a G1 readiness
 decision. The recorder, guard and declared export exceptions are verification
 assets only. Native serving does not read them or legacy source files.
+
+## Bounded qualification process and host supervision (#2614)
+
+The main executable initializes optional process-wide S3 physical-send and paid-provider allowances before constructing runtime services. `SERVER2_SHADOW_S3_LIMITS` limits reads, write/list sends and PUT bytes across all storage adapters; exhausted physical admission is sticky and is reported to the host guard. `SERVER2_SHADOW_PROVIDER_UNITS` similarly precharges existing funded acquisition units across all keys and UTC windows for Visual Crossing, Google geocoding, Google Air Quality and OpenWeather. Absent settings preserve ordinary runtime behavior. These process allowances do not measure provider invoices or establish a wire-byte ceiling.
+
+The [bounded supervisor](../operations/server2-shadow-supervisor.md) freezes one host plan, candidate/configuration digests, original deadlines and priced grants in an exclusive local journal. Its explicit `run`/`finish` lifecycle uses one launch token, pinned SSH, one-use installation, Linux process/socket checks, and protected cleanup capacity. The qualification process clears static AWS credentials, uses only its owned raw bucket and an explicit native-read family list, excludes push, and sends unsupported routes only to a closed loopback fallback. It retains paired responses and original S3 versions separately; missing source linkage remains incomplete. The [workflow](diagrams/server2-shadow-supervisor.html) is the intended qualification flow, not a claim of a completed seven-day run or production deployment. The 48-GiB transfer reservation is a conservative cost model with contingency, not a proven physical transfer cap.

@@ -59,12 +59,24 @@ impl RefreshableCredentials {
 /// SigV4 HTTP adapter. Credentials come from its [`RefreshableCredentials`] handle.
 /// No Debug implementation: neither credentials nor signed URLs belong in diagnostics.
 pub struct HttpS3Transport {
+    #[cfg(test)]
+    pub(crate) test_allowance: Option<Arc<super::allowance::Allowance>>,
     pub(crate) raw_cache: Option<Arc<crate::cache::disk::DiskCache>>,
     pub(crate) client: Client,
     pub(crate) bucket: Bucket,
     pub(crate) credentials: RefreshableCredentials,
 }
 impl HttpS3Transport {
+    pub(crate) fn admit(&self, attempt: super::allowance::Attempt) -> Result<(), Error> {
+        if let Some(allowance) = super::allowance::process() {
+            return allowance.admit(attempt);
+        }
+        #[cfg(test)]
+        if let Some(allowance) = &self.test_allowance {
+            return allowance.admit(attempt);
+        }
+        Ok(())
+    }
     pub fn new(
         endpoint: &str,
         bucket: &str,
@@ -127,6 +139,8 @@ impl HttpS3Transport {
             .build()
             .map_err(|_| Error::Transport)?;
         Ok(Self {
+            #[cfg(test)]
+            test_allowance: None,
             client,
             bucket,
             credentials,
@@ -190,6 +204,7 @@ impl HttpS3Transport {
                         .get_object(Some(&credentials), key)
                         .sign(Duration::from_secs(30))
                 };
+                self.admit(crate::storage::allowance::Attempt::Read)?;
                 let mut response = self
                     .client
                     .request(if head { Method::HEAD } else { Method::GET }, url)
@@ -263,6 +278,7 @@ impl ObjectTransport for HttpS3Transport {
                 for (key, value) in &record.metadata {
                     request = request.header(format!("x-amz-meta-{key}"), value);
                 }
+                self.admit(crate::storage::allowance::Attempt::Put(record.body.len()))?;
                 let response = request
                     .body(record.body.clone())
                     .send()

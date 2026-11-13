@@ -1,4 +1,5 @@
 //! Immutable exact-byte raw records. A body PUT is not catalog/fetch-group publication.
+pub mod allowance;
 mod catalog;
 mod catalog_model;
 mod catalog_transport;

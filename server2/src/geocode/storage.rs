@@ -52,6 +52,9 @@ impl S3AddressStore {
             .bucket
             .get_object(Some(&credentials), key)
             .sign(Duration::from_secs(30));
+        self.transport
+            .admit(crate::storage::allowance::Attempt::Read)
+            .map_err(|_| GeocodeError::Provider)?;
         let mut response = self
             .transport
             .client
@@ -149,6 +152,9 @@ impl AddressStore for S3AddressStore {
                 .insert("content-type", "application/json");
             action.headers_mut().insert("content-md5", &digest);
             let url = action.sign(Duration::from_secs(30));
+            self.transport
+                .admit(crate::storage::allowance::Attempt::Put(bytes.len()))
+                .map_err(|_| GeocodeError::Provider)?;
             let mut response = self
                 .transport
                 .client

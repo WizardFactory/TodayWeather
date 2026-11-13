@@ -203,6 +203,8 @@ pub(crate) async fn list_page(
         action.with_continuation_token(token);
     }
     let url = action.sign(Duration::from_secs(30));
+    t.admit(crate::storage::allowance::Attempt::List)
+        .map_err(|_| DemandError::Transport)?;
     let response = t
         .client
         .get(url)
@@ -275,6 +277,8 @@ impl DemandTransport for HttpS3Transport {
             .bucket
             .get_object(Some(&credentials), key)
             .sign(Duration::from_secs(30));
+        self.admit(crate::storage::allowance::Attempt::Read)
+            .map_err(|_| DemandError::Transport)?;
         let response = self
             .client
             .get(url)
@@ -328,6 +332,8 @@ impl DemandTransport for HttpS3Transport {
             .headers_mut()
             .insert("content-type", "application/json");
         let url = action.sign(Duration::from_secs(30));
+        self.admit(crate::storage::allowance::Attempt::Put(payload.len()))
+            .map_err(|_| DemandError::Transport)?;
         let response = self
             .client
             .put(url)

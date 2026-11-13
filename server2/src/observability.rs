@@ -763,6 +763,7 @@ fn record(
     details: Details,
 ) -> Record {
     let (cause, action, outcome) = decision;
+    crate::storage::allowance::observe_rejection(cause);
     Record {
         schema: 1,
         build_revision: option_env!("SERVER2_BUILD_REVISION")
@@ -1202,10 +1203,12 @@ pub fn fatal(cause: Cause) {
 }
 pub fn render_metrics() -> String {
     let m = metrics();
-    format!(
+    let mut rendered = format!(
         "server2_logging_filtered_total {}\nserver2_logging_rate_limited_total {}\nserver2_logging_queue_full_total {}\nserver2_logging_oversized_total {}\nserver2_logging_sink_errors_total {}\n",
         m.filtered, m.rate_limited, m.queue_full, m.oversized, m.sink_errors
-    )
+    );
+    rendered.push_str(&crate::storage::allowance::render_metrics());
+    rendered
 }
 
 impl Classify for crate::budget::BudgetError {

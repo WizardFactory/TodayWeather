@@ -1,0 +1,81 @@
+{
+  "task": "SHADOW-SUPERVISOR",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2614",
+  "scope": "One task-owned bounded seven-day qualification host, lifecycle guards, original evidence retention and independent cleanup. No production deployment or device sends. Historical benchmark approval unchanged.",
+  "server2_paths": [
+    "server2/deploy/shadow/state.py",
+    "server2/deploy/shadow/coordinator.py",
+    "server2/deploy/shadow/provision.py",
+    "server2/deploy/shadow/remote.py",
+    "server2/deploy/shadow/guard.py",
+    "server2/deploy/shadow/bootstrap.sh",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/config/tasks/SHADOW-SUPERVISOR.json",
+    "server2/tools/ci.py",
+    "server2/src/storage/allowance.rs",
+    "server2/src/storage/mod.rs",
+    "server2/src/storage/transport.rs",
+    "server2/src/storage/catalog_transport.rs",
+    "server2/src/history/transport.rs",
+    "server2/src/summary/transport.rs",
+    "server2/src/geocode/storage.rs",
+    "server2/src/budget/transport.rs",
+    "server2/src/main.rs",
+    "server2/src/observability.rs",
+    "server2/src/budget/qualification.rs",
+    "server2/src/budget/mod.rs",
+    "server2/src/budget/store.rs"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2614-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "specs/issue-2614-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "plans/issue-2614-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/manual.json",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/manual.pdf",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/cli-output.png",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Scoped operator intent/spec/plan, maintained operations guide and validated flow/manual artifacts."
+    },
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Document opt-in main-wide S3 and paid-provider qualification allowances and operator boundary."
+    }
+  ]
+}
