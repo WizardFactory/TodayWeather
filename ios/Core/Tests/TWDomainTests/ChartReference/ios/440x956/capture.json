@@ -1,0 +1,54 @@
+{
+ "size": "440x956",
+ "capturedAt": "2026-11-13T08:13:14Z",
+ "env": {
+  "screen": {
+   "width": 440,
+   "height": 956
+  },
+  "viewport": {
+   "width": 440,
+   "height": 956
+  },
+  "devicePixelRatio": 3,
+  "language": "ko-KR",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+  "theme": "light"
+ },
+ "device": {
+  "name": "tw_cap_16promax",
+  "udid": "C07BFC9B-AB5D-42CC-B7B5-ABF70B07E50B",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+ },
+ "webViewOrigins": [
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  },
+  {
+   "x": 0,
+   "y": 0
+  }
+ ],
+ "fixtures": [
+  "kma-seoul",
+  "vc-london"
+ ]
+}

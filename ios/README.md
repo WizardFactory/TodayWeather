@@ -35,7 +35,7 @@ cd ios && xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather \
 
 The scheme's test action runs the app-hosted tests and the package tests. `build/` is ignored.
 
-CI (`.github/workflows/ios.yml`) runs the same commands twice: once after re-running the import tools (client assets and golden corpus) and checking that they change nothing, and once in a checkout whose `client/`, `android/`, `tw.ios/`, `ta.ios/` and `applewatch/` directories have been deleted.
+CI (`.github/workflows/ios.yml`) runs the same commands twice: once after re-running the import tools (client assets, golden corpus and chart scenes) and checking that they change nothing, and once in a checkout whose `client/`, `android/`, `tw.ios/`, `ta.ios/` and `applewatch/` directories have been deleted.
 
 ## Imported client assets
 
@@ -79,6 +79,42 @@ python3 ios/tools/corpus/compare_jsc.py [--report FILE] [--write]
 ```
 
 The tool runs the unchanged generator in the macOS `jsc` shell, with the Node APIs it uses provided by `tools/corpus/node-shim.js`. It runs once per time zone and compares every case with the Node corpus. Values that differ are recorded in `Core/Tests/TWDomainTests/JavaScriptCore/differences.json`. For exactly those values the Swift tests expect the JavaScriptCore output; `--write` updates the record. [`tools/corpus/differences.md`](tools/corpus/differences.md) lists the differences with the run's command and versions, and what the run did not compare. The 2026-11-13 run found 21 values in `special.json`: JavaScriptCore rejects a day past the end of its month and accepts second 60. `Warnings.jsDate` follows JavaScriptCore.
+
+## Charts
+
+The hourly and daily forecast charts (gate G2, IN-05) port the Android AN-05 charts, which reproduce the Cordova D3 directives (`ngShortChart`, `ngShortDetailChart`, `ngMidChart` in `client/www/js/app.js`).
+
+- **Scenes (`TWDomain`, `Chart/`):** `HourlyChart` and `DailyChart` build each chart as the SVG the directive draws, element by element (`Svg`): D3 v3 bands and `.nice()` scales (`D3`), the current point inserted into the line, labels, icons, the header labels, the legend texts and the opening scroll offset (`ChartPosition`). `ChartMetrics` takes the sizes from the screen size as `initSize` does, with its iOS branch (a 20 pt status bar less in the header's content height; it changes the chart heights only where the height bounds the header font, as on a landscape iPad). A place without `timeChart` or `dayChart` gives no chart (the directive throws there). `ChartTexts.keys` lists the catalog strings the charts show.
+- **Drawing (`TodayWeather/Chart/`):** `HourlyChartView` (header rows, chart, separators, detail rows, the pinned legend and the expander row) and `DailyChartView` draw the scenes with SwiftUI `Canvas`, in the colors of the Cordova SCSS for the light, dark, old and photo themes (`ChartColors`), with the images of `TWResources` and the theme's image folders of `theme.js`. Text is drawn with CoreText in the system UI font (`-apple-system` in WebKit) with CoreText's fallback fonts; rows have WebKit's `line-height: normal` (each used font's ascent and descent rounded up to whole points: 19 pt for 15 px text, 22 pt for 17 px), and the expander glyph comes from the imported Material Icons font. Both charts open at the Cordova scroll position: the opening offset rounded down to a whole point, as WebKit's `scrollLeft` (iOS 17 has no offset scroll position, so a marker view at that offset is the scroll target). The views take the chart, the expanded state, a toggle action and `applyCount`; IN-07 and IN-08 supply the data, theme, catalog, units and the stored `expandShortChart`.
+- **Scroll resets (`applyCount`):** the Cordova page sets `scrollLeft` to the opening position after every `applyWeatherData` (opening the tab, changing the place, a refresh, also with unchanged data), and at no other time; a tap on the expander keeps the position. The page that owns the charts keeps one integer and increments it each time it applies weather to the page (each complete Cordova `applyWeatherData`, as the Android `ForecastScope.scrolls` counts them; an apply that returns early does not count), and passes it to both views as `applyCount`. Each change scrolls the chart back to the opening position, whether or not the chart changed; a user's scroll stays until then, and changing `expanded` does not move it.
+- **Without a scroll view:** `HourlyChartFrame` and `DailyChartFrame` show the same content and pinned parts at a given scroll offset; the screenshot tests render them, so no test or preview mode exists in the app.
+
+### References and tests
+
+| File | Contents |
+| --- | --- |
+| `Core/Tests/TWDomainTests/ChartReference/android/` | The Cordova scenes captured on the Android emulator (360×780, 384×832, 412×892 dp), copied by `tools/import_chart_reference.py` (provenance `provenance/chart-reference.json`) |
+| `Core/Tests/TWDomainTests/ChartReference/ios/<WxH>/` | The Cordova iOS scenes at 375×667, 393×852 and 440×956 pt: every SVG element with its attributes and text, the rects of the header labels, legend, separators and expander, computed styles and scroll offsets (`kma-seoul` and `vc-london` at every size, eleven fixtures at 393×852) |
+| `TodayWeatherTests/ChartReference/` | Captures of the Cordova iOS chart wrappers for `kma-seoul` at each size, at the opening position and both scroll ends (sRGB PNG), `captures.json` (scroll offsets and pixel sizes), the served response `kma-seoul.input.json` and `tolerances.json` |
+| `provenance/chart-captures.json` | Build commit and recipe, the chart sources inside the built app compared with `client/`, simulator, runtime, user agent, WebView origin in each screenshot, served data and the SHA-256 of every capture file |
+
+- `ChartSceneTests` (`swift test` and the scheme): the Swift scenes against every element, label, legend text and opening offset of both reference sets, within 0.02 pt; the Android set with the Android metrics, the iOS set with the iOS metrics. `ChartReferenceProvenanceTests` checks that every reference file is listed with its hash.
+- `ChartScreenshotTests` (app-hosted): renders the charts with `ImageRenderer` at the capture's width, scroll offset and pixel scale (2 at 375×667, 3 otherwise) and compares them with the captures by the AN-05 metric (the share of pixels whose largest channel differs by more than 64 after a 3×3 blur, the mean difference and the height); each comparison passes within the value recorded in `tolerances.json` plus the Android margins (0.0015, 0.3, 0 px), which also says why. The render does not depend on the simulator model, so CI's iPhone 17 runs all three sizes; renders and difference images go to the app's `tmp/chart-compare/`. `ChartScrollTests` puts the live views in a window and checks that their scroll views open at the captured `scrollLeft`. `ChartApplyTests` keeps one view in a window, scrolls it to the end and checks that applying other weather with the same opening offset, or the same data again, returns both charts to the captured opening, and that toggling the expander keeps the position.
+- What the tolerances leave: glyph rasterization (WebKit places glyphs on its own subpixel grid) and image filtering, up to about one device pixel at text edges. A today line 1 pt wide instead of 2 is detected at 375×667 and 393×852 but not at 440×956; a 1 pt vertical shift of the daily chart is detected at every size (plans/ios-native.md, IN-05).
+
+### Recapturing
+
+After a change to the Cordova charts (the chart sources in `provenance/chart-captures.json` no longer match `client/`), rebuild the Cordova reference app and capture on the owned simulators (macOS with Xcode, Node, network for npm and Bower; see [`tools/chart-reference`](tools/chart-reference/README.md)):
+
+```sh
+sh ios/tools/chart-reference/build-cordova.sh ios/build/chart-reference http://127.0.0.1:18453
+for udid in 52E0C852-6471-487A-A2B5-99E41E0CA3D4 9CAAD5CA-A41F-4C19-808E-907D3E1F6F48 C07BFC9B-AB5D-42CC-B7B5-ABF70B07E50B; do
+  python3 ios/tools/chart-reference/capture.py run $udid ios/build/chart-reference/TodayWeather.app
+done
+python3 ios/tools/chart-reference/capture.py provenance ios/build/chart-reference/TodayWeather.app
+```
+
+Then run the tests; update `tolerances.json` with the measured values (the test prints them) only for an explained change. After the Android references change, re-run `python3 ios/tools/import_chart_reference.py`; CI fails on a stale copy.
 
 ## Private inputs
 
