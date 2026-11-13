@@ -1,0 +1,41 @@
+{
+  "title": "TodayWeather for iOS: ad tracking permission",
+  "scenario": "TodayWeather on an iPhone 12 Pro Max with iOS 26 and Korean screens. The build contains the App Tracking Transparency change of pull request #2949 and was updated in place over version 1.1.1. Korean labels are followed by their English meaning. Captured on 13 November 2026. Outside Europe the steps appear as shown; where a consent message for European regulations applies, that message comes first.",
+  "steps": [
+    {
+      "title": "Read the explanation",
+      "instruction": "Open TodayWeather. When the weather screen opens for the first time with this version, a message titled 앱이 계속 무료로 제공됩니다 (Our app wants to stay free for you) explains that ads support the app. Tap 계속 (Continue).",
+      "screenshot": "screenshots/01-explainer.png",
+      "caption": "The explanation over the weather screen. No ad is requested yet.",
+      "expected": "iOS shows its own permission prompt next."
+    },
+    {
+      "title": "Answer the iOS prompt",
+      "instruction": "iOS asks whether TodayWeather may track your activity across other companies' apps and websites. Under the question, TodayWeather states its reason: the advertising identifier is used to show personalized ads and to measure ad performance. Tap 허용 (Allow) to permit personalized ads, or 앱에 추적 금지 요청 (Ask App Not to Track).",
+      "screenshot": "screenshots/02-system-prompt.png",
+      "caption": "The iOS tracking prompt with TodayWeather's reason and the two answers.",
+      "expected": "The prompt closes and does not appear again on later launches. Weather features work the same with either answer. Where the consent message for European regulations applies, personalized ads also need that consent."
+    },
+    {
+      "title": "Use the app without tracking",
+      "instruction": "When tracking is not allowed, keep using the app as before. TodayWeather still requests ads at the bottom of the screen, but only non-personalized ones, so the space can stay empty when no such ad is available.",
+      "screenshot": "screenshots/05-weather-after-decline.png",
+      "caption": "The weather screen with tracking not allowed; no ad was available at this moment.",
+      "expected": "Weather, air quality and notifications are unchanged."
+    },
+    {
+      "title": "Find the setting",
+      "instruction": "To change your answer later, open the iPhone's 설정 (Settings) app, search for TodayWeather and open it. The switch 추적 허용 (Allow Tracking) shows the current choice.",
+      "screenshot": "screenshots/03-settings-tracking-on.png",
+      "caption": "Settings > TodayWeather with 추적 허용 (Allow Tracking) on.",
+      "expected": "The switch is on after 허용 (Allow). It is off when tracking is not allowed."
+    },
+    {
+      "title": "Turn tracking off or on",
+      "instruction": "Tap the 추적 허용 (Allow Tracking) switch. iOS closes TodayWeather when the setting changes; open the app again.",
+      "screenshot": "screenshots/04-settings-tracking-off.png",
+      "caption": "The same screen with 추적 허용 (Allow Tracking) off.",
+      "expected": "The next launch uses the new choice without asking again: non-personalized ads when off; when on, personalized ads, where a European consent message applies only with that consent too."
+    }
+  ]
+}
