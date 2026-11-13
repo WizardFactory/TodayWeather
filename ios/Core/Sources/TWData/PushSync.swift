@@ -58,6 +58,9 @@ public actor PushSync {
     private var replay: Task<Void, Never>?
     /// A list post fell due during the replay.
     private var postAfterReplay = false
+    /// Token observations handled so far (the token callback, the open's token): a provider value read while another
+    /// observation was handled is older than it and is dropped (CODEX-IN04-8).
+    private var observations = 0
     /// Opens whose first step ran, and list posts that fell due (observed by tests on a virtual clock).
     public private(set) var openStarts = 0
     public private(set) var reposts = 0
@@ -97,6 +100,7 @@ public actor PushSync {
     /// while a replay runs: the replay sends them in turn).
     @discardableResult
     public func tokenArrived(_ token: String) -> [PushRequest] {
+        observations += 1
         guard let (state, ctx) = reconciled() else { return [] }
         recover()
         return replace(token, state: state, ctx: ctx).map(\.0)
@@ -107,9 +111,17 @@ public actor PushSync {
     /// current FCM token, if one is known). When the post is due: the list with the state's token, when there is one
     /// (after the replay, if one runs). Returns, once their replies arrived, the requests of the open and of its post
     /// that it started itself; nil when no request can be built.
+    ///
+    /// The token is read from `token` (the SDK's current token) while the actor runs other events. A token the callback
+    /// delivered meanwhile (`tokenArrived`) is newer than any value the read can still return late, or as new, and FCM
+    /// delivers every later change through the callback, so a value whose read overlapped another observation is
+    /// dropped: observations count on the actor when the read starts and are compared when it ends.
     public func open(token: @escaping @Sendable () async -> String?) async -> Outcome? {
         let due = timer(repostDelay)
-        let current = await token()
+        let seen = observations
+        let read = await token()
+        let current = observations == seen ? read : nil
+        if current != nil { observations += 1 }
         guard let (state, ctx) = reconciled() else { return nil }
         recover()
         openStarts += 1
@@ -155,11 +167,12 @@ public actor PushSync {
               let entry = try? log.append(old: state.push.fcmToken, new: token), storeToken(token) else { return [] }
         if replay != nil { return [] }
         sentHere.insert(entry.id)
+        // One unit: the replacement and, for a first token, its list post; acknowledged when all of them replied.
         let started = start(result.requests)
-        let reply = started[0].1
+        let replies = started.map(\.1)
         let id = UUID()
         replyWatchers[id] = Task {
-            _ = await reply.status
+            for reply in replies { _ = await reply.status }
             self.replied(id, entry: entry.id)
         }
         return started
@@ -180,12 +193,13 @@ public actor PushSync {
         replay = Task { await self.replayEntries() }
     }
 
-    /// Sends the waiting entries one after another in `id` order, each when the previous reply arrived; an entry
-    /// without `old` is followed by the list post with its token (Cordova's first-token path). Then the list post that
-    /// fell due meanwhile.
+    /// Sends the waiting entries one after another in `id` order, each as one unit: the replacement and, for an entry
+    /// without `old`, the list post with its token (Cordova's first-token path). A unit is complete when all its
+    /// requests replied; then its entry is acknowledged and the next unit starts (CODEX-IN04-4). Then the list post
+    /// that fell due meanwhile.
     private func replayEntries() async {
         while let next = nextToReplay() {
-            _ = await next.reply.status
+            for reply in next.replies { _ = await reply.status }
             try? log.acknowledge(next.entry)
         }
         replay = nil
@@ -195,17 +209,18 @@ public actor PushSync {
         }
     }
 
-    private func nextToReplay() -> (entry: Int, reply: PushReply)? {
+    private func nextToReplay() -> (entry: Int, replies: [PushReply])? {
         guard let (state, ctx) = reconciled(),
               let entry = (try? log.entries())?.first(where: { !sentHere.contains($0.id) }) else { return nil }
         sentHere.insert(entry.id)
-        let reply = transport.start(PushRegistration.replacement(entry.new, over: entry.old, context: ctx))
+        var replies = [transport.start(PushRegistration.replacement(entry.new, over: entry.old, context: ctx))]
         if entry.old == nil {
             var push = state.push
             push.fcmToken = entry.new
-            _ = start(PushRegistration.onStart(push, places: state.places, token: nil, context: ctx).requests)
+            replies += start(PushRegistration.onStart(push, places: state.places, token: nil, context: ctx).requests)
+                .map(\.1)
         }
-        return (entry.id, reply)
+        return (entry.id, replies)
     }
 
     private func start(_ requests: [PushRequest]) -> [(PushRequest, PushReply)] {

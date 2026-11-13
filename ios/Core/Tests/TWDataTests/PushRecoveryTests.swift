@@ -200,6 +200,63 @@ struct PushRecoveryTests {
         #expect(await eventually { await p1.pendingReplies == 0 })
     }
 
+    /// CODEX-IN04-4 (round 5): a first-token unit is complete only when its replacement (403) and its list post both
+    /// replied; a process that ends after the 403 and before the post's reply leaves the entry, and the next process
+    /// sends the unit again, a start alone included.
+    @Test func codexIn04_4_firstTokenUnitEndsWithItsListPost() async throws {
+        let files = Files()
+        try files.seed(token: "token-b")
+        try files.log.append(old: nil, new: "token-b")
+        let server = ServerModel()
+        let first = DeliveredServerTransport(server: server)
+        let end = ProcessEnd()
+        let p1 = files.process(first, end: end, clock: ContinuousClock())
+        await p1.start()
+        #expect(await eventually { first.requests.count == 2 })
+        first.deliver(0) // the 403 of PUT(null→B)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(files.logEntries.map(\.acked) == [false], "not acknowledged while the list post waits")
+        end.endNow() // the process ends; its list post never reached the server
+        first.drop(1)
+        let second = DeliveredServerTransport(server: server)
+        let p2 = files.sync(second)
+        await p2.start()
+        #expect(await pump(second, p2))
+        #expect(second.requests.map(\.request.method) == ["PUT", "POST"])
+        #expect(server.tokens == ["token-b"])
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(files.logEntries.isEmpty)
+    }
+
+    /// CODEX-IN04-8: the open reads the token from the SDK while token C arrives through the callback; the read then
+    /// returns the older B. The value is dropped (an observation was handled during the read), so nothing reverts to B.
+    @Test func codexIn04_8_aTokenReadDuringACallbackIsDropped() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let server = seededServer(token: "token-a")
+        let transport = DeliveredServerTransport(server: server)
+        let sync = files.sync(transport)
+        let read = ProviderRead()
+        let open = Task { await sync.open { await read.value() } }
+        #expect(await eventually { read.isWaiting })
+        await sync.tokenArrived("token-c")
+        read.resolve("token-b")
+        for _ in 0..<20 {
+            #expect(await pump(transport, sync))
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let outcome = await open.value
+        #expect(outcome?.requests.map(\.method) == ["POST"], "only the list post: \(String(describing: outcome?.requests))")
+        #expect(transport.requests.compactMap { r -> [String?]? in
+            let x = replacement(r.request)
+            return x.isEmpty ? nil : x
+        } == [["token-c", "token-a"]])
+        #expect(server.tokens == ["token-c"])
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(files.storedToken == "token-c")
+        #expect(files.logEntries.isEmpty)
+    }
+
     /// While a replay runs, a new token is logged and sent by the replay after the entries before it, and the list
     /// post that falls due waits for the replay.
     @Test func eventsDuringAReplayWaitTheirTurn() async throws {

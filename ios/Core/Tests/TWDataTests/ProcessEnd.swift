@@ -30,6 +30,9 @@ final class ProcessEnd: @unchecked Sendable {
     var operations: Int { lock.withLock { count } }
     var hasEnded: Bool { lock.withLock { ended } }
 
+    /// Ends the process now (the system ended it between operations).
+    func endNow() { lock.withLock { ended = true } }
+
     /// False from the tripping operation on.
     func allow(_ op: Operation) -> Bool {
         lock.withLock {
