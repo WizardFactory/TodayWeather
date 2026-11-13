@@ -76,8 +76,10 @@ def decode_cloud(operation: str, returncode: int | None, stdout: str = '',
     if timed_out:
         return CloudResult('timeout', operation)
     if returncode != 0:
-        match = re.search(r'^An error occurred \(([A-Za-z0-9_.-]+)\) when calling the '
-                          r'([A-Za-z0-9]+) operation:', stderr, re.MULTILINE)
+        match = re.search(r'^(?:aws: \[ERROR\]: )?An error occurred '
+                          r'\(([A-Za-z0-9_.-]+)\) when calling the '
+                          r'([A-Za-z0-9]+) operation(?: \(reached max retries: [0-9]+\))?:',
+                          stderr, re.MULTILINE)
         if match and match[2] == operation:
             return CloudResult('service_error', operation, code=match[1])
         return CloudResult('command_error', operation)

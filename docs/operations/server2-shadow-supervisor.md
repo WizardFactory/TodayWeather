@@ -61,7 +61,7 @@ existing qualification quota signal for the host guard.
 
 ## Evidence and cleanup boundary
 
-AWS timeout, access denial, malformed output and empty success remain distinct from successful resource inventories. Only an operation-specific absence result may prove deletion; the caller must also bind the command to the expected account, region and owned resource. Source export must retain original bytes and hashes within the outbound allowance. An incomplete export or unknown response dependency remains incomplete evidence.
+AWS timeout, access denial, malformed output and empty success remain distinct from successful resource inventories. Service errors accept both the legacy AWS CLI format and the current `aws: [ERROR]:` prefix with optional numeric retry-count suffix; absence still requires the exact expected operation and service error code. Only an operation-specific absence result may prove deletion; the caller must also bind the command to the expected account, region and owned resource. Source export must retain original bytes and hashes within the outbound allowance. An incomplete export or unknown response dependency remains incomplete evidence.
 
 The [flow](../architecture/diagrams/server2-shadow-supervisor.html) describes the scoped operator contract, not evidence of a completed live run.
 

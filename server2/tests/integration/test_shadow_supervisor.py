@@ -217,6 +217,19 @@ class ResultTests(unittest.TestCase):
         self.assertFalse(state.absence(mismatch))
         self.assertFalse(state.absence(state.decode_cloud('DeleteRole',0,'')))
 
+    def test_current_aws_cli_error_prefix_and_retry_suffix(self):
+        for operation in ('GetRole', 'GetInstanceProfile'):
+            message = (f'\naws: [ERROR]: An error occurred (NoSuchEntity) when calling the '
+                       f'{operation} operation (reached max retries: 0): missing\n')
+            self.assertTrue(state.absence(state.decode_cloud(operation, 254, stderr=message)))
+            self.assertFalse(state.absence(state.decode_cloud('DeleteRole', 254, stderr=message)))
+        for message in (
+            'aws: [ERROR]: An error occurred (AccessDenied) when calling the GetRole operation: denied',
+            'network error: An error occurred (NoSuchEntity) when calling the GetRole operation: missing',
+            'aws: [ERROR]: An error occurred (NoSuchEntity) when calling the GetRole operation (unknown): missing',
+        ):
+            self.assertFalse(state.absence(state.decode_cloud('GetRole', 254, stderr=message)))
+
     def test_bucket_absence_requires_complete_successful_inventory(self):
         self.assertTrue(state.absence(self.decode('ListBuckets',{'Buckets':[]}),name='task-bucket'))
         for data in ({}, {'Buckets':[{}]}, {'Buckets':[{'Name':'task-bucket'}]}, {'Buckets':[],'NextToken':'more'}, {'Buckets':[],'IsTruncated':True}):
