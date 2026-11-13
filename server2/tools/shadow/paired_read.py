@@ -142,7 +142,7 @@ class Ledger:
             now = time.time()
             with self.db:
                 for key, value in {'identity': identity, 'started': now, 'last_clock': now,
-                                   'last_attempt': 0, 'failures': 0, 'terminal': None}.items():
+                                   'last_attempt': 0, 'failures': {}, 'terminal': None}.items():
                     self.put(key, value)
         require(self.get('identity') == identity, 'run identity changed')
         require(self.get('terminal') is None, 'run is terminal; automatic resume refused')
@@ -211,9 +211,13 @@ class Ledger:
 
     def finish(self, attempt, result):
         with self.db:
+            row = self.db.execute('SELECT origin FROM attempts WHERE id=?', (attempt,)).fetchone()
+            require(row is not None, 'result requires an admitted attempt')
+            origin = row[0]
             self.db.execute('UPDATE attempts SET result=? WHERE id=?', (canonical(result), attempt))
             status = result.get('status', 0)
-            failures = self.get('failures') + 1 if result.get('error') or status >= 500 else 0
+            failures = self.get('failures')
+            failures[origin] = failures.get(origin, 0) + 1 if result.get('error') or status >= 500 else 0
             self.put('failures', failures)
             reason = None
             if result.get('error') in ('deadline', 'oversize'):
@@ -222,7 +226,7 @@ class Ledger:
                 reason = f'http-{status}'
             elif 300 <= status < 400 and status != 304:
                 reason = 'redirect'
-            elif failures >= 3:
+            elif failures[origin] >= 3:
                 reason = 'consecutive-failures'
             if reason:
                 self.put('terminal', reason)
@@ -243,12 +247,12 @@ def http_worker(origin, method, path, headers, directory, attempt, owner_fd, sec
     def deadline(signum, frame):
         raise TimeoutError('deadline')
     signal.signal(signal.SIGALRM, deadline)
-    signal.setitimer(signal.ITIMER_REAL, seconds)
     parsed = urlsplit(origin)
     cls = http.client.HTTPSConnection if parsed.scheme == 'https' else http.client.HTTPConnection
     conn = cls(parsed.hostname, parsed.port, timeout=REQUEST_SECONDS)
     result, body = {}, b''
     try:
+        signal.setitimer(signal.ITIMER_REAL, seconds)
         conn.request(method, path, headers={'User-Agent': 'server2-bounded-verification/1',
                                          'Accept-Encoding': 'identity', **headers})
         response = conn.getresponse()
@@ -265,8 +269,8 @@ def http_worker(origin, method, path, headers, directory, attempt, owner_fd, sec
     except (OSError, http.client.HTTPException) as error:
         result['error'] = type(error).__name__  # Do not retain arbitrary exception text or URLs.
     finally:
-        conn.close()
         signal.setitimer(signal.ITIMER_REAL, 0)
+        conn.close()
     result.update(body_bytes=len(body), body_sha256=digest(body))
     private_write(Path(directory) / f'{attempt}.body', body)
     private_write(Path(directory) / f'{attempt}.json', canonical(result).encode())
@@ -359,7 +363,8 @@ def execute(manifest, candidate, production, state, binary, resume=False, loopba
             # Pending admission remains consumed. Explicit --resume may continue other slots.
             pass
         except BaseException:
-            ledger.terminal('operator-error')
+            if ledger.get('terminal') is None:
+                ledger.terminal('operator-error')
             raise
         finally:
             summary = ledger.summary()

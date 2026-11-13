@@ -2,6 +2,8 @@
 """Offline behavioral checks using real loopback peers; no provider credentials."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
+from types import SimpleNamespace
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -202,7 +204,7 @@ class PairedReadTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             capture.Ledger(ledger.path, changed, True)
 
-    def test_rollback_expiry_and_three_consecutive_failures(self):
+    def test_rollback_and_expiry(self):
         ledger = self.ledger()
         with patch.object(capture.time, 'time', return_value=ledger.get('started') - 1):
             with self.assertRaisesRegex(ValueError, 'backwards'):
@@ -213,11 +215,25 @@ class PairedReadTests(unittest.TestCase):
         with patch.object(capture.time, 'time', return_value=ledger.end + 1):
             self.assertIsNone(ledger.clock())
         self.assertEqual(ledger.get('terminal'), 'duration-complete')
-        with ledger.db:
-            ledger.put('terminal', None)
-        for _ in range(3):
-            ledger.finish(99, {'error': 'ConnectionRefusedError'})
-        self.assertEqual(ledger.get('terminal'), 'consecutive-failures')
+
+    def test_transport_failure_count_survives_resume_and_other_origin_success(self):
+        m = manifest(duration=100)
+        ledger = self.ledger(m)
+        case = m['cases'][0]
+        start = ledger.get('started')
+        for slot, origin in enumerate(('candidate', 'production', 'candidate')):
+            with patch.object(capture.time, 'time', return_value=start+slot+1):
+                ident = ledger.reserve(case, slot, origin)
+            ledger.finish(ident, {'error': 'ConnectionRefusedError'} if origin == 'candidate' else {'status': 200})
+        resumed = capture.Ledger(ledger.path, self.identity(m), True)
+        self.addCleanup(resumed.close)
+        with patch.object(capture.time, 'time', return_value=start+4):
+            ident = resumed.reserve(case, 3, 'candidate')
+        resumed.finish(ident, {'error': 'ConnectionRefusedError'})
+        self.assertEqual(resumed.get('terminal'), 'consecutive-failures')
+        self.assertEqual(resumed.get('failures'), {'candidate': 3, 'production': 0})
+        with self.assertRaisesRegex(ValueError, 'admitted'):
+            resumed.finish(99, {'status': 200})
 
     def test_validator_bound_to_origin_path_and_get(self):
         ledger = self.ledger(manifest(duration=100))
@@ -282,6 +298,59 @@ class PairedReadTests(unittest.TestCase):
             if process.poll() is None:
                 process.kill()
                 process.communicate()
+
+    def test_one_failing_origin_stops_despite_healthy_peer(self):
+        # GEM-BS-001: no shared counter reset by the other origin's success.
+        for failing in ('candidate', 'production'):
+            with self.subTest(failing=failing):
+                a = self.peer(status=500 if failing == 'candidate' else 200)
+                b = self.peer(status=503 if failing == 'production' else 200)
+                m = manifest(duration=8)
+                m['cases'][0]['interval_seconds'] = 1
+                result = capture.execute(m, a.origin, b.origin, self.path/('run-'+failing),
+                                         self.binary, loopback_test=True)
+                self.assertEqual(result['terminal'], 'consecutive-failures')
+                self.assertEqual(result['attempts'][failing], 3)
+                self.assertEqual(len(a.requests), 3)
+                self.assertEqual(len(b.requests), 2 if failing == 'candidate' else 3)
+
+    def test_execute_preserves_clock_rollback_reason(self):
+        # GEM-BS-002: exercise execute's exception wrapper, not just Ledger.clock.
+        state = self.path/'rollback'
+        with patch.object(capture.time, 'time', side_effect=[1000., 1000., 999.]):
+            with self.assertRaisesRegex(ValueError, 'backwards'):
+                capture.execute(manifest(), 'http://127.0.0.1:1', 'http://127.0.0.1:2',
+                                state, self.binary, loopback_test=True)
+        with sqlite3.connect(state/'ledger.sqlite3') as db:
+            reason = json.loads(db.execute("SELECT value FROM meta WHERE key='terminal'").fetchone()[0])
+            self.assertEqual(reason, 'clock-rollback')
+            self.assertEqual(db.execute('SELECT count(*) FROM attempts').fetchone()[0], 0)
+
+    def test_worker_deadline_is_guarded_and_disabled_before_close(self):
+        # GEM-BS-003: deterministic signal-boundary injection, no actual network.
+        for idx, immediate in enumerate((True, False), 1):
+            with self.subTest(immediate=immediate):
+                armed = [False]
+                def timer(which, seconds):
+                    armed[0] = seconds > 0
+                    if seconds and immediate:
+                        raise TimeoutError('injected deadline at timer arm')
+                def close():
+                    self.assertFalse(armed[0], 'timer still armed during socket close')
+                owner = SimpleNamespace(detach=lambda: os.dup(self.lockfile.fileno()))
+                with patch.object(capture.signal, 'signal'), \
+                     patch.object(capture.signal, 'setitimer', side_effect=timer), \
+                     patch.object(capture.http.client, 'HTTPConnection') as factory:
+                    conn = factory.return_value
+                    conn.close.side_effect = close
+                    response = conn.getresponse.return_value
+                    response.status = 200
+                    response.getheaders.return_value = []
+                    response.read.return_value = b''
+                    capture.http_worker('http://127.0.0.1:1', 'GET', PATH, {}, str(self.path),
+                                        idx, owner, .001)
+                result = json.loads((self.path/f'{idx}.json').read_text())
+                self.assertEqual(result.get('error'), 'deadline' if immediate else None)
 
     def test_existing_directory_and_concurrent_owner_rejected(self):
         state = self.path / 'lock'

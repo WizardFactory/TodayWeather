@@ -72,7 +72,9 @@ without the parent retention review.
 
 Each request has an absolute 20-second deadline and a 2 MiB body ceiling.
 HTTP 401/403/429, redirects, oversize bodies and deadline expiry terminate capture;
-three consecutive transport/5xx failures also stop it. There is no retry. Other
+three consecutive transport/5xx failures from either origin also stop it.
+Each origin has its own persisted failure count; success from the other origin
+does not reset that count. There is no retry. Other
 HTTP errors are retained as incomplete coverage, not turned into parity success.
 Provider errors embedded inside HTTP 200 require the parent runtime telemetry and
 response analysis; this sampler does not parse provider quota envelopes.
