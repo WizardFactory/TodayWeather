@@ -1,9 +1,9 @@
 {
  "tool": "android/tools/parity-reference/capture.sh",
- "capturedAt": "2026-11-12T18:57:18.142Z",
+ "capturedAt": "2026-11-13T06:27:18.082Z",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "d3Version": "3.5.17",
   "sources": [
@@ -67,17 +67,13 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    },
    {
     "file": "client/www/lib/d3/d3.js",
     "apkSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/data/theme.js",
@@ -125,7 +121,7 @@
  "displays": {
   "en-US": {
    "size": "384x832",
-   "capturedAt": "2026-11-12T18:57:42.092Z",
+   "capturedAt": "2026-11-13T06:28:28.619Z",
    "env": {
     "screen": {
      "width": 384,
@@ -143,7 +139,7 @@
   },
   "ko-KR": {
    "size": "384x832",
-   "capturedAt": "2026-11-12T18:57:18.142Z",
+   "capturedAt": "2026-11-13T06:27:18.082Z",
    "env": {
     "screen": {
      "width": 384,
@@ -164,7 +160,7 @@
  "files": [
   {
    "file": "en-US/capture.json",
-   "sha256": "f06868b4abcda192d212684a5af113450ef883db60fb880876da4e5fe5284529"
+   "sha256": "4b05764cf3c676ca340e7071a64669e02c448d22f04ffe5780ccd59b469c886a"
   },
   {
    "file": "en-US/kma-seoul.json",
@@ -204,7 +200,7 @@
   },
   {
    "file": "ko-KR/capture.json",
-   "sha256": "be2eb66c57cc6a830e9fb057f3ed86bdf54ac56ce1bfa4dfe8bf4d0cd7f5796a"
+   "sha256": "ba57a9ee9221c829476c45d642e672afe3e26bb90544b06e6651472ef2023583"
   },
   {
    "file": "ko-KR/kma-seoul.json",
