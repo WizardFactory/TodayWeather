@@ -1,0 +1,150 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Bounded shadow supervision plan",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/server2-shadow-supervisor.html"
+  },
+  "lanes": [
+    {
+      "id": "owner",
+      "label": "Acquisition owner"
+    },
+    {
+      "id": "cleanup",
+      "label": "Evidence and cleanup"
+    }
+  ],
+  "mainPath": [
+    "plan",
+    "provision",
+    "bind",
+    "collect",
+    "stop"
+  ],
+  "nodes": [
+    {
+      "id": "plan",
+      "lane": "owner",
+      "col": 0,
+      "type": "security",
+      "label": "Offline plan",
+      "sublabel": "prices and grants"
+    },
+    {
+      "id": "provision",
+      "lane": "owner",
+      "col": 1,
+      "type": "cloud",
+      "label": "One host",
+      "sublabel": "expiry at first boot"
+    },
+    {
+      "id": "bind",
+      "lane": "owner",
+      "col": 2,
+      "type": "security",
+      "label": "Install once",
+      "sublabel": "pinned SSH + grant"
+    },
+    {
+      "id": "collect",
+      "lane": "owner",
+      "col": 3,
+      "type": "backend",
+      "label": "Paired reads",
+      "sublabel": "fixed deadline"
+    },
+    {
+      "id": "stop",
+      "lane": "cleanup",
+      "col": 3,
+      "type": "security",
+      "label": "Stop acquisition",
+      "sublabel": "deadline or guard"
+    },
+    {
+      "id": "export",
+      "lane": "cleanup",
+      "col": 2,
+      "type": "database",
+      "label": "Export originals",
+      "sublabel": "bytes + metadata"
+    },
+    {
+      "id": "clean",
+      "lane": "cleanup",
+      "col": 1,
+      "type": "cloud",
+      "label": "Delete owned",
+      "sublabel": "exact resources"
+    },
+    {
+      "id": "verified",
+      "lane": "cleanup",
+      "col": 0,
+      "type": "backend",
+      "label": "Verify absence",
+      "sublabel": "errors stay unknown"
+    }
+  ],
+  "edges": [
+    {
+      "from": "plan",
+      "to": "provision",
+      "variant": "default"
+    },
+    {
+      "from": "provision",
+      "to": "bind",
+      "variant": "default"
+    },
+    {
+      "from": "bind",
+      "to": "collect",
+      "variant": "default"
+    },
+    {
+      "from": "collect",
+      "to": "stop",
+      "variant": "security"
+    },
+    {
+      "from": "stop",
+      "to": "export",
+      "variant": "default"
+    },
+    {
+      "from": "export",
+      "to": "clean",
+      "variant": "default"
+    },
+    {
+      "from": "clean",
+      "to": "verified",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Scoped contract",
+      "items": [
+        "Original epoch: 168h collection, 170h host expiry",
+        "One initial process; resume never uploads twice",
+        "Priced provider grants total at most USD 5"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Accounting and evidence",
+      "items": [
+        "48 GiB cost model includes termination contingency",
+        "Control envelopes and cleanup budgets are separate",
+        "Missing original linkage stays incomplete; no live PASS"
+      ]
+    }
+  ]
+}

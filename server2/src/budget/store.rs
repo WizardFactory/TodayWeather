@@ -73,6 +73,7 @@ impl Reservation {
         if units == 0 || units > self.left {
             return Err(BudgetError::Exhausted);
         }
+        super::qualification::admit(self.policy.provider, units)?;
         self.left -= units;
         Ok(())
     }
