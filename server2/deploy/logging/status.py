@@ -52,27 +52,56 @@ def parse_cursor(cursor):
 BEHIND_SECONDS = {'s3': 120, 'cloudwatch': 20}
 
 
-def first_entry_after(cursor, namespace='server2'):
-    """Cursor of the first entry after `cursor`, or None when nothing follows it."""
-    process = subprocess.Popen(['journalctl', f'--namespace={namespace}', f'--after-cursor={cursor}', '-o', 'json',
-                                '--output-fields=__CURSOR'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-    try:
-        line = process.stdout.readline()
-    finally:
+class JournalError(Exception):
+    """journalctl failed; distinct from an empty result (CX-LP2-004)."""
+
+
+def _first_cursor(arguments):
+    """Cursor of the first entry journalctl prints, None when it prints none."""
+    process = subprocess.Popen(['journalctl', *arguments, '-o', 'json', '--output-fields=__CURSOR'],
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    line = process.stdout.readline()
+    if line.strip():
         process.kill()
         process.wait()
-    return json.loads(line)['__CURSOR'] if line.strip() else None
+        return json.loads(line)['__CURSOR']
+    process.wait(timeout=30)
+    if process.returncode != 0:
+        raise JournalError('journalctl failed')
+    return None
+
+
+def first_entry_after(cursor, namespace='server2'):
+    return _first_cursor([f'--namespace={namespace}', f'--after-cursor={cursor}'])
+
+
+def oldest_entry(namespace='server2'):
+    return _first_cursor([f'--namespace={namespace}'])
+
+
+def newest_entry(namespace='server2'):
+    result = subprocess.run(['journalctl', f'--namespace={namespace}', '-o', 'json', '--output-fields=__CURSOR', '-n', '1'],
+                            capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        raise JournalError('journalctl failed')
+    lines = [l for l in result.stdout.splitlines() if l.strip()]
+    return json.loads(lines[-1])['__CURSOR'] if lines else None
+
+
+def checkpoint(state_dir, destination):
+    try:
+        return (Path(state_dir) / f'journal_{destination}' / 'checkpoint.txt').read_text().strip() or None
+    except FileNotFoundError:
+        return None
 
 
 def unshipped_seconds(state_dir, destination, previous, now_usec):
     """Age of the oldest entry the destination has not confirmed, or 0 when it is current.
 
     Vector retries a failing destination indefinitely and counts an error only when it
-    gives up, so this age is what shows an outage while it lasts."""
-    try:
-        text = (Path(state_dir) / f'journal_{destination}' / 'checkpoint.txt').read_text().strip()
-    except FileNotFoundError:
-        text = ''
+    gives up, so this age is what shows an outage while it lasts. A failed journal query
+    raises JournalError rather than reporting the destination as current."""
+    text = checkpoint(state_dir, destination)
     if text:
         following = first_entry_after(text)
         if following is None:
@@ -85,58 +114,48 @@ def unshipped_seconds(state_dir, destination, previous, now_usec):
     return max(0, int((now_usec - realtime) / 1e6))
 
 
-def oldest_entry(namespace='server2'):
-    """Cursor of the oldest entry still in the namespace, or None when it is empty."""
-    process = subprocess.Popen(['journalctl', f'--namespace={namespace}', '-o', 'json', '--output-fields=__CURSOR'],
-                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-    try:
-        line = process.stdout.readline()
-    finally:
-        process.kill()
-        process.wait()
-    return json.loads(line)['__CURSOR'] if line.strip() else None
+def overruns(state_dir, oldest_cursor, previous, active):
+    """New gaps per active destination: [(destination, lost_from_usec, lost_until_usec, (id, seq, time))].
 
-
-def overruns(state_dir, oldest_cursor, previous):
-    """New gaps per destination: [(destination, lost_from_usec, lost_until_usec, key)].
-
-    The reader's next needed entry is the one after its checkpoint. A reader without a
-    checkpoint (nothing acknowledged yet, e.g. S3 failing since the start) needs
-    everything from the baseline recorded when the collector first saw it.
+    The reader needs the entry after its checkpoint; a reader with no acknowledged delivery
+    yet needs everything from its baseline. Only the part not reported before is new
+    (CX-LP2-002): while the journal start keeps moving, each report continues the last one.
     """
     if oldest_cursor is None:
         return []
     oldest_id, oldest_seq, oldest_time = parse_cursor(oldest_cursor)
     found = []
-    for destination in DESTINATIONS:
-        checkpoint = Path(state_dir) / f'journal_{destination}' / 'checkpoint.txt'
-        try:
-            text = checkpoint.read_text().strip()
-        except FileNotFoundError:
-            text = ''
+    for destination in active:
+        entry = previous.get(destination, {})
+        text = checkpoint(state_dir, destination)
         if text:
             seq_id, seq, realtime = parse_cursor(text)
             needed = seq + 1
-        elif previous.get(destination, {}).get('baseline'):
-            seq_id, needed, realtime = parse_cursor(previous[destination]['baseline'])
+        elif entry.get('baseline'):
+            seq_id, needed, realtime = parse_cursor(entry['baseline'])
         else:
             continue
-        if seq_id == oldest_id and needed < oldest_seq:
-            key = f'{seq_id}:{needed}:{oldest_seq}'
-            if key not in previous.get(destination, {}).get('reported', []):
-                found.append((destination, realtime, oldest_time, key))
+        if seq_id != oldest_id or needed >= oldest_seq:
+            continue
+        reported = entry.get('reported_until')
+        if reported and reported[0] == seq_id and reported[1] > needed:
+            if reported[1] >= oldest_seq:
+                continue  # this gap was already reported in full
+            needed, realtime = reported[1], reported[2]
+        found.append((destination, realtime, oldest_time, (seq_id, oldest_seq, oldest_time)))
     return found
 
 
-def set_baselines(state_dir, oldest_cursor, state):
-    """Remember where a reader without a checkpoint starts, so a later loss is visible."""
+def set_baselines(state_dir, oldest_cursor, state, active):
+    """Remember where an active reader without a checkpoint starts, so a later loss is visible.
+
+    An inactive destination keeps its checkpoint; when it is selected again, the collector
+    resumes there, and records rotated out meanwhile are reported as an overrun."""
     if oldest_cursor is None:
         return
-    for destination in DESTINATIONS:
-        checkpoint = Path(state_dir) / f'journal_{destination}' / 'checkpoint.txt'
-        has_checkpoint = checkpoint.exists() and checkpoint.read_text().strip()
-        entry = state.setdefault(destination, {'count': 0, 'reported': []})
-        if has_checkpoint:
+    for destination in active:
+        entry = state.setdefault(destination, {'count': 0})
+        if checkpoint(state_dir, destination):
             entry.pop('baseline', None)
         elif not entry.get('baseline'):
             entry['baseline'] = oldest_cursor
@@ -156,22 +175,56 @@ def save_state(path, state):
     temporary.replace(path)
 
 
-def report_overruns(state_dir):
-    """Print one record per new gap and return the cumulative counts."""
+def report_overruns(state_dir, active):
+    """Print one record per new gap and return the cumulative counts of the active destinations."""
     state_file = Path(state_dir) / 'overrun-state.json'
     state = load_state(state_file)
     oldest = oldest_entry()
-    for destination, lost_from, lost_until, key in overruns(state_dir, oldest, state):
-        entry = state.setdefault(destination, {'count': 0, 'reported': []})
+    for destination, lost_from, lost_until, boundary in overruns(state_dir, oldest, state, active):
+        entry = state.setdefault(destination, {'count': 0})
         entry['count'] += 1
-        entry['reported'] = (entry['reported'] + [key])[-20:]
+        entry['reported_until'] = list(boundary)
+        if not checkpoint(state_dir, destination):
+            # Without a checkpoint the reader starts at the oldest remaining entry; measure
+            # its unconfirmed age from there, not from the rotated-out baseline (GEM-LP2-002).
+            entry['baseline'] = oldest
         print(json.dumps({'collector_schema': COLLECTOR_SCHEMA, 'timestamp': now(), 'level': 'warn',
                           'event': 'collector.journal_overrun', 'destination': destination,
                           'lost_from': iso(lost_from), 'lost_until': iso(lost_until),
                           'overrun_count': entry['count']}, sort_keys=True), flush=True)
-    set_baselines(state_dir, oldest, state)
+    set_baselines(state_dir, oldest, state, active)
     save_state(state_file, state)
-    return {d: state.get(d, {}).get('count', 0) for d in DESTINATIONS}
+    return {d: state.get(d, {}).get('count', 0) for d in active}
+
+
+def drain(state_dir, active, timeout, poll=0.5):
+    """Wait until every active reader has confirmed delivery up to the newest journal entry
+    present now, so the collector can be stopped without unconfirmed in-flight records.
+
+    On SIGTERM the collector flushes what it has read, but its checkpoint only covers
+    deliveries confirmed before the stop, so a restart would resend the rest (CX-LP2-001).
+    Bounded by `timeout`: a failing destination is not waited for beyond it; its
+    undelivered records stay in the journal and are sent once after the next start."""
+    target = newest_entry()
+    began = time.monotonic()
+    result = {}
+    if target is None:
+        return {d: {'drained': True, 'waited_seconds': 0} for d in active}
+    target_id, target_seq, _ = parse_cursor(target)
+    pending = set(active)
+    while pending and time.monotonic() - began < timeout:
+        for destination in sorted(pending):
+            text = checkpoint(state_dir, destination)
+            if text:
+                seq_id, seq, _ = parse_cursor(text)
+                if seq_id != target_id or seq >= target_seq:
+                    result[destination] = {'drained': True, 'waited_seconds': round(time.monotonic() - began, 1)}
+                    pending.discard(destination)
+        if pending:
+            time.sleep(poll)
+    for destination in pending:
+        result[destination] = {'drained': False, 'waited_seconds': round(time.monotonic() - began, 1)}
+    return result
 
 
 def counters(text):
@@ -197,19 +250,36 @@ def counters(text):
     return {d: {k: int(v) for k, v in e.items()} for d, e in totals.items()}
 
 
+def active_destinations(config):
+    try:
+        return [d for d in DESTINATIONS if d in json.loads(Path(config).read_text())['sinks']]
+    except (OSError, ValueError, KeyError):
+        return []
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Collector loss visibility records.')
-    parser.add_argument('moment', choices=('start', 'periodic'))
+    parser.add_argument('moment', choices=('start', 'periodic', 'drain'))
     parser.add_argument('--state', default='/var/lib/server2-logs', help='collector state directory')
     parser.add_argument('--config', default='/run/server2-logs/vector.json', help='rendered collector configuration')
+    parser.add_argument('--timeout', type=float, default=75, help='drain: seconds to wait for confirmations')
     args = parser.parse_args(argv)
+    active = active_destinations(args.config)
+    if args.moment == 'drain':
+        try:
+            result = drain(args.state, active, args.timeout)
+        except (OSError, ValueError, KeyError, JournalError, subprocess.TimeoutExpired) as exc:
+            result, error = None, type(exc).__name__
+        complete = result is not None and all(r['drained'] for r in result.values())
+        record = {'collector_schema': COLLECTOR_SCHEMA, 'timestamp': now(), 'level': 'info' if complete else 'warn',
+                  'event': 'collector.drained', 'destinations': result}
+        if result is None:
+            record['error'] = error
+        print(json.dumps(record, sort_keys=True), flush=True)
+        return 0  # never block the stop; the record says what was not confirmed
     try:
-        active = [d for d in DESTINATIONS if d in json.loads(Path(args.config).read_text())['sinks']]
-    except (OSError, ValueError, KeyError):
-        active = []
-    try:
-        overrun_counts = report_overruns(args.state)
-    except (OSError, ValueError, KeyError) as exc:
+        overrun_counts = report_overruns(args.state, active)
+    except (OSError, ValueError, KeyError, JournalError, subprocess.TimeoutExpired) as exc:
         print(f'server2 log collector: overrun check failed ({type(exc).__name__})', file=sys.stderr)
         overrun_counts = None
     if args.moment == 'start':
@@ -233,7 +303,7 @@ def main(argv=None):
         entry['journal_overruns'] = overrun_counts.get(destination) if overrun_counts is not None else None
         try:
             entry['unshipped_seconds'] = unshipped_seconds(args.state, destination, previous, now_usec)
-        except (OSError, ValueError, KeyError):
+        except (OSError, ValueError, KeyError, JournalError, subprocess.TimeoutExpired):
             entry['unshipped_seconds'] = None
         entry['behind'] = entry['unshipped_seconds'] is None or entry['unshipped_seconds'] > BEHIND_SECONDS[destination]
         destinations[destination] = entry

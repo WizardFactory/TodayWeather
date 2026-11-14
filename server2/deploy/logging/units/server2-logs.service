@@ -21,12 +21,17 @@ ExecCondition=+/usr/bin/python3 -I /opt/server2/logging/render.py --env-file /op
 # "+": root reads the checkpoints and the journal to report records rotated away
 # before they were shipped (status.py, LP-2).
 ExecStartPre=+/usr/bin/python3 -I /opt/server2/logging/status.py start --state /var/lib/server2-logs
-ExecStart=/opt/server2/logging/vector --config /run/server2-logs/vector.json
+ExecStart=/opt/server2/logging/vector --config /run/server2-logs/vector.json --graceful-shutdown-limit-secs 20
+# Stop: wait (at most 75 s, about one S3 object window) until every destination has
+# confirmed delivery up to the journal's end, then stop. This ships the server's final
+# records and avoids resending records on the next start (LP-2, #2979).
+ExecStop=+/usr/bin/python3 -I /opt/server2/logging/status.py drain --state /var/lib/server2-logs --timeout 75
 # Restart after a crash (signal, timeout), not after an exit code: invalid settings
 # (255 from render.py, 78 from Vector) stay failed until the settings change.
 Restart=on-abnormal
 RestartSec=5
-TimeoutStopSec=30
+# drain 75 s + collector shutdown 20 s + margin
+TimeoutStopSec=100
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

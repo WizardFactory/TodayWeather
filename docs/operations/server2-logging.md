@@ -85,12 +85,13 @@ The installer checks the collector archive's SHA-256 against [`collector.json`](
 | Path | Purpose |
 | --- | --- |
 | `/etc/systemd/system/server2.service` | The server: `/opt/server2/bin/server2` in `/opt/server2/config` (where its `.env` is read). Output goes to the `server2` journal namespace with journal rate limiting off. It is ordered after the collector without requiring it, so a shutdown stops the server first and the server starts when the collector is missing or rejected. |
-| `/etc/systemd/system/server2-logs.service` | The collector. Its start condition runs `render.py`; the collector itself (Vector) runs as a dynamic user in the `systemd-journal` group. |
+| `/etc/systemd/system/server2-logs.service` | The collector. Its start condition runs `render.py` and `status.py start` (overrun check); the collector itself (Vector) runs as a dynamic user in the `systemd-journal` group; its stop runs `status.py drain`. |
+| `/etc/systemd/system/server2-logs-status.{service,timer}` | Status record every 60 s while the collector runs (LP-2). |
 | `/etc/systemd/journald@server2.conf` | The local copy: persistent, compressed, capped at 1 GiB, no rate limit. |
 | `/etc/systemd/journald.conf.d/server2-system.conf` | Caps the system journal at 512 MiB, so host logs stay within the 2 GiB log budget of [`prerequisites.json`](../../server2/deploy/staging/prerequisites.json). |
-| `/opt/server2/logging/` | `vector`, `render.py`, `collector.json`. |
+| `/opt/server2/logging/` | `vector`, `render.py`, `status.py`, `collector.json`. |
 
-It enables both units and starts neither. The server binary and its `.env` come from the release procedure.
+It enables the server, the collector and the status timer, and starts only the timer, which does nothing while the collector is stopped. The server binary and its `.env` come from the release procedure.
 
 ### Select destinations
 
@@ -159,7 +160,7 @@ The templates and their checks are local: `test_logging.py` fails on any grant b
 Each remote destination has its own journal reader, filter and checkpoint, so its level and progress are independent of the other destination. A destination receives:
 
 - server records (`server2.service`) that are schema-1 NDJSON with `level` at or above the destination's level, as the original line, unchanged;
-- collector records (`server2-logs.service`) in the collector record format, at every level.
+- collector records (`server2-logs.service`, `server2-logs-status.service`) in the collector record format, at every level.
 
 Everything else stays in the local journal only: the stdout readiness line, any line that is not schema-1 NDJSON (for example a runtime abort message) and the collector's own diagnostics.
 
@@ -176,10 +177,9 @@ The **collector record format** is one JSON object per line with `"collector_sch
 - CloudWatch stream: `<source>/<instance-id>/<boot-id>`
 - S3 key: `<prefix>/<source>/dt=<YYYY-MM-DD>/hour=<HH>/<instance-id>/<boot-id>-<YYYYMMDDTHHMMSSZ>-<uuid>.ndjson.gz`, gzip, one record per line. Records are partitioned by their own time; an S3 object is closed at least every 60 seconds.
 
-### Limits of this slice
+### Stop behaviour and remaining limits
 
-- **Final records at shutdown.** On SIGTERM the collector stops reading the journal at once, so records written just before a shutdown stay in the local journal only (observed in the smoke: every record from the last 41 ms before the collector's stop). The ordered stop and drain that ship them belong to LP-4 (#2981).
-- **Restart after a stop: at least once.** On SIGTERM the collector flushes what it has read, but its checkpoint is written only for deliveries acknowledged before the stop. Measured (2026-11-14): after a stop a few seconds into a run, the next start resent 15 of 20 records to S3 under new keys; nothing is overwritten. Records are unique per line (nanosecond timestamp, trace and operation IDs), so remove duplicates when reading (`sort -u`, or by `trace_id`, `operation_id`, `event` and `timestamp`). Recovery from a destination outage without a restart delivered exactly once (LP-2 check). The stop drain of LP-4 (#2981) addresses the restart case.
+- **Stop drain (LP-2).** On SIGTERM the collector stops reading the journal at once, and its checkpoint covers only deliveries confirmed before the stop. LP-1 therefore lost the final records at a shutdown (in the LP-1 smoke, every record from the last 41 ms) and resent records after a restart (15 of 20 in a measurement). The collector's stop now first waits, for at most 75 s, until every destination has confirmed everything up to the journal's end (`status.py drain`), and writes a `collector.drained` record. With that, a stop ships the server's final records, and a restart resends nothing (LP-2 check). A stop therefore takes up to about one S3 object window, 60 s, or 75 s plus 20 s when a destination is failing. If a destination is still failing after 75 s, the stop proceeds; its unconfirmed records stay in the journal and are sent once after the next start, and the `collector.drained` record is `warn`. The Spot time budget is LP-4's (#2981).
 - **Identity and credentials.** The instance ID is the machine ID and credentials come from the default AWS chain (the instance role on EC2) until LP-3 (#2980).
 
 ### Loss, redelivery and counters
@@ -197,8 +197,8 @@ LP-2 ([#2979](https://github.com/WizardFactory/TodayWeather/issues/2979)).
   ```
 
   Every gap is reported once, and the count per destination is kept in the collector's state directory. The range covers entries the reader never saw; they can include the collector's own diagnostics, which are never shipped. A reader with no acknowledged delivery yet is compared against the position it started from.
-- **Counters.** The collector serves Prometheus counters on `127.0.0.1:9598` only (`curl -s http://127.0.0.1:9598/metrics` on the host). Per destination (`component_id="s3"` or `"cloudwatch"`), loss shows in `vector_component_errors_total` (failed requests, retried), `vector_component_discarded_events_total{intentional="false"}` and `vector_buffer_discarded_events_total` (records dropped). `intentional="true"` on `select_*` counts records below the destination's level, which is filtering, not loss. The counters restart at zero with the collector.
-- **Status record.** Every 60 s while the collector runs, `server2-logs-status.timer` writes one collector record, which is shipped to every destination:
+- **Counters.** The collector serves Prometheus counters on `127.0.0.1:9598` only (`curl -s http://127.0.0.1:9598/metrics` on the host). Per destination (`component_id="s3"` or `"cloudwatch"`), loss shows in `vector_component_errors_total` (requests that failed after the collector gave up retrying), `vector_component_discarded_events_total{intentional="false"}` and `vector_buffer_discarded_events_total` (records dropped). `intentional="true"` on `select_*` counts records below the destination's level, which is filtering, not loss. The counters restart at zero with the collector.
+- **Status record.** Every 60 s while the collector runs (a tick during a collector stop or restart is skipped), `server2-logs-status.timer` writes one collector record, which is shipped to every destination:
 
   ```json
   {"collector_schema": 1, "event": "collector.status", "level": "warn", "metrics_available": true,
@@ -246,7 +246,7 @@ The collector is [Vector](https://github.com/vectordotdev/vector) 0.61.0 (MPL-2.
 | Reads the journal of selected units | Yes: the `journald` source with `journal_namespace` and `include_units`, as a dynamic user in `systemd-journal`. On systemd 250–257 (Ubuntu 24.04: 255, Amazon Linux 2023: 252) Vector rejects reading previous boots (`current_boot_only: false`), so each reader covers the current boot only. LP-3 must handle the backlog left by a previous boot on a surviving disk. |
 | Destinations from variables | Not natively: Vector cannot switch sinks by environment and ignores the AWS SDK's `AWS_ENDPOINT_URL_*` variables. `render.py` validates the variables and writes the configuration; endpoints follow from the region only. |
 | Minimal permissions | With health checks off: S3 `PutObject`; CloudWatch Logs `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. The CloudWatch sink calls `DescribeLogStreams` before writing, so the role template allows it. No bucket listing, no `DescribeLogGroups`, no group creation. |
-| Flush at stop | 0.02–0.24 s with up to 569 journal lines (stop of the collector after the server); the bound under a two-minute notice belongs to LP-4. |
+| Flush at stop | Without a drain, 0.02–0.24 s but unconfirmed (LP-1). With LP-2's stop drain, a stop waits for confirmation: 57–60 s with an open S3 object, about 0.1 s with CloudWatch only. The bound under a two-minute notice belongs to LP-4. |
 | Memory | Peak resident set 70–77 MiB with one or two destinations. |
 
 ### Verify the pipeline

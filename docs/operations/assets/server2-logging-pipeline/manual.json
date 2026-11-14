@@ -25,7 +25,7 @@
     },
     {
       "title": "Where records arrive",
-      "instruction": "Serve requests, then stop the server and, a few seconds later, the collector (until LP-4 adds a drain step, stopping both at once can leave the server's last records in the local journal only). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
+      "instruction": "Serve requests, then stop the server and the collector (systemctl stop server2.service server2-logs.service stops the server first). The collector's stop waits until every destination has confirmed the records (up to about 60 s for an open S3 object). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
       "screenshot": "3b-delivered.png",
       "caption": "S3 keys and CloudWatch streams carry the source (server or collector), the host ID and the boot ID; S3 keys also carry the UTC date and hour and a unique suffix.",
       "expected": "Server and collector records are kept apart, and records from different hosts or boots never share a stream or key."

@@ -308,7 +308,7 @@
       "title": "Host pipeline",
       "items": [
         "A start check reads only SERVER2_LOG_* and bucket/region; local alone skips the collector, invalid settings fail it.",
-        "The server does not require the collector; a shutdown stops the server first.",
+        "The server does not require the collector; a shutdown stops the server first, then the collector drains until delivery is confirmed (at most 75 s).",
         "Each remote destination has its own journal reader, level filter and checkpoint.",
         "Only schema-1 server records at or above the level, and collector records, leave the host.",
         "Loss is visible per destination: status records, overrun records and loopback counters (LP-2)."

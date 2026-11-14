@@ -497,24 +497,24 @@ class StatusTest(unittest.TestCase):
     def test_gap_after_the_checkpoint_is_an_overrun(self):
         with tempfile.TemporaryDirectory() as directory:
             self.state(directory, s3=_cursor(100, 1_000), cloudwatch=_cursor(199, 2_000))
-            found = status.overruns(directory, _cursor(200, 5_000), {})
+            found = status.overruns(directory, _cursor(200, 5_000), {}, ('s3', 'cloudwatch'))
             self.assertEqual([(d, a, b) for d, a, b, _ in found], [('s3', 1_000, 5_000)])  # cloudwatch needs 200: no gap
 
     def test_no_gap_when_the_next_entry_is_still_there_or_ids_differ(self):
         with tempfile.TemporaryDirectory() as directory:
             self.state(directory, s3=_cursor(199, 1_000), cloudwatch=_cursor(10, 1_000, seq_id='c' * 32))
-            self.assertEqual(status.overruns(directory, _cursor(200, 5_000), {}), [])
-            self.assertEqual(status.overruns(directory, None, {}), [])
+            self.assertEqual(status.overruns(directory, _cursor(200, 5_000), {}, ('s3', 'cloudwatch')), [])
+            self.assertEqual(status.overruns(directory, None, {}, ('s3', 'cloudwatch')), [])
 
     def test_reader_without_checkpoint_uses_the_baseline(self):
         with tempfile.TemporaryDirectory() as directory:
             state = {}
-            status.set_baselines(directory, _cursor(50, 900), state)
+            status.set_baselines(directory, _cursor(50, 900), state, ('s3', 'cloudwatch'))
             self.assertEqual(state['s3']['baseline'], _cursor(50, 900))
-            found = status.overruns(directory, _cursor(80, 5_000), state)
+            found = status.overruns(directory, _cursor(80, 5_000), state, ('s3', 'cloudwatch'))
             self.assertEqual(sorted(d for d, *_ in found), ['cloudwatch', 's3'])
             self.state(directory, s3=_cursor(90, 6_000))
-            status.set_baselines(directory, _cursor(95, 7_000), state)
+            status.set_baselines(directory, _cursor(95, 7_000), state, ('s3', 'cloudwatch'))
             self.assertNotIn('baseline', state['s3'])
 
     def test_each_gap_is_reported_once_and_counted(self):
@@ -522,8 +522,8 @@ class StatusTest(unittest.TestCase):
             self.state(directory, s3=_cursor(100, 1_000))
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                first = status.report_overruns(directory)
-                second = status.report_overruns(directory)
+                first = status.report_overruns(directory, ('s3', 'cloudwatch'))
+                second = status.report_overruns(directory, ('s3', 'cloudwatch'))
             records = [json.loads(l) for l in out.getvalue().splitlines()]
             self.assertEqual(len(records), 1)
             self.assertEqual((records[0]['event'], records[0]['destination'], records[0]['level']),
@@ -531,6 +531,83 @@ class StatusTest(unittest.TestCase):
             self.assertLess(records[0]['lost_from'], records[0]['lost_until'])
             self.assertEqual(first['s3'], 1)
             self.assertEqual(second['s3'], 1)
+
+    def test_a_moving_journal_start_reports_only_the_new_part(self):  # CX-LP2-002
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(100, 1_000))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                for oldest in (_cursor(200, 5_000), _cursor(200, 5_000), _cursor(300, 9_000)):
+                    with mock.patch.object(status, 'oldest_entry', return_value=oldest):
+                        counts = status.report_overruns(directory, ('s3',))
+            records = [json.loads(l) for l in out.getvalue().splitlines()]
+            self.assertEqual(len(records), 2)
+            self.assertEqual(records[0]['lost_until'], records[1]['lost_from'])  # continues, no overlap
+            self.assertEqual(counts['s3'], 2)
+
+    def test_an_overrun_moves_the_baseline_of_a_reader_without_checkpoint(self):  # GEM-LP2-002
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(status, 'oldest_entry', return_value=_cursor(50, 900)):
+                status.report_overruns(directory, ('s3',))
+            with mock.patch.object(status, 'oldest_entry', return_value=_cursor(300, 7_000_000)), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                status.report_overruns(directory, ('s3',))
+            self.assertIn('collector.journal_overrun', out.getvalue())
+            state = status.load_state(Path(directory) / 'overrun-state.json')
+            self.assertEqual(state['s3']['baseline'], _cursor(300, 7_000_000))
+            self.assertEqual(status.unshipped_seconds(directory, 's3', state, 10_000_000), 3)
+
+    def test_inactive_destinations_get_no_baseline_or_overrun(self):  # CX-LP2-003
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(100, 1_000))
+            state = {}
+            status.set_baselines(directory, _cursor(50, 900), state, ('s3',))
+            self.assertNotIn('cloudwatch', state)
+            self.assertEqual([d for d, *_ in status.overruns(directory, _cursor(300, 5_000), state, ('s3',))], ['s3'])
+            with mock.patch.object(status, 'oldest_entry', return_value=_cursor(300, 5_000)), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(status.report_overruns(directory, ('s3',)), {'s3': 1})
+            self.assertNotIn('cloudwatch', out.getvalue())
+
+    def test_a_failing_journal_query_is_not_an_empty_one(self):  # CX-LP2-004
+        failing = mock.MagicMock(returncode=1)
+        failing.stdout.readline.return_value = ''
+        with mock.patch.object(status.subprocess, 'Popen', return_value=failing):
+            with self.assertRaises(status.JournalError):
+                status.oldest_entry()
+            with tempfile.TemporaryDirectory() as directory:
+                self.state(directory, s3=_cursor(100, 1_000))
+                with self.assertRaises(status.JournalError):
+                    status.unshipped_seconds(directory, 's3', {}, 10**12)
+        empty = mock.MagicMock(returncode=0)
+        empty.stdout.readline.return_value = ''
+        with mock.patch.object(status.subprocess, 'Popen', return_value=empty):
+            self.assertIsNone(status.oldest_entry())
+
+    def test_drain_waits_for_confirmations_up_to_the_journal_end(self):  # CX-LP2-001
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(150, 1_000), cloudwatch=_cursor(200, 1_000))
+            def advance(seconds):
+                self.state(directory, s3=_cursor(200, 2_000))
+            with mock.patch.object(status, 'newest_entry', return_value=_cursor(200, 2_000)), \
+                    mock.patch.object(status.time, 'sleep', side_effect=advance):
+                result = status.drain(directory, ('s3', 'cloudwatch'), timeout=5)
+            self.assertTrue(result['s3']['drained'])
+            self.assertTrue(result['cloudwatch']['drained'])
+            self.state(directory, s3=_cursor(150, 1_000))
+            with mock.patch.object(status, 'newest_entry', return_value=_cursor(200, 2_000)):
+                result = status.drain(directory, ('s3',), timeout=0.2, poll=0.05)
+            self.assertFalse(result['s3']['drained'])  # bounded: a failing destination is not waited for
+
+    def test_drain_record_never_blocks_the_stop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'vector.json'
+            config.write_text(json.dumps({'sinks': {'s3': {}}}))
+            with mock.patch.object(status, 'newest_entry', side_effect=status.JournalError('x')), \
+                    contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(status.main(['drain', '--state', directory, '--config', str(config)]), 0)
+            record = json.loads(out.getvalue())
+            self.assertEqual((record['event'], record['level']), ('collector.drained', 'warn'))
 
     def test_counters_per_destination(self):
         text = '\n'.join([
@@ -597,7 +674,10 @@ class StatusTest(unittest.TestCase):
         self.assertIn('ExecCondition=/usr/bin/systemctl is-active --quiet server2-logs.service', unit)
         self.assertIn('LogNamespace=server2', unit)
         self.assertIn('OnUnitActiveSec=60', (HERE / 'units' / 'server2-logs-status.timer').read_text())
-        self.assertIn('status.py start', (HERE / 'units' / 'server2-logs.service').read_text())
+        collector = (HERE / 'units' / 'server2-logs.service').read_text()
+        self.assertIn('status.py start', collector)
+        self.assertIn('ExecStop=+/usr/bin/python3 -I /opt/server2/logging/status.py drain', collector)
+        self.assertIn('--graceful-shutdown-limit-secs 20', collector)
         self.assertIn('server2-logs-status.service', render.UNITS)
 
 
