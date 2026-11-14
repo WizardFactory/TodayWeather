@@ -313,6 +313,12 @@ class InstalledFilesTest(unittest.TestCase):
         self.assertNotIn('EnvironmentFile', unit)
         self.assertNotIn('Environment', unit)
 
+    def test_every_namespace_unit_stops_before_its_journal(self):  # LP-4 reboot check
+        for name in ('server2.service', 'server2-logs.service', 'server2-logs-status.service', 'server2-logs-watch.service'):
+            unit = self.unit(name)
+            self.assertEqual(unit['Service']['LogNamespace'], 'server2', name)
+            self.assertIn('systemd-journald@server2.service', unit['Unit']['After'].split(), name)
+
     def test_journal_namespace_is_capped_without_rate_limit(self):
         parser = configparser.ConfigParser()
         parser.read(HERE / 'units' / 'journald@server2.conf')
