@@ -1,0 +1,5 @@
+{
+  "logGroupName": "${LogGroupName}",
+  "logGroupClass": "STANDARD",
+  "retentionInDays": 30
+}

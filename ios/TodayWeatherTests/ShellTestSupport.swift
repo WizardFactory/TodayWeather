@@ -120,8 +120,9 @@ final class HostedView {
     func tap(_ identifier: String) throws {
         let all = elements()
         let ids = all.compactMap { Self.identifier($0) }.filter { !$0.isEmpty }
-        let element = try #require(element(identifier),
-                                   "element \(identifier) among \(all.count): \(ids.prefix(20)) \(all.prefix(8).map { String(describing: type(of: $0)) })")
-        #expect(element.accessibilityActivate(), "activate \(identifier)")
+        // Not named `element`: inside `#require` the local would shadow `element(_:)` (Swift 6.3, Xcode 26.6).
+        let target = try #require(element(identifier),
+                                  "element \(identifier) among \(all.count): \(ids.prefix(20)) \(all.prefix(8).map { String(describing: type(of: $0)) })")
+        #expect(target.accessibilityActivate(), "activate \(identifier)")
     }
 }

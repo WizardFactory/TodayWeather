@@ -1,0 +1,19 @@
+{
+  "collector": "vector",
+  "version": "0.61.0",
+  "license": "MPL-2.0",
+  "source": "https://github.com/vectordotdev/vector/releases/tag/v0.61.0",
+  "selected": "2026-11-14, issue #2978",
+  "artifacts": {
+    "aarch64": {
+      "url": "https://github.com/vectordotdev/vector/releases/download/v0.61.0/vector-0.61.0-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "12d7e91db2e447003558c955c4f510b17ed1d77340757f3e591e5222e464675c",
+      "binary": "./vector-aarch64-unknown-linux-musl/bin/vector"
+    },
+    "x86_64": {
+      "url": "https://github.com/vectordotdev/vector/releases/download/v0.61.0/vector-0.61.0-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "e1609b8a55ef1c1fc4fd88633e2bc6366e9a4022f6f1ae846cadd27af5237621",
+      "binary": "./vector-x86_64-unknown-linux-musl/bin/vector"
+    }
+  }
+}

@@ -105,6 +105,10 @@ def main():
     # artifact tests; inserted last so the positional inserts above keep their order.
     commands.insert(commands.index([sys.executable, 'tools/test_verify_artifact.py']) + 1,
                     [sys.executable, 'tools/verification/test_kma_client_validation.py'])
+    # #2978 log pipeline: settings, rendering and unit files, offline. The systemd and
+    # collector behaviour is checked by deploy/logging/linux_check.py in a disposable VM.
+    commands.insert(commands.index([sys.executable, 'tools/test_verify_artifact.py']) + 1,
+                    [sys.executable, 'deploy/logging/test_logging.py'])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)
 

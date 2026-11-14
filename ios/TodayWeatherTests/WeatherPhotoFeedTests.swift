@@ -53,7 +53,8 @@ struct WeatherPhotoFeedTests {
 
     @Test func aSlowRequestGetsTwoMoreAttemptsAGapApart() async {
         let script = Script([.hang, .hang, .hang])
-        let result = await firstSettled(attempts: 3, gap: .milliseconds(200), timeout: .milliseconds(900)) {
+        // The third attempt starts at 400 ms, long before the first attempt's timeout at 3 s.
+        let result = await firstSettled(attempts: 3, gap: .milliseconds(200), timeout: .seconds(3)) {
             try await script.get(self.url)
         }
         #expect(script.attempts == 3)
@@ -64,17 +65,19 @@ struct WeatherPhotoFeedTests {
     }
 
     @Test func aFastFailureEndsTheLoadWithoutRetrying() async {
-        let script = Script([.fail(.milliseconds(20))])
-        let result = await firstSettled(attempts: 3, gap: .milliseconds(300), timeout: .seconds(5)) { try await script.get(self.url) }
+        // The gap is far above the failure's delay, so a busy CI runner cannot start the second attempt first.
+        let script = Script([.fail(.milliseconds(10))])
+        let result = await firstSettled(attempts: 3, gap: .seconds(5), timeout: .seconds(10)) { try await script.get(self.url) }
         #expect(script.attempts == 1)
         #expect((try? result.get()) == nil)
     }
 
     @Test func theFirstAttemptToAnswerWinsAndTheOthersAreCancelled() async {
-        let script = Script([.answer(.milliseconds(500)), .hang, .hang])
-        let result = await firstSettled(attempts: 3, gap: .milliseconds(300), timeout: .seconds(5)) { try await script.get(self.url) }
+        // The answer at 1.5 s comes 0.5 s after the second attempt and 0.5 s before the third would start.
+        let script = Script([.answer(.milliseconds(1500)), .hang, .hang])
+        let result = await firstSettled(attempts: 3, gap: .seconds(1), timeout: .seconds(10)) { try await script.get(self.url) }
         #expect((try? result.get()) == Self.feedBody)
-        #expect(script.attempts == 2, "the second attempt started at 300 ms; the third never did")
+        #expect(script.attempts == 2, "the second attempt started at 1 s; the third never did")
         #expect(script.cancelledAttempts == [2])
     }
 
