@@ -48,7 +48,7 @@ jobs:
   build:
     name: Build and test (with client import check)
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,7 +72,7 @@ jobs:
   standalone:
     name: Build and test without client/, android/ and the legacy iOS directories
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Remove the directories the iOS build must not read
