@@ -84,10 +84,11 @@
                 return {
                     restrict: 'E',
                     scope: {},
-                    template: '<div class="card tw-tracking-notice" ng-if="view().notice">' +
+                    // The theme styles .card of these pages; the inner block carries this notice's own spacing.
+                    template: '<div class="card tw-tracking-notice" ng-if="view().notice"><div class="tw-tracking-body">' +
                         "<p>{{'LOC_TRACKING_NOTICE'|translate}}</p>" +
                         '<button class="button button-small button-outline tw-tracking-settings" ng-click="open()">' +
-                        "{{'LOC_TRACKING_OPEN_SETTINGS'|translate}}</button></div>",
+                        "{{'LOC_TRACKING_OPEN_SETTINGS'|translate}}</button></div></div>",
                     link: function (scope) {
                         scope.view = function () { return visibility(tracking.state.status); };
                         scope.open = tracking.openSettings;
