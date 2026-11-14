@@ -103,10 +103,13 @@ test('the status is read on start, resume, activation, banner results and page c
     }
     s.calls.length = 0; s.rootHandlers['$ionicView.enter']();
     assert.deepEqual(s.calls, [['emiAdmobPlugin', 'twAdPrivacyState', []]]);
+    // A failed or unknown answer clears a row or notice shown before (Gemini G1-02).
     const failed = service({status: 'error'});
+    failed.tracking.state.status = 'denied';
     failed.docHandlers.deviceready();
     assert.equal(failed.tracking.state.status, 'unavailable');
     const unknown = service({status: 'new_status'});
+    unknown.tracking.state.status = 'authorized';
     unknown.docHandlers.deviceready();
     assert.equal(unknown.tracking.state.status, 'unavailable');
 });
