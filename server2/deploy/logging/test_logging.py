@@ -599,6 +599,27 @@ class StatusTest(unittest.TestCase):
                 result = status.drain(directory, ('s3',), timeout=0.2, poll=0.05)
             self.assertFalse(result['s3']['drained'])  # bounded: a failing destination is not waited for
 
+    def test_drain_needs_the_same_journal_sequence(self):  # CX-LP2-008
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(500, 1_000, seq_id='c' * 32))
+            with mock.patch.object(status, 'newest_entry', return_value=_cursor(200, 2_000)):
+                self.assertFalse(status.drain(directory, ('s3',), timeout=0.2, poll=0.05)['s3']['drained'])
+
+    def test_one_deadline_covers_the_lookup_and_the_wait(self):  # CX-LP2-009
+        clock = [0.0]
+        def slow_lookup(timeout):
+            self.assertLessEqual(timeout, 75)
+            clock[0] += 30  # a slow journal lookup
+            return _cursor(200, 2_000)
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(status.time, 'monotonic', side_effect=lambda: clock[0]), \
+                mock.patch.object(status.time, 'sleep', side_effect=lambda s: clock.__setitem__(0, clock[0] + s)), \
+                mock.patch.object(status, 'newest_entry', side_effect=slow_lookup):
+            result = status.drain(directory, ('s3',), timeout=75, poll=5)
+        self.assertFalse(result['s3']['drained'])
+        self.assertLessEqual(clock[0], 75)
+        self.assertLessEqual(result['s3']['waited_seconds'], 75)
+
     def test_drain_record_never_blocks_the_stop(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / 'vector.json'

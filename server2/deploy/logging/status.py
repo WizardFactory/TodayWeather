@@ -79,9 +79,9 @@ def oldest_entry(namespace='server2'):
     return _first_cursor([f'--namespace={namespace}'])
 
 
-def newest_entry(namespace='server2'):
+def newest_entry(namespace='server2', timeout=30):
     result = subprocess.run(['journalctl', f'--namespace={namespace}', '-o', 'json', '--output-fields=__CURSOR', '-n', '1'],
-                            capture_output=True, text=True, timeout=30)
+                            capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise JournalError('journalctl failed')
     lines = [l for l in result.stdout.splitlines() if l.strip()]
@@ -203,25 +203,27 @@ def drain(state_dir, active, timeout, poll=0.5):
 
     On SIGTERM the collector flushes what it has read, but its checkpoint only covers
     deliveries confirmed before the stop, so a restart would resend the rest (CX-LP2-001).
-    Bounded by `timeout`: a failing destination is not waited for beyond it; its
-    undelivered records stay in the journal and are sent once after the next start."""
-    target = newest_entry()
+    One deadline covers the target lookup and the wait (CX-LP2-009). Only a checkpoint
+    with the target's sequence ID can confirm it (CX-LP2-008). A failing destination is
+    not waited for beyond the deadline; its undelivered records stay in the journal."""
+    deadline = time.monotonic() + timeout
     began = time.monotonic()
-    result = {}
+    target = newest_entry(timeout=max(1.0, deadline - time.monotonic()))
     if target is None:
-        return {d: {'drained': True, 'waited_seconds': 0} for d in active}
+        return {d: {'drained': True, 'waited_seconds': round(time.monotonic() - began, 1)} for d in active}
     target_id, target_seq, _ = parse_cursor(target)
-    pending = set(active)
-    while pending and time.monotonic() - began < timeout:
+    result, pending = {}, set(active)
+    while pending:
         for destination in sorted(pending):
             text = checkpoint(state_dir, destination)
             if text:
                 seq_id, seq, _ = parse_cursor(text)
-                if seq_id != target_id or seq >= target_seq:
+                if seq_id == target_id and seq >= target_seq:
                     result[destination] = {'drained': True, 'waited_seconds': round(time.monotonic() - began, 1)}
                     pending.discard(destination)
-        if pending:
-            time.sleep(poll)
+        if not pending or time.monotonic() >= deadline:
+            break
+        time.sleep(min(poll, max(0.0, deadline - time.monotonic())))
     for destination in pending:
         result[destination] = {'drained': False, 'waited_seconds': round(time.monotonic() - began, 1)}
     return result
