@@ -45,7 +45,7 @@ These are candidate selections, not submitted answers. Collection includes SDK b
 | Crash/performance diagnostics | Collected by enabled SDKs | Final archive privacy report and account retention |
 | Support contact/content | Review optional-disclosure criteria before selection | Final inbox and support process; no in-app account registration |
 | Linked to user (Apple) | Include data associated with device identifiers; lack of login is insufficient | Final per-data-type treatment |
-| Tracking (Apple) | Yes, after ATT permission: Device ID (advertising identifier) used by AdMob for third-party advertising and measurement | Allow, and the `denied` state after switching tracking off in Settings, verified on a device on 2026-11-13; a direct decline in the prompt and the Xcode privacy report of the final archive remain (#2945) |
+| Tracking (Apple) | Yes, after ATT permission: Device ID (advertising identifier) used by AdMob for third-party advertising and measurement | Allow (2026-11-13) and a direct decline after a fresh install (2026-11-15) verified on a device; answers published with 1.1.2; the Xcode privacy report of the final archive remains (#2945) |
 | Shared (Play) | AdMob sharing must be included | Assess service-provider exceptions per recipient instead of applying them to every SDK |
 | Ephemeral-only location | Not established | URL logs, caches and stored push coordinates prevent a blanket assertion |
 | All data encrypted in transit | Not verified | Recheck every user-data network hop |
@@ -89,8 +89,8 @@ iPhone the explainer came before the system prompt, the prompt showed the Korean
 `authorized` with a personalized request, turning tracking off gave `denied` with `npa=1`, no second prompt appeared,
 and a 1.1.1 build without a purpose string showed no prompt and kept running.
 
-Remaining gates: a direct "Ask App Not to Track" answer in the prompt; a fresh-install run; whether the ATT alert
-follows a refused GDPR message; the App Store privacy answers. The updated policy pages were uploaded on 2026-11-13
+The App Store privacy answers were published on 2026-11-13 and 1.1.2 was approved. Remaining gate: whether the ATT
+alert follows a refused GDPR message. The updated policy pages were uploaded on 2026-11-13
 ([record](../evidence/tasks/issue-2945/README.md#policy-page-upload-2026-11-13)).
 
 ## Decisions and remaining publication gates

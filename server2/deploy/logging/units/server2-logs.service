@@ -25,10 +25,15 @@ ExecStart=/opt/server2/logging/vector --config /run/server2-logs/vector.json --g
 # Stop: wait (at most 75 s, about one S3 object window) until every destination has
 # confirmed delivery up to the journal's end, then stop. This ships the server's final
 # records and avoids resending records on the next start (LP-2, #2979).
-ExecStop=+/usr/bin/python3 -I /opt/server2/logging/status.py drain --state /var/lib/server2-logs --timeout 75
+# ${MAINPID} is empty when the collector already exited by itself: then nothing is waited for.
+ExecStop=+/usr/bin/python3 -I /opt/server2/logging/status.py drain --state /var/lib/server2-logs --timeout 75 --main-pid=${MAINPID}
 # Restart after a crash (signal, timeout), not after an exit code: invalid settings
 # (255 from render.py, 78 from Vector) stay failed until the settings change.
 Restart=on-abnormal
+# Vector also exits with status 0 after an error it cannot handle (observed: an
+# unreadable checkpoint); restart then too, so an unattended host does not stay without
+# a collector. A requested stop is never restarted.
+RestartForceExitStatus=0
 RestartSec=5
 # drain 75 s + collector shutdown 20 s + margin
 TimeoutStopSec=100

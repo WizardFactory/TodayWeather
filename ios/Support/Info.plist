@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- The weather photo feed of the photo theme (IN-07): TW_WEATHER_PHOTOS_URL, a private build input (the Cordova
+	     clientConfig.weatherPhotosUrl). Empty without it: the photo theme then shows no photo and nothing is requested. -->
+	<key>TWWeatherPhotosURL</key>
+	<string>$(TW_WEATHER_PHOTOS_URL)</string>
+	<!-- The status bar style is the application's, as in the Cordova build (cordova-plugin-statusbar): the shell sets
+	     it per theme and tab (IN-07, StatusBar.swift). -->
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 	<!-- Analytics defaults of the Cordova build (client/config.xml, iOS platform block), merged into the
 	     generated Info.plist. AnalyticsGuard also turns collection off before Firebase starts. -->
 	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
