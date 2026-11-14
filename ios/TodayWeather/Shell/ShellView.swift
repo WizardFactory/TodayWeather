@@ -43,13 +43,15 @@ struct RootView: View {
             if let shell = launch.shell {
                 switch shell.screen {
                 case .start: StartPlaceholder(model: shell)
-                case .tab: ShellView(model: shell)
+                case .tab: ShellView(model: shell, banner: Monetization.shared.bannerView)
                 }
             } else {
                 SplashView()
             }
         }
-        .task { launch.start() }
+        // IN-15: the banner's session starts with the window, and a new width loads a new banner.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { Monetization.shared.windowWidthChanged($0) }
+        .task { launch.start(); Monetization.shared.uiStarted() }
     }
 }
 
@@ -114,8 +116,9 @@ struct ShellView: View {
     let model: ShellModel
     /// The page of a tab; IN-08 and later give it. Nil: the shell's default.
     var content: ((ShellTab) -> TabContent)? = nil
-    /// The banner while it shows (IN-15). The slot is under the tab bar, above the home indicator; where the Cordova
-    /// banner sits is IN-15's to measure.
+    /// The banner while it shows (IN-15). The slot is under the tab bar, above the home indicator, as the AdMob plugin
+    /// put it (`EmiBannerManager.updateBannerLayout`: the WebView ends at the banner's top, the banner sits on the
+    /// home indicator's inset, black below and beside it).
     var banner: AnyView? = nil
 
     var body: some View {
@@ -135,6 +138,14 @@ struct ShellFrame: View {
     let insets: ShellInsets
     var content: ((ShellTab) -> TabContent)? = nil
     var banner: AnyView? = nil
+    /// The banner with the strip below it (IN-15).
+    @State private var bannerHeight: CGFloat = 0
+
+    /// The insets inside the WebView: with a banner the WebView no longer reaches the home indicator.
+    private var webViewInsets: ShellInsets {
+        banner == nil ? insets : ShellInsets(statusBar: insets.statusBar, top: insets.top, bottom: 0, leading: insets.leading,
+                                             trailing: insets.trailing)
+    }
 
     var body: some View {
         let colors = ShellColors.of(model.theme, tab: model.selected)
@@ -149,25 +160,28 @@ struct ShellFrame: View {
                     HeaderBar(colors: colors, title: tab.title, insets: insets, onMenu: model.openMenu) { tab.actions }
                 }
                 .frame(maxHeight: .infinity)
-                TabBar(selected: model.selected, colors: colors, catalog: catalog,
-                       insets: banner == nil ? insets : ShellInsets(statusBar: 0, top: 0, bottom: 0, leading: insets.leading,
-                                                                    trailing: insets.trailing),
+                TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
                        onTap: model.tapTab)
                 if let banner {
-                    banner.frame(maxWidth: .infinity).padding(.bottom, insets.bottom)
+                    // IN-15: black below the banner, over the home indicator's inset (the plugin's root view).
+                    banner.frame(maxWidth: .infinity).padding(.bottom, insets.bottom).background(Color.black)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bannerHeight = $0 }
                         .accessibilityIdentifier("shell-banner")
                 }
             }
             // The menu covers the WebView's area; the status bar keeps the tab's color (Cordova does not change it).
+            // With a banner the WebView, and so the menu and the popups, end at the banner's top (IN-15).
             GeometryReader { area in
-                SideMenu(model: model, catalog: catalog, insets: insets)
+                SideMenu(model: model, catalog: catalog, insets: webViewInsets)
                     .offset(x: model.menuOpen ? 0 : -area.size.width)
                     .animation(.easeInOut(duration: 0.2), value: model.menuOpen)
                     .accessibilityHidden(!model.menuOpen)
             }
             .padding(.top, insets.statusBar)
+            .padding(.bottom, banner == nil ? 0 : bannerHeight)
             if let popup = model.popups.first {
                 IonicPopupView(popup: popup, onTap: model.tapPopupButton).padding(.top, insets.statusBar)
+                    .padding(.bottom, banner == nil ? 0 : bannerHeight)
             }
         }
         .background(CssColor(0xF5F5F5).color)

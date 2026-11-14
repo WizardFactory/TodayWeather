@@ -1,0 +1,121 @@
+{
+ "tool": "ios/tools/import_ad_privacy.py",
+ "config": {
+  "source": "client/config.xml",
+  "commit": "449ddc6db64ea6e83e0039bd2015eb9724dc2e69",
+  "sha256": "ad127cd824a8fc307d5847a35f0da16743021fec7456ca2a236c308d3d6dd5ad"
+ },
+ "tracking": [
+  {
+   "locale": "ko",
+   "source": "client/resources/ios/tracking/ko.lproj/InfoPlist.strings",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "source_sha256": "4b55b99b1a2f864f3c9f38c1e9f38e0fc69ef3e368ea5ff8d8e7b860a4b4caeb",
+   "output": "TodayWeather/ko.lproj/InfoPlist.strings",
+   "output_sha256": "4b55b99b1a2f864f3c9f38c1e9f38e0fc69ef3e368ea5ff8d8e7b860a4b4caeb",
+   "value": "TodayWeather는 기기의 광고 식별자를 사용해 맞춤 광고를 보여 주고 광고 성과를 측정합니다. 추적을 허용하지 않아도 광고는 표시되지만 맞춤 광고는 아닙니다."
+  },
+  {
+   "locale": "en",
+   "source": "client/resources/ios/tracking/en.lproj/InfoPlist.strings",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "source_sha256": "26308edf8892ee2cf649e5006757bbe7208e8b5891284ec443d5a6ef82ce4a02",
+   "output": "TodayWeather/en.lproj/InfoPlist.strings",
+   "output_sha256": "26308edf8892ee2cf649e5006757bbe7208e8b5891284ec443d5a6ef82ce4a02",
+   "value": "TodayWeather uses your device's advertising identifier to show you personalized ads and to measure how ads perform. If you do not allow tracking, you still see ads, but they are not personalized."
+  },
+  {
+   "locale": "ja",
+   "source": "client/resources/ios/tracking/ja.lproj/InfoPlist.strings",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "source_sha256": "c5d50de1ebd30ea20efe9e679702c6cf0f59e4e46e5105f006af2ce69637006e",
+   "output": "TodayWeather/ja.lproj/InfoPlist.strings",
+   "output_sha256": "c5d50de1ebd30ea20efe9e679702c6cf0f59e4e46e5105f006af2ce69637006e",
+   "value": "TodayWeatherは、デバイスの広告識別子を使用して、パーソナライズされた広告を表示し、広告の効果を測定します。トラッキングを許可しない場合も広告は表示されますが、パーソナライズされません。"
+  },
+  {
+   "locale": "zh-Hans",
+   "source": "client/resources/ios/tracking/zh-Hans.lproj/InfoPlist.strings",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "source_sha256": "ecf4c081c22f4b71c302b26d3dd0d4c1833c8f182734928a57d36fa44ce23221",
+   "output": "TodayWeather/zh-Hans.lproj/InfoPlist.strings",
+   "output_sha256": "ecf4c081c22f4b71c302b26d3dd0d4c1833c8f182734928a57d36fa44ce23221",
+   "value": "TodayWeather 使用设备的广告标识符向您展示个性化广告并衡量广告效果。如果您不允许跟踪，仍会看到广告，但不是个性化广告。"
+  },
+  {
+   "locale": "zh-Hant",
+   "source": "client/resources/ios/tracking/zh-Hant.lproj/InfoPlist.strings",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "source_sha256": "2edec3f09b9a831c419cb8dddf82f88419333e65e018aef271b1ee9b7abe3def",
+   "output": "TodayWeather/zh-Hant.lproj/InfoPlist.strings",
+   "output_sha256": "2edec3f09b9a831c419cb8dddf82f88419333e65e018aef271b1ee9b7abe3def",
+   "value": "TodayWeather 會使用裝置的廣告識別碼向您顯示個人化廣告並衡量廣告成效。如果您不允許追蹤，仍會看到廣告，但不是個人化廣告。"
+  }
+ ],
+ "plugin": {
+  "package": "emi-indo-cordova-plugin-admob",
+  "version": "3.0.4",
+  "resolved": "https://registry.npmjs.org/emi-indo-cordova-plugin-admob/-/emi-indo-cordova-plugin-admob-3.0.4.tgz",
+  "integrity": "sha512-UToUsjUj3HobOnD0kA3jbH4EyAHbtB6YNgzTJj4/nzMQnWrHEeyFn0aYV5VgzdAfd8yVZ4xjVduP/PYC2Rg8IA==",
+  "lock": "client/package-lock.json",
+  "lock_commit": "449ddc6db64ea6e83e0039bd2015eb9724dc2e69",
+  "plugin_xml_sha256": "581bba88df87061a243ee651b4a4644d6cc1f313c88f74b9bc5e9b8dd97f6160",
+  "GADDelayAppMeasurementInit": true,
+  "SKAdNetworkItems": [
+   "cstr6suwn9.skadnetwork",
+   "4fzdc2evr5.skadnetwork",
+   "2fnua5tdw4.skadnetwork",
+   "ydx93a7ass.skadnetwork",
+   "p78axxw29g.skadnetwork",
+   "v72qych5uu.skadnetwork",
+   "ludvb6z3bs.skadnetwork",
+   "cp8zw746q7.skadnetwork",
+   "3sh42y64q3.skadnetwork",
+   "c6k4g5qg8m.skadnetwork",
+   "s39g8k73mm.skadnetwork",
+   "wg4vff78zm.skadnetwork",
+   "3qy4746246.skadnetwork",
+   "f38h382jlk.skadnetwork",
+   "hs6bdukanm.skadnetwork",
+   "mlmmfzh3r3.skadnetwork",
+   "v4nxqhlyqp.skadnetwork",
+   "wzmmz9fp6w.skadnetwork",
+   "su67r6k2v3.skadnetwork",
+   "yclnxrl5pm.skadnetwork",
+   "t38b2kh725.skadnetwork",
+   "7ug5zh24hu.skadnetwork",
+   "gta9lk7p23.skadnetwork",
+   "vutu7akeur.skadnetwork",
+   "y5ghdn5j9k.skadnetwork",
+   "v9wttpbfk9.skadnetwork",
+   "n38lu8286q.skadnetwork",
+   "47vhws6wlr.skadnetwork",
+   "kbd757ywx3.skadnetwork",
+   "9t245vhmpl.skadnetwork",
+   "a2p9lx4jpn.skadnetwork",
+   "22mmun2rn5.skadnetwork",
+   "44jx6755aq.skadnetwork",
+   "k674qkevps.skadnetwork",
+   "4468km3ulz.skadnetwork",
+   "2u9pt9hc89.skadnetwork",
+   "8s468mfl3y.skadnetwork",
+   "klf5c3l5u5.skadnetwork",
+   "ppxm28t8ap.skadnetwork",
+   "kbmxgpxpgc.skadnetwork",
+   "uw77j35x4d.skadnetwork",
+   "578prtvx9j.skadnetwork",
+   "4dzt52r2t5.skadnetwork",
+   "tl55sbb4fm.skadnetwork",
+   "c3frkrj4fj.skadnetwork",
+   "e5fvkxwrpn.skadnetwork",
+   "8c4e2ghe7u.skadnetwork",
+   "3rd42ekr43.skadnetwork",
+   "97r2b46745.skadnetwork",
+   "3qcr597p9d.skadnetwork"
+  ]
+ },
+ "info_plist": {
+  "output": "Support/Info.plist",
+  "block_sha256": "13cc685c8feab35c2681ba8dc292f7129170c0b864ca192283b9a45d03980d25"
+ }
+}

@@ -16,6 +16,13 @@ on:
       - "android/core-domain/src/test/resources/corpus/**"
       # Source of ios/tools/import_chart_reference.py (the Cordova chart scenes captured for Android).
       - "android/core-domain/src/test/resources/chart-reference/**"
+      # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
+      - "client/resources/ios/tracking/**"
+      - "client/config.xml"
+      - "client/package-lock.json"
+      - "client/scripts/ios-ad-request-rule.h"
+      - "client/www/js/service.monetization.js"
+      - "client/www/js/service.admobemi.js"
       - ".github/workflows/ios.yml"
   push:
     branches: [master]
@@ -31,6 +38,13 @@ on:
       - "android/app/provenance/cordova-fonts.json"
       - "android/core-domain/src/test/resources/corpus/**"
       - "android/core-domain/src/test/resources/chart-reference/**"
+      # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
+      - "client/resources/ios/tracking/**"
+      - "client/config.xml"
+      - "client/package-lock.json"
+      - "client/scripts/ios-ad-request-rule.h"
+      - "client/www/js/service.monetization.js"
+      - "client/www/js/service.admobemi.js"
       - ".github/workflows/ios.yml"
 
 # Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
@@ -48,11 +62,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets, golden corpus and chart scenes are current
+      - name: Imported client assets, golden corpus, chart scenes and ad privacy entries are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
           python3 ios/tools/import_chart_reference.py
+          python3 ios/tools/import_ad_privacy.py
+          python3 ios/tools/ads/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
       - name: Core package tests (macOS)

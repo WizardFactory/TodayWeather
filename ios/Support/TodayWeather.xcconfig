@@ -1,0 +1,14 @@
+// Build settings of the app target (IN-15, #2964). The private build inputs come from the ignored
+// ios/Private.xcconfig (README, "Private inputs"); without it they are empty: no photo feed and, in a Release build,
+// no ad requests.
+
+// Without TW_ADMOB_APP_ID_IOS a Release build carries this placeholder, which no AdMob app has: the Google Mobile
+// Ads SDK stops an app whose GADApplicationIdentifier is empty at launch (GADInvalidInitializationException), and
+// AdsSettings treats the placeholder as missing, so neither UMP nor the Ads SDK starts and no ad is requested.
+TW_ADMOB_APP_ID_IOS = ca-app-pub-0000000000000000~0000000000
+#include? "../Private.xcconfig"
+
+// Debug builds always use Google's documented test app ID and test banner unit, whatever Private.xcconfig holds,
+// as the Cordova builds without --release did (client/scripts/make-client-config.mjs).
+TW_ADMOB_APP_ID_IOS[config=Debug] = ca-app-pub-3940256099942544~1458002511
+TW_ADMOB_BANNER_IOS[config=Debug] = ca-app-pub-3940256099942544/2435281174
