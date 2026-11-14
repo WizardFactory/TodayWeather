@@ -1,0 +1,20 @@
+{
+  "task": "LogIam2982",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2982",
+  "scope": "LP-5 of #2977: least-privilege role policy, prefix-limited S3 lifecycle and log group retention templates with a renderer and checks; prerequisites record. Stacked on PR #2984. Pre-merge only; no AWS change.",
+  "server2_paths": [
+    "server2/config/tasks/LogIam2982.json",
+    "server2/deploy/logging/",
+    "server2/deploy/staging/prerequisites.json"
+  ],
+  "outside": [
+    {"path": "intent/issue-2982.md", "category": "documentation", "reason": "Task intent for LP-5"},
+    {"path": "specs/issue-2982.md", "category": "documentation", "reason": "Task specification for LP-5"},
+    {"path": "plans/issue-2982.md", "category": "documentation", "reason": "Task plan and user scenarios for LP-5"},
+    {"path": "docs/operations/server2-logging.md", "category": "documentation", "reason": "Operator steps and recorded retention values"},
+    {"path": "docs/operations/server2-logging-pipeline.pdf", "category": "documentation", "reason": "Manual gains the template rendering step"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/manual.json", "category": "documentation", "reason": "Editable manual source"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/5-aws-templates.png", "category": "documentation", "reason": "Actual capture of the template renderer"},
+    {"path": "docs/evidence/tasks/issue-2982/verification.md", "category": "documentation", "reason": "Selected verification evidence for LP-5"}
+  ]
+}

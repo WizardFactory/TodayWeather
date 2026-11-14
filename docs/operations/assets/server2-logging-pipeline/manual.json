@@ -1,6 +1,6 @@
 {
-  "title": "server2 host log pipeline (LP-1): install, select destinations, read logs",
-  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, and reads each destination. Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
+  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS",
+  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, and renders the AWS templates (LP-5) that the owner applies. Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
   "steps": [
     {
       "title": "Install the pipeline; the default ships nothing",
@@ -36,6 +36,13 @@
       "screenshot": "4-read.png",
       "caption": "The readiness line stays in the journal only. S3 (level info) holds the info and warn records; CloudWatch (level warn) holds only the two warn records of the HTTP 501 request.",
       "expected": "Each destination holds exactly the server records at or above its level, as the original lines."
+    },
+    {
+      "title": "Prepare the AWS templates (LP-5)",
+      "instruction": "Render the role policy, bucket lifecycle and log group templates for the actual bucket, prefix, group, region and account with server2/deploy/logging/aws_templates.py. Then apply them with administrator credentials using the commands in the guide (section Prepare AWS for the destinations); put-bucket-lifecycle-configuration replaces the whole configuration, so read it first. The capture shows synthetic names; nothing was applied to AWS.",
+      "screenshot": "5-aws-templates.png",
+      "caption": "A prefix inside a weather data prefix is refused and nothing is written. The rendered policy grants only PutObject under the log prefix, stream creation, event writing and stream lookup in the one group; the lifecycle covers only the log prefix; the group keeps 30 days.",
+      "expected": "Three JSON files without placeholders, ready for the owner to apply and read back."
     }
   ]
 }

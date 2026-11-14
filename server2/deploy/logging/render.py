@@ -144,8 +144,9 @@ def settings(values):
         group = values.get('SERVER2_LOG_CLOUDWATCH_GROUP') or ''
         if not group:
             raise SettingError('SERVER2_LOG_CLOUDWATCH_GROUP', 'required for the cloudwatch destination')
-        if not re.fullmatch(r'[A-Za-z0-9._/#-]{1,512}', group):
-            raise SettingError('SERVER2_LOG_CLOUDWATCH_GROUP', 'not a CloudWatch Logs group name')
+        if not re.fullmatch(r'[A-Za-z0-9._/#-]{1,512}', group) or group.startswith('aws/'):
+            # AWS reserves names starting with aws/ (CreateLogGroup), CX-LP5-003.
+            raise SettingError('SERVER2_LOG_CLOUDWATCH_GROUP', 'not a CloudWatch Logs group name (aws/ is reserved)')
         result['group'] = group
     return result
 
