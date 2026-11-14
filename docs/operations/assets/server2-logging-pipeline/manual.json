@@ -20,7 +20,7 @@
       "title": "Ship to S3 and CloudWatch Logs with different levels",
       "instruction": "Set the destinations, the per-destination levels, the S3 prefix and an existing CloudWatch log group in .env, then start (or restart) the collector. On EC2 the credentials come from the instance role.",
       "screenshot": "3-ship.png",
-      "caption": "Both units are active. The collector's first record names its version, the active destinations, the host (machine ID until LP-3) and the boot.",
+      "caption": "Both units are active. The collector's first record names its version, the active destinations, the host (here the machine ID, as on a host without instance metadata; on EC2 the instance ID, LP-3) and the boot.",
       "expected": "The collector start record appears in the journal and is shipped to every remote destination."
     },
     {

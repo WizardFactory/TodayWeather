@@ -29,6 +29,11 @@ from pathlib import Path
 
 METRICS_URL = 'http://127.0.0.1:9598/metrics'
 DESTINATIONS = ('s3', 'cloudwatch')
+# The units the collector's readers include (render.UNITS). Positions are compared only
+# with their entries: journald's own lines in the namespace ("Journal started/stopped")
+# are never read, so a reader can never reach them.
+READ_UNITS = ('server2.service', 'server2-logs.service', 'server2-logs-status.service')
+UNIT_MATCHES = [f'_SYSTEMD_UNIT={unit}' for unit in READ_UNITS]
 COLLECTOR_SCHEMA = 1
 _SAMPLE = re.compile(r'^(\w+)\{([^}]*)\}\s+([0-9.eE+-]+)(?:\s+\d+)?$')
 
@@ -72,15 +77,45 @@ def _first_cursor(arguments):
 
 
 def first_entry_after(cursor, namespace='server2'):
-    return _first_cursor([f'--namespace={namespace}', f'--after-cursor={cursor}'])
+    return _first_cursor([f'--namespace={namespace}', f'--after-cursor={cursor}', *UNIT_MATCHES])
 
 
 def oldest_entry(namespace='server2'):
     return _first_cursor([f'--namespace={namespace}'])
 
 
+def first_entry_of_current_boot(namespace='server2'):
+    """Where a reader without a checkpoint starts: it reads the current boot from its start."""
+    return _first_cursor([f'--namespace={namespace}', '--boot', *UNIT_MATCHES])
+
+
 def newest_entry(namespace='server2', timeout=30):
-    result = subprocess.run(['journalctl', f'--namespace={namespace}', '-o', 'json', '--output-fields=__CURSOR', '-n', '1'],
+    result = subprocess.run(['journalctl', f'--namespace={namespace}', '-o', 'json', '--output-fields=__CURSOR', '-n', '1',
+                             *UNIT_MATCHES], capture_output=True, text=True, timeout=timeout)
+    if result.returncode != 0:
+        raise JournalError('journalctl failed')
+    lines = [l for l in result.stdout.splitlines() if l.strip()]
+    return json.loads(lines[-1])['__CURSOR'] if lines else None
+
+
+def checkpoint(state_dir, destination, source=None):
+    try:
+        return (Path(state_dir) / (source or f'journal_{destination}') / 'checkpoint.txt').read_text().strip() or None
+    except FileNotFoundError:
+        return None
+
+
+def backlog(state_dir):
+    """Earlier-boot readers still shipping, as planned by render.py (LP-3)."""
+    try:
+        return json.loads((Path(state_dir) / 'backlog.json').read_text())
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def last_entry_of_boot(boot, namespace='server2', timeout=30):
+    result = subprocess.run(['journalctl', f'--namespace={namespace}', f'--boot={boot}', '-o', 'json',
+                             '--output-fields=__CURSOR', '-n', '1', *UNIT_MATCHES],
                             capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise JournalError('journalctl failed')
@@ -88,11 +123,14 @@ def newest_entry(namespace='server2', timeout=30):
     return json.loads(lines[-1])['__CURSOR'] if lines else None
 
 
-def checkpoint(state_dir, destination):
-    try:
-        return (Path(state_dir) / f'journal_{destination}' / 'checkpoint.txt').read_text().strip() or None
-    except FileNotFoundError:
-        return None
+def backlog_age(state_dir, item, now_usec):
+    """Age of the oldest unconfirmed entry of an earlier-boot reader, 0 when it is done."""
+    text = checkpoint(state_dir, None, item['source'])
+    arguments = ['--namespace=server2', f"--boot={item['boot']}"] + ([f'--after-cursor={text}'] if text else []) + UNIT_MATCHES
+    following = _first_cursor(arguments)
+    if following is None:
+        return 0
+    return max(0, int((now_usec - parse_cursor(following)[2]) / 1e6))
 
 
 def unshipped_seconds(state_dir, destination, previous, now_usec):
@@ -104,14 +142,16 @@ def unshipped_seconds(state_dir, destination, previous, now_usec):
     text = checkpoint(state_dir, destination)
     if text:
         following = first_entry_after(text)
-        if following is None:
-            return 0
-        _, _, realtime = parse_cursor(following)
+        age = 0 if following is None else max(0, int((now_usec - parse_cursor(following)[2]) / 1e6))
     elif previous.get(destination, {}).get('baseline'):
         _, _, realtime = parse_cursor(previous[destination]['baseline'])
+        age = max(0, int((now_usec - realtime) / 1e6))
     else:
         return None
-    return max(0, int((now_usec - realtime) / 1e6))
+    # An earlier boot still being shipped (surviving disk) is the oldest unconfirmed part.
+    for item in backlog(state_dir).get(destination, []):
+        age = max(age, backlog_age(state_dir, item, now_usec))
+    return age
 
 
 def overruns(state_dir, oldest_cursor, previous, active):
@@ -192,7 +232,9 @@ def report_overruns(state_dir, active):
                           'event': 'collector.journal_overrun', 'destination': destination,
                           'lost_from': iso(lost_from), 'lost_until': iso(lost_until),
                           'overrun_count': entry['count']}, sort_keys=True), flush=True)
-    set_baselines(state_dir, oldest, state, active)
+    # A new baseline is where a reader without a checkpoint starts: the current boot's first
+    # remaining entry, not an earlier boot it never reads (LP-3).
+    set_baselines(state_dir, first_entry_of_current_boot() if oldest else None, state, active)
     save_state(state_file, state)
     return {d: state.get(d, {}).get('count', 0) for d in active}
 
@@ -211,22 +253,27 @@ def drain(state_dir, active, timeout, poll=0.5):
     target = newest_entry(timeout=max(1.0, deadline - time.monotonic()))
     if target is None:
         return {d: {'drained': True, 'waited_seconds': round(time.monotonic() - began, 1)} for d in active}
-    target_id, target_seq, _ = parse_cursor(target)
-    result, pending = {}, set(active)
+    # Readers and their targets: each destination's main reader up to the journal end, and
+    # each earlier-boot reader (LP-3) up to its boot's last entry.
+    targets = {(d, None): parse_cursor(target) for d in active}
+    for destination in active:
+        for item in backlog(state_dir).get(destination, []):
+            last = last_entry_of_boot(item['boot'], timeout=max(1.0, deadline - time.monotonic()))
+            if last:
+                targets[(destination, item['source'])] = parse_cursor(last)
+    pending = set(targets)
     while pending:
-        for destination in sorted(pending):
-            text = checkpoint(state_dir, destination)
+        for key in sorted(pending, key=str):
+            text = checkpoint(state_dir, key[0], key[1])
             if text:
                 seq_id, seq, _ = parse_cursor(text)
-                if seq_id == target_id and seq >= target_seq:
-                    result[destination] = {'drained': True, 'waited_seconds': round(time.monotonic() - began, 1)}
-                    pending.discard(destination)
+                if seq_id == targets[key][0] and seq >= targets[key][1]:
+                    pending.discard(key)
         if not pending or time.monotonic() >= deadline:
             break
         time.sleep(min(poll, max(0.0, deadline - time.monotonic())))
-    for destination in pending:
-        result[destination] = {'drained': False, 'waited_seconds': round(time.monotonic() - began, 1)}
-    return result
+    waited = round(time.monotonic() - began, 1)
+    return {d: {'drained': not any(k[0] == d for k in pending), 'waited_seconds': waited} for d in active}
 
 
 def counters(text):

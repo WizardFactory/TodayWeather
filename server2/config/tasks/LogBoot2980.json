@@ -1,0 +1,21 @@
+{
+  "task": "LogBoot2980",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2980",
+  "scope": "LP-3 of #2977: boot configuration (generated user data), instance identity from IMDSv2, start record identity, Spot local-only warning, several instances, surviving-disk backlog. PR to master; no deployment or AWS change.",
+  "server2_paths": [
+    "server2/config/tasks/LogBoot2980.json",
+    "server2/deploy/logging/"
+  ],
+  "outside": [
+    {"path": "intent/issue-2980.md", "category": "documentation", "reason": "Task intent for LP-3"},
+    {"path": "specs/issue-2980.md", "category": "documentation", "reason": "Task specification for LP-3"},
+    {"path": "plans/issue-2980.md", "category": "documentation", "reason": "Task plan and user scenarios for LP-3"},
+    {"path": "docs/operations/server2-logging.md", "category": "documentation", "reason": "Boot configuration, identity, several instances, surviving disk"},
+    {"path": "docs/architecture/diagrams/server2-logging.json", "category": "documentation", "reason": "Diagram gains boot configuration and instance metadata"},
+    {"path": "docs/architecture/diagrams/server2-logging.html", "category": "documentation", "reason": "Regenerated diagram"},
+    {"path": "docs/operations/server2-logging-pipeline.pdf", "category": "documentation", "reason": "Manual: identity wording and the boot configuration step"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/manual.json", "category": "documentation", "reason": "Editable manual source"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/7-boot.png", "category": "documentation", "reason": "Actual capture of a fresh instance started from the boot configuration"},
+    {"path": "docs/evidence/tasks/issue-2980/verification.md", "category": "documentation", "reason": "Selected verification evidence for LP-3"}
+  ]
+}

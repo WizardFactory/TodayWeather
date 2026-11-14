@@ -52,8 +52,37 @@ STANDIN_UNIT = 'server2-logging-standin.service'
 SYSTEMD_ENV = {'PATH', 'LANG', 'LANGUAGE', 'LC_ALL', 'USER', 'LOGNAME', 'HOME', 'SHELL', 'INVOCATION_ID',
                'JOURNAL_STREAM', 'SYSTEMD_EXEC_PID', 'RUNTIME_DIRECTORY', 'STATE_DIRECTORY', 'MEMORY_PRESSURE_WATCH',
                'MEMORY_PRESSURE_WRITE', 'CREDENTIALS_DIRECTORY', 'NOTIFY_SOCKET', 'TERM', 'LOG_NAMESPACE'}
-TEST_CREDENTIALS = {'AWS_ACCESS_KEY_ID': 'standin-test', 'AWS_SECRET_ACCESS_KEY': 'standin-test',
-                    'AWS_EC2_METADATA_DISABLED': 'true'}
+# No static AWS key anywhere: the collector takes credentials from the instance role
+# through the IMDS stand-in, as on EC2 (LP-3).
+IMDS_UNIT = 'server2-logging-imds.service'
+IMDS_STATE = WORK / 'imds'
+STANDIN_KEY_ID = 'ASIASTANDIN'
+INSTANCE_A, INSTANCE_B = 'i-0c0ffee0000000001', 'i-0c0ffee0000000002'
+
+
+def set_identity(instance_id, life_cycle='on-demand'):
+    (IMDS_STATE / 'instance-id').write_text(instance_id + '\n')
+    (IMDS_STATE / 'life-cycle').write_text(life_cycle + '\n')
+
+
+def setup_imds():
+    """EC2 instance metadata stand-in on 169.254.169.254:80 (loopback alias)."""
+    run('ip', 'addr', 'add', '169.254.169.254/32', 'dev', 'lo', check=False)
+    systemctl('stop', IMDS_UNIT, check=False)
+    systemctl('reset-failed', IMDS_UNIT, check=False)
+    shutil.rmtree(IMDS_STATE, ignore_errors=True)
+    IMDS_STATE.mkdir(parents=True)
+    set_identity(INSTANCE_A)
+    run('systemd-run', '--unit', IMDS_UNIT, '/usr/bin/python3', '-I', str(HERE / 'imds_standin.py'), '--state', str(IMDS_STATE))
+    for _ in range(200):
+        if (IMDS_STATE / 'ready').exists():
+            return
+        time.sleep(0.1)
+    raise SystemExit('IMDS stand-in did not start')
+
+
+def current_identity():
+    return (IMDS_STATE / 'instance-id').read_text().strip()
 
 
 def run(*args, check=True, **kwargs):
@@ -607,7 +636,7 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     received, keys, streams, operations = delivered(state)
     entry['observations'].update(s3_keys=keys, cloudwatch_streams=streams,
                                  operations=collections.Counter(f"{o['service']}:{o['action']}" for o in operations))
-    machine = Path('/etc/machine-id').read_text().strip()
+    machine = current_identity()  # the instance ID from instance metadata (LP-3)
     boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip().replace('-', '')
     for destination, level in (('s3', s3_level), ('cloudwatch', cloudwatch_level)):
         if destination in sinks:
@@ -619,7 +648,8 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
             starts = [r for r in map(json.loads, received[destination]['collector']) if r['event'] == 'collector.started']
             check(f'{destination} holds the collector start record',
                   len(starts) == 1 and starts[0]['event'] == 'collector.started' and starts[0]['sinks'] == sinks
-                  and starts[0]['collector_version'] == 'vector 0.61.0' and starts[0]['instance_id'] == machine,
+                  and starts[0]['collector_version'] == 'vector 0.61.0' and starts[0]['instance_id'] == machine
+                  and starts[0]['instance_life_cycle'] == 'on-demand' and starts[0]['boot_id'] == boot,
                   json.dumps(starts)[:300])
             check(f'{destination} holds no readiness line', not any(l in received[destination]['server'] for l in readiness))
         else:
@@ -636,6 +666,11 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     used = {(o['service'], o['action']) for o in operations}
     check('only actions granted by the role policy template were used', used <= allowed, str(sorted(used - allowed)))
     check('no object was overwritten', ('s3', 'Overwrite') not in used)
+    if remote:
+        check('every request was signed with the instance-role key from instance metadata',
+              operations and all(o['key_id'] == STANDIN_KEY_ID for o in operations
+                                 if o['action'] not in ('Unavailable', 'Overwrite')),
+              str({o['key_id'] for o in operations}))
     # Every destination, the local journal included (GEM-LP1-003).
     text = (all_received_text(state) if state.exists() else '') + '\n'.join(server_lines + collector_lines)
     check('destinations, the local journal included, hold no synthetic sensitive value', SYNTHETIC not in text)
@@ -645,13 +680,68 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
         check('collector environment holds no .env value', vector_environ is not None
               and not any(SYNTHETIC in v for v in vector_environ.values()) and not (names & file_names),
               str(sorted(names)))
-        check('collector environment holds only systemd and test credential names',
-              names <= SYSTEMD_ENV | set(TEST_CREDENTIALS), str(sorted(names - SYSTEMD_ENV - set(TEST_CREDENTIALS))))
+        check('collector environment holds only systemd names (no AWS key)',
+              names <= SYSTEMD_ENV, str(sorted(names - SYSTEMD_ENV)))
     else:
         result = systemctl('show', '-p', 'ConditionResult', '--value', 'server2-logs.service').stdout.strip()
         check('collector is skipped when only local is selected', result == 'no', result)
         check('local-only start explains that nothing is shipped',
               any('only the local journal is selected' in l for l in collector_lines))
+    return entry
+
+
+def replacement_scenario(report):
+    """LP-3: two instance IDs in the same hour (an interrupted instance and its replacement,
+    with the identical configuration) write disjoint streams and keys, and the destinations
+    hold every record of both, exactly once."""
+    entry = report.scenario('instance-replacement', ['LP3-AC2'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-replacement'
+    reset_host()
+    start_standin(state)
+    write_env(logging_env())
+    names = {}
+    for instance in (INSTANCE_A, INSTANCE_B):
+        set_identity(instance)
+        systemctl('start', 'server2-logs.service')
+        systemctl('start', 'server2.service')
+        check(f'{instance}: server healthy', wait_health())
+        for i in range(3):
+            http(f'/weather/v000903/coord/31.{i},127.0')
+        systemctl('stop', 'server2.service', 'server2-logs.service')  # server first, then the drain
+        received, keys, streams, _ = delivered(state)
+        names[instance] = ({k for k in keys if f'/{instance}/' in k}, {s for s in streams if f'/{instance}/' in s})
+    systemctl('stop', STANDIN_UNIT)
+    set_identity(INSTANCE_A)
+    a_keys, a_streams = names[INSTANCE_A]
+    b_keys, b_streams = names[INSTANCE_B][0] - a_keys, names[INSTANCE_B][1] - a_streams
+    check('each instance has its own S3 keys and CloudWatch streams', a_keys and b_keys and a_streams and b_streams
+          and not (a_keys & b_keys) and not (a_streams & b_streams), f'{len(a_keys)} {len(b_keys)}')
+    hours = {re.search(r'hour=(\d\d)', k).group(1) for k in a_keys | b_keys}
+    entry['observations'].update(hours=sorted(hours), streams=sorted(a_streams | b_streams))
+    server_lines = [l for l in journal('server2.service') if server_record_level(l) in ('info', 'warn', 'error')]
+    received = delivered(state)[0]
+    for destination in ('s3', 'cloudwatch'):
+        check(f'{destination} holds both instances\' records exactly once',
+              sorted(received[destination]['server']) == sorted(server_lines))
+    started = [json.loads(l) for l in received['s3']['collector'] if '"collector.started"' in l]
+    check('each instance announced itself in its start record', {r['instance_id'] for r in started} == {INSTANCE_A, INSTANCE_B})
+    return entry
+
+
+def spot_warning_scenario(report):
+    """LP-3: with only the local journal selected, a Spot instance warns at collector start."""
+    entry = report.scenario('spot-local-only-warning', ['LP3-AC4'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    for life_cycle, expected in (('spot', True), ('on-demand', False)):
+        reset_host()
+        set_identity(INSTANCE_A, life_cycle)
+        write_env(server_env(SERVER2_LOG_SINKS='local'))
+        systemctl('start', 'server2-logs.service', check=False)
+        warned = any('"collector.local_only_on_spot"' in l for l in journal('server2-logs.service'))
+        check(f'{life_cycle}: warning {"written" if expected else "absent"}', warned == expected)
+    set_identity(INSTANCE_A)
+    reset_host()
     return entry
 
 
@@ -688,16 +778,18 @@ def main():
     run('bash', str(HERE / 'install.sh'), '--collector-tarball', args.collector_tarball)
     shutil.copy(args.server_binary, '/opt/server2/bin/server2')
     os.chmod('/opt/server2/bin/server2', 0o755)
-    dropin = Path('/etc/systemd/system/server2-logs.service.d/zz-check-credentials.conf')
-    dropin.parent.mkdir(parents=True, exist_ok=True)
-    dropin.write_text('[Service]\n' + ''.join(f'Environment={k}={v}\n' for k, v in TEST_CREDENTIALS.items()))
+    # Earlier versions of this check used a credential drop-in; LP-3 uses instance metadata only.
+    Path('/etc/systemd/system/server2-logs.service.d/zz-check-credentials.conf').unlink(missing_ok=True)
     systemctl('daemon-reload')
     setup_tls_and_hosts()
+    setup_imds()
     report = Report()
     delivery_scenario(report, 'local-only', ['AC1', 'AC2'], ['local'], 'info', 'warn')
     delivery_scenario(report, 's3-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['s3'], 'info', 'warn', timed=('s3',))
     delivery_scenario(report, 'cloudwatch-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['cloudwatch'], 'info', 'warn', timed=('cloudwatch',))
     delivery_scenario(report, 'all-destinations', ['AC1', 'AC2', 'AC4', 'AC5'], ['local', 's3', 'cloudwatch'], 'debug', 'error', burst=300, timed=('s3',))
+    replacement_scenario(report)
+    spot_warning_scenario(report)
     isolation_scenario(report)
     restart_scenario(report)
     outage_scenario(report)

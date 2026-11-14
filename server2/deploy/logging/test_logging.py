@@ -143,6 +143,13 @@ class SettingsTest(unittest.TestCase):
 
 
 class RenderTest(unittest.TestCase):
+    def setUp(self):
+        # Host facts are fixtures: no instance metadata or journal on the test machine.
+        for name, value in (('instance_identity', ('i-0123456789abcdef0', 'on-demand')), ('plan_backlog', {})):
+            patcher = mock.patch.object(render, name, return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     def rendered(self, **overrides):
         config = render.settings(dict(COMPLETE, **overrides))
         return render.collector_config(config, 'a' * 32, '/var/lib/server2-logs')
@@ -217,7 +224,8 @@ class RenderTest(unittest.TestCase):
             self.assertEqual(start['collector_schema'], 1)
             self.assertEqual(start['collector_version'], 'vector 0.61.0')
             self.assertEqual(start['sinks'], ['local', 's3', 'cloudwatch'])
-            self.assertEqual(start['instance_id'], 'b' * 32)
+            self.assertEqual(start['instance_id'], 'i-0123456789abcdef0')
+            self.assertEqual(start['instance_life_cycle'], 'on-demand')
             self.assertEqual(start['boot_id'], 'c' * 32)
 
     def test_exit_codes_follow_exec_condition(self):
@@ -251,8 +259,8 @@ class RenderTest(unittest.TestCase):
                 with self.subTest(name), contextlib.ExitStack() as stack:
                     # Host identity is a fixture unless the case injects its failure, so each
                     # case reaches the step it tests on any OS (CX-LP1-004).
-                    stack.enter_context(mock.patch.object(render, 'machine_id', side_effect=faults.get('machine_id'),
-                                                          return_value='b' * 32))
+                    stack.enter_context(mock.patch.object(render, 'instance_identity', side_effect=faults.get('machine_id'),
+                                                          return_value=('i-0123456789abcdef0', 'on-demand')))
                     stack.enter_context(mock.patch.object(render.Path, 'read_text', autospec=True,
                                                           side_effect=_read_text_with_boot))
                     replace = stack.enter_context(mock.patch.object(render.os, 'replace',
@@ -323,6 +331,253 @@ class InstalledFilesTest(unittest.TestCase):
         text = (HERE / 'install.sh').read_text()
         self.assertLess(text.index('sha256sum --check'), text.index('tar -xzf'))
         self.assertNotRegex(text, re.compile(r'systemctl\s+(start|restart)\s+server2\.service'))
+
+
+class IdentityAndBacklogTest(unittest.TestCase):
+    """LP-3 (#2980): instance identity from IMDSv2 and earlier-boot backlog readers."""
+
+    def serve_imds(self, instance_id='i-0abc1234def567890', life_cycle='spot'):
+        import http.server, threading
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_PUT(self):
+                ok = self.path == '/latest/api/token' and self.headers.get('X-aws-ec2-metadata-token-ttl-seconds')
+                self.send_response(200 if ok else 400); self.end_headers(); self.wfile.write(b'token')
+            def do_GET(self):
+                if self.headers.get('X-aws-ec2-metadata-token') != 'token':
+                    self.send_response(401); self.end_headers(); return
+                body = {'/latest/meta-data/instance-id': instance_id, '/latest/meta-data/instance-life-cycle': life_cycle}.get(self.path)
+                self.send_response(200 if body else 404); self.end_headers(); self.wfile.write((body or '').encode())
+        server = http.server.HTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.shutdown)
+        return f'http://127.0.0.1:{server.server_port}'
+
+    def test_identity_from_imdsv2(self):
+        base = self.serve_imds()
+        self.assertEqual(render.instance_identity(base=base), ('i-0abc1234def567890', 'spot'))
+
+    def test_identity_falls_back_to_machine_id(self):
+        with mock.patch.object(render, 'machine_id', return_value='d' * 32):
+            self.assertEqual(render.instance_identity(timeout=0.2, base='http://127.0.0.1:9'), ('d' * 32, 'unknown'))
+            base = self.serve_imds(instance_id='not-an-id')
+            self.assertEqual(render.instance_identity(base=base), ('d' * 32, 'unknown'))
+
+    def test_local_only_on_spot_warns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = ['--env-file', str(Path(directory) / 'missing.env'), '--state', directory,
+                    '--output', str(Path(directory) / 'out.json'), '--version-file', str(HERE / 'collector.json')]
+            for life_cycle, warned in (('spot', True), ('on-demand', False), ('unknown', False)):
+                with self.subTest(life_cycle), mock.patch.object(render, 'instance_identity', return_value=('i-1', life_cycle)), \
+                        contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(render.main(args, environ={}), 1)
+                self.assertEqual('collector.local_only_on_spot' in out.getvalue(), warned)
+
+    def checkpoint(self, directory, name, cursor):
+        path = Path(directory) / name / 'checkpoint.txt'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(cursor + '\n')
+
+    def test_backlog_reader_for_an_earlier_boot_starts_at_the_checkpoint(self):
+        old, middle, current = 'a' * 32, 'b' * 32, 'c' * 32
+        with tempfile.TemporaryDirectory() as directory:
+            cursor = f's={"e" * 32};i=10;b={old};m=1;t=1;x=1'
+            self.checkpoint(directory, 'journal_s3', cursor)
+            last = lambda arguments: f's={"e" * 32};i={"20" if old in arguments[0] else "30"};b=x;m=1;t=1;x=1'
+            plan = render.plan_backlog(directory, ['s3', 'cloudwatch'], current, boots=[old, middle, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [old, middle])
+            self.assertNotIn('cloudwatch', plan)
+            seed = Path(directory) / f'backlog_s3_{old[:12]}' / 'checkpoint.txt'
+            self.assertEqual(seed.read_text().strip(), cursor)
+            # Owned like the state directory, so the collector's dynamic user can update it.
+            self.assertEqual((seed.stat().st_uid, seed.parent.stat().st_uid), (Path(directory).stat().st_uid,) * 2)
+            self.assertFalse((Path(directory) / f'backlog_s3_{middle[:12]}' / 'checkpoint.txt').exists())
+            config = render.collector_config(render.settings(dict(COMPLETE, SERVER2_LOG_SINKS='s3')), 'i-1', directory, plan)
+            source = config['sources'][f'backlog_s3_{old[:12]}']
+            self.assertEqual(source['extra_args'], [f'--boot={old}'])
+            self.assertTrue(source['current_boot_only'])
+            self.assertEqual(config['transforms']['select_s3']['inputs'],
+                             ['journal_s3', f'backlog_s3_{old[:12]}', f'backlog_s3_{middle[:12]}'])
+
+    def test_backlog_persists_until_the_boot_is_shipped(self):
+        old, current = 'a' * 32, 'c' * 32
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={old};m=1;t=1;x=1')
+            last = lambda arguments: f's={"e" * 32};i=20;b={old};m=1;t=1;x=1'
+            render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
+            # The main reader moves to the current boot; the backlog is not finished yet.
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=40;b={current};m=1;t=1;x=1')
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [old])
+            self.checkpoint(directory, f'backlog_s3_{old[:12]}', f's={"e" * 32};i=20;b={old};m=1;t=1;x=1')
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
+            self.assertEqual(plan, {})
+            self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text()), {})
+
+    def test_reader_without_a_checkpoint_ships_the_boot_it_started_in(self):
+        # A destination that confirmed nothing before a reboot (failing throughout) has no
+        # checkpoint; its whole earlier boot is still unshipped (LP-3 reboot check, run 1).
+        old, current = 'a' * 32, 'c' * 32
+        last = lambda arguments: f's={"e" * 32};i=20;b={old};m=1;t=1;x=1'
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(render.plan_backlog(directory, ['s3'], old, boots=[old], last_cursor=last), {})
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
+            self.assertEqual(plan['s3'], [{'boot': old, 'source': f'backlog_s3_{old[:12]}'}])
+            self.assertFalse((Path(directory) / f'backlog_s3_{old[:12]}' / 'checkpoint.txt').exists())  # from its start
+            # Enabled only now, on a host with an older boot: nothing before this boot.
+            self.assertEqual(render.plan_backlog(directory, ['cloudwatch'], current, boots=[old, current], last_cursor=last), {})
+            # Once the main reader has a checkpoint, the start boot is no longer needed.
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=40;b={current};m=1;t=1;x=1')
+            render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
+            self.assertNotIn('s3', json.loads((Path(directory) / 'reader-start.json').read_text()))
+
+    def test_boot_list_failure_keeps_the_plan(self):
+        import subprocess
+        failed = subprocess.CompletedProcess([], 1, '', 'error')
+        with tempfile.TemporaryDirectory() as directory, mock.patch('subprocess.run', return_value=failed):
+            (Path(directory) / 'backlog.json').write_text(json.dumps({'s3': [{'boot': 'a' * 32, 'source': 'backlog_s3_x'}]}))
+            with self.assertRaises(OSError):
+                render.plan_backlog(directory, ['s3'], 'c' * 32)
+            self.assertIn('backlog_s3_x', (Path(directory) / 'backlog.json').read_text())
+        listing = subprocess.CompletedProcess([], 0, f' -1 {"a" * 32} Sat 2026-11-14 01:00:00 UTC Sat 2026-11-14 02:00:00 UTC\n'
+                                                    f'  0 {"c" * 32} Sat 2026-11-14 03:00:00 UTC Sat 2026-11-14 04:00:00 UTC\n', '')
+        with mock.patch('subprocess.run', return_value=listing):
+            self.assertEqual(render.journal_boots(), ['a' * 32, 'c' * 32])
+
+    def test_no_backlog_for_the_current_boot_or_a_rotated_one(self):
+        current = 'c' * 32
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={current};m=1;t=1;x=1')
+            self.assertEqual(render.plan_backlog(directory, ['s3'], current, boots=[current], last_cursor=lambda a: None), {})
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={"f" * 32};m=1;t=1;x=1')
+            self.assertEqual(render.plan_backlog(directory, ['s3'], current, boots=[current], last_cursor=lambda a: None), {})
+
+
+class BootConfigTest(unittest.TestCase):
+    """LP-3 (#2980): the generated user data pins a commit and every file's hash, validates
+    the settings and stays within EC2's limit."""
+
+    ARGS = ['--sinks', 'local,s3,cloudwatch', '--prefix', 'logs/server2', '--group', '/server2/production',
+            '--bucket', 'tw-server2-logs', '--region', 'ap-northeast-2', '--revision', 'HEAD']
+    COMMIT = '0123456789abcdef0123456789abcdef01234567'
+
+    @staticmethod
+    def local_digests():
+        import boot, hashlib
+        return {name: hashlib.sha256((HERE / name).read_bytes()).hexdigest() for name in boot.BUNDLE}
+
+    def generate(self, extra=(), limit=None):
+        import boot
+        out = Path(tempfile.mkdtemp()) / 'out'
+        stderr = io.StringIO()
+        patch = mock.patch.object(boot, 'EC2_USER_DATA_LIMIT', limit) if limit else contextlib.nullcontext()
+        with patch, contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+            code = boot.main(self.ARGS + list(extra) + ['--out', str(out)],
+                             digests_for=lambda revision: (self.COMMIT, self.local_digests()))
+        return code, out, stderr.getvalue()
+
+    def test_user_data_pins_the_commit_and_every_file_hash(self):
+        import boot, gzip
+        code, out, _ = self.generate()
+        self.assertEqual(code, 0)
+        compressed = (out / 'user-data.sh.gz').read_bytes()
+        self.assertLessEqual(len(compressed), 4 * 1024)  # far below EC2's 16 KiB, whatever the pipeline's size
+        self.assertEqual(gzip.decompress(compressed), (out / 'user-data.sh').read_bytes())
+        text = (out / 'user-data.sh').read_text()
+        self.assertTrue(text.startswith('#!/bin/bash\n'))
+        self.assertIn(f'base=https://raw.githubusercontent.com/WizardFactory/TodayWeather/{self.COMMIT}/server2/deploy/logging', text)
+        for name, digest in self.local_digests().items():
+            self.assertIn(f'fetch {name} {digest}\n', text)
+        self.assertIn("--proto '=https'", text)
+        self.assertNotRegex(text, r'AWS_(ACCESS_KEY_ID|SECRET_ACCESS_KEY|SESSION_TOKEN)|ssh ')
+        self.assertLess(text.index('fetch units/journald-system.conf'), text.index('bash "$bundle/install.sh"'))
+
+    def require_gnu_sha256sum(self):
+        import subprocess
+        # User data runs on Linux (GNU coreutils); BSD sha256sum lacks --status.
+        try:
+            gnu = 'GNU' in subprocess.run(['sha256sum', '--version'], capture_output=True, text=True).stdout
+        except FileNotFoundError:
+            gnu = False
+        if not gnu:
+            self.skipTest('needs GNU sha256sum, as on the Linux host')
+
+    def run_download(self, tamper=None):
+        """Run the user data up to the host changes with a curl double that serves this
+        checkout's files (optionally one changed file), and return (exit code, bundle dir)."""
+        import boot, subprocess
+        text = boot.script(dict(COMPLETE), self.COMMIT, self.local_digests())
+        head = text[:text.index('install -d -m 0755 /etc/systemd/system')]
+        work = Path(tempfile.mkdtemp())
+        target = work / 'bundle'
+        (work / 'bin').mkdir()
+        curl = work / 'bin' / 'curl'
+        curl.write_text('#!/bin/bash\n'
+                        'while [[ $# -gt 0 ]]; do case "$1" in -o) out=$2; shift 2;; http*) url=$1; shift;; *) shift;; esac; done\n'
+                        f'name=${{url#*/server2/deploy/logging/}}\ncp "{HERE}/$name" "$out"\n'
+                        + (f'[[ $name == {tamper} ]] && echo "# changed" >> "$out"\n' if tamper else '') + 'exit 0\n')
+        curl.chmod(0o755)
+        head = head.replace("trap 'rm -rf \"$bundle\"' EXIT", '') + f'cp -R "$bundle/." "{target}/"\n'
+        result = subprocess.run(['bash', '-c', head], env={'PATH': f'{work / "bin"}:/usr/bin:/bin'},
+                                capture_output=True, text=True)
+        return result, target
+
+    def test_downloaded_files_are_checked_against_the_pinned_hashes(self):
+        import boot
+        self.require_gnu_sha256sum()
+        result, target = self.run_download()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in boot.BUNDLE:
+            self.assertEqual((target / name).read_bytes(), (HERE / name).read_bytes(), name)
+
+    def test_a_changed_download_stops_the_boot_configuration(self):
+        self.require_gnu_sha256sum()
+        result, target = self.run_download(tamper='render.py')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('render.py hash mismatch', result.stderr)
+        self.assertFalse(target.exists())
+
+    def test_revision_must_be_a_commit_matching_this_checkout(self):
+        import boot, subprocess
+        def fake_git(content_for):
+            def run(arguments, capture_output):
+                if arguments[3] == 'rev-parse':
+                    return subprocess.CompletedProcess(arguments, 0, (self.COMMIT + '\n').encode(), b'')
+                name = arguments[4].split(':', 1)[1][len('server2/deploy/logging/'):]
+                return subprocess.CompletedProcess(arguments, 0, content_for(name), b'')
+            return run
+        commit, digests = boot.revision_digests('HEAD', run=fake_git(lambda name: (HERE / name).read_bytes()))
+        self.assertEqual((commit, digests), (self.COMMIT, self.local_digests()))
+        changed = fake_git(lambda name: b'old' if name == 'status.py' else (HERE / name).read_bytes())
+        with self.assertRaisesRegex(boot.BootError, 'status.py'):
+            boot.revision_digests('HEAD', run=changed)
+        with self.assertRaises(boot.BootError):
+            boot.script(dict(COMPLETE), 'HEAD', self.local_digests())
+
+    def test_drop_in_holds_only_the_validated_settings_in_use(self):
+        import boot
+        drop_in = boot.drop_in(render.settings({'SERVER2_LOG_SINKS': 'cloudwatch', 'SERVER2_S3_BUCKET': 'Bad"%bucket',
+                                                'SERVER2_LOG_CLOUDWATCH_GROUP': '/server2/production'}))
+        self.assertEqual(drop_in.splitlines()[0], '[Service]')
+        environment = [l for l in drop_in.splitlines() if l.startswith('Environment=')]
+        self.assertEqual(environment, ['Environment="SERVER2_LOG_SINKS=cloudwatch"',
+                                       'Environment="SERVER2_LOG_CLOUDWATCH_LEVEL=warn"',
+                                       'Environment="SERVER2_LOG_CLOUDWATCH_GROUP=/server2/production"',
+                                       'Environment="SERVER2_S3_REGION=ap-northeast-2"'])
+        self.assertNotIn('Bad', drop_in)
+
+    def test_invalid_setting_writes_nothing_and_does_not_echo_the_value(self):
+        code, out, stderr = self.generate(['--s3-level', SECRET])
+        self.assertEqual(code, 2)
+        self.assertFalse(out.exists())
+        self.assertIn('SERVER2_LOG_S3_LEVEL', stderr)
+        self.assertNotIn(SECRET, stderr)
+
+    def test_oversized_user_data_is_refused(self):
+        code, out, stderr = self.generate(limit=256)
+        self.assertEqual(code, 1)
+        self.assertFalse(out.exists())
+        self.assertIn('above the EC2 limit', stderr)
 
 
 class AwsTemplatesTest(unittest.TestCase):
@@ -485,6 +740,33 @@ def _cursor(seq, realtime, seq_id='a' * 32):
 class StatusTest(unittest.TestCase):
     """LP-2 (#2979): loss counters and journal overrun detection."""
 
+    def setUp(self):
+        # One boot in these journals: its first entry is the oldest entry (as mocked per test).
+        patcher = mock.patch.object(status, 'first_entry_of_current_boot', side_effect=lambda *a: status.oldest_entry())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_positions_are_compared_with_the_read_units_only(self):
+        self.assertEqual(status.READ_UNITS, tuple(render.UNITS))
+        import subprocess
+        result = subprocess.CompletedProcess([], 0, '', '')
+        with mock.patch('subprocess.run', return_value=result) as run:
+            status.last_entry_of_boot('a' * 32)
+            status.newest_entry()
+            render._journal_cursor(['--boot=' + 'a' * 32])
+        for call in run.call_args_list:
+            self.assertEqual([a for a in call.args[0] if a.startswith('_SYSTEMD_UNIT=')],
+                             [f'_SYSTEMD_UNIT={u}' for u in render.UNITS])
+
+    def test_new_baseline_is_the_current_boot_start(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(status, 'oldest_entry', return_value=_cursor(10, 100)), \
+                mock.patch.object(status, 'first_entry_of_current_boot', return_value=_cursor(80, 5_000)), \
+                contextlib.redirect_stdout(io.StringIO()):
+            status.report_overruns(directory, ('s3',))
+            state = json.loads((Path(directory) / 'overrun-state.json').read_text())
+            self.assertEqual(state['s3']['baseline'], _cursor(80, 5_000))
+
     def state(self, directory, **checkpoints):
         for destination, cursor in checkpoints.items():
             path = Path(directory) / f'journal_{destination}' / 'checkpoint.txt'
@@ -619,6 +901,27 @@ class StatusTest(unittest.TestCase):
         self.assertFalse(result['s3']['drained'])
         self.assertLessEqual(clock[0], 75)
         self.assertLessEqual(result['s3']['waited_seconds'], 75)
+
+    def test_drain_waits_for_an_earlier_boot_reader_too(self):  # LP-3
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(300, 3_000))
+            (Path(directory) / 'backlog.json').write_text(json.dumps({'s3': [{'boot': 'a' * 32, 'source': 'backlog_s3_aaaa'}]}))
+            backlog_cp = Path(directory) / 'backlog_s3_aaaa' / 'checkpoint.txt'
+            backlog_cp.parent.mkdir()
+            backlog_cp.write_text(_cursor(150, 1_500))
+            with mock.patch.object(status, 'newest_entry', return_value=_cursor(300, 3_000)), \
+                    mock.patch.object(status, 'last_entry_of_boot', return_value=_cursor(200, 2_000)):
+                self.assertFalse(status.drain(directory, ('s3',), timeout=0.2, poll=0.05)['s3']['drained'])
+                backlog_cp.write_text(_cursor(200, 2_000))
+                self.assertTrue(status.drain(directory, ('s3',), timeout=0.2, poll=0.05)['s3']['drained'])
+
+    def test_unshipped_age_includes_an_earlier_boot_reader(self):  # LP-3
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(300, 3_000_000))
+            (Path(directory) / 'backlog.json').write_text(json.dumps({'s3': [{'boot': 'a' * 32, 'source': 'backlog_s3_aaaa'}]}))
+            with mock.patch.object(status, 'first_entry_after', return_value=None), \
+                    mock.patch.object(status, '_first_cursor', return_value=_cursor(120, 100_000_000)):
+                self.assertEqual(status.unshipped_seconds(directory, 's3', {}, 400_000_000), 300)
 
     def test_drain_record_never_blocks_the_stop(self):
         with tempfile.TemporaryDirectory() as directory:

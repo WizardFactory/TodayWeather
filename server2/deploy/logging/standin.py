@@ -84,7 +84,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def record(self, service, action, **fields):
-        entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')), **fields)
+        credential = re.search(r'Credential=([A-Z0-9]+)/', self.headers.get('Authorization', ''))
+        entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')),
+                     key_id=credential.group(1) if credential else None, **fields)
         with self.server.lock:
             with open(self.server.state / 'operations.jsonl', 'a') as f:
                 f.write(json.dumps(entry, sort_keys=True) + '\n')
@@ -199,6 +201,11 @@ def main():
     server.daemon_threads = True
     server.state, server.bucket, server.groups = state, args.bucket, set(args.log_group)
     server.streams, server.lock = {}, threading.Lock()
+    # Streams survive a restart of the stand-in (a host reboot), as they do on AWS.
+    for group in server.groups:
+        group_dir = state / 'cloudwatch' / group.strip('/')
+        for path in group_dir.rglob('*.jsonl') if group_dir.exists() else []:
+            server.streams.setdefault(group, set()).add(str(path.relative_to(group_dir))[:-len('.jsonl')])
     signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown).start())
     (state / 'ready').write_text(str(os.getpid()))
     server.serve_forever()

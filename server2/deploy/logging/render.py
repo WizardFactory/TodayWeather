@@ -161,6 +161,142 @@ def machine_id(path='/etc/machine-id'):
     return value
 
 
+IMDS = 'http://169.254.169.254'
+LIFE_CYCLES = ('spot', 'on-demand', 'scheduled')
+
+
+def instance_identity(timeout=1.0, base=IMDS):
+    """(instance ID, life cycle) from EC2 instance metadata (IMDSv2), or (machine ID, 'unknown')
+    on a host without instance metadata (LP-3, #2980)."""
+    import urllib.request
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        token_request = urllib.request.Request(base + '/latest/api/token', method='PUT',
+                                               headers={'X-aws-ec2-metadata-token-ttl-seconds': '60'})
+        with opener.open(token_request, timeout=timeout) as response:
+            token = response.read().decode()
+        def get(path):
+            request = urllib.request.Request(base + path, headers={'X-aws-ec2-metadata-token': token})
+            with opener.open(request, timeout=timeout) as response:
+                return response.read().decode().strip()
+        instance_id = get('/latest/meta-data/instance-id')
+        life_cycle = get('/latest/meta-data/instance-life-cycle')
+        if re.fullmatch(r'i-[0-9a-f]{8,17}', instance_id) and life_cycle in LIFE_CYCLES:
+            return instance_id, life_cycle
+    except (OSError, ValueError):
+        pass
+    return machine_id(), 'unknown'
+
+
+def _journal_cursor(arguments):
+    """Last cursor of the read units' entries for `arguments` (-n 1), or None."""
+    import subprocess
+    # Only entries of the read units: journald's own lines ("Journal stopped") are never read.
+    matches = [f'_SYSTEMD_UNIT={unit}' for unit in UNITS]
+    result = subprocess.run(['journalctl', f'--namespace={NAMESPACE}', *arguments, '-o', 'json',
+                             '--output-fields=__CURSOR', '-n', '1', *matches], capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        raise OSError('journalctl failed')
+    lines = [line for line in result.stdout.splitlines() if line.strip()]
+    return json.loads(lines[-1])['__CURSOR'] if lines else None
+
+
+def journal_boots():
+    """Boot IDs of the server2 namespace, oldest first (none for an empty namespace).
+
+    A failing journalctl fails the start instead of returning no boots: an empty list
+    would drop the saved backlog plan."""
+    import subprocess
+    result = subprocess.run(['journalctl', f'--namespace={NAMESPACE}', '--list-boots', '--no-pager', '-q'],
+                            capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        raise OSError('journalctl --list-boots failed')
+    return [m.group(1) for m in re.finditer(r'^\s*-?\d+\s+([0-9a-f]{32})\b', result.stdout, re.M)]
+
+
+def _cursor_fields(cursor):
+    return dict(part.split('=', 1) for part in cursor.strip().split(';') if '=' in part)
+
+
+def _write_owned(state_dir, path, text):
+    """Write a reader checkpoint owned like the state directory: this start step runs as
+    root, the collector as the unit's dynamic user, which must be able to update it."""
+    owner = state_dir.stat()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    for item in (path.parent, path):
+        os.chown(item, owner.st_uid, owner.st_gid)
+
+
+def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=_journal_cursor):
+    """Earlier boots each destination still has to ship (surviving disk, LP-3).
+
+    Vector reads only the current boot on systemd 250-257, so a destination whose checkpoint
+    is from an earlier boot gets one extra reader per earlier boot, starting where the
+    checkpoint stopped (or, without a checkpoint, from the first entry of the boot in which
+    the reader started). The plan persists in backlog.json until each reader has reached
+    its boot's last entry, so a restart in between keeps the remaining backlog."""
+    state_dir = Path(state_dir)
+    plan_file = state_dir / 'backlog.json'
+    try:
+        plan = json.loads(plan_file.read_text())
+    except (FileNotFoundError, ValueError):
+        plan = {}
+    # Boot in which a reader without a checkpoint started: it reads that boot from its
+    # first entry, so a reader that never confirmed anything before a reboot (a destination
+    # failing throughout) still has that whole boot to ship.
+    starts_file = state_dir / 'reader-start.json'
+    try:
+        starts = json.loads(starts_file.read_text())
+    except (FileNotFoundError, ValueError):
+        starts = {}
+    boots = journal_boots() if boots is None else boots
+    for destination in destinations:
+        try:
+            checkpoint = (state_dir / f'journal_{destination}' / 'checkpoint.txt').read_text().strip()
+        except FileNotFoundError:
+            checkpoint = ''
+        pending = {item['boot']: item for item in plan.get(destination, [])}
+        if checkpoint:
+            starts.pop(destination, None)
+            boot = _cursor_fields(checkpoint).get('b')
+        else:
+            boot = starts.setdefault(destination, current_boot)
+        if boot and boot != current_boot and boot in boots:
+            for later in boots[boots.index(boot):]:
+                if later == current_boot:
+                    break
+                source = f'backlog_{destination}_{later[:12]}'
+                if later not in pending:
+                    pending[later] = {'boot': later, 'source': source}
+                    seed = state_dir / source / 'checkpoint.txt'
+                    if checkpoint and later == boot and not seed.exists():
+                        _write_owned(state_dir, seed, checkpoint + '\n')
+        remaining = []
+        for item in pending.values():
+            if item['boot'] not in boots:
+                continue  # rotated out; the overrun check reports it
+            last = last_cursor([f"--boot={item['boot']}"])
+            try:
+                done = (state_dir / item['source'] / 'checkpoint.txt').read_text().strip()
+            except FileNotFoundError:
+                done = ''
+            if last and done and int(_cursor_fields(done)['i'], 16) >= int(_cursor_fields(last)['i'], 16):
+                continue  # this boot is shipped
+            remaining.append(item)
+        if remaining:
+            plan[destination] = remaining
+        else:
+            plan.pop(destination, None)
+    for destination in list(plan):
+        if destination not in destinations:
+            plan.pop(destination)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    plan_file.write_text(json.dumps(plan, sort_keys=True))
+    starts_file.write_text(json.dumps(starts, sort_keys=True))
+    return plan
+
+
 def _filter_program(min_level):
     """VRL: keep a server schema-1 record at or above `min_level`, or a collector record.
 
@@ -188,7 +324,7 @@ boot = downcase(string(._BOOT_ID) ?? "unknown")
 '''.strip()
 
 
-def collector_config(config, instance_id, state_dir):
+def collector_config(config, instance_id, state_dir, backlog=None):
     """The Vector configuration: one journal reader per remote destination.
 
     Each destination has its own journal source and checkpoint, so a destination
@@ -203,8 +339,17 @@ def collector_config(config, instance_id, state_dir):
             'type': 'journald', 'journal_namespace': NAMESPACE, 'include_units': list(UNITS),
             'current_boot_only': True, 'since_now': False,
         }
+        inputs = [f'journal_{destination}']
+        for item in (backlog or {}).get(destination, []):
+            # An earlier boot's unshipped records (surviving disk): Vector's own boot
+            # argument is overridden by the later --boot.
+            sources[item['source']] = {
+                'type': 'journald', 'journal_namespace': NAMESPACE, 'include_units': list(UNITS),
+                'current_boot_only': True, 'since_now': False, 'extra_args': [f"--boot={item['boot']}"],
+            }
+            inputs.append(item['source'])
         transforms[f'select_{destination}'] = {
-            'type': 'remap', 'inputs': [f'journal_{destination}'], 'drop_on_abort': True,
+            'type': 'remap', 'inputs': inputs, 'drop_on_abort': True,
             'source': _filter_program(config[f'{destination}_level']),
         }
     common = {'encoding': {'codec': 'text'}, 'healthcheck': {'enabled': False},
@@ -234,11 +379,15 @@ def collector_config(config, instance_id, state_dir):
             'sources': sources, 'transforms': transforms, 'sinks': sinks}
 
 
-def start_record(config, instance_id, boot_id, version, timestamp):
+def start_record(config, instance_id, boot_id, version, timestamp, life_cycle='unknown', backlog=None):
     """The collector's first record after each start (collector record format, schema 1)."""
-    return {'collector_schema': COLLECTOR_SCHEMA, 'timestamp': timestamp, 'level': 'info',
-            'event': 'collector.started', 'collector_version': version,
-            'sinks': config['sinks'], 'instance_id': instance_id, 'boot_id': boot_id}
+    record = {'collector_schema': COLLECTOR_SCHEMA, 'timestamp': timestamp, 'level': 'info',
+              'event': 'collector.started', 'collector_version': version,
+              'sinks': config['sinks'], 'instance_id': instance_id, 'boot_id': boot_id,
+              'instance_life_cycle': life_cycle}
+    if backlog:
+        record['backlog_boots'] = {d: [item['boot'] for item in items] for d, items in sorted(backlog.items())}
+    return record
 
 
 def write_atomic(path, text):
@@ -269,12 +418,19 @@ def main(argv=None, environ=None):
         config = settings(lookup(environ, parse_dotenv(text)))
         if config['sinks'] == ['local']:
             print('server2 log collector: only the local journal is selected; nothing is shipped', file=sys.stderr)
+            if instance_identity()[1] == 'spot':
+                import datetime
+                print(json.dumps({'collector_schema': COLLECTOR_SCHEMA, 'level': 'warn', 'event': 'collector.local_only_on_spot',
+                                  'timestamp': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                                  'message': 'logs are kept only on this Spot instance and are lost if it is interrupted'},
+                                 sort_keys=True), flush=True)
             return 1
         manifest = json.loads(Path(args.version_file).read_text())
         version = f"vector {manifest['version']}"
-        instance_id = machine_id()
+        instance_id, life_cycle = instance_identity()
         boot_id = Path('/proc/sys/kernel/random/boot_id').read_text().strip().replace('-', '')
-        rendered = collector_config(config, instance_id, args.state)
+        backlog = plan_backlog(args.state, [d for d in config['sinks'] if d != 'local'], boot_id)
+        rendered = collector_config(config, instance_id, args.state, backlog)
         write_atomic(args.output, json.dumps(rendered, indent=1, sort_keys=True) + '\n')
     except SettingError as exc:
         print(f'server2 log collector: invalid setting {exc}; the collector is not started', file=sys.stderr)
@@ -286,7 +442,7 @@ def main(argv=None, environ=None):
         return 255
     import datetime
     now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-    print(json.dumps(start_record(config, instance_id, boot_id, version, now), sort_keys=True), flush=True)
+    print(json.dumps(start_record(config, instance_id, boot_id, version, now, life_cycle, backlog), sort_keys=True), flush=True)
     return 0
 
 
