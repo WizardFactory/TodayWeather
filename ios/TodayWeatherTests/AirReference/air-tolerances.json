@@ -1,0 +1,219 @@
+{
+ "metric": "AN-05: strong = share of pixels whose largest RGB channel differs by more than 64 after a 3x3 box blur; mean = mean largest RGB channel difference (0-255); heightDifference = |native - Cordova| px at scale 3, after the points a block ends under the tab bar (`hidden`). Each case passes within its value plus `margin`. Measured 2026-11-14 on twios_dev_in07 (iOS 26.5, Xcode 27.2) against the captures of ios/tools/air-reference.",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "reasons": {
+  "header blocks (-0)": "Glyph rasterization of the bar's title and glyphs and the main box's texts; the elements are at the captured positions (strong 0 to 0.0005).",
+  "gauge (-1)": "The value label is 1 px from the capture: its width is the bold value's width plus 22 pt, and CoreText measures the bold digits up to 1/3 pt narrower than WebKit, which changes the whole-point `offsetWidth` getLabelPosition reads and the label's right border; the band texts start at quarter-pixel positions (x 97.25 pt), where WebKit and CoreText round glyphs to different device pixels.",
+  "chart (-2)": "Glyph rasterization of the 13 pt labels; the crisp axis: WebKit's 1 pt path covers four device rows (the last one partly) where the native line covers three.",
+  "daily, detail and station cells": "Glyph rasterization only; the cells, faces and texts are at the captured positions.",
+  "info (-5, london -3)": "IN-08's detail AQI table (AirRows): left-aligned table text 1 px (1/3 pt) from the capture, because the table is centered on its widest row and CoreText measures some Korean texts up to 2/3 pt narrower than WebKit (forecast-tolerances.json, detailAir).",
+  "heightDifference 1": "The last block ends under the tab bar: WebKit lays the page out on 1/64 pt and rounds each block's pixel edges; the native block ends on the next pixel.",
+  "sensitivity": "Mutation checks, run once and reverted (plans/ios-native.md, IN-09): see the plan's checks."
+ },
+ "cases": {
+  "kma-jeju-no-air-0": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "kma-jeju-no-air-1": {
+   "strong": 0.008,
+   "mean": 1.06,
+   "heightDifference": 0
+  },
+  "kma-seoul-0": {
+   "strong": 0.0,
+   "mean": 0.04,
+   "heightDifference": 0
+  },
+  "kma-seoul-1": {
+   "strong": 0.01,
+   "mean": 1.39,
+   "heightDifference": 0
+  },
+  "kma-seoul-2": {
+   "strong": 0.0009,
+   "mean": 0.86,
+   "heightDifference": 0
+  },
+  "kma-seoul-3": {
+   "strong": 0.0007,
+   "mean": 0.21,
+   "heightDifference": 0
+  },
+  "kma-seoul-4": {
+   "strong": 0.0035,
+   "mean": 0.48,
+   "heightDifference": 0
+  },
+  "kma-seoul-5": {
+   "strong": 0.0152,
+   "mean": 2.12,
+   "heightDifference": 0
+  },
+  "kma-seoul-6": {
+   "strong": 0.0026,
+   "mean": 0.72,
+   "heightDifference": 1
+  },
+  "kma-seoul-dark-0": {
+   "strong": 0.0001,
+   "mean": 0.04,
+   "heightDifference": 0
+  },
+  "kma-seoul-dark-1": {
+   "strong": 0.0049,
+   "mean": 1.21,
+   "heightDifference": 0
+  },
+  "kma-seoul-dark-2": {
+   "strong": 0.0014,
+   "mean": 0.99,
+   "heightDifference": 0
+  },
+  "kma-seoul-dark-3": {
+   "strong": 0.001,
+   "mean": 0.22,
+   "heightDifference": 0
+  },
+  "kma-seoul-dark-4": {
+   "strong": 0.0009,
+   "mean": 0.38,
+   "heightDifference": 0
+  },
+  "kma-seoul-dark-5": {
+   "strong": 0.0035,
+   "mean": 1.61,
+   "heightDifference": 0
+  },
+  "kma-seoul-dark-6": {
+   "strong": 0.0024,
+   "mean": 0.72,
+   "heightDifference": 1
+  },
+  "kma-seoul-o3-0": {
+   "strong": 0.0,
+   "mean": 0.1,
+   "heightDifference": 0
+  },
+  "kma-seoul-o3-1": {
+   "strong": 0.0086,
+   "mean": 1.29,
+   "heightDifference": 0
+  },
+  "kma-seoul-o3-2": {
+   "strong": 0.0009,
+   "mean": 0.83,
+   "heightDifference": 0
+  },
+  "kma-seoul-o3-3": {
+   "strong": 0.0037,
+   "mean": 0.49,
+   "heightDifference": 0
+  },
+  "kma-seoul-o3-4": {
+   "strong": 0.0152,
+   "mean": 2.12,
+   "heightDifference": 0
+  },
+  "kma-seoul-o3-5": {
+   "strong": 0.0036,
+   "mean": 0.9,
+   "heightDifference": 1
+  },
+  "kma-seoul-pm25-0": {
+   "strong": 0.0005,
+   "mean": 0.15,
+   "heightDifference": 0
+  },
+  "kma-seoul-pm25-1": {
+   "strong": 0.0097,
+   "mean": 1.39,
+   "heightDifference": 0
+  },
+  "kma-seoul-pm25-2": {
+   "strong": 0.0009,
+   "mean": 0.85,
+   "heightDifference": 0
+  },
+  "kma-seoul-pm25-3": {
+   "strong": 0.0007,
+   "mean": 0.21,
+   "heightDifference": 0
+  },
+  "kma-seoul-pm25-4": {
+   "strong": 0.0037,
+   "mean": 0.49,
+   "heightDifference": 0
+  },
+  "kma-seoul-pm25-5": {
+   "strong": 0.0152,
+   "mean": 2.12,
+   "heightDifference": 0
+  },
+  "kma-seoul-pm25-6": {
+   "strong": 0.0031,
+   "mean": 0.81,
+   "heightDifference": 1
+  },
+  "kma-seoul-station-1-0": {
+   "strong": 0.0,
+   "mean": 0.04,
+   "heightDifference": 0
+  },
+  "kma-seoul-station-1-1": {
+   "strong": 0.0105,
+   "mean": 1.38,
+   "heightDifference": 0
+  },
+  "kma-seoul-station-1-2": {
+   "strong": 0.0009,
+   "mean": 0.86,
+   "heightDifference": 0
+  },
+  "kma-seoul-station-1-3": {
+   "strong": 0.0007,
+   "mean": 0.21,
+   "heightDifference": 0
+  },
+  "kma-seoul-station-1-4": {
+   "strong": 0.0033,
+   "mean": 0.44,
+   "heightDifference": 0
+  },
+  "kma-seoul-station-1-5": {
+   "strong": 0.0152,
+   "mean": 2.12,
+   "heightDifference": 0
+  },
+  "kma-seoul-station-1-6": {
+   "strong": 0.0026,
+   "mean": 0.72,
+   "heightDifference": 1
+  },
+  "vc-london-0": {
+   "strong": 0.0,
+   "mean": 0.04,
+   "heightDifference": 0
+  },
+  "vc-london-1": {
+   "strong": 0.0079,
+   "mean": 1.27,
+   "heightDifference": 0
+  },
+  "vc-london-2": {
+   "strong": 0.0038,
+   "mean": 0.56,
+   "heightDifference": 0
+  },
+  "vc-london-3": {
+   "strong": 0.0094,
+   "mean": 1.36,
+   "heightDifference": 1
+  }
+ }
+}

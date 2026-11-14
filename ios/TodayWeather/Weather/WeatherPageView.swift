@@ -398,7 +398,7 @@ struct ThemeImage: View {
 
 /// A `.card`: 10 pt of padding above and below, the title (15 pt, `.card-title`, 5 pt from the sides, 10 pt above the
 /// table) and the table.
-private struct Card<Body: View>: View {
+struct Card<Body: View>: View {
     let title: String?
     let colors: WeatherColors
     let s: TextScale
@@ -467,7 +467,7 @@ private struct AqiTable: View {
 }
 
 /// A glyph of an icon font on a line of its own size (`<i class="material-icons">`, line-height 1).
-private struct GlyphText: View {
+struct GlyphText: View {
     let glyph: String
     let size: CGFloat
     let color: CssColor
@@ -484,7 +484,7 @@ private struct GlyphText: View {
 
 /// A row's runs: the row's font, `<small>` at 0.8 of `base`, `.sub-text` at 13 pt, its `<small>` at 10.4 pt, links and
 /// the Ionicons arrow after a link.
-private func runs(_ runs: [TextRun], base: CGFloat, colors: WeatherColors, s: TextScale) -> [CssRun] {
+func runs(_ runs: [TextRun], base: CGFloat, colors: WeatherColors, s: TextScale) -> [CssRun] {
     runs.map { run in
         switch run.style {
         case .plain: CssRun(text: run.text, size: base, color: colors.forced ?? WeatherColors.grade(run.color))
@@ -498,7 +498,7 @@ private func runs(_ runs: [TextRun], base: CGFloat, colors: WeatherColors, s: Te
 }
 
 /// The height of a table row of a 24 pt image and 17 pt text (24.516 pt at the default size).
-private func rowHeight(_ s: TextScale) -> CGFloat {
+func rowHeight(_ s: TextScale) -> CGFloat {
     let line = CssLine.metrics([CssRun(text: "가", size: s(17))])
     return max(24 + WeatherMetrics.rowImageTop, line.ascent + line.descent + WeatherMetrics.rowExtra)
 }
@@ -564,7 +564,7 @@ private struct PollenButton: View {
 
 /// `.colgroup-box` of the detail AQI card: the labels' column and the values' column (a 24 pt glyph with 8 pt margins and
 /// the text), centered as one table.
-private struct AirRows: View {
+struct AirRows: View {
     let rows: [AirRow]
     let colors: WeatherColors
     let s: TextScale

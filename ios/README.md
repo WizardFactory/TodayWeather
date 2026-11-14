@@ -203,6 +203,46 @@ After a change to `service.weatherutil.js` or `service.weatherinfo.js`, run `pyt
 
 `TW_SERVER_URL` in the ignored `ios/Private.xcconfig` (until IN-04's `Support/App.xcconfig` includes it, build with `-xcconfig Private.xcconfig`); the build then sends read-only weather GETs to the legacy server. The IN-08 run used the owned `twios_dev_in07` simulator with an injected state (an unsigned build has no App Group container): 회현동 and 런던, each on Hourly and Daily, one GET per launch.
 
+## Air quality (IN-09)
+
+The Air tab, S05 (#2958): AirCtrl's scope and the template in `TWDomain` `Air/`, the SwiftUI page in `TodayWeather/Air/`, connected to IN-08's loading in `WeatherScreens`. Ported from the Android AN-09 page (`AirScope`, `AirPage`, `AirChart`, `AirScreen`) and checked against the Cordova iOS build.
+
+- **Scope (`AirScope`):** a visit of AirCtrl (`/tab/air`, `cache: false`): `open` on the pollutant of the link (`?code=`, else the overall index), `apply` for the selected place, `setCode` and `setStation` for the detail and station cells (each brings the page to the top, `scrolls`), `applyEvent` for TabCtrl's `applyEvent` (back to the first station). `_applyWeatherData` runs in one `try`: it stops at the first value it cannot read, and what it did not reach keeps an earlier place's value (A16); a missing chart slot is dated in the device's zone with JavaScriptCore's date reading (`Warnings.jsDate`) and wall-clock `setHours`. `airUnit` is TabCtrl's standard; a change on the units page goes to the visit as it is (`changeAirUnitEvent`).
+- **Page (`AirPage`, `AirChart`):** the main box (title, the grade at `bigFontSize × 0.55` or the value at `bigFontSize` with ㎍/㎥ or ppm, the grade line with the face and the advice, the current weather), the gauge (the standard's bands with `~ bound`, the value label placed by `getLabelPosition` from whole-point `offsetWidth`s), the chart title, the daily, detail, info (station, publication, standard, forecast time, forecast source) and station cells; values as sent (no rounding; a station value of 0 shows `-`). `AirChart` is ngAirChart's SVG: 24 slots on D3 bands, `nice` scale, a tick per date with a label every three hours and the date under 0시, the current hour's 2 pt line, bars in the grade colors.
+- **Screen (`AirPageView`, `AirChartView`, `AirStyle`):** the Cordova iOS measures: the header block (64 pt above, `headerHeight` at least), the gauge 4 pt in from the card's sides, cards with 10 pt padding and 5 pt apart, the detail and station cells (`border-spacing` 10, at least 110 pt, stretched to the card or scrolling sideways), the info card as IN-08's detail AQI rows. The grade line is drawn with CoreText (each piece on its own baseline: the face's box is the 24 pt line, `vertical-align: bottom`); the chart with `Canvas`, its axis on whole device pixels (`crispEdges`). Colors: the dark theme has its own (`.dark-theme.air`); the photo and old themes show the light page. Text follows Dynamic Type (the header block, gauge and cells grow; the chart keeps the Cordova sizes).
+- **In the shell (`WeatherScreens`):** a new visit each time the Air tab opens; each of the session's `applies` is an `applyEvent` (a load, a reload by a tap on the selected Air tab, a swipe or the arrows, a response). `goAirInfoPage(code)` on S03 and S04 sets the link's pollutant, which stays while the weather tabs change the path and is cleared by the Locations tab (`navigation` of `air-captures.json`, recorded from the Cordova build). The current weather opens S03 (`goWeather`), the standard row the units page (IN-12), the forecast source its description O08 (`popUpAirForecastInfo`, kaq and airkorea only). The location glyph is inert on S05 (`switchToLocationSettings` is ForecastCtrl's, A10). The page stores nothing: the session saves responses through the `AppStateHolder`.
+
+### References and tests
+
+| File | Contents |
+| --- | --- |
+| `TodayWeatherTests/AirReference/<state>-<block>.png` | The blocks of the Cordova iOS S05 at 393x852 pt and scale 3 (0 the header block with the bar, 1 the gauge, then each card) in seven states: `kma-seoul` (manual page 10, and page 12 at the end), `kma-seoul-pm25` (page 11), `kma-seoul-station-1`, `kma-seoul-o3` (`?code=o3`, no forecast), `kma-seoul-dark`, `vc-london` (second place), `kma-jeju-no-air` (the scale only); `o08-airkorea.png` |
+| `TodayWeatherTests/AirReference/air-captures.json`, `air-<fixture>.input.json`, `air-tolerances.json` | Manifest (states, places, blocks, O08's texts, the navigation of a pollutant chosen on S03), the served responses, and each block's tolerance with the reasons |
+| `Core/Tests/TWDomainTests/AirReference/<state>.json`, `o08-airkorea.json`, `navigation.json` | Every element of every block (rect, text, image, font, color, borders), the scope values, the gauge's widths and the chart's SVG |
+| `Core/Tests/TWDomainTests/AirReference/air-scale.json` | V32: `setAirUnit`, `grade2Color`, `getSentimentIcon` and `getLabelPosition` of the Cordova sources run in the macOS JavaScriptCore shell (`tools/air/generate.py`, with the sources' commits and hashes) for every standard, pollutant, grade and the iOS gauge widths |
+| `provenance/air-captures.json` | Build commit and recipe, the S05 sources inside the built app compared with `client/`, the run's simulator and environment, and the SHA-256 of every capture file |
+
+- `TWDomainTests`: `AirScopeTests` (the 32 visits and 97 steps of `air.json`, station switching, the page without air data, slot dating in Seoul and New York checked in JavaScriptCore), `AirScaleTests` (V32 through the page model: bands, colors, faces and 4,160 label positions), `AirPageTests` (every captured element of the seven states, the label position at the captured widths, the template rules), `AirChartTests` (every tick, label, date and bar of the five captured charts within 0.02 pt; D3's rules), `AirReferenceProvenanceTests`.
+- App-hosted: `AirScreenshotTests` (40 blocks by the AN-05 metric within `air-tolerances.json`), `AirTabTests` (stations and a reload back to the first, the link's pollutant across the tabs as captured, O08 with the captured texts, the weather link, a response without air data), `AirLiveTests` (taps on station and detail cells in the live shell) and `AirFitTests` (every catalog at the default size and `xxxLarge`, at 375, 393, 834, 1024 and 1366 pt; every theme's page colors).
+
+### Recapturing and regenerating
+
+After a change to the Cordova S05 (the sources in `provenance/air-captures.json` no longer match `client/`), on the owned simulator `twios_cap_16`:
+
+```sh
+sh ios/tools/chart-reference/build-cordova.sh ios/build/air-reference http://127.0.0.1:18456
+python3 ios/tools/air-reference/capture.py run 517DC815-4EF1-4EC7-835C-FAD594AFB4C5 ios/build/air-reference/TodayWeather.app
+python3 ios/tools/air-reference/capture.py provenance ios/build/air-reference/TodayWeather.app
+```
+
+`capture.py` uses the forecast tool's fixture server, simulator preparation, block cutter and request check (`tools/forecast-reference/capture.py`): it refuses other simulators, erases the owned one, sets ko-KR, installs a copy of the build with `capture.js` injected, adds the corpus places through the app's own services and opens S05 afresh for each state; the cells' taps go to their handlers, the tab taps carry `isIonicTap`. It fails when a request leaves the Mac. Then run the tests and update `air-tolerances.json` with the measured values (the test prints `AIR-COMPARE` lines) only for an explained change. Delete `ios/build/air-reference/` and the build's DerivedData folder `App-*` afterwards.
+
+After a change to `controller.tabctrl.js`, `controller.air.js` or `service.weatherutil.js`, run `python3 ios/tools/air/generate.py` (macOS `jsc`; needs `client/` and the Git history) and commit the golden; CI fails on a stale copy.
+
+### Against production
+
+`ProductionAirTests` (app-hosted) runs only with `TEST_RUNNER_TW_PRODUCTION_AIR=1` in a build with the private `TW_SERVER_URL` (`-xcconfig Private.xcconfig`); otherwise it is skipped, as in CI. It sends one read-only GET for 회현동 through the app's client, opens the Air tab in the live shell, taps the second station and checks that the shown observation changed; it writes the request paths (no host) and the page before and after the tap to the app's `tmp/air-production/`.
+
 ## Private inputs
 
 The build and the tests run without private inputs. They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).

@@ -1,0 +1,1638 @@
+{
+ "source": "ios/tools/air-reference/capture.py manifest, from Core/Tests/TWDomainTests/AirReference",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "language": "ko-KR",
+ "units": {
+  "temperatureUnit": "C",
+  "windSpeedUnit": "m/s",
+  "pressureUnit": "hPa",
+  "distanceUnit": "km",
+  "precipitationUnit": "mm",
+  "airUnit": "airkorea"
+ },
+ "states": {
+  "kma-seoul": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    }
+   ],
+   "url": "/tab/air",
+   "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready air",
+   "scope": {
+    "address": "회현동",
+    "aqiCode": "aqi",
+    "airCodeName": "LOC_AQI",
+    "mainName": "LOC_AIR_STATUS",
+    "stnIndex": 0,
+    "airCodeGrade": 1,
+    "airCodeValue": 40,
+    "airCodeStr": "",
+    "mainInfo": "좋음",
+    "airCodeActionGuide": "실외활동 걱정 없어요",
+    "cityCount": 1,
+    "forecastPubdate": "2026-11-07 23:00",
+    "forecastSource": "airkorea",
+    "hourlyChartTitle": "LOC_HOURLY_AQI_FORECAST",
+    "chartAirHeight": 100,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 42,
+    "left": "57.6px",
+    "labelRect": {
+     "x": 61.59375,
+     "y": 360,
+     "w": 42.109375,
+     "h": 29
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 389,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "kma-seoul-1.png",
+     "rect": {
+      "x": 4,
+      "y": 49,
+      "w": 385,
+      "h": 69
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 207
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-2.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 149
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 447
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-3.png",
+     "rect": {
+      "x": 0,
+      "y": 137,
+      "w": 393,
+      "h": 132
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 396
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "kma-seoul-4.png",
+     "rect": {
+      "x": 0,
+      "y": 274,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 432
+     }
+    },
+    {
+     "index": 5,
+     "cls": "card",
+     "file": "kma-seoul-5.png",
+     "rect": {
+      "x": 0,
+      "y": 423,
+      "w": 393,
+      "h": 142.578125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 428
+     }
+    },
+    {
+     "index": 6,
+     "cls": "card",
+     "file": "kma-seoul-6.png",
+     "rect": {
+      "x": 0,
+      "y": 570.578125,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0.578125,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 430
+     }
+    }
+   ]
+  },
+  "kma-seoul-pm25": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    }
+   ],
+   "url": "/tab/air",
+   "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready air",
+   "scope": {
+    "address": "회현동",
+    "aqiCode": "pm25",
+    "airCodeName": "LOC_PM25",
+    "mainName": "LOC_PM25",
+    "stnIndex": 0,
+    "airCodeGrade": 1,
+    "airCodeValue": 12,
+    "airCodeStr": "좋음",
+    "mainInfo": 12,
+    "airCodeActionGuide": "실외활동 걱정 없어요",
+    "cityCount": 1,
+    "forecastPubdate": "2026-11-07 23:00",
+    "forecastSource": "airkorea",
+    "hourlyChartTitle": "LOC_HOURLY_AQI_FORECAST",
+    "chartAirHeight": 100,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 39,
+    "left": "59.1px",
+    "labelRect": {
+     "x": 63.09375,
+     "y": 360,
+     "w": 38.859375,
+     "h": 29
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 389,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-pm25-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "kma-seoul-pm25-1.png",
+     "rect": {
+      "x": 4,
+      "y": 49,
+      "w": 385,
+      "h": 69
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 207
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-pm25-2.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 149
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 447
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-pm25-3.png",
+     "rect": {
+      "x": 0,
+      "y": 137,
+      "w": 393,
+      "h": 132
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 396
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "kma-seoul-pm25-4.png",
+     "rect": {
+      "x": 0,
+      "y": 274,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 432
+     }
+    },
+    {
+     "index": 5,
+     "cls": "card",
+     "file": "kma-seoul-pm25-5.png",
+     "rect": {
+      "x": 0,
+      "y": 423,
+      "w": 393,
+      "h": 142.578125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 428
+     }
+    },
+    {
+     "index": 6,
+     "cls": "card",
+     "file": "kma-seoul-pm25-6.png",
+     "rect": {
+      "x": 0,
+      "y": 570.578125,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0.578125,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 430
+     }
+    }
+   ]
+  },
+  "kma-seoul-station-1": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    }
+   ],
+   "url": "/tab/air",
+   "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready air",
+   "scope": {
+    "address": "회현동",
+    "aqiCode": "aqi",
+    "airCodeName": "LOC_AQI",
+    "mainName": "LOC_AIR_STATUS",
+    "stnIndex": 1,
+    "airCodeGrade": 1,
+    "airCodeValue": 47,
+    "airCodeStr": "",
+    "mainInfo": "좋음",
+    "airCodeActionGuide": "실외활동 걱정 없어요",
+    "cityCount": 1,
+    "forecastPubdate": "2026-11-07 23:00",
+    "forecastSource": "airkorea",
+    "hourlyChartTitle": "LOC_HOURLY_AQI_FORECAST",
+    "chartAirHeight": 100,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 41,
+    "left": "71.855px",
+    "labelRect": {
+     "x": 75.84375,
+     "y": 360,
+     "w": 40.90625,
+     "h": 29
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 389,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-station-1-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "kma-seoul-station-1-1.png",
+     "rect": {
+      "x": 4,
+      "y": 49,
+      "w": 385,
+      "h": 69
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 207
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-station-1-2.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 149
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 447
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-station-1-3.png",
+     "rect": {
+      "x": 0,
+      "y": 137,
+      "w": 393,
+      "h": 132
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 396
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "kma-seoul-station-1-4.png",
+     "rect": {
+      "x": 0,
+      "y": 274,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 432
+     }
+    },
+    {
+     "index": 5,
+     "cls": "card",
+     "file": "kma-seoul-station-1-5.png",
+     "rect": {
+      "x": 0,
+      "y": 423,
+      "w": 393,
+      "h": 142.578125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 428
+     }
+    },
+    {
+     "index": 6,
+     "cls": "card",
+     "file": "kma-seoul-station-1-6.png",
+     "rect": {
+      "x": 0,
+      "y": 570.578125,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0.578125,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 430
+     }
+    }
+   ]
+  },
+  "kma-seoul-o3": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    }
+   ],
+   "url": "/tab/air?code=o3",
+   "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready air",
+   "scope": {
+    "address": "회현동",
+    "aqiCode": "o3",
+    "airCodeName": "LOC_O3",
+    "mainName": "LOC_O3",
+    "stnIndex": 0,
+    "airCodeGrade": 1,
+    "airCodeValue": 0.008,
+    "airCodeStr": "좋음",
+    "mainInfo": 0.008,
+    "airCodeActionGuide": "실외활동 걱정 없어요",
+    "cityCount": 1,
+    "forecastPubdate": "2026-11-07 23:00",
+    "forecastSource": "airkorea",
+    "hourlyChartTitle": "LOC_HOURLY_AQI_INFORMATION",
+    "chartAirHeight": 100,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 66,
+    "left": "0px",
+    "labelRect": {
+     "x": 4,
+     "y": 360,
+     "w": 65.796875,
+     "h": 29
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 389,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-o3-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "kma-seoul-o3-1.png",
+     "rect": {
+      "x": 4,
+      "y": 49,
+      "w": 385,
+      "h": 69
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 207
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-o3-2.png",
+     "rect": {
+      "x": 0,
+      "y": 120,
+      "w": 393,
+      "h": 149
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 447
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-o3-3.png",
+     "rect": {
+      "x": 0,
+      "y": 274,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 432
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "kma-seoul-o3-4.png",
+     "rect": {
+      "x": 0,
+      "y": 423,
+      "w": 393,
+      "h": 142.578125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 428
+     }
+    },
+    {
+     "index": 5,
+     "cls": "card",
+     "file": "kma-seoul-o3-5.png",
+     "rect": {
+      "x": 0,
+      "y": 570.578125,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0.578125,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 430
+     }
+    }
+   ]
+  },
+  "kma-seoul-dark": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    }
+   ],
+   "url": "/tab/air",
+   "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready dark-theme air",
+   "scope": {
+    "address": "회현동",
+    "aqiCode": "aqi",
+    "airCodeName": "LOC_AQI",
+    "mainName": "LOC_AIR_STATUS",
+    "stnIndex": 0,
+    "airCodeGrade": 1,
+    "airCodeValue": 40,
+    "airCodeStr": "",
+    "mainInfo": "좋음",
+    "airCodeActionGuide": "실외활동 걱정 없어요",
+    "cityCount": 1,
+    "forecastPubdate": "2026-11-07 23:00",
+    "forecastSource": "airkorea",
+    "hourlyChartTitle": "LOC_HOURLY_AQI_FORECAST",
+    "chartAirHeight": 100,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 42,
+    "left": "57.6px",
+    "labelRect": {
+     "x": 61.59375,
+     "y": 360,
+     "w": 42.109375,
+     "h": 29
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 389,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(255, 255, 255)",
+     "background-color": "rgb(27, 27, 27)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(68, 68, 68)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-dark-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "kma-seoul-dark-1.png",
+     "rect": {
+      "x": 4,
+      "y": 49,
+      "w": 385,
+      "h": 69
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 207
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-dark-2.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 149
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 447
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-dark-3.png",
+     "rect": {
+      "x": 0,
+      "y": 137,
+      "w": 393,
+      "h": 132
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 396
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "kma-seoul-dark-4.png",
+     "rect": {
+      "x": 0,
+      "y": 274,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 432
+     }
+    },
+    {
+     "index": 5,
+     "cls": "card",
+     "file": "kma-seoul-dark-5.png",
+     "rect": {
+      "x": 0,
+      "y": 423,
+      "w": 393,
+      "h": 142.578125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 428
+     }
+    },
+    {
+     "index": 6,
+     "cls": "card",
+     "file": "kma-seoul-dark-6.png",
+     "rect": {
+      "x": 0,
+      "y": 570.578125,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0.578125,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 430
+     }
+    }
+   ]
+  },
+  "vc-london": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "fixture": "vc-london",
+     "mutations": [],
+     "name": "런던",
+     "address": "영국 런던",
+     "country": "GB",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    }
+   ],
+   "url": "/tab/air",
+   "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready light-theme air",
+   "scope": {
+    "address": "런던",
+    "aqiCode": "aqi",
+    "airCodeName": "LOC_AQI",
+    "mainName": "LOC_AIR_STATUS",
+    "stnIndex": 0,
+    "airCodeGrade": 3,
+    "airCodeValue": 151,
+    "airCodeStr": "",
+    "mainInfo": "나쁨",
+    "airCodeActionGuide": "외출시 황사마스크를 착용하세요!",
+    "cityCount": 2,
+    "chartAirHeight": 100,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 46,
+    "left": "206.905px",
+    "labelRect": {
+     "x": 210.890625,
+     "y": 360,
+     "w": 46.453125,
+     "h": 29
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 389,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "vc-london-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "vc-london-1.png",
+     "rect": {
+      "x": 4,
+      "y": 360,
+      "w": 385,
+      "h": 69
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 207
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "vc-london-2.png",
+     "rect": {
+      "x": 0,
+      "y": 444,
+      "w": 393,
+      "h": 144
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 432
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "vc-london-3.png",
+     "rect": {
+      "x": 0,
+      "y": 593,
+      "w": 393,
+      "h": 69.03125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 207
+     }
+    }
+   ]
+  },
+  "kma-jeju-no-air": {
+   "places": [
+    {
+     "fixture": "kma-seoul",
+     "mutations": [],
+     "name": "회현동",
+     "address": "대한민국 서울특별시 중구 회현동",
+     "country": "KR",
+     "location": {
+      "lat": 37.56,
+      "long": 126.98
+     }
+    },
+    {
+     "fixture": "vc-london",
+     "mutations": [],
+     "name": "런던",
+     "address": "영국 런던",
+     "country": "GB",
+     "location": {
+      "lat": 51.51,
+      "long": -0.13
+     }
+    },
+    {
+     "fixture": "kma-jeju",
+     "mutations": [
+      {
+       "path": [
+        "airInfoList"
+       ]
+      },
+      {
+       "path": [
+        "currentWeather",
+        "arpltn"
+       ]
+      }
+     ],
+     "name": "연동",
+     "address": "대한민국 제주특별자치도 제주시 연동",
+     "country": "KR",
+     "location": {
+      "lat": 33.5,
+      "long": 126.53
+     }
+    }
+   ],
+   "url": "/tab/air",
+   "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready light-theme air",
+   "scope": {
+    "address": "이도2동",
+    "aqiCode": "aqi",
+    "airCodeName": "LOC_AQI",
+    "mainName": "LOC_AIR_STATUS",
+    "stnIndex": 0,
+    "bodyWidth": 393,
+    "bodyHeight": 852,
+    "bigFontSize": 78.60000000000001,
+    "headerHeight": 355,
+    "strHour": "시"
+   },
+   "gauge": {
+    "width": 385,
+    "labelWidth": 22,
+    "left": "0px",
+    "labelRect": {
+     "x": 4,
+     "y": 365,
+     "w": 22,
+     "h": 10
+    },
+    "stdRect": {
+     "x": 4,
+     "y": 379,
+     "w": 385,
+     "h": 40
+    }
+   },
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-jeju-no-air-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "cls": "air-std-table",
+     "file": "kma-jeju-no-air-1.png",
+     "rect": {
+      "x": 4,
+      "y": 360,
+      "w": 385,
+      "h": 59
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 1155,
+      "height": 177
+     }
+    }
+   ]
+  }
+ },
+ "o08": {
+  "file": "o08-airkorea.png",
+  "rect": {
+   "x": 71.5,
+   "y": 314,
+   "w": 250,
+   "h": 170
+  },
+  "pixels": {
+   "width": 750,
+   "height": 510
+  },
+  "body": [
+   "환경부는 대기오염으로 인한 국민 건강 피해를 최소화 하기 위해 대기오염 농도를 예보하고 있습니다."
+  ],
+  "buttons": [
+   {
+    "text": "닫기",
+    "className": "button button-default"
+   }
+  ]
+ },
+ "navigation": [
+  {
+   "url": "/tab/air?code=pm25",
+   "state": "tab.air",
+   "aqiCode": "pm25",
+   "after": "goAirInfoPage(pm25) on S03"
+  },
+  {
+   "url": "/tab/forecast?code=pm25",
+   "state": "tab.forecast",
+   "aqiCode": null,
+   "after": "Hourly tab"
+  },
+  {
+   "url": "/tab/air?code=pm25",
+   "state": "tab.air",
+   "aqiCode": "pm25",
+   "after": "Air tab"
+  },
+  {
+   "url": "/tab/dailyforecast?code=pm25",
+   "state": "tab.dailyforecast",
+   "aqiCode": null,
+   "after": "Daily tab"
+  },
+  {
+   "url": "/tab/air?code=pm25",
+   "state": "tab.air",
+   "aqiCode": "pm25",
+   "after": "Air tab"
+  },
+  {
+   "url": "/tab/search",
+   "state": "tab.search",
+   "aqiCode": null,
+   "after": "Locations tab"
+  },
+  {
+   "url": "/tab/air",
+   "state": "tab.air",
+   "aqiCode": "aqi",
+   "after": "Air tab"
+  }
+ ],
+ "webViewOrigin": {
+  "x": 0,
+  "y": 162
+ }
+}

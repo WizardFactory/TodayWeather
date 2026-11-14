@@ -1,0 +1,400 @@
+{
+ "tool": "ios/tools/air-reference/capture.py",
+ "build": {
+  "recipe": "ios/tools/chart-reference/build-cordova.sh <out> http://127.0.0.1:18456",
+  "commit": "002f9291e103c401d22deab9a939236e20c8a587",
+  "client_version": "1.1.2",
+  "cordova_ios": "8.1.1",
+  "xcode": "Xcode 27.2",
+  "node": "v24.19.0",
+  "server": "http://127.0.0.1:18456",
+  "built_at": "2026-11-14T17:01:55Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+ },
+ "data": {
+  "served": "the corpus responses (Core/Tests/TWDomainTests/Corpus/inputs) for GET /weather/v000903/coord/...",
+  "places": "회현동 (kma-seoul) alone; then 런던 (vc-london) added and selected; then 연동 (kma-jeju without airInfoList and currentWeather.arpltn) added and selected",
+  "settings": "defaults (Korean units, airkorea); light theme, dark for kma-seoul-dark"
+ },
+ "pageSources": [
+  {
+   "file": "client/www/templates/tab-air.html",
+   "appSha256": "4d68ccf085abf78aeebcf2f1ecc5effa14d6343c154cd374f0bce6665a29ee81",
+   "tracked": true,
+   "clientSha256": "4d68ccf085abf78aeebcf2f1ecc5effa14d6343c154cd374f0bce6665a29ee81",
+   "matchesClient": true,
+   "lastCommit": "86efb3189ddf3e7bd86b0211b7e5b05a8faea1e3"
+  },
+  {
+   "file": "client/www/templates/tabs.html",
+   "appSha256": "df534297a99e7e5733e83165435fdbf84eb7c356bf0d8d0e954a2ad4a0af9d9b",
+   "tracked": true,
+   "clientSha256": "df534297a99e7e5733e83165435fdbf84eb7c356bf0d8d0e954a2ad4a0af9d9b",
+   "matchesClient": true,
+   "lastCommit": "48a7f172b62ae5babdef9750db0974fd48a79b84"
+  },
+  {
+   "file": "client/www/js/controller.air.js",
+   "appSha256": "760b7e32832cc12d49c063b044a48f0726aa6460b744bae7c6a809418c04af6e",
+   "tracked": true,
+   "clientSha256": "760b7e32832cc12d49c063b044a48f0726aa6460b744bae7c6a809418c04af6e",
+   "matchesClient": true,
+   "lastCommit": "f0a744f1964e601237f6be31a78916a3b545edf4"
+  },
+  {
+   "file": "client/www/js/controller.tabctrl.js",
+   "appSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "tracked": true,
+   "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/service.weatherutil.js",
+   "appSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "tracked": true,
+   "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/service.weatherinfo.js",
+   "appSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "tracked": true,
+   "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/app.js",
+   "appSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "tracked": true,
+   "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/css/ionic.app.css",
+   "appSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/data/theme.js",
+   "appSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+   "tracked": true,
+   "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+   "matchesClient": true,
+   "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
+  },
+  {
+   "file": "client/www/index.html",
+   "appSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+   "tracked": true,
+   "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+   "matchesClient": true,
+   "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
+  },
+  {
+   "file": "client/www/lib/d3/d3.js",
+   "appSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  }
+ ],
+ "run": {
+  "device": {
+   "name": "twios_cap_16",
+   "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+   "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+   "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+  },
+  "capturedAt": "2026-11-14T17:08:24Z",
+  "env": {
+   "screen": {
+    "width": 393,
+    "height": 852
+   },
+   "viewport": {
+    "width": 393,
+    "height": 798
+   },
+   "devicePixelRatio": 3,
+   "language": "ko-KR",
+   "languages": [
+    "ko-KR"
+   ],
+   "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+   "region": "KR",
+   "theme": "light",
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready light-theme air"
+  },
+  "webViewOrigins": [
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   },
+   {
+    "x": 0,
+    "y": 162
+   }
+  ],
+  "weatherAcceptLanguage": [
+   "ko-KR,ko;q=0.9"
+  ]
+ },
+ "files": [
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/kma-jeju-no-air.json",
+   "sha256": "39838e679d1fd0590a9642429b9909b54310ab7e40701a48bdde095d03b046dc"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/kma-seoul-dark.json",
+   "sha256": "72966591d5fe86765f9379eec89c0d1753d351833d2cbeaded8580f17626501e"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/kma-seoul-o3.json",
+   "sha256": "979f323e412805b722287a6d9fb446a3775b66bb12b89014c4becd4f68c12d13"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/kma-seoul-pm25.json",
+   "sha256": "b284de7921e7278ec92f746e23d1a345b423ab0a6493691ca30592a7ea25fc0c"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/kma-seoul-station-1.json",
+   "sha256": "2cde1313825d7807c6371f4f357959324a7201bcf5eee48ad210c2a5d864d082"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/kma-seoul.json",
+   "sha256": "14ccbb08cc98a1c38fc8af7da17f8bf4cd6dbcf058471f3f3d9dd19ff8be0830"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/navigation.json",
+   "sha256": "b07b61a4de3c53de62e9590849bfd129ee349e47ad4ac4b8a8f0a1bbf5ffb65b"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/o08-airkorea.json",
+   "sha256": "1d5b11fe8c84df6acf61e8efd58b6b5698920eda8d372c11c32f107ed385f82a"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/AirReference/vc-london.json",
+   "sha256": "83bba8ca44723e4d70cc7f9befaa44d9c2c40502281719e68d03763347aba9c7"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/air-captures.json",
+   "sha256": "fe223598f9d7320ecad9c482443a5058ab86e4cd574e645bbc1ee1b52ebea195"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/air-kma-jeju.input.json",
+   "sha256": "ef47608c439827ad92dabcb4d8e2cd2e02c7dcb6bda0ea232aa7cf59fe4525b4"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/air-kma-seoul.input.json",
+   "sha256": "ec2a645f69200df2609792d64d9c9ea90dafaa2d1daadbf2566df1d75a7b6b31"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/air-vc-london.input.json",
+   "sha256": "0e9d2f0d03ac538064a61c6c10d6712b7b3407e8ff405a2de089f91120d38884"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-jeju-no-air-0.png",
+   "sha256": "6b33a28604a5b36f7d98190fbbe72c373c95cd523195bfa37addaf009a16f038"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-jeju-no-air-1.png",
+   "sha256": "b79b982344b73a0275d436141b47d11c92108db94c58aea5d8b2192efc513244"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-0.png",
+   "sha256": "5fa8f57d5698b05cde4422969292e4afb626f4496edff64ab0a0746a5ca51c31"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-1.png",
+   "sha256": "b8140e30fcaf1c93b862280bd5326d0f8aa4e95a43f67e3098e538eaef8a275b"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-2.png",
+   "sha256": "0933206be9b586a62db459afedc8d0f874d3326a43c3a942867388ccfe4984be"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-3.png",
+   "sha256": "b7e109aa7e151a71302e50f57fbeb38cc034ceccabca6b5c706a9cfb4f4d7ec2"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-4.png",
+   "sha256": "ba01f5603e204a7e834d6f8ead9be25b4470d69d95ebec45eacb8e6239e50de2"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-5.png",
+   "sha256": "2e3a58412c3ced3c6e50df7a1ad168743a6d1edfe1ca49abde2fe0b1b7a0b5c0"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-6.png",
+   "sha256": "bcc146a5b2e9e458e5176e86dc92b6f83ca028e2312deb1745c8ae38494ba020"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-0.png",
+   "sha256": "ca198421a5f1d8d8b8971d23d0c3160bea1f511a030aaf8e181a913cc8e71f49"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-1.png",
+   "sha256": "c1c050c3d3124fdfcaf58b0abc1c23ebe44d8f108e4c70a61583b1989ed81509"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-2.png",
+   "sha256": "2bb3db35c8472cdc7ba2b049c4a4f987f7e737dff2ee51866d8607fe32b44ae7"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-3.png",
+   "sha256": "de96fddf3d6f37afb586f798a18347af8ca7f5a5290581559b622962facddf62"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-4.png",
+   "sha256": "02e6a18694913e5aa79eeb09ea5d272117363e740959df3b39ed911355b0e4c2"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-5.png",
+   "sha256": "97f687801dae5b2e13f17c4a1705e3fca4d9e63cd36ac4e44bc7339035b5b853"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-dark-6.png",
+   "sha256": "e52f0f4f431458f3a27e7aa61646595a28313a057265abcd2d599c53c0675fbb"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-o3-0.png",
+   "sha256": "40d6cd0785e8cfd3bef7109a9067099ebaff60154f1271c35eccb10256db9b71"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-o3-1.png",
+   "sha256": "7135fbbd2c0ff4586294dceeebf3655481efa2c38935ec28f855e8d1290fe110"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-o3-2.png",
+   "sha256": "a27aaffb9e794814e0760c4b5bd46592d2cc41459df87c81ebc4f0bb9e47cd5d"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-o3-3.png",
+   "sha256": "6c7231d26df23297f0e2b4204b8b8746025f2d9300533d2514f6dbb52b101792"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-o3-4.png",
+   "sha256": "731386549ca6c1b5aa2c727b4e24e8b414b99bd460d53c8655d6b32ef40b5f99"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-o3-5.png",
+   "sha256": "7a5f23dd453b2327a2622040d25a56e7c2c02a028fd2494b26b635f294897c76"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-0.png",
+   "sha256": "d3e3a87b24b53c9741d43dbd3b793e0ef1b474d69ad011c717009411485e516f"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-1.png",
+   "sha256": "1ffc90623207b0d9c509507c18902f71ac17f560cfc297b5a8d226d8d8545b4f"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-2.png",
+   "sha256": "639a78d793724af252a219687c13f4bb05ba2517c5a37cdbf424c643e7718909"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-3.png",
+   "sha256": "b7e109aa7e151a71302e50f57fbeb38cc034ceccabca6b5c706a9cfb4f4d7ec2"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-4.png",
+   "sha256": "0d3f26cc02f4e000f8e41f09cf865fd5375bf23120fb94880b432915975b7e1b"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-5.png",
+   "sha256": "2e3a58412c3ced3c6e50df7a1ad168743a6d1edfe1ca49abde2fe0b1b7a0b5c0"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-pm25-6.png",
+   "sha256": "411d2a285eb732e0fa32d905e3938877aa0adb8bf80762e20877c4093ce22003"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-0.png",
+   "sha256": "5fa8f57d5698b05cde4422969292e4afb626f4496edff64ab0a0746a5ca51c31"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-1.png",
+   "sha256": "f1791afefb4578f6f74be9e884c5d33336034368ffb1ec4100dab0724cf73097"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-2.png",
+   "sha256": "3a74c6f5434348bfd13fafe6f4ba8523300a21618c5bf56497babc1a95c752d7"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-3.png",
+   "sha256": "b7e109aa7e151a71302e50f57fbeb38cc034ceccabca6b5c706a9cfb4f4d7ec2"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-4.png",
+   "sha256": "ffeb6d472574f287dcd20e70243bdbc4b40d0b5103a318a7caa84c4298c7c930"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-5.png",
+   "sha256": "82f8c69446c5aa4532070ab0a48baa5d78845bc6d13d50dcb075aa0514d710df"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/kma-seoul-station-1-6.png",
+   "sha256": "741c95330efeb6ea84d572b45ca589026c248538de83dc1ab36e9b59026e6b3e"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/o08-airkorea.png",
+   "sha256": "350c46beecdc0b4ebcdbb2cb041a3e9e1572c1cf78f7ad4ec90eec03bd6bee53"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/vc-london-0.png",
+   "sha256": "8657f7d025661ff3310af04ecedbef61cff5d6afd06cce43de3236aba1189215"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/vc-london-1.png",
+   "sha256": "b2332d09add065582c021e091a5e4582a9df945925675064ecfc77d9d1c6cb15"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/vc-london-2.png",
+   "sha256": "9a917992e8f1b64bbe7e9a7a8da53ae23e6c23be451b205e918881b3ede4488a"
+  },
+  {
+   "path": "TodayWeatherTests/AirReference/vc-london-3.png",
+   "sha256": "867a413b991e9df57754e3bf3f27767e672644a2af22461971c54d21a34520a1"
+  }
+ ]
+}
