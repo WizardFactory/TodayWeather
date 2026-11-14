@@ -876,7 +876,7 @@ def spot_interruption_scenario(report):
                                  server_stopped_before_collector_by_seconds=round(collector_stop - server_stop, 1)
                                  if server_stop and collector_stop else None)
     check('the server and the collector stopped', stopped is not None)
-    check('notice to collector stop within the 81 s budget (two-minute notice)', total <= 81, str(total))
+    check('notice to collector stop within the 86 s budget (two-minute notice)', total <= 86, str(total))
     check('the server unit had stopped before the collector began to stop', server_stop is not None
           and collector_stopping is not None and server_stop <= collector_stopping, f'{server_stop} {collector_stopping}')
     watch_lines = journal(WATCH_UNIT)

@@ -333,7 +333,7 @@
         "Only schema-1 server records at or above the level, and collector records, leave the host.",
         "Loss is visible per destination: status records, overrun records and loopback counters (LP-2).",
         "Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3).",
-        "A Spot notice is recorded, then the server and the collector stop in order within 81 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4)."
+        "A Spot notice is recorded, then the server and the collector stop in order within 86 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4)."
       ]
     }
   ]

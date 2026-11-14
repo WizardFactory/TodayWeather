@@ -553,10 +553,10 @@ class FakeSystemd:
     `script` maps (verb, unit) to an exit code, an exception, or 'stuck' (the stop job
     never finishes); `after_server_stop` sets unit states once the server has stopped."""
 
-    def __init__(self, states=None, script=None, after_server_stop=None):
+    def __init__(self, states=None, script=None, after_server_stop=None, latency=0.0):
         self.states = dict({'server2.service': 'active', 'server2-logs.service': 'active'}, **(states or {}))
         self.script, self.after_server_stop = script or {}, after_server_stop or {}
-        self.calls, self.now = [], 0.0
+        self.calls, self.now, self.latency, self.started = [], 0.0, latency, []
 
     def clock(self):
         return self.now
@@ -567,6 +567,13 @@ class FakeSystemd:
     def __call__(self, command, **kwargs):
         import subprocess
         verb, unit = command[1], command[-1]
+        timeout = kwargs.get('timeout')
+        self.started.append((verb, unit, self.now, timeout))
+        if self.latency:  # every call takes this long, up to its timeout
+            if timeout is not None and self.latency > timeout:
+                self.now += timeout
+                raise subprocess.TimeoutExpired(command, timeout)
+            self.now += self.latency
         if verb == 'show':
             return subprocess.CompletedProcess(command, 0, self.states.get(unit, 'inactive') + '\n', '')
         self.calls.append((command, kwargs.get('timeout')))
@@ -643,14 +650,23 @@ class SpotWatchTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(calls[-1], ['kill', '--signal=SIGKILL', 'server2-logs.service'])
         self.assertEqual(systemd.states['server2-logs.service'], 'inactive')
-        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS + 5)
-        self.assertIn('killed at the deadline (inactive)', out)
+        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS)
+        self.assertIn('killed at the deadline (ok) (inactive)', out)
         # A server stop job still running at its bound: its real state is recorded, the collector still stops.
         ok, calls, progress, out, systemd, _ = self.stop_with(script={('stop', 'server2.service'): 'stuck'})
         self.assertFalse(ok)
         self.assertEqual((progress['server_stop'], progress['server_state'], progress['level']), ('timeout', 'deactivating', 'warn'))
         self.assertIn(['stop', 'server2-logs.service'], calls)
-        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS + 5)
+        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS)
+
+    def test_slow_queries_and_the_kill_stay_inside_the_budget(self):  # CX-LP4-001 round 3
+        # Every systemctl call takes 1.9 s; the collector's stop never finishes.
+        ok, calls, progress, out, systemd, _ = self.stop_with(script={('stop', 'server2-logs.service'): 'stuck'}, latency=1.9)
+        self.assertIn(['kill', '--signal=SIGKILL', 'server2-logs.service'], calls)
+        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS)
+        for verb, unit, at, timeout in systemd.started:
+            self.assertLess(at, spot_watch.STOP_BUDGET_SECONDS, (verb, unit))  # nothing starts after the deadline
+            self.assertLessEqual(at + timeout, spot_watch.STOP_BUDGET_SECONDS + 1e-9, (verb, unit, at, timeout))
 
     def test_a_collector_waiting_for_its_restart_is_started_first(self):  # CX-LP4-003
         ok, calls, progress, out, systemd, _ = self.stop_with(states={'server2-logs.service': 'activating'})
@@ -760,8 +776,9 @@ class SpotWatchTest(unittest.TestCase):
         self.assertEqual((spot_watch.SERVER_STOP_SECONDS, spot_watch.DRAIN_SECONDS, spot_watch.FLUSH_SECONDS),
                          (server, status.INTERRUPTION_DRAIN_SECONDS, flush))
         self.assertGreaterEqual(spot_watch.DETECTION_SECONDS, spot_watch.POLL_SECONDS + 4 * spot_watch.METADATA_TIMEOUT)
+        self.assertEqual(spot_watch.STOP_BUDGET_SECONDS, 45 + 30 + spot_watch.RESERVE_SECONDS)
         budget = spot_watch.DETECTION_SECONDS + spot_watch.STOP_BUDGET_SECONDS
-        self.assertEqual(budget, 81)
+        self.assertEqual(budget, 86)
         self.assertLessEqual(budget, 120 - 30)  # at least 30 s margin
 
 

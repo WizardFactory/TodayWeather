@@ -62,7 +62,7 @@
       "title": "A Spot interruption stops the server, then the collector (LP-4)",
       "instruction": "Nothing to do: on a Spot instance server2-logs-watch.service polls instance metadata every 4 s. When EC2 announces an interruption, it writes the interruption record, stops server2.service, then server2-logs.service, whose drain waits at most 10 s before the collector's own flush. Afterwards, read the watcher's lines and the collector's drained record in the server2 journal namespace.",
       "screenshot": "8-interruption.png",
-      "caption": "The interruption record names the announced action and time. The server stopped first, the collector about 10 s later. CloudWatch had confirmed everything; S3's open object was sent by the collector's flush (drained false, so the record is warn). The whole sequence took 13 s of the two-minute notice; the budget is 81 s.",
+      "caption": "The interruption record names the announced action and time. The server stopped first, the collector about 10 s later. CloudWatch had confirmed everything; S3's open object was sent by the collector's flush (drained false, so the record is warn). The whole sequence took 13 s of the two-minute notice; the budget is 86 s.",
       "expected": "Every record up to the server's stop reaches each destination, and the interruption record comes before the server's shutdown records. On an On-Demand instance the watcher says it is idle and stops nothing."
     }
   ]
