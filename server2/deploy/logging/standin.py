@@ -11,7 +11,8 @@ bodies with chunk signatures or trailing checksums.
 CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
-Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503.
+Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
+while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds.
 """
 import argparse
 import json
@@ -159,6 +160,13 @@ class Handler(BaseHTTPRequestHandler):
             temporary = target.with_name('.' + target.name + '.tmp')  # readers never see a partial object
             temporary.write_bytes(body)
             temporary.replace(target)
+        # Test fault: while <state>/delay-s3 exists, a server object is stored at once but
+        # confirmed only after that many seconds (a delayed confirmation).
+        delay = self.server.state / 'delay-s3'
+        if delay.exists() and '/server/' in key:
+            self.record('s3', 'DelayedConfirmation', bucket=bucket, key=key)
+            import time
+            time.sleep(float(delay.read_text().strip() or '0'))
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
 
     def unavailable(self, service):

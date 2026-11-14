@@ -105,12 +105,70 @@ def checkpoint(state_dir, destination, source=None):
         return None
 
 
-def backlog(state_dir):
-    """Earlier-boot readers still shipping, as planned by render.py (LP-3)."""
+def journal_boots(namespace='server2'):
+    """Boot IDs of the namespace, oldest first."""
+    result = subprocess.run(['journalctl', f'--namespace={namespace}', '--list-boots', '--no-pager', '-q'],
+                            capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        raise JournalError('journalctl --list-boots failed')
+    return [m.group(1) for m in re.finditer(r'^\s*-?\d+\s+([0-9a-f]{32})\b', result.stdout, re.M)]
+
+
+def current_boot():
+    return Path('/proc/sys/kernel/random/boot_id').read_text().strip().replace('-', '')
+
+
+def boot_of(cursor):
+    return dict(part.split('=', 1) for part in cursor.strip().split(';') if '=' in part).get('b')
+
+
+def backlog_plan(state_dir):
+    """The earlier-boot plan written by render.py (LP-3), rotated items included."""
     try:
         return json.loads((Path(state_dir) / 'backlog.json').read_text())
     except (FileNotFoundError, ValueError):
         return {}
+
+
+def backlog(state_dir, boots=None):
+    """Earlier-boot readers still shipping. A boot that left the journal (rotated, possibly
+    while the collector runs) has no reader any more: it is never queried (GEM-LP3-001);
+    its loss is reported by the overrun check."""
+    plan = backlog_plan(state_dir)
+    if not any(plan.values()):
+        return {}
+    boots = journal_boots() if boots is None else boots
+    return {d: [i for i in items if not i.get('rotated') and i['boot'] in boots] for d, items in plan.items()}
+
+
+def item_position(state_dir, item):
+    """(sequence ID, first sequence number needed, realtime) of a backlog reader, or None."""
+    text = checkpoint(state_dir, None, item['source'])
+    if text:
+        seq_id, seq, realtime = parse_cursor(text)
+        return seq_id, seq + 1, realtime
+    return tuple(item['needed']) if item.get('needed') else None
+
+
+def main_position(state_dir, destination, previous, plan):
+    """(sequence ID, first sequence number needed, realtime) of the current-boot reader.
+
+    When its checkpoint (or baseline) is in an earlier boot that a backlog reader ships,
+    the current-boot reader has confirmed nothing of this boot yet and needs it from its
+    first entry (GEM-LP3-002); the earlier part is the backlog reader's."""
+    text = checkpoint(state_dir, destination)
+    if text:
+        seq_id, seq, realtime = parse_cursor(text)
+        position, boot = (seq_id, seq + 1, realtime), boot_of(text)
+    elif previous.get(destination, {}).get('baseline'):
+        baseline = previous[destination]['baseline']
+        position, boot = parse_cursor(baseline), boot_of(baseline)
+    else:
+        return None
+    if boot in {item['boot'] for item in plan.get(destination, [])} and boot != current_boot():
+        first = first_entry_of_current_boot()
+        return parse_cursor(first) if first else None
+    return position
 
 
 def last_entry_of_boot(boot, namespace='server2', timeout=30):
@@ -139,12 +197,20 @@ def unshipped_seconds(state_dir, destination, previous, now_usec):
     Vector retries a failing destination indefinitely and counts an error only when it
     gives up, so this age is what shows an outage while it lasts. A failed journal query
     raises JournalError rather than reporting the destination as current."""
+    plan = backlog_plan(state_dir)
     text = checkpoint(state_dir, destination)
-    if text:
+    baseline = previous.get(destination, {}).get('baseline')
+    covered = {item['boot'] for item in plan.get(destination, [])}
+    position_boot = boot_of(text) if text else boot_of(baseline) if baseline else None
+    if position_boot in covered and position_boot != current_boot():
+        # The current-boot reader has confirmed nothing of this boot yet (GEM-LP3-002).
+        first = first_entry_of_current_boot()
+        age = 0 if first is None else max(0, int((now_usec - parse_cursor(first)[2]) / 1e6))
+    elif text:
         following = first_entry_after(text)
         age = 0 if following is None else max(0, int((now_usec - parse_cursor(following)[2]) / 1e6))
-    elif previous.get(destination, {}).get('baseline'):
-        _, _, realtime = parse_cursor(previous[destination]['baseline'])
+    elif baseline:
+        _, _, realtime = parse_cursor(baseline)
         age = max(0, int((now_usec - realtime) / 1e6))
     else:
         return None
@@ -158,24 +224,25 @@ def overruns(state_dir, oldest_cursor, previous, active):
     """New gaps per active destination: [(destination, lost_from_usec, lost_until_usec, (id, seq, time))].
 
     The reader needs the entry after its checkpoint; a reader with no acknowledged delivery
-    yet needs everything from its baseline. Only the part not reported before is new
-    (CX-LP2-002): while the journal start keeps moving, each report continues the last one.
+    yet needs everything from its baseline. A destination needs the earliest position of
+    its readers: the current-boot reader and every earlier-boot reader, a rotated one
+    included (CX-LP3-004). Only the part not reported before is new (CX-LP2-002): while
+    the journal start keeps moving, each report continues the last one.
     """
     if oldest_cursor is None:
         return []
     oldest_id, oldest_seq, oldest_time = parse_cursor(oldest_cursor)
+    plan = backlog_plan(state_dir)
     found = []
     for destination in active:
         entry = previous.get(destination, {})
-        text = checkpoint(state_dir, destination)
-        if text:
-            seq_id, seq, realtime = parse_cursor(text)
-            needed = seq + 1
-        elif entry.get('baseline'):
-            seq_id, needed, realtime = parse_cursor(entry['baseline'])
-        else:
+        candidates = [main_position(state_dir, destination, previous, plan)]
+        candidates += [item_position(state_dir, item) for item in plan.get(destination, [])]
+        candidates = [c for c in candidates if c and c[0] == oldest_id]
+        if not candidates:
             continue
-        if seq_id != oldest_id or needed >= oldest_seq:
+        seq_id, needed, realtime = min(candidates, key=lambda c: c[1])
+        if needed >= oldest_seq:
             continue
         reported = entry.get('reported_until')
         if reported and reported[0] == seq_id and reported[1] > needed:
@@ -236,7 +303,22 @@ def report_overruns(state_dir, active):
     # remaining entry, not an earlier boot it never reads (LP-3).
     set_baselines(state_dir, first_entry_of_current_boot() if oldest else None, state, active)
     save_state(state_file, state)
+    prune_backlog(state_dir, active)
     return {d: state.get(d, {}).get('count', 0) for d in active}
+
+
+def prune_backlog(state_dir, active):
+    """After the overrun check has accounted for them, drop the planned boots of active
+    destinations that left the journal (CX-LP3-004)."""
+    plan = backlog_plan(state_dir)
+    if not any(plan.get(d) for d in active):
+        return
+    boots = journal_boots()
+    kept = {d: [i for i in items if d not in active or (not i.get('rotated') and i['boot'] in boots)]
+            for d, items in plan.items()}
+    kept = {d: items for d, items in kept.items() if items}
+    if kept != plan:
+        save_state(Path(state_dir) / 'backlog.json', kept)
 
 
 def drain(state_dir, active, timeout, poll=0.5):

@@ -337,6 +337,14 @@ class InstalledFilesTest(unittest.TestCase):
 class IdentityAndBacklogTest(unittest.TestCase):
     """LP-3 (#2980): instance identity from IMDSv2 and earlier-boot backlog readers."""
 
+    FIRST = 's=' + 'e' * 32 + ';i=5;b=x;m=1;t=1;x=1'
+
+    def setUp(self):
+        # The first entry of a boot without a reader position (journalctl on a real host).
+        patcher = mock.patch.object(render, '_journal_first_cursor', return_value=self.FIRST)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def serve_imds(self, instance_id='i-0abc1234def567890', life_cycle='spot'):
         import http.server, threading
         class Handler(http.server.BaseHTTPRequestHandler):
@@ -423,7 +431,7 @@ class IdentityAndBacklogTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(render.plan_backlog(directory, ['s3'], old, boots=[old], last_cursor=last), {})
             plan = render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
-            self.assertEqual(plan['s3'], [{'boot': old, 'source': f'backlog_s3_{old[:12]}'}])
+            self.assertEqual(plan['s3'], [{'boot': old, 'source': f'backlog_s3_{old[:12]}', 'needed': ['e' * 32, 5, 1]}])
             self.assertFalse((Path(directory) / f'backlog_s3_{old[:12]}' / 'checkpoint.txt').exists())  # from its start
             # Enabled only now, on a host with an older boot: nothing before this boot.
             self.assertEqual(render.plan_backlog(directory, ['cloudwatch'], current, boots=[old, current], last_cursor=last), {})
@@ -431,6 +439,65 @@ class IdentityAndBacklogTest(unittest.TestCase):
             self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=40;b={current};m=1;t=1;x=1')
             render.plan_backlog(directory, ['s3'], current, boots=[old, current], last_cursor=last)
             self.assertNotIn('s3', json.loads((Path(directory) / 'reader-start.json').read_text()))
+
+    def test_rotated_position_boot_still_plans_the_remaining_boots(self):  # CX-LP3-001
+        a, b, current = 'a' * 32, 'b' * 32, 'c' * 32
+        last = lambda arguments: 's=' + 'e' * 32 + ';i=90;b=x;m=1;t=1;x=1'
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={a};m=1;t=1;x=1')
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[b, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [b])
+        with tempfile.TemporaryDirectory() as directory:  # without a checkpoint
+            render.plan_backlog(directory, ['s3'], a, boots=[a], last_cursor=last)
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[b, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [b])
+
+    def test_planned_boot_that_rotates_stays_until_reported(self):  # CX-LP3-004
+        a, current = 'a' * 32, 'c' * 32
+        last = lambda arguments: 's=' + 'e' * 32 + ';i=90;b=x;m=1;t=1;x=1'
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={a};m=1;t=1;x=1')
+            render.plan_backlog(directory, ['s3'], current, boots=[a, current], last_cursor=last)
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[current], last_cursor=last)
+            self.assertEqual(plan['s3'][0]['boot'], a)
+            self.assertTrue(plan['s3'][0]['rotated'])
+            self.assertEqual(render.readers(plan), {'s3': []})
+            config = render.collector_config(render.settings(dict(COMPLETE, SERVER2_LOG_SINKS='s3')), 'i-1', directory, plan)
+            self.assertNotIn(f'backlog_s3_{a[:12]}', config['sources'])
+
+    def test_completion_needs_the_same_sequence_id_and_empty_boots_are_done(self):  # CX-LP3-003, GEM-LP3-003
+        a, current = 'a' * 32, 'c' * 32
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={a};m=1;t=1;x=1')
+            self.checkpoint(directory, f'backlog_s3_{a[:12]}', f's={"e" * 32};i=1000;b={a};m=1;t=1;x=1')
+            other_id = lambda arguments: 's=' + 'f' * 32 + ';i=10;b=x;m=1;t=1;x=1'
+            self.assertEqual(len(render.plan_backlog(directory, ['s3'], current, boots=[a, current], last_cursor=other_id)['s3']), 1)
+            self.assertEqual(render.plan_backlog(directory, ['s3'], current, boots=[a, current], last_cursor=lambda arguments: None), {})
+
+    def test_unreadable_state_is_kept_aside_and_everything_is_planned_again(self):  # CX-LP3-002
+        a, b, current = 'a' * 32, 'b' * 32, 'c' * 32
+        last = lambda arguments: 's=' + 'e' * 32 + ';i=90;b=x;m=1;t=1;x=1'
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=40;b={current};m=1;t=1;x=1')
+            (Path(directory) / 'backlog.json').write_text('{"s3": [{"boot"')  # interrupted write
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                plan = render.plan_backlog(directory, ['s3'], current, boots=[a, b, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [a, b])
+            self.assertIn('collector.backlog_state_recovered', out.getvalue())
+            self.assertTrue((Path(directory) / 'backlog.json.corrupt').exists())
+            self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text()), plan)
+            self.assertFalse(list(Path(directory).glob('.*.tmp')))
+
+    def test_an_unselected_destination_keeps_its_plan(self):  # GEM-LP3-003
+        a, current = 'a' * 32, 'c' * 32
+        last = lambda arguments: 's=' + 'e' * 32 + ';i=90;b=x;m=1;t=1;x=1'
+        with tempfile.TemporaryDirectory() as directory:
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={a};m=1;t=1;x=1')
+            render.plan_backlog(directory, ['s3'], current, boots=[a, current], last_cursor=last)
+            self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=40;b={current};m=1;t=1;x=1')
+            self.assertEqual(render.plan_backlog(directory, ['cloudwatch'], current, boots=[a, current], last_cursor=last), {})
+            plan = render.plan_backlog(directory, ['s3'], current, boots=[a, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [a])
 
     def test_boot_list_failure_keeps_the_plan(self):
         import subprocess
@@ -742,10 +809,14 @@ class StatusTest(unittest.TestCase):
     """LP-2 (#2979): loss counters and journal overrun detection."""
 
     def setUp(self):
-        # One boot in these journals: its first entry is the oldest entry (as mocked per test).
-        patcher = mock.patch.object(status, 'first_entry_of_current_boot', side_effect=lambda *a: status.oldest_entry())
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        # The current boot is 'b' * 32 (as in _cursor); 'a' * 32 is an earlier boot still in
+        # the journal. The current boot's first entry is the oldest entry (as mocked per test).
+        for name, kwargs in (('first_entry_of_current_boot', {'side_effect': lambda *a: status.oldest_entry()}),
+                             ('journal_boots', {'return_value': ['a' * 32, 'b' * 32]}),
+                             ('current_boot', {'return_value': 'b' * 32})):
+            patcher = mock.patch.object(status, name, **kwargs)
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def test_positions_are_compared_with_the_read_units_only(self):
         self.assertEqual(status.READ_UNITS, tuple(render.UNITS))
@@ -937,6 +1008,49 @@ class StatusTest(unittest.TestCase):
             with mock.patch.object(status, 'first_entry_after', return_value=None), \
                     mock.patch.object(status, '_first_cursor', return_value=_cursor(120, 100_000_000)):
                 self.assertEqual(status.unshipped_seconds(directory, 's3', {}, 400_000_000), 300)
+
+    def backlog_state(self, directory, items):
+        (Path(directory) / 'backlog.json').write_text(json.dumps({'s3': items}))
+
+    def test_overrun_of_an_unfinished_earlier_boot_is_reported_and_then_pruned(self):  # CX-LP3-004, GEM-LP3-002
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(status, 'oldest_entry', return_value=_cursor(250, 2_500)), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            self.state(directory, s3=_cursor(300, 3_000))  # the current-boot reader is ahead
+            self.backlog_state(directory, [{'boot': 'z' * 32, 'source': 'backlog_s3_zzzz', 'needed': ['a' * 32, 100, 1_000],
+                                            'rotated': True}])
+            status.report_overruns(directory, ('s3',))
+            record = json.loads(out.getvalue().splitlines()[0])
+            self.assertEqual((record['event'], record['destination']), ('collector.journal_overrun', 's3'))
+            self.assertEqual(record['lost_from'], status.iso(1_000))
+            self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text()), {})
+
+    def test_a_reader_of_an_earlier_boot_counts_from_its_own_position(self):  # GEM-LP3-002
+        with tempfile.TemporaryDirectory() as directory:
+            # Current-boot reader still at a cursor of the earlier boot 'a' that a backlog reader ships.
+            self.state(directory, s3=_cursor(100, 1_000).replace('b=' + 'b' * 32, 'b=' + 'a' * 32))
+            self.backlog_state(directory, [{'boot': 'a' * 32, 'source': 'backlog_s3_aaaa', 'needed': ['a' * 32, 101, 1_000]}])
+            reader = Path(directory) / 'backlog_s3_aaaa' / 'checkpoint.txt'
+            reader.parent.mkdir()
+            reader.write_text(_cursor(180, 1_800))
+            with mock.patch.object(status, 'oldest_entry', return_value=_cursor(150, 1_500)), \
+                    mock.patch.object(status, 'first_entry_of_current_boot', return_value=_cursor(200, 2_000)):
+                self.assertEqual(status.overruns(directory, _cursor(150, 1_500), {}, ('s3',)), [])
+            with mock.patch.object(status, 'first_entry_of_current_boot', return_value=_cursor(200, 300_000_000)), \
+                    mock.patch.object(status, '_first_cursor', return_value=None):
+                self.assertEqual(status.unshipped_seconds(directory, 's3', {}, 400_000_000), 100)
+
+    def test_a_boot_that_left_the_journal_is_never_queried(self):  # GEM-LP3-001
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(300, 3_000))
+            self.backlog_state(directory, [{'boot': 'z' * 32, 'source': 'backlog_s3_zzzz', 'needed': ['a' * 32, 100, 1_000]}])
+            self.assertEqual(status.backlog(directory), {'s3': []})
+            with mock.patch.object(status, 'newest_entry', return_value=_cursor(300, 3_000)), \
+                    mock.patch.object(status, 'last_entry_of_boot', side_effect=status.JournalError('no such boot')):
+                self.assertTrue(status.drain(directory, ('s3',), timeout=0.2, poll=0.05)['s3']['drained'])
+            with mock.patch.object(status, 'first_entry_after', return_value=None), \
+                    mock.patch.object(status, 'backlog_age', side_effect=status.JournalError('no such boot')):
+                self.assertEqual(status.unshipped_seconds(directory, 's3', {}, 4_000), 0)
 
     def test_drain_record_never_blocks_the_stop(self):
         with tempfile.TemporaryDirectory() as directory:

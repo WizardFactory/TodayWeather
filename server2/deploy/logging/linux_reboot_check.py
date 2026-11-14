@@ -122,7 +122,7 @@ def before(report, partial=False):
     time.sleep(3)
     lines = server_lines_by_boot().get(boot_id(), [])
     shipped = set(lc.delivered(STANDIN_STATE)[0]['s3']['server'])
-    (STATE / 'before.json').write_text(json.dumps({'boot': boot_id()}))
+    (STATE / 'before.json').write_text(json.dumps({'boot': boot_id(), 'variant': 'partial' if partial else 'unconfirmed'}))
     entry['observations'].update(boot=boot_id(), records=len(lines), s3_confirmed_before_reboot=len(shipped))
     check('records written while S3 fails', len(lines) > 10, str(len(lines)))
     check('S3 lacks part of this boot', len(shipped) < len(lines) and (partial or not shipped), f'{len(shipped)}/{len(lines)}')
@@ -130,9 +130,11 @@ def before(report, partial=False):
 
 
 def after(report):
-    entry = report.scenario('reboot-after', ['LP3-AC5'])
+    saved = json.loads((STATE / 'before.json').read_text())
+    # The variant names which saved position the backlog reader starts from (GEM-LP3-004).
+    entry = report.scenario(f"reboot-after-{saved['variant']}", ['LP3-AC5'])
     check = lambda n, ok, d='': report.check(entry, n, ok, d)
-    old_boot, new_boot = json.loads((STATE / 'before.json').read_text())['boot'], boot_id()
+    old_boot, new_boot = saved['boot'], boot_id()
     check('the host rebooted', old_boot != new_boot, f'{old_boot} -> {new_boot}')
     check('the collector was started by the boot alone',
           lc.wait_unit('server2-logs.service', {'active'}, 60) == 'active')

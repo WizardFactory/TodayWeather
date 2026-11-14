@@ -228,29 +228,93 @@ def _write_owned(state_dir, path, text):
         os.chown(item, owner.st_uid, owner.st_gid)
 
 
-def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=_journal_cursor):
+def _journal_first_cursor(arguments):
+    """First cursor journalctl prints for `arguments`, or None."""
+    import subprocess
+    process = subprocess.Popen(['journalctl', f'--namespace={NAMESPACE}', *arguments, '-o', 'json',
+                                '--output-fields=__CURSOR'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    line = process.stdout.readline()
+    if line.strip():
+        process.kill()
+        process.wait()
+        return json.loads(line)['__CURSOR']
+    process.wait(timeout=30)
+    if process.returncode != 0:
+        raise OSError('journalctl failed')
+    return None
+
+
+def save_state_json(path, value):
+    """Replace a state file atomically (write, fsync, rename), so an interrupted write
+    leaves either the old or the new content, never a truncated file (CX-LP3-002)."""
+    path = Path(path)
+    temporary = path.with_name('.' + path.name + '.tmp')
+    with open(temporary, 'w') as handle:
+        handle.write(json.dumps(value, sort_keys=True))
+        handle.flush()
+        os.fsync(handle.fileno())
+    temporary.replace(path)
+    directory = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def _load_state_json(path):
+    """(value, readable): a missing file is an empty state; an unreadable one is kept aside
+    as <name>.corrupt and reported, never silently treated as empty."""
+    try:
+        return json.loads(path.read_text()), True
+    except FileNotFoundError:
+        return {}, True
+    except ValueError:
+        path.replace(path.with_name(path.name + '.corrupt'))
+        return {}, False
+
+
+def _position(cursor, after):
+    """(sequence ID, first sequence number still needed, realtime) of a cursor."""
+    fields = _cursor_fields(cursor)
+    return [fields['s'], int(fields['i'], 16) + (1 if after else 0), int(fields['t'], 16)]
+
+
+def _warn(event, **fields):
+    import datetime
+    print(json.dumps(dict(collector_schema=COLLECTOR_SCHEMA, level='warn', event=event,
+                          timestamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                          **fields), sort_keys=True), flush=True)
+
+
+def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=_journal_cursor, first_cursor=None):
     """Earlier boots each destination still has to ship (surviving disk, LP-3).
 
-    Vector reads only the current boot on systemd 250-257, so a destination whose checkpoint
-    is from an earlier boot gets one extra reader per earlier boot, starting where the
-    checkpoint stopped (or, without a checkpoint, from the first entry of the boot in which
-    the reader started). The plan persists in backlog.json until each reader has reached
-    its boot's last entry, so a restart in between keeps the remaining backlog."""
+    Vector reads only the current boot on systemd 250-257, so a destination whose position
+    is in an earlier boot gets one extra reader per earlier boot still in the journal: the
+    reader of the position's boot starts where the checkpoint stopped, a later boot (or,
+    without a checkpoint, the boot in which the reader started) from its first entry. When
+    the position's boot rotated out, every remaining earlier boot is planned (CX-LP3-001).
+    The plan persists in backlog.json until each reader has reached its boot's last entry,
+    so a restart in between keeps the remaining backlog. A planned boot that rotates out
+    stays in the plan, marked `rotated`, until status.py has reported the loss (CX-LP3-004).
+    Each item keeps `needed`, the first position its reader needs, for that report."""
+    first_cursor = first_cursor or _journal_first_cursor
     state_dir = Path(state_dir)
-    plan_file = state_dir / 'backlog.json'
-    try:
-        plan = json.loads(plan_file.read_text())
-    except (FileNotFoundError, ValueError):
-        plan = {}
+    state_dir.mkdir(parents=True, exist_ok=True)
+    plan_file, starts_file = state_dir / 'backlog.json', state_dir / 'reader-start.json'
+    plan, plan_ok = _load_state_json(plan_file)
     # Boot in which a reader without a checkpoint started: it reads that boot from its
     # first entry, so a reader that never confirmed anything before a reboot (a destination
     # failing throughout) still has that whole boot to ship.
-    starts_file = state_dir / 'reader-start.json'
-    try:
-        starts = json.loads(starts_file.read_text())
-    except (FileNotFoundError, ValueError):
-        starts = {}
+    starts, starts_ok = _load_state_json(starts_file)
+    recovering = not (plan_ok and starts_ok)
+    if recovering:
+        # What was shipped is unknown: plan every earlier boot still in the journal. Readers
+        # resume from their own saved positions; the rest can repeat records, never lose them.
+        _warn('collector.backlog_state_recovered',
+              message='backlog state was unreadable; every earlier boot in the journal is shipped again')
     boots = journal_boots() if boots is None else boots
+    earlier = boots[:boots.index(current_boot)] if current_boot in boots else list(boots)
     for destination in destinations:
         try:
             checkpoint = (state_dir / f'journal_{destination}' / 'checkpoint.txt').read_text().strip()
@@ -262,39 +326,62 @@ def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=
             boot = _cursor_fields(checkpoint).get('b')
         else:
             boot = starts.setdefault(destination, current_boot)
-        if boot and boot != current_boot and boot in boots:
-            for later in boots[boots.index(boot):]:
-                if later == current_boot:
-                    break
-                source = f'backlog_{destination}_{later[:12]}'
-                if later not in pending:
-                    pending[later] = {'boot': later, 'source': source}
-                    seed = state_dir / source / 'checkpoint.txt'
-                    if checkpoint and later == boot and not seed.exists():
-                        _write_owned(state_dir, seed, checkpoint + '\n')
+        if recovering:
+            wanted = earlier
+        elif boot == current_boot:
+            wanted = []
+        elif boot in earlier:
+            wanted = earlier[earlier.index(boot):]
+        else:
+            wanted = earlier  # the position's boot rotated out: everything that remains
+        for later in wanted:
+            if later in pending:
+                continue
+            source = f'backlog_{destination}_{later[:12]}'
+            seed = state_dir / source / 'checkpoint.txt'
+            if checkpoint and later == boot and not seed.exists():
+                _write_owned(state_dir, seed, checkpoint + '\n')
+            if seed.exists():
+                needed = _position(seed.read_text().strip(), after=True)
+            else:
+                first = first_cursor([f'--boot={later}'])
+                if first is None:
+                    continue  # nothing of this boot is left
+                needed = _position(first, after=False)
+            pending[later] = {'boot': later, 'source': source, 'needed': needed}
         remaining = []
         for item in pending.values():
             if item['boot'] not in boots:
-                continue  # rotated out; the overrun check reports it
+                item['rotated'] = True  # kept until status.py reports the loss
+                remaining.append(item)
+                continue
             last = last_cursor([f"--boot={item['boot']}"])
+            if last is None:
+                continue  # the boot holds no entry of the read units: nothing to ship (GEM-LP3-003)
             try:
                 done = (state_dir / item['source'] / 'checkpoint.txt').read_text().strip()
             except FileNotFoundError:
                 done = ''
-            if last and done and int(_cursor_fields(done)['i'], 16) >= int(_cursor_fields(last)['i'], 16):
-                continue  # this boot is shipped
+            if done:
+                done_fields, last_fields = _cursor_fields(done), _cursor_fields(last)
+                # Sequence numbers compare only within one sequence ID (CX-LP3-003).
+                if done_fields['s'] == last_fields['s'] and int(done_fields['i'], 16) >= int(last_fields['i'], 16):
+                    continue  # this boot is shipped
             remaining.append(item)
         if remaining:
-            plan[destination] = remaining
+            plan[destination] = sorted(remaining, key=lambda item: boots.index(item['boot']) if item['boot'] in boots else -1)
         else:
             plan.pop(destination, None)
-    for destination in list(plan):
-        if destination not in destinations:
-            plan.pop(destination)
-    state_dir.mkdir(parents=True, exist_ok=True)
-    plan_file.write_text(json.dumps(plan, sort_keys=True))
-    starts_file.write_text(json.dumps(starts, sort_keys=True))
-    return plan
+    # A destination that is not selected now keeps its plan for when it is selected again
+    # (GEM-LP3-003); only the selected ones get readers.
+    save_state_json(plan_file, plan)
+    save_state_json(starts_file, starts)
+    return {d: items for d, items in plan.items() if d in destinations}
+
+
+def readers(plan):
+    """Plan items that still have a reader (a rotated boot has none)."""
+    return {d: [item for item in items if not item.get('rotated')] for d, items in (plan or {}).items()}
 
 
 def _filter_program(min_level):
@@ -340,7 +427,7 @@ def collector_config(config, instance_id, state_dir, backlog=None):
             'current_boot_only': True, 'since_now': False,
         }
         inputs = [f'journal_{destination}']
-        for item in (backlog or {}).get(destination, []):
+        for item in readers(backlog).get(destination, []):
             # An earlier boot's unshipped records (surviving disk): Vector's own boot
             # argument is overridden by the later --boot.
             sources[item['source']] = {
@@ -386,7 +473,7 @@ def start_record(config, instance_id, boot_id, version, timestamp, life_cycle='u
               'sinks': config['sinks'], 'instance_id': instance_id, 'boot_id': boot_id,
               'instance_life_cycle': life_cycle}
     if backlog:
-        record['backlog_boots'] = {d: [item['boot'] for item in items] for d, items in sorted(backlog.items())}
+        record['backlog_boots'] = {d: [item['boot'] for item in items] for d, items in sorted(readers(backlog).items()) if items}
     return record
 
 
