@@ -5462,15 +5462,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-detail="context" x="844" y="875" class="t-muted" font-size="8" text-anchor="middle">default warn; ~1 s</text>
         </g>
 
-        <g id="node-s3logs" data-node-id="s3logs" data-node-label="S3 log prefix" tabindex="0" role="button" aria-label="Focus S3 log prefix, default info; 60 s objects, Outputs: remote destinations, loopback counters" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="default info; 60 s objects" data-node-context="Outputs: remote destinations, loopback counters">
-          <title>S3 log prefix · default info; 60 s objects · Outputs: remote destinations, loopback counters</title>
+        <g id="node-s3logs" data-node-id="s3logs" data-node-label="S3 log prefix" tabindex="0" role="button" aria-label="Focus S3 log prefix, default info; 50 s objects, Outputs: remote destinations, loopback counters" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="default info; 50 s objects" data-node-context="Outputs: remote destinations, loopback counters">
+          <title>S3 log prefix · default info; 50 s objects · Outputs: remote destinations, loopback counters</title>
           <rect x="1023.5999999999999" y="837" width="160" height="52" rx="8" class="c-mask"/>
           <rect x="1023.5999999999999" y="837" width="160" height="52" rx="8" class="c-cloud" data-animate="node" style="--step:12" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(1029.6 843) scale(0.6875)">
             <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="1103.6" y="858" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">S3 log prefix</text>
-          <text data-detail="context" x="1103.6" y="875" class="t-muted" font-size="8" text-anchor="middle">default info; 60 s objects</text>
+          <text data-detail="context" x="1103.6" y="875" class="t-muted" font-size="8" text-anchor="middle">default info; 50 s objects</text>
         </g>
 
         <!-- Edge labels -->
@@ -5795,7 +5795,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>Only schema-1 server records at or above the level, and collector records, leave the host.</li>
           <li>Loss is visible per destination: status records, overrun records and loopback counters (LP-2).</li>
           <li>Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3).</li>
-          <li>A Spot notice is recorded, then the server and the collector stop in order within 80 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4).</li>
+          <li>A Spot notice is recorded, then the server and the collector stop in order within 81 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4).</li>
         </ul>
       </div>
     </div>

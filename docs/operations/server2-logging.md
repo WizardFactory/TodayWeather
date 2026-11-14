@@ -92,7 +92,7 @@ The installer checks the collector archive's SHA-256 against [`collector.json`](
 | `/etc/systemd/journald.conf.d/server2-system.conf` | Caps the system journal at 512 MiB, so host logs stay within the 2 GiB log budget of [`prerequisites.json`](../../server2/deploy/staging/prerequisites.json). |
 | `/opt/server2/logging/` | `vector`, `render.py`, `status.py`, `spot_watch.py`, `collector.json`. |
 
-It enables the server, the collector, the status timer and the interruption watcher, and starts only the timer, which does nothing while the collector is stopped. The server binary and its `.env` come from the release procedure.
+It enables the server, the collector, the status timer and the interruption watcher, and starts the timer, which does nothing while the collector is stopped, and the watcher, which is idle unless the instance is a Spot instance. The server binary and its `.env` come from the release procedure.
 
 ### Boot configuration
 
@@ -215,25 +215,25 @@ The **collector record format** is one JSON object per line with `"collector_sch
 
 ### Spot interruption and loss without notice
 
-LP-4 ([#2981](https://github.com/WizardFactory/TodayWeather/issues/2981)). `server2-logs-watch.service` runs [`spot_watch.py`](../../server2/deploy/logging/spot_watch.py). It reads the instance's life cycle from instance metadata (IMDSv2). On an On-Demand or scheduled instance, or when instance metadata does not answer within about a minute, it writes one line saying why it is idle and ends successfully; it never stops anything there. On a Spot instance it polls `spot/instance-action` every 5 s.
+LP-4 ([#2981](https://github.com/WizardFactory/TodayWeather/issues/2981)). `server2-logs-watch.service` runs [`spot_watch.py`](../../server2/deploy/logging/spot_watch.py). It reads the instance's life cycle from instance metadata (IMDSv2). On an On-Demand or scheduled instance, or when instance metadata does not answer within about a minute, it writes one line saying why it is idle and ends successfully; it never stops anything there. On a Spot instance it polls `spot/instance-action` every 4 s, each request bounded at 0.5 s, so a notice is seen within 6 s.
 
 **Interruption sequence.** When EC2 announces an interruption (two minutes before it acts):
 
-1. Within 5 s the watcher writes a warn collector record, shipped to every destination before the server's shutdown records:
+1. Within 6 s the watcher writes a warn collector record, shipped to every destination before the server's shutdown records:
 
    ```json
    {"collector_schema": 1, "event": "collector.interruption_notice", "level": "warn", "action": "terminate",
     "action_time": "2026-11-15T01:02:03Z", "timestamp": "…Z", "message": "Spot interruption notice: stopping server2, then the log collector"}
    ```
 
-2. It stops `server2.service` (the server's worker drain is bounded at 35 s; systemd ends it at 45 s).
+2. It stops `server2.service` (the server's worker drain is bounded at 35 s; systemd ends it at 45 s). If the collector is not running at that moment (for example while it waits for an automatic restart), the watcher starts it at the same time, so it reads and ships the journal. After the server's stop it writes a `collector.interruption_progress` record with the outcome of each step (`warn` if a step failed or timed out), which still reaches the destinations.
 3. It then stops `server2-logs.service`. On an interruption the stop drain waits at most 10 s instead of 75 s; the collector's own flush at SIGTERM (at most 20 s) then sends what is left. Records sent that way can be repeated if the disk survives and the collector starts again (see the repeat bound above), but they are not lost while the destinations work.
 
 EC2 then stops or terminates the instance; the watcher does not power anything off. A normal shutdown without a notice keeps the same order, because the server unit is ordered after the collector and therefore stops first.
 
-**Time budget.** Detection 5 s + server stop 45 s + drain 10 s + collector flush 20 s = **80 s**, leaving 40 s of the two-minute notice. Each part is enforced by its own bound (poll interval, the server unit's `TimeoutStopSec`, the drain deadline, Vector's `--graceful-shutdown-limit-secs`). In the LP-4 check, notice to collector stop took about 15 s.
+**Time budget.** Detection 6 s + server stop 45 s + drain 10 s + collector flush 20 s = **81 s**, leaving 39 s of the two-minute notice. Each part has its own bound (poll schedule and request timeout, the server unit's `TimeoutStopSec`, the drain deadline shared by all its journal lookups, Vector's `--graceful-shutdown-limit-secs`), and the watcher waits for each step only for the time left of 75 s after the notice; a step that runs over is recorded and the next one starts. In the LP-4 check, notice to collector stop took about 15 s.
 
-**Loss without a notice.** Notices are best effort, and an instance can also lose power or be terminated without one. Then the records that had not reached a destination are lost from it, and they are the youngest: in normal operation a record reaches S3 within 60 s (objects close every 50 s) and CloudWatch within 10 s. That is the bound of an interruption without notice. If the disk survives (a Spot stop or a reboot), the previous boot's remainder is shipped after the next start ([surviving disk](#several-instances-and-a-surviving-disk)). The interruption watcher does not mark the instance unready or remove it from routing; that is [#2705](https://github.com/WizardFactory/TodayWeather/issues/2705).
+**Loss without a notice.** Notices are best effort, and an instance can also lose power or be terminated without one. Then the records that had not reached a destination are lost from it, and they are the youngest: in normal operation a record reaches S3 within 60 s (objects close every 50 s and an upload is given at most 10 s, after which it is retried) and CloudWatch within 10 s, while the destinations answer normally. That is the bound of an interruption without notice; while a destination is slow or failing, the age of its oldest unshipped record is in `collector.status` (`unshipped_seconds`). If the disk survives (a Spot stop or a reboot), the previous boot's remainder is shipped after the next start ([surviving disk](#several-instances-and-a-surviving-disk)). The interruption watcher does not mark the instance unready or remove it from routing; that is [#2705](https://github.com/WizardFactory/TodayWeather/issues/2705).
 
 ### Loss, redelivery and counters
 

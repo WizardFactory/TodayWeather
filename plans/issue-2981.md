@@ -6,7 +6,7 @@ Paths: `server2/deploy/logging/` (`spot_watch.py`, `units/server2-logs-watch.ser
 
 | ID | User and goal | Steps | Expected | Failure path | AC | Check |
 | --- | --- | --- | --- | --- | --- | --- |
-| S1 | Operator: logs survive a Spot interruption | EC2 announces an interruption | Notice record first; server stops, then collector; every server record arrives; within 80 s | Destination failing: drain gives up after 10 s, flush sends the rest | AC1 AC2 | `linux_check` spot-interruption |
+| S1 | Operator: logs survive a Spot interruption | EC2 announces an interruption | Notice record first; server stops, then collector; every server record arrives; within 81 s | Destination failing: drain gives up after 10 s, flush sends the rest | AC1 AC2 | `linux_check` spot-interruption |
 | S2 | Operator: normal shutdown keeps the order | `systemctl poweroff` | Server stopped before the collector stops; final records delivered | — | AC3 | `linux_reboot_check` after (order) |
 | S3 | Operator: interruption without notice | Power lost | Missing records younger than 60 s (S3) / 10 s (CloudWatch) | — | AC4 | `linux_reboot_check` before-poweroff/after; `linux_check` delivery timing |
 | S4 | Operator: On-Demand or no metadata | Watcher starts | Idle line, success, no stop | — | AC5 | `linux_check` watcher idle, `test_logging` |

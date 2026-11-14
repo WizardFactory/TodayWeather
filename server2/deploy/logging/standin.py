@@ -12,7 +12,8 @@ CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
 Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
-while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds.
+while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
+while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds.
 """
 import argparse
 import json
@@ -155,6 +156,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(404, b'<Error><Code>NoSuchBucket</Code></Error>', 'application/xml')
         if not SAFE.match(key) or '..' in key.split('/'):
             return self.reply(400, b'<Error><Code>InvalidKey</Code></Error>', 'application/xml')
+        # Test fault: while <state>/slow-s3 exists, every object is stored and confirmed only
+        # after that many seconds (a slow upload).
+        slow = self.server.state / 'slow-s3'
+        if slow.exists():
+            time.sleep(float(slow.read_text().strip() or '0'))
         target = self.server.state / 's3' / key
         with self.server.lock:
             if target.exists():

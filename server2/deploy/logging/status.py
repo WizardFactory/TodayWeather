@@ -109,10 +109,10 @@ def checkpoint(state_dir, destination, source=None):
         return None
 
 
-def journal_boots(namespace='server2'):
+def journal_boots(namespace='server2', timeout=30):
     """Boot IDs of the namespace, oldest first."""
     result = subprocess.run(['journalctl', f'--namespace={namespace}', '--list-boots', '--no-pager', '-q'],
-                            capture_output=True, text=True, timeout=30)
+                            capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise JournalError('journalctl --list-boots failed')
     return [m.group(1) for m in re.finditer(r'^\s*-?\d+\s+([0-9a-f]{32})\b', result.stdout, re.M)]
@@ -345,11 +345,18 @@ def drain(state_dir, active, timeout, poll=0.5):
     # Readers and their targets: each destination's main reader up to the journal end, and
     # each earlier-boot reader (LP-3) up to its boot's last entry.
     targets = {(d, None): parse_cursor(target) for d in active}
-    for destination in active:
-        for item in backlog(state_dir).get(destination, []):
-            last = last_entry_of_boot(item['boot'], timeout=max(1.0, deadline - time.monotonic()))
-            if last:
-                targets[(destination, item['source'])] = parse_cursor(last)
+    # Every lookup shares the one deadline (CX-LP4-002): the boot list is read once, and no
+    # earlier-boot target is looked up once the time is spent.
+    plan = backlog_plan(state_dir)
+    if any(plan.get(d) for d in active) and deadline > time.monotonic():
+        readers = backlog(state_dir, journal_boots(timeout=max(0.1, deadline - time.monotonic())))
+        for destination in active:
+            for item in readers.get(destination, []):
+                if deadline <= time.monotonic():
+                    break
+                last = last_entry_of_boot(item['boot'], timeout=max(0.1, deadline - time.monotonic()))
+                if last:
+                    targets[(destination, item['source'])] = parse_cursor(last)
     pending = set(targets)
     while pending:
         for key in sorted(pending, key=str):

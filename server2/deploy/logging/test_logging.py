@@ -194,6 +194,7 @@ class RenderTest(unittest.TestCase):
             self.assertNotIn('auth', sink)  # credentials come from the instance role
         self.assertFalse(out['sinks']['cloudwatch']['create_missing_group'])
         self.assertEqual(out['sinks']['s3']['batch']['timeout_secs'], 50)
+        self.assertEqual(out['sinks']['s3']['request']['timeout_secs'], 10)  # 50 + 10: the 60 s bound (LP-4)
         self.assertEqual(out['sinks']['cloudwatch']['batch']['timeout_secs'], 1)
 
     def test_filter_thresholds(self):
@@ -556,8 +557,10 @@ class SpotWatchTest(unittest.TestCase):
         calls, slept = [], []
         marker = Path(tempfile.mkdtemp()) / 'watch' / 'interruption'
         def run(command, **kwargs):
-            calls.append((command, marker.exists()))
             import subprocess
+            if command[1] == 'show':  # the collector is running
+                return subprocess.CompletedProcess(command, 0, 'active\n', '')
+            calls.append((command, marker.exists()))
             return subprocess.CompletedProcess(command, 0, '', '')
         metadata = self.FakeMetadata(values)
         with mock.patch.object(spot_watch, 'MARKER', str(marker)), contextlib.redirect_stdout(io.StringIO()) as out:
@@ -573,11 +576,70 @@ class SpotWatchTest(unittest.TestCase):
         self.assertEqual([c[0] for c in calls], [['systemctl', 'stop', 'server2.service'], ['systemctl', 'stop', 'server2-logs.service']])
         self.assertTrue(all(present for _, present in calls))  # the collector's drain sees the interruption
         self.assertFalse(marker.exists())
-        self.assertEqual(slept, [spot_watch.POLL_SECONDS] * 2)  # polled every 5 s until the notice
+        self.assertEqual(len(slept), 2)  # polled twice before the notice
         record = json.loads(next(l for l in out.splitlines() if l.startswith('{')))
         self.assertEqual((record['collector_schema'], record['event'], record['level'], record['action'], record['action_time']),
                          (1, 'collector.interruption_notice', 'warn', 'terminate', '2026-11-15T01:02:03Z'))
         self.assertLess(out.index('collector.interruption_notice'), len(out))
+
+    def stop_with(self, responses):
+        """ordered_stop with scripted systemctl results: {(verb, unit): result or exception}."""
+        import subprocess
+        calls, records = [], io.StringIO()
+        states = list(responses.get('states', ['active']))
+        def run(command, **kwargs):
+            if command[1] == 'show':
+                return subprocess.CompletedProcess(command, 0, (states.pop(0) if len(states) > 1 else states[0]) + '\n', '')
+            calls.append((command, kwargs.get('timeout')))
+            outcome = responses.get((command[1], command[-1]), 0)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return subprocess.CompletedProcess(command, outcome, '', '')
+        marker = Path(tempfile.mkdtemp()) / 'interruption'
+        with contextlib.redirect_stdout(records):
+            ok = spot_watch.ordered_stop(run, marker, sleep=lambda s: None)
+        return ok, calls, records.getvalue()
+
+    def test_failed_or_slow_steps_are_bounded_and_recorded(self):  # CX-LP4-001
+        import subprocess
+        ok, calls, out = self.stop_with({('stop', 'server2.service'): 1})
+        self.assertFalse(ok)
+        self.assertEqual([c[0][1:] for c in calls], [['stop', 'server2.service'], ['stop', 'server2-logs.service']])
+        progress = json.loads(next(l for l in out.splitlines() if 'interruption_progress' in l))
+        self.assertEqual((progress['level'], progress['server_stop']), ('warn', 'failed (exit 1)'))
+        ok, calls, out = self.stop_with({('stop', 'server2.service'): subprocess.TimeoutExpired('systemctl', 45)})
+        self.assertFalse(ok)
+        self.assertIn('"server_stop": "timeout"', out)
+        # Each wait is bounded by the budget left: the server's leaves 30 s for the collector.
+        self.assertLessEqual(calls[0][1], spot_watch.STOP_BUDGET_SECONDS - spot_watch.DRAIN_SECONDS - spot_watch.FLUSH_SECONDS)
+        self.assertLessEqual(calls[1][1], spot_watch.STOP_BUDGET_SECONDS)
+        self.assertIn('server2-logs.service ok', out)
+
+    def test_a_collector_waiting_for_its_restart_is_started_first(self):  # CX-LP4-003
+        ok, calls, out = self.stop_with({'states': ['activating', 'activating', 'active']})
+        self.assertTrue(ok)
+        self.assertEqual([c[0][1:] for c in calls][:2], [['start', '--no-block', 'server2-logs.service'], ['stop', 'server2.service']])
+        progress = json.loads(next(l for l in out.splitlines() if 'interruption_progress' in l))
+        self.assertEqual((progress['collector_before'], progress['collector_started'], progress['level']), ('activating', 'active', 'info'))
+
+    def test_polls_are_scheduled_so_request_time_does_not_add_up(self):  # CX-LP4-004
+        clock = [0.0]
+        class SlowMetadata(self.FakeMetadata):
+            def get(inner, path):
+                clock[0] += 0.5  # each request takes its full timeout
+                return super().get(path)
+        metadata = SlowMetadata({'/latest/meta-data/instance-life-cycle': 'spot',
+                                 '/latest/meta-data/spot/instance-action': [None, None, None, '{"action": "stop", "time": "T"}']})
+        slept = []
+        def sleep(seconds):
+            slept.append(seconds); clock[0] += seconds
+        import subprocess
+        run = lambda command, **kwargs: subprocess.CompletedProcess(command, 0, 'active\n', '')
+        with mock.patch.object(spot_watch, 'MARKER', str(Path(tempfile.mkdtemp()) / 'm')), contextlib.redirect_stdout(io.StringIO()):
+            spot_watch.main([], run=run, sleep=sleep, metadata=metadata, clock=lambda: clock[0])
+        self.assertEqual(slept, [3.5, 3.5, 3.5])  # polls 4 s apart: the 0.5 s request is inside the interval
+        # A notice published just after a poll is seen at the next one: at most 4 s + its request.
+        self.assertLessEqual(spot_watch.POLL_SECONDS + spot_watch.METADATA_TIMEOUT, spot_watch.DETECTION_SECONDS)
 
     def test_idle_on_demand_and_without_metadata(self):
         code, calls, out, slept, _ = self.run_watcher({'/latest/meta-data/instance-life-cycle': 'on-demand'})
@@ -638,17 +700,23 @@ class SpotWatchTest(unittest.TestCase):
         self.assertEqual(unit['ExecStart'], '/usr/bin/python3 -I /opt/server2/logging/spot_watch.py')
         self.assertEqual(unit['LogNamespace'], 'server2')
         self.assertEqual(unit['RuntimeDirectory'], 'server2-logs-watch')
+        self.assertEqual(unit['RuntimeDirectoryPreserve'], 'yes')
+        self.assertEqual(parser['Unit']['Before'].split(), ['server2.service', 'server2-logs.service'])  # GEM-LP4-002
         self.assertEqual(render.UNITS['server2-logs-watch.service'], 'collector')
         self.assertEqual(spot_watch.MARKER, status.INTERRUPTION_MARKER)
         self.assertIn('spot_watch.py', (HERE / 'install.sh').read_text())
+        self.assertIn('systemctl restart server2-logs-watch.service', (HERE / 'install.sh').read_text())  # CX-LP4-006
         import boot
         self.assertIn('units/server2-logs-watch.service', boot.BUNDLE)
 
     def test_budget_fits_the_two_minute_notice(self):
         server = int(re.search(r'^TimeoutStopSec=(\d+)', (HERE / 'units' / 'server2.service').read_text(), re.M).group(1))
         flush = int(re.search(r'--graceful-shutdown-limit-secs (\d+)', (HERE / 'units' / 'server2-logs.service').read_text()).group(1))
-        budget = spot_watch.POLL_SECONDS + server + status.INTERRUPTION_DRAIN_SECONDS + flush
-        self.assertEqual(budget, 80)
+        self.assertEqual((spot_watch.SERVER_STOP_SECONDS, spot_watch.DRAIN_SECONDS, spot_watch.FLUSH_SECONDS),
+                         (server, status.INTERRUPTION_DRAIN_SECONDS, flush))
+        self.assertGreaterEqual(spot_watch.DETECTION_SECONDS, spot_watch.POLL_SECONDS + 4 * spot_watch.METADATA_TIMEOUT)
+        budget = spot_watch.DETECTION_SECONDS + spot_watch.STOP_BUDGET_SECONDS
+        self.assertEqual(budget, 81)
         self.assertLessEqual(budget, 120 - 30)  # at least 30 s margin
 
 
@@ -1201,6 +1269,26 @@ class StatusTest(unittest.TestCase):
             with mock.patch.object(status, 'first_entry_after', return_value=None), \
                     mock.patch.object(status, 'backlog_age', side_effect=status.JournalError('no such boot')):
                 self.assertEqual(status.unshipped_seconds(directory, 's3', {}, 4_000), 0)
+
+    def test_drain_lookups_share_its_deadline(self):  # CX-LP4-002
+        import time as _time
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(300, 3_000))
+            (Path(directory) / 'backlog.json').write_text(json.dumps({'s3': [{'boot': 'a' * 32, 'source': 'backlog_s3_aaaa'}],
+                                                                      'cloudwatch': [{'boot': 'a' * 32, 'source': 'backlog_cw_aaaa'}]}))
+            timeouts = []
+            def slow_boots(*args, timeout=30):
+                timeouts.append(timeout); _time.sleep(0.4); return ['a' * 32, 'b' * 32]
+            with mock.patch.object(status, 'journal_boots', side_effect=slow_boots), \
+                    mock.patch.object(status, 'newest_entry', return_value=_cursor(300, 3_000)), \
+                    mock.patch.object(status, 'last_entry_of_boot', return_value=_cursor(200, 2_000)) as last:
+                began = _time.monotonic()
+                status.drain(directory, ('s3', 'cloudwatch'), timeout=0.3, poll=0.05)
+                elapsed = _time.monotonic() - began
+            self.assertEqual(len(timeouts), 1)  # one boot listing for every destination
+            self.assertLessEqual(timeouts[0], 0.3)
+            last.assert_not_called()  # the deadline had passed
+            self.assertLess(elapsed, 0.8)
 
     def test_drain_record_never_blocks_the_stop(self):
         with tempfile.TemporaryDirectory() as directory:

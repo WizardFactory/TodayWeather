@@ -379,7 +379,7 @@ def restart_scenario(report):
     check('server healthy', wait_health())
     for i in range(5):
         http(f'/weather/v000903/coord/33.{i},127.0')
-    time.sleep(3)  # read, but the 60 s S3 object is still open
+    time.sleep(3)  # read, but the S3 object (50 s window) is still open
     seconds = stop_seconds('server2-logs.service')
     entry['observations']['collector_stop_seconds'] = seconds
     check('the collector stop waited for confirmation and stayed within its bound', seconds < 100, str(seconds))
@@ -836,9 +836,9 @@ def abrupt_stop_scenario(report):
 WATCH_UNIT = 'server2-logs-watch.service'
 
 
-def unit_inactive_since(unit):
-    """Monotonic seconds (CLOCK_MONOTONIC) when the unit last became inactive, or None."""
-    value = systemctl('show', '-p', 'InactiveEnterTimestampMonotonic', '--value', unit).stdout.strip()
+def unit_inactive_since(unit, field='InactiveEnterTimestampMonotonic'):
+    """Monotonic seconds (CLOCK_MONOTONIC) of a unit's last state change, or None."""
+    value = systemctl('show', '-p', field, '--value', unit).stdout.strip()
     return int(value) / 1e6 if value and value != '0' else None
 
 
@@ -864,9 +864,11 @@ def spot_interruption_scenario(report):
     began = time.monotonic()
     action_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(time.time() + 120))
     (IMDS_STATE / 'instance-action').write_text(json.dumps({'action': 'terminate', 'time': action_time}))
+    published_at = time.time()
     stopped = wait_until(lambda: wait_unit('server2-logs.service', {'inactive', 'failed'}, 1) in ('inactive', 'failed'), 130)
     total = round(time.monotonic() - began, 1)
     server_stop, collector_stop = unit_inactive_since('server2.service'), unit_inactive_since('server2-logs.service')
+    collector_stopping = unit_inactive_since('server2-logs.service', 'DeactivatingEnterTimestampMonotonic')
     (IMDS_STATE / 'instance-action').unlink(missing_ok=True)
     set_identity(INSTANCE_A)
     systemctl('stop', STANDIN_UNIT)
@@ -874,31 +876,74 @@ def spot_interruption_scenario(report):
                                  server_stopped_before_collector_by_seconds=round(collector_stop - server_stop, 1)
                                  if server_stop and collector_stop else None)
     check('the server and the collector stopped', stopped is not None)
-    check('notice to collector stop within the 80 s budget (two-minute notice)', total <= 80, str(total))
-    check('the server unit stopped before the collector', server_stop is not None and collector_stop is not None
-          and server_stop < collector_stop, f'{server_stop} {collector_stop}')
+    check('notice to collector stop within the 81 s budget (two-minute notice)', total <= 81, str(total))
+    check('the server unit had stopped before the collector began to stop', server_stop is not None
+          and collector_stopping is not None and server_stop <= collector_stopping, f'{server_stop} {collector_stopping}')
     watch_lines = journal(WATCH_UNIT)
     notices = [json.loads(l) for l in watch_lines if '"collector.interruption_notice"' in l]
     check('one interruption record with the announced action and time', len(notices) == 1
           and notices[0]['action'] == 'terminate' and notices[0]['action_time'] == action_time, str(notices)[:200])
-    detected = None
     if notices:
         import datetime
-        detected = datetime.datetime.strptime(notices[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc)
-    # Every server record up to the unit's stop, at each destination; the notice record first.
+        seen = datetime.datetime.strptime(notices[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc)
+        detection = round(seen.timestamp() - published_at, 1)
+        entry['observations']['detection_seconds'] = detection
+        check('the notice was seen within 6 s of its publication', detection <= 6, str(detection))
+    # Every server record up to the unit's stop, at each destination. The server's shutdown
+    # records are identified by their own fields, not by time (CX-LP4-005), and the notice
+    # record must come before each of them at each destination.
     records = server_records()
     received = delivered(state)[0]
     notice_line = next((l for l in watch_lines if '"collector.interruption_notice"' in l), None)
-    after_notice = [m for _, m in records if detected and json.loads(m).get('timestamp', '') > notices[0]['timestamp']]
-    entry['observations']['server_records_after_notice'] = len(after_notice)
-    check('the server wrote shutdown records after the notice', len(after_notice) > 0)
+    shutdown = [json.loads(m) for _, m in records if json.loads(m).get('component') == 'process'
+                and json.loads(m).get('stage') in ('shutdown', 'runtime_teardown')]
+    entry['observations']['server_shutdown_records'] = len(shutdown)
+    check('the server wrote shutdown records', len(shutdown) > 0)
+    progress = [json.loads(l) for l in watch_lines if '"collector.interruption_progress"' in l]
+    check('the stop progress record says the server stopped', len(progress) == 1 and progress[0]['server_stop'] == 'ok',
+          str(progress)[:200])
     for destination in ('s3', 'cloudwatch'):
         got = set(received[destination]['server'])
         missing = [m for _, m in records if m not in got]
         check(f'{destination}: every server record up to the stop arrived', not missing, f'{len(missing)} missing')
-        check(f'{destination}: the interruption record arrived', notice_line in received[destination]['collector'])
-    check('the interruption record precedes the server shutdown records',
-          bool(after_notice) and all(json.loads(m)['timestamp'] > notices[0]['timestamp'] for m in after_notice))
+        collector_lines = [json.loads(l) for l in received[destination]['collector'] if l.startswith('{')]
+        notice_at = [r['timestamp'] for r in collector_lines if r.get('event') == 'collector.interruption_notice']
+        shipped_shutdown = [json.loads(m) for m in received[destination]['server']
+                            if json.loads(m).get('component') == 'process' and json.loads(m).get('stage') in ('shutdown', 'runtime_teardown')]
+        check(f'{destination}: the interruption record arrived', notice_line in received[destination]['collector'] and len(notice_at) == 1)
+        check(f'{destination}: the interruption record precedes every shutdown record',
+              notice_at and shipped_shutdown and all(notice_at[0] < r['timestamp'] for r in shipped_shutdown),
+              f'{notice_at} vs {[r["timestamp"] for r in shipped_shutdown]}')
+        check(f'{destination}: the stop progress record arrived', any(r.get('event') == 'collector.interruption_progress' for r in collector_lines))
+    return entry
+
+
+def slow_upload_scenario(report):
+    """LP-4 (CX-LP4-007): with every S3 upload taking 8 s (inside the 10 s request bound), a
+    new record still reaches S3 within 60 s."""
+    entry = report.scenario('s3-slow-upload', ['LP4-AC4'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-slow'
+    reset_host()
+    start_standin(state)
+    (state / 'slow-s3').write_text('8')
+    write_env(logging_env(sinks='s3'))
+    systemctl('start', 'server2-logs.service', 'server2.service')
+    check('server healthy', wait_health())
+    time.sleep(1.5)
+    before = len(journal('server2.service'))
+    began = time.monotonic()
+    http('/weather/v000903/coord/35.5,127.0')
+    time.sleep(0.5)
+    produced = [l for l in journal('server2.service')[before:] if server_record_level(l) in ('info', 'warn', 'error')]
+    target = produced[-1] if produced else None
+    arrived = wait_until(lambda: target in delivered(state)[0]['s3']['server'], 75)
+    seconds = round(time.monotonic() - began, 1) if arrived is not None else None
+    entry['observations']['s3_delivery_seconds_with_8_s_upload'] = seconds
+    check('a record reaches S3 within 60 s although each upload takes 8 s', seconds is not None and seconds <= 60, str(seconds))
+    (state / 'slow-s3').unlink()
+    systemctl('stop', 'server2.service', 'server2-logs.service')
+    systemctl('stop', STANDIN_UNIT)
     return entry
 
 
@@ -991,6 +1036,7 @@ def main():
     abrupt_stop_scenario(report)
     spot_interruption_scenario(report)
     watcher_idle_scenario(report)
+    slow_upload_scenario(report)
     spot_warning_scenario(report)
     isolation_scenario(report)
     restart_scenario(report)

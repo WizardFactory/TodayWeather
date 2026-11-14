@@ -176,13 +176,25 @@ def before(report, variant='unconfirmed'):
         check('S3 confirmed the first records of this boot', confirmed is not None, str(confirmed))
         (STANDIN_STATE / 'fail-s3').touch()  # then S3 fails through the reboot
     if variant == 'poweroff':
-        # Steady traffic for longer than an S3 object window, then an abrupt power-off.
+        # Steady traffic, then an abrupt power-off just before the next S3 object would
+        # close: the oldest unsent record is then about one window old, the worst case
+        # (CX-LP4-007). An S3 object closes every 50 s per source and hour.
+        server_objects = lambda: sorted((p.stat().st_mtime for p in (STANDIN_STATE / 's3').rglob('*.ndjson.gz')
+                                         if '/server/' in str(p)), reverse=True) if (STANDIN_STATE / 's3').exists() else []
         began = time.monotonic()
         i = 0
-        while time.monotonic() - began < 75:
+        seen = len(server_objects())
+        closed_at = None
+        while time.monotonic() - began < 180:
             lc.http(f'/weather/v000903/coord/30.{i % 50},127.0')
             i += 1
             time.sleep(0.5)
+            if closed_at is None and time.monotonic() - began > 20 and len(server_objects()) > seen:
+                closed_at = server_objects()[0]  # a server object just closed
+            if closed_at is not None and time.time() >= closed_at + 46:
+                break
+        entry['observations']['seconds_after_last_object_close'] = round(time.time() - closed_at, 1) if closed_at else None
+        check('powered off about one window after an S3 object closed', closed_at is not None)
         lc.run('journalctl', '--namespace=server2', '--sync')  # the comparison base: the journal up to now
         poweroff_at = time.time()
         with open(STATE / 'before.json', 'w') as f:
@@ -234,6 +246,15 @@ def after(report):
         check('the shutdown stopped the server before stopping the collector',
               'server_stopped' in order and 'collector_stopping' in order and order['server_stopped'] <= order['collector_stopping'],
               json.dumps(order))
+        # The server's own shutdown records, and CloudWatch (working during the shutdown)
+        # stored them before this boot began (GEM-LP4-004).
+        booted_at = next(int(l.split()[1]) for l in Path('/proc/stat').read_text().splitlines() if l.startswith('btime '))
+        final = [m for _, m in records_with_time(old_boot)
+                 if json.loads(m).get('component') == 'process' and json.loads(m).get('stage') in ('shutdown', 'runtime_teardown')]
+        stored = received_before(STANDIN_STATE, booted_at)['cloudwatch']
+        entry['observations']['previous_boot_shutdown_records'] = len(final)
+        check('the previous boot ended with the server\'s shutdown records', len(final) > 0)
+        check('CloudWatch stored them before the reboot', final and set(final) <= stored, f'{len(set(final) - stored)} missing')
     check('the collector was started by the boot alone',
           lc.wait_unit('server2-logs.service', {'active'}, 60) == 'active')
     starts = [json.loads(l) for l in lc.journal('server2-logs.service') if '"collector.started"' in l]

@@ -43,6 +43,7 @@ RESERVED_PREFIXES = ('raw', 'index', 'packs', 'summary', 'state', 'budgets', 'ge
 COLLECTOR_SCHEMA = 1
 # 50 s keeps a record's journal-to-S3 delay under 60 s including the upload (LP-4).
 S3_BATCH_SECONDS = 50
+S3_REQUEST_SECONDS = 10
 CLOUDWATCH_BATCH_SECONDS = 1
 
 
@@ -475,6 +476,9 @@ def collector_config(config, instance_id, state_dir, backlog=None):
             'filename_extension': 'ndjson.gz', 'compression': 'gzip',
             'framing': {'method': 'newline_delimited'},
             'batch': {'timeout_secs': S3_BATCH_SECONDS},
+            # The 60 s delivery bound holds while an upload completes within this time; a
+            # slower one is retried and the destination shows as behind (LP-4).
+            'request': {'timeout_secs': S3_REQUEST_SECONDS},
         })
     if 'cloudwatch' in config['sinks']:
         sinks['cloudwatch'] = dict(common, **{
