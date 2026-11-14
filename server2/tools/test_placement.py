@@ -306,7 +306,7 @@ permissions:
   contents: read
 jobs:
   foundation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
       run:
@@ -334,6 +334,18 @@ jobs:
           python-version: '3.11'
       - run: python tools/golden/ci.py --install
 """
+    def test_foundation_runner_is_pinned_to_ubuntu_24_04(self):
+        # ubuntu-latest moved to 26.04 (Python 3.14): subprocess then uses posix_spawn, which
+        # the benchmark sandbox's audit hook denies; the foundation job stays on 24.04.
+        self.d['outside'].append(dict(path='.github/workflows/server2.yml', category='ci-wiring', reason='reviewed runner pin'))
+        good = self.golden_workflow()
+        self.write('.github/workflows/server2.yml', good)
+        self.assertEqual([], self.errors())
+        for runner in ('ubuntu-latest', 'ubuntu-26.04', 'ubuntu-22.04'):
+            with self.subTest(runner=runner):
+                self.write('.github/workflows/server2.yml', good.replace('runs-on: ubuntu-24.04', f'runs-on: {runner}', 1))
+                self.assertTrue(self.errors())
+
     def test_foundation_60_and_goldens_30_are_exact_independent_budgets(self):
         self.d['outside'].append(dict(path='.github/workflows/server2.yml', category='ci-wiring', reason='reviewed foundation budget'))
         good = self.golden_workflow()
