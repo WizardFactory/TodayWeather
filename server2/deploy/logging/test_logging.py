@@ -624,7 +624,7 @@ class SpotWatchTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual([c[0] for c in calls], [['systemctl', 'stop', 'server2.service'], ['systemctl', 'stop', 'server2-logs.service']])
         self.assertTrue(all(present for _, present in calls))  # the collector's drain sees the interruption
-        self.assertTrue(marker.exists())  # kept until the host goes down (GEM-LP4-002)
+        self.assertFalse(marker.exists())  # removed once the collector stopped
         self.assertEqual(len(slept), 2)  # polled twice before the notice
         record = json.loads(next(l for l in out.splitlines() if l.startswith('{')))
         self.assertEqual((record['collector_schema'], record['event'], record['level'], record['action'], record['action_time']),
@@ -681,8 +681,11 @@ class SpotWatchTest(unittest.TestCase):
         self.assertEqual((progress['collector_at_stop'], progress['collector_started']), ('activating', 'active'))
 
     def test_the_marker_stays_while_a_stop_is_pending(self):  # GEM-LP4-002 round 2
+        ok, calls, progress, out, systemd, marker = self.stop_with(script={('stop', 'server2-logs.service'): 'stuck',
+                                                                           ('kill', 'server2-logs.service'): 'stuck'})
+        self.assertTrue(marker.exists())  # the collector's stop is still pending
         ok, calls, progress, out, systemd, marker = self.stop_with(script={('stop', 'server2-logs.service'): 'stuck'})
-        self.assertTrue(marker.exists())
+        self.assertFalse(marker.exists())  # killed and inactive: later stops use the normal drain
 
     def test_polls_are_scheduled_so_request_time_does_not_add_up(self):  # CX-LP4-004
         clock = [0.0]

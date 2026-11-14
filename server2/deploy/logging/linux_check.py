@@ -168,6 +168,7 @@ def reset_host():
     # Rotate, then delete every archived file: the namespace keeps running and the
     # new active file is empty. (Restarting the namespace repeatedly trips its start limit.)
     # The namespace daemon exits when idle; rotation needs it running.
+    Path('/run/server2-logs-watch/interruption').unlink(missing_ok=True)  # an earlier interruption's marker
     systemctl('start', 'systemd-journald@server2.service', check=False)
     run('journalctl', '--namespace=server2', '--rotate', check=False)
     time.sleep(1.5)

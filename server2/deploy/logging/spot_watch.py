@@ -142,8 +142,10 @@ def ordered_stop(run, marker, clock=time.monotonic, sleep=time.sleep):
     reserve for the final state check and, for a collector still stopping, the kill. Every
     systemctl call is capped by the time left of its allotment (CX-LP4-001). A collector
     that is not running at the notice, or crashed during the server's stop, is started so
-    it ships the journal (CX-LP4-003). The marker stays until the host goes down, so a stop
-    still pending in systemd also uses the short drain (GEM-LP4-002). The record after the
+    it ships the journal (CX-LP4-003). The marker stays while a stop is pending, so a stop
+    still pending in systemd also uses the short drain (GEM-LP4-002); once the collector has
+    stopped, it is removed, so later stops in the same boot (after a hibernation, or a
+    notice that did not end the instance) use the normal drain. The record after the
     server's stop reaches the destinations; the last line stays local."""
     began = clock()
     server_deadline = began + SERVER_STOP_SECONDS
@@ -177,6 +179,8 @@ def ordered_stop(run, marker, clock=time.monotonic, sleep=time.sleep):
         kill, _, _ = bounded(run, ['systemctl', 'kill', '--signal=SIGKILL', 'server2-logs.service'], final_deadline, clock, CALL_SECONDS)
         collector = f'killed at the deadline ({kill})'
         collector_state = unit_state(run, 'server2-logs.service', final_deadline, clock)
+    if collector_state in ('inactive', 'failed'):
+        marker.unlink(missing_ok=True)  # kept only while a stop is still pending (GEM-LP4-002)
     # The collector has stopped, so this line stays in the local journal only.
     print(f'server2 interruption stop: server2.service {server} ({server_state}) in {server_seconds} s, '
           f'server2-logs.service {collector} ({collector_state}) after {round(clock() - began, 1)} s '
