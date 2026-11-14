@@ -13,13 +13,14 @@ public protocol PushLogStore: Sendable {
     func entries() throws -> [PushReplacementLog.Entry]
     func append(old: String?, new: String) throws -> PushReplacementLog.Entry
     func acknowledge(_ id: Int) throws
+    func wasIssued(_ token: String) throws -> Bool
 }
 
 extension AppStateStore: PushStateStore {}
 
 extension PushReplacementLog: PushLogStore {}
 
-/// The Cordova `Push` service's timeline on one actor (IN-04, #2953; review rounds 1–8).
+/// The Cordova `Push` service's timeline on one actor (IN-04, #2953; review rounds 1–9).
 ///
 /// Every event (the process start, the open, a token that arrived, the list post 3 seconds after the open, a reply)
 /// is handled on this actor, from reading the state to starting the requests, without suspending, so events never
@@ -32,14 +33,17 @@ extension PushReplacementLog: PushLogStore {}
 /// entry's `new` when they differ.
 ///
 /// Entries this process did not send were left by an earlier one: their requests may have reached the server, in
-/// part or not at all. They are recovered without sending a replacement again (review round 8, CODEX-IN04-12): the
-/// legacy Mongo store keeps a document that a `PUT` moves onto a key another document already has, so a replacement
-/// that reaches the server after a list post of its new token leaves two documents per record. Recovery posts the
-/// list with the newest token (an upsert: one document per record under it) and, once that post succeeded, deletes
-/// the documents of every other token the entries name (`DELETE /push {fcmToken}`), then acknowledges the entries;
-/// when a request of it does not succeed, the entries stay for the next process.
-/// While a recovery runs, or while entries wait that this process has not sent, new replacements are appended and
-/// recovered in turn, and a list post that falls due waits until the entries were recovered (CODEX-IN04-11).
+/// part or not at all. The legacy store is Mongo: a `PUT` moves documents onto a token that may already hold them and
+/// keeps both, so sending a replacement again, or posting an older token's list again, can duplicate records
+/// (review round 8, CODEX-IN04-12); removing documents is unsafe too, since the legacy list post answers 200 when a
+/// record failed to save and a removal can arrive late (round 9, CODEX-IN04-13, -14). Recovery therefore only posts
+/// the list with the newest token (an upsert: one document per record under it), as Cordova's next open does, and
+/// acknowledges the entries when it succeeded (2xx); otherwise they stay for the next process. Documents under an
+/// older token can stay, as Cordova leaves them. While a recovery runs, or while entries wait that this process has
+/// not handled, new tokens are logged and recovered in turn instead of replaced with a `PUT`, and a list post that
+/// falls due waits until the entries were handled (CODEX-IN04-11). A `PUT` goes only to a value that never held this
+/// installation's documents (the log's `issued` values): a value that comes back is recovered the same way, so a
+/// `PUT` never moves documents onto documents.
 /// A failed read or write ends the event; the next event or start completes it. `context` returns nil when no request
 /// can be built (no server URL or `Device-Id`): nothing is sent or stored then, and the log waits.
 public actor PushSync {
@@ -58,10 +62,6 @@ public actor PushSync {
 
     /// Log entries this process sent or recovered; one process never handles an entry twice.
     private var sentHere: Set<Int> = []
-    /// Recovered entries whose recovery did not succeed: the server may hold documents under the newest and under an
-    /// older token, so while one is in the log no replacement is sent (it would move documents onto a token that may
-    /// already hold them); new tokens are recovered instead (CODEX-IN04-12). The next process recovers them again.
-    private var unconfirmed: Set<Int> = []
     /// Tasks waiting for replies of replacements sent outside a recovery, owned by this actor.
     private var replyWatchers: [UUID: Task<Void, Never>] = [:]
     /// The recovery of left entries, owned by this actor; nil when none runs.
@@ -176,12 +176,15 @@ public actor PushSync {
     /// token); while entries wait for a recovery, only log and state (the recovery handles it).
     private func replace(_ token: String, state: AppState, ctx: PushRegistration.Context) -> [(PushRequest, PushReply)] {
         let result = PushRegistration.onTokenRefresh(state.push, places: state.places, token: token, context: ctx)
-        guard let put = result.requests.first, put.method == "PUT",
-              let entry = try? log.append(old: state.push.fcmToken, new: token), storeToken(token) else { return [] }
-        // Sent here only when every entry before it was handled by this process and no recovery is unconfirmed;
-        // otherwise a recovery handles it (also when the recovery could not start yet: the next event starts it,
-        // CODEX-IN04-11, -12).
-        if !inOrder(except: entry.id) || hasUnconfirmed() {
+        guard let put = result.requests.first, put.method == "PUT" else { return [] }
+        // A value that held this installation's documents before (it came back) is not replaced onto: the move
+        // could join documents still under it; the recovery posts its list instead (review round 9). Unknown when
+        // the log cannot be read: recovered too.
+        let returning = (try? log.wasIssued(token)) ?? true
+        guard let entry = try? log.append(old: state.push.fcmToken, new: token), storeToken(token) else { return [] }
+        // Sent here only when every entry before it was handled by this process; otherwise a recovery handles it
+        // (also when the recovery could not start yet: the next event starts it, CODEX-IN04-11).
+        if returning || !inOrder(except: entry.id) {
             recover()
             return []
         }
@@ -210,12 +213,6 @@ public actor PushSync {
         return entries.allSatisfy { $0.id == id || sentHere.contains($0.id) }
     }
 
-    /// An entry whose recovery did not succeed is still in the log (false when the log cannot be read).
-    private func hasUnconfirmed() -> Bool {
-        guard let entries = try? log.entries() else { return true }
-        return entries.contains { unconfirmed.contains($0.id) }
-    }
-
     /// Starts the recovery when entries wait that this process has not sent.
     private func recover() {
         guard recovery == nil, let entries = try? log.entries(),
@@ -224,21 +221,12 @@ public actor PushSync {
     }
 
     /// Recovers the waiting entries, and those appended meanwhile, in rounds: the list post with the newest token;
-    /// when it succeeded (2xx), one `DELETE /push` per other token the entries name; when every request of the round
-    /// succeeded, the entries are acknowledged. Otherwise nothing more is sent (no removal without a confirmed post:
-    /// the records may still be only under an older token) and the entries stay for the next process, whose start
-    /// recovers them again (posting and removing again change nothing that was already applied). A post that fell
-    /// due meanwhile goes out after the recovery.
+    /// when it succeeded (2xx), the entries are acknowledged, otherwise they stay for the next process. A post that
+    /// fell due meanwhile goes out after the recovery.
     private func recoverEntries() async {
         while let round = nextRecovery() {
-            var succeeded = await Self.allSucceeded(round.post)
-            if succeeded {
-                succeeded = await Self.allSucceeded(start(round.removals))
-            }
-            if succeeded {
+            if await Self.allSucceeded(round.post) {
                 for id in round.entries { try? log.acknowledge(id) }
-            } else {
-                unconfirmed.formUnion(round.entries)
             }
         }
         recovery = nil
@@ -257,22 +245,15 @@ public actor PushSync {
         return all
     }
 
-    /// Starts the next recovery round over the entries this process has not handled: their ids, the started list
-    /// post with the newest token (none without records) and the removals of the other tokens they name.
-    private func nextRecovery() -> (entries: [Int], post: [(PushRequest, PushReply)], removals: [PushRequest])? {
+    /// Starts the next recovery round over the entries this process has not handled: their ids and the started list
+    /// post with the newest token (none without records or token).
+    private func nextRecovery() -> (entries: [Int], post: [(PushRequest, PushReply)])? {
         guard let (state, ctx) = reconciled(), let entries = try? log.entries() else { return nil }
         let waiting = entries.filter { !sentHere.contains($0.id) }
         guard !waiting.isEmpty else { return nil }
         sentHere.formUnion(waiting.map(\.id))
-        let newest = state.push.fcmToken
-        var others: [String] = []
-        for token in waiting.flatMap({ [$0.old, $0.new] }).compactMap({ $0 })
-        where PushRegistration.accepts(token) && !JSString.equal(token, newest ?? "")
-            && !others.contains(where: { JSString.equal($0, token) }) {
-            others.append(token)
-        }
         let post = start(PushRegistration.onStart(state.push, places: state.places, token: nil, context: ctx).requests)
-        return (waiting.map(\.id), post, others.map { PushRegistration.removal(of: $0, context: ctx) })
+        return (waiting.map(\.id), post)
     }
 
     private func start(_ requests: [PushRequest]) -> [(PushRequest, PushReply)] {

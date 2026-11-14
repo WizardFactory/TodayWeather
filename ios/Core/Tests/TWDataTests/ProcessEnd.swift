@@ -95,6 +95,11 @@ struct EndingLog: PushLogStore {
         guard end.allow(.acknowledge) else { throw ProcessEnded() }
         try inner.acknowledge(id)
     }
+
+    func wasIssued(_ token: String) throws -> Bool {
+        guard end.allow(.entries) else { throw ProcessEnded() }
+        return try inner.wasIssued(token)
+    }
 }
 
 struct EndingTransport: PushTransport {

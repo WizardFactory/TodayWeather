@@ -9,7 +9,7 @@ import TWStorage
 /// without an old token, routePushNotification.js), so a document moved onto a key that another document already has
 /// stays beside it (two documents, two notifications; `removeDuplicateAlarms` skips FCM-only documents); `POST
 /// /push-list` upserts each record (`update(keyQuery, doc, {upsert: true})`: the first document with the key, or a new
-/// one); `DELETE /push {fcmToken}` without `cityIndex` removes every document of the token.
+/// one).
 final class ServerModel: @unchecked Sendable {
     struct Key: Hashable, CustomStringConvertible {
         let type: String
@@ -28,6 +28,19 @@ final class ServerModel: @unchecked Sendable {
 
     /// The documents as `type/cityIndex/id`, one entry per document.
     var records: [String] { keys.map { "\($0.type)/\($0.cityIndex)/\($0.id)" }.sorted() }
+
+    /// What keeps the records from being registered once under `newest`: not exactly one document per record under it
+    /// (`expected`), or a key held by two documents anywhere (two notifications). Documents under an older token are
+    /// not counted: Cordova leaves them too.
+    func issues(newest: String, expected: [String] = ["ios/1/1", "ios/1/2"]) -> [String] {
+        let all = keys
+        var out: [String] = []
+        let under = all.filter { $0.token == newest }.map { "\($0.type)/\($0.cityIndex)/\($0.id)" }.sorted()
+        if under != expected { out.append("under \(newest): \(under), expected \(expected)") }
+        let duplicates = Dictionary(grouping: all, by: { $0 }).filter { $0.value.count > 1 }.keys
+        if !duplicates.isEmpty { out.append("duplicate documents \(duplicates.map(\.description).sorted())") }
+        return out
+    }
 
     @discardableResult
     func apply(_ request: PushRequest) -> Int {
@@ -52,11 +65,6 @@ final class ServerModel: @unchecked Sendable {
                         documents.append((key, record.jsonText))
                     }
                 }
-                return 200
-            case ("DELETE", "/v000903/push"):
-                // Without `cityIndex`: every document of the token (`removeWithResult`, `tokenQuery`).
-                guard let token = request.body["fcmToken"]?.stringValue, !token.isEmpty else { return 403 }
-                documents.removeAll { $0.key.token == token }
                 return 200
             default:
                 return 404

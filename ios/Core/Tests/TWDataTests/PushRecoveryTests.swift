@@ -71,8 +71,7 @@ struct PushRecoveryTests {
     }
 
     static func expectConverged(_ run: Run, _ label: String) {
-        #expect(run.server.tokens == ["token-b"], "\(label): tokens on the server \(run.server.keys)")
-        #expect(run.server.records == ["ios/1/1", "ios/1/2"], "\(label): each record once \(run.server.keys)")
+        #expect(run.server.issues(newest: "token-b").isEmpty, "\(run.server.issues(newest: "token-b"))")
         #expect(run.files.logEntries.isEmpty, "\(label): log \(run.files.logEntries)")
         #expect(run.files.storedToken == "token-b", "\(label): state token")
     }
@@ -104,10 +103,10 @@ struct PushRecoveryTests {
 
     // MARK: - The reviewer's reproductions
 
-    /// CODEX-IN04-6 and -12: the server holds the records under B, the log A→B, B→C, C→B (state B). The recovery
-    /// sends no replacement again: the list post with the newest token B, then, after it succeeded, the removal of
-    /// the other tokens the entries name (A, C), one document per record under B.
-    @Test func codexIn04_12_theRecoveryPostsTheNewestTokenAndRemovesTheOthers() async throws {
+    /// CODEX-IN04-6, -12, -13, -14: the server holds the records under B, the log A→B, B→C, C→B (state B). The
+    /// recovery sends no replacement again and removes nothing: only the list post with the newest token B, one
+    /// document per record under B.
+    @Test func codexIn04_12_theRecoveryOnlyPostsTheNewestToken() async throws {
         let files = Files()
         try files.seed(token: "token-b")
         let server = seededServer(token: "token-b")
@@ -119,11 +118,9 @@ struct PushRecoveryTests {
         await sync.start()
         #expect(await eventually { transport.pending.count == 1 })
         try await Task.sleep(for: .milliseconds(30))
-        #expect(summary(transport.requests) == ["POST token-b"], "nothing is removed before the post succeeded")
         #expect(await pump(transport, sync))
-        #expect(summary(transport.requests) == ["POST token-b", "DELETE token-a", "DELETE token-c"])
-        #expect(server.tokens == ["token-b"], "\(server.keys)")
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(summary(transport.requests) == ["POST token-b"])
+        #expect(server.issues(newest: "token-b").isEmpty, "\(server.issues(newest: "token-b"))")
         #expect(files.logEntries.isEmpty)
     }
 
@@ -143,14 +140,14 @@ struct PushRecoveryTests {
         await p2.start()
         #expect(await pump(transport, p2))
         #expect(summary(transport.requests) == ["POST token-b"])
-        #expect(server.tokens == ["token-b"])
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(server.issues(newest: "token-b").isEmpty, "\(server.issues(newest: "token-b"))")
         #expect(files.storedToken == "token-b")
         #expect(files.logEntries.isEmpty)
     }
 
     /// CODEX-IN04-4 (round 3): the process ends after the log took B←A and before the state did. The next process
-    /// derives B and recovers the entry (the list with B, then A removed); the next token C is replaced over B.
+    /// derives B and recovers the entry (the list with B; A's documents stay, as Cordova leaves them); the next token
+    /// C is replaced over B.
     @Test func codexIn04_4_endBetweenLogAndStateCompletesTheTransition() async throws {
         let files = Files()
         try files.seed(token: "token-a")
@@ -164,40 +161,62 @@ struct PushRecoveryTests {
         await p2.start()
         #expect(files.storedToken == "token-b", "the state completes the transition")
         #expect(await pump(transport, p2))
-        #expect(summary(transport.requests) == ["POST token-b", "DELETE token-a"])
+        #expect(summary(transport.requests) == ["POST token-b"])
         await p2.tokenArrived("token-c")
         await openPumped(p2, transport, token: "token-c")
         #expect(transport.requests.map { replacement($0.request) }.filter { !$0.isEmpty } == [["token-c", "token-b"]])
-        #expect(server.tokens == ["token-c"], "\(server.keys)")
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(server.issues(newest: "token-c").isEmpty, "\(server.issues(newest: "token-c"))")
         #expect(files.logEntries.isEmpty)
     }
 
-    /// CODEX-IN04-5: B←A (lost), C←B and B←C in flight; B←C answers first and the process ends. Its reply
+    /// CODEX-IN04-5: B←A (lost), C←B and D←C in flight; D←C answers first and the process ends. Its reply
     /// acknowledged its own entry and entries leave only as an acknowledged prefix, so the next process recovers all
-    /// three: the list with B, then A and C removed; the records end under B once.
+    /// three with the list with D; the records end once under D.
     @Test func codexIn04_5_repliesAcknowledgeTheirOwnEntry() async throws {
         let files = Files()
         try files.seed(token: "token-a")
         let server = seededServer(token: "token-a")
         let first = DeliveredServerTransport(server: server)
         let p1 = files.sync(first)
-        for token in ["token-b", "token-c", "token-b"] { await p1.tokenArrived(token) }
-        first.deliver(2) // B←C answers first
+        for token in ["token-b", "token-c", "token-d"] { await p1.tokenArrived(token) }
+        #expect(first.requests.count == 3)
+        first.deliver(2) // D←C answers first
         #expect(await eventually { files.logEntries.map(\.acked) == [false, false, true] })
         // Process 1 ends here: B←A never reaches the server and its other replies never reach process 1.
         let second = DeliveredServerTransport(server: server)
         let p2 = files.sync(second)
         await p2.start()
         #expect(await pump(second, p2))
-        #expect(summary(second.requests) == ["POST token-b", "DELETE token-a", "DELETE token-c"])
-        await openPumped(p2, second, token: "token-b")
-        #expect(server.tokens == ["token-b"], "\(server.keys)")
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(summary(second.requests) == ["POST token-d"])
+        await openPumped(p2, second, token: "token-d")
+        #expect(server.issues(newest: "token-d").isEmpty, "\(server.issues(newest: "token-d"))")
         #expect(files.logEntries.isEmpty)
-        #expect(files.storedToken == "token-b")
+        #expect(files.storedToken == "token-d")
         first.dropAll() // the simulated process 1 is still in memory: no task stays suspended
         #expect(await eventually { await p1.pendingReplies == 0 })
+    }
+
+    /// A value that held the records before and comes back is not replaced onto (the move could join documents still
+    /// under it): B←A fails, B is registered by a list post, then A again is recovered with the list with A, one
+    /// document per record under A (B's documents stay, as in Cordova).
+    @Test func aReturningTokenIsPostedNotReplacedOnto() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let server = seededServer(token: "token-a")
+        let transport = DeliveredServerTransport(server: server)
+        let sync = files.sync(transport)
+        await sync.tokenArrived("token-b")
+        // The replacement B←A fails: A's documents stay (as in Cordova), and a later list post registers B.
+        #expect(await eventually { transport.pending.count == 1 })
+        transport.drop(0)
+        server.apply(PushRegistration.postList(PushState(type: "ios", fcmToken: "token-b", records: Files.records),
+                                               context: Files.context(AppState())!))
+        await sync.tokenArrived("token-a")
+        #expect(await pump(transport, sync))
+        #expect(summary(transport.requests) == ["PUT token-b", "POST token-a"], "no PUT onto A's documents")
+        #expect(server.issues(newest: "token-a").isEmpty, "\(server.issues(newest: "token-a"))")
+        #expect(files.storedToken == "token-a")
+        #expect(files.logEntries.isEmpty)
     }
 
     /// CODEX-IN04-4 (round 5): a recovered entry is acknowledged only when the recovery's requests replied; a process
@@ -222,8 +241,7 @@ struct PushRecoveryTests {
         await p2.start()
         #expect(await pump(second, p2))
         #expect(summary(second.requests) == ["POST token-b"])
-        #expect(server.tokens == ["token-b"])
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(server.issues(newest: "token-b").isEmpty, "\(server.issues(newest: "token-b"))")
         #expect(files.logEntries.isEmpty)
     }
 
@@ -250,8 +268,7 @@ struct PushRecoveryTests {
             let x = replacement(r.request)
             return x.isEmpty ? nil : x
         } == [["token-c", "token-a"]])
-        #expect(server.tokens == ["token-c"])
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(server.issues(newest: "token-c").isEmpty, "\(server.issues(newest: "token-c"))")
         #expect(files.storedToken == "token-c")
         #expect(files.logEntries.isEmpty)
     }
@@ -273,8 +290,7 @@ struct PushRecoveryTests {
         await p2.start()
         #expect(await pump(transport, p2))
         #expect(summary(transport.requests) == ["POST token-b"])
-        #expect(server.tokens == ["token-b"])
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(server.issues(newest: "token-b").isEmpty, "\(server.issues(newest: "token-b"))")
         #expect(files.storedToken == "token-b")
         #expect(files.logEntries.isEmpty)
     }
@@ -301,16 +317,15 @@ struct PushRecoveryTests {
             let x = replacement(r.request)
             return x.isEmpty ? nil : x
         } == [["token-b", "token-a"]])
-        #expect(server.tokens == ["token-b"])
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(server.issues(newest: "token-b").isEmpty, "\(server.issues(newest: "token-b"))")
         #expect(files.storedToken == "token-b")
         #expect(files.logEntries.isEmpty)
     }
 
     /// CODEX-IN04-11: server and state at B, log A→B, B→C, C→B (only the last answered). The open's start of the
     /// recovery fails once (the log cannot be read) and the open gets C. The new hop C←B is not sent on its own: the
-    /// next event starts the recovery, which handles it with the others (the list with C, then A and B removed), and
-    /// the list post that falls due waits for it. Records end once under C.
+    /// next event starts the recovery, which handles it with the others (the list with C), and the list post that
+    /// falls due waits for it. Records end once under C.
     @Test func codexIn04_11_aRecoveryThatCouldNotStartHoldsNewHopsBack() async throws {
         let files = Files()
         try files.seed(token: "token-b")
@@ -329,18 +344,16 @@ struct PushRecoveryTests {
         #expect(failsOnce.transientFailures == 1)
         let sent = summary(transport.requests)
         #expect(!sent.contains { $0.hasPrefix("PUT") }, "no replacement on its own: \(sent)")
-        #expect(Array(sent.prefix(3)) == ["POST token-c", "DELETE token-a", "DELETE token-b"], "\(sent)")
-        #expect(sent.dropFirst(3).allSatisfy { $0 == "POST token-c" }, "\(sent)")
-        #expect(server.tokens == ["token-c"], "\(server.keys)")
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(!sent.isEmpty && sent.allSatisfy { $0 == "POST token-c" }, "\(sent)")
+        #expect(server.issues(newest: "token-c").isEmpty, "\(server.issues(newest: "token-c"))")
         #expect(files.storedToken == "token-c")
         #expect(files.logEntries.isEmpty)
     }
 
     /// CODEX-IN04-12: no stored token (nil or ""), first token B: the PUT (403) and the list post B, which the server
     /// applies without the reply arriving; then C over B, applied and answered. The process ends with the log
-    /// [B over none (open), C over B (answered)]. A start alone recovers without posting B again: the list with C,
-    /// then B removed, so the records stay one document each under C, also after an open with C.
+    /// [B over none (open), C over B (answered)]. A start alone recovers without posting B again: only the list with
+    /// C, so the records stay one document each under C, also after an open with C.
     @Test(arguments: [nil, ""] as [String?])
     func codexIn04_12_aFirstTokenRecoveryPostsOnlyTheNewestToken(_ none: String?) async throws {
         let files = Files()
@@ -361,18 +374,17 @@ struct PushRecoveryTests {
         let p2 = files.sync(second)
         await p2.start()
         #expect(await pump(second, p2))
-        #expect(summary(second.requests) == ["POST token-c", "DELETE token-b"])
-        #expect(server.tokens == ["token-c"], "\(server.keys)")
-        #expect(server.records == ["ios/1/1", "ios/1/2"], "one document per record: \(server.keys)")
+        #expect(summary(second.requests) == ["POST token-c"])
+        #expect(server.issues(newest: "token-c").isEmpty, "\(server.issues(newest: "token-c"))")
         #expect(files.logEntries.isEmpty)
         await openPumped(p2, second, token: "token-c")
-        #expect(server.records == ["ios/1/1", "ios/1/2"], "\(server.keys)")
+        #expect(server.issues(newest: "token-c").isEmpty, "\(server.keys)")
         #expect(files.storedToken == "token-c")
         first.dropAll()
     }
 
-    /// While a recovery runs, a new token is logged and recovered after the entries before it (the list with C, then
-    /// B removed), and the list post that falls due waits for the recovery.
+    /// While a recovery runs, a new token is logged and recovered after the entries before it (the list with C), and
+    /// the list post that falls due waits for the recovery.
     @Test func eventsDuringARecoveryWaitTheirTurn() async throws {
         let files = Files()
         try files.seed(token: "token-b")
@@ -392,9 +404,8 @@ struct PushRecoveryTests {
         }
         _ = await open.value
         #expect(summary(transport.requests) ==
-                ["POST token-b", "DELETE token-a", "POST token-c", "DELETE token-b", "POST token-c"])
-        #expect(server.tokens == ["token-c"])
-        #expect(server.records == ["ios/1/1", "ios/1/2"])
+                ["POST token-b", "POST token-c", "POST token-c"])
+        #expect(server.issues(newest: "token-c").isEmpty, "\(server.issues(newest: "token-c"))")
         #expect(files.logEntries.isEmpty)
     }
 }
@@ -406,7 +417,7 @@ final class OperationCounter: @unchecked Sendable {
     func next() -> Int { lock.withLock { count += 1; return count } }
 }
 
-/// `METHOD token` of each request: the new token of a replacement, the token of a list post or a removal.
+/// `METHOD token` of each request: the new token of a replacement, the token of a list post.
 func summary(_ sent: [DeliveredServerTransport.Sent]) -> [String] {
     sent.map { s in
         let r = s.request

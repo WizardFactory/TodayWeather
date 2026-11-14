@@ -158,7 +158,8 @@ final class Flag: @unchecked Sendable {
 /// the open's read latency, first tokens over nil or "" and replacements,
 /// replies in any order (lost ones and the 403 of a replacement without an old token), and process ends at any
 /// operation, over up to three processes; the last one runs until nothing moves (it may never be opened). Oracle:
-/// every record once on the server under the newest token FCM gave, an empty log, and that token in the state.
+/// every record once on the server under the newest token FCM gave and no record twice anywhere (documents under an
+/// older token may stay, as Cordova leaves them), an empty log, and that token in the state.
 struct PushPropertyTests {
     struct Outcome {
         let seed: UInt64
@@ -248,6 +249,7 @@ struct PushPropertyTests {
             for _ in 0..<Int.random(in: 6...28, using: &rng) where !end.hasEnded {
                 switch Int.random(in: 0..<10, using: &rng) {
                 case 0 where changes < 4:
+                    // Values may come back (a stale value delivered late is one to the app).
                     let pool: [String] = ["token-b", "token-c", "token-d", "token-a"]
                     let next: String = pool.filter { $0 != fcm }.randomElement(using: &rng)!
                     fcm = next
@@ -279,7 +281,8 @@ struct PushPropertyTests {
                     if network.applyNext() { trace.append("p\(p): server applies \(network.requests.count) sent") }
                 case 6, 7:
                     if let i = network.unreplied.randomElement(using: &rng) {
-                        let delivered = Int.random(in: 0..<5, using: &rng) > 0
+                        // A launch added to complete what was left gets every reply.
+                        let delivered = Int.random(in: 0..<5, using: &rng) > 0 || p >= processes
                         network.reply(i, delivered: delivered)
                     }
                 default:
@@ -336,8 +339,7 @@ struct PushPropertyTests {
 
         var failures: [String] = []
         if let token = fcm {
-            if server.tokens != [token] { failures.append("server tokens \(server.tokens.sorted()), expected [\(token)]") }
-            if server.records != ["ios/1/1", "ios/1/2"] { failures.append("records \(server.keys.map(\.description).sorted())") }
+            failures += server.issues(newest: token)
         } else if !server.keys.isEmpty {
             failures.append("records without a token \(server.keys)")
         }

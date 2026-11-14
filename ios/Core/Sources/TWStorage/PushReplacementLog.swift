@@ -3,14 +3,15 @@ import TWModel
 
 /// The durable, ordered log of token replacements (IN-04 review round 3, CODEX-IN04-4..5):
 /// `Library/Application Support/TodayWeather/push_replacements.json`,
-/// `{"nextId":N,"dropped":K,"entries":[{"id":1,"old":"…"|null,"new":"…","acked":false}]}`, replaced atomically on every
+/// `{"nextId":N,"dropped":K,"entries":[{"id":1,"old":"…"|null,"new":"…","acked":false}],"issued":["…"]}`, replaced
+/// atomically on every
 /// change.
 ///
 /// An entry is appended when the Cordova code would send `PUT /push` (`old` nil or "" for a first token), before the
 /// request starts; the app state's token is the last entry's `new`. A reply (success or failure) acknowledges exactly
 /// its entry's `id`; entries leave the log only as an acknowledged prefix, so the entries left are a suffix of the
 /// replacements sent, ending with the newest. Entries an earlier process left are recovered by `PushSync` (the list
-/// with the newest token, then the removal of the other tokens they name; review round 8, CODEX-IN04-12). At most
+/// with the newest token; review rounds 8–9). At most
 /// `capacity` entries are kept: beyond that the oldest is dropped and counted in `dropped`.
 public final class PushReplacementLog: @unchecked Sendable {
     public struct Entry: Hashable, Sendable {
@@ -39,6 +40,10 @@ public final class PushReplacementLog: @unchecked Sendable {
         public var nextId = 1
         public var dropped = 0
         public var entries: [Entry] = []
+        /// Token values this installation registered documents under (the `old` and `new` of every appended entry,
+        /// the newest last, at most `capacity`): a replacement onto one of them could move documents onto documents
+        /// already there (review round 9).
+        public var issued: [String] = []
     }
 
     public static let capacity = 64
@@ -65,7 +70,13 @@ public final class PushReplacementLog: @unchecked Sendable {
         try contents().entries
     }
 
-    /// Appends the replacement of `old` by `new` and returns its entry.
+    /// Whether documents may have been registered under `token` by this installation (a value it replaced or
+    /// replaced with before).
+    public func wasIssued(_ token: String) throws -> Bool {
+        try contents().issued.contains { JSString.equal($0, token) }
+    }
+
+    /// Appends the replacement of `old` by `new` and returns its entry; both values are recorded as issued.
     @discardableResult
     public func append(old: String?, new: String) throws -> Entry {
         try Self.lock.withLock {
@@ -77,6 +88,11 @@ public final class PushReplacementLog: @unchecked Sendable {
                 c.entries.removeFirst()
                 c.dropped += 1
             }
+            for token in [old, new].compactMap({ $0 }) where !token.isEmpty {
+                c.issued.removeAll { JSString.equal($0, token) }
+                c.issued.append(token)
+            }
+            if c.issued.count > Self.capacity { c.issued.removeFirst(c.issued.count - Self.capacity) }
             try write(c)
             return entry
         }
@@ -102,6 +118,7 @@ public final class PushReplacementLog: @unchecked Sendable {
         guard let doc = try? JSONValue.parse(data), let list = doc["entries"]?.arrayValue,
               let next = doc["nextId"]?.numberValue.flatMap({ Int($0.text) }) else { return Contents() }
         var c = Contents(nextId: next, dropped: doc["dropped"]?.numberValue.flatMap { Int($0.text) } ?? 0)
+        c.issued = (doc["issued"]?.arrayValue ?? []).compactMap(\.stringValue)
         for v in list {
             guard let id = v["id"]?.numberValue.flatMap({ Int($0.text) }), let new = v["new"]?.stringValue else { continue }
             c.entries.append(Entry(id: id, old: v["old"]?.stringValue, new: new, acked: v["acked"]?.boolValue ?? false))
@@ -116,7 +133,8 @@ public final class PushReplacementLog: @unchecked Sendable {
                                          ("new", .string(e.new)), ("acked", .bool(e.acked))]))
         }
         let doc = JSONValue.object(JSONObject([("nextId", .number(c.nextId)), ("dropped", .number(c.dropped)),
-                                               ("entries", .array(entries))]))
+                                               ("entries", .array(entries)),
+                                               ("issued", .array(c.issued.map(JSONValue.string)))]))
         try Data(doc.jsonText.utf8).write(to: url, options: .atomic)
     }
 }
