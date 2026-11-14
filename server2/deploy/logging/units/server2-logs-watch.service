@@ -1,0 +1,22 @@
+# server2 Spot interruption watcher (LP-4, #2981): polls instance metadata every 5 s;
+# on a notice it records it and stops server2.service, then server2-logs.service.
+# Idle (exits successfully) on On-Demand instances and without instance metadata.
+[Unit]
+Description=server2 Spot interruption watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+# Root: it stops the two units; it reads only instance metadata.
+ExecStart=/usr/bin/python3 -I /opt/server2/logging/spot_watch.py
+RuntimeDirectory=server2-logs-watch
+LogNamespace=server2
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

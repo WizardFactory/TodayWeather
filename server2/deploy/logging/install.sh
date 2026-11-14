@@ -46,16 +46,17 @@ getent passwd server2 >/dev/null || useradd --system --gid server2 --home-dir /o
 install -d -m 0755 /opt/server2 /opt/server2/bin /opt/server2/logging
 install -d -m 0750 -o root -g server2 /opt/server2/config
 install -m 0755 "$work/$member" /opt/server2/logging/vector
-install -m 0644 "$here/render.py" "$here/status.py" "$here/collector.json" /opt/server2/logging/
+install -m 0644 "$here/render.py" "$here/status.py" "$here/spot_watch.py" "$here/collector.json" /opt/server2/logging/
 install -m 0644 "$here/units/server2.service" "$here/units/server2-logs.service" \
-  "$here/units/server2-logs-status.service" "$here/units/server2-logs-status.timer" /etc/systemd/system/
+  "$here/units/server2-logs-status.service" "$here/units/server2-logs-status.timer" \
+  "$here/units/server2-logs-watch.service" /etc/systemd/system/
 install -m 0644 "$here/units/journald@server2.conf" /etc/systemd/journald@server2.conf
 install -d -m 0755 /etc/systemd/journald.conf.d
 install -m 0644 "$here/units/journald-system.conf" /etc/systemd/journald.conf.d/server2-system.conf
 
 systemctl daemon-reload
 systemctl restart systemd-journald.service
-systemctl enable server2.service server2-logs.service server2-logs-status.timer
+systemctl enable server2.service server2-logs.service server2-logs-status.timer server2-logs-watch.service
 # The status timer only acts while the collector runs (its service checks that).
 systemctl start server2-logs-status.timer
 echo "install.sh: installed $(/opt/server2/logging/vector --version | head -n 1)"

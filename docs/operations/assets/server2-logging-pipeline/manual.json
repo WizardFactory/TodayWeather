@@ -1,6 +1,6 @@
 {
-  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS, watch for loss, start new instances unattended",
-  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, renders the AWS templates (LP-5) that the owner applies, watches one destination fail and recover (LP-2), and starts a new instance from the boot configuration alone (LP-3). Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names; for step 8 a second, new VM had nothing installed, and instance metadata (instance ID, life cycle, instance-role credentials) was the stand-in server2/deploy/logging/imds_standin.py. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
+  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS, watch for loss, start new instances unattended, survive a Spot interruption",
+  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, renders the AWS templates (LP-5) that the owner applies, watches one destination fail and recover (LP-2), starts a new instance from the boot configuration alone (LP-3), and sees a Spot interruption stop the server and then the collector (LP-4). Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names; for step 8 a second, new VM had nothing installed; for steps 8 and 9, instance metadata (instance ID, life cycle, instance-role credentials) was the stand-in server2/deploy/logging/imds_standin.py. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
   "steps": [
     {
       "title": "Install the pipeline; the default ships nothing",
@@ -25,7 +25,7 @@
     },
     {
       "title": "Where records arrive",
-      "instruction": "Serve requests, then stop the server and the collector (systemctl stop server2.service server2-logs.service stops the server first). The collector's stop waits until every destination has confirmed the records (up to about 60 s for an open S3 object). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
+      "instruction": "Serve requests, then stop the server and the collector (systemctl stop server2.service server2-logs.service stops the server first). The collector's stop waits until every destination has confirmed the records (up to about one S3 object window, 50 s since LP-4). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
       "screenshot": "3b-delivered.png",
       "caption": "S3 keys and CloudWatch streams carry the source (server or collector), the host ID and the boot ID; S3 keys also carry the UTC date and hour and a unique suffix.",
       "expected": "Server and collector records are kept apart, and records from different hosts or boots never share a stream or key."
@@ -57,6 +57,13 @@
       "screenshot": "7-boot.png",
       "caption": "The user data names the commit and each file's hash (about 1.3 KB of EC2's 16 KB). On the new instance both units are enabled, the collector runs, the destination settings are a unit drop-in, and the start record names the EC2 instance ID, its life cycle and the boot.",
       "expected": "The collector ships from its first record; every instance of the launch template uses the same user data and writes its own streams and keys."
+    },
+    {
+      "title": "A Spot interruption stops the server, then the collector (LP-4)",
+      "instruction": "Nothing to do: on a Spot instance server2-logs-watch.service polls instance metadata every 5 s. When EC2 announces an interruption, it writes the interruption record, stops server2.service, then server2-logs.service, whose drain waits at most 10 s before the collector's own flush. Afterwards, read the watcher's lines and the collector's drained record in the server2 journal namespace.",
+      "screenshot": "8-interruption.png",
+      "caption": "The interruption record names the announced action and time. The server stopped first, the collector about 10 s later. CloudWatch had confirmed everything; S3's open object was sent by the collector's flush (drained false, so the record is warn). The whole sequence took 13 s of the two-minute notice; the budget is 80 s.",
+      "expected": "Every record up to the server's stop reaches each destination, and the interruption record comes before the server's shutdown records. On an On-Demand instance the watcher says it is idle and stops nothing."
     }
   ]
 }

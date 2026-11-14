@@ -20,6 +20,7 @@ sys.path.insert(0, str(HERE))
 import render  # noqa: E402
 import aws_templates  # noqa: E402
 import status  # noqa: E402
+import spot_watch  # noqa: E402
 
 SECRET = 'SYNTHETIC-PRIVATE-2802'
 COMPLETE = {'SERVER2_LOG_SINKS': 'local,s3,cloudwatch', 'SERVER2_S3_BUCKET': 'tw-server2-logs',
@@ -163,7 +164,7 @@ class RenderTest(unittest.TestCase):
                 continue
             self.assertEqual(source['type'], 'journald')
             self.assertEqual(source['journal_namespace'], 'server2')
-            self.assertEqual(source['include_units'], ['server2.service', 'server2-logs.service', 'server2-logs-status.service'])
+            self.assertEqual(source['include_units'], ['server2.service', 'server2-logs.service', 'server2-logs-status.service', 'server2-logs-watch.service'])
         self.assertEqual(out['sinks']['s3']['inputs'], ['select_s3'])
         self.assertEqual(out['transforms']['select_s3']['inputs'], ['journal_s3'])
         self.assertEqual(out['timezone'], 'UTC')
@@ -192,7 +193,7 @@ class RenderTest(unittest.TestCase):
             self.assertNotIn('endpoint', sink)
             self.assertNotIn('auth', sink)  # credentials come from the instance role
         self.assertFalse(out['sinks']['cloudwatch']['create_missing_group'])
-        self.assertEqual(out['sinks']['s3']['batch']['timeout_secs'], 60)
+        self.assertEqual(out['sinks']['s3']['batch']['timeout_secs'], 50)
         self.assertEqual(out['sinks']['cloudwatch']['batch']['timeout_secs'], 1)
 
     def test_filter_thresholds(self):
@@ -537,6 +538,118 @@ class IdentityAndBacklogTest(unittest.TestCase):
             self.assertEqual(render.plan_backlog(directory, ['s3'], current, boots=[current], last_cursor=lambda a: None), {})
             self.checkpoint(directory, 'journal_s3', f's={"e" * 32};i=10;b={"f" * 32};m=1;t=1;x=1')
             self.assertEqual(render.plan_backlog(directory, ['s3'], current, boots=[current], last_cursor=lambda a: None), {})
+
+
+class SpotWatchTest(unittest.TestCase):
+    """LP-4 (#2981): the Spot interruption watcher."""
+
+    class FakeMetadata:
+        def __init__(self, values):
+            self.values, self.asked = values, []
+
+        def get(self, path):
+            self.asked.append(path)
+            value = self.values.get(path)
+            return value.pop(0) if isinstance(value, list) else value
+
+    def run_watcher(self, values):
+        calls, slept = [], []
+        marker = Path(tempfile.mkdtemp()) / 'watch' / 'interruption'
+        def run(command, **kwargs):
+            calls.append((command, marker.exists()))
+            import subprocess
+            return subprocess.CompletedProcess(command, 0, '', '')
+        metadata = self.FakeMetadata(values)
+        with mock.patch.object(spot_watch, 'MARKER', str(marker)), contextlib.redirect_stdout(io.StringIO()) as out:
+            code = spot_watch.main([], run=run, sleep=slept.append, metadata=metadata)
+        return code, calls, out.getvalue(), slept, marker
+
+    def test_notice_records_then_stops_the_server_before_the_collector(self):
+        notice = json.dumps({'action': 'terminate', 'time': '2026-11-15T01:02:03Z'})
+        code, calls, out, slept, marker = self.run_watcher({
+            '/latest/meta-data/instance-life-cycle': 'spot',
+            '/latest/meta-data/spot/instance-action': [None, None, notice]})
+        self.assertEqual(code, 0)
+        self.assertEqual([c[0] for c in calls], [['systemctl', 'stop', 'server2.service'], ['systemctl', 'stop', 'server2-logs.service']])
+        self.assertTrue(all(present for _, present in calls))  # the collector's drain sees the interruption
+        self.assertFalse(marker.exists())
+        self.assertEqual(slept, [spot_watch.POLL_SECONDS] * 2)  # polled every 5 s until the notice
+        record = json.loads(next(l for l in out.splitlines() if l.startswith('{')))
+        self.assertEqual((record['collector_schema'], record['event'], record['level'], record['action'], record['action_time']),
+                         (1, 'collector.interruption_notice', 'warn', 'terminate', '2026-11-15T01:02:03Z'))
+        self.assertLess(out.index('collector.interruption_notice'), len(out))
+
+    def test_idle_on_demand_and_without_metadata(self):
+        code, calls, out, slept, _ = self.run_watcher({'/latest/meta-data/instance-life-cycle': 'on-demand'})
+        self.assertEqual((code, calls, slept), (0, [], []))
+        self.assertIn('idle (instance life cycle is on-demand)', out)
+        code, calls, out, slept, _ = self.run_watcher({})
+        self.assertEqual((code, calls), (0, []))
+        self.assertEqual(len(slept), spot_watch.LIFE_CYCLE_ATTEMPTS - 1)  # about a minute of retries at boot
+        self.assertIn('idle (no instance metadata)', out)
+
+    def test_only_an_interruption_action_counts(self):
+        for text in ('{"action": "reboot"}', 'not json', '[]', '{}'):
+            self.assertIsNone(spot_watch.notice(text), text)
+        self.assertEqual(spot_watch.notice('{"action": "stop", "time": "T"}'), ('stop', 'T'))
+
+    def test_metadata_client_uses_imdsv2_and_renews_a_refused_token(self):
+        import http.server, threading
+        seen = []
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a): pass
+            def do_PUT(self):
+                seen.append('token'); self.send_response(200); self.end_headers(); self.wfile.write(f'token{len(seen)}'.encode())
+            def do_GET(self):
+                token = self.headers.get('X-aws-ec2-metadata-token')
+                seen.append(token)
+                if token == 'token1':
+                    self.send_response(401); self.end_headers(); return
+                body = b'spot' if self.path.endswith('instance-life-cycle') else b''
+                self.send_response(200 if body else 404); self.end_headers(); self.wfile.write(body)
+        server = http.server.HTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.shutdown)
+        metadata = spot_watch.Metadata(base=f'http://127.0.0.1:{server.server_port}')
+        self.assertEqual(metadata.get('/latest/meta-data/instance-life-cycle'), 'spot')
+        self.assertIsNone(metadata.get('/latest/meta-data/spot/instance-action'))  # 404: no notice
+        self.assertEqual(seen[:4], ['token', 'token1', 'token', 'token3'])
+        self.assertIsNone(spot_watch.Metadata(base='http://127.0.0.1:9', timeout=0.2).get('/latest/meta-data/instance-id'))
+
+    def test_interruption_shortens_the_stop_drain(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'vector.json'
+            config.write_text(json.dumps({'sinks': {'s3': {}}}))
+            marker = Path(directory) / 'interruption'
+            for present, expected in ((False, 75), (True, status.INTERRUPTION_DRAIN_SECONDS)):
+                if present:
+                    marker.write_text('x')
+                with mock.patch.object(status, 'INTERRUPTION_MARKER', str(marker)), \
+                        mock.patch.object(status, 'drain', return_value={'s3': {'drained': True, 'waited_seconds': 0}}) as drain, \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    status.main(['drain', '--state', directory, '--config', str(config), '--timeout', '75', '--main-pid=1'])
+                self.assertEqual(drain.call_args.args[2], expected)
+
+    def test_watcher_unit_and_its_records_are_shipped(self):
+        parser = configparser.ConfigParser(strict=False, interpolation=None)
+        parser.optionxform = str
+        parser.read(HERE / 'units' / 'server2-logs-watch.service')
+        unit = parser['Service']
+        self.assertEqual(unit['ExecStart'], '/usr/bin/python3 -I /opt/server2/logging/spot_watch.py')
+        self.assertEqual(unit['LogNamespace'], 'server2')
+        self.assertEqual(unit['RuntimeDirectory'], 'server2-logs-watch')
+        self.assertEqual(render.UNITS['server2-logs-watch.service'], 'collector')
+        self.assertEqual(spot_watch.MARKER, status.INTERRUPTION_MARKER)
+        self.assertIn('spot_watch.py', (HERE / 'install.sh').read_text())
+        import boot
+        self.assertIn('units/server2-logs-watch.service', boot.BUNDLE)
+
+    def test_budget_fits_the_two_minute_notice(self):
+        server = int(re.search(r'^TimeoutStopSec=(\d+)', (HERE / 'units' / 'server2.service').read_text(), re.M).group(1))
+        flush = int(re.search(r'--graceful-shutdown-limit-secs (\d+)', (HERE / 'units' / 'server2-logs.service').read_text()).group(1))
+        budget = spot_watch.POLL_SECONDS + server + status.INTERRUPTION_DRAIN_SECONDS + flush
+        self.assertEqual(budget, 80)
+        self.assertLessEqual(budget, 120 - 30)  # at least 30 s margin
 
 
 class BootConfigTest(unittest.TestCase):

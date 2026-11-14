@@ -20,6 +20,7 @@ import os
 import re
 import signal
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -87,7 +88,7 @@ class Handler(BaseHTTPRequestHandler):
     def record(self, service, action, **fields):
         credential = re.search(r'Credential=([A-Z0-9]+)/', self.headers.get('Authorization', ''))
         entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')),
-                     key_id=credential.group(1) if credential else None, **fields)
+                     key_id=credential.group(1) if credential else None, at=time.time(), **fields)
         with self.server.lock:
             with open(self.server.state / 'operations.jsonl', 'a') as f:
                 f.write(json.dumps(entry, sort_keys=True) + '\n')
@@ -126,7 +127,10 @@ class Handler(BaseHTTPRequestHandler):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with open(path, 'a') as f:
                     for event in request.get('logEvents', []):
-                        f.write(json.dumps({'timestamp': event['timestamp'], 'message': event['message']}) + '\n')
+                        f.write(json.dumps({'timestamp': event['timestamp'], 'message': event['message'],
+                                            'stored_at': time.time()}) + '\n')
+                    f.flush()
+                    os.fsync(f.fileno())
             return self.reply(200, b'{}')
         return self.cw_error(400, 'UnknownOperationException', action)
 
@@ -158,7 +162,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.record('s3', 'Overwrite', bucket=bucket, key=key)
             target.parent.mkdir(parents=True, exist_ok=True)
             temporary = target.with_name('.' + target.name + '.tmp')  # readers never see a partial object
-            temporary.write_bytes(body)
+            with open(temporary, 'wb') as f:
+                f.write(body)
+                f.flush()
+                os.fsync(f.fileno())  # a confirmed object survives a power-off of the host (LP-4 check)
             temporary.replace(target)
         # Test fault: while <state>/delay-s3 exists, a server object is stored at once but
         # confirmed only after that many seconds (a delayed confirmation).

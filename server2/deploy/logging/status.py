@@ -32,7 +32,7 @@ DESTINATIONS = ('s3', 'cloudwatch')
 # The units the collector's readers include (render.UNITS). Positions are compared only
 # with their entries: journald's own lines in the namespace ("Journal started/stopped")
 # are never read, so a reader can never reach them.
-READ_UNITS = ('server2.service', 'server2-logs.service', 'server2-logs-status.service')
+READ_UNITS = ('server2.service', 'server2-logs.service', 'server2-logs-status.service', 'server2-logs-watch.service')
 UNIT_MATCHES = [f'_SYSTEMD_UNIT={unit}' for unit in READ_UNITS]
 COLLECTOR_SCHEMA = 1
 _SAMPLE = re.compile(r'^(\w+)\{([^}]*)\}\s+([0-9.eE+-]+)(?:\s+\d+)?$')
@@ -53,8 +53,12 @@ def parse_cursor(cursor):
 
 
 # A destination is behind when its oldest unconfirmed record is older than twice its
-# normal delivery window (S3 objects close every 60 s; CloudWatch batches within 1-10 s).
+# normal delivery window (S3 within 60 s, objects close every 50 s; CloudWatch within 10 s).
 BEHIND_SECONDS = {'s3': 120, 'cloudwatch': 20}
+# Written by spot_watch.py on a Spot interruption notice (LP-4): the stop drain then waits
+# at most this long, and the collector's own flush at stop ships the rest.
+INTERRUPTION_MARKER = '/run/server2-logs-watch/interruption'
+INTERRUPTION_DRAIN_SECONDS = 10
 
 
 class JournalError(Exception):
@@ -408,8 +412,11 @@ def main(argv=None):
                          sort_keys=True), flush=True)
         return 0
     if args.moment == 'drain':
+        timeout = args.timeout
+        if Path(INTERRUPTION_MARKER).exists():
+            timeout = min(timeout, INTERRUPTION_DRAIN_SECONDS)  # inside the two-minute notice
         try:
-            result = drain(args.state, active, args.timeout)
+            result = drain(args.state, active, timeout)
         except (OSError, ValueError, KeyError, JournalError, subprocess.TimeoutExpired) as exc:
             result, error = None, type(exc).__name__
         complete = result is not None and all(r['drained'] for r in result.values())

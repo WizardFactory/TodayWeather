@@ -34,14 +34,15 @@ DEFAULTS = {'SERVER2_LOG_SINKS': 'local', 'SERVER2_LOG_S3_LEVEL': 'info', 'SERVE
 # The journal namespace and units whose output is shipped; their `source` names.
 NAMESPACE = 'server2'
 UNITS = {'server2.service': 'server', 'server2-logs.service': 'collector',
-         'server2-logs-status.service': 'collector'}
+         'server2-logs-status.service': 'collector', 'server2-logs-watch.service': 'collector'}
 # Loopback-only Prometheus endpoint with the collector's own counters (LP-2, #2979).
 METRICS_ADDRESS = '127.0.0.1:9598'
 # First segments of the weather data prefixes in the same bucket (staging role policy).
 # A log prefix inside them would put the log lifecycle rule over weather records.
 RESERVED_PREFIXES = ('raw', 'index', 'packs', 'summary', 'state', 'budgets', 'geocode')
 COLLECTOR_SCHEMA = 1
-S3_BATCH_SECONDS = 60
+# 50 s keeps a record's journal-to-S3 delay under 60 s including the upload (LP-4).
+S3_BATCH_SECONDS = 50
 CLOUDWATCH_BATCH_SECONDS = 1
 
 
