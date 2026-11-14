@@ -1,0 +1,384 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff, as AN-05 and IN-05)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "native minus Cordova height in device pixels (scale 3; the launch image at scale 1)"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "Xcode 27.2, iOS 26.5 simulator (twios_dev_in07, iPhone 16), ImageRenderer at scale 3; references from the Cordova 1.1.2 build on twios_cap_16 (ios/provenance/shell-captures.json)",
+ "masks": "header bars leave out the page's own buttons (x 305-393 pt; on Locations x 50-393 pt: the search field and its button), which IN-08 and IN-10 draw; the launch image leaves out the status bar's text (y 0-54 pt)",
+ "why": "What remains is glyph rasterization: WebKit places text on its own subpixel grid, so white text on the dark theme's bars differs most (up to 0.008 strong in the dark menu). Baselines were matched to the captures (ShellMetrics.titleBaseline, menuTitleBaseline, tabLabelBaseline).",
+ "sensitivity": "Measured 2026-11-13 by removing the hairlines (ShellMetrics.hairline 0) and rerunning: all 32 tab-bar and 28 header hairline checks failed (the photo theme's clear Hourly and Daily headers have no line), and the mean failed in 56 of the 64 tab and header comparisons. Before the baselines were matched, a 1 pt title shift, a 2 pt menu-glyph shift and a 2/3 pt tab-label shift each showed as strong 0.009-0.017 (over the margin); the open menu laid out one row off gave strong 0.04-0.1.",
+ "cases": {
+  "en-US-dark-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-dark-air-tabs": {
+   "strong": 0.001,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "en-US-dark-dailyforecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-dark-dailyforecast-tabs": {
+   "strong": 0.001,
+   "mean": 0.65,
+   "heightDifference": 0
+  },
+  "en-US-dark-forecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-dark-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.6,
+   "heightDifference": 0
+  },
+  "en-US-dark-menu": {
+   "strong": 0.0057,
+   "mean": 0.94,
+   "heightDifference": 0
+  },
+  "en-US-dark-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-dark-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.6,
+   "heightDifference": 0
+  },
+  "en-US-light-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-light-air-tabs": {
+   "strong": 0.0013,
+   "mean": 0.78,
+   "heightDifference": 0
+  },
+  "en-US-light-dailyforecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-light-dailyforecast-tabs": {
+   "strong": 0.0013,
+   "mean": 0.73,
+   "heightDifference": 0
+  },
+  "en-US-light-forecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-light-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "en-US-light-menu": {
+   "strong": 0.0007,
+   "mean": 0.79,
+   "heightDifference": 0
+  },
+  "en-US-light-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-light-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "en-US-old-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-old-air-tabs": {
+   "strong": 0.0013,
+   "mean": 0.78,
+   "heightDifference": 0
+  },
+  "en-US-old-dailyforecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-old-dailyforecast-tabs": {
+   "strong": 0.0013,
+   "mean": 0.73,
+   "heightDifference": 0
+  },
+  "en-US-old-forecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-old-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.66,
+   "heightDifference": 0
+  },
+  "en-US-old-menu": {
+   "strong": 0.0005,
+   "mean": 0.77,
+   "heightDifference": 0
+  },
+  "en-US-old-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-old-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "en-US-photo-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-photo-air-tabs": {
+   "strong": 0.0013,
+   "mean": 0.78,
+   "heightDifference": 0
+  },
+  "en-US-photo-dailyforecast-header": {
+   "strong": 0.0025,
+   "mean": 0.94,
+   "heightDifference": 0
+  },
+  "en-US-photo-dailyforecast-tabs": {
+   "strong": 0.0013,
+   "mean": 0.73,
+   "heightDifference": 0
+  },
+  "en-US-photo-forecast-header": {
+   "strong": 0.0025,
+   "mean": 0.94,
+   "heightDifference": 0
+  },
+  "en-US-photo-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "en-US-photo-menu": {
+   "strong": 0.0005,
+   "mean": 0.81,
+   "heightDifference": 0
+  },
+  "en-US-photo-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "en-US-photo-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-air-tabs": {
+   "strong": 0.001,
+   "mean": 0.66,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-dailyforecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-dailyforecast-tabs": {
+   "strong": 0.001,
+   "mean": 0.62,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-forecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.53,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-menu": {
+   "strong": 0.0081,
+   "mean": 1.09,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-dark-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.52,
+   "heightDifference": 0
+  },
+  "ko-KR-light-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-light-air-tabs": {
+   "strong": 0.0013,
+   "mean": 0.74,
+   "heightDifference": 0
+  },
+  "ko-KR-light-dailyforecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-light-dailyforecast-tabs": {
+   "strong": 0.0013,
+   "mean": 0.69,
+   "heightDifference": 0
+  },
+  "ko-KR-light-forecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-light-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.59,
+   "heightDifference": 0
+  },
+  "ko-KR-light-menu": {
+   "strong": 0.0004,
+   "mean": 0.89,
+   "heightDifference": 0
+  },
+  "ko-KR-light-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-light-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.58,
+   "heightDifference": 0
+  },
+  "ko-KR-old-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-old-air-tabs": {
+   "strong": 0.0013,
+   "mean": 0.74,
+   "heightDifference": 0
+  },
+  "ko-KR-old-dailyforecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-old-dailyforecast-tabs": {
+   "strong": 0.0013,
+   "mean": 0.69,
+   "heightDifference": 0
+  },
+  "ko-KR-old-forecast-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-old-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.59,
+   "heightDifference": 0
+  },
+  "ko-KR-old-menu": {
+   "strong": 0.0004,
+   "mean": 0.88,
+   "heightDifference": 0
+  },
+  "ko-KR-old-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-old-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.58,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-air-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-air-tabs": {
+   "strong": 0.0013,
+   "mean": 0.74,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-dailyforecast-header": {
+   "strong": 0.0025,
+   "mean": 0.94,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-dailyforecast-tabs": {
+   "strong": 0.0013,
+   "mean": 0.69,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-forecast-header": {
+   "strong": 0.0025,
+   "mean": 0.94,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-forecast-tabs": {
+   "strong": 0.0,
+   "mean": 0.59,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-menu": {
+   "strong": 0.0004,
+   "mean": 0.9,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-search-header": {
+   "strong": 0.0,
+   "mean": 0.01,
+   "heightDifference": 0
+  },
+  "ko-KR-photo-search-tabs": {
+   "strong": 0.0,
+   "mean": 0.58,
+   "heightDifference": 0
+  },
+  "ko-KR-splash": {
+   "strong": 0.0,
+   "mean": 0.45,
+   "heightDifference": 0
+  }
+ }
+}
