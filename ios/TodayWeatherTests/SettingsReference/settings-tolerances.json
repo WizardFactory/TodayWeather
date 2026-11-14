@@ -1,0 +1,224 @@
+{
+ "metric": "AN-05: strong = share of pixels whose largest RGB channel differs by more than 64 after a 3x3 box blur; mean = mean largest RGB channel difference (0-255); heightDifference = |native - Cordova| px at scale 3. Each case passes within its value plus `margin`.",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "reasons": {
+  "settings pages (units*, radio-*)": "Glyph rasterization of the row and title texts only (WebKit places glyphs on its own subpixel grid; Korean falls back to Apple SD Gothic Neo in both): rows, borders, the check mark and the back arrow are at the captured positions within 1 px after the measured offsets (radio labels 2/3 pt above S07's, the check mark 14 pt inside the edge and 2 pt below the label's center). Compared from the top to 40 pt under the list; the rest is checked as the list's background.",
+  "hourly-* (-0 header block, -1 chart)": "IN-08's header block and IN-05's chart in the theme of the state: glyph rasterization of the temperature, the summary and the chart labels, the photo theme's outline, image filtering (the forecast-tolerances reasons).",
+  "about": "IN-07's popup over the menu and Ionic's backdrop: glyph rasterization of the menu rows, the title, the three lines and the button. The lines are 18 pt apart as WebKit lays them out (IonicPopupView's line spacing, IN-12); before that change the Korean popup measured strong 0.0175 and mean 3.38.",
+  "headroom": "Each case is its local measurement (`measured`, Xcode 27.2, iOS 26.5 simulator) times 1.5 plus 0.0005 for strong and times 1.2 plus 0.2 for mean, rounded up, plus `margin`: CI renders with Xcode 26.6, whose text rasterization IN-08 measured up to about twice as far from WebKit on text-heavy blocks. The height must match.",
+  "sensitivity": "plans/ios-native.md, IN-12 checks: the mutations these values detect."
+ },
+ "cases": {
+  "en-US-about": {
+   "measured": {
+    "strong": 0.00574,
+    "mean": 1.305
+   },
+   "strong": 0.0092,
+   "mean": 1.77,
+   "heightDifference": 0
+  },
+  "en-US-units": {
+   "measured": {
+    "strong": 0.00024,
+    "mean": 0.775
+   },
+   "strong": 0.0009,
+   "mean": 1.13,
+   "heightDifference": 0
+  },
+  "ko-KR-about": {
+   "measured": {
+    "strong": 0.00489,
+    "mean": 1.573
+   },
+   "strong": 0.0079,
+   "mean": 2.09,
+   "heightDifference": 0
+  },
+  "ko-KR-hourly-dark-0": {
+   "measured": {
+    "strong": 0.00083,
+    "mean": 0.344
+   },
+   "strong": 0.0018,
+   "mean": 0.62,
+   "heightDifference": 0
+  },
+  "ko-KR-hourly-dark-1": {
+   "measured": {
+    "strong": 0.00166,
+    "mean": 0.918
+   },
+   "strong": 0.003,
+   "mean": 1.31,
+   "heightDifference": 0
+  },
+  "ko-KR-hourly-f-0": {
+   "measured": {
+    "strong": 0.0003,
+    "mean": 0.43
+   },
+   "strong": 0.001,
+   "mean": 0.72,
+   "heightDifference": 0
+  },
+  "ko-KR-hourly-f-1": {
+   "measured": {
+    "strong": 0.00211,
+    "mean": 0.988
+   },
+   "strong": 0.0037,
+   "mean": 1.39,
+   "heightDifference": 0
+  },
+  "ko-KR-hourly-photo-0": {
+   "measured": {
+    "strong": 0.00301,
+    "mean": 1.202
+   },
+   "strong": 0.0051,
+   "mean": 1.65,
+   "heightDifference": 0
+  },
+  "ko-KR-hourly-photo-1": {
+   "measured": {
+    "strong": 0.00181,
+    "mean": 0.851
+   },
+   "strong": 0.0033,
+   "mean": 1.23,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-airUnit": {
+   "measured": {
+    "strong": 0.00255,
+    "mean": 0.9
+   },
+   "strong": 0.0044,
+   "mean": 1.29,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-distanceUnit": {
+   "measured": {
+    "strong": 0.00143,
+    "mean": 0.914
+   },
+   "strong": 0.0027,
+   "mean": 1.3,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-precipitationUnit": {
+   "measured": {
+    "strong": 0.00086,
+    "mean": 0.823
+   },
+   "strong": 0.0018,
+   "mean": 1.19,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-pressureUnit": {
+   "measured": {
+    "strong": 0.00241,
+    "mean": 0.621
+   },
+   "strong": 0.0042,
+   "mean": 0.95,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-refreshInterval": {
+   "measured": {
+    "strong": 0.00419,
+    "mean": 1.65
+   },
+   "strong": 0.0068,
+   "mean": 2.19,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-startupPage": {
+   "measured": {
+    "strong": 0.00627,
+    "mean": 1.963
+   },
+   "strong": 0.0099,
+   "mean": 2.56,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-temperatureUnit": {
+   "measured": {
+    "strong": 0.00033,
+    "mean": 0.738
+   },
+   "strong": 0.001,
+   "mean": 1.09,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-temperatureUnit-f": {
+   "measured": {
+    "strong": 0.00052,
+    "mean": 0.424
+   },
+   "strong": 0.0013,
+   "mean": 0.71,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-theme": {
+   "measured": {
+    "strong": 0.00562,
+    "mean": 1.604
+   },
+   "strong": 0.009,
+   "mean": 2.13,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-theme-dark": {
+   "measured": {
+    "strong": 0.00594,
+    "mean": 1.226
+   },
+   "strong": 0.0095,
+   "mean": 1.68,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-theme-photo": {
+   "measured": {
+    "strong": 0.0048,
+    "mean": 1.766
+   },
+   "strong": 0.0078,
+   "mean": 2.32,
+   "heightDifference": 0
+  },
+  "ko-KR-radio-windSpeedUnit": {
+   "measured": {
+    "strong": 0.0033,
+    "mean": 1.115
+   },
+   "strong": 0.0055,
+   "mean": 1.54,
+   "heightDifference": 0
+  },
+  "ko-KR-units": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.737
+   },
+   "strong": 0.0005,
+   "mean": 1.09,
+   "heightDifference": 0
+  },
+  "ko-KR-units-f": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.732
+   },
+   "strong": 0.0005,
+   "mean": 1.08,
+   "heightDifference": 0
+  }
+ }
+}

@@ -9,6 +9,7 @@ import TWStorage
 /// ten-minute gate, the refresh-interval timer, the retry confirmation (O03), the swipes between places and a late
 /// response applied to its own place. Port of the Android `WeatherSessionTest` without the current position's lookup
 /// (IN-10).
+extension ClockedDataTests {
 @MainActor
 struct WeatherSessionTests {
     struct Fixture {
@@ -167,4 +168,5 @@ struct WeatherSessionTests {
         #expect(f.holder.state?.places[1].photo == feed.find(skyIcon: sky, random: 0))
         #expect(f.holder.state?.places[1].photo != nil)
     }
+}
 }

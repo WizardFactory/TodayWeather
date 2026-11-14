@@ -29,8 +29,11 @@ let package = Package(
         .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
         // The weather requests, retries, timeouts, late responses and the refresh gate and timer on a virtual clock
-        // (IN-08). Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py.
-        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel", "TWDomain"],
+        // (IN-08). Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py; the
+        // settings steps, hand-offs and push re-post (IN-12, ios/tools/settings/generate.py) and what the Cordova iOS
+        // build sent and opened in the settings capture (ios/tools/settings-reference). The catalogs of TWResources
+        // give the texts.
+        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel", "TWDomain", "TWResources"],
                     resources: [.copy("Golden")]),
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
         // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by

@@ -45,7 +45,8 @@ struct RootView: View {
             if let shell = launch.shell {
                 switch shell.screen {
                 case .start: StartPlaceholder(model: shell)
-                case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } })
+                case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } },
+                                     page: launch.settings.map { settings in settings.pageView })
                 }
             } else {
                 SplashView()
@@ -119,10 +120,13 @@ struct ShellView: View {
     /// The banner while it shows (IN-15). The slot is under the tab bar, above the home indicator; where the Cordova
     /// banner sits is IN-15's to measure.
     var banner: AnyView? = nil
+    /// A page over the tabs and the tab bar, from the status bar down, in the given insets (IN-12's settings pages); nil
+    /// while none shows.
+    var page: ((ShellInsets) -> AnyView?)? = nil
 
     var body: some View {
         GeometryReader { geometry in
-            ShellFrame(model: model, insets: .live(geometry.safeAreaInsets), content: content, banner: banner)
+            ShellFrame(model: model, insets: .live(geometry.safeAreaInsets), content: content, banner: banner, page: page)
                 .ignoresSafeArea()
         }
         // `KeyboardResize` false (config.xml): the keyboard covers the page; the tab bar and the layout stay.
@@ -137,11 +141,13 @@ struct ShellFrame: View {
     let insets: ShellInsets
     var content: ((ShellTab) -> TabContent?)? = nil
     var banner: AnyView? = nil
+    var page: ((ShellInsets) -> AnyView?)? = nil
 
     var body: some View {
         let colors = ShellColors.of(model.theme, tab: model.selected)
         let catalog = Catalog(code: model.locale.catalog)
         let tab = content.flatMap { $0(model.selected) } ?? defaultContent(model.selected)
+        let over = page.flatMap { $0(insets) }
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 colors.statusBar.color.frame(height: insets.statusBar)
@@ -161,6 +167,8 @@ struct ShellFrame: View {
                         .accessibilityIdentifier("shell-banner")
                 }
             }
+            .accessibilityHidden(over != nil)
+            if let over { over }
             // The menu covers the WebView's area; the status bar keeps the tab's color (Cordova does not change it).
             GeometryReader { area in
                 SideMenu(model: model, catalog: catalog, insets: insets)
@@ -487,6 +495,8 @@ struct MenuRows: View {
 struct IonicPopupView: View {
     let popup: Popup
     let onTap: (Int) -> Void
+    /// False: the lines without a scroll view (the screenshot tests render it, as `SideMenu(scrolls: false)`).
+    var scrolls = true
     @ScaledMetric(relativeTo: .headline) private var titleSize: CGFloat = 15
     @ScaledMetric(relativeTo: .body) private var lineSize: CGFloat = 14
     @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 15
@@ -502,11 +512,16 @@ struct IonicPopupView: View {
                         .padding(.horizontal, 10).padding(.top, 15)
                 }
                 Color(white: 0.933).frame(height: 1).padding(.top, 15)
-                ScrollView {
-                    Text(popup.lines.joined(separator: "\n")).font(.system(size: lineSize))
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                // WebKit lays the 14 px lines 18 pt apart (measured in the About capture, IN-12), more than the
+                // system font's own line height.
+                let lines = Text(popup.lines.joined(separator: "\n")).font(.system(size: lineSize))
+                    .lineSpacing(max(0, lineSize * 18 / 14 - UIFont.systemFont(ofSize: lineSize).lineHeight))
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                if scrolls {
+                    ScrollView { lines }.fixedSize(horizontal: false, vertical: true)
+                } else {
+                    lines.fixedSize(horizontal: false, vertical: true)
                 }
-                .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 5) {
                     ForEach(Array(popup.buttons.enumerated()), id: \.offset) { index, button in
                         Button { onTap(index) } label: {

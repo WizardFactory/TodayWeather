@@ -1,0 +1,73 @@
+{
+ "source": "ios/tools/settings-reference/capture.py: what the Cordova iOS build (settings-captures provenance) sent and parsed on the owned twios_cap_16 simulator",
+ "note": "weather: every weather request with the capture step that caused it (path and query as the fixture server received them; the server URL left out). mail: WebKit's URL (`new URL(text).href` in the WKWebView) of the strings the Cordova mail row assigns to location.href (Golden/settings.json). userAgent: navigator.userAgent of the WKWebView.",
+ "weather": [
+  {
+   "step": "place",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "step": "place",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "step": "choose-temperatureUnit-F",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=F&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul-f",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "step": "choose-temperatureUnit-C",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "step": "choose-theme-dark",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "step": "choose-theme-photo",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "step": "choose-theme-light",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "fixture": "kma-seoul",
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  }
+ ],
+ "mail": [
+  {
+   "raw": "mailto:feedback@example.com?subject=의견보내기&body=%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AApp%20Version%20%3A%202.0.0%0AUUID%20%3A%200F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F%0AUA%20%3A%20Mozilla%2F5.0%20(iPhone%3B%20CPU%20iPhone%20OS%2018_7%20like%20Mac%20OS%20X)%20AppleWebKit%2F605.1.15%20(KHTML%2C%20like%20Gecko)%20Mobile%2F15E148%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A",
+   "href": "mailto:feedback@example.com?subject=%EC%9D%98%EA%B2%AC%EB%B3%B4%EB%82%B4%EA%B8%B0&body=%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AApp%20Version%20%3A%202.0.0%0AUUID%20%3A%200F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F%0AUA%20%3A%20Mozilla%2F5.0%20(iPhone%3B%20CPU%20iPhone%20OS%2018_7%20like%20Mac%20OS%20X)%20AppleWebKit%2F605.1.15%20(KHTML%2C%20like%20Gecko)%20Mobile%2F15E148%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A"
+  },
+  {
+   "raw": "mailto:feedback@example.com?subject=Send feedback&body=%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AApp%20Version%20%3A%202.0.0%0AUUID%20%3A%200F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F%0AUA%20%3A%20Mozilla%2F5.0%20(iPhone%3B%20CPU%20iPhone%20OS%2018_7%20like%20Mac%20OS%20X)%20AppleWebKit%2F605.1.15%20(KHTML%2C%20like%20Gecko)%20Mobile%2F15E148%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A",
+   "href": "mailto:feedback@example.com?subject=Send%20feedback&body=%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AApp%20Version%20%3A%202.0.0%0AUUID%20%3A%200F0B1C9E-5B4A-4C1D-9E2F-3A4B5C6D7E8F%0AUA%20%3A%20Mozilla%2F5.0%20(iPhone%3B%20CPU%20iPhone%20OS%2018_7%20like%20Mac%20OS%20X)%20AppleWebKit%2F605.1.15%20(KHTML%2C%20like%20Gecko)%20Mobile%2F15E148%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A"
+  }
+ ],
+ "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+ "englishWeather": [
+  {
+   "step": "place",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=airnow&airForecastSource=kaq",
+   "fixture": "kma-seoul-f",
+   "acceptLanguage": "en-US,en;q=0.9"
+  },
+  {
+   "step": "place",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=airnow&airForecastSource=kaq",
+   "fixture": "kma-seoul-f",
+   "acceptLanguage": "en-US,en;q=0.9"
+  }
+ ]
+}

@@ -8,6 +8,7 @@ import TWModel
 /// the first attempt to settle deciding, one load per process, shared while it runs and repeated after a failure.
 /// The attempts and their answers run on a virtual clock (moved here from the app-hosted tests, where a busy CI runner
 /// stretched the real clock: the order of events, not its speed, decides every outcome).
+extension ClockedDataTests {
 struct WeatherPhotoFeedTests {
     static let feedBody = Data(#"[{"id":"sun-1","tags":["sun"],"twUrls":{"regular":"https://photos.test.invalid/sun-1.jpg"}}]"#.utf8)
     let url = URL(string: "https://photos.test.invalid/list.json")!
@@ -135,4 +136,5 @@ struct WeatherPhotoFeedTests {
         #expect(WeatherPhotoFeed.attemptGap == .seconds(2))
         #expect(WeatherPhotoFeed.timeout == .seconds(20))
     }
+}
 }

@@ -32,5 +32,9 @@
 	     clientConfig.serverUrl), set by the ignored ios/Private.xcconfig. Empty without it: the app then sends nothing. -->
 	<key>TWServerURL</key>
 	<string>$(TW_SERVER_URL)</string>
+	<!-- The feedback address of 의견보내기 (IN-12): TW_MAIL_TO, a private build input (the Cordova clientConfig.mailTo).
+	     Empty without it: the mail then opens without a recipient. -->
+	<key>TWMailTo</key>
+	<string>$(TW_MAIL_TO)</string>
 </dict>
 </plist>

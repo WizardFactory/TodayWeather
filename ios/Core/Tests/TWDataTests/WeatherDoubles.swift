@@ -4,6 +4,11 @@ import TWData
 import TWModel
 import TWStorage
 
+/// The suites that run the data layer on a `VirtualClock` run one after the other (IN-12): `advance` decides that the
+/// woken work has run when nothing touched the clock for a while on the real clock, which concurrent suites stretch
+/// (with the settings suites added, the parallel run failed and stalled the IN-08 timing tests).
+@Suite(.serialized) struct ClockedDataTests {}
+
 /// A virtual clock (IN-08): sleeps wait until `advance` reaches their deadline or their task is cancelled. Every
 /// continuation is resumed exactly once: by `advance` (removed from `sleepers` under the lock first) or by the
 /// cancellation handler (which finds it there, or marks the id so the sleep that has not registered yet throws at once).
