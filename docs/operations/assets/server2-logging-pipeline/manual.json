@@ -1,0 +1,41 @@
+{
+  "title": "server2 host log pipeline (LP-1): install, select destinations, read logs",
+  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, and reads each destination. Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
+  "steps": [
+    {
+      "title": "Install the pipeline; the default ships nothing",
+      "instruction": "As root, run server2/deploy/logging/install.sh (with --collector-tarball for a local copy of the pinned archive, otherwise it downloads it). It checks the archive hash, installs the units and enables them. With no SERVER2_LOG_SINKS setting, start both units and check the collector.",
+      "screenshot": "1-install.png",
+      "caption": "install.sh reports the collector version. server2.service is active; server2-logs.service is skipped by its start condition and says why in the server2 journal.",
+      "expected": "The server runs and writes to the local journal namespace server2. The collector is skipped (start condition unmet), so nothing leaves the host."
+    },
+    {
+      "title": "A mistyped setting fails only the collector",
+      "instruction": "Set SERVER2_LOG_SINKS in /opt/server2/config/.env (here with a typo, clodwatch) and start the units. Read the collector's message in the server2 journal namespace, fix the value, and start the collector again.",
+      "screenshot": "2-invalid.png",
+      "caption": "The collector is failed and names SERVER2_LOG_SINKS and the allowed values, without repeating the mistyped value. The server is active and /health answers 200.",
+      "expected": "server2-logs.service is failed without restarting in a loop; server2.service keeps serving."
+    },
+    {
+      "title": "Ship to S3 and CloudWatch Logs with different levels",
+      "instruction": "Set the destinations, the per-destination levels, the S3 prefix and an existing CloudWatch log group in .env, then start (or restart) the collector. On EC2 the credentials come from the instance role.",
+      "screenshot": "3-ship.png",
+      "caption": "Both units are active. The collector's first record names its version, the active destinations, the host (machine ID until LP-3) and the boot.",
+      "expected": "The collector start record appears in the journal and is shipped to every remote destination."
+    },
+    {
+      "title": "Where records arrive",
+      "instruction": "Serve requests, then stop the server and, a few seconds later, the collector (until LP-4 adds a drain step, stopping both at once can leave the server's last records in the local journal only). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
+      "screenshot": "3b-delivered.png",
+      "caption": "S3 keys and CloudWatch streams carry the source (server or collector), the host ID and the boot ID; S3 keys also carry the UTC date and hour and a unique suffix.",
+      "expected": "Server and collector records are kept apart, and records from different hosts or boots never share a stream or key."
+    },
+    {
+      "title": "Read each destination",
+      "instruction": "Read the local journal with journalctl --namespace=server2, an S3 object with gzip -dc (after aws s3 cp), and the CloudWatch stream (aws logs tail on EC2). Filter with jq.",
+      "screenshot": "4-read.png",
+      "caption": "The readiness line stays in the journal only. S3 (level info) holds the info and warn records; CloudWatch (level warn) holds only the two warn records of the HTTP 501 request.",
+      "expected": "Each destination holds exactly the server records at or above its level, as the original lines."
+    }
+  ]
+}
