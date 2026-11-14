@@ -347,12 +347,17 @@ def drain(state_dir, active, timeout, poll=0.5):
     targets = {(d, None): parse_cursor(target) for d in active}
     # Every lookup shares the one deadline (CX-LP4-002): the boot list is read once, and no
     # earlier-boot target is looked up once the time is spent.
+    # A destination with a planned reader whose target could not be looked up in time is
+    # not drained (CX-LP4-009).
     plan = backlog_plan(state_dir)
-    if any(plan.get(d) for d in active) and deadline > time.monotonic():
+    unresolved = {d for d in active if any(not i.get('rotated') for i in plan.get(d, []))}
+    if unresolved and deadline > time.monotonic():
         readers = backlog(state_dir, journal_boots(timeout=max(0.1, deadline - time.monotonic())))
+        unresolved = set()
         for destination in active:
             for item in readers.get(destination, []):
                 if deadline <= time.monotonic():
+                    unresolved.add(destination)
                     break
                 last = last_entry_of_boot(item['boot'], timeout=max(0.1, deadline - time.monotonic()))
                 if last:
@@ -369,7 +374,8 @@ def drain(state_dir, active, timeout, poll=0.5):
             break
         time.sleep(min(poll, max(0.0, deadline - time.monotonic())))
     waited = round(time.monotonic() - began, 1)
-    return {d: {'drained': not any(k[0] == d for k in pending), 'waited_seconds': waited} for d in active}
+    return {d: {'drained': d not in unresolved and not any(k[0] == d for k in pending), 'waited_seconds': waited}
+            for d in active}
 
 
 def counters(text):

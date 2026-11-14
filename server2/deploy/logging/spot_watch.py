@@ -118,35 +118,59 @@ def unit_state(run, unit):
         return 'unknown'
 
 
+def wait_state(run, unit, states, until, clock, sleep):
+    """Poll the unit's state until it is in `states` or `until` (monotonic) passes."""
+    state = unit_state(run, unit)
+    while state not in states and clock() < until:
+        sleep(0.5)
+        state = unit_state(run, unit)
+    return state
+
+
+def ensure_collector(run, until, clock, sleep):
+    """A collector that is not running (crashed, or waiting for its automatic restart) is
+    started, so it reads and ships the journal before it stops (CX-LP4-003)."""
+    state = unit_state(run, 'server2-logs.service')
+    if state == 'active':
+        return state, None
+    bounded(run, ['systemctl', 'start', '--no-block', 'server2-logs.service'], 5)
+    return state, wait_state(run, 'server2-logs.service', ('active', 'failed', 'inactive'), until, clock, sleep)
+
+
 def ordered_stop(run, marker, clock=time.monotonic, sleep=time.sleep):
-    """Server first, then the collector, inside STOP_BUDGET_SECONDS from now. The collector's
-    drain sees the marker and waits at most 10 s. Every step's outcome is recorded: the
-    record after the server's stop still reaches the destinations, the last line stays local."""
+    """Server first, then the collector, inside STOP_BUDGET_SECONDS from now.
+
+    The collector's drain sees the marker and waits at most 10 s; the marker is kept until
+    the host goes down, so a stop still pending in systemd also uses the short drain
+    (GEM-LP4-002). Each step is bounded by the time left and its real outcome is checked:
+    a collector still stopping at the deadline is killed (CX-LP4-001). The record after the
+    server's stop reaches the destinations; the last line stays local."""
     deadline = clock() + STOP_BUDGET_SECONDS
+    collector_deadline = deadline - DRAIN_SECONDS - FLUSH_SECONDS
     marker = Path(marker)
     marker.parent.mkdir(parents=True, exist_ok=True)
     marker.write_text(now() + '\n')
     collector_before = unit_state(run, 'server2-logs.service')
-    recovery = None
-    if collector_before != 'active':
-        # Not running (an automatic restart pending, failed, or stopped): start it now, while
-        # the server stops, so the journal is read and shipped before the collector stops.
-        recovery = bounded(run, ['systemctl', 'start', '--no-block', 'server2-logs.service'], 5)[0]
-    server, server_seconds = bounded(run, ['systemctl', 'stop', 'server2.service'],
-                                     deadline - clock() - DRAIN_SECONDS - FLUSH_SECONDS)
-    if recovery is not None:
-        while clock() < deadline - DRAIN_SECONDS - FLUSH_SECONDS and unit_state(run, 'server2-logs.service') not in ('active', 'failed', 'inactive'):
-            sleep(0.5)
-        recovery = unit_state(run, 'server2-logs.service')
-    record('collector.interruption_progress', 'info' if server == 'ok' and recovery in (None, 'active') else 'warn',
-           server_stop=server, server_stop_seconds=server_seconds, collector_before=collector_before,
-           collector_started=recovery)
+    if collector_before != 'active':  # start it now, in parallel with the server's stop
+        bounded(run, ['systemctl', 'start', '--no-block', 'server2-logs.service'], 5)
+    server, server_seconds = bounded(run, ['systemctl', 'stop', 'server2.service'], collector_deadline - clock())
+    server_state = wait_state(run, 'server2.service', ('inactive', 'failed'), collector_deadline, clock, sleep)
+    # Checked again right before its stop: it may have crashed while the server stopped.
+    collector_seen, collector_started = ensure_collector(run, collector_deadline, clock, sleep)
+    degraded = server != 'ok' or server_state not in ('inactive', 'failed') or collector_started not in (None, 'active')
+    record('collector.interruption_progress', 'warn' if degraded else 'info',
+           server_stop=server, server_stop_seconds=server_seconds, server_state=server_state,
+           collector_before=collector_before, collector_at_stop=collector_seen, collector_started=collector_started)
     collector, total = bounded(run, ['systemctl', 'stop', 'server2-logs.service'], deadline - clock())
-    marker.unlink(missing_ok=True)
+    collector_state = wait_state(run, 'server2-logs.service', ('inactive', 'failed'), deadline, clock, sleep)
+    if collector_state not in ('inactive', 'failed'):
+        # Past the budget: end it, so the instance's last minute is not spent waiting.
+        bounded(run, ['systemctl', 'kill', '--signal=SIGKILL', 'server2-logs.service'], 5)
+        collector, collector_state = 'killed at the deadline', unit_state(run, 'server2-logs.service')
     # The collector has stopped, so this line stays in the local journal only.
-    print(f'server2 interruption stop: server2.service {server} in {server_seconds} s, '
-          f'server2-logs.service {collector} {total} s later (budget {STOP_BUDGET_SECONDS} s)', flush=True)
-    return server == 'ok' and collector == 'ok'
+    print(f'server2 interruption stop: server2.service {server} ({server_state}) in {server_seconds} s, '
+          f'server2-logs.service {collector} ({collector_state}) {total} s later (budget {STOP_BUDGET_SECONDS} s)', flush=True)
+    return not degraded and collector == 'ok'
 
 
 def main(argv=None, run=subprocess.run, sleep=time.sleep, metadata=None, clock=time.monotonic):

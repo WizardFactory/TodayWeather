@@ -547,6 +547,43 @@ class IdentityAndBacklogTest(unittest.TestCase):
             self.assertEqual(render.plan_backlog(directory, ['s3'], current, boots=[current], last_cursor=lambda a: None), {})
 
 
+class FakeSystemd:
+    """A systemctl double with unit states and a fake clock (LP-4 watcher tests).
+
+    `script` maps (verb, unit) to an exit code, an exception, or 'stuck' (the stop job
+    never finishes); `after_server_stop` sets unit states once the server has stopped."""
+
+    def __init__(self, states=None, script=None, after_server_stop=None):
+        self.states = dict({'server2.service': 'active', 'server2-logs.service': 'active'}, **(states or {}))
+        self.script, self.after_server_stop = script or {}, after_server_stop or {}
+        self.calls, self.now = [], 0.0
+
+    def clock(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+    def __call__(self, command, **kwargs):
+        import subprocess
+        verb, unit = command[1], command[-1]
+        if verb == 'show':
+            return subprocess.CompletedProcess(command, 0, self.states.get(unit, 'inactive') + '\n', '')
+        self.calls.append((command, kwargs.get('timeout')))
+        outcome = self.script.get((verb, unit), 0)
+        if outcome == 'stuck':
+            self.states[unit] = 'deactivating'
+            self.now += kwargs.get('timeout') or 0
+            raise subprocess.TimeoutExpired(command, kwargs.get('timeout'))
+        if isinstance(outcome, Exception):
+            raise outcome
+        if outcome == 0:
+            self.states[unit] = {'stop': 'inactive', 'kill': 'inactive', 'start': 'active'}.get(verb, self.states.get(unit))
+            if verb == 'stop' and unit == 'server2.service':
+                self.states.update(self.after_server_stop)
+        return subprocess.CompletedProcess(command, outcome, '', '')
+
+
 class SpotWatchTest(unittest.TestCase):
     """LP-4 (#2981): the Spot interruption watcher."""
 
@@ -562,12 +599,11 @@ class SpotWatchTest(unittest.TestCase):
     def run_watcher(self, values):
         calls, slept = [], []
         marker = Path(tempfile.mkdtemp()) / 'watch' / 'interruption'
+        systemd = FakeSystemd()
         def run(command, **kwargs):
-            import subprocess
-            if command[1] == 'show':  # the collector is running
-                return subprocess.CompletedProcess(command, 0, 'active\n', '')
-            calls.append((command, marker.exists()))
-            return subprocess.CompletedProcess(command, 0, '', '')
+            if command[1] != 'show':
+                calls.append((command, marker.exists()))
+            return systemd(command, **kwargs)
         metadata = self.FakeMetadata(values)
         with mock.patch.object(spot_watch, 'MARKER', str(marker)), contextlib.redirect_stdout(io.StringIO()) as out:
             code = spot_watch.main([], run=run, sleep=slept.append, metadata=metadata)
@@ -581,52 +617,56 @@ class SpotWatchTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual([c[0] for c in calls], [['systemctl', 'stop', 'server2.service'], ['systemctl', 'stop', 'server2-logs.service']])
         self.assertTrue(all(present for _, present in calls))  # the collector's drain sees the interruption
-        self.assertFalse(marker.exists())
+        self.assertTrue(marker.exists())  # kept until the host goes down (GEM-LP4-002)
         self.assertEqual(len(slept), 2)  # polled twice before the notice
         record = json.loads(next(l for l in out.splitlines() if l.startswith('{')))
         self.assertEqual((record['collector_schema'], record['event'], record['level'], record['action'], record['action_time']),
                          (1, 'collector.interruption_notice', 'warn', 'terminate', '2026-11-15T01:02:03Z'))
         self.assertLess(out.index('collector.interruption_notice'), len(out))
 
-    def stop_with(self, responses):
-        """ordered_stop with scripted systemctl results: {(verb, unit): result or exception}."""
-        import subprocess
-        calls, records = [], io.StringIO()
-        states = list(responses.get('states', ['active']))
-        def run(command, **kwargs):
-            if command[1] == 'show':
-                return subprocess.CompletedProcess(command, 0, (states.pop(0) if len(states) > 1 else states[0]) + '\n', '')
-            calls.append((command, kwargs.get('timeout')))
-            outcome = responses.get((command[1], command[-1]), 0)
-            if isinstance(outcome, Exception):
-                raise outcome
-            return subprocess.CompletedProcess(command, outcome, '', '')
+    def stop_with(self, **kwargs):
+        systemd = FakeSystemd(**kwargs)
+        records = io.StringIO()
         marker = Path(tempfile.mkdtemp()) / 'interruption'
         with contextlib.redirect_stdout(records):
-            ok = spot_watch.ordered_stop(run, marker, sleep=lambda s: None)
-        return ok, calls, records.getvalue()
+            ok = spot_watch.ordered_stop(systemd, marker, clock=systemd.clock, sleep=systemd.sleep)
+        progress = json.loads(next(l for l in records.getvalue().splitlines() if 'interruption_progress' in l))
+        return ok, [c[0][1:] for c in systemd.calls], progress, records.getvalue(), systemd, marker
 
     def test_failed_or_slow_steps_are_bounded_and_recorded(self):  # CX-LP4-001
-        import subprocess
-        ok, calls, out = self.stop_with({('stop', 'server2.service'): 1})
+        ok, calls, progress, out, systemd, _ = self.stop_with(script={('stop', 'server2.service'): 1})
         self.assertFalse(ok)
-        self.assertEqual([c[0][1:] for c in calls], [['stop', 'server2.service'], ['stop', 'server2-logs.service']])
-        progress = json.loads(next(l for l in out.splitlines() if 'interruption_progress' in l))
+        self.assertEqual(calls, [['stop', 'server2.service'], ['stop', 'server2-logs.service']])
         self.assertEqual((progress['level'], progress['server_stop']), ('warn', 'failed (exit 1)'))
-        ok, calls, out = self.stop_with({('stop', 'server2.service'): subprocess.TimeoutExpired('systemctl', 45)})
+        # A collector stop that never finishes is waited for only until the deadline, then killed.
+        ok, calls, progress, out, systemd, _ = self.stop_with(script={('stop', 'server2-logs.service'): 'stuck'})
         self.assertFalse(ok)
-        self.assertIn('"server_stop": "timeout"', out)
-        # Each wait is bounded by the budget left: the server's leaves 30 s for the collector.
-        self.assertLessEqual(calls[0][1], spot_watch.STOP_BUDGET_SECONDS - spot_watch.DRAIN_SECONDS - spot_watch.FLUSH_SECONDS)
-        self.assertLessEqual(calls[1][1], spot_watch.STOP_BUDGET_SECONDS)
-        self.assertIn('server2-logs.service ok', out)
+        self.assertEqual(calls[-1], ['kill', '--signal=SIGKILL', 'server2-logs.service'])
+        self.assertEqual(systemd.states['server2-logs.service'], 'inactive')
+        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS + 5)
+        self.assertIn('killed at the deadline (inactive)', out)
+        # A server stop job still running at its bound: its real state is recorded, the collector still stops.
+        ok, calls, progress, out, systemd, _ = self.stop_with(script={('stop', 'server2.service'): 'stuck'})
+        self.assertFalse(ok)
+        self.assertEqual((progress['server_stop'], progress['server_state'], progress['level']), ('timeout', 'deactivating', 'warn'))
+        self.assertIn(['stop', 'server2-logs.service'], calls)
+        self.assertLessEqual(systemd.now, spot_watch.STOP_BUDGET_SECONDS + 5)
 
     def test_a_collector_waiting_for_its_restart_is_started_first(self):  # CX-LP4-003
-        ok, calls, out = self.stop_with({'states': ['activating', 'activating', 'active']})
+        ok, calls, progress, out, systemd, _ = self.stop_with(states={'server2-logs.service': 'activating'})
         self.assertTrue(ok)
-        self.assertEqual([c[0][1:] for c in calls][:2], [['start', '--no-block', 'server2-logs.service'], ['stop', 'server2.service']])
-        progress = json.loads(next(l for l in out.splitlines() if 'interruption_progress' in l))
-        self.assertEqual((progress['collector_before'], progress['collector_started'], progress['level']), ('activating', 'active', 'info'))
+        self.assertEqual(calls[:2], [['start', '--no-block', 'server2-logs.service'], ['stop', 'server2.service']])
+        self.assertEqual((progress['collector_before'], progress['level']), ('activating', 'info'))
+
+    def test_a_collector_that_crashes_during_the_server_stop_is_recovered(self):  # CX-LP4-003 round 2
+        ok, calls, progress, out, systemd, _ = self.stop_with(after_server_stop={'server2-logs.service': 'activating'})
+        self.assertTrue(ok)
+        self.assertEqual(calls, [['stop', 'server2.service'], ['start', '--no-block', 'server2-logs.service'], ['stop', 'server2-logs.service']])
+        self.assertEqual((progress['collector_at_stop'], progress['collector_started']), ('activating', 'active'))
+
+    def test_the_marker_stays_while_a_stop_is_pending(self):  # GEM-LP4-002 round 2
+        ok, calls, progress, out, systemd, marker = self.stop_with(script={('stop', 'server2-logs.service'): 'stuck'})
+        self.assertTrue(marker.exists())
 
     def test_polls_are_scheduled_so_request_time_does_not_add_up(self):  # CX-LP4-004
         clock = [0.0]
@@ -639,11 +679,10 @@ class SpotWatchTest(unittest.TestCase):
         slept = []
         def sleep(seconds):
             slept.append(seconds); clock[0] += seconds
-        import subprocess
-        run = lambda command, **kwargs: subprocess.CompletedProcess(command, 0, 'active\n', '')
+        run = FakeSystemd()
         with mock.patch.object(spot_watch, 'MARKER', str(Path(tempfile.mkdtemp()) / 'm')), contextlib.redirect_stdout(io.StringIO()):
             spot_watch.main([], run=run, sleep=sleep, metadata=metadata, clock=lambda: clock[0])
-        self.assertEqual(slept, [3.5, 3.5, 3.5])  # polls 4 s apart: the 0.5 s request is inside the interval
+        self.assertEqual(slept[:3], [3.5, 3.5, 3.5])  # polls 4 s apart: the 0.5 s request is inside the interval
         # A notice published just after a poll is seen at the next one: at most 4 s + its request.
         self.assertLessEqual(spot_watch.POLL_SECONDS + spot_watch.METADATA_TIMEOUT, spot_watch.DETECTION_SECONDS)
 
@@ -1289,12 +1328,13 @@ class StatusTest(unittest.TestCase):
                     mock.patch.object(status, 'newest_entry', return_value=_cursor(300, 3_000)), \
                     mock.patch.object(status, 'last_entry_of_boot', return_value=_cursor(200, 2_000)) as last:
                 began = _time.monotonic()
-                status.drain(directory, ('s3', 'cloudwatch'), timeout=0.3, poll=0.05)
+                result = status.drain(directory, ('s3', 'cloudwatch'), timeout=0.3, poll=0.05)
                 elapsed = _time.monotonic() - began
             self.assertEqual(len(timeouts), 1)  # one boot listing for every destination
             self.assertLessEqual(timeouts[0], 0.3)
             last.assert_not_called()  # the deadline had passed
             self.assertLess(elapsed, 0.8)
+            self.assertEqual({d: r['drained'] for d, r in result.items()}, {'s3': False, 'cloudwatch': False})  # CX-LP4-009
 
     def test_drain_record_never_blocks_the_stop(self):
         with tempfile.TemporaryDirectory() as directory:

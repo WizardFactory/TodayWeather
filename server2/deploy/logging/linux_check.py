@@ -941,7 +941,9 @@ def slow_upload_scenario(report):
     seconds = round(time.monotonic() - began, 1) if arrived is not None else None
     entry['observations']['s3_delivery_seconds_with_5_s_upload'] = seconds
     check('a record reaches S3 within 60 s although each upload is answered 5 s late', seconds is not None and seconds <= 60, str(seconds))
-    check('no upload was retried', not any(o['action'] == 'Overwrite' for o in delivered(state)[3]))
+    attempts = collections.Counter(o['key'] for o in delivered(state)[3] if o['action'] == 'PutObject')
+    entry['observations']['upload_attempts_per_object'] = sorted(set(attempts.values()))
+    check('no upload was retried (one PutObject per key)', attempts and set(attempts.values()) == {1}, str(dict(attempts))[:200])
     (state / 'slow-s3').unlink()
     systemctl('stop', 'server2.service', 'server2-logs.service')
     systemctl('stop', STANDIN_UNIT)
