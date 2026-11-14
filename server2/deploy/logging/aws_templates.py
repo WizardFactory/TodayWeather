@@ -42,6 +42,12 @@ EXPECTED_GRANTS = {
 }
 
 
+def same(value, expected):
+    """Equal as JSON, types included (CX-LP5-004): Python's True == 1 == 1.0 must not pass
+    where AWS requires an integer period or a boolean flag."""
+    return json.dumps(value, sort_keys=True) == json.dumps(expected, sort_keys=True)
+
+
 def load(name):
     return json.loads((HERE / 'aws' / TEMPLATES[name]).read_text())
 
@@ -106,7 +112,7 @@ def lifecycle_violations(lifecycle, log_prefix, data_prefixes):
         for data in data_prefixes:
             if data.startswith(rule_prefix) or rule_prefix.startswith(data):
                 problems.append(f"rule {rule.get('ID')}: filter overlaps weather prefix {data}")
-        if rule.get('Status') != 'Enabled':
+        if not same(rule.get('Status'), 'Enabled'):
             problems.append(f"rule {rule.get('ID')}: not enabled")
         # Exact fields and values (CX-LP5-001): an extra field such as NewerNoncurrentVersions
         # or Transitions, or a different period, would change what is kept.
@@ -115,19 +121,19 @@ def lifecycle_violations(lifecycle, log_prefix, data_prefixes):
         if extra:
             problems.append(f"rule {rule.get('ID')}: unexpected fields {sorted(extra)}")
         expiration = rule.get('Expiration')
-        if expiration == {'Days': S3_RETENTION_DAYS}:
+        if same(expiration, {'Days': S3_RETENTION_DAYS}):
             actions.add('current')
-        elif expiration == {'ExpiredObjectDeleteMarker': True}:
+        elif same(expiration, {'ExpiredObjectDeleteMarker': True}):
             actions.add('delete-markers')
         elif expiration is not None:
             problems.append(f"rule {rule.get('ID')}: Expiration must be Days={S3_RETENTION_DAYS} or ExpiredObjectDeleteMarker only")
         noncurrent = rule.get('NoncurrentVersionExpiration')
-        if noncurrent == {'NoncurrentDays': 1}:
+        if same(noncurrent, {'NoncurrentDays': 1}):
             actions.add('noncurrent')
         elif noncurrent is not None:
             problems.append(f"rule {rule.get('ID')}: NoncurrentVersionExpiration must be NoncurrentDays=1 only")
         multipart = rule.get('AbortIncompleteMultipartUpload')
-        if multipart == {'DaysAfterInitiation': 1}:
+        if same(multipart, {'DaysAfterInitiation': 1}):
             actions.add('multipart')
         elif multipart is not None:
             problems.append(f"rule {rule.get('ID')}: AbortIncompleteMultipartUpload must be DaysAfterInitiation=1 only")
@@ -143,9 +149,9 @@ def log_group_violations(group):
     """The log group record: exactly the name, the Standard class and the decided retention."""
     expected = {'logGroupName', 'logGroupClass', 'retentionInDays'}
     problems = [] if set(group) == expected else [f'log group fields must be {sorted(expected)}']
-    if group.get('retentionInDays') != CLOUDWATCH_RETENTION_DAYS:
+    if not same(group.get('retentionInDays'), CLOUDWATCH_RETENTION_DAYS):
         problems.append(f'log group retention must be {CLOUDWATCH_RETENTION_DAYS} days')
-    if group.get('logGroupClass') != 'STANDARD':
+    if not same(group.get('logGroupClass'), 'STANDARD'):
         problems.append('log group class must be STANDARD')
     return problems
 

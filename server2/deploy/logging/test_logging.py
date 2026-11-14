@@ -408,7 +408,13 @@ class AwsTemplatesTest(unittest.TestCase):
                 'Days and marker in one rule': lambda r: r[0]['Expiration'].update(ExpiredObjectDeleteMarker=True),
                 'Days added to the marker rule': lambda r: r[1]['Expiration'].update(Days=1),
                 'negative noncurrent days': lambda r: r[0]['NoncurrentVersionExpiration'].update(NoncurrentDays=-1),
-                'non-integer multipart days': lambda r: r[0]['AbortIncompleteMultipartUpload'].update(DaysAfterInitiation='x')}.items():
+                'non-integer multipart days': lambda r: r[0]['AbortIncompleteMultipartUpload'].update(DaysAfterInitiation='x'),
+                # CX-LP5-004: JSON types are exact; Python's True == 1 == 1.0 must not pass.
+                'boolean noncurrent days': lambda r: r[0]['NoncurrentVersionExpiration'].update(NoncurrentDays=True),
+                'float expiration days': lambda r: r[0]['Expiration'].update(Days=90.0),
+                'float multipart days': lambda r: r[0]['AbortIncompleteMultipartUpload'].update(DaysAfterInitiation=1.0),
+                'numeric delete marker': lambda r: r[1]['Expiration'].update(ExpiredObjectDeleteMarker=1),
+                'enabled as boolean': lambda r: r[0].update(Status=True)}.items():
             with self.subTest(name):
                 lifecycle = self.lifecycle()
                 change(lifecycle['Rules'])
@@ -426,7 +432,8 @@ class AwsTemplatesTest(unittest.TestCase):
         self.assertEqual(aws_templates.load('log-group'),
                          {'logGroupName': '${LogGroupName}', 'logGroupClass': 'STANDARD', 'retentionInDays': 30})
         self.assertEqual(aws_templates.log_group_violations(aws_templates.load('log-group')), [])
-        for change in ({'retentionInDays': 3653}, {'logGroupClass': 'INFREQUENT_ACCESS'}, {'kmsKeyId': 'k'}):  # GEM-LP5-003
+        for change in ({'retentionInDays': 3653}, {'logGroupClass': 'INFREQUENT_ACCESS'}, {'kmsKeyId': 'k'},  # GEM-LP5-003
+                       {'retentionInDays': 30.0}, {'retentionInDays': True}):  # CX-LP5-004
             with self.subTest(change):
                 self.assertTrue(aws_templates.log_group_violations(dict(aws_templates.load('log-group'), **change)))
 
