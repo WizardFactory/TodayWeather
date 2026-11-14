@@ -175,8 +175,8 @@ The collector is [Vector](https://github.com/vectordotdev/vector) 0.61.0 (MPL-2.
 | Reads the journal of selected units | Yes: the `journald` source with `journal_namespace` and `include_units`, as a dynamic user in `systemd-journal`. On systemd 250–257 (Ubuntu 24.04: 255, Amazon Linux 2023: 252) Vector rejects reading previous boots (`current_boot_only: false`), so each reader covers the current boot only. LP-3 must handle the backlog left by a previous boot on a surviving disk. |
 | Destinations from variables | Not natively: Vector cannot switch sinks by environment and ignores the AWS SDK's `AWS_ENDPOINT_URL_*` variables. `render.py` validates the variables and writes the configuration; endpoints follow from the region only. |
 | Minimal permissions | With health checks off: S3 `PutObject`; CloudWatch Logs `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. The CloudWatch sink calls `DescribeLogStreams` before writing, so LP-5 must allow it. No bucket listing, no `DescribeLogGroups`, no group creation. |
-| Flush at stop | 0.07–0.24 s with up to 569 journal lines (stop of the collector after the server); the bound under a two-minute notice belongs to LP-4. |
-| Memory | Peak resident set 70–76 MiB with one or two destinations. |
+| Flush at stop | 0.02–0.24 s with up to 569 journal lines (stop of the collector after the server); the bound under a two-minute notice belongs to LP-4. |
+| Memory | Peak resident set 70–77 MiB with one or two destinations. |
 
 ### Verify the pipeline
 
@@ -188,7 +188,7 @@ sudo python3 -I server2/deploy/logging/linux_check.py --disposable-host \
   --report reports/logging-pipeline/check.json
 ```
 
-It points the real regional AWS host names at the loopback stand-in [`standin.py`](../../server2/deploy/logging/standin.py) through `/etc/hosts` and a test CA, so the product configuration has no endpoint or test setting; only the collector gets dummy credentials through a test drop-in. Scenarios: local only, S3 only, CloudWatch only, all destinations with a request burst, and three invalid settings. Each checks exact delivery against the journal per level, the naming contract, the AWS actions used, the start record, the absence of the synthetic sensitive values and of `.env` values in the collector's environment, and that the server keeps answering. The [PDF](server2-logging.pdf) is the #2802 snapshot and does not cover this section.
+It points the real regional AWS host names at the loopback stand-in [`standin.py`](../../server2/deploy/logging/standin.py) through `/etc/hosts` and a test CA, so the product configuration has no endpoint or test setting; only the collector gets dummy credentials through a test drop-in. Scenarios: local only, S3 only, CloudWatch only, all destinations with a request burst, and three invalid settings. Each checks delivery while both units run (within 70 s for S3 and 10 s for CloudWatch), exact delivery against the journal per level after the stop, the naming contract, the AWS actions used, the start record, the absence of the synthetic sensitive values at every destination including the journal, and of `.env` values in the collector's environment, and that the server keeps answering. The [PDF](server2-logging.pdf) is the #2802 snapshot and does not cover this section.
 
 ## Implementation audit
 

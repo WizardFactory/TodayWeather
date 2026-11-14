@@ -57,6 +57,36 @@ class DotenvTest(unittest.TestCase):
                                   'SERVER2_S3_BUCKET': 'bucket-one', 'SERVER2_S3_REGION': 'us-east-1'})
         self.assertNotIn(SECRET, json.dumps(values))
 
+    def test_javascript_whitespace_and_line_terminators_like_server2(self):
+        # The cases of server2/src/dotenv.rs `javascript_whitespace_and_line_terminators`
+        # (CX-LP1-001), on allowlisted names: U+FEFF counts as space, U+0085 does not,
+        # and a line whose value continues after U+2028 is not a setting.
+        values = render.parse_dotenv(
+            '# comment\n'
+            '﻿SERVER2_LOG_SINKS=cloudwatch\n'
+            'SERVER2_S3_BUCKET=﻿ bucket-one　\n'
+            'SERVER2_LOG_S3_PREFIX=\u0085logs\u0085\n'
+            'SERVER2_LOG_CLOUDWATCH_GROUP=/server2/x   \n'
+            'SERVER2_S3_REGION=ap-northeast-2 ,us-east-1\n')
+        self.assertEqual(values, {'SERVER2_LOG_SINKS': 'cloudwatch', 'SERVER2_S3_BUCKET': 'bucket-one',
+                                  'SERVER2_LOG_S3_PREFIX': '\u0085logs\u0085',
+                                  'SERVER2_LOG_CLOUDWATCH_GROUP': '/server2/x'})
+
+    def test_server2_dotenv_cases_on_allowlisted_names(self):
+        # server2/src/dotenv.rs `parses_like_dotenv_10`, renamed to allowlisted keys.
+        values = render.parse_dotenv(
+            'SERVER2_LOG_SINKS=value\r\n'
+            '  SERVER2_LOG_S3_LEVEL = padded value  \n'
+            'SERVER2_LOG_CLOUDWATCH_LEVEL="a\\nb"\n'
+            "SERVER2_LOG_S3_PREFIX='[\"k1\",\"k2\"]'\r"
+            'SERVER2_LOG_CLOUDWATCH_GROUP=\n'
+            'export SERVER2_S3_BUCKET=1\n'
+            'SERVER2_S3_REGION="quoted"  \n')
+        self.assertEqual(values, {'SERVER2_LOG_SINKS': 'value', 'SERVER2_LOG_S3_LEVEL': 'padded value',
+                                  'SERVER2_LOG_CLOUDWATCH_LEVEL': 'a\nb', 'SERVER2_LOG_S3_PREFIX': '["k1","k2"]',
+                                  'SERVER2_LOG_CLOUDWATCH_GROUP': '', 'SERVER2_S3_REGION': '"quoted"'})
+        self.assertEqual(render.parse_dotenv('SERVER2_LOG_SINKS="\n'), {'SERVER2_LOG_SINKS': '"'})
+
     def test_process_environment_wins_even_when_empty(self):
         looked = render.lookup({'SERVER2_LOG_SINKS': ''}, {'SERVER2_LOG_SINKS': 's3', 'SERVER2_S3_BUCKET': 'b-1'})
         self.assertEqual(looked['SERVER2_LOG_SINKS'], '')
@@ -196,6 +226,33 @@ class RenderTest(unittest.TestCase):
                 self.assertEqual(render.main(args, environ={'SERVER2_LOG_SINKS': f's3,{SECRET}'}), 255)
             self.assertIn('SERVER2_LOG_SINKS', err.getvalue())
             self.assertNotIn(SECRET, err.getvalue())
+
+    def test_every_preparation_failure_fails_the_unit(self):
+        # CX-LP1-002: exit code 1 means "local only, skip"; any other failure must be 255.
+        with tempfile.TemporaryDirectory() as directory:
+            env = Path(directory) / '.env'
+            env.write_text(''.join(f'{k}={v}\n' for k, v in COMPLETE.items()) + f'DONGNAE_SECRET_KEYS={SECRET}\n')
+            base = ['--env-file', str(env), '--state', directory, '--output', str(Path(directory) / 'out.json')]
+            cases = {
+                'missing manifest': (base + ['--version-file', str(Path(directory) / 'missing.json')], {}),
+                'broken manifest': (base + ['--version-file', str(env)], {}),
+                'unwritable output': (base + ['--version-file', str(HERE / 'collector.json')],
+                                      {'os.replace': OSError(28, 'No space left on device')}),
+                'unreadable identity': (base + ['--version-file', str(HERE / 'collector.json')],
+                                        {'machine_id': OSError(2, 'No such file')}),
+            }
+            for name, (args, faults) in cases.items():
+                with self.subTest(name), contextlib.ExitStack() as stack:
+                    if 'os.replace' in faults:
+                        stack.enter_context(mock.patch.object(render.os, 'replace', side_effect=faults['os.replace']))
+                    else:
+                        stack.enter_context(mock.patch.object(render, 'machine_id', side_effect=faults.get('machine_id'),
+                                                              return_value='b' * 32))
+                    err = stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
+                    stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+                    self.assertEqual(render.main(args, environ={}), 255)
+                    self.assertIn('the collector is not started', err.getvalue())
+                    self.assertNotIn(SECRET, err.getvalue())
 
 
 def _read_text_with_boot(self, *args, **kwargs):

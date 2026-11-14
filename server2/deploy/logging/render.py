@@ -50,26 +50,46 @@ class SettingError(Exception):
         self.variable = variable
 
 
-_LINE = re.compile(r'^\s*([\w.-]+)\s*=\s*(.*)?\s*$')
+# ECMAScript `\s`/`trim` (server2/src/world/js.rs `is_js_space`): U+FEFF is a space,
+# U+0085 is not. Python's own `\s` and `str.strip()` differ, so they are not used.
+JS_SPACE = ('\t\n\x0b\x0c\r \xa0\u1680\u2028\u2029\u202f\u205f\u3000\ufeff'
+            + ''.join(chr(c) for c in range(0x2000, 0x200b)))
+
+
+def _parse_line(line):
+    r"""One line, as server2/src/dotenv.rs `parse_line`: `^\s*([\w.-]+)\s*=\s*(.*)?\s*$`
+    with JavaScript semantics, then the quote or trim rule."""
+    rest = line.lstrip(JS_SPACE)
+    end = 0
+    while end < len(rest) and rest[end].isascii() and (rest[end].isalnum() or rest[end] in '_.-'):
+        end += 1
+    if end == 0:
+        return None
+    key, rest = rest[:end], rest[end:].lstrip(JS_SPACE)
+    if not rest.startswith('='):
+        return None
+    rest = rest[1:].lstrip(JS_SPACE)
+    # `(.*)?` stops at U+2028/U+2029; `\s*$` must then consume everything after it.
+    cut = min([i for i in (rest.find('\u2028'), rest.find('\u2029')) if i >= 0], default=len(rest))
+    value, tail = rest[:cut], rest[cut:]
+    if tail.strip(JS_SPACE):
+        return None
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        value = value[1:-1].replace('\\n', '\n')
+    elif len(value) >= 2 and value[0] == value[-1] == "'":
+        value = value[1:-1]
+    else:
+        value = value.strip(JS_SPACE)
+    return key, value
 
 
 def parse_dotenv(text, names=ALLOWED):
     """dotenv 10.0.0 `parse`, as server2/src/dotenv.rs implements it, kept to `names`."""
     values = {}
-    text = text.lstrip('﻿')
     for line in re.split(r'\r\n|\n|\r', text):
-        match = _LINE.match(line)
-        if not match or match.group(1) not in names:
-            continue
-        value = match.group(2) or ''
-        value = re.split('[  ]', value, maxsplit=1)[0]
-        if len(value) >= 2 and value[0] == value[-1] == '"':
-            value = value[1:-1].replace('\\n', '\n')
-        elif len(value) >= 2 and value[0] == value[-1] == "'":
-            value = value[1:-1]
-        else:
-            value = value.strip()
-        values[match.group(1)] = value
+        parsed = _parse_line(line)
+        if parsed and parsed[0] in names:
+            values[parsed[0]] = parsed[1]
     return values
 
 
@@ -249,6 +269,11 @@ def main(argv=None, environ=None):
         write_atomic(args.output, json.dumps(rendered, indent=1, sort_keys=True) + '\n')
     except SettingError as exc:
         print(f'server2 log collector: invalid setting {exc}; the collector is not started', file=sys.stderr)
+        return 255
+    except Exception as exc:  # noqa: BLE001 - any other failure must fail the unit, not skip it
+        # Exit code 1 would mean "local only, skip" to systemd; name only the error class.
+        print(f'server2 log collector: preparation failed ({type(exc).__name__}); the collector is not started',
+              file=sys.stderr)
         return 255
     import datetime
     now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')

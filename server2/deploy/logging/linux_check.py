@@ -137,6 +137,8 @@ def reset_host():
         systemctl('reset-failed', unit, check=False)
     # Rotate, then delete every archived file: the namespace keeps running and the
     # new active file is empty. (Restarting the namespace repeatedly trips its start limit.)
+    # The namespace daemon exits when idle; rotation needs it running.
+    systemctl('start', 'systemd-journald@server2.service', check=False)
     run('journalctl', '--namespace=server2', '--rotate', check=False)
     time.sleep(1.5)
     run('journalctl', '--namespace=server2', '--vacuum-time=1s', check=False)
@@ -276,6 +278,23 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
             entry['observations']['collector_rss_kib'] = int(re.search(r'VmHWM:\s+(\d+)', status).group(1))
             rendered = Path('/run/server2-logs/vector.json').read_text()
             check('rendered configuration holds no .env secret', SYNTHETIC not in rendered)
+    # Delivery while both units run (CX-LP1-003): the newest server record at or above
+    # each destination's level must arrive within the documented bound, before any stop.
+    bounds = {'s3': render.S3_BATCH_SECONDS + 10, 'cloudwatch': 10}
+    for destination, level in (('s3', s3_level), ('cloudwatch', cloudwatch_level)):
+        if destination not in sinks:
+            continue
+        wanted = [l for l in journal('server2.service') if server_record_level(l) is not None
+                  and render.LEVELS[server_record_level(l)] >= render.LEVELS[level]]
+        began, arrived = time.monotonic(), None
+        while wanted and time.monotonic() - began < bounds[destination] + 5:
+            if wanted[-1] in delivered(state)[0][destination]['server']:
+                arrived = round(time.monotonic() - began, 1)
+                break
+            time.sleep(0.5)
+        entry['observations'][f'{destination}_running_delivery_seconds'] = arrived
+        check(f'{destination} receives the newest record while running, within {bounds[destination]} s',
+              arrived is not None and arrived <= bounds[destination], str(arrived))
     # The server stops first. The pause lets the collector read the server's last
     # records: on SIGTERM Vector stops reading at once, so without it those records
     # stay local only. Shipping them at shutdown is LP-4 (#2981), not checked here.
@@ -325,8 +344,9 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     used = {(o['service'], o['action']) for o in operations}
     check('only the documented AWS actions were used', used <= allowed, str(sorted(used - allowed)))
     check('no object was overwritten', ('s3', 'Overwrite') not in used)
-    text = all_received_text(state) if state.exists() else ''
-    check('destinations hold no synthetic sensitive value', SYNTHETIC not in text)
+    # Every destination, the local journal included (GEM-LP1-003).
+    text = (all_received_text(state) if state.exists() else '') + '\n'.join(server_lines + collector_lines)
+    check('destinations, the local journal included, hold no synthetic sensitive value', SYNTHETIC not in text)
     if remote:
         names = set(vector_environ or {})
         file_names = set(server_env()) - set(render.ALLOWED)

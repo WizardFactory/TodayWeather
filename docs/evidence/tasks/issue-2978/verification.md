@@ -18,12 +18,12 @@ Selected evidence for [#2978](https://github.com/WizardFactory/TodayWeather/issu
 | CloudWatch Logs calls with health checks off | `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. |
 | S3 calls with health checks off | `PutObject` only, `Content-Encoding: gzip`. |
 | `journald` source `current_boot_only: false` | Rejected on systemd 255 ("not supported for systemd versions 250 through 257"). |
-| Collector peak resident set | 69.9–75.8 MiB (VmHWM; the three shipping scenarios in each of runs 5–8). |
-| Collector stop time after the server stopped | 0.068–0.237 s (runs 5–8), with up to 569 server journal lines. |
+| Collector peak resident set | 69.9–76.9 MiB (VmHWM; the three shipping scenarios in each of runs 5–8 and 11). |
+| Collector stop time after the server stopped | 0.016–0.237 s (runs 5–8 and 11), with up to 569 server journal lines. |
 
 ## Offline tests
 
-`python3 -I server2/deploy/logging/test_logging.py`: 19 tests, OK. Seeded defects in temporary copies were all detected: health check enabled, value echoed in the `SERVER2_LOG_SINKS` message, `create_missing_group` true, and the server unit requiring the collector.
+`python3 -I server2/deploy/logging/test_logging.py`: 22 tests, OK (19 before the review correction). Seeded defects in temporary copies were all detected: health check enabled, value echoed in the `SERVER2_LOG_SINKS` message, `create_missing_group` true, and the server unit requiring the collector.
 
 ## Integrated check
 
@@ -42,9 +42,11 @@ Earlier runs, retained as failures:
 | 2 | FAIL | `RestartPreventExitStatus` does not apply to the start condition → `Restart=on-abnormal`. S3 delivered nothing: the stand-in read the regional host name as a virtual-hosted bucket (stand-in defect). `LOG_NAMESPACE` from systemd missing from the test's allowed names. |
 | 3 | FAIL (crash) | Resetting the journal namespace by stopping its units tripped a start limit, so `server2.service` failed on its journal dependency (test harness defect) → rotate and vacuum instead. |
 | 4–7 | PASS (77 checks each) | Run 6 added a 300-request burst; run 7 ran on the first staged candidate. |
-| 8 | PASS (77 checks) | Final code bytes (only comments changed after run 7). |
+| 8 | PASS (77 checks) | First PR head `93577610` (only comments changed after run 7). |
+| 9 | FAIL (80 of 81) | After the review correction: the new running-delivery checks passed; the harness reset found old journal entries because the namespace daemon had exited while idle (test harness defect) → start it before rotating. |
+| 10, 11 | PASS (81 checks) | Run 11 adds the local journal to the secret check (GEM-LP1-003). |
 
-Run 8 (report SHA-256 `fa30d85ac86fc89e6f8134192164e420d4218769b3a1f325ef2f0171dbbbbb5f`):
+Run 11 on the corrected candidate repeats the run 8 results below with 81 checks: it adds a delivery check while both units run (S3 60.2 s and 59.8 s against the 70 s bound; CloudWatch 1.5 s and 0.0 s against 10 s, CX-LP1-003) and the local journal in the secret check. Run 8 (report SHA-256 `fa30d85ac86fc89e6f8134192164e420d4218769b3a1f325ef2f0171dbbbbb5f`):
 
 | Scenario | ACs | Checks | Observed |
 | --- | --- | --- | --- |
@@ -66,6 +68,16 @@ A separate manual flow on the installed VM: `install.sh`, `.env` with `local,s3,
 | Smoke 2 (log SHA-256 `67663f9a…`) | Server stopped, 2 s later the collector | S3 held exactly the journal's server records (16 `info`, 4 `warn`), CloudWatch the 4 `warn` records, including the shutdown records; no synthetic value anywhere. The journal still held smoke 1's records (the namespace vacuum ran while its journal daemon was stopped), and the collector, starting without a checkpoint, shipped those too. |
 
 Consequences, recorded in the guide's limits: shipping the final records at shutdown needs a drain step (LP-4, #2981); the empty S3 checkpoint means a restart resends that boot's records to S3 (LP-2, #2979).
+
+Smoke 3 after the review correction (log SHA-256 `6b194802…`): the `.env` line `SERVER2_LOG_SINKS` carried a leading byte order mark, which server2 reads as a setting (CX-LP1-001); delivery was journal-exact (8 `info` and 2 `warn` in S3, 2 `warn` in CloudWatch) and no synthetic value appeared in the stand-in, the rendered configuration or the journal.
+
+## Independent review
+
+| Reviewer | Head | Verdict | Findings and disposition |
+| --- | --- | --- | --- |
+| Codex `gpt-6.1-sol`, high (required, OpenAI) | `93577610` | CHANGES_REQUIRED | CX-LP1-001 (Required): `.env` parsing differed from server2 on ECMAScript whitespace and U+2028/U+2029 → ported `parse_line` exactly, Rust boundary cases added as tests. CX-LP1-002 (Required): non-setting errors exited 1, which systemd treats as a skip → every preparation failure exits 255, tests for manifest, identity and write failures. CX-LP1-003 (Recommended): delivery was only proven at shutdown → running-delivery check added. Red (`correction-red`: 1 failure, 4 errors) then Green (22 tests). |
+| Gemini 4 Argon high (additional) | `93577610` | PASS | GEM-LP1-001/002 equal CX-LP1-002/001. GEM-LP1-003 (Recommended): the secret check skipped the local journal → added. |
+| Grok 4.7 high (additional) | — | not completed | Stopped by its usage quota (HTTP 429, rolling 24 h) before returning findings; not retried. |
 
 ## Manual
 
