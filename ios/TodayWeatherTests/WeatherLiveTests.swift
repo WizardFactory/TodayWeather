@@ -88,6 +88,42 @@ struct WeatherLiveTests {
         #expect(await eventually { (f.screens.scope?.scrolls ?? 0) > applies + 1 })
     }
 
+    /// CODEX-IN08-3: a resize starts the visit again, so the charts open at today's position again (Cordova measures and
+    /// opens once per visit), also when the new visit's apply count equals the old one's.
+    @Test func aResizeBringsTheChartBackToToday() async throws {
+        let screen = CGSize(width: 1024, height: 1366)
+        let f = WeatherTabTests.Fixture(WeatherTabTests.byPlace(), screenSize: screen)
+        f.screens.handle(.launch)
+        #expect(await eventually { f.screens.scope?.currentWeather != nil && !f.screens.session.loadingSelected })
+        let first = CGSize(width: 678, height: 1032)
+        let w = try Window(Live(screens: f.screens, tab: .forecast), size: first)
+        defer { w.window.isHidden = true }
+        #expect(await eventually { f.screens.scope?.metrics.bodyWidth == Double(first.width) && w.chartScroll != nil })
+        try await Task.sleep(for: .milliseconds(500))
+        let scroll = try #require(w.chartScroll)
+        let end = scroll.contentSize.width - scroll.bounds.width
+        scroll.setContentOffset(CGPoint(x: end, y: 0), animated: false)
+        try await Task.sleep(for: .milliseconds(300))
+        let applies = try #require(f.screens.scope?.scrolls)
+
+        let second = CGSize(width: 320, height: 1032)
+        w.window.frame = CGRect(origin: .zero, size: second)
+        #expect(await eventually { f.screens.scope?.metrics.bodyWidth == Double(second.width) })
+        #expect(f.screens.scope?.scrolls == applies, "the new visit's apply count equals the old one's: the case to cover")
+        let opening = try #require(f.screens.pageContent?.hourly?.openingOffset)
+        // `scrollLeft` snapped to a whole point and limited by the content's end, as `OpeningScrollView` scrolls.
+        func expected() -> Double? {
+            guard let s = w.chartScroll else { return nil }
+            return min(OpeningScrollView<EmptyView>.scrollPosition(opening), max(0, s.contentSize.width - s.bounds.width))
+        }
+        let back = await eventually {
+            guard let x = w.chartScroll?.contentOffset.x, let target = expected() else { return false }
+            return abs(x - target) < 1.0 / 6
+        }
+        let x = w.chartScroll?.contentOffset.x ?? -1
+        #expect(back, "the chart opens at today's position \(expected() ?? -1) after the resize: \(x), the end was \(end)")
+    }
+
     /// CODEX-IN08-2: the page's sizes follow the window, as Cordova's `initSize` takes them from the WebView's area: one
     /// live window of an iPad screen resizes to Split View's third and half and to a small Stage Manager window, at
     /// `xxxLarge`. After each resize the sizes are the window's, the temperature with the sky image and every summary

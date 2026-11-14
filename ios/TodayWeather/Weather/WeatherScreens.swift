@@ -24,6 +24,8 @@ final class WeatherScreens {
     @ObservationIgnored private var visitTab: ShellTab?
     /// The session's `applyEvent` count the visit last applied (CODEX-IN08-1): only a new one applies the weather again.
     @ObservationIgnored private var appliedEvents = -1
+    /// Page visits opened so far: each is a new chart identity (CODEX-IN08-3).
+    private(set) var visits = 0
     @ObservationIgnored private var retryShown = false
     /// The window's size in points, for the chart and header sizes (`initSize`'s `bodyWidth` and `bodyHeight`; CODEX-IN08-2):
     /// the screen until the page reports its window, then the window as it is resized.
@@ -117,6 +119,7 @@ final class WeatherScreens {
         // No enabled place: Cordova opens the start choice O02 instead (IN-10).
         visit.open(selectedRecord(), enabledCount: enabled, hasPush: hasPush(state))
         appliedEvents = session.applies
+        visits += 1
         scope = visit
     }
 
@@ -178,7 +181,9 @@ final class WeatherScreens {
     var pageContent: WeatherPageContent? {
         guard let scope, let state = shell.holder.state else { return nil }
         let photo = scope.photo?.stringValue.flatMap { URL(string: $0) }
-        return WeatherPageContent(scope: scope, units: Self.units(state.units), texts: texts, photo: photo)
+        var content = WeatherPageContent(scope: scope, units: Self.units(state.units), texts: texts, photo: photo)
+        content.visit = visits
+        return content
     }
 
     /// What the shell shows on a weather tab: the place's title with the location glyph or the spinner, the bell and

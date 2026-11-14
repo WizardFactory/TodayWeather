@@ -12,6 +12,9 @@ struct WeatherPageContent {
     let daily: DailyChart?
     /// The visit's complete applies (`ForecastScope.scrolls`): each brings the charts back to today's position.
     var scrolls = 0
+    /// The page visit (`WeatherScreens` counts them): a new visit, also after a resize, is a new chart that opens at
+    /// today's position, whatever its apply count (CODEX-IN08-3).
+    var visit = 0
     var expanded = false
     /// The photo theme's picture of the place (`[photo-url]`), nil without one.
     var photo: URL? = nil
@@ -177,12 +180,14 @@ struct WeatherBlockView: View {
             } else {
                 HourlyChartView(chart: hourly, expanded: content.expanded, applyCount: content.scrolls, colors: colors.chart,
                                 onToggleExpanded: actions.toggleExpanded)
+                    .id(content.visit)
             }
         } else if content.type == .mid, let daily = content.daily {
             if let offset = chartOffset {
                 DailyChartFrame(chart: daily, offset: offset, colors: colors.chart)
             } else {
                 DailyChartView(chart: daily, applyCount: content.scrolls, colors: colors.chart)
+                    .id(content.visit)
             }
         }
     }
