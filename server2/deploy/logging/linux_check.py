@@ -237,7 +237,7 @@ def all_received_text(state):
     return '\n'.join(texts)
 
 
-def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level, burst=0):
+def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level, burst=0, timed=()):
     entry = report.scenario(name, criteria)
     check = lambda n, ok, d='': report.check(entry, n, ok, d)
     state = WORK / ('standin-' + name)
@@ -296,8 +296,11 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
                       and render.LEVELS[server_record_level(l)] >= render.LEVELS[level]]
             if wanted:
                 targets[destination] = wanted[-1]
+            elif destination in timed:
+                check(f'{destination} has a new record to time at level {level}', False, 'no record produced')
             else:
-                entry['observations'][f'{destination}_running_delivery_seconds'] = 'no new record at this level'
+                # Declared exclusion, e.g. CloudWatch at `error`: a request writes no error record.
+                entry['observations'][f'{destination}_running_delivery_seconds'] = 'excluded: no runtime record at this level'
         arrived = {}
         while len(arrived) < len(targets) and time.monotonic() - began < max(bounds.values()) + 5:
             received = delivered(state)[0]
@@ -305,6 +308,8 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
                 if destination not in arrived and line in received[destination]['server']:
                     arrived[destination] = round(time.monotonic() - began, 1)
             time.sleep(0.25)
+        for destination in set(timed) - set(remote_levels):
+            check(f'{destination} is selected for timing', False, 'timed destination not selected')
         for destination in targets:
             seconds = arrived.get(destination)
             entry['observations'][f'{destination}_running_delivery_seconds'] = seconds
@@ -418,9 +423,9 @@ def main():
     setup_tls_and_hosts()
     report = Report()
     delivery_scenario(report, 'local-only', ['AC1', 'AC2'], ['local'], 'info', 'warn')
-    delivery_scenario(report, 's3-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['s3'], 'info', 'warn')
-    delivery_scenario(report, 'cloudwatch-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['cloudwatch'], 'info', 'warn')
-    delivery_scenario(report, 'all-destinations', ['AC1', 'AC2', 'AC4', 'AC5'], ['local', 's3', 'cloudwatch'], 'debug', 'error', burst=300)
+    delivery_scenario(report, 's3-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['s3'], 'info', 'warn', timed=('s3',))
+    delivery_scenario(report, 'cloudwatch-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['cloudwatch'], 'info', 'warn', timed=('cloudwatch',))
+    delivery_scenario(report, 'all-destinations', ['AC1', 'AC2', 'AC4', 'AC5'], ['local', 's3', 'cloudwatch'], 'debug', 'error', burst=300, timed=('s3',))
     invalid_scenario(report, 'invalid-destination', dict(SERVER2_LOG_SINKS='s3,' + SYNTHETIC), 'SERVER2_LOG_SINKS', SYNTHETIC)
     invalid_scenario(report, 'invalid-level', dict(SERVER2_LOG_SINKS='cloudwatch', SERVER2_LOG_CLOUDWATCH_GROUP=GROUP,
                                                    SERVER2_LOG_CLOUDWATCH_LEVEL=SYNTHETIC), 'SERVER2_LOG_CLOUDWATCH_LEVEL', SYNTHETIC)

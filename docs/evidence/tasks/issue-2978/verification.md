@@ -47,8 +47,9 @@ Earlier runs, retained as failures:
 | 10, 11 | PASS (81 checks) | Run 11 adds the local journal to the secret check (GEM-LP1-003). |
 | 12 | PASS (79 checks) | Latency measured from one start before a new request, each destination watched independently (CX-LP1-005); in the all-destinations scenario the new request produced no record because the preceding burst had exhausted the server's own per-second rate limit. |
 | 13 | PASS (80 checks) | Waits 1.5 s before the measured request. |
+| 14 | PASS (80 checks) | Each scenario declares the destinations it must time; a missing measuring record fails (CX-LP1-006); CloudWatch at `error` is an explicit exclusion. |
 
-Run 13 on the final candidate repeats the run 8 results below and adds two kinds of check. A delivery check while both units run, timed from a new request and watched per destination: S3 58.5 s and 58.0 s against the 70 s bound, CloudWatch 1.0 s against 10 s (CX-LP1-003/005); CloudWatch at `error` gets no new runtime record, so it is not timed there. And the local journal in the secret check (GEM-LP1-003). Run 8 (report SHA-256 `fa30d85ac86fc89e6f8134192164e420d4218769b3a1f325ef2f0171dbbbbb5f`):
+Run 14 on the final candidate repeats the run 8 results below and adds two kinds of check. A delivery check while both units run, timed from a new request and watched per destination: S3 58.6 s and 58.3 s against the 70 s bound, CloudWatch 1.0 s against 10 s (CX-LP1-003/005/006); CloudWatch at `error` gets no new runtime record, a declared exclusion. And the local journal in the secret check (GEM-LP1-003). Run 8 (report SHA-256 `fa30d85ac86fc89e6f8134192164e420d4218769b3a1f325ef2f0171dbbbbb5f`):
 
 | Scenario | ACs | Checks | Observed |
 | --- | --- | --- | --- |
@@ -79,6 +80,7 @@ Smoke 3 after the review correction (log SHA-256 `6b194802…`): the `.env` line
 | --- | --- | --- | --- |
 | Codex `gpt-6.1-sol`, high (required, OpenAI) | `93577610` | CHANGES_REQUIRED | CX-LP1-001 (Required): `.env` parsing differed from server2 on ECMAScript whitespace and U+2028/U+2029 → ported `parse_line` exactly, Rust boundary cases added as tests. CX-LP1-002 (Required): non-setting errors exited 1, which systemd treats as a skip → every preparation failure exits 255, tests for manifest, identity and write failures. CX-LP1-003 (Recommended): delivery was only proven at shutdown → running-delivery check added. Red (`correction-red`: 1 failure, 4 errors) then Green (22 tests). |
 | Codex, same context (round 2) | `0b13be88` | PASS | All round-1 findings resolved (it also compared 784 `.env` cases with server2's rules). CX-LP1-004 (Recommended): on macOS the write-failure case had failed on the missing `/etc/machine-id`, not on the write → the case fixes the host identity and asserts the write was attempted; with the 255 handler removed it now fails on the injected ENOSPC (`correction2-control`). CX-LP1-005 (Recommended): latency was timed per destination in sequence → one start per request, destinations watched independently. |
+| Codex, same context (round 3) | `af99465d` | PASS | CX-LP1-004/005 resolved (a 30-second CloudWatch delay now fails). CX-LP1-006 (Recommended): a missing measuring record skipped the timing → timed destinations are declared per scenario and a missing record fails. |
 | Gemini 4 Argon high (additional) | `93577610` | PASS | GEM-LP1-001/002 equal CX-LP1-002/001. GEM-LP1-003 (Recommended): the secret check skipped the local journal → added. |
 | Grok 4.7 high (additional) | — | not completed | Stopped by its usage quota (HTTP 429, rolling 24 h) before returning findings; not retried. |
 
