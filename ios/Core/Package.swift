@@ -17,7 +17,7 @@ let package = Package(
     targets: [
         .target(name: "TWModel"),
         .target(name: "TWDomain", dependencies: ["TWModel"]),
-        .target(name: "TWData", dependencies: ["TWModel", "TWDomain"]),
+        .target(name: "TWData", dependencies: ["TWModel", "TWDomain", "TWStorage"]),
         .target(name: "TWStorage", dependencies: ["TWModel"]),
         // Images, translations, the town list and fonts copied from client/ by ios/tools/import_client_assets.py.
         // `.copy` keeps the directory tree and the bytes, so the provenance hashes hold in the built bundle.
@@ -28,15 +28,20 @@ let package = Package(
         // The Cordova migration rules and readers, with a fixture of each storage layout.
         .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
+        // The weather requests, retries, timeouts, late responses and the refresh gate and timer on a virtual clock
+        // (IN-08). Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py.
+        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel", "TWDomain"],
+                    resources: [.copy("Golden")]),
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
         // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by
         // ios/tools/corpus/compare_jsc.py; for those the iOS expectation is the JavaScriptCore output. The yesterday
         // texts come from the imported catalogs in TWResources, as the app reads them. ChartReference: the Cordova chart
         // scenes, copied from android/ by ios/tools/import_chart_reference.py and captured on iOS Simulators by
         // ios/tools/chart-reference. ShellReference: how the Cordova iOS WebView reports the system languages, recorded by
-        // ios/tools/shell-reference (IN-07).
+        // ios/tools/shell-reference (IN-07). ForecastReference: every element of the Cordova iOS weather pages, captured by
+        // ios/tools/forecast-reference (IN-08).
         .testTarget(name: "TWDomainTests", dependencies: ["TWDomain", "TWModel", "TWResources"],
                     resources: [.copy("Corpus"), .copy("JavaScriptCore"), .copy("ChartReference"),
-                                .copy("ShellReference")]),
+                                .copy("ShellReference"), .copy("ForecastReference")]),
     ]
 )
