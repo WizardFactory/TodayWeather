@@ -13,14 +13,13 @@ public protocol PushLogStore: Sendable {
     func entries() throws -> [PushReplacementLog.Entry]
     func append(old: String?, new: String) throws -> PushReplacementLog.Entry
     func acknowledge(_ id: Int) throws
-    func reopen(_ ids: Set<Int>) throws
 }
 
 extension AppStateStore: PushStateStore {}
 
 extension PushReplacementLog: PushLogStore {}
 
-/// The Cordova `Push` service's timeline on one actor (IN-04, #2953; review rounds 1–4).
+/// The Cordova `Push` service's timeline on one actor (IN-04, #2953; review rounds 1–8).
 ///
 /// Every event (the process start, the open, a token that arrived, the list post 3 seconds after the open, a reply)
 /// is handled on this actor, from reading the state to starting the requests, without suspending, so events never
@@ -30,12 +29,17 @@ extension PushReplacementLog: PushLogStore {}
 /// Token replacements go through the replacement log: when the Cordova code would send `PUT /push`, an entry
 /// `{id, old, new}` is appended first, then the state takes `new`, then the request starts; its reply, success or
 /// failure (Cordova does not retry), acknowledges that `id`. Every event first sets the state's token to the last
-/// entry's `new` when they differ. At the process start and at the open, the entries not sent by this process are
-/// replayed strictly one after another in `id` order (the next starts when the previous reply arrived), an entry
-/// without `old` followed by the list post with its token, so the server applies the hops in order. While the replay
-/// runs, or while entries wait that this process has not sent (the replay could not start, e.g. a failed write), new
-/// replacements are appended and sent by the replay in turn, and a list post that falls due waits until the entries
-/// were sent (CODEX-IN04-11).
+/// entry's `new` when they differ.
+///
+/// Entries this process did not send were left by an earlier one: their requests may have reached the server, in
+/// part or not at all. They are recovered without sending a replacement again (review round 8, CODEX-IN04-12): the
+/// legacy Mongo store keeps a document that a `PUT` moves onto a key another document already has, so a replacement
+/// that reaches the server after a list post of its new token leaves two documents per record. Recovery posts the
+/// list with the newest token (an upsert: one document per record under it) and, once that post succeeded, deletes
+/// the documents of every other token the entries name (`DELETE /push {fcmToken}`), then acknowledges the entries;
+/// when a request of it does not succeed, the entries stay for the next process.
+/// While a recovery runs, or while entries wait that this process has not sent, new replacements are appended and
+/// recovered in turn, and a list post that falls due waits until the entries were recovered (CODEX-IN04-11).
 /// A failed read or write ends the event; the next event or start completes it. `context` returns nil when no request
 /// can be built (no server URL or `Device-Id`): nothing is sent or stored then, and the log waits.
 public actor PushSync {
@@ -52,14 +56,18 @@ public actor PushSync {
     private let repostDelay: Duration
     private let timer: @Sendable (Duration) -> @Sendable () async -> Void
 
-    /// Log entries this process sent (new or replayed); one process never sends an entry twice.
+    /// Log entries this process sent or recovered; one process never handles an entry twice.
     private var sentHere: Set<Int> = []
-    /// Tasks waiting for replies of replacements sent outside a replay, owned by this actor.
+    /// Recovered entries whose recovery did not succeed: the server may hold documents under the newest and under an
+    /// older token, so while one is in the log no replacement is sent (it would move documents onto a token that may
+    /// already hold them); new tokens are recovered instead (CODEX-IN04-12). The next process recovers them again.
+    private var unconfirmed: Set<Int> = []
+    /// Tasks waiting for replies of replacements sent outside a recovery, owned by this actor.
     private var replyWatchers: [UUID: Task<Void, Never>] = [:]
-    /// The replay of left entries, owned by this actor; nil when none runs.
-    private var replay: Task<Void, Never>?
-    /// A list post fell due during the replay.
-    private var postAfterReplay = false
+    /// The recovery of left entries, owned by this actor; nil when none runs.
+    private var recovery: Task<Void, Never>?
+    /// A list post fell due during the recovery.
+    private var postAfterRecovery = false
     /// Token observations handled so far (the token callback, the open's token): a provider value read while another
     /// observation was handled is older than it and is dropped (CODEX-IN04-8).
     private var observations = 0
@@ -67,7 +75,7 @@ public actor PushSync {
     public private(set) var openStarts = 0
     public private(set) var reposts = 0
     public var pendingReplies: Int { replyWatchers.count }
-    public var isReplaying: Bool { replay != nil }
+    public var isRecovering: Bool { recovery != nil }
 
     public init(store: any PushStateStore, log: any PushLogStore, transport: any PushTransport,
                 repostDelay: Duration = .seconds(3),
@@ -92,14 +100,14 @@ public actor PushSync {
 
     // MARK: - Events
 
-    /// The process started (in the foreground or the background): the entries an earlier process left are replayed.
+    /// The process started (in the foreground or the background): the entries an earlier process left are recovered.
     public func start() {
         guard reconciled() != nil else { return }
         recover()
     }
 
     /// A token FCM delivered while the app runs: the Cordova token callback. Returns the requests it started (none
-    /// while a replay runs: the replay sends them in turn).
+    /// while entries wait for a recovery: the recovery handles it in turn).
     @discardableResult
     public func tokenArrived(_ token: String) -> [PushRequest] {
         // A blank token is ignored by the callback, so it is no observation (CODEX-IN04-10).
@@ -110,9 +118,9 @@ public actor PushSync {
     }
 
     /// The Cordova `Push.init` when the app is opened. The list post is due `repostDelay` from now (its
-    /// `setTimeout`). At once: the replay of left entries, then the repair and the token callback for `token` (the
+    /// `setTimeout`). At once: the recovery of left entries, then the repair and the token callback for `token` (the
     /// current FCM token, if one is known). When the post is due: the list with the state's token, when there is one
-    /// (after the replay, if one runs). Returns, once their replies arrived, the requests of the open and of its post
+    /// (after the recovery, if one runs). Returns, once their replies arrived, the requests of the open and of its post
     /// that it started itself; nil when no request can be built.
     ///
     /// The token is read from `token` (the SDK's current token) while the actor runs other events. A token the callback
@@ -140,10 +148,10 @@ public actor PushSync {
 
     // MARK: - Steps (no suspension)
 
-    /// `_postPushList(pushList)` with the token current now; after the replay when entries wait (CODEX-IN04-11).
+    /// `_postPushList(pushList)` with the token current now; after the recovery when entries wait (CODEX-IN04-11).
     private func postList() -> [(PushRequest, PushReply)] {
         if !inOrder() {
-            postAfterReplay = true
+            postAfterRecovery = true
             recover()
             return []
         }
@@ -165,14 +173,15 @@ public actor PushSync {
     }
 
     /// The Cordova token callback for `token`: log, state, then the requests (the replacement, and the list for a first
-    /// token); while a replay runs, only log and state (the replay sends it).
+    /// token); while entries wait for a recovery, only log and state (the recovery handles it).
     private func replace(_ token: String, state: AppState, ctx: PushRegistration.Context) -> [(PushRequest, PushReply)] {
         let result = PushRegistration.onTokenRefresh(state.push, places: state.places, token: token, context: ctx)
         guard let put = result.requests.first, put.method == "PUT",
               let entry = try? log.append(old: state.push.fcmToken, new: token), storeToken(token) else { return [] }
-        // Sent here only when every entry before it was sent by this process; otherwise the replay sends it after
-        // them (also when the replay could not start yet: the next event starts it, CODEX-IN04-11).
-        if !inOrder(except: entry.id) {
+        // Sent here only when every entry before it was handled by this process and no recovery is unconfirmed;
+        // otherwise a recovery handles it (also when the recovery could not start yet: the next event starts it,
+        // CODEX-IN04-11, -12).
+        if !inOrder(except: entry.id) || hasUnconfirmed() {
             recover()
             return []
         }
@@ -193,54 +202,77 @@ public actor PushSync {
         try? log.acknowledge(entry)
     }
 
-    /// No replay runs and every entry in the log (but `id`) was sent by this process: only then is a new replacement
+    /// No recovery runs and every entry in the log (but `id`) was handled by this process: only then is a new replacement
     /// or a list post sent at once, so no hop overtakes one that waits (CODEX-IN04-11). False when the log cannot be
     /// read.
     private func inOrder(except id: Int? = nil) -> Bool {
-        guard replay == nil, let entries = try? log.entries() else { return false }
+        guard recovery == nil, let entries = try? log.entries() else { return false }
         return entries.allSatisfy { $0.id == id || sentHere.contains($0.id) }
     }
 
-    /// Starts the replay when entries wait that this process has not sent.
-    private func recover() {
-        guard replay == nil, let entries = try? log.entries() else { return }
-        let waiting = Set(entries.map(\.id).filter { !sentHere.contains($0) })
-        // Each waiting entry is applied again, also one an earlier process saw answered behind an unanswered one,
-        // so none may leave the log before its replay was answered.
-        guard !waiting.isEmpty, (try? log.reopen(waiting)) != nil else { return }
-        replay = Task { await self.replayEntries() }
+    /// An entry whose recovery did not succeed is still in the log (false when the log cannot be read).
+    private func hasUnconfirmed() -> Bool {
+        guard let entries = try? log.entries() else { return true }
+        return entries.contains { unconfirmed.contains($0.id) }
     }
 
-    /// Sends the waiting entries one after another in `id` order, each as one unit: the replacement and, for an entry
-    /// without `old` (nil or "", `PushRegistration.isFirst`), the list post with its token (Cordova's first-token path). A unit is complete when all its
-    /// requests replied; then its entry is acknowledged and the next unit starts (CODEX-IN04-4). Then the list post
-    /// that fell due meanwhile.
-    private func replayEntries() async {
-        while let next = nextToReplay() {
-            for reply in next.replies { _ = await reply.status }
-            try? log.acknowledge(next.entry)
+    /// Starts the recovery when entries wait that this process has not sent.
+    private func recover() {
+        guard recovery == nil, let entries = try? log.entries(),
+              entries.contains(where: { !sentHere.contains($0.id) }) else { return }
+        recovery = Task { await self.recoverEntries() }
+    }
+
+    /// Recovers the waiting entries, and those appended meanwhile, in rounds: the list post with the newest token;
+    /// when it succeeded (2xx), one `DELETE /push` per other token the entries name; when every request of the round
+    /// succeeded, the entries are acknowledged. Otherwise nothing more is sent (no removal without a confirmed post:
+    /// the records may still be only under an older token) and the entries stay for the next process, whose start
+    /// recovers them again (posting and removing again change nothing that was already applied). A post that fell
+    /// due meanwhile goes out after the recovery.
+    private func recoverEntries() async {
+        while let round = nextRecovery() {
+            var succeeded = await Self.allSucceeded(round.post)
+            if succeeded {
+                succeeded = await Self.allSucceeded(start(round.removals))
+            }
+            if succeeded {
+                for id in round.entries { try? log.acknowledge(id) }
+            } else {
+                unconfirmed.formUnion(round.entries)
+            }
         }
-        replay = nil
-        // A post that fell due goes out once the entries are sent; while some wait (the replay stopped on a failed
-        // read), it waits for the next event, which starts the replay again.
-        if postAfterReplay && inOrder() {
-            postAfterReplay = false
+        recovery = nil
+        if postAfterRecovery && inOrder() {
+            postAfterRecovery = false
             _ = postList()
         }
     }
 
-    private func nextToReplay() -> (entry: Int, replies: [PushReply])? {
-        guard let (state, ctx) = reconciled(),
-              let entry = (try? log.entries())?.first(where: { !sentHere.contains($0.id) }) else { return nil }
-        sentHere.insert(entry.id)
-        var replies = [transport.start(PushRegistration.replacement(entry.new, over: entry.old, context: ctx))]
-        if PushRegistration.isFirst(over: entry.old) {
-            var push = state.push
-            push.fcmToken = entry.new
-            replies += start(PushRegistration.onStart(push, places: state.places, token: nil, context: ctx).requests)
-                .map(\.1)
+    private static func allSucceeded(_ started: [(PushRequest, PushReply)]) async -> Bool {
+        var all = true
+        for (_, reply) in started {
+            let status = await reply.status
+            if !(status.map { (200..<300).contains($0) } ?? false) { all = false }
         }
-        return (entry.id, replies)
+        return all
+    }
+
+    /// Starts the next recovery round over the entries this process has not handled: their ids, the started list
+    /// post with the newest token (none without records) and the removals of the other tokens they name.
+    private func nextRecovery() -> (entries: [Int], post: [(PushRequest, PushReply)], removals: [PushRequest])? {
+        guard let (state, ctx) = reconciled(), let entries = try? log.entries() else { return nil }
+        let waiting = entries.filter { !sentHere.contains($0.id) }
+        guard !waiting.isEmpty else { return nil }
+        sentHere.formUnion(waiting.map(\.id))
+        let newest = state.push.fcmToken
+        var others: [String] = []
+        for token in waiting.flatMap({ [$0.old, $0.new] }).compactMap({ $0 })
+        where PushRegistration.accepts(token) && !JSString.equal(token, newest ?? "")
+            && !others.contains(where: { JSString.equal($0, token) }) {
+            others.append(token)
+        }
+        let post = start(PushRegistration.onStart(state.push, places: state.places, token: nil, context: ctx).requests)
+        return (waiting.map(\.id), post, others.map { PushRegistration.removal(of: $0, context: ctx) })
     }
 
     private func start(_ requests: [PushRequest]) -> [(PushRequest, PushReply)] {

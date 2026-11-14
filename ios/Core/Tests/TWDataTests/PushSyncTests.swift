@@ -138,10 +138,10 @@ struct PushSyncTests {
         #expect(await eventually { await sync.pendingReplies == 0 })
     }
 
-    /// The process start sends again, in `id` order, every entry an earlier process left, each with its own tokens,
-    /// one at a time (the next when the previous reply arrived); a second start of the same process sends nothing
-    /// again.
-    @Test func theProcessStartReplaysTheLeftEntriesOneAtATime() async throws {
+    /// The process start recovers the entries an earlier process left: the list post with the newest token, then
+    /// (after it succeeded) the removal of the other tokens they name; a second start of the same process sends
+    /// nothing again.
+    @Test func theProcessStartRecoversTheLeftEntries() async throws {
         let files = Files()
         try files.seed(token: "token-c")
         try files.log.append(old: "token-a", new: "token-b")
@@ -152,12 +152,42 @@ struct PushSyncTests {
         await sync.start()
         #expect(await eventually { transport.requests.count == 1 })
         try await Task.sleep(for: .milliseconds(50))
-        #expect(transport.requests.map(replacement) == [["token-b", "token-a"]])
+        #expect(transport.requests.map(\.method) == ["POST"])
         transport.answerAll(200)
-        #expect(await eventually { transport.requests.count == 2 })
-        #expect(transport.requests.map(replacement) == [["token-b", "token-a"], ["token-c", "token-b"]])
+        #expect(await eventually { transport.requests.count == 3 })
+        #expect(transport.requests.dropFirst().map { $0.body["fcmToken"]?.stringValue } == ["token-a", "token-b"])
+        #expect(transport.requests.dropFirst().allSatisfy { $0.method == "DELETE" })
         transport.answerAll(200)
-        #expect(await eventually { await !sync.isReplaying })
+        #expect(await eventually { await !sync.isRecovering })
         #expect(files.logEntries.isEmpty)
+    }
+
+    /// A recovery whose list post fails removes nothing (the records may still be only under an older token) and
+    /// keeps the entries for the next process, which recovers them again.
+    @Test func aFailedRecoveryPostRemovesNothing() async throws {
+        let files = Files()
+        try files.seed(token: "token-c")
+        try files.log.append(old: "token-b", new: "token-c")
+        let transport = HangingTransport()
+        let sync = files.sync(transport)
+        await sync.start()
+        #expect(await eventually { transport.requests.count == 1 })
+        transport.answerAll(500)
+        #expect(await eventually { await !sync.isRecovering })
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(transport.requests.map(\.method) == ["POST"])
+        #expect(files.logEntries.count == 1, "kept for the next process")
+        await sync.start()
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(transport.requests.count == 1, "not again in the same process")
+        let next = HangingTransport()
+        let second = files.sync(next)
+        await second.start()
+        #expect(await eventually { next.requests.count == 1 })
+        next.answerAll(200)
+        #expect(await eventually { next.requests.count == 2 })
+        #expect(next.requests.map(\.method) == ["POST", "DELETE"])
+        next.answerAll(200)
+        #expect(await eventually { files.logEntries.isEmpty })
     }
 }

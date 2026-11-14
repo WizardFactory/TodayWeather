@@ -45,6 +45,20 @@ final class FIFONetwork: @unchecked Sendable {
     var isIdle: Bool { unapplied.isEmpty && unreplied.isEmpty }
     var requests: [PushRequest] { lock.withLock { sent.map(\.request) } }
 
+    /// Every request as `pN METHOD token → status` (applied), `→ lost` or `→ waiting`, for a failure's trace.
+    var log: [String] {
+        lock.withLock {
+            sent.map { s in
+                let r = s.request
+                let token = r.method == "POST" ? r.body[0]?["fcmToken"]?.stringValue
+                    : (r.body["newToken"]?.stringValue).map { n in "\(r.body["oldToken"]?.stringValue ?? "null")→\(n)" }
+                    ?? r.body["fcmToken"]?.stringValue
+                let fate = s.applied ? "\(s.status.map(String.init) ?? "?")" : s.lost ? "lost" : "waiting"
+                return "p\(s.process) \(r.method) \(token ?? "-") → \(fate)"
+            }
+        }
+    }
+
     /// The server applies the oldest request it has not applied.
     @discardableResult
     func applyNext() -> Bool {
@@ -139,7 +153,7 @@ final class Flag: @unchecked Sendable {
 }
 
 /// The property test over every event source (IN-04 review rounds 5–6): token changes and their callbacks at any time
-/// (also during the open's token read and during a replay), a launch with or without FCM's callback, blank callbacks
+/// (also during the open's token read and during a recovery), a launch with or without FCM's callback, blank callbacks
 /// and reads (ignored by Cordova), single failed reads and writes of the state and the log in a process that goes on,
 /// the open's read latency, first tokens over nil or "" and replacements,
 /// replies in any order (lost ones and the 403 of a replacement without an old token), and process ends at any
@@ -160,7 +174,7 @@ struct PushPropertyTests {
     static func settle(_ sync: PushSync) async {
         for _ in 0..<4 {
             await Task.yield()
-            _ = await sync.isReplaying
+            _ = await sync.isRecovering
         }
         try? await Task.sleep(for: .milliseconds(1))
     }
@@ -187,7 +201,7 @@ struct PushPropertyTests {
             let last = p == total - 1
             // Single reads and writes of the state and the log may fail while the process goes on (CODEX-IN04-11);
             // in the last process only before it runs until nothing moves. A last process that had such failures
-            // is followed by one more launch without them (the next start replays what waits).
+            // is followed by one more launch without them (the next start recovers what waits).
             let failureRate = p < processes ? [0, 10, 25, 50].randomElement(using: &rng)! : 0
             let failing: Set<Int> = Set((1...200).filter { _ in Int.random(in: 0..<100, using: &rng) < failureRate })
             let endAt = Int.random(in: 1...80, using: &rng)
@@ -228,6 +242,7 @@ struct PushPropertyTests {
                 _ = await eventually(seconds: 2) { r.isWaiting || openDone.isSet }
                 trace.append("p\(p): open, reading the token")
             }
+            trace.append("p\(p): log \(files.logEntries.map { "\($0.id):\($0.old ?? "-")→\($0.new)\($0.acked ? " acked" : "")" }), state \(files.storedToken ?? "nil")")
             await sync.start()
             trace.append("p\(p): start (opens: \(opens), launch callback: \(launchCallback))")
             for _ in 0..<Int.random(in: 6...28, using: &rng) where !end.hasEnded {
@@ -298,19 +313,23 @@ struct PushPropertyTests {
                 now += .seconds(10)
                 clock.advance(to: now)
                 while network.applyNext() {}
+                // A launch added to complete what was left gets every reply.
                 for i in network.unreplied {
-                    network.reply(i, delivered: Int.random(in: 0..<5, using: &rng) > 0)
+                    network.reply(i, delivered: p >= processes || Int.random(in: 0..<5, using: &rng) > 0)
                 }
                 await Self.settle(sync)
-                let replaying = await sync.isReplaying
+                let recovering = await sync.isRecovering
                 let replies = await sync.pendingReplies
-                if network.isIdle, !replaying, replies == 0, openTask == nil || openDone.isSet { break }
+                if network.isIdle, !recovering, replies == 0, openTask == nil || openDone.isSet { break }
             }
             if let openTask { _ = await openTask.value }
-            if end.transientFailures > 0 && p < processes {
+            // A last process that had single failures, or that leaves entries for the next start (a recovery
+            // request that did not succeed), is followed by one more launch (at most four more in all).
+            let leaves = !files.logEntries.isEmpty
+            if (end.transientFailures > 0 || leaves) && total < processes + 4 {
                 end.endNow()
                 network.end(p, applying: 0)
-                trace.append("p\(p): ends after \(end.transientFailures) failed alone; one more launch follows")
+                trace.append("p\(p): ends after \(end.transientFailures) failed alone\(leaves ? ", leaving the log" : ""); one more launch follows")
                 total += 1
             }
         }
@@ -327,6 +346,7 @@ struct PushPropertyTests {
         if files.storedToken != expected {
             failures.append("state token \(files.storedToken ?? "nil"), expected \(expected ?? "nil")")
         }
+        if !failures.isEmpty { trace += ["requests:"] + network.log }
         return Outcome(seed: seed, failures: failures, raceDuringOpenRead: race,
                        firstTokenPostLost: network.firstTokenPostLostAfterItsReplacement, trace: trace)
     }

@@ -7,7 +7,7 @@ import TWStorage
 
 /// One operation on a dependency of `PushSync`.
 enum Operation: Equatable, Sendable {
-    case load, save, entries, append, acknowledge, reopen
+    case load, save, entries, append, acknowledge
     case send(String)
 }
 
@@ -94,11 +94,6 @@ struct EndingLog: PushLogStore {
     func acknowledge(_ id: Int) throws {
         guard end.allow(.acknowledge) else { throw ProcessEnded() }
         try inner.acknowledge(id)
-    }
-
-    func reopen(_ ids: Set<Int>) throws {
-        guard end.allow(.reopen) else { throw ProcessEnded() }
-        try inner.reopen(ids)
     }
 }
 

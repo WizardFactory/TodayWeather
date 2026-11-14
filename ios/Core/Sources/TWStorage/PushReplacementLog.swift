@@ -6,14 +6,12 @@ import TWModel
 /// `{"nextId":N,"dropped":K,"entries":[{"id":1,"old":"…"|null,"new":"…","acked":false}]}`, replaced atomically on every
 /// change.
 ///
-/// The legacy server keys a record by `(type, cityIndex, id, fcmToken)`, `PUT /push` rewrites the records of the old
-/// token and `POST /push-list` upserts by that key, so a lost replacement is not healed by a list post, while
-/// replaying the hops in order changes nothing already applied. An entry is appended when the Cordova code would send
-/// the `PUT` (`old` nil for a first token), before the request starts; the app state's token is the last entry's `new`.
-/// A reply (success or failure) acknowledges exactly its entry's `id`; entries leave the log only as an acknowledged
-/// prefix, so the entries left are always a suffix of the hops sent, ending with the newest, and replaying all of them in
-/// `id` order brings the server's records to the last `new`. At most `capacity` entries are kept: beyond that the
-/// oldest is dropped and counted in `dropped`.
+/// An entry is appended when the Cordova code would send `PUT /push` (`old` nil or "" for a first token), before the
+/// request starts; the app state's token is the last entry's `new`. A reply (success or failure) acknowledges exactly
+/// its entry's `id`; entries leave the log only as an acknowledged prefix, so the entries left are a suffix of the
+/// replacements sent, ending with the newest. Entries an earlier process left are recovered by `PushSync` (the list
+/// with the newest token, then the removal of the other tokens they name; review round 8, CODEX-IN04-12). At most
+/// `capacity` entries are kept: beyond that the oldest is dropped and counted in `dropped`.
 public final class PushReplacementLog: @unchecked Sendable {
     public struct Entry: Hashable, Sendable {
         public let id: Int
@@ -92,17 +90,6 @@ public final class PushReplacementLog: @unchecked Sendable {
             let e = c.entries[i]
             c.entries[i] = Entry(id: e.id, old: e.old, new: e.new, acked: true)
             while let first = c.entries.first, first.acked { c.entries.removeFirst() }
-            try write(c)
-        }
-    }
-
-    /// Clears the acknowledgement of the entries `ids` (a new process replays them all again: an entry an earlier
-    /// process saw answered behind an unanswered one must be applied again after it).
-    public func reopen(_ ids: Set<Int>) throws {
-        try Self.lock.withLock {
-            var c = try read()
-            guard c.entries.contains(where: { ids.contains($0.id) && $0.acked }) else { return }
-            c.entries = c.entries.map { ids.contains($0.id) ? Entry(id: $0.id, old: $0.old, new: $0.new) : $0 }
             try write(c)
         }
     }

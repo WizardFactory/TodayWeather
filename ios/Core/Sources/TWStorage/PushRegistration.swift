@@ -95,6 +95,14 @@ public enum PushRegistration {
                     body: .object(JSONObject([("newToken", .string(token)), ("oldToken", old.map(JSONValue.string) ?? .null)])))
     }
 
+    /// `DELETE /push {fcmToken}`: removes every alarm and alert document of `token` (the legacy route without
+    /// `cityIndex` removes all of the token's documents; `_deletePushInfo` sends the same request with a `cityIndex`
+    /// when a place is removed). Used by the recovery for tokens the app replaced (CODEX-IN04-12).
+    public static func removal(of token: String, context: Context) -> PushRequest {
+        PushRequest(method: "DELETE", path: context.versionPath + "/push", headers: headers(context, language: false),
+                    body: .object(JSONObject([("fcmToken", .string(token))])))
+    }
+
     /// `_postPushList(pushList)` with a token.
     public static func postList(_ state: PushState, context: Context) -> PushRequest {
         PushRequest(method: "POST", path: context.versionPath + "/push-list", headers: headers(context, language: true),

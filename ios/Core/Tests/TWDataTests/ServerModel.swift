@@ -3,10 +3,13 @@ import TWData
 import TWModel
 import TWStorage
 
-/// The legacy push store as far as push registration touches it (IN-04 review, CODEX-IN04-4..6): records keyed by
-/// `(type, cityIndex, id, fcmToken)` (server/lib/pushStore/mongo.js `keyQuery`, the SQLite `rec_key`);
-/// `PUT /push {newToken, oldToken}` rewrites every record of the old token (`updateToken`; 403 without an old token,
-/// routePushNotification.js), keeping one record when two collide; `POST /push-list` upserts each record by its key.
+/// The legacy Mongo push store as far as push registration touches it (IN-04 review, CODEX-IN04-4..6, -12): documents
+/// with the key `(type, cityIndex, id, fcmToken)` (server/lib/pushStore/mongo.js `keyQuery`); `PUT /push {newToken,
+/// oldToken}` sets the token of every document of the old token (`updateToken`, `update` with `multi: true`; 403
+/// without an old token, routePushNotification.js), so a document moved onto a key that another document already has
+/// stays beside it (two documents, two notifications; `removeDuplicateAlarms` skips FCM-only documents); `POST
+/// /push-list` upserts each record (`update(keyQuery, doc, {upsert: true})`: the first document with the key, or a new
+/// one); `DELETE /push {fcmToken}` without `cityIndex` removes every document of the token.
 final class ServerModel: @unchecked Sendable {
     struct Key: Hashable, CustomStringConvertible {
         let type: String
@@ -17,12 +20,13 @@ final class ServerModel: @unchecked Sendable {
     }
 
     private let lock = NSLock()
-    private var store: [Key: String] = [:]
+    private var documents: [(key: Key, value: String)] = []
 
-    var keys: Set<Key> { lock.withLock { Set(store.keys) } }
+    /// The documents' keys, each once per document (a duplicate appears twice).
+    var keys: [Key] { lock.withLock { documents.map(\.key) } }
     var tokens: Set<String> { Set(keys.map(\.token)) }
 
-    /// The records as `type/cityIndex/id`, each once per token it is held under.
+    /// The documents as `type/cityIndex/id`, one entry per document.
     var records: [String] { keys.map { "\($0.type)/\($0.cityIndex)/\($0.id)" }.sorted() }
 
     @discardableResult
@@ -32,9 +36,9 @@ final class ServerModel: @unchecked Sendable {
             case ("PUT", "/v000903/push"):
                 guard let new = request.body["newToken"]?.stringValue, let old = request.body["oldToken"]?.stringValue,
                       !new.isEmpty, !old.isEmpty else { return 403 }
-                for key in store.keys where key.token == old {
-                    let value = store.removeValue(forKey: key)!
-                    store[Key(type: key.type, cityIndex: key.cityIndex, id: key.id, token: new)] = value
+                for i in documents.indices where documents[i].key.token == old {
+                    let key = documents[i].key
+                    documents[i].key = Key(type: key.type, cityIndex: key.cityIndex, id: key.id, token: new)
                 }
                 return 200
             case ("POST", "/v000903/push-list"):
@@ -42,8 +46,17 @@ final class ServerModel: @unchecked Sendable {
                     guard let token = record["fcmToken"]?.stringValue else { continue }
                     let key = Key(type: record["type"]?.stringValue ?? "", cityIndex: record["cityIndex"]?.jsonText ?? "",
                                   id: record["id"]?.jsonText ?? "", token: token)
-                    store[key] = record.jsonText
+                    if let i = documents.firstIndex(where: { $0.key == key }) {
+                        documents[i].value = record.jsonText
+                    } else {
+                        documents.append((key, record.jsonText))
+                    }
                 }
+                return 200
+            case ("DELETE", "/v000903/push"):
+                // Without `cityIndex`: every document of the token (`removeWithResult`, `tokenQuery`).
+                guard let token = request.body["fcmToken"]?.stringValue, !token.isEmpty else { return 403 }
+                documents.removeAll { $0.key.token == token }
                 return 200
             default:
                 return 404
@@ -143,9 +156,9 @@ func pump(_ transport: DeliveredServerTransport, _ sync: PushSync,
     for _ in 0..<1000 {
         let settled = await eventually {
             if !transport.pending.isEmpty { return true }
-            let replaying = await sync.isReplaying
+            let recovering = await sync.isRecovering
             let replies = await sync.pendingReplies
-            return !replaying && replies == 0
+            return !recovering && replies == 0
         }
         guard settled else { return false }
         let pending = transport.pending
