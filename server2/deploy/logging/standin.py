@@ -11,7 +11,8 @@ bodies with chunk signatures or trailing checksums.
 CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
-Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503.
+Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
+while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds.
 """
 import argparse
 import json
@@ -84,7 +85,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
     def record(self, service, action, **fields):
-        entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')), **fields)
+        credential = re.search(r'Credential=([A-Z0-9]+)/', self.headers.get('Authorization', ''))
+        entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')),
+                     key_id=credential.group(1) if credential else None, **fields)
         with self.server.lock:
             with open(self.server.state / 'operations.jsonl', 'a') as f:
                 f.write(json.dumps(entry, sort_keys=True) + '\n')
@@ -157,6 +160,13 @@ class Handler(BaseHTTPRequestHandler):
             temporary = target.with_name('.' + target.name + '.tmp')  # readers never see a partial object
             temporary.write_bytes(body)
             temporary.replace(target)
+        # Test fault: while <state>/delay-s3 exists, a server object is stored at once but
+        # confirmed only after that many seconds (a delayed confirmation).
+        delay = self.server.state / 'delay-s3'
+        if delay.exists() and '/server/' in key:
+            self.record('s3', 'DelayedConfirmation', bucket=bucket, key=key)
+            import time
+            time.sleep(float(delay.read_text().strip() or '0'))
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
 
     def unavailable(self, service):
@@ -199,6 +209,11 @@ def main():
     server.daemon_threads = True
     server.state, server.bucket, server.groups = state, args.bucket, set(args.log_group)
     server.streams, server.lock = {}, threading.Lock()
+    # Streams survive a restart of the stand-in (a host reboot), as they do on AWS.
+    for group in server.groups:
+        group_dir = state / 'cloudwatch' / group.strip('/')
+        for path in group_dir.rglob('*.jsonl') if group_dir.exists() else []:
+            server.streams.setdefault(group, set()).add(str(path.relative_to(group_dir))[:-len('.jsonl')])
     signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown).start())
     (state / 'ready').write_text(str(os.getpid()))
     server.serve_forever()

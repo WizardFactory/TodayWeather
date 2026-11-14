@@ -26,6 +26,10 @@
       "variant": "exception"
     },
     {
+      "id": "instance",
+      "label": "EC2 instance (LP-3)"
+    },
+    {
       "id": "host",
       "label": "Host log pipeline (#2977)"
     },
@@ -167,6 +171,15 @@
       "label": "Status every 60 s",
       "sublabel": "counts + journal overrun",
       "width": 160
+    },
+    {
+      "id": "boot",
+      "lane": "instance",
+      "col": 5,
+      "type": "security",
+      "label": "Instance start",
+      "sublabel": "user data; IMDSv2 ID + role",
+      "width": 160
     }
   ],
   "edges": [
@@ -274,6 +287,13 @@
       "to": "journal",
       "label": "collector record",
       "variant": "default"
+    },
+    {
+      "id": "boot-collector",
+      "from": "boot",
+      "to": "collector",
+      "label": "install, identity, credentials",
+      "variant": "default"
     }
   ],
   "cards": [
@@ -281,7 +301,7 @@
       "dot": "cyan",
       "title": "Scope",
       "items": [
-        "Process contract: issue 2802. Host pipeline: LP-1 (issue 2978) of issue 2977.",
+        "Process contract: issue 2802. Host pipeline: LP-1, LP-2, LP-3 and LP-5 (issues 2978, 2979, 2980, 2982) of issue 2977.",
         "Destinations are chosen by SERVER2_LOG_SINKS; local alone skips the collector.",
         "Not deployment evidence; no AWS resource is created by these files."
       ]
@@ -311,7 +331,8 @@
         "The server does not require the collector; a shutdown stops the server first, then the collector drains until delivery is confirmed (at most 75 s).",
         "Each remote destination has its own journal reader, level filter and checkpoint.",
         "Only schema-1 server records at or above the level, and collector records, leave the host.",
-        "Loss is visible per destination: status records, overrun records and loopback counters (LP-2)."
+        "Loss is visible per destination: status records, overrun records and loopback counters (LP-2).",
+        "Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3)."
       ]
     }
   ]

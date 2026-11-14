@@ -1,6 +1,6 @@
 {
-  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS, watch for loss",
-  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, renders the AWS templates (LP-5) that the owner applies, and watches one destination fail and recover (LP-2). Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
+  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS, watch for loss, start new instances unattended",
+  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, renders the AWS templates (LP-5) that the owner applies, watches one destination fail and recover (LP-2), and starts a new instance from the boot configuration alone (LP-3). Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names; for step 8 a second, new VM had nothing installed, and instance metadata (instance ID, life cycle, instance-role credentials) was the stand-in server2/deploy/logging/imds_standin.py. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
   "steps": [
     {
       "title": "Install the pipeline; the default ships nothing",
@@ -20,7 +20,7 @@
       "title": "Ship to S3 and CloudWatch Logs with different levels",
       "instruction": "Set the destinations, the per-destination levels, the S3 prefix and an existing CloudWatch log group in .env, then start (or restart) the collector. On EC2 the credentials come from the instance role.",
       "screenshot": "3-ship.png",
-      "caption": "Both units are active. The collector's first record names its version, the active destinations, the host (machine ID until LP-3) and the boot.",
+      "caption": "Both units are active. The collector's first record names its version, the active destinations, the host and the boot. This capture predates LP-3: the record now also carries instance_life_cycle, and the host is the EC2 instance ID (the machine ID, as here, only without instance metadata); see step 8.",
       "expected": "The collector start record appears in the journal and is shipped to every remote destination."
     },
     {
@@ -50,6 +50,13 @@
       "screenshot": "6-loss.png",
       "caption": "While S3 fails, the collector keeps retrying, so its failure counter stays at zero; the status record is warn with s3 behind (134 s unconfirmed) and CloudWatch current. After recovery the records written meanwhile arrive from the journal and the status is info again. The counters listen on 127.0.0.1 only.",
       "expected": "An outage is visible in the status record while it lasts, and recovery needs no action."
+    },
+    {
+      "title": "Start a new instance from the boot configuration (LP-3)",
+      "instruction": "Generate the user data with boot.py for a commit that is on GitHub (normally the merged master commit) and the destination settings, and give user-data.sh.gz to the launch template or instance. At the first boot it downloads the pipeline files from that commit, refuses any file whose SHA-256 differs, installs the pinned collector and starts it; the release procedure then installs server2 and its .env. Nobody logs in, and the instance holds no AWS key.",
+      "screenshot": "7-boot.png",
+      "caption": "The user data names the commit and each file's hash (about 1.3 KB of EC2's 16 KB). On the new instance both units are enabled, the collector runs, the destination settings are a unit drop-in, and the start record names the EC2 instance ID, its life cycle and the boot.",
+      "expected": "The collector ships from its first record; every instance of the launch template uses the same user data and writes its own streams and keys."
     }
   ]
 }
