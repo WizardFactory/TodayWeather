@@ -6,7 +6,8 @@ import TWModel
 
 /// The photo feed loads like `loadWeatherPhotos` (IN-07, #2956): `_retryGetHttp`'s overlapping attempts `gap` apart,
 /// the first attempt to settle deciding, one load per process, shared while it runs and repeated after a failure.
-/// The attempt gap is shortened (the production value is 2 s) so the timing runs on the real clock.
+/// The attempt gap and timeout are set per test (the production values are 2 s and 20 s); outcomes are decided by the
+/// script's order of events, not by the real clock's speed.
 struct WeatherPhotoFeedTests {
     static let feedBody = Data(#"[{"id":"sun-1","tags":["sun"],"twUrls":{"regular":"https://photos.test.invalid/sun-1.jpg"}}]"#.utf8)
 
@@ -51,39 +52,55 @@ struct WeatherPhotoFeedTests {
 
     let url = URL(string: "https://photos.test.invalid/list.json")!
 
+    // These tests run in the app-hosted suite on a busy CI runner, where a 1.5 s test took over 10 s: every outcome
+    // here is decided by the order of events the script controls (an attempt that hangs until it is cancelled, one
+    // that answers), not by how long the real clock takes.
+
     @Test func aSlowRequestGetsTwoMoreAttemptsAGapApart() async {
-        let script = Script([.hang, .hang, .hang])
-        // The third attempt starts at 400 ms, long before the first attempt's timeout at 3 s.
-        let result = await firstSettled(attempts: 3, gap: .milliseconds(200), timeout: .seconds(3)) {
+        // The first two attempts hang; the third, started two gaps later, answers and wins.
+        let script = Script([.hang, .hang, .answer(.milliseconds(10))])
+        let result = await firstSettled(attempts: 3, gap: .milliseconds(200), timeout: .seconds(60)) {
             try await script.get(self.url)
         }
         #expect(script.attempts == 3)
         let offsets = script.startOffsets.map { Double($0.components.attoseconds) / 1e18 + Double($0.components.seconds) }
         #expect(offsets.count == 3 && offsets[1] >= 0.19 && offsets[2] >= 0.39, "\(offsets)")
+        #expect((try? result.get()) == Self.feedBody)
+        #expect(script.cancelledAttempts.sorted() == [1, 2], "the hanging attempts are cancelled")
+    }
+
+    @Test func theFirstAttemptsTimeoutDecides() async {
+        let script = Script([.hang])
+        let result = await firstSettled(attempts: 1, gap: .milliseconds(200), timeout: .milliseconds(100)) {
+            try await script.get(self.url)
+        }
         #expect((try? result.get()) == nil)
-        if case .failure(let error) = result { #expect(error is AttemptTimeout, "the first attempt's timeout decides") }
+        if case .failure(let error) = result { #expect(error is AttemptTimeout, "the attempt's timeout decides") }
+        #expect(script.cancelledAttempts == [1])
     }
 
     @Test func aFastFailureEndsTheLoadWithoutRetrying() async {
-        // The gap is far above the failure's delay, so a busy CI runner cannot start the second attempt first.
+        // The next attempt would start a minute later; the failure settles first and cancels it.
         let script = Script([.fail(.milliseconds(10))])
-        let result = await firstSettled(attempts: 3, gap: .seconds(5), timeout: .seconds(10)) { try await script.get(self.url) }
+        let result = await firstSettled(attempts: 3, gap: .seconds(60), timeout: .seconds(60)) { try await script.get(self.url) }
         #expect(script.attempts == 1)
         #expect((try? result.get()) == nil)
     }
 
     @Test func theFirstAttemptToAnswerWinsAndTheOthersAreCancelled() async {
-        // The answer at 1.5 s comes 0.5 s after the second attempt and 0.5 s before the third would start.
-        let script = Script([.answer(.milliseconds(1500)), .hang, .hang])
-        let result = await firstSettled(attempts: 3, gap: .seconds(1), timeout: .seconds(10)) { try await script.get(self.url) }
+        // Two attempts: the first hangs, the second answers; the second wins and the first is cancelled.
+        let script = Script([.hang, .answer(.milliseconds(10))])
+        let result = await firstSettled(attempts: 2, gap: .milliseconds(100), timeout: .seconds(60)) {
+            try await script.get(self.url)
+        }
         #expect((try? result.get()) == Self.feedBody)
-        #expect(script.attempts == 2, "the second attempt started at 1 s; the third never did")
-        #expect(script.cancelledAttempts == [2])
+        #expect(script.attempts == 2)
+        #expect(script.cancelledAttempts == [1])
     }
 
     @Test func oneLoadIsSharedRepeatedAfterAFailureAndKeptAfterASuccess() async throws {
         let script = Script([.fail(.milliseconds(10)), .answer(.milliseconds(200))])
-        let feed = WeatherPhotoFeed(url: url, http: script, gap: .seconds(5), timeout: .seconds(5))
+        let feed = WeatherPhotoFeed(url: url, http: script, gap: .seconds(60), timeout: .seconds(60))
         #expect(await feed.load() == nil, "the first load fails")
         #expect(script.attempts == 1)
         async let first = feed.load()
