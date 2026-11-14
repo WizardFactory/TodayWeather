@@ -1,0 +1,13 @@
+{
+  "task": "CiRunner2404",
+  "issue": "https://github.com/WizardFactory/TodayWeather/pull/2987#issuecomment-6880732875",
+  "scope": "Pin the Server2 foundation job to ubuntu-24.04: ubuntu-latest moved to 26.04 (Python 3.14), whose subprocess uses posix_spawn, which the benchmark sandbox's audit hook denies. Owner decision 2026-11-15 (fix CI first, then merge LP-3). No behaviour change.",
+  "server2_paths": [
+    "server2/config/tasks/CiRunner2404.json",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {"path": ".github/workflows/server2.yml", "category": "ci-wiring", "reason": "Foundation job runner pinned to ubuntu-24.04 (owner decision 2026-11-15)"}
+  ]
+}
