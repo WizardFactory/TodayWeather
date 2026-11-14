@@ -6,7 +6,7 @@ Dated evidence for [#2990](https://github.com/WizardFactory/TodayWeather/issues/
 ## Build
 
 - Source: `client/` of branch `ios-tracking-settings-shortcut-2990` (commits `c0f9c6ac` and `6db6825c` on master
-  `312ae970`), prepared with `npx cordova prepare ios` (both hooks ran; `prepare_exit=0`).
+  `312ae970`; run 08 also includes the review fix that re-reads the status on activation, banner failure and menu open), prepared with `npx cordova prepare ios` (both hooks ran; `prepare_exit=0`).
 - iPhone: Cordova Debug `iphoneos` build with the release ad configuration, re-signed with the development profile,
   installed in place over the 1.1.2 install of 2026-11-15 (city 서울, tracking not allowed). Displayed version 1.1.2.
 - Simulator: Debug `iphonesimulator` build on a dedicated iPhone 16 simulator (iOS 26.5, Korean), fresh install.
@@ -40,6 +40,8 @@ matched the iPhone run.
 | --- | --- | --- |
 | [06](06-simulator-device-wide-switch-off.txt) | Settings > 개인정보 보호 및 보안 > 추적: "앱이 추적을 요청하도록 허용" turned off with "앱이 추적을 중단하도록 요청" | App status `denied`; notice and row 허용 안 함 shown. The TodayWeather switch stays listed and enabled on that page |
 | [07](07-simulator-app-switch-on-while-device-wide-off.txt) | With the device-wide switch still off, the TodayWeather switch turned on | App status `authorized`; no notice; row 허용됨 |
+
+| [08](08-simulator-decline-in-place.txt) | Fixed candidate (review findings C1-01, C1-02): fresh install, "앱에 추적 금지 요청", then the current page scrolled and the menu opened without a page change or relaunch | Notice at the end of the current page; row 허용 안 함; `denied`. The simulator also loaded a test banner, so this run does not isolate the `active` trigger; unit tests do |
 
 So a user whose device-wide switch is off can still remove the notice by allowing TodayWeather alone; the notice text
 needs no change for that case. The device-wide switch was turned on again afterwards.

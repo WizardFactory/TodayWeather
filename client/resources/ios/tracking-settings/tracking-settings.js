@@ -29,7 +29,9 @@
                 var state = {status: 'unavailable'};
 
                 // iOS ends the app when the switch changes in Settings, so a start reads the new value. Resume covers a
-                // return without a change; the first banner follows the consent flow and the ATT answer.
+                // return without a change. The app becomes active again when the iOS tracking prompt closes, so the
+                // answer shows on the current page whether or not an ad loads afterwards; banner results, page
+                // changes and opening the side menu read it again as well.
                 function read() {
                     var cordova = $window.cordova;
                     function apply(result) {
@@ -59,10 +61,11 @@
                     }
                 }
 
-                ['deviceready', 'resume', 'on.banner.load'].forEach(function (name) {
+                ['deviceready', 'resume', 'active', 'on.banner.load', 'on.banner.failed.load'].forEach(function (name) {
                     $window.document.addEventListener(name, read, false);
                 });
                 $rootScope.$on('$ionicView.enter', read);
+                $rootScope.$on('$ionicSideMenuOpen', read);
                 return {state: state, read: read, openSettings: openSettings};
             }])
             .run(['twTrackingStatus', function () {}])

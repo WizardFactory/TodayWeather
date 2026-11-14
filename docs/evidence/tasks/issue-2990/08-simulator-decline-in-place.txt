@@ -1,0 +1,4 @@
+# inplace-summary: app-dialog -> city -> explainer -> att-prompt | notice=shown | row=추적 허용 설정 · 허용 안 함
+2026-11-15 03:38:45 {"component":"admob","operation":"request_policy","att_status":"denied","personalized":false,"result":"applied"}
+2026-11-15 03:38:45 Set options of emi AdMob
+2026-11-15 03:38:48 create banner view

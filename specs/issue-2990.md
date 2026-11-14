@@ -41,8 +41,10 @@ shows, and it ships the markup in the Android bundle.
 
 1. The overlay reads the status with the existing read-only plugin action `twAdPrivacyState`
    (`cordova.exec(..., 'emiAdmobPlugin', 'twAdPrivacyState', [])`). It adds no native code and calls no ATT request.
-2. It reads when the menu opens, when one of the three pages is entered and when the app resumes. iOS ends the app
-   when the switch changes in Settings, so the next launch reads the new value.
+2. It reads at start, on resume, when the app becomes active again (the iOS tracking prompt closing makes it active),
+   after each banner load or failure, when one of the three pages is entered and when the side menu opens. iOS ends
+   the app when the switch changes in Settings, so the next launch reads the new value. The answer to the prompt
+   therefore shows on the current page whether or not an ad loads (review finding C1-02).
 3. A failed or unknown answer counts as `unavailable`. Before the first answer both elements are absent.
 
 ### R2. Visibility rule (AC1, AC2)

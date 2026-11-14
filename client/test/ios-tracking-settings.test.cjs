@@ -70,6 +70,7 @@ function fakeApp() {
 const invoke = (def, ...args) => def[def.length - 1](...args);
 
 function service({status = 'denied', settings = 'ok'} = {}) {
+    let current = status;
     const {angular, registered} = fakeApp();
     overlay().register(angular);
     const calls = [], warns = [], rootHandlers = {}, docHandlers = {};
@@ -82,19 +83,19 @@ function service({status = 'denied', settings = 'ok'} = {}) {
             plugins: settings === 'missing' ? {} : {diagnostic},
             exec(ok, fail, service, action, args) {
                 calls.push([service, action, args]);
-                if (status === 'error') fail('error'); else ok({att_status: status, personalized: status === 'authorized'});
+                if (current === 'error') fail('error'); else ok({att_status: current, personalized: current === 'authorized'});
             }
         }
     };
     const tracking = invoke(registered.factory.twTrackingStatus, $rootScope, $window);
-    return {tracking, registered, calls, warns, rootHandlers, docHandlers, $window};
+    return {tracking, registered, calls, warns, rootHandlers, docHandlers, $window, setStatus(value) { current = value; }};
 }
 
-test('the status is read on start, resume, banner load and page change, and only through twAdPrivacyState', () => {
+test('the status is read on start, resume, activation, banner results and page change, only through twAdPrivacyState', () => {
     const s = service({status: 'denied'});
     assert.equal(s.tracking.state.status, 'unavailable', 'nothing is shown before the first answer');
     assert.equal(s.registered.run.length, 1, 'the service starts with the app');
-    for (const name of ['deviceready', 'resume', 'on.banner.load']) {
+    for (const name of ['deviceready', 'resume', 'active', 'on.banner.load', 'on.banner.failed.load']) {
         s.calls.length = 0; s.tracking.state.status = 'unavailable';
         s.docHandlers[name]();
         assert.deepEqual(s.calls, [['emiAdmobPlugin', 'twAdPrivacyState', []]], name);
@@ -108,6 +109,29 @@ test('the status is read on start, resume, banner load and page change, and only
     const unknown = service({status: 'new_status'});
     unknown.docHandlers.deviceready();
     assert.equal(unknown.tracking.state.status, 'unavailable');
+});
+
+// Codex C1-01: opening the side menu reads the status again, so a failed or stale read does not stick to the row.
+test('opening the menu reads the status again after a failed read', () => {
+    const s = service({status: 'error'});
+    s.docHandlers.deviceready();
+    assert.equal(s.tracking.state.status, 'unavailable');
+    s.setStatus('authorized'); s.calls.length = 0;
+    s.rootHandlers['$ionicSideMenuOpen']('left');
+    assert.deepEqual(s.calls, [['emiAdmobPlugin', 'twAdPrivacyState', []]]);
+    assert.deepEqual(overlay().visibility(s.tracking.state.status), {row: true, allowed: true, notice: false});
+});
+
+// Codex C1-02: the answer to the ATT prompt shows without a successful ad and without a page change.
+test('after the ATT answer the status is read when the app becomes active or the banner fails', () => {
+    for (const event of ['active', 'on.banner.failed.load']) {
+        const s = service({status: 'not_determined'});
+        s.docHandlers.deviceready();
+        assert.deepEqual(overlay().visibility(s.tracking.state.status), {row: false, allowed: false, notice: false});
+        s.setStatus('denied');
+        s.docHandlers[event]();
+        assert.deepEqual(overlay().visibility(s.tracking.state.status), {row: true, allowed: false, notice: true}, event);
+    }
 });
 
 test('both elements open the app page in iOS Settings; a failure only logs one warning', () => {
