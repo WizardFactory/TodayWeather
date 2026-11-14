@@ -33,6 +33,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import render  # noqa: E402
+import aws_templates  # noqa: E402
 
 REGION = 'ap-northeast-2'
 BUCKET = 'server2-logs-check'
@@ -360,9 +361,10 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     if 'cloudwatch' in sinks:
         check('CloudWatch streams follow the naming contract',
               sorted(streams) == sorted(f'{s}/{machine}/{boot}' for s in ('collector', 'server')), str(streams))
-    allowed = {('s3', 'PutObject'), ('logs', 'DescribeLogStreams'), ('logs', 'CreateLogStream'), ('logs', 'PutLogEvents')}
+    # The role policy template (LP-5) is the authority for what the collector may call.
+    allowed = aws_templates.allowed_actions()
     used = {(o['service'], o['action']) for o in operations}
-    check('only the documented AWS actions were used', used <= allowed, str(sorted(used - allowed)))
+    check('only actions granted by the role policy template were used', used <= allowed, str(sorted(used - allowed)))
     check('no object was overwritten', ('s3', 'Overwrite') not in used)
     # Every destination, the local journal included (GEM-LP1-003).
     text = (all_received_text(state) if state.exists() else '') + '\n'.join(server_lines + collector_lines)

@@ -18,6 +18,7 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import render  # noqa: E402
+import aws_templates  # noqa: E402
 
 SECRET = 'SYNTHETIC-PRIVATE-2802'
 COMPLETE = {'SERVER2_LOG_SINKS': 'local,s3,cloudwatch', 'SERVER2_S3_BUCKET': 'tw-server2-logs',
@@ -317,6 +318,114 @@ class InstalledFilesTest(unittest.TestCase):
         text = (HERE / 'install.sh').read_text()
         self.assertLess(text.index('sha256sum --check'), text.index('tar -xzf'))
         self.assertNotRegex(text, re.compile(r'systemctl\s+(start|restart)\s+server2\.service'))
+
+
+class AwsTemplatesTest(unittest.TestCase):
+    """LP-5 (#2982): least-privilege role, lifecycle and log group templates."""
+
+    def lifecycle(self, prefix='logs/server2'):
+        values = {'BucketName': 'b-1', 'LogPrefix': prefix, 'LogGroupName': '/server2/x',
+                  'Region': 'ap-northeast-2', 'AccountId': '123456789012'}
+        return json.loads(aws_templates.fill(json.dumps(aws_templates.load('bucket-lifecycle')), values))
+
+    def test_role_policy_is_exactly_the_approved_grants(self):
+        self.assertEqual(aws_templates.policy_violations(aws_templates.load('role-policy')), [])
+
+    def test_policy_check_rejects_any_broader_or_extra_grant(self):
+        base = aws_templates.load('role-policy')
+        def mutated(change):
+            policy = json.loads(json.dumps(base))
+            change(policy['Statement'])
+            return aws_templates.policy_violations(policy)
+        changes = {
+            'extra logs action': lambda st: st[1]['Action'].append('logs:DeleteLogGroup'),
+            'group creation': lambda st: st.append({'Effect': 'Allow', 'Action': 'logs:CreateLogGroup', 'Resource': '*'}),
+            'retention change': lambda st: st.append({'Effect': 'Allow', 'Action': 'logs:PutRetentionPolicy',
+                                                      'Resource': st[2]['Resource'][0]}),
+            'wildcard resource': lambda st: st[0].update(Resource='arn:aws:s3:::${BucketName}/*'),
+            'read logs back': lambda st: st[0]['Action'].append('s3:GetObject'),
+            'list bucket': lambda st: st.append({'Effect': 'Allow', 'Action': 's3:ListBucket',
+                                                 'Resource': 'arn:aws:s3:::${BucketName}'}),
+            'delete objects': lambda st: st[0]['Action'].append('s3:DeleteObject'),
+            'service wildcard': lambda st: st[1].update(Action='logs:*'),
+            'condition': lambda st: st[0].update(Condition={'Bool': {'aws:SecureTransport': 'true'}}),
+            'missing describe': lambda st: st.pop(2),
+        }
+        for name, change in changes.items():
+            with self.subTest(name):
+                self.assertTrue(mutated(change))
+
+    def test_collector_actions_equal_the_policy(self):
+        self.assertEqual(aws_templates.allowed_actions(), {('s3', 'PutObject'), ('logs', 'CreateLogStream'),
+                                                           ('logs', 'PutLogEvents'), ('logs', 'DescribeLogStreams')})
+
+    def test_weather_prefixes_come_from_the_staging_policy(self):
+        self.assertEqual(aws_templates.weather_prefixes(), sorted([
+            'raw/v2/', 'index/v2/', 'packs/v2/', 'summary/v2/', 'state/v2/', 'state/demand/grid/',
+            'budgets/v2/', 'geocode/address/v1/']))
+
+    def test_lifecycle_is_limited_to_the_log_prefix_and_removes_every_version(self):
+        self.assertEqual(aws_templates.lifecycle_violations(self.lifecycle(), 'logs/server2',
+                                                            aws_templates.weather_prefixes()), [])
+        rules = self.lifecycle()['Rules']
+        self.assertEqual(rules[0]['Expiration'], {'Days': 90})
+        self.assertEqual(rules[1]['Expiration'], {'ExpiredObjectDeleteMarker': True})
+
+    def test_lifecycle_check_rejects_unsafe_or_incomplete_rules(self):
+        data = aws_templates.weather_prefixes()
+        cases = {
+            'empty prefix': (self.lifecycle(''), ''),
+            'weather prefix': (self.lifecycle('raw/v2'), 'raw/v2'),
+            'parent of weather prefixes': (self.lifecycle('state'), 'state'),
+        }
+        for name, (lifecycle, prefix) in cases.items():
+            with self.subTest(name):
+                self.assertTrue(aws_templates.lifecycle_violations(lifecycle, prefix, data))
+        for key in ('NoncurrentVersionExpiration', 'AbortIncompleteMultipartUpload', 'Expiration'):
+            with self.subTest('missing ' + key):
+                lifecycle = self.lifecycle()
+                del lifecycle['Rules'][0][key]
+                self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        with self.subTest('missing delete-marker rule'):
+            lifecycle = self.lifecycle()
+            lifecycle['Rules'].pop(1)
+            self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        with self.subTest('tag filter'):
+            lifecycle = self.lifecycle()
+            lifecycle['Rules'][0]['Filter'] = {'And': {'Prefix': 'logs/server2/', 'Tags': []}}
+            self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+
+    def test_log_group_has_explicit_retention(self):
+        self.assertEqual(aws_templates.load('log-group'),
+                         {'logGroupName': '${LogGroupName}', 'logGroupClass': 'STANDARD', 'retentionInDays': 30})
+
+    def test_prerequisites_record_the_templates_as_not_provisioned(self):
+        record = json.loads((HERE.parent / 'staging' / 'prerequisites.json').read_text())['log_pipeline']
+        self.assertIs(record['provisioned'], False)
+        self.assertEqual(record['log_group']['retention_days'], aws_templates.load('log-group')['retentionInDays'])
+        self.assertEqual(record['bucket_lifecycle']['current_version_days'],
+                         aws_templates.load('bucket-lifecycle')['Rules'][0]['Expiration']['Days'])
+        for key in ('role_policy', 'bucket_lifecycle', 'log_group'):
+            self.assertTrue((HERE.parents[2] / record[key]['template']).is_file(), key)
+
+    def test_render_fills_every_placeholder_and_validates_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args = ['--bucket', 'tw-server2-123456789012-apne2', '--prefix', 'logs/server2', '--group', '/server2/production',
+                    '--region', 'ap-northeast-2', '--account', '123456789012']
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(aws_templates.main(args + ['--out', directory + '/ok']), 0)
+            for file in Path(directory, 'ok').iterdir():
+                self.assertNotIn('${', file.read_text())
+                json.loads(file.read_text())
+            policy = json.loads(Path(directory, 'ok', 'role-policy.json').read_text())
+            self.assertIn('arn:aws:s3:::tw-server2-123456789012-apne2/logs/server2/*',
+                          [s['Resource'] for s in policy['Statement']])
+            for bad in (['--prefix', 'raw/v2/logs'], ['--account', '12345'], ['--group', 'bad group']):
+                with self.subTest(bad), contextlib.redirect_stderr(io.StringIO()):
+                    changed = list(args)
+                    changed[changed.index(bad[0]) + 1] = bad[1]
+                    self.assertEqual(aws_templates.main(changed + ['--out', directory + '/bad']), 2)
+            self.assertFalse(Path(directory, 'bad').exists())
 
 
 if __name__ == '__main__':

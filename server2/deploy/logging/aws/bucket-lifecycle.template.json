@@ -1,0 +1,30 @@
+{
+  "Rules": [
+    {
+      "ID": "server2-logs-expire",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "${LogPrefix}/"
+      },
+      "Expiration": {
+        "Days": 90
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    },
+    {
+      "ID": "server2-logs-delete-markers",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "${LogPrefix}/"
+      },
+      "Expiration": {
+        "ExpiredObjectDeleteMarker": true
+      }
+    }
+  ]
+}

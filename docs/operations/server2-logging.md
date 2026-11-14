@@ -118,6 +118,41 @@ Example configurations; moving between them is the owner's decision and a config
 
 At the measured volume (9–15 MB per hour at `info`), CloudWatch at `info` costs about $5–9 per month in Seoul, CloudWatch at `warn` under $0.05, and S3 about $0.2 per month per log source, mostly PUT requests (see #2977).
 
+### Prepare AWS for the destinations
+
+LP-5 ([#2982](https://github.com/WizardFactory/TodayWeather/issues/2982)) defines what AWS needs; nothing has been provisioned. Retention values (owner decision, 2026-11-14): **CloudWatch Logs 30 days**; **S3 log objects 90 days** (current versions expire after 90 days and their noncurrent versions one day later, so the bytes are gone after about 91 days).
+
+| Template in [`server2/deploy/logging/aws/`](../../server2/deploy/logging/aws/) | What it does |
+| --- | --- |
+| `role-policy.template.json` | A second inline policy for the instance role. It allows `s3:PutObject` on `<bucket>/<prefix>/*`, and `logs:CreateLogStream`, `logs:PutLogEvents` on the group's streams and `logs:DescribeLogStreams` on the group. `DescribeLogStreams` is required because the collector's CloudWatch sink calls it before writing ([LP-1 evidence](../evidence/tasks/issue-2978/verification.md)). Nothing else: no read, list or delete of log objects, no group creation and no retention change. |
+| `bucket-lifecycle.template.json` | The bucket's lifecycle configuration, limited to `<prefix>/`: current versions expire after 90 days, noncurrent versions 1 day after, expired delete markers are removed (separate rule, because `Days` and `ExpiredObjectDeleteMarker` cannot share a rule) and incomplete multipart uploads are aborted after 1 day. It is the bucket's first deleting rule and must never match a weather prefix. |
+| `log-group.template.json` | The log group (`STANDARD` class) with `retentionInDays` 30. |
+
+Render them for the actual names. The renderer applies the collector's own validation and refuses a prefix inside a weather data prefix:
+
+```sh
+python3 -I server2/deploy/logging/aws_templates.py --bucket "$BUCKET" --prefix logs/server2 \
+  --group /server2/production --region ap-northeast-2 --account "$ACCOUNT" --out "$OUT"
+```
+
+The owner then applies them with administrator credentials (the instance role can do none of this). `put-bucket-lifecycle-configuration` **replaces** the whole configuration, so read it first. `prerequisites.json` records no lifecycle configuration; if one exists, merge the rules instead.
+
+```sh
+aws s3api get-bucket-lifecycle-configuration --bucket "$BUCKET"   # expect NoSuchLifecycleConfiguration
+aws s3api put-bucket-lifecycle-configuration --bucket "$BUCKET" --lifecycle-configuration "file://$OUT/bucket-lifecycle.json"
+aws logs create-log-group --log-group-name /server2/production --log-group-class STANDARD --region ap-northeast-2
+aws logs put-retention-policy --log-group-name /server2/production --retention-in-days 30 --region ap-northeast-2
+aws iam put-role-policy --role-name tw-server2-runtime --policy-name tw-server2-runtime-logs \
+  --policy-document "file://$OUT/role-policy.json"
+# Read back
+aws s3api get-bucket-lifecycle-configuration --bucket "$BUCKET"
+aws logs describe-log-groups --log-group-name-prefix /server2/production --region ap-northeast-2 \
+  --query 'logGroups[].[logGroupName,retentionInDays,logGroupClass]'
+aws iam get-role-policy --role-name tw-server2-runtime --policy-name tw-server2-runtime-logs
+```
+
+The templates and their checks are local: `test_logging.py` fails on any grant beyond the list above, and on a lifecycle filter that is empty or overlaps one of the eight weather prefixes of the [staging role policy](../../server2/deploy/staging/role-policy.template.json). The integration check accepts only collector calls granted by the role template. IAM evaluation against real AWS has not been exercised.
+
 ### What leaves the host
 
 Each remote destination has its own journal reader, filter and checkpoint, so its level and progress are independent of the other destination. A destination receives:
@@ -174,7 +209,7 @@ The collector is [Vector](https://github.com/vectordotdev/vector) 0.61.0 (MPL-2.
 | --- | --- |
 | Reads the journal of selected units | Yes: the `journald` source with `journal_namespace` and `include_units`, as a dynamic user in `systemd-journal`. On systemd 250–257 (Ubuntu 24.04: 255, Amazon Linux 2023: 252) Vector rejects reading previous boots (`current_boot_only: false`), so each reader covers the current boot only. LP-3 must handle the backlog left by a previous boot on a surviving disk. |
 | Destinations from variables | Not natively: Vector cannot switch sinks by environment and ignores the AWS SDK's `AWS_ENDPOINT_URL_*` variables. `render.py` validates the variables and writes the configuration; endpoints follow from the region only. |
-| Minimal permissions | With health checks off: S3 `PutObject`; CloudWatch Logs `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. The CloudWatch sink calls `DescribeLogStreams` before writing, so LP-5 must allow it. No bucket listing, no `DescribeLogGroups`, no group creation. |
+| Minimal permissions | With health checks off: S3 `PutObject`; CloudWatch Logs `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. The CloudWatch sink calls `DescribeLogStreams` before writing, so the role template allows it. No bucket listing, no `DescribeLogGroups`, no group creation. |
 | Flush at stop | 0.02–0.24 s with up to 569 journal lines (stop of the collector after the server); the bound under a two-minute notice belongs to LP-4. |
 | Memory | Peak resident set 70–77 MiB with one or two destinations. |
 
