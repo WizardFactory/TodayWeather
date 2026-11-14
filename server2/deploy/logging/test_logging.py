@@ -307,6 +307,7 @@ class InstalledFilesTest(unittest.TestCase):
         self.assertEqual(unit['LogNamespace'], 'server2')
         self.assertEqual(unit['DynamicUser'], 'yes')
         self.assertEqual(unit['Restart'], 'on-abnormal')
+        self.assertEqual(unit['RestartForceExitStatus'], '0')
         self.assertNotIn('EnvironmentFile', unit)
         self.assertNotIn('Environment', unit)
 
@@ -865,6 +866,20 @@ class StatusTest(unittest.TestCase):
         empty.stdout.readline.return_value = ''
         with mock.patch.object(status.subprocess, 'Popen', return_value=empty):
             self.assertIsNone(status.oldest_entry())
+
+    def test_drain_is_skipped_when_the_collector_already_exited(self):
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(status, 'drain') as drain, \
+                mock.patch.object(status, 'active_destinations', return_value=('s3',)), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(status.main(['drain', '--state', directory, '--main-pid=']), 0)
+        drain.assert_not_called()
+        record = json.loads(out.getvalue())
+        self.assertEqual((record['event'], record['level'], record['error']), ('collector.drained', 'warn', 'collector already exited'))
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(status, 'drain', return_value={'s3': {'drained': True, 'waited_seconds': 0.1}}) as drain, \
+                mock.patch.object(status, 'active_destinations', return_value=('s3',)), contextlib.redirect_stdout(io.StringIO()):
+            status.main(['drain', '--state', directory, '--main-pid=1234'])
+        drain.assert_called_once()
 
     def test_drain_waits_for_confirmations_up_to_the_journal_end(self):  # CX-LP2-001
         with tempfile.TemporaryDirectory() as directory:

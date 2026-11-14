@@ -312,8 +312,16 @@ def main(argv=None):
     parser.add_argument('--state', default='/var/lib/server2-logs', help='collector state directory')
     parser.add_argument('--config', default='/run/server2-logs/vector.json', help='rendered collector configuration')
     parser.add_argument('--timeout', type=float, default=75, help='drain: seconds to wait for confirmations')
+    parser.add_argument('--main-pid', help='drain: the collector process (systemd ${MAINPID}); empty when it has already exited')
     args = parser.parse_args(argv)
     active = active_destinations(args.config)
+    if args.moment == 'drain' and args.main_pid == '':
+        # The collector exited by itself (systemd knows no main process any more): nobody
+        # is left to confirm deliveries, so waiting would only delay its restart.
+        print(json.dumps({'collector_schema': COLLECTOR_SCHEMA, 'timestamp': now(), 'level': 'warn',
+                          'event': 'collector.drained', 'destinations': None, 'error': 'collector already exited'},
+                         sort_keys=True), flush=True)
+        return 0
     if args.moment == 'drain':
         try:
             result = drain(args.state, active, args.timeout)
