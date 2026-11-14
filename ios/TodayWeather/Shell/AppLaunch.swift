@@ -35,6 +35,13 @@ final class AppLaunch {
     let locale: ShellLocale
     /// The photo theme's feed (IN-08 shows the photos).
     @ObservationIgnored let photos: WeatherPhotoFeed
+    /// The feed once loaded, for the weather pages (`window.weatherPhotos`).
+    @ObservationIgnored private(set) var loadedPhotos: WeatherPhotos?
+    /// The weather of the places (IN-08): requests to the legacy server (Info.plist `TWServerURL`, the private build
+    /// input `TW_SERVER_URL`; without it nothing is requested), cached in `Library/Caches/weather`.
+    @ObservationIgnored let repository: WeatherRepository
+    /// The weather pages S03 and S04 (IN-08), created with the shell.
+    private(set) var weather: WeatherScreens?
     /// The shell, created with the state; nil until the migration has finished.
     private(set) var shell: ShellModel?
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "launch")
@@ -50,22 +57,27 @@ final class AppLaunch {
         var preferredLanguages: [String]
         var photosURL: URL?
         var version: String
+        /// The legacy server (Cordova `clientConfig.serverUrl`); nil without the private input.
+        var serverURL: String? = nil
 
         static var system: Environment {
             let info = Bundle.main.infoDictionary ?? [:]
             let photos = (info["TWWeatherPhotosURL"] as? String).flatMap { $0.isEmpty ? nil : URL(string: $0) }
+            let server = (info["TWServerURL"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             return Environment(preferredLanguages: Locale.preferredLanguages, photosURL: photos,
-                               version: info["CFBundleShortVersionString"] as? String ?? "")
+                               version: info["CFBundleShortVersionString"] as? String ?? "", serverURL: server)
         }
     }
 
     @ObservationIgnored let environment: Environment
 
-    init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet()) {
+    init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet(),
+         weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache()) {
         holder = AppStateHolder(store: store)
         self.environment = environment
         locale = ShellLocale(preferredLanguages: environment.preferredLanguages)
         photos = WeatherPhotoFeed(url: environment.photosURL, http: http)
+        repository = WeatherRepository(baseURL: environment.serverURL, cacheDirectory: weatherCache, http: weatherHTTP)
         // The process started: the first entry event, before any notification tap or link of this launch.
         entries.submit(.launch)
     }
@@ -84,6 +96,12 @@ final class AppLaunch {
         holder.load(state)
         let shell = ShellModel(holder: holder, locale: locale, version: environment.version)
         self.shell = shell
+        let locale = self.locale
+        let session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { locale.acceptLanguage },
+                                     photos: { [weak self] in self?.loadedPhotos }, loadPhotos: { [weak self] in self?.loadPhotos() })
+        let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
+        self.weather = weather
+        shell.onEntry = { [weak weather] event in weather?.handle(event) }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
     }
@@ -109,7 +127,24 @@ final class AppLaunch {
 
     func loadPhotos() {
         let feed = photos
-        Task { _ = await feed.load() }
+        Task { [weak self] in
+            guard let loaded = await feed.load(), let self, loadedPhotos == nil else { return }
+            loadedPhotos = loaded
+            // `loadWeatherPhotos`: places without a photo get one; the photo theme's page takes the selected one's.
+            weather?.session.photosLoaded()
+        }
+    }
+
+    /// The weather cache, `Library/Caches/weather` (the Cordova app kept the weather with the city).
+    nonisolated static func weatherCache() -> URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent("weather")
+    }
+
+    /// `screen.width` and `screen.height` of the WebView: the screen in points, portrait.
+    static func screenSize() -> CGSize {
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let size = scene?.screen.bounds.size ?? CGSize(width: 393, height: 852)
+        return CGSize(width: min(size.width, size.height), height: max(size.width, size.height))
     }
 
     private func handle(_ event: EntryEvent) {

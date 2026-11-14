@@ -11,6 +11,10 @@ public protocol HTTPGetting: Sendable {
 public struct URLSessionGet: HTTPGetting {
     public struct StatusError: Error, Equatable {
         public let status: Int
+
+        public init(status: Int) {
+            self.status = status
+        }
     }
 
     let session: URLSession
@@ -33,16 +37,18 @@ public struct AttemptTimeout: Error, Equatable {}
 
 /// `_retryGetHttp` (service.weatherutil.js): attempt `n + 1` starts `gap` after attempt `n` while no attempt has
 /// answered, up to `attempts`; each attempt ends after `timeout`. The first attempt to settle, with a body or an error,
-/// decides, and the others are cancelled (Cordova lets them run and ignores them).
-public func firstSettled<T: Sendable>(attempts: Int, gap: Duration, timeout: Duration,
+/// decides, and the others are cancelled (Cordova lets them run and ignores them). A fast failure therefore ends the
+/// request without another attempt, as Cordova clears the next attempt's timer when an attempt fails. `clock` times the
+/// gaps and the timeouts.
+public func firstSettled<T: Sendable>(attempts: Int, gap: Duration, timeout: Duration, clock: any AppClock = SystemClock(),
                                       _ attempt: @escaping @Sendable () async throws -> T) async -> Result<T, any Error> {
     await withTaskGroup(of: Result<T, any Error>?.self) { group in
         for index in 0..<max(attempts, 1) {
             group.addTask {
                 if index > 0 {
-                    do { try await Task.sleep(for: gap * index) } catch { return nil }
+                    do { try await clock.sleep(for: gap * index) } catch { return nil }
                 }
-                return await withTimeout(timeout, attempt)
+                return await withTimeout(timeout, clock: clock, attempt)
             }
         }
         var result: Result<T, any Error> = .failure(CancellationError())
@@ -58,14 +64,15 @@ public func firstSettled<T: Sendable>(attempts: Int, gap: Duration, timeout: Dur
 }
 
 /// `attempt`'s result, or `AttemptTimeout` after `timeout` (the attempt is then cancelled).
-func withTimeout<T: Sendable>(_ timeout: Duration, _ attempt: @escaping @Sendable () async throws -> T) async -> Result<T, any Error> {
+func withTimeout<T: Sendable>(_ timeout: Duration, clock: any AppClock = SystemClock(),
+                               _ attempt: @escaping @Sendable () async throws -> T) async -> Result<T, any Error> {
     await withTaskGroup(of: Result<T, any Error>.self) { group in
         group.addTask {
             do { return .success(try await attempt()) } catch { return .failure(error) }
         }
         group.addTask {
             do {
-                try await Task.sleep(for: timeout)
+                try await clock.sleep(for: timeout)
                 return .failure(AttemptTimeout())
             } catch {
                 return .failure(error)

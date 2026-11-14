@@ -1,0 +1,481 @@
+{
+ "generator": "ios/tools/weather/generate.py (cases.js in the macOS JavaScriptCore shell)",
+ "sources": [
+  {
+   "path": "client/www/js/service.weatherutil.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+  },
+  {
+   "path": "client/www/js/service.weatherinfo.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca"
+  }
+ ],
+ "note": "retry: getWeatherByGeoInfo on a virtual clock; `at` is ms after the call, `behaviors[i]` attempt i's answer, failure (with status) or hang until $http's timeout (status -1). Legacy attempts started after the promise settled (A06) are listed; the native client cancels them (IN-08). gate: canLoadCity at the given ms after a fixed start.",
+ "units": {
+  "temperatureUnit": "C",
+  "windSpeedUnit": "m/s",
+  "pressureUnit": "hPa",
+  "distanceUnit": "km",
+  "precipitationUnit": "mm",
+  "airUnit": "airkorea"
+ },
+ "retry": [
+  {
+   "name": "answer-fast",
+   "behaviors": [
+    {
+     "answer": 300
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 300,
+    "outcome": "resolved"
+   }
+  },
+  {
+   "name": "error-fast-501",
+   "behaviors": [
+    {
+     "fail": 120,
+     "status": 501
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 120,
+    "outcome": "rejected",
+    "code": 501
+   }
+  },
+  {
+   "name": "error-fast-404",
+   "behaviors": [
+    {
+     "fail": 500,
+     "status": 404
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 500,
+    "outcome": "rejected",
+    "code": 404
+   }
+  },
+  {
+   "name": "answer-after-first-gap",
+   "behaviors": [
+    {
+     "answer": 2500
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 3,
+     "at": 4000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 2500,
+    "outcome": "resolved"
+   }
+  },
+  {
+   "name": "second-answers-first",
+   "behaviors": [
+    {
+     "hang": true
+    },
+    {
+     "answer": 400
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 2400,
+    "outcome": "resolved"
+   }
+  },
+  {
+   "name": "third-answers",
+   "behaviors": [
+    {
+     "hang": true
+    },
+    {
+     "hang": true
+    },
+    {
+     "answer": 300
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 3,
+     "at": 4000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 4300,
+    "outcome": "resolved"
+   }
+  },
+  {
+   "name": "slow-error-after-second-started",
+   "behaviors": [
+    {
+     "fail": 3000,
+     "status": 503
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 3,
+     "at": 4000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 3000,
+    "outcome": "rejected",
+    "code": 503
+   }
+  },
+  {
+   "name": "all-hang-timeout",
+   "behaviors": [
+    {
+     "hang": true
+    },
+    {
+     "hang": true
+    },
+    {
+     "hang": true
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 3,
+     "at": 4000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 10000,
+    "outcome": "rejected",
+    "code": -1
+   }
+  },
+  {
+   "name": "first-fails-while-second-runs",
+   "behaviors": [
+    {
+     "fail": 2500,
+     "status": 500
+    },
+    {
+     "answer": 1000
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 2500,
+    "outcome": "rejected",
+    "code": 500
+   }
+  },
+  {
+   "name": "second-fails-first",
+   "behaviors": [
+    {
+     "hang": true
+    },
+    {
+     "fail": 100,
+     "status": 502
+    },
+    {
+     "answer": 100
+    }
+   ],
+   "attempts": [
+    {
+     "index": 1,
+     "at": 0,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    },
+    {
+     "index": 2,
+     "at": 2000,
+     "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+     "method": "GET",
+     "timeout": 10000
+    }
+   ],
+   "settled": {
+    "at": 2100,
+    "outcome": "rejected",
+    "code": 502
+   }
+  }
+ ],
+ "gate": [
+  {
+   "name": "ten-minutes",
+   "steps": [
+    {
+     "at": 0,
+     "op": "canLoad",
+     "index": 1
+    },
+    {
+     "at": 0,
+     "op": "update",
+     "index": 1
+    },
+    {
+     "at": 1000,
+     "op": "canLoad",
+     "index": 1
+    },
+    {
+     "at": 600000,
+     "op": "canLoad",
+     "index": 1
+    },
+    {
+     "at": 600001,
+     "op": "canLoad",
+     "index": 1
+    }
+   ],
+   "results": [
+    {
+     "at": 0,
+     "index": 1,
+     "canLoad": true
+    },
+    {
+     "at": 1000,
+     "index": 1,
+     "canLoad": false
+    },
+    {
+     "at": 600000,
+     "index": 1,
+     "canLoad": false
+    },
+    {
+     "at": 600001,
+     "index": 1,
+     "canLoad": true
+    }
+   ]
+  },
+  {
+   "name": "reload-city",
+   "steps": [
+    {
+     "at": 0,
+     "op": "update",
+     "index": 1
+    },
+    {
+     "at": 5000,
+     "op": "canLoad",
+     "index": 1
+    },
+    {
+     "at": 5000,
+     "op": "reload",
+     "index": 1
+    },
+    {
+     "at": 5000,
+     "op": "canLoad",
+     "index": 1
+    }
+   ],
+   "results": [
+    {
+     "at": 5000,
+     "index": 1,
+     "canLoad": false
+    },
+    {
+     "at": 5000,
+     "index": 1,
+     "canLoad": true
+    }
+   ]
+  },
+  {
+   "name": "disabled-and-other",
+   "steps": [
+    {
+     "at": 0,
+     "op": "update",
+     "index": 1
+    },
+    {
+     "at": 0,
+     "op": "canLoad",
+     "index": 0
+    },
+    {
+     "at": 0,
+     "op": "canLoad",
+     "index": 2
+    },
+    {
+     "at": 0,
+     "op": "canLoad",
+     "index": 3
+    }
+   ],
+   "results": [
+    {
+     "at": 0,
+     "index": 0,
+     "canLoad": false
+    },
+    {
+     "at": 0,
+     "index": 2,
+     "canLoad": true
+    },
+    {
+     "at": 0,
+     "index": 3,
+     "canLoad": false
+    }
+   ]
+  }
+ ]
+}
