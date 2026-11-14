@@ -27,7 +27,7 @@
     },
     {
       "id": "instance",
-      "label": "EC2 instance (LP-3)"
+      "label": "EC2 instance (LP-3, LP-4)"
     },
     {
       "id": "host",
@@ -151,7 +151,7 @@
       "col": 5,
       "type": "cloud",
       "label": "S3 log prefix",
-      "sublabel": "default info; 60 s objects",
+      "sublabel": "default info; 50 s objects",
       "width": 160
     },
     {
@@ -177,8 +177,8 @@
       "lane": "instance",
       "col": 5,
       "type": "security",
-      "label": "Instance start",
-      "sublabel": "user data; IMDSv2 ID + role",
+      "label": "Start + Spot watch",
+      "sublabel": "user data; IMDSv2; notice",
       "width": 160
     }
   ],
@@ -292,7 +292,7 @@
       "id": "boot-collector",
       "from": "boot",
       "to": "collector",
-      "label": "install, identity, credentials",
+      "label": "install; on notice: server, then collector stop",
       "variant": "default"
     }
   ],
@@ -301,7 +301,7 @@
       "dot": "cyan",
       "title": "Scope",
       "items": [
-        "Process contract: issue 2802. Host pipeline: LP-1, LP-2, LP-3 and LP-5 (issues 2978, 2979, 2980, 2982) of issue 2977.",
+        "Process contract: issue 2802. Host pipeline: LP-1 to LP-5 (issues 2978-2982) of issue 2977.",
         "Destinations are chosen by SERVER2_LOG_SINKS; local alone skips the collector.",
         "Not deployment evidence; no AWS resource is created by these files."
       ]
@@ -332,7 +332,8 @@
         "Each remote destination has its own journal reader, level filter and checkpoint.",
         "Only schema-1 server records at or above the level, and collector records, leave the host.",
         "Loss is visible per destination: status records, overrun records and loopback counters (LP-2).",
-        "Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3)."
+        "Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3).",
+        "A Spot notice is recorded, then the server and the collector stop in order within 86 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4)."
       ]
     }
   ]

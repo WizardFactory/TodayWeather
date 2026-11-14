@@ -4,7 +4,10 @@
 # invalid settings it fails without affecting server2.service.
 [Unit]
 Description=server2 log collector
-After=network-online.target
+# LogNamespace= orders a unit after its journal's sockets only; ordering after the
+# namespace's journald service makes a shutdown stop this unit before its journal, so its
+# final lines are kept (found by the LP-4 reboot check: they were lost otherwise).
+After=network-online.target systemd-journald@server2.service
 Wants=network-online.target
 StartLimitIntervalSec=300
 StartLimitBurst=5
