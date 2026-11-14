@@ -1,6 +1,6 @@
 {
-  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS",
-  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, and renders the AWS templates (LP-5) that the owner applies. Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
+  "title": "server2 host log pipeline: install, select destinations, read logs, prepare AWS, watch for loss",
+  "scenario": "An operator installs the server2 log collector on a Linux host, keeps the default local journal, recovers from a mistyped setting, ships the log to S3 and CloudWatch Logs with different levels, reads each destination, renders the AWS templates (LP-5) that the owner applies, and watches one destination fail and recover (LP-2). Captured on 2026-11-14 in a disposable Ubuntu 24.04 VM (systemd 255) with the pinned Vector 0.61.0 collector and a server2 release binary; S3 and CloudWatch Logs were the loopback stand-in server2/deploy/logging/standin.py, reached through the real regional AWS host names. All values are synthetic. Full reference: docs/operations/server2-logging.md, section Host log pipeline.",
   "steps": [
     {
       "title": "Install the pipeline; the default ships nothing",
@@ -25,7 +25,7 @@
     },
     {
       "title": "Where records arrive",
-      "instruction": "Serve requests, then stop the server and, a few seconds later, the collector (until LP-4 adds a drain step, stopping both at once can leave the server's last records in the local journal only). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
+      "instruction": "Serve requests, then stop the server and the collector (systemctl stop server2.service server2-logs.service stops the server first). The collector's stop waits until every destination has confirmed the records (up to about 60 s for an open S3 object). Look at what arrived: S3 keys under the prefix and CloudWatch streams in the group.",
       "screenshot": "3b-delivered.png",
       "caption": "S3 keys and CloudWatch streams carry the source (server or collector), the host ID and the boot ID; S3 keys also carry the UTC date and hour and a unique suffix.",
       "expected": "Server and collector records are kept apart, and records from different hosts or boots never share a stream or key."
@@ -43,6 +43,13 @@
       "screenshot": "5-aws-templates.png",
       "caption": "A prefix inside a weather data prefix is refused and nothing is written. The rendered policy grants only PutObject under the log prefix, stream creation, event writing and stream lookup in the one group; the lifecycle covers only the log prefix; the group keeps 30 days.",
       "expected": "Three JSON files without placeholders, ready for the owner to apply and read back."
+    },
+    {
+      "title": "Watch a destination fail and recover (LP-2)",
+      "instruction": "Read the collector's counters on the host (curl -s http://127.0.0.1:9598/metrics) and its status record, written every 60 s to the server2 journal and shipped to every destination. A destination whose oldest unconfirmed record is older than twice its delivery window (S3 120 s, CloudWatch 20 s) is shown as behind. The capture makes S3 fail with the stand-in's fault switch for over two minutes while CloudWatch keeps working, then lets it recover.",
+      "screenshot": "6-loss.png",
+      "caption": "While S3 fails, the collector keeps retrying, so its failure counter stays at zero; the status record is warn with s3 behind (134 s unconfirmed) and CloudWatch current. After recovery the records written meanwhile arrive from the journal and the status is info again. The counters listen on 127.0.0.1 only.",
+      "expected": "An outage is visible in the status record while it lasts, and recovery needs no action."
     }
   ]
 }

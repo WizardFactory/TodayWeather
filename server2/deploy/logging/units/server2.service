@@ -1,9 +1,8 @@
 # server2 origin. stdout/stderr go to the size-capped `server2` journal namespace,
 # which the collector (server2-logs.service) ships. The server does not require
 # the collector: it starts and stops normally when the collector is absent or
-# rejected. Ordering after the collector makes a shutdown stop the server first.
-# The collector stops reading on SIGTERM, so shipping the server's final records
-# at shutdown needs the drain step of LP-4 (#2981); until then they stay local.
+# rejected. Ordering after the collector makes a shutdown stop the server first;
+# the collector's stop drain (LP-2) then ships the server's final records.
 [Unit]
 Description=server2 weather origin
 After=network-online.target server2-logs.service

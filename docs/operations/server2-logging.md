@@ -67,7 +67,7 @@ No event API formats raw errors, URLs, headers, request/response bodies, key mat
 
 ## Host log pipeline
 
-Issue [#2977](https://github.com/WizardFactory/TodayWeather/issues/2977) adds the host side in slices. This section describes LP-1 ([#2978](https://github.com/WizardFactory/TodayWeather/issues/2978)): collector, destination selection, validation, naming and the local journal. Redelivery after outages and loss counters (LP-2, #2979), boot configuration and instance identity (LP-3, #2980), Spot interruption handling (LP-4, #2981), IAM and retention templates (LP-5, #2982) and the qualification host (LP-6, #2983) follow. Nothing here creates an AWS resource or deploys a host.
+Issue [#2977](https://github.com/WizardFactory/TodayWeather/issues/2977) adds the host side in slices. This section describes LP-1 ([#2978](https://github.com/WizardFactory/TodayWeather/issues/2978)): collector, destination selection, validation, naming and the local journal; LP-5 ([#2982](https://github.com/WizardFactory/TodayWeather/issues/2982)) adds the AWS templates and LP-2 ([#2979](https://github.com/WizardFactory/TodayWeather/issues/2979)) loss visibility below. Boot configuration and instance identity (LP-3, #2980), Spot interruption handling (LP-4, #2981) and the qualification host (LP-6, #2983) follow. Nothing here creates an AWS resource or deploys a host.
 
 The server process is unchanged: it writes NDJSON to stderr and its readiness line to stdout. A host collector outside the process ships that output. Assets live in [`server2/deploy/logging/`](../../server2/deploy/logging/). An operator walkthrough with actual captures is in the [pipeline manual PDF](server2-logging-pipeline.pdf) ([editable source](assets/server2-logging-pipeline/manual.json)).
 
@@ -85,12 +85,13 @@ The installer checks the collector archive's SHA-256 against [`collector.json`](
 | Path | Purpose |
 | --- | --- |
 | `/etc/systemd/system/server2.service` | The server: `/opt/server2/bin/server2` in `/opt/server2/config` (where its `.env` is read). Output goes to the `server2` journal namespace with journal rate limiting off. It is ordered after the collector without requiring it, so a shutdown stops the server first and the server starts when the collector is missing or rejected. |
-| `/etc/systemd/system/server2-logs.service` | The collector. Its start condition runs `render.py`; the collector itself (Vector) runs as a dynamic user in the `systemd-journal` group. |
+| `/etc/systemd/system/server2-logs.service` | The collector. Its start condition runs `render.py` and `status.py start` (overrun check); the collector itself (Vector) runs as a dynamic user in the `systemd-journal` group; its stop runs `status.py drain`. |
+| `/etc/systemd/system/server2-logs-status.{service,timer}` | Status record every 60 s while the collector runs (LP-2). |
 | `/etc/systemd/journald@server2.conf` | The local copy: persistent, compressed, capped at 1 GiB, no rate limit. |
 | `/etc/systemd/journald.conf.d/server2-system.conf` | Caps the system journal at 512 MiB, so host logs stay within the 2 GiB log budget of [`prerequisites.json`](../../server2/deploy/staging/prerequisites.json). |
-| `/opt/server2/logging/` | `vector`, `render.py`, `collector.json`. |
+| `/opt/server2/logging/` | `vector`, `render.py`, `status.py`, `collector.json`. |
 
-It enables both units and starts neither. The server binary and its `.env` come from the release procedure.
+It enables the server, the collector and the status timer, and starts only the timer, which does nothing while the collector is stopped. The server binary and its `.env` come from the release procedure.
 
 ### Select destinations
 
@@ -159,7 +160,7 @@ The templates and their checks are local: `test_logging.py` fails on any grant b
 Each remote destination has its own journal reader, filter and checkpoint, so its level and progress are independent of the other destination. A destination receives:
 
 - server records (`server2.service`) that are schema-1 NDJSON with `level` at or above the destination's level, as the original line, unchanged;
-- collector records (`server2-logs.service`) in the collector record format, at every level.
+- collector records (`server2-logs.service`, `server2-logs-status.service`) in the collector record format, at every level.
 
 Everything else stays in the local journal only: the stdout readiness line, any line that is not schema-1 NDJSON (for example a runtime abort message) and the collector's own diagnostics.
 
@@ -176,11 +177,45 @@ The **collector record format** is one JSON object per line with `"collector_sch
 - CloudWatch stream: `<source>/<instance-id>/<boot-id>`
 - S3 key: `<prefix>/<source>/dt=<YYYY-MM-DD>/hour=<HH>/<instance-id>/<boot-id>-<YYYYMMDDTHHMMSSZ>-<uuid>.ndjson.gz`, gzip, one record per line. Records are partitioned by their own time; an S3 object is closed at least every 60 seconds.
 
-### Limits of this slice
+### Stop behaviour and remaining limits
 
-- **Final records at shutdown.** On SIGTERM the collector stops reading the journal at once, so records written just before a shutdown stay in the local journal only (observed in the smoke: every record from the last 41 ms before the collector's stop). The ordered stop and drain that ship them belong to LP-4 (#2981).
-- **Restart after shutdown.** After a stop, the S3 reader's checkpoint was observed empty, so the next start sends that boot's records to S3 again (new keys; nothing is overwritten). Exactly-once redelivery belongs to LP-2 (#2979).
+- **Stop drain (LP-2).** On SIGTERM the collector stops reading the journal at once, and its checkpoint covers only deliveries confirmed before the stop. LP-1 therefore lost the final records at a shutdown (in the LP-1 smoke, every record from the last 41 ms) and resent records after a restart (15 of 20 in a measurement). The collector's stop now first waits, for at most 75 s, until every destination has confirmed everything up to the journal's end (`status.py drain`), and writes a `collector.drained` record. With that, a stop after the server has stopped (every shutdown: the server stops first) ships the server's final records and resends nothing at the next start (LP-2 check). **Accepted (owner decision, 2026-11-14):** a restart of the collector alone while the server keeps writing (for example after a settings change) can resend records read during its stop: they are flushed at SIGTERM without a checkpoint update. Records are unique per line (nanosecond timestamp, trace and operation IDs), so remove duplicates when reading (`sort -u`, or by `trace_id`, `operation_id`, `event` and `timestamp`). To avoid them, stop the server first, as a shutdown does. A stop therefore takes up to about one S3 object window, 60 s, or 75 s plus 20 s when a destination is failing. If a destination is still failing after 75 s, the stop proceeds; its unconfirmed records stay in the journal and are sent once after the next start, and the `collector.drained` record is `warn`. The Spot time budget is LP-4's (#2981).
 - **Identity and credentials.** The instance ID is the machine ID and credentials come from the default AWS chain (the instance role on EC2) until LP-3 (#2980).
+
+### Loss, redelivery and counters
+
+LP-2 ([#2979](https://github.com/WizardFactory/TodayWeather/issues/2979)).
+
+- **The server is independent of the pipeline.** With the collector stopped, or with both destinations failing, the server's responses and its stop time are unchanged (checked against a baseline).
+- **Destinations are independent.** Each has its own journal reader and checkpoint. While S3 failed for more than a minute, CloudWatch kept receiving every record within 1 s. When S3 recovered, including after a collector restart during the outage, every record arrived exactly once and in journal order. The local journal is the buffer: a failing destination's reader stops advancing, and nothing is dropped while its unshipped records are still in the journal.
+- **Journal capacity.** The `server2` namespace keeps 1 GiB. At the measured 9–15 MB per hour at `info`, that is roughly 68–110 hours (about 3–4.5 days) of output before an outage starts losing records; compression extends it. Beyond that, records rotate out unshipped.
+- **Overrun record.** When records left the journal before a destination's reader got to them, the collector writes a warn record at its next start and at the next status run:
+
+  ```json
+  {"collector_schema": 1, "event": "collector.journal_overrun", "level": "warn", "destination": "s3",
+   "lost_from": "…Z", "lost_until": "…Z", "overrun_count": 1, "timestamp": "…Z"}
+  ```
+
+  Every gap is reported once, and the count per destination is kept in the collector's state directory. The range covers entries the reader never saw; they can include the collector's own diagnostics, which are never shipped. A reader with no acknowledged delivery yet is compared against the position it started from.
+- **Counters.** The collector serves Prometheus counters on `127.0.0.1:9598` only (`curl -s http://127.0.0.1:9598/metrics` on the host). Per destination (`component_id="s3"` or `"cloudwatch"`), loss shows in `vector_component_errors_total` (requests that failed after the collector gave up retrying), `vector_component_discarded_events_total{intentional="false"}` and `vector_buffer_discarded_events_total` (records dropped). `intentional="true"` on `select_*` counts records below the destination's level, which is filtering, not loss. The counters restart at zero with the collector.
+- **Status record.** Every 60 s while the collector runs (a tick during a collector stop or restart is skipped), `server2-logs-status.timer` writes one collector record, which is shipped to every destination:
+
+  ```json
+  {"collector_schema": 1, "event": "collector.status", "level": "warn", "metrics_available": true,
+   "destinations": {"s3": {"unshipped_seconds": 128, "behind": true, "sent_events": 0, "failed_requests": 0,
+                           "dropped_events": 0, "journal_overruns": 0},
+                    "cloudwatch": {"unshipped_seconds": 0, "behind": false, "sent_events": 55, ...}}}
+  ```
+
+  `unshipped_seconds` is the age of the oldest journal record that the destination has not yet confirmed. `behind` is true above twice the destination's delivery window (S3 120 s, CloudWatch 20 s). This is how an outage shows **while it lasts**: the collector retries a failing destination indefinitely and counts `failed_requests` only when it gives up, so the counters alone stay at zero during an outage (observed). The level is `warn` when a destination is behind, anything was dropped or overrun, or the counters were unavailable. Counters refresh every 10 s.
+
+**Reading the two sides together.** A gap in a destination has these possible causes:
+- the server dropped records before they reached stderr: nonzero `server2_logging_*_total` on the server's metrics port and its `logging.loss` records;
+- the collector has not delivered them yet, or failed or dropped them: `behind` or a large `unshipped_seconds`, nonzero `failed_requests` or `dropped_events` in `collector.status`, or the Prometheus counters above;
+- they rotated out of the journal before shipping: a `collector.journal_overrun` record;
+- a record is still in flight: an S3 object closes within 60 s, CloudWatch within seconds.
+
+`collector.started` and `collector.status` records bracket the periods that are covered. A destination with no status record for longer than a few minutes means the collector or the host was down; the local journal on a surviving host still holds the records.
 
 ### Read each destination
 
@@ -211,7 +246,7 @@ The collector is [Vector](https://github.com/vectordotdev/vector) 0.61.0 (MPL-2.
 | Reads the journal of selected units | Yes: the `journald` source with `journal_namespace` and `include_units`, as a dynamic user in `systemd-journal`. On systemd 250–257 (Ubuntu 24.04: 255, Amazon Linux 2023: 252) Vector rejects reading previous boots (`current_boot_only: false`), so each reader covers the current boot only. LP-3 must handle the backlog left by a previous boot on a surviving disk. |
 | Destinations from variables | Not natively: Vector cannot switch sinks by environment and ignores the AWS SDK's `AWS_ENDPOINT_URL_*` variables. `render.py` validates the variables and writes the configuration; endpoints follow from the region only. |
 | Minimal permissions | With health checks off: S3 `PutObject`; CloudWatch Logs `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. The CloudWatch sink calls `DescribeLogStreams` before writing, so the role template allows it. No bucket listing, no `DescribeLogGroups`, no group creation. |
-| Flush at stop | 0.02–0.24 s with up to 569 journal lines (stop of the collector after the server); the bound under a two-minute notice belongs to LP-4. |
+| Flush at stop | Without a drain, 0.02–0.24 s but unconfirmed (LP-1). With LP-2's stop drain, a stop waits for confirmation: 57–60 s with an open S3 object, about 0.1 s with CloudWatch only. The bound under a two-minute notice belongs to LP-4. |
 | Memory | Peak resident set 70–77 MiB with one or two destinations. |
 
 ### Verify the pipeline
@@ -224,7 +259,7 @@ sudo python3 -I server2/deploy/logging/linux_check.py --disposable-host \
   --report reports/logging-pipeline/check.json
 ```
 
-It points the real regional AWS host names at the loopback stand-in [`standin.py`](../../server2/deploy/logging/standin.py) through `/etc/hosts` and a test CA, so the product configuration has no endpoint or test setting; only the collector gets dummy credentials through a test drop-in. Scenarios: local only, S3 only, CloudWatch only, all destinations with a request burst, and three invalid settings. Each checks delivery while both units run (within 70 s for S3 and 10 s for CloudWatch), exact delivery against the journal per level after the stop, the naming contract, the AWS actions used, the start record, the absence of the synthetic sensitive values at every destination including the journal, and of `.env` values in the collector's environment, and that the server keeps answering. The [PDF](server2-logging.pdf) is the #2802 snapshot and does not cover this section.
+It points the real regional AWS host names at the loopback stand-in [`standin.py`](../../server2/deploy/logging/standin.py) through `/etc/hosts` and a test CA, so the product configuration has no endpoint or test setting; only the collector gets dummy credentials through a test drop-in. Scenarios: local only, S3 only, CloudWatch only, all destinations with a request burst, isolation of the server (collector stopped, destinations failing), a one-destination outage with a collector restart and recovery, a journal overrun, and three invalid settings. The stand-in answers 503 for S3 or CloudWatch while `<state>/fail-s3` or `fail-logs` exists. Each checks delivery while both units run (within 70 s for S3 and 10 s for CloudWatch), exact delivery against the journal per level after the stop, the naming contract, the AWS actions used, the start record, the absence of the synthetic sensitive values at every destination including the journal, and of `.env` values in the collector's environment, and that the server keeps answering. The [PDF](server2-logging.pdf) is the #2802 snapshot and does not cover this section.
 
 ## Implementation audit
 

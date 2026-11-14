@@ -33,7 +33,10 @@ DEFAULT_REGION = 'ap-northeast-2'
 DEFAULTS = {'SERVER2_LOG_SINKS': 'local', 'SERVER2_LOG_S3_LEVEL': 'info', 'SERVER2_LOG_CLOUDWATCH_LEVEL': 'warn'}
 # The journal namespace and units whose output is shipped; their `source` names.
 NAMESPACE = 'server2'
-UNITS = {'server2.service': 'server', 'server2-logs.service': 'collector'}
+UNITS = {'server2.service': 'server', 'server2-logs.service': 'collector',
+         'server2-logs-status.service': 'collector'}
+# Loopback-only Prometheus endpoint with the collector's own counters (LP-2, #2979).
+METRICS_ADDRESS = '127.0.0.1:9598'
 # First segments of the weather data prefixes in the same bucket (staging role policy).
 # A log prefix inside them would put the log lifecycle rule over weather records.
 RESERVED_PREFIXES = ('raw', 'index', 'packs', 'summary', 'state', 'budgets', 'geocode')
@@ -222,6 +225,11 @@ def collector_config(config, instance_id, state_dir):
             'create_missing_group': False, 'create_missing_stream': True,
             'batch': {'timeout_secs': CLOUDWATCH_BATCH_SECONDS},
         })
+    # The collector's own counters (sent, failed, dropped per component) on loopback only;
+    # status.py reads them and ships a summary record (LP-2, #2979).
+    sources['collector_metrics'] = {'type': 'internal_metrics', 'scrape_interval_secs': 10}
+    sinks['collector_metrics_endpoint'] = {'type': 'prometheus_exporter', 'inputs': ['collector_metrics'],
+                                           'address': METRICS_ADDRESS}
     return {'data_dir': str(state_dir), 'timezone': 'UTC', 'api': {'enabled': False},
             'sources': sources, 'transforms': transforms, 'sinks': sinks}
 

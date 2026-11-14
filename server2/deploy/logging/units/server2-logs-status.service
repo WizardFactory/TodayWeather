@@ -1,0 +1,17 @@
+# Periodic collector status record (LP-2, #2979): per-destination sent, failed and
+# dropped counts from the collector's loopback metrics endpoint, and journal overruns.
+# The record goes to the server2 journal namespace; the collector ships it.
+[Unit]
+Description=server2 log collector status record
+After=server2-logs.service
+
+[Service]
+Type=oneshot
+LogNamespace=server2
+ExecCondition=/usr/bin/systemctl is-active --quiet server2-logs.service
+ExecStart=/usr/bin/python3 -I /opt/server2/logging/status.py periodic --state /var/lib/server2-logs
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=-/var/lib/private/server2-logs
+ProtectHome=yes
+PrivateTmp=yes

@@ -11,6 +11,7 @@ bodies with chunk signatures or trailing checksums.
 CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
+Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503.
 """
 import argparse
 import json
@@ -153,14 +154,25 @@ class Handler(BaseHTTPRequestHandler):
                 # Distinct keys are part of the contract: an overwrite is recorded, not hidden.
                 self.record('s3', 'Overwrite', bucket=bucket, key=key)
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(body)
+            temporary = target.with_name('.' + target.name + '.tmp')  # readers never see a partial object
+            temporary.write_bytes(body)
+            temporary.replace(target)
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
+
+    def unavailable(self, service):
+        """Test fault: while <state>/fail-<service> exists, that service answers 503."""
+        if (self.server.state / f'fail-{service}').exists():
+            self.body()  # drain the request
+            self.record(service, 'Unavailable')
+            self.reply(503, b'{"__type":"ServiceUnavailableException","message":"stand-in fault"}')
+            return True
+        return False
 
     def handle_one(self):
         try:
             if self.headers.get('X-Amz-Target', '').startswith('Logs_20140328.'):
-                return self.logs()
-            return self.s3()
+                return None if self.unavailable('logs') else self.logs()
+            return None if self.unavailable('s3') else self.s3()
         except (ValueError, KeyError, json.JSONDecodeError) as exc:
             return self.reply(400, json.dumps({'__type': 'StandinBadRequest', 'message': type(exc).__name__}).encode())
 
