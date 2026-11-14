@@ -140,13 +140,14 @@ The owner then applies them with administrator credentials (the instance role ca
 ```sh
 aws s3api get-bucket-lifecycle-configuration --bucket "$BUCKET"   # expect NoSuchLifecycleConfiguration
 aws s3api put-bucket-lifecycle-configuration --bucket "$BUCKET" --lifecycle-configuration "file://$OUT/bucket-lifecycle.json"
-aws logs create-log-group --log-group-name /server2/production --log-group-class STANDARD --region ap-northeast-2
-aws logs put-retention-policy --log-group-name /server2/production --retention-in-days 30 --region ap-northeast-2
+GROUP=$(jq -r .logGroupName "$OUT/log-group.json")   # CloudWatch splits creation and retention into two calls
+aws logs create-log-group --log-group-name "$GROUP" --log-group-class "$(jq -r .logGroupClass "$OUT/log-group.json")" --region ap-northeast-2
+aws logs put-retention-policy --log-group-name "$GROUP" --retention-in-days "$(jq -r .retentionInDays "$OUT/log-group.json")" --region ap-northeast-2
 aws iam put-role-policy --role-name tw-server2-runtime --policy-name tw-server2-runtime-logs \
   --policy-document "file://$OUT/role-policy.json"
 # Read back
 aws s3api get-bucket-lifecycle-configuration --bucket "$BUCKET"
-aws logs describe-log-groups --log-group-name-prefix /server2/production --region ap-northeast-2 \
+aws logs describe-log-groups --log-group-name-prefix "$GROUP" --region ap-northeast-2 \
   --query 'logGroups[].[logGroupName,retentionInDays,logGroupClass]'
 aws iam get-role-policy --role-name tw-server2-runtime --policy-name tw-server2-runtime-logs
 ```

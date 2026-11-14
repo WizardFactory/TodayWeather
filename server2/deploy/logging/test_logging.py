@@ -404,6 +404,15 @@ class AwsTemplatesTest(unittest.TestCase):
             lifecycle = self.lifecycle()
             lifecycle['Rules'][0]['Expiration']['Days'] = 30
             self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        for name, change in {  # GEM-LP5-001
+                'Days and marker in one rule': lambda r: r[0]['Expiration'].update(ExpiredObjectDeleteMarker=True),
+                'Days added to the marker rule': lambda r: r[1]['Expiration'].update(Days=1),
+                'negative noncurrent days': lambda r: r[0]['NoncurrentVersionExpiration'].update(NoncurrentDays=-1),
+                'non-integer multipart days': lambda r: r[0]['AbortIncompleteMultipartUpload'].update(DaysAfterInitiation='x')}.items():
+            with self.subTest(name):
+                lifecycle = self.lifecycle()
+                change(lifecycle['Rules'])
+                self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
         with self.subTest('transition added'):
             lifecycle = self.lifecycle()
             lifecycle['Rules'][0]['Transitions'] = [{'Days': 30, 'StorageClass': 'GLACIER'}]
@@ -416,6 +425,10 @@ class AwsTemplatesTest(unittest.TestCase):
     def test_log_group_has_explicit_retention(self):
         self.assertEqual(aws_templates.load('log-group'),
                          {'logGroupName': '${LogGroupName}', 'logGroupClass': 'STANDARD', 'retentionInDays': 30})
+        self.assertEqual(aws_templates.log_group_violations(aws_templates.load('log-group')), [])
+        for change in ({'retentionInDays': 3653}, {'logGroupClass': 'INFREQUENT_ACCESS'}, {'kmsKeyId': 'k'}):  # GEM-LP5-003
+            with self.subTest(change):
+                self.assertTrue(aws_templates.log_group_violations(dict(aws_templates.load('log-group'), **change)))
 
     def test_prerequisites_record_the_templates_as_not_provisioned(self):
         record = json.loads((HERE.parent / 'staging' / 'prerequisites.json').read_text())['log_pipeline']

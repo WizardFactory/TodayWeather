@@ -21,6 +21,8 @@ Selected evidence for [#2982](https://github.com/WizardFactory/TodayWeather/issu
 | Reviewer | Head | Verdict | Findings and disposition |
 | --- | --- | --- | --- |
 | Codex `gpt-6.1-sol`, high (required) | `88963153` | CHANGES_REQUIRED | CX-LP5-001 (Required): the lifecycle check only required the actions to exist, so `NewerNoncurrentVersions=1` or an extra 1-day expiry rule passed → exact rules, fields and values. CX-LP5-002 (Required): an empty `--region` was normalized but the raw empty value was rendered into the ARNs → render the normalized settings. CX-LP5-003 (Recommended): `aws/` group names accepted → rejected by the collector and the renderer. Red (`correction-red`, 5 failures) then Green. |
+| Gemini 4 Argon high (additional) | `88963153` | PASS | GEM-LP5-001/002 match CX-LP5-001/002 (combined `Days` + marker, negative or non-integer days are now test cases; an empty region is normalized like the collector does rather than rejected). GEM-LP5-003 (Recommended): log group template now checked (`log_group_violations`), and the apply commands read the rendered `log-group.json`. |
+| Grok 4.7 high (additional) | — | not attempted | Its usage quota (HTTP 429, rolling 24 h) was exhausted in the LP-1 review of the same session. |
 
 ## Limitations
 

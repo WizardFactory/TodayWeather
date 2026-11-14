@@ -139,6 +139,17 @@ def lifecycle_violations(lifecycle, log_prefix, data_prefixes):
     return problems
 
 
+def log_group_violations(group):
+    """The log group record: exactly the name, the Standard class and the decided retention."""
+    expected = {'logGroupName', 'logGroupClass', 'retentionInDays'}
+    problems = [] if set(group) == expected else [f'log group fields must be {sorted(expected)}']
+    if group.get('retentionInDays') != CLOUDWATCH_RETENTION_DAYS:
+        problems.append(f'log group retention must be {CLOUDWATCH_RETENTION_DAYS} days')
+    if group.get('logGroupClass') != 'STANDARD':
+        problems.append('log group class must be STANDARD')
+    return problems
+
+
 def fill(template_text, values):
     text = template_text
     for name, value in values.items():
@@ -172,7 +183,7 @@ def main(argv=None):
         return 2
     values = {'BucketName': config['bucket'], 'LogPrefix': config['prefix'], 'LogGroupName': config['group'],
               'Region': config['region'], 'AccountId': args.account}
-    problems = policy_violations(load('role-policy')) + lifecycle_violations(
+    problems = policy_violations(load('role-policy')) + log_group_violations(load('log-group')) + lifecycle_violations(
         json.loads(fill(json.dumps(load('bucket-lifecycle')), values)), config['prefix'], weather_prefixes())
     if problems:
         print('aws_templates: template check failed: ' + '; '.join(problems), file=sys.stderr)
