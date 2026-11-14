@@ -1,0 +1,21 @@
+{
+  "task": "LogLoss2979",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2979",
+  "scope": "LP-2 of #2977: server isolation from the collector, independent destinations, redelivery from the journal, loopback counters, periodic status record with unconfirmed age, journal overrun records. Stacked on PR #2985. Pre-merge only; no deployment or AWS change.",
+  "server2_paths": [
+    "server2/config/tasks/LogLoss2979.json",
+    "server2/deploy/logging/"
+  ],
+  "outside": [
+    {"path": "intent/issue-2979.md", "category": "documentation", "reason": "Task intent for LP-2"},
+    {"path": "specs/issue-2979.md", "category": "documentation", "reason": "Task specification for LP-2"},
+    {"path": "plans/issue-2979.md", "category": "documentation", "reason": "Task plan and user scenarios for LP-2"},
+    {"path": "docs/operations/server2-logging.md", "category": "documentation", "reason": "Loss, redelivery and counters; restart limit"},
+    {"path": "docs/architecture/diagrams/server2-logging.json", "category": "documentation", "reason": "Diagram gains status and collector counters"},
+    {"path": "docs/architecture/diagrams/server2-logging.html", "category": "documentation", "reason": "Regenerated diagram"},
+    {"path": "docs/operations/server2-logging-pipeline.pdf", "category": "documentation", "reason": "Manual gains the loss step"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/manual.json", "category": "documentation", "reason": "Editable manual source"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/6-loss.png", "category": "documentation", "reason": "Actual capture of counters and status records"},
+    {"path": "docs/evidence/tasks/issue-2979/verification.md", "category": "documentation", "reason": "Selected verification evidence for LP-2"}
+  ]
+}

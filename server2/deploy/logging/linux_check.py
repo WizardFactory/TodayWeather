@@ -133,7 +133,7 @@ def start_standin(state):
 
 def reset_host():
     """Stop both units and empty the server2 journal namespace and collector state."""
-    for unit in ('server2.service', 'server2-logs.service'):
+    for unit in ('server2.service', 'server2-logs.service', 'server2-logs-status.service'):
         systemctl('stop', unit, check=False)
         systemctl('reset-failed', unit, check=False)
     # Rotate, then delete every archived file: the namespace keeps running and the
@@ -154,6 +154,194 @@ def http(path, method='GET', body=None, headers=None):
             return response.status
     except urllib.error.HTTPError as exc:
         return exc.code
+
+
+def http_body(path):
+    """Status and body digest of one request, for comparing responses across conditions."""
+    import hashlib
+    request = urllib.request.Request(f'http://127.0.0.1:{PORT}{path}')
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status, hashlib.sha256(response.read()).hexdigest()
+    except urllib.error.HTTPError as exc:
+        return exc.code, hashlib.sha256(exc.read()).hexdigest()
+
+
+FIXED_REQUESTS = ('/health', '/weather/v000903/coord/37.5,127.0', '/no/such/path')
+
+
+def stop_seconds(unit):
+    began = time.monotonic()
+    systemctl('stop', unit)
+    return round(time.monotonic() - began, 2)
+
+
+def logging_env(sinks='local,s3,cloudwatch', s3_level='info', cloudwatch_level='info'):
+    return server_env(SERVER2_LOG_SINKS=sinks, SERVER2_LOG_S3_LEVEL=s3_level, SERVER2_LOG_CLOUDWATCH_LEVEL=cloudwatch_level,
+                      SERVER2_LOG_S3_PREFIX=PREFIX, SERVER2_LOG_CLOUDWATCH_GROUP=GROUP)
+
+
+def wait_until(predicate, seconds):
+    began = time.monotonic()
+    while time.monotonic() - began < seconds:
+        if predicate():
+            return round(time.monotonic() - began, 1)
+        time.sleep(0.5)
+    return None
+
+
+def isolation_scenario(report):
+    """LP-2 AC1: the collector or a destination being down changes neither responses nor stop time."""
+    entry = report.scenario('isolation', ['LP2-AC1'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-isolation'
+    results = {}
+    for condition in ('baseline', 'collector stopped', 'destinations failing'):
+        reset_host()
+        start_standin(state)
+        write_env(logging_env())
+        if condition == 'destinations failing':
+            (state / 'fail-s3').touch(); (state / 'fail-logs').touch()
+        systemctl('start', 'server2-logs.service', check=False)
+        systemctl('start', 'server2.service')
+        if condition == 'collector stopped':
+            systemctl('stop', 'server2-logs.service')
+        check(f'{condition}: server healthy', wait_health())
+        responses = [http_body(p) for p in FIXED_REQUESTS]
+        seconds = stop_seconds('server2.service')
+        results[condition] = {'responses': responses, 'stop_seconds': seconds}
+        systemctl('stop', 'server2-logs.service', check=False)
+    entry['observations']['conditions'] = results
+    for condition in ('collector stopped', 'destinations failing'):
+        check(f'{condition}: responses equal the baseline', results[condition]['responses'] == results['baseline']['responses'])
+        check(f'{condition}: server stops within its bound and the baseline + 5 s',
+              results[condition]['stop_seconds'] < 45 and results[condition]['stop_seconds'] <= results['baseline']['stop_seconds'] + 5,
+              str(results[condition]['stop_seconds']))
+    systemctl('stop', STANDIN_UNIT, check=False)
+    return entry
+
+
+def ordered_subsequence(part, whole):
+    position = 0
+    for line in part:
+        try:
+            position = whole.index(line, position) + 1
+        except ValueError:
+            return False
+    return True
+
+
+def outage_scenario(report):
+    """LP-2 AC2/AC3: one destination down, the other continues; after recovery (and a collector
+    restart during the outage) every journal record arrives exactly once, in order."""
+    entry = report.scenario('outage-and-redelivery', ['LP2-AC2', 'LP2-AC3'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-outage'
+    reset_host()
+    start_standin(state)
+    write_env(logging_env())
+    systemctl('start', 'server2-logs.service', check=False)
+    systemctl('start', 'server2.service')
+    check('server healthy', wait_health())
+    (state / 'fail-s3').touch()
+    for i in range(10):
+        http(f'/weather/v000903/coord/36.{i},127.0')
+    time.sleep(1)
+    newest = [l for l in journal('server2.service') if server_record_level(l) in ('info', 'warn', 'error')][-1]
+    seconds = wait_until(lambda: newest in delivered(state)[0]['cloudwatch']['server'], 15)
+    entry['observations']['cloudwatch_while_s3_down_seconds'] = seconds
+    check('CloudWatch keeps receiving while S3 fails', seconds is not None and seconds <= 10, str(seconds))
+    time.sleep(125)  # an S3 batch closes and fails; S3 falls behind its 120 s window
+    check('S3 refused uploads during the outage', any(o['action'] == 'Unavailable' for o in delivered(state)[3]))
+    def latest_status():
+        systemctl('start', 'server2-logs-status.service')
+        records = [json.loads(l) for l in journal('server2-logs-status.service') if '"collector_schema"' in l]
+        return records[-1] if records else {}
+    during = latest_status()
+    entry['observations']['status_during_outage'] = during
+    check('the status record shows S3 behind while it fails, CloudWatch current',
+          during.get('level') == 'warn' and during['destinations']['s3']['behind'] is True
+          and during['destinations']['s3']['unshipped_seconds'] > 120
+          and during['destinations']['cloudwatch']['behind'] is False, json.dumps(during)[:300])
+    systemctl('restart', 'server2-logs.service')  # a collector restart during the outage
+    for i in range(10):
+        http(f'/weather/v000903/coord/35.{i},127.0')
+    (state / 'fail-s3').unlink()
+    wanted = [l for l in journal('server2.service') if server_record_level(l) in ('info', 'warn', 'error')]
+    seconds = wait_until(lambda: set(wanted) <= set(delivered(state)[0]['s3']['server']), 150)
+    entry['observations']['s3_recovery_seconds'] = seconds
+    check('after recovery S3 holds every journal record', seconds is not None, str(seconds))
+    time.sleep(2)
+    after = latest_status()
+    entry['observations']['status_after_recovery'] = after
+    check('after recovery the status shows S3 current', after.get('destinations', {}).get('s3', {}).get('behind') is False,
+          json.dumps(after)[:300])
+    systemctl('stop', 'server2.service'); time.sleep(1); systemctl('stop', 'server2-logs.service')
+    systemctl('stop', STANDIN_UNIT)
+    server_lines = [l for l in journal('server2.service') if server_record_level(l) in ('info', 'warn', 'error')]
+    received, keys, streams, _ = delivered(state)
+    for destination in ('s3', 'cloudwatch'):
+        got = received[destination]['server']
+        check(f'{destination}: every record exactly once', sorted(got) == sorted(server_lines),
+              f'expected {len(server_lines)} got {len(got)} unique {len(set(got))}')
+    check('cloudwatch: records in journal order', received['cloudwatch']['server'] == server_lines)
+    objects = []
+    for key in keys:
+        if '/server/' in key:
+            objects.append(gzip.decompress((state / 's3' / key).read_bytes()).decode().splitlines())
+    check('s3: lines in journal order within every object', objects and all(ordered_subsequence(o, server_lines) for o in objects))
+    statuses = [json.loads(l) for d in ('s3', 'cloudwatch') for l in received[d]['collector']]
+    check('a periodic status record reached both destinations',
+          all(any(r['event'] == 'collector.status' for r in map(json.loads, received[d]['collector'])) for d in ('s3', 'cloudwatch')))
+    entry['observations']['collector_events'] = sorted({r['event'] for r in statuses})
+    return entry
+
+
+def overrun_scenario(report):
+    """LP-2 AC4: records rotated away before delivery are reported with their time range and a
+    counter; the counters endpoint is loopback only."""
+    entry = report.scenario('journal-overrun', ['LP2-AC4'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-overrun'
+    reset_host()
+    start_standin(state)
+    write_env(logging_env())
+    systemctl('start', 'server2-logs.service', check=False)
+    systemctl('start', 'server2.service')
+    check('server healthy', wait_health())
+    listening = lambda: [line.split()[3] for line in run('ss', '-ltnH', 'sport = :9598').stdout.splitlines() if line.strip()]
+    wait_until(lambda: listening(), 15)  # the endpoint opens a moment after the collector starts
+    local = listening()
+    check('counters endpoint listens on loopback only', local == ['127.0.0.1:9598'], ' '.join(local) or 'no listener')
+    external = run('hostname', '-I').stdout.split()[0]
+    refused = run('curl', '-s', '-o', '/dev/null', '-m', '3', f'http://{external}:9598/metrics', check=False).returncode != 0
+    check('counters endpoint is not reachable on the host address', refused, external)
+    (state / 'fail-s3').touch()
+    for i in range(5):
+        http(f'/weather/v000903/coord/34.{i},127.0')
+    time.sleep(2)
+    systemctl('stop', 'server2-logs.service')
+    # Simulate an outage longer than the journal cap: rotate and delete the archived entries.
+    run('journalctl', '--namespace=server2', '--rotate', check=False)
+    time.sleep(1.5)
+    run('journalctl', '--namespace=server2', '--vacuum-time=1s', check=False)
+    (state / 'fail-s3').unlink()
+    systemctl('start', 'server2-logs.service')
+    systemctl('start', 'server2-logs-status.service')
+    collector = [json.loads(l) for l in journal('server2-logs.service') if '"collector_schema"' in l]
+    overruns = [r for r in collector if r['event'] == 'collector.journal_overrun' and r['destination'] == 's3']
+    check('an overrun record names the lost time range', len(overruns) == 1 and overruns[0]['lost_from'] < overruns[0]['lost_until'],
+          json.dumps(overruns)[:300])
+    status = [json.loads(l) for l in journal('server2-logs-status.service') if '"collector_schema"' in l]
+    check('the status record counts the overrun', status and status[-1]['destinations']['s3']['journal_overruns'] >= 1
+          and status[-1]['level'] == 'warn', json.dumps(status[-1:])[:300])
+    got = wait_until(lambda: any(json.loads(l)['event'] == 'collector.journal_overrun'
+                                 for l in delivered(state)[0]['s3']['collector']), 75)
+    check('the overrun record reaches S3', got is not None, str(got))
+    check('the overrun record reaches CloudWatch', any(json.loads(l)['event'] == 'collector.journal_overrun'
+                                                       for l in delivered(state)[0]['cloudwatch']['collector']))
+    systemctl('stop', 'server2.service'); systemctl('stop', 'server2-logs.service'); systemctl('stop', STANDIN_UNIT)
+    return entry
 
 
 def wait_health():
@@ -212,7 +400,7 @@ def delivered(state):
     result = {'s3': collections.defaultdict(list), 'cloudwatch': collections.defaultdict(list)}
     keys, streams = [], []
     for path in sorted((state / 's3').rglob('*')) if (state / 's3').exists() else []:
-        if path.is_file():
+        if path.is_file() and not path.name.startswith('.'):
             key = str(path.relative_to(state / 's3'))
             keys.append(key)
             source = key.split('/')[2] if key.startswith(PREFIX + '/') else '?'
@@ -221,9 +409,11 @@ def delivered(state):
     for path in sorted(group_dir.rglob('*.jsonl')) if group_dir.exists() else []:
         stream = str(path.relative_to(group_dir))[:-len('.jsonl')]
         streams.append(stream)
-        result['cloudwatch'][stream.split('/')[0]] += [json.loads(l)['message'] for l in path.read_text().splitlines()]
-    operations = [json.loads(l) for l in (state / 'operations.jsonl').read_text().splitlines()] \
-        if (state / 'operations.jsonl').exists() else []
+        text = path.read_text()
+        complete = text[:text.rfind('\n') + 1]  # the stand-in may be appending right now
+        result['cloudwatch'][stream.split('/')[0]] += [json.loads(l)['message'] for l in complete.splitlines()]
+    log = (state / 'operations.jsonl').read_text() if (state / 'operations.jsonl').exists() else ''
+    operations = [json.loads(l) for l in log[:log.rfind('\n') + 1].splitlines()]
     return result, keys, streams, operations
 
 
@@ -346,7 +536,7 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
             got = sorted(received[destination]['server'])
             check(f'{destination} holds exactly the server records at or above {level}', got == expected,
                   f'expected {len(expected)} got {len(got)}')
-            starts = [json.loads(l) for l in received[destination]['collector']]
+            starts = [r for r in map(json.loads, received[destination]['collector']) if r['event'] == 'collector.started']
             check(f'{destination} holds the collector start record',
                   len(starts) == 1 and starts[0]['event'] == 'collector.started' and starts[0]['sinks'] == sinks
                   and starts[0]['collector_version'] == 'vector 0.61.0' and starts[0]['instance_id'] == machine,
@@ -428,6 +618,9 @@ def main():
     delivery_scenario(report, 's3-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['s3'], 'info', 'warn', timed=('s3',))
     delivery_scenario(report, 'cloudwatch-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['cloudwatch'], 'info', 'warn', timed=('cloudwatch',))
     delivery_scenario(report, 'all-destinations', ['AC1', 'AC2', 'AC4', 'AC5'], ['local', 's3', 'cloudwatch'], 'debug', 'error', burst=300, timed=('s3',))
+    isolation_scenario(report)
+    outage_scenario(report)
+    overrun_scenario(report)
     invalid_scenario(report, 'invalid-destination', dict(SERVER2_LOG_SINKS='s3,' + SYNTHETIC), 'SERVER2_LOG_SINKS', SYNTHETIC)
     invalid_scenario(report, 'invalid-level', dict(SERVER2_LOG_SINKS='cloudwatch', SERVER2_LOG_CLOUDWATCH_GROUP=GROUP,
                                                    SERVER2_LOG_CLOUDWATCH_LEVEL=SYNTHETIC), 'SERVER2_LOG_CLOUDWATCH_LEVEL', SYNTHETIC)

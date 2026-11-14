@@ -18,6 +18,9 @@ RuntimeDirectory=server2-logs
 LogNamespace=server2
 # "+": runs as root only to read the allowlisted names from server2's .env.
 ExecCondition=+/usr/bin/python3 -I /opt/server2/logging/render.py --env-file /opt/server2/config/.env --state /var/lib/server2-logs --output /run/server2-logs/vector.json --version-file /opt/server2/logging/collector.json
+# "+": root reads the checkpoints and the journal to report records rotated away
+# before they were shipped (status.py, LP-2).
+ExecStartPre=+/usr/bin/python3 -I /opt/server2/logging/status.py start --state /var/lib/server2-logs
 ExecStart=/opt/server2/logging/vector --config /run/server2-logs/vector.json
 # Restart after a crash (signal, timeout), not after an exit code: invalid settings
 # (255 from render.py, 78 from Vector) stay failed until the settings change.

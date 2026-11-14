@@ -31,7 +31,7 @@
     },
     {
       "id": "remote",
-      "label": "Remote destinations"
+      "label": "Outputs: remote destinations, loopback counters"
     }
   ],
   "mainPath": [
@@ -149,6 +149,24 @@
       "label": "S3 log prefix",
       "sublabel": "default info; 60 s objects",
       "width": 160
+    },
+    {
+      "id": "collector-counters",
+      "lane": "remote",
+      "col": 3,
+      "type": "backend",
+      "label": "Collector counters",
+      "sublabel": "127.0.0.1:9598 only",
+      "width": 160
+    },
+    {
+      "id": "status",
+      "lane": "host",
+      "col": 3,
+      "type": "security",
+      "label": "Status every 60 s",
+      "sublabel": "counts + journal overrun",
+      "width": 160
     }
   ],
   "edges": [
@@ -235,6 +253,27 @@
       "to": "cloudwatch",
       "label": "log events",
       "variant": "default"
+    },
+    {
+      "id": "collector-expose",
+      "from": "collector",
+      "to": "collector-counters",
+      "label": "sent / failed / dropped",
+      "variant": "security"
+    },
+    {
+      "id": "counters-status",
+      "from": "collector-counters",
+      "to": "status",
+      "label": "read",
+      "variant": "dashed"
+    },
+    {
+      "id": "status-journal",
+      "from": "status",
+      "to": "journal",
+      "label": "collector record",
+      "variant": "default"
     }
   ],
   "cards": [
@@ -271,7 +310,8 @@
         "A start check reads only SERVER2_LOG_* and bucket/region; local alone skips the collector, invalid settings fail it.",
         "The server does not require the collector; a shutdown stops the server first.",
         "Each remote destination has its own journal reader, level filter and checkpoint.",
-        "Only schema-1 server records at or above the level, and collector records, leave the host."
+        "Only schema-1 server records at or above the level, and collector records, leave the host.",
+        "Loss is visible per destination: status records, overrun records and loopback counters (LP-2)."
       ]
     }
   ]

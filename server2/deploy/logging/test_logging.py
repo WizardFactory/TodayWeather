@@ -19,6 +19,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import render  # noqa: E402
 import aws_templates  # noqa: E402
+import status  # noqa: E402
 
 SECRET = 'SYNTHETIC-PRIVATE-2802'
 COMPLETE = {'SERVER2_LOG_SINKS': 'local,s3,cloudwatch', 'SERVER2_S3_BUCKET': 'tw-server2-logs',
@@ -148,20 +149,22 @@ class RenderTest(unittest.TestCase):
 
     def test_one_journal_reader_and_filter_per_remote_destination(self):
         out = self.rendered()
-        self.assertEqual(set(out['sources']), {'journal_s3', 'journal_cloudwatch'})
-        self.assertEqual(set(out['sinks']), {'s3', 'cloudwatch'})
+        self.assertEqual(set(out['sources']), {'journal_s3', 'journal_cloudwatch', 'collector_metrics'})
+        self.assertEqual(set(out['sinks']), {'s3', 'cloudwatch', 'collector_metrics_endpoint'})
         for name, source in out['sources'].items():
+            if name == 'collector_metrics':
+                continue
             self.assertEqual(source['type'], 'journald')
             self.assertEqual(source['journal_namespace'], 'server2')
-            self.assertEqual(source['include_units'], ['server2.service', 'server2-logs.service'])
+            self.assertEqual(source['include_units'], ['server2.service', 'server2-logs.service', 'server2-logs-status.service'])
         self.assertEqual(out['sinks']['s3']['inputs'], ['select_s3'])
         self.assertEqual(out['transforms']['select_s3']['inputs'], ['journal_s3'])
         self.assertEqual(out['timezone'], 'UTC')
 
     def test_only_selected_destinations_are_rendered(self):
         out = self.rendered(SERVER2_LOG_SINKS='cloudwatch')
-        self.assertEqual(set(out['sinks']), {'cloudwatch'})
-        self.assertEqual(set(out['sources']), {'journal_cloudwatch'})
+        self.assertEqual(set(out['sinks']), {'cloudwatch', 'collector_metrics_endpoint'})
+        self.assertEqual(set(out['sources']), {'journal_cloudwatch', 'collector_metrics'})
 
     def test_naming_contract(self):
         out = self.rendered()
@@ -174,6 +177,7 @@ class RenderTest(unittest.TestCase):
 
     def test_least_privilege_and_delivery_settings(self):
         out = self.rendered()
+        self.assertEqual(out['sinks'].pop('collector_metrics_endpoint')['address'], '127.0.0.1:9598')  # loopback only
         for sink in out['sinks'].values():
             self.assertEqual(sink['healthcheck'], {'enabled': False})  # no HeadBucket/DescribeLogGroups
             self.assertEqual(sink['acknowledgements'], {'enabled': True})
@@ -472,6 +476,129 @@ class AwsTemplatesTest(unittest.TestCase):
                     changed[changed.index(bad[0]) + 1] = bad[1]
                     self.assertEqual(aws_templates.main(changed + ['--out', directory + '/bad']), 2)
             self.assertFalse(Path(directory, 'bad').exists())
+
+
+def _cursor(seq, realtime, seq_id='a' * 32):
+    return f's={seq_id};i={seq:x};b={"b" * 32};m=1;t={realtime:x};x=1'
+
+
+class StatusTest(unittest.TestCase):
+    """LP-2 (#2979): loss counters and journal overrun detection."""
+
+    def state(self, directory, **checkpoints):
+        for destination, cursor in checkpoints.items():
+            path = Path(directory) / f'journal_{destination}' / 'checkpoint.txt'
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(cursor)
+
+    def test_cursor_fields(self):
+        self.assertEqual(status.parse_cursor(_cursor(0x1cdd, 1_700_000_000_000_000)), ('a' * 32, 0x1cdd, 1_700_000_000_000_000))
+
+    def test_gap_after_the_checkpoint_is_an_overrun(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(100, 1_000), cloudwatch=_cursor(199, 2_000))
+            found = status.overruns(directory, _cursor(200, 5_000), {})
+            self.assertEqual([(d, a, b) for d, a, b, _ in found], [('s3', 1_000, 5_000)])  # cloudwatch needs 200: no gap
+
+    def test_no_gap_when_the_next_entry_is_still_there_or_ids_differ(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(199, 1_000), cloudwatch=_cursor(10, 1_000, seq_id='c' * 32))
+            self.assertEqual(status.overruns(directory, _cursor(200, 5_000), {}), [])
+            self.assertEqual(status.overruns(directory, None, {}), [])
+
+    def test_reader_without_checkpoint_uses_the_baseline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = {}
+            status.set_baselines(directory, _cursor(50, 900), state)
+            self.assertEqual(state['s3']['baseline'], _cursor(50, 900))
+            found = status.overruns(directory, _cursor(80, 5_000), state)
+            self.assertEqual(sorted(d for d, *_ in found), ['cloudwatch', 's3'])
+            self.state(directory, s3=_cursor(90, 6_000))
+            status.set_baselines(directory, _cursor(95, 7_000), state)
+            self.assertNotIn('baseline', state['s3'])
+
+    def test_each_gap_is_reported_once_and_counted(self):
+        with tempfile.TemporaryDirectory() as directory, mock.patch.object(status, 'oldest_entry', return_value=_cursor(200, 5_000)):
+            self.state(directory, s3=_cursor(100, 1_000))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                first = status.report_overruns(directory)
+                second = status.report_overruns(directory)
+            records = [json.loads(l) for l in out.getvalue().splitlines()]
+            self.assertEqual(len(records), 1)
+            self.assertEqual((records[0]['event'], records[0]['destination'], records[0]['level']),
+                             ('collector.journal_overrun', 's3', 'warn'))
+            self.assertLess(records[0]['lost_from'], records[0]['lost_until'])
+            self.assertEqual(first['s3'], 1)
+            self.assertEqual(second['s3'], 1)
+
+    def test_counters_per_destination(self):
+        text = '\n'.join([
+            '# HELP x', 'vector_component_sent_events_total{component_id="s3",component_kind="sink"} 40 1',
+            'vector_component_sent_events_total{component_id="journal_s3",component_kind="source"} 99 1',
+            'vector_component_errors_total{component_id="s3",error_type="request_failed"} 3 1',
+            'vector_component_discarded_events_total{component_id="s3",intentional="false"} 2 1',
+            'vector_component_discarded_events_total{component_id="select_s3",intentional="true"} 50 1',
+            'vector_buffer_discarded_events_total{component_id="cloudwatch",intentional="false"} 1 1'])
+        self.assertEqual(status.counters(text), {
+            's3': {'sent_events': 40, 'failed_requests': 3, 'dropped_events': 2},
+            'cloudwatch': {'sent_events': 0, 'failed_requests': 0, 'dropped_events': 1}})
+
+    def test_status_record_is_warn_on_any_loss(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'vector.json'
+            config.write_text(json.dumps({'sinks': {'s3': {}, 'collector_metrics_endpoint': {}}}))
+            metrics = 'vector_component_errors_total{component_id="s3"} 1 1'
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = metrics.encode()
+            out = io.StringIO()
+            with mock.patch.object(status, 'oldest_entry', return_value=None), \
+                    mock.patch.object(status, 'unshipped_seconds', return_value=0), \
+                    mock.patch.object(status.urllib.request, 'urlopen', return_value=response), contextlib.redirect_stdout(out):
+                self.assertEqual(status.main(['periodic', '--state', directory, '--config', str(config)]), 0)
+            record = json.loads(out.getvalue().splitlines()[-1])
+            self.assertEqual(record['event'], 'collector.status')
+            self.assertEqual(record['level'], 'warn')
+            self.assertEqual(set(record['destinations']), {'s3'})
+            self.assertEqual(record['destinations']['s3']['failed_requests'], 1)
+            self.assertNotIn('URL', out.getvalue())
+
+    def test_unshipped_age_shows_an_outage_while_it_lasts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            self.state(directory, s3=_cursor(100, 1_000_000))
+            now = 400_000_000  # 400 s later
+            with mock.patch.object(status, 'first_entry_after', return_value=_cursor(101, 10_000_000)):
+                self.assertEqual(status.unshipped_seconds(directory, 's3', {}, now), 390)
+            with mock.patch.object(status, 'first_entry_after', return_value=None):
+                self.assertEqual(status.unshipped_seconds(directory, 's3', {}, now), 0)
+            self.assertIsNone(status.unshipped_seconds(directory, 'cloudwatch', {}, now))
+            baseline = {'cloudwatch': {'baseline': _cursor(5, 100_000_000)}}
+            self.assertEqual(status.unshipped_seconds(directory, 'cloudwatch', baseline, now), 300)
+
+    def test_a_destination_behind_its_window_makes_the_status_warn(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / 'vector.json'
+            config.write_text(json.dumps({'sinks': {'s3': {}, 'cloudwatch': {}}}))
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = b''
+            for ages, level in (({'s3': 60, 'cloudwatch': 5}, 'info'), ({'s3': 121, 'cloudwatch': 5}, 'warn'),
+                                ({'s3': 0, 'cloudwatch': 21}, 'warn')):
+                out = io.StringIO()
+                with self.subTest(ages), mock.patch.object(status, 'oldest_entry', return_value=None), \
+                        mock.patch.object(status, 'unshipped_seconds', side_effect=lambda st, d, p, n: ages[d]), \
+                        mock.patch.object(status.urllib.request, 'urlopen', return_value=response), contextlib.redirect_stdout(out):
+                    status.main(['periodic', '--state', directory, '--config', str(config)])
+                record = json.loads(out.getvalue().splitlines()[-1])
+                self.assertEqual(record['level'], level)
+                self.assertEqual(record['destinations']['s3']['unshipped_seconds'], ages['s3'])
+
+    def test_units_install_the_status_timer(self):
+        unit = (HERE / 'units' / 'server2-logs-status.service').read_text()
+        self.assertIn('ExecCondition=/usr/bin/systemctl is-active --quiet server2-logs.service', unit)
+        self.assertIn('LogNamespace=server2', unit)
+        self.assertIn('OnUnitActiveSec=60', (HERE / 'units' / 'server2-logs-status.timer').read_text())
+        self.assertIn('status.py start', (HERE / 'units' / 'server2-logs.service').read_text())
+        self.assertIn('server2-logs-status.service', render.UNITS)
 
 
 if __name__ == '__main__':

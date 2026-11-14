@@ -1,0 +1,11 @@
+# Every 60 seconds while the collector runs (the service checks that itself).
+[Unit]
+Description=server2 log collector status record every 60 seconds
+
+[Timer]
+OnActiveSec=60
+OnUnitActiveSec=60
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target
