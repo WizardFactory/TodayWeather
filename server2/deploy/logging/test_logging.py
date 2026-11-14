@@ -243,16 +243,22 @@ class RenderTest(unittest.TestCase):
             }
             for name, (args, faults) in cases.items():
                 with self.subTest(name), contextlib.ExitStack() as stack:
-                    if 'os.replace' in faults:
-                        stack.enter_context(mock.patch.object(render.os, 'replace', side_effect=faults['os.replace']))
-                    else:
-                        stack.enter_context(mock.patch.object(render, 'machine_id', side_effect=faults.get('machine_id'),
-                                                              return_value='b' * 32))
+                    # Host identity is a fixture unless the case injects its failure, so each
+                    # case reaches the step it tests on any OS (CX-LP1-004).
+                    stack.enter_context(mock.patch.object(render, 'machine_id', side_effect=faults.get('machine_id'),
+                                                          return_value='b' * 32))
+                    stack.enter_context(mock.patch.object(render.Path, 'read_text', autospec=True,
+                                                          side_effect=_read_text_with_boot))
+                    replace = stack.enter_context(mock.patch.object(render.os, 'replace',
+                                                                    side_effect=faults.get('os.replace')))
                     err = stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
                     stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
                     self.assertEqual(render.main(args, environ={}), 255)
                     self.assertIn('the collector is not started', err.getvalue())
                     self.assertNotIn(SECRET, err.getvalue())
+                    if 'os.replace' in faults:
+                        self.assertEqual(replace.call_count, 1, 'the write failure was not reached')
+                        self.assertIn('(OSError)', err.getvalue())
 
 
 def _read_text_with_boot(self, *args, **kwargs):

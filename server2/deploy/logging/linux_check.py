@@ -278,23 +278,38 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
             entry['observations']['collector_rss_kib'] = int(re.search(r'VmHWM:\s+(\d+)', status).group(1))
             rendered = Path('/run/server2-logs/vector.json').read_text()
             check('rendered configuration holds no .env secret', SYNTHETIC not in rendered)
-    # Delivery while both units run (CX-LP1-003): the newest server record at or above
-    # each destination's level must arrive within the documented bound, before any stop.
+    # Delivery while both units run (CX-LP1-003, CX-LP1-005). One clock starts before a
+    # new request; each destination is then watched independently for the newest record
+    # that request produced at or above its level.
     bounds = {'s3': render.S3_BATCH_SECONDS + 10, 'cloudwatch': 10}
-    for destination, level in (('s3', s3_level), ('cloudwatch', cloudwatch_level)):
-        if destination not in sinks:
-            continue
-        wanted = [l for l in journal('server2.service') if server_record_level(l) is not None
-                  and render.LEVELS[server_record_level(l)] >= render.LEVELS[level]]
-        began, arrived = time.monotonic(), None
-        while wanted and time.monotonic() - began < bounds[destination] + 5:
-            if wanted[-1] in delivered(state)[0][destination]['server']:
-                arrived = round(time.monotonic() - began, 1)
-                break
-            time.sleep(0.5)
-        entry['observations'][f'{destination}_running_delivery_seconds'] = arrived
-        check(f'{destination} receives the newest record while running, within {bounds[destination]} s',
-              arrived is not None and arrived <= bounds[destination], str(arrived))
+    remote_levels = {d: lv for d, lv in (('s3', s3_level), ('cloudwatch', cloudwatch_level)) if d in sinks}
+    if remote_levels:
+        time.sleep(1.5)  # a preceding burst can exhaust the server's own per-second rate limit
+        before = len(journal('server2.service'))
+        began = time.monotonic()
+        http('/weather/v000903/coord/36.1,128.6')
+        time.sleep(0.5)
+        produced = journal('server2.service')[before:]
+        targets = {}
+        for destination, level in remote_levels.items():
+            wanted = [l for l in produced if server_record_level(l) is not None
+                      and render.LEVELS[server_record_level(l)] >= render.LEVELS[level]]
+            if wanted:
+                targets[destination] = wanted[-1]
+            else:
+                entry['observations'][f'{destination}_running_delivery_seconds'] = 'no new record at this level'
+        arrived = {}
+        while len(arrived) < len(targets) and time.monotonic() - began < max(bounds.values()) + 5:
+            received = delivered(state)[0]
+            for destination, line in targets.items():
+                if destination not in arrived and line in received[destination]['server']:
+                    arrived[destination] = round(time.monotonic() - began, 1)
+            time.sleep(0.25)
+        for destination in targets:
+            seconds = arrived.get(destination)
+            entry['observations'][f'{destination}_running_delivery_seconds'] = seconds
+            check(f'{destination} receives a new record while running, within {bounds[destination]} s of the request',
+                  seconds is not None and seconds <= bounds[destination], str(seconds))
     # The server stops first. The pause lets the collector read the server's last
     # records: on SIGTERM Vector stops reading at once, so without it those records
     # stay local only. Shipping them at shutdown is LP-4 (#2981), not checked here.
