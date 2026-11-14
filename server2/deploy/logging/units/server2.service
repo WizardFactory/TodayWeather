@@ -1,0 +1,31 @@
+# server2 origin. stdout/stderr go to the size-capped `server2` journal namespace,
+# which the collector (server2-logs.service) ships. The server does not require
+# the collector: it starts and stops normally when the collector is absent or
+# rejected. Ordering after the collector makes a shutdown stop the server first.
+# The collector stops reading on SIGTERM, so shipping the server's final records
+# at shutdown needs the drain step of LP-4 (#2981); until then they stay local.
+[Unit]
+Description=server2 weather origin
+After=network-online.target server2-logs.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=server2
+Group=server2
+WorkingDirectory=/opt/server2/config
+ExecStart=/opt/server2/bin/server2
+StandardOutput=journal
+StandardError=journal
+LogNamespace=server2
+# The process limits its own rate (SERVER2_LOG_RATE); the journal must not drop lines.
+LogRateLimitIntervalSec=0
+KillSignal=SIGTERM
+# Worker drain is bounded at 35 seconds, including teardown.
+TimeoutStopSec=45
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

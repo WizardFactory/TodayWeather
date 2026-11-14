@@ -1,6 +1,6 @@
 # server2 structured diagnostics and incident response
 
-This contract describes the repository implementation for #2802. Installation on a production host, production retention and provider availability are not established by local verification. The [baseline audit](server2-logging-audit.md) records the pre-change gaps; the implementation audit below records coverage and exclusions. See the [flow](../architecture/diagrams/server2-logging.html), [editable diagram](../architecture/diagrams/server2-logging.json), [PDF](server2-logging.pdf) and [selected verification](../evidence/tasks/issue-2802/verification.md).
+This contract describes the repository implementation for #2802; the [host log pipeline](#host-log-pipeline) section adds #2977. Installation on a production host, production retention and provider availability are not established by local verification. The [baseline audit](server2-logging-audit.md) records the pre-change gaps; the implementation audit below records coverage and exclusions. See the [flow](../architecture/diagrams/server2-logging.html), [editable diagram](../architecture/diagrams/server2-logging.json), [PDF](server2-logging.pdf) and [selected verification](../evidence/tasks/issue-2802/verification.md).
 
 ## First five minutes of an incident
 
@@ -63,7 +63,132 @@ No event API formats raw errors, URLs, headers, request/response bodies, key mat
 - Error/warn/info/debug have independent rate buckets. Frequent lookup/restore/reserve/HTTP transport success, expected S3 absence and health/metrics operations are debug. Failures remain warn; panic/startup fatal records are error. Normal client 4xx HTTP terminals are info except 429. A shared queue can still fill and drop errors; separate rate buckets are not a delivery guarantee.
 - Internal metrics expose cumulative filtered, rate-limited, queue-full, oversized and sink-error counts. Expected debug filtering is not a failure. Nonzero loss counters mean the capture may be incomplete. The writer tries a `logging.loss` summary at ten-second intervals or a shutdown flush; a blocked/closed sink cannot reliably report its own failure, so metrics are independent.
 - Shutdown flushing uses at most 50 ms of unused existing drain allowance. It cannot extend the existing 6-second HTTP-only or 35-second worker process stop bound. Acknowledging a flush is not durable log storage. Runtime teardown can cancel detached provider work after that flush; absence of its terminal event proves nothing.
-- Before deployment, assign an approved host collector, bounded storage budget and rotation/retention window, restricted service/operator access, clock synchronization and export procedure. Keep stdout/stderr separate if the host reader supports it. Preserve the selected incident window and executable identity before rotation. No host logging configuration, production retention period or permission change was installed by this task.
+- Before deployment, assign an approved host collector, bounded storage budget and rotation/retention window, restricted service/operator access, clock synchronization and export procedure. Keep stdout/stderr separate if the host reader supports it. Preserve the selected incident window and executable identity before rotation. No host logging configuration, production retention period or permission change was installed by this task. The host collector is now defined by the [host log pipeline](#host-log-pipeline) below (#2977).
+
+## Host log pipeline
+
+Issue [#2977](https://github.com/WizardFactory/TodayWeather/issues/2977) adds the host side in slices. This section describes LP-1 ([#2978](https://github.com/WizardFactory/TodayWeather/issues/2978)): collector, destination selection, validation, naming and the local journal. Redelivery after outages and loss counters (LP-2, #2979), boot configuration and instance identity (LP-3, #2980), Spot interruption handling (LP-4, #2981), IAM and retention templates (LP-5, #2982) and the qualification host (LP-6, #2983) follow. Nothing here creates an AWS resource or deploys a host.
+
+The server process is unchanged: it writes NDJSON to stderr and its readiness line to stdout. A host collector outside the process ships that output. Assets live in [`server2/deploy/logging/`](../../server2/deploy/logging/). An operator walkthrough with actual captures is in the [pipeline manual PDF](server2-logging-pipeline.pdf) ([editable source](assets/server2-logging-pipeline/manual.json)).
+
+### Install
+
+On the Linux host, as root, from a checkout or bundle of `server2/deploy/logging/`:
+
+```sh
+bash server2/deploy/logging/install.sh                       # downloads the pinned collector
+bash server2/deploy/logging/install.sh --collector-tarball PATH  # or uses a local copy
+```
+
+The installer checks the collector archive's SHA-256 against [`collector.json`](../../server2/deploy/logging/collector.json) before extracting it, creates the `server2` system user, and installs:
+
+| Path | Purpose |
+| --- | --- |
+| `/etc/systemd/system/server2.service` | The server: `/opt/server2/bin/server2` in `/opt/server2/config` (where its `.env` is read). Output goes to the `server2` journal namespace with journal rate limiting off. It is ordered after the collector without requiring it, so a shutdown stops the server first and the server starts when the collector is missing or rejected. |
+| `/etc/systemd/system/server2-logs.service` | The collector. Its start condition runs `render.py`; the collector itself (Vector) runs as a dynamic user in the `systemd-journal` group. |
+| `/etc/systemd/journald@server2.conf` | The local copy: persistent, compressed, capped at 1 GiB, no rate limit. |
+| `/etc/systemd/journald.conf.d/server2-system.conf` | Caps the system journal at 512 MiB, so host logs stay within the 2 GiB log budget of [`prerequisites.json`](../../server2/deploy/staging/prerequisites.json). |
+| `/opt/server2/logging/` | `vector`, `render.py`, `collector.json`. |
+
+It enables both units and starts neither. The server binary and its `.env` come from the release procedure.
+
+### Select destinations
+
+The collector reads these names, from its unit environment first and then from the server's `/opt/server2/config/.env` with the same dotenv rules as server2. It reads no other name from that file, so provider keys never reach the collector's process or configuration.
+
+| Variable | Values | Default |
+| --- | --- | --- |
+| `SERVER2_LOG_SINKS` | Comma-separated `local`, `s3`, `cloudwatch` | `local` |
+| `SERVER2_LOG_S3_LEVEL` | `error`, `warn`, `info`, `debug`: minimum level shipped to S3 | `info` |
+| `SERVER2_LOG_CLOUDWATCH_LEVEL` | Same, for CloudWatch Logs | `warn` |
+| `SERVER2_LOG_S3_PREFIX` | Key prefix in the bucket, e.g. `logs/server2`; must not start with a weather data prefix (`raw`, `index`, `packs`, `summary`, `state`, `budgets`, `geocode`) | required with `s3` |
+| `SERVER2_LOG_CLOUDWATCH_GROUP` | An existing log group; the collector creates streams, never groups | required with `cloudwatch` |
+| `SERVER2_S3_BUCKET`, `SERVER2_S3_REGION` | The server's existing settings; the region (default `ap-northeast-2`) is also used for CloudWatch Logs | — |
+
+`SERVER2_LOG_LEVEL` still bounds what the process emits: a destination level below it receives nothing extra. The local journal is always kept. With `local` alone the collector unit is skipped ("condition failed") and nothing leaves the host. An unknown destination or level, a malformed name or a missing required name fails the collector unit with a message that names the variable and the rule but not the value; the server keeps running. A settings change takes effect at the next `systemctl restart server2-logs.service`.
+
+Example configurations; moving between them is the owner's decision and a configuration change, with no automatic switching:
+
+| Phase | Settings |
+| --- | --- |
+| Local only (default) | `SERVER2_LOG_SINKS=local` |
+| Early operation: everything searchable in CloudWatch | `SERVER2_LOG_SINKS=local,cloudwatch`, `SERVER2_LOG_CLOUDWATCH_LEVEL=info`, `SERVER2_LOG_CLOUDWATCH_GROUP=/server2/production` |
+| Stable operation: warnings in CloudWatch, full stream in S3 | `SERVER2_LOG_SINKS=local,s3,cloudwatch`, `SERVER2_LOG_CLOUDWATCH_LEVEL=warn`, `SERVER2_LOG_S3_LEVEL=info`, `SERVER2_LOG_S3_PREFIX=logs/server2` |
+| Low cost | `SERVER2_LOG_SINKS=local,s3`, `SERVER2_LOG_S3_LEVEL=info` |
+
+At the measured volume (9–15 MB per hour at `info`), CloudWatch at `info` costs about $5–9 per month in Seoul, CloudWatch at `warn` under $0.05, and S3 about $0.2 per month per log source, mostly PUT requests (see #2977).
+
+### What leaves the host
+
+Each remote destination has its own journal reader, filter and checkpoint, so its level and progress are independent of the other destination. A destination receives:
+
+- server records (`server2.service`) that are schema-1 NDJSON with `level` at or above the destination's level, as the original line, unchanged;
+- collector records (`server2-logs.service`) in the collector record format, at every level.
+
+Everything else stays in the local journal only: the stdout readiness line, any line that is not schema-1 NDJSON (for example a runtime abort message) and the collector's own diagnostics.
+
+The **collector record format** is one JSON object per line with `"collector_schema": 1`, `timestamp`, `level`, `event` and fixed fields per event. It never uses the server's `schema` field. LP-1 writes one record per collector start:
+
+```json
+{"collector_schema": 1, "event": "collector.started", "level": "info", "timestamp": "…Z",
+ "collector_version": "vector 0.61.0", "sinks": ["local", "s3", "cloudwatch"],
+ "instance_id": "<32 hex>", "boot_id": "<32 hex>"}
+```
+
+**Naming.** `source` is `server` or `collector`; `instance-id` is the host's machine ID until LP-3 adds the EC2 instance ID; `boot-id` is the journal boot ID of the record; times are UTC.
+
+- CloudWatch stream: `<source>/<instance-id>/<boot-id>`
+- S3 key: `<prefix>/<source>/dt=<YYYY-MM-DD>/hour=<HH>/<instance-id>/<boot-id>-<YYYYMMDDTHHMMSSZ>-<uuid>.ndjson.gz`, gzip, one record per line. Records are partitioned by their own time; an S3 object is closed at least every 60 seconds.
+
+### Limits of this slice
+
+- **Final records at shutdown.** On SIGTERM the collector stops reading the journal at once, so records written just before a shutdown stay in the local journal only (observed in the smoke: every record from the last 41 ms before the collector's stop). The ordered stop and drain that ship them belong to LP-4 (#2981).
+- **Restart after shutdown.** After a stop, the S3 reader's checkpoint was observed empty, so the next start sends that boot's records to S3 again (new keys; nothing is overwritten). Exactly-once redelivery belongs to LP-2 (#2979).
+- **Identity and credentials.** The instance ID is the machine ID and credentials come from the default AWS chain (the instance role on EC2) until LP-3 (#2980).
+
+### Read each destination
+
+```sh
+# Local journal on the host (both units, full stream including non-NDJSON lines)
+journalctl --namespace=server2 -u server2.service -o cat --since '2026-11-14 05:00' --until '2026-11-14 06:00'
+journalctl --namespace=server2 -u server2-logs.service            # collector start/validation messages
+systemctl status server2-logs.service                              # skipped, active or failed
+
+# S3: list one hour, then read the objects
+aws s3 ls s3://$SERVER2_S3_BUCKET/logs/server2/server/dt=2026-11-14/hour=05/ --recursive
+aws s3 cp s3://$SERVER2_S3_BUCKET/KEY - | gzip -dc | jq -c 'select(.level=="warn")'
+
+# CloudWatch Logs
+aws logs tail /server2/production --since 1h --log-stream-name-prefix server/
+aws logs filter-log-events --log-group-name /server2/production \
+  --filter-pattern '{ $.level = "error" }' --start-time $(date -d '-1 hour' +%s000)
+```
+
+Save a selected window with `-o cat` (journal) or the decompressed S3 objects, then use the [trace lookup](#first-five-minutes-of-an-incident) above on that copy.
+
+### Collector choice
+
+The collector is [Vector](https://github.com/vectordotdev/vector) 0.61.0 (MPL-2.0), pinned in `collector.json`: aarch64 musl archive SHA-256 `12d7e91d…464675c`, x86_64 `e1609b8a…5237621`, both equal to the release's published `SHA256SUMS`. Both binaries ran on Ubuntu 24.04 (x86_64 through Rosetta). Feasibility answers, observed on Ubuntu 24.04 aarch64 with systemd 255 (2026-11-14, [evidence](../evidence/tasks/issue-2978/verification.md)):
+
+| Question | Answer |
+| --- | --- |
+| Reads the journal of selected units | Yes: the `journald` source with `journal_namespace` and `include_units`, as a dynamic user in `systemd-journal`. On systemd 250–257 (Ubuntu 24.04: 255, Amazon Linux 2023: 252) Vector rejects reading previous boots (`current_boot_only: false`), so each reader covers the current boot only. LP-3 must handle the backlog left by a previous boot on a surviving disk. |
+| Destinations from variables | Not natively: Vector cannot switch sinks by environment and ignores the AWS SDK's `AWS_ENDPOINT_URL_*` variables. `render.py` validates the variables and writes the configuration; endpoints follow from the region only. |
+| Minimal permissions | With health checks off: S3 `PutObject`; CloudWatch Logs `DescribeLogStreams`, `CreateLogStream`, `PutLogEvents`. The CloudWatch sink calls `DescribeLogStreams` before writing, so LP-5 must allow it. No bucket listing, no `DescribeLogGroups`, no group creation. |
+| Flush at stop | 0.07–0.24 s with up to 569 journal lines (stop of the collector after the server); the bound under a two-minute notice belongs to LP-4. |
+| Memory | Peak resident set 70–76 MiB with one or two destinations. |
+
+### Verify the pipeline
+
+`python3 server2/deploy/logging/test_logging.py` checks settings, rendering and unit files offline; CI runs it. The integrated check runs the real server binary, collector and units in a **disposable** Linux VM. It changes `/etc/hosts`, the CA store, users and units there, so never run it on a server2 host:
+
+```sh
+sudo python3 -I server2/deploy/logging/linux_check.py --disposable-host \
+  --server-binary /path/to/linux/server2 --collector-tarball /path/to/vector-0.61.0-<arch>-unknown-linux-musl.tar.gz \
+  --report reports/logging-pipeline/check.json
+```
+
+It points the real regional AWS host names at the loopback stand-in [`standin.py`](../../server2/deploy/logging/standin.py) through `/etc/hosts` and a test CA, so the product configuration has no endpoint or test setting; only the collector gets dummy credentials through a test drop-in. Scenarios: local only, S3 only, CloudWatch only, all destinations with a request burst, and three invalid settings. Each checks exact delivery against the journal per level, the naming contract, the AWS actions used, the start record, the absence of the synthetic sensitive values and of `.env` values in the collector's environment, and that the server keeps answering. The [PDF](server2-logging.pdf) is the #2802 snapshot and does not cover this section.
 
 ## Implementation audit
 

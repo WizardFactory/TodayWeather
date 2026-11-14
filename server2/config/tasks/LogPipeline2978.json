@@ -1,0 +1,83 @@
+{
+  "task": "LogPipeline2978",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2978",
+  "scope": "LP-1 of #2977: host log collector outside the server process, destination selection by SERVER2_LOG_* variables, validation that never affects the server, naming contract and capped local journal. Pre-merge only; no merge, deployment, AWS resource creation or live provider call.",
+  "server2_paths": [
+    "server2/config/tasks/LogPipeline2978.json",
+    "server2/deploy/logging/",
+    "server2/tools/ci.py",
+    "server2/.env.example"
+  ],
+  "outside": [
+    {
+      "path": "intent/issue-2978.md",
+      "category": "documentation",
+      "reason": "Task intent for LP-1; no runtime implementation outside server2"
+    },
+    {
+      "path": "specs/issue-2978.md",
+      "category": "documentation",
+      "reason": "Task specification for LP-1"
+    },
+    {
+      "path": "plans/issue-2978.md",
+      "category": "documentation",
+      "reason": "Task plan and user scenarios for LP-1"
+    },
+    {
+      "path": "docs/operations/server2-logging.md",
+      "category": "documentation",
+      "reason": "Operations guide: collector, variables, phases, queries and choice record"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-logging.json",
+      "category": "documentation",
+      "reason": "Logging diagram source gains the host pipeline"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-logging.html",
+      "category": "documentation",
+      "reason": "Regenerated logging diagram"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-2978/verification.md",
+      "category": "documentation",
+      "reason": "Selected verification evidence for LP-1"
+    },
+    {
+      "path": "docs/operations/server2-logging-pipeline.pdf",
+      "category": "documentation",
+      "reason": "Operator manual PDF built from actual captures"
+    },
+    {
+      "path": "docs/operations/assets/server2-logging-pipeline/manual.json",
+      "category": "documentation",
+      "reason": "Editable manual source"
+    },
+    {
+      "path": "docs/operations/assets/server2-logging-pipeline/1-install.png",
+      "category": "documentation",
+      "reason": "Actual operator session capture for the manual"
+    },
+    {
+      "path": "docs/operations/assets/server2-logging-pipeline/2-invalid.png",
+      "category": "documentation",
+      "reason": "Actual operator session capture for the manual"
+    },
+    {
+      "path": "docs/operations/assets/server2-logging-pipeline/3-ship.png",
+      "category": "documentation",
+      "reason": "Actual operator session capture for the manual"
+    },
+    {
+      "path": "docs/operations/assets/server2-logging-pipeline/3b-delivered.png",
+      "category": "documentation",
+      "reason": "Actual operator session capture for the manual"
+    },
+    {
+      "path": "docs/operations/assets/server2-logging-pipeline/4-read.png",
+      "category": "documentation",
+      "reason": "Actual operator session capture for the manual"
+    }
+  ]
+}

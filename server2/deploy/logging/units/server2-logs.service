@@ -1,0 +1,34 @@
+# server2 log collector: ships the `server2` journal namespace to the destinations
+# selected by SERVER2_LOG_SINKS. render.py validates the settings first; with
+# `local` only, the unit is skipped (the journal stays the only copy), and with
+# invalid settings it fails without affecting server2.service.
+[Unit]
+Description=server2 log collector
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=exec
+DynamicUser=yes
+SupplementaryGroups=systemd-journal
+StateDirectory=server2-logs
+RuntimeDirectory=server2-logs
+LogNamespace=server2
+# "+": runs as root only to read the allowlisted names from server2's .env.
+ExecCondition=+/usr/bin/python3 -I /opt/server2/logging/render.py --env-file /opt/server2/config/.env --state /var/lib/server2-logs --output /run/server2-logs/vector.json --version-file /opt/server2/logging/collector.json
+ExecStart=/opt/server2/logging/vector --config /run/server2-logs/vector.json
+# Restart after a crash (signal, timeout), not after an exit code: invalid settings
+# (255 from render.py, 78 from Vector) stay failed until the settings change.
+Restart=on-abnormal
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

@@ -2,7 +2,7 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "server2 logging contract \u2014 design",
+    "title": "server2 logging \u2014 process contract and host pipeline",
     "locale": "en",
     "quality_profile": "showcase",
     "output": "docs/architecture/diagrams/server2-logging.html"
@@ -24,6 +24,14 @@
       "id": "loss",
       "label": "Loss visibility",
       "variant": "exception"
+    },
+    {
+      "id": "host",
+      "label": "Host log pipeline (#2977)"
+    },
+    {
+      "id": "remote",
+      "label": "Remote destinations"
     }
   ],
   "mainPath": [
@@ -105,6 +113,42 @@
       "label": "Internal metrics",
       "sublabel": "independent of stderr",
       "width": 160
+    },
+    {
+      "id": "journal",
+      "lane": "host",
+      "col": 4,
+      "type": "database",
+      "label": "server2 journal",
+      "sublabel": "1 GiB, no rate limit",
+      "width": 160
+    },
+    {
+      "id": "collector",
+      "lane": "host",
+      "col": 5,
+      "type": "backend",
+      "label": "Collector",
+      "sublabel": "validated SERVER2_LOG_*",
+      "width": 160
+    },
+    {
+      "id": "cloudwatch",
+      "lane": "remote",
+      "col": 4,
+      "type": "cloud",
+      "label": "CloudWatch Logs",
+      "sublabel": "default warn; ~1 s",
+      "width": 160
+    },
+    {
+      "id": "s3logs",
+      "lane": "remote",
+      "col": 5,
+      "type": "cloud",
+      "label": "S3 log prefix",
+      "sublabel": "default info; 60 s objects",
+      "width": 160
     }
   ],
   "edges": [
@@ -163,15 +207,44 @@
       "to": "metrics",
       "label": "count",
       "variant": "security"
+    },
+    {
+      "id": "stderr-journal",
+      "from": "stderr",
+      "to": "journal",
+      "label": "unit output",
+      "variant": "emphasis"
+    },
+    {
+      "id": "journal-collector",
+      "from": "journal",
+      "to": "collector",
+      "label": "checkpointed read",
+      "variant": "emphasis"
+    },
+    {
+      "id": "collector-s3",
+      "from": "collector",
+      "to": "s3logs",
+      "label": "gzip NDJSON",
+      "variant": "default"
+    },
+    {
+      "id": "collector-cw",
+      "from": "collector",
+      "to": "cloudwatch",
+      "label": "log events",
+      "variant": "default"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Design scope",
+      "title": "Scope",
       "items": [
-        "Specification for issue2802; not implementation or deployment evidence.",
-        "HTTP wire behavior, attempts, deadlines and delivery ownership stay unchanged."
+        "Process contract: issue 2802. Host pipeline: LP-1 (issue 2978) of issue 2977.",
+        "Destinations are chosen by SERVER2_LOG_SINKS; local alone skips the collector.",
+        "Not deployment evidence; no AWS resource is created by these files."
       ]
     },
     {
@@ -189,6 +262,16 @@
       "items": [
         "A blocked stderr sink can lose diagnostics; independent counters expose the gap.",
         "A loss summary is best-effort when output becomes available; logs are not a durable business ledger."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Host pipeline",
+      "items": [
+        "A start check reads only SERVER2_LOG_* and bucket/region; local alone skips the collector, invalid settings fail it.",
+        "The server does not require the collector; a shutdown stops the server first.",
+        "Each remote destination has its own journal reader, level filter and checkpoint.",
+        "Only schema-1 server records at or above the level, and collector records, leave the host."
       ]
     }
   ]
