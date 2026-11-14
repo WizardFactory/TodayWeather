@@ -16,13 +16,27 @@ struct ProcessEnded: Error {}
 /// The end of a simulated process: from the operation `trip` names on (counted from 1 over every operation on the
 /// state store, the log and the transport), every operation fails (reads and writes throw, sends send nothing and are
 /// answered nil at once). The test then discards the `PushSync` and starts a new one over the same files.
+/// An operation `transient` names fails alone and the process goes on (a write or read error, CODEX-IN04-11).
 final class ProcessEnd: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
     private var ended = false
+    private var failures = 0
+    private var calm = false
     private let trip: @Sendable (Operation, Int) -> Bool
+    private let transient: @Sendable (Operation, Int) -> Bool
 
-    init(_ trip: @escaping @Sendable (Operation, Int) -> Bool = { _, _ in false }) { self.trip = trip }
+    init(_ trip: @escaping @Sendable (Operation, Int) -> Bool = { _, _ in false },
+         transient: @escaping @Sendable (Operation, Int) -> Bool = { _, _ in false }) {
+        self.trip = trip
+        self.transient = transient
+    }
+
+    /// No operation fails alone from now on.
+    func stopFailing() { lock.withLock { calm = true } }
+
+    /// Operations that failed alone so far.
+    var transientFailures: Int { lock.withLock { failures } }
 
     /// Ends at operation `k` (nil: never).
     static func at(_ k: Int?) -> ProcessEnd { ProcessEnd { _, n in n == k } }
@@ -39,6 +53,10 @@ final class ProcessEnd: @unchecked Sendable {
             if ended { return false }
             count += 1
             if trip(op, count) { ended = true }
+            if !ended && !calm && transient(op, count) {
+                failures += 1
+                return false
+            }
             return !ended
         }
     }

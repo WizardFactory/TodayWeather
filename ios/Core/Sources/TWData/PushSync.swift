@@ -33,7 +33,9 @@ extension PushReplacementLog: PushLogStore {}
 /// entry's `new` when they differ. At the process start and at the open, the entries not sent by this process are
 /// replayed strictly one after another in `id` order (the next starts when the previous reply arrived), an entry
 /// without `old` followed by the list post with its token, so the server applies the hops in order. While the replay
-/// runs, new replacements are appended and sent by it in turn, and a list post that falls due waits for its end.
+/// runs, or while entries wait that this process has not sent (the replay could not start, e.g. a failed write), new
+/// replacements are appended and sent by the replay in turn, and a list post that falls due waits until the entries
+/// were sent (CODEX-IN04-11).
 /// A failed read or write ends the event; the next event or start completes it. `context` returns nil when no request
 /// can be built (no server URL or `Device-Id`): nothing is sent or stored then, and the log waits.
 public actor PushSync {
@@ -138,10 +140,11 @@ public actor PushSync {
 
     // MARK: - Steps (no suspension)
 
-    /// `_postPushList(pushList)` with the token current now; after the replay when one runs.
+    /// `_postPushList(pushList)` with the token current now; after the replay when entries wait (CODEX-IN04-11).
     private func postList() -> [(PushRequest, PushReply)] {
-        if replay != nil {
+        if !inOrder() {
             postAfterReplay = true
+            recover()
             return []
         }
         guard let (state, ctx) = reconciled() else { return [] }
@@ -167,7 +170,12 @@ public actor PushSync {
         let result = PushRegistration.onTokenRefresh(state.push, places: state.places, token: token, context: ctx)
         guard let put = result.requests.first, put.method == "PUT",
               let entry = try? log.append(old: state.push.fcmToken, new: token), storeToken(token) else { return [] }
-        if replay != nil { return [] }
+        // Sent here only when every entry before it was sent by this process; otherwise the replay sends it after
+        // them (also when the replay could not start yet: the next event starts it, CODEX-IN04-11).
+        if !inOrder(except: entry.id) {
+            recover()
+            return []
+        }
         sentHere.insert(entry.id)
         // One unit: the replacement and, for a first token, its list post; acknowledged when all of them replied.
         let started = start(result.requests)
@@ -183,6 +191,14 @@ public actor PushSync {
     private func replied(_ watcher: UUID, entry: Int) {
         replyWatchers[watcher] = nil
         try? log.acknowledge(entry)
+    }
+
+    /// No replay runs and every entry in the log (but `id`) was sent by this process: only then is a new replacement
+    /// or a list post sent at once, so no hop overtakes one that waits (CODEX-IN04-11). False when the log cannot be
+    /// read.
+    private func inOrder(except id: Int? = nil) -> Bool {
+        guard replay == nil, let entries = try? log.entries() else { return false }
+        return entries.allSatisfy { $0.id == id || sentHere.contains($0.id) }
     }
 
     /// Starts the replay when entries wait that this process has not sent.
@@ -205,7 +221,9 @@ public actor PushSync {
             try? log.acknowledge(next.entry)
         }
         replay = nil
-        if postAfterReplay {
+        // A post that fell due goes out once the entries are sent; while some wait (the replay stopped on a failed
+        // read), it waits for the next event, which starts the replay again.
+        if postAfterReplay && inOrder() {
             postAfterReplay = false
             _ = postList()
         }

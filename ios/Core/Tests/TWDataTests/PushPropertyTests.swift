@@ -140,7 +140,8 @@ final class Flag: @unchecked Sendable {
 
 /// The property test over every event source (IN-04 review rounds 5–6): token changes and their callbacks at any time
 /// (also during the open's token read and during a replay), a launch with or without FCM's callback, blank callbacks
-/// and reads (ignored by Cordova), the open's read latency, first tokens over nil or "" and replacements,
+/// and reads (ignored by Cordova), single failed reads and writes of the state and the log in a process that goes on,
+/// the open's read latency, first tokens over nil or "" and replacements,
 /// replies in any order (lost ones and the 403 of a replacement without an old token), and process ends at any
 /// operation, over up to three processes; the last one runs until nothing moves (it may never be opened). Oracle:
 /// every record once on the server under the newest token FCM gave, an empty log, and that token in the state.
@@ -179,9 +180,21 @@ struct PushPropertyTests {
         var race = false
         let processes = Int.random(in: 1...3, using: &rng)
         trace.append("first token: \(firstToken) (stored \(initial.map { "\"\($0)\"" } ?? "nil")), processes: \(processes)")
-        for p in 0..<processes {
-            let last = p == processes - 1
-            let end = last ? ProcessEnd() : ProcessEnd.at(Int.random(in: 1...80, using: &rng))
+        var total = processes
+        var p = 0
+        while p < total {
+            defer { p += 1 }
+            let last = p == total - 1
+            // Single reads and writes of the state and the log may fail while the process goes on (CODEX-IN04-11);
+            // in the last process only before it runs until nothing moves. A last process that had such failures
+            // is followed by one more launch without them (the next start replays what waits).
+            let failureRate = p < processes ? [0, 10, 25, 50].randomElement(using: &rng)! : 0
+            let failing: Set<Int> = Set((1...200).filter { _ in Int.random(in: 0..<100, using: &rng) < failureRate })
+            let endAt = Int.random(in: 1...80, using: &rng)
+            let end = ProcessEnd({ _, n in !last && n == endAt }, transient: { op, n in
+                failing.contains(n) && op != .send("PUT") && op != .send("POST")
+            })
+            if !failing.isEmpty { trace.append("p\(p): \(failureRate)% of reads and writes fail alone") }
             let clock = VirtualClock()
             var now = Duration.zero
             let sync = files.process(network.transport(p), end: end, clock: clock)
@@ -263,13 +276,14 @@ struct PushPropertyTests {
                 end.endNow()
                 let applying = Int.random(in: 0...4, using: &rng)
                 network.end(p, applying: applying)
-                trace.append("p\(p): ends (\(end.operations) operations; the server still applies up to \(applying))")
+                trace.append("p\(p): ends (\(end.operations) operations, \(end.transientFailures) failed alone; the server still applies up to \(applying))")
                 read?.resolve(readValue(&rng))
                 clock.advance(to: .seconds(3600))
                 if let openTask { _ = await openTask.value }
                 continue
             }
             // The last process runs until nothing moves; one that opens and has not yet opens now.
+            end.stopFailing()
             if opens && openTask == nil { await startOpen() }
             for _ in 0..<400 {
                 read?.resolve(readValue(&rng))
@@ -293,6 +307,12 @@ struct PushPropertyTests {
                 if network.isIdle, !replaying, replies == 0, openTask == nil || openDone.isSet { break }
             }
             if let openTask { _ = await openTask.value }
+            if end.transientFailures > 0 && p < processes {
+                end.endNow()
+                network.end(p, applying: 0)
+                trace.append("p\(p): ends after \(end.transientFailures) failed alone; one more launch follows")
+                total += 1
+            }
         }
 
         var failures: [String] = []

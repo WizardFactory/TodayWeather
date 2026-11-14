@@ -309,6 +309,35 @@ struct PushRecoveryTests {
         #expect(files.logEntries.isEmpty)
     }
 
+    /// CODEX-IN04-11: server and state at B, log A→B, B→C, C→B (only the last answered). The open's preparation of
+    /// the replay fails once (`reopen` throws) and the open gets C. The new hop C←B may not overtake the entries before
+    /// it: it is logged and sent by the replay after them, and the list post waits for that replay. Records end once
+    /// under C.
+    @Test func codexIn04_11_aFailedReplayStartHoldsNewHopsBack() async throws {
+        let files = Files()
+        try files.seed(token: "token-b")
+        for (old, new) in [("token-a", "token-b"), ("token-b", "token-c"), ("token-c", "token-b")] {
+            _ = try files.log.append(old: old, new: new)
+        }
+        try files.log.acknowledge(3)
+        let server = seededServer(token: "token-b")
+        let transport = DeliveredServerTransport(server: server)
+        let once = OnceFlag()
+        let failsOnce = ProcessEnd(transient: { op, _ in op == .reopen && once.first() })
+        let sync = PushSync(store: files.store, log: EndingLog(inner: files.log, end: failsOnce), transport: transport,
+                            repostDelay: .zero, context: Files.context)
+        await openPumped(sync, transport, token: "token-c")
+        #expect(transport.requests.map { replacement($0.request) }.filter { !$0.isEmpty } ==
+                [["token-b", "token-a"], ["token-c", "token-b"], ["token-b", "token-c"], ["token-c", "token-b"]],
+                "\(transport.requests.map(\.request.method))")
+        #expect(transport.requests.last?.request.method == "POST")
+        #expect(server.tokens == ["token-c"], "\(server.keys)")
+        #expect(server.records == ["ios/1/1", "ios/1/2"])
+        #expect(files.storedToken == "token-c")
+        #expect(files.logEntries.isEmpty)
+        #expect(failsOnce.transientFailures == 1)
+    }
+
     /// While a replay runs, a new token is logged and sent by the replay after the entries before it, and the list
     /// post that falls due waits for the replay.
     @Test func eventsDuringAReplayWaitTheirTurn() async throws {
@@ -336,4 +365,11 @@ struct PushRecoveryTests {
         #expect(server.records == ["ios/1/1", "ios/1/2"])
         #expect(files.logEntries.isEmpty)
     }
+}
+
+/// True the first time only.
+final class OnceFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    func first() -> Bool { lock.withLock { defer { done = true }; return !done } }
 }
