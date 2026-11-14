@@ -1,0 +1,4 @@
+# allowed-summary: hourly=no-notice | daily=no-notice | air=no-notice | row=추적 허용 설정 · 허용됨
+2026-11-15 03:17:01 {"component":"admob","operation":"request_policy","att_status":"authorized","personalized":true,"result":"applied"}
+2026-11-15 03:17:01 Set options of emi AdMob
+2026-11-15 03:17:02 create banner view

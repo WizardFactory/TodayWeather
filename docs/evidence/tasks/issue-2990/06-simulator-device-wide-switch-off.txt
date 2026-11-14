@@ -1,0 +1,7 @@
+# globaloff-air-notice: TodayWeather는 광고 수익으로 운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다.
+# globaloff-daily-notice: TodayWeather는 광고 수익으로 운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다.
+# globaloff-hourly-notice: TodayWeather는 광고 수익으로 운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다.
+# globaloff-summary: hourly=notice | hourly-button=visible | daily=notice | daily-button=visible | air=notice | air-button=visible | row=추적 허용 설정 · 허용 안 함
+2026-11-15 03:04:59 {"component":"admob","operation":"request_policy","att_status":"denied","personalized":false,"result":"applied"}
+2026-11-15 03:04:59 Set options of emi AdMob
+2026-11-15 03:05:00 create banner view

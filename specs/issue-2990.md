@@ -103,9 +103,11 @@ stored consent.
   diagram shows the status flow; otherwise record why not.
 - Dated device evidence in `docs/evidence/tasks/issue-2990/`.
 
-## Not verified yet
+## Probe results (2026-11-15)
 
-- Which status iOS reports and what the app's Settings page shows when the device-wide switch
-  "Allow Apps to Request to Track" is off. Plan task T0 probes this on a simulator. If the per-app switch is missing
-  there, the notice text needs AK's decision before the build task starts.
-- Whether the banner overlaps the end of the scrolled page on a small iPhone. Checked in the smoke task.
+- Device-wide "Allow Apps to Request to Track" off (simulator): the app reports `denied` and shows the notice; the
+  TodayWeather switch stays listed and enabled in Settings > Privacy & Security > Tracking, and turning it on gives
+  `authorized`. The texts need no change for this case.
+- The banner does not cover the end of the scrolled page: the iOS banner shrinks the web view (`isOverlapping: false`).
+- The theme's `.card` rules outrank a single class, so the notice keeps its spacing on an inner block.
+- Evidence: [#2990 record](../docs/evidence/tasks/issue-2990/README.md).

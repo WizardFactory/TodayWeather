@@ -60,6 +60,56 @@
     720,
     1558
    ]
+  },
+  "06-notice-hourly.png": {
+   "capture": "denied-hourly-end.png",
+   "capture_sha256": "2e69bc314f0e53d7dbe6bbf6a8dd6abe739469aa0d3306851026a7d8cf343f10",
+   "sha256": "76cedd168053a76134bfb218af6159c49e67bf57bf80d15bc06a442f3e663b3c",
+   "size": [
+    720,
+    903
+   ],
+   "crop": "bottom 58% of the capture (from 42% of its height), so that the notice is readable"
+  },
+  "07-menu-not-allowed.png": {
+   "capture": "denied-menu.png",
+   "capture_sha256": "26c6a355e7603e99c6f992f882a8f0c50a057f010bfe88cb4609816601017227",
+   "sha256": "0f7ef8cd8ecca6dc88f52d402da4c021ec71c71121a11678a06f255adcbfba94",
+   "size": [
+    720,
+    1557
+   ]
+  },
+  "08-settings-from-app.png": {
+   "capture": "open-notice-settings.png",
+   "capture_sha256": "1fd8d5629765540d7b0352fd573ddb780f31225b01841cfcdc2bf6958b6ace57",
+   "sha256": "36715b8ce3d9e04abf63fd0160508db1eba5b1978eff790ba42b4dd43daed578",
+   "size": [
+    720,
+    1557
+   ]
+  },
+  "09-menu-allowed.png": {
+   "capture": "allowed-menu.png",
+   "capture_sha256": "673ffec37e3dd0133beff41f7fb9ad6336fc7df4afc27c7d198715ea860a244f",
+   "sha256": "f7e769f2bd7e9e058270980b7e8835f8382abfcca632d167e429481f0805d99c",
+   "size": [
+    720,
+    1382
+   ],
+   "crop": "top 88.8% of the capture; the banner with a third-party ad is cut off"
   }
+ },
+ "additions_2990": {
+  "pages": "6-9",
+  "client_source": "client/ of branch ios-tracking-settings-shortcut-2990 at 371aa49c (master 24a90bcd plus #2990 commits c0f9c6ac and 6db6825c)",
+  "build": "Cordova Debug iphoneos build of the same configuration as above, re-signed with the development profile; displayed version 1.1.2",
+  "install": "in place over 1.1.2 (fresh install of 2026-11-15, city 서울, tracking not allowed)",
+  "runs": {
+   "denied-*": "XCUITest TrackingSettingsTests.testPagesAndMenu, 2026-11-15 03:12-03:14 KST",
+   "open-notice-*": "TrackingSettingsTests.testOpenSettings with TW_FROM=notice, 03:15 KST",
+   "allowed-*": "TrackingSettingsTests.testPagesAndMenu after ATTFlowTests.testTrackingOn, 03:17-03:19 KST"
+  },
+  "privacy_review": "The header shows the saved place 서울. No ad creative, token or account name is shown; the banner of 09 is cropped."
  }
 }

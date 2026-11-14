@@ -1,0 +1,4 @@
+# globaloff-appon-summary: hourly=no-notice | daily=no-notice | air=no-notice | row=추적 허용 설정 · 허용됨
+2026-11-15 03:07:12 {"component":"admob","operation":"request_policy","att_status":"authorized","personalized":true,"result":"applied"}
+2026-11-15 03:07:12 Set options of emi AdMob
+2026-11-15 03:07:13 create banner view
