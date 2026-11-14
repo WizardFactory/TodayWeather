@@ -1,0 +1,44 @@
+{
+    "ko": {
+        "LOC_TRACKING_PERMISSION": "추적 허용 설정",
+        "LOC_TRACKING_ALLOWED": "허용됨",
+        "LOC_TRACKING_NOT_ALLOWED": "허용 안 함",
+        "LOC_TRACKING_NOTICE": "TodayWeather는 광고 수익으로 운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다.",
+        "LOC_TRACKING_OPEN_SETTINGS": "설정 열기"
+    },
+    "en": {
+        "LOC_TRACKING_PERMISSION": "Tracking permission",
+        "LOC_TRACKING_ALLOWED": "Allowed",
+        "LOC_TRACKING_NOT_ALLOWED": "Not allowed",
+        "LOC_TRACKING_NOTICE": "TodayWeather is funded by ads. If you prefer ads based on your interests, you can allow tracking in iOS Settings. All features work the same either way.",
+        "LOC_TRACKING_OPEN_SETTINGS": "Open Settings"
+    },
+    "ja": {
+        "LOC_TRACKING_PERMISSION": "トラッキングの許可",
+        "LOC_TRACKING_ALLOWED": "許可",
+        "LOC_TRACKING_NOT_ALLOWED": "許可しない",
+        "LOC_TRACKING_NOTICE": "TodayWeatherは広告収入で運営されています。興味に合った広告をご希望の場合は、iOSの設定でトラッキングを許可できます。どちらを選んでも機能は同じです。",
+        "LOC_TRACKING_OPEN_SETTINGS": "設定を開く"
+    },
+    "zh-CN": {
+        "LOC_TRACKING_PERMISSION": "跟踪权限",
+        "LOC_TRACKING_ALLOWED": "已允许",
+        "LOC_TRACKING_NOT_ALLOWED": "未允许",
+        "LOC_TRACKING_NOTICE": "TodayWeather 依靠广告收入运营。如果希望看到符合兴趣的广告，可以在 iOS 设置中允许跟踪。无论如何选择，功能都相同。",
+        "LOC_TRACKING_OPEN_SETTINGS": "打开设置"
+    },
+    "zh-TW": {
+        "LOC_TRACKING_PERMISSION": "追蹤權限",
+        "LOC_TRACKING_ALLOWED": "已允許",
+        "LOC_TRACKING_NOT_ALLOWED": "未允許",
+        "LOC_TRACKING_NOTICE": "TodayWeather 依靠廣告收入營運。如果希望看到符合興趣的廣告，可以在 iOS 設定中允許追蹤。無論如何選擇，功能都相同。",
+        "LOC_TRACKING_OPEN_SETTINGS": "打開設定"
+    },
+    "de": {
+        "LOC_TRACKING_PERMISSION": "Tracking-Berechtigung",
+        "LOC_TRACKING_ALLOWED": "Erlaubt",
+        "LOC_TRACKING_NOT_ALLOWED": "Nicht erlaubt",
+        "LOC_TRACKING_NOTICE": "TodayWeather finanziert sich durch Werbung. Wenn Sie Werbung nach Ihren Interessen bevorzugen, können Sie das Tracking in den iOS-Einstellungen erlauben. Alle Funktionen bleiben in beiden Fällen gleich.",
+        "LOC_TRACKING_OPEN_SETTINGS": "Einstellungen öffnen"
+    }
+}

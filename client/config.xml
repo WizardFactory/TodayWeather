@@ -29,6 +29,7 @@
     <!-- Real AdMob app IDs come from client/.env at prepare time; package.json keeps Google's sample IDs. -->
     <hook type="after_prepare" src="scripts/admob-app-id.js" />
     <hook type="after_prepare" src="scripts/ios-ad-privacy.js" />
+    <hook type="after_prepare" src="scripts/ios-tracking-settings.js" />
     <platform name="android">
         <!-- Ionic routes own screen_view; suppress automatic Activity-level duplicates. -->
         <config-file target="AndroidManifest.xml" parent="application">

@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for iOS: ad tracking permission",
-  "scenario": "TodayWeather on an iPhone 12 Pro Max with iOS 26 and Korean screens. The build contains the App Tracking Transparency change of pull request #2949 and was updated in place over version 1.1.1. Korean labels are followed by their English meaning. Captured on 13 November 2026. Outside Europe the steps appear as shown; where a consent message for European regulations applies, that message comes first.",
+  "scenario": "TodayWeather on an iPhone 12 Pro Max with iOS 26 and Korean screens. The build contains the App Tracking Transparency change of pull request #2949 and was updated in place over version 1.1.1. Korean labels are followed by their English meaning. Captured on 13 November 2026. Outside Europe the steps appear as shown; where a consent message for European regulations applies, that message comes first. Pages 6 to 9 show the tracking notice and menu row added in #2990: the same iPhone, a build of that change installed in place over 1.1.2 with tracking not allowed, captured on 15 November 2026.",
   "steps": [
     {
       "title": "Read the explanation",
@@ -36,6 +36,34 @@
       "screenshot": "screenshots/04-settings-tracking-off.png",
       "caption": "The same screen with 추적 허용 (Allow Tracking) off.",
       "expected": "The next launch uses the new choice without asking again: non-personalized ads when off; when on, personalized ads, where a European consent message applies only with that consent too."
+    },
+    {
+      "title": "Read the notice on the weather pages",
+      "instruction": "While tracking is not allowed, the end of the 시간별날씨 (Hourly), 일별날씨 (Daily) and 대기정보 (Air) pages shows a short notice: TodayWeather는 광고 수익으로 운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다. (TodayWeather is funded by ads. If you prefer ads based on your interests, you can allow tracking in iOS Settings. All features work the same either way.) Scroll to the end of the page to see it.",
+      "screenshot": "screenshots/06-notice-hourly.png",
+      "caption": "The end of the Hourly page with the notice and its 설정 열기 (Open Settings) button.",
+      "expected": "The notice is part of the page: it does not cover weather information or the ad space and has no close button. It stays while tracking is not allowed."
+    },
+    {
+      "title": "Check the choice in the menu",
+      "instruction": "Open the menu with the button at the top left. Below 광고 개인정보 선택 (Ad privacy choices), the row 추적 허용 설정 · 허용 안 함 (Tracking permission · Not allowed) shows the current choice.",
+      "screenshot": "screenshots/07-menu-not-allowed.png",
+      "caption": "The menu with the tracking row while tracking is not allowed.",
+      "expected": "The row appears once the iOS prompt has been answered. It does not appear before that, or when tracking is restricted on the device."
+    },
+    {
+      "title": "Open Settings from the app",
+      "instruction": "Tap 설정 열기 (Open Settings) in the notice, or tap the menu row. iOS opens Settings at TodayWeather. To allow tracking, turn on 추적 허용 (Allow Tracking), confirm with 허용 (Allow) as on page 5, and open TodayWeather again.",
+      "screenshot": "screenshots/08-settings-from-app.png",
+      "caption": "Settings > TodayWeather, opened from the notice, with 추적 허용 (Allow Tracking) off.",
+      "expected": "Settings opens on the TodayWeather page. Nothing changes until you change the switch."
+    },
+    {
+      "title": "After allowing tracking",
+      "instruction": "After TodayWeather opens again with tracking allowed, the three weather pages no longer show the notice and the menu row reads 추적 허용 설정 · 허용됨 (Tracking permission · Allowed).",
+      "screenshot": "screenshots/09-menu-allowed.png",
+      "caption": "The menu row after tracking was allowed in Settings.",
+      "expected": "Turning 추적 허용 (Allow Tracking) off again brings the notice back on the next launch."
     }
   ]
 }
