@@ -13,8 +13,7 @@ The manual covers the App Tracking Transparency flow added in #2945 (pull reques
 
 ## Not shown
 
-- A first launch after a new install. The captures start from an update over 1.1.1.
-- Tapping 앱에 추적 금지 요청 (Ask App Not to Track) in the prompt. The captures without tracking were taken after 허용 (Allow) and then switching 추적 허용 off in Settings.
+- The captures start from an update over 1.1.1. A later fresh install showed the same explanation and prompt after a city was chosen on the start screen ([evidence](../../evidence/tasks/issue-2945/README.md#fresh-install-and-direct-decline-2026-11-15)).
 - The consent message for European regulations, which comes before the prompt where it applies.
 - An ad. With tracking allowed the banner showed a third-party ad, which is left out.
 
