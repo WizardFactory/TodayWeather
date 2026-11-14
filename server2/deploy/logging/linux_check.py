@@ -919,8 +919,8 @@ def spot_interruption_scenario(report):
 
 
 def slow_upload_scenario(report):
-    """LP-4 (CX-LP4-007): with every S3 upload taking 5 s (half the 10 s request bound, which
-    also covers the connection), a new record still reaches S3 within 60 s."""
+    """LP-4 (CX-LP4-007): with every S3 upload answered 5 s late (half the 10 s request bound),
+    a new record still reaches S3 within 60 s."""
     entry = report.scenario('s3-slow-upload', ['LP4-AC4'])
     check = lambda n, ok, d='': report.check(entry, n, ok, d)
     state = WORK / 'standin-slow'
@@ -940,7 +940,7 @@ def slow_upload_scenario(report):
     arrived = wait_until(lambda: target in delivered(state)[0]['s3']['server'], 75)
     seconds = round(time.monotonic() - began, 1) if arrived is not None else None
     entry['observations']['s3_delivery_seconds_with_5_s_upload'] = seconds
-    check('a record reaches S3 within 60 s although each upload takes 5 s', seconds is not None and seconds <= 60, str(seconds))
+    check('a record reaches S3 within 60 s although each upload is answered 5 s late', seconds is not None and seconds <= 60, str(seconds))
     check('no upload was retried', not any(o['action'] == 'Overwrite' for o in delivered(state)[3]))
     (state / 'slow-s3').unlink()
     systemctl('stop', 'server2.service', 'server2-logs.service')

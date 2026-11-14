@@ -178,7 +178,6 @@ class Handler(BaseHTTPRequestHandler):
         delay = self.server.state / 'delay-s3'
         if delay.exists() and '/server/' in key:
             self.record('s3', 'DelayedConfirmation', bucket=bucket, key=key)
-            import time
             time.sleep(float(delay.read_text().strip() or '0'))
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
 
