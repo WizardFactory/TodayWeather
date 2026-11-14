@@ -139,11 +139,12 @@ struct WeatherBlockView: View {
             }
         case .detailWeather:
             Card(title: page.detailWeatherTitle, colors: colors, s: s) {
-                WeatherRows(rows: page.detailWeather ?? [], theme: theme, colors: colors, s: s, perform: actions.perform)
+                WeatherRows(rows: page.detailWeather ?? [], theme: theme, colors: colors, s: s, width: content.metrics.bodyWidth,
+                            perform: actions.perform)
             }
         case .detailAir:
             Card(title: page.detailAirTitle, colors: colors, s: s) {
-                AirRows(rows: page.detailAir ?? [], colors: colors, s: s, perform: actions.perform)
+                AirRows(rows: page.detailAir ?? [], colors: colors, s: s, width: content.metrics.bodyWidth, perform: actions.perform)
             }
         case .dailyAqi:
             if let aqi = page.dailyAqi {
@@ -230,9 +231,10 @@ private struct HeaderBlock: View {
         .accessibilityIdentifier("forecast-header")
     }
 
-    /// The block's height: `min-height: headerHeight`, or the content with its padding when taller (larger text).
+    /// The block's height: `min-height: headerHeight`, or the content with its padding when taller (larger text). The
+    /// main box is 80 % of the page, whose width is the window's (`metrics.bodyWidth`, CODEX-IN08-2).
     var height: CGFloat {
-        let content = MainBox.height(page: page, metrics: metrics, s: s, width: (UIScreenWidth.value) * 0.8)
+        let content = MainBox.height(page: page, metrics: metrics, s: s, width: metrics.bodyWidth * 0.8)
         return max(metrics.headerHeight, WeatherMetrics.headerTop + content + colors.headerBottom)
     }
 
@@ -249,10 +251,43 @@ private struct HeaderBlock: View {
     }
 }
 
-/// The width the header's main box is laid out for when its height is needed before layout: the screen's.
-enum UIScreenWidth {
-    @MainActor static var value: CGFloat {
-        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first?.screen.bounds.width ?? 393
+/// Reports the size of the window the view is in, at once and whenever the window is resized (rotation, Split View,
+/// Stage Manager): the WebView's area that Cordova's `initSize` measured, which the native page fills.
+struct WindowSizeReader: UIViewRepresentable {
+    let onChange: (CGSize) -> Void
+
+    final class Probe: UIView {
+        var onChange: (CGSize) -> Void = { _ in }
+        private var last: CGSize?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            report()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            report()
+        }
+
+        private func report() {
+            guard let size = window?.bounds.size, size.width > 0, size.height > 0, size != last else { return }
+            last = size
+            let onChange = self.onChange
+            // After the layout pass: the change updates the page's model.
+            Task { @MainActor in onChange(size) }
+        }
+    }
+
+    func makeUIView(context: Context) -> Probe {
+        let probe = Probe()
+        probe.isUserInteractionEnabled = false
+        probe.onChange = onChange
+        return probe
+    }
+
+    func updateUIView(_ probe: Probe, context: Context) {
+        probe.onChange = onChange
     }
 }
 
@@ -416,7 +451,7 @@ private struct Card<Body: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                CssLine(runs: [CssRun(text: title, size: s(WeatherMetrics.cardTitle))], color: colors.cardTitle)
+                FitLine(runs: [CssRun(text: title, size: s(WeatherMetrics.cardTitle))], color: colors.cardTitle, alignment: .leading)
                     .padding(.horizontal, 5)
                     .padding(.bottom, 10)
             }
@@ -449,13 +484,13 @@ private struct AqiTable: View {
             ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
                 let grade = colors.forced ?? WeatherColors.grade(cell.color) ?? colors.text
                 VStack(spacing: 0) {
-                    CssLine(runs: [CssRun(text: cell.heading, size: s(15))], color: colors.text)
+                    FitLine(runs: [CssRun(text: cell.heading, size: s(15))], color: colors.text)
                     Spacer().frame(height: 5)
                     GlyphText(glyph: cell.glyph, size: 32, color: grade)
                         .frame(height: WeatherMetrics.aqiGlyphLine - 17 + s(17), alignment: .top)
-                    CssLine(runs: [CssRun(text: cell.grade, size: s(17))], color: grade)
+                    FitLine(runs: [CssRun(text: cell.grade, size: s(17))], color: grade)
                     if !cell.value.isEmpty {
-                        CssLine(runs: runs(cell.value, base: s(17), colors: colors, s: s), color: colors.text, strut: s(17))
+                        FitLine(runs: runs(cell.value, base: s(17), colors: colors, s: s), color: colors.text, strut: s(17))
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -503,12 +538,51 @@ private func rowHeight(_ s: TextScale) -> CGFloat {
     return max(24 + WeatherMetrics.rowImageTop, line.ascent + line.descent + WeatherMetrics.rowExtra)
 }
 
+/// A line of CSS text, or, when it does not fit the width offered (larger text in a narrow window), the same runs
+/// wrapped within it, as WebKit wraps a block's text (CODEX-IN08-2). At the sizes the captures cover the line fits, and
+/// it is the `CssLine` itself.
+private struct FitLine: View {
+    let runs: [CssRun]
+    let color: CssColor
+    var strut: CGFloat? = nil
+    var alignment: TextAlignment = .center
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            CssLine(runs: runs, color: color, strut: strut)
+            CssLine(runs: runs, color: color).text
+                .multilineTextAlignment(alignment)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// A table cell's text on one line, or, when it is wider than `cap` (larger text in a narrow window), wrapped within
+/// `cap` as WebKit wraps a table that does not fit (CODEX-IN08-2).
+private struct TableText: View {
+    let runs: [CssRun]
+    let color: CssColor
+    let cap: CGFloat
+
+    var body: some View {
+        if CssLine.width(runs) <= cap {
+            CssLine(runs: runs, color: color)
+        } else {
+            CssLine(runs: runs, color: color).text
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: max(cap, 1), alignment: .leading)
+        }
+    }
+}
+
 /// `.colgroup-box` of the detail weather card: rows of a 24 pt image (8 pt margins) and its text, as one centered table.
 private struct WeatherRows: View {
     let rows: [WeatherRow]
     let theme: Theme
     let colors: WeatherColors
     let s: TextScale
+    /// The page's width: a row's text wraps within it.
+    let width: CGFloat
     let perform: (PageAction) -> Void
 
     var body: some View {
@@ -523,11 +597,11 @@ private struct WeatherRows: View {
                             .padding(.horizontal, 8)
                             .padding(.top, height - 24)
                         // The white space between the image and the text (`<img> <span>`).
-                        CssLine(runs: [CssRun(text: " ", size: s(17))] + runs(row.text, base: s(17), colors: colors, s: s),
-                                color: colors.forced ?? colors.text)
+                        TableText(runs: [CssRun(text: " ", size: s(17))] + runs(row.text, base: s(17), colors: colors, s: s),
+                                  color: colors.forced ?? colors.text, cap: width - 40)
                             .padding(.top, WeatherMetrics.rowTextTop)
                     }
-                    .frame(height: height, alignment: .top)
+                    .frame(minHeight: height, alignment: .top)
                 }
             }
         }
@@ -568,25 +642,29 @@ private struct AirRows: View {
     let rows: [AirRow]
     let colors: WeatherColors
     let s: TextScale
+    /// The page's width: the labels take at most 40 % of it, the values wrap within the rest.
+    let width: CGFloat
     let perform: (PageAction) -> Void
 
     var body: some View {
         let height = rowHeight(s)
         let text = colors.forced ?? colors.text
-        let labelWidth = rows.map { CssLine.width([CssRun(text: $0.label, size: s(17))]) }.max() ?? 0
+        let widest = rows.map { CssLine.width([CssRun(text: $0.label, size: s(17))]) }.max() ?? 0
+        let labelWidth = min(widest, width * 0.4)
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(alignment: .top, spacing: 0) {
-                    CssLine(runs: [CssRun(text: row.label, size: s(17))], color: text)
+                    TableText(runs: [CssRun(text: row.label, size: s(17))], color: text, cap: labelWidth)
                         .padding(.top, WeatherMetrics.rowTextTop)
                         .frame(width: labelWidth, alignment: .leading)
                     GlyphText(glyph: row.glyph, size: 24, color: colors.forced ?? WeatherColors.grade(row.color) ?? text)
                         .padding(.horizontal, 8)
                         .padding(.top, height - 24)
-                    CssLine(runs: [CssRun(text: " ", size: s(17))] + runs(row.text, base: s(17), colors: colors, s: s), color: text)
+                    TableText(runs: [CssRun(text: " ", size: s(17))] + runs(row.text, base: s(17), colors: colors, s: s), color: text,
+                              cap: width - labelWidth - 40)
                         .padding(.top, WeatherMetrics.rowTextTop)
                 }
-                .frame(height: height, alignment: .top)
+                .frame(minHeight: height, alignment: .top)
                 .contentShape(Rectangle())
                 .onTapGesture { if let action = row.action { perform(action) } }
                 .accessibilityAddTraits(row.action == nil ? [] : .isButton)
@@ -624,10 +702,10 @@ private struct DustRows: View {
                         ForEach(Array(row.cells.enumerated()), id: \.offset) { _, cell in
                             let grade = colors.forced ?? WeatherColors.grade(cell.color) ?? colors.text
                             VStack(spacing: 0) {
-                                CssLine(runs: [CssRun(text: cell.heading, size: s(15))], color: colors.text)
+                                FitLine(runs: [CssRun(text: cell.heading, size: s(15))], color: colors.text)
                                 Spacer().frame(height: 5)
                                 GlyphText(glyph: cell.glyph, size: 32, color: grade).frame(height: WeatherMetrics.aqiGlyphLine, alignment: .top)
-                                CssLine(runs: [CssRun(text: cell.grade, size: s(17))], color: grade)
+                                FitLine(runs: [CssRun(text: cell.grade, size: s(17))], color: grade)
                             }
                             .frame(width: unit)
                             .contentShape(Rectangle())
@@ -719,7 +797,7 @@ private struct AttributionView: View {
                         .frame(width: 160, height: 160 * image.size.height / max(image.size.width, 1))
                 }
             case .visualCrossing:
-                CssLine(runs: [CssRun(text: Attribution.visualCrossingText, size: s(12))], color: colors.attributionLink, strut: s(14))
+                FitLine(runs: [CssRun(text: Attribution.visualCrossingText, size: s(12))], color: colors.attributionLink, strut: s(14))
             }
         }
         .frame(maxWidth: .infinity)

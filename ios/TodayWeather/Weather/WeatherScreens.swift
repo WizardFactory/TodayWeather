@@ -25,8 +25,9 @@ final class WeatherScreens {
     /// The session's `applyEvent` count the visit last applied (CODEX-IN08-1): only a new one applies the weather again.
     @ObservationIgnored private var appliedEvents = -1
     @ObservationIgnored private var retryShown = false
-    /// The screen size in points (`screen.width`, `screen.height`), for the chart and header sizes.
-    @ObservationIgnored var screenSize: CGSize
+    /// The window's size in points, for the chart and header sizes (`initSize`'s `bodyWidth` and `bodyHeight`; CODEX-IN08-2):
+    /// the screen until the page reports its window, then the window as it is resized.
+    @ObservationIgnored private(set) var screenSize: CGSize
 
     init(session: WeatherSession, shell: ShellModel, screenSize: CGSize) {
         self.session = session
@@ -129,6 +130,16 @@ final class WeatherScreens {
         scope = visit
     }
 
+    /// The page's window has a new size (it opened, rotated or was resized). Cordova's `initSize` measures once per page
+    /// visit, from `window.screen` (the WebView filled the screen); the native window can be smaller than the screen (Split
+    /// View, Stage Manager) and change while the page is open, so the visit starts again with the window's sizes: the
+    /// header, the fonts and the chart columns follow it, and the charts open at today's position again.
+    func windowChanged(_ size: CGSize) {
+        guard size.width > 0, size.height > 0, size != screenSize else { return }
+        screenSize = size
+        if let tab = visitTab, scope != nil { openVisit(tab) }
+    }
+
     /// `loadWeatherPhotosEvent`: in the photo theme the page takes the selected place's new photo, without an apply (the
     /// charts stay where they are).
     private func photoLoaded() {
@@ -187,6 +198,7 @@ final class WeatherScreens {
             actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
                                                onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
             page: AnyView(WeatherPageView(content: content, theme: theme, actions: actions)
+                .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
                 .accessibilityIdentifier("forecast-page-\(tab.rawValue)")))
     }
 

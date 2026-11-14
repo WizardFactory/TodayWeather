@@ -68,6 +68,31 @@ struct WeatherFitTests {
         }
     }
 
+    /// CODEX-IN08-2: narrow iPad windows (Split View's third and half of a portrait iPad Pro 11", a small Stage Manager
+    /// window) at `xxxLarge`, with the page's sizes taken from the window: both pages of both places ask for no more than
+    /// the window's width (tables wrap their text), and the temperature with the sky image fits the main box.
+    @Test(arguments: ["ko", "de"])
+    func narrowWindowsFitAtTheLargestTextSize(catalog: String) throws {
+        let windows = [CGSize(width: 320, height: 1032), CGSize(width: 678, height: 1032), CGSize(width: 500, height: 600)]
+        for page in WeatherScreenshotTests.pages where !page.hasSuffix("expanded") {
+            for window in windows {
+                let name = "\(catalog) \(page) \(window)"
+                let content = try Self.content(page, catalog: catalog, width: window.width, height: window.height)
+                let view = WeatherPageView(content: content, theme: .light, scrolls: false)
+                    .environment(\.sizeCategory, .extraExtraExtraLarge)
+                let host = UIHostingController(rootView: view)
+                let asked = host.sizeThatFits(in: CGSize(width: window.width, height: .greatestFiniteMagnitude))
+                #expect(asked.width <= window.width + 0.5, "\(name): the page asks for \(asked.width)")
+                if let hero = content.page.hero {
+                    let big = content.metrics.bigFontSize
+                    let runs = [CssRun(text: hero.temperature, size: big), CssRun(text: "˚", size: big / 2)]
+                    let row = CssLine.width(runs) + content.metrics.bigImageSize
+                    #expect(row <= window.width * 0.8 + 0.5, "\(name): temperature row \(row)")
+                }
+            }
+        }
+    }
+
     @Test func rowsGrowWithTheText() {
         let large = CssLine.metrics([CssRun(text: "가", size: TextScale(.large)(17))])
         let xxx = CssLine.metrics([CssRun(text: "가", size: TextScale(.extraExtraExtraLarge)(17))])
@@ -76,7 +101,7 @@ struct WeatherFitTests {
         #expect(TextScale(.extraExtraExtraLarge).factor > 1.3)
     }
 
-    static func content(_ page: String, catalog: String, width: CGFloat) throws -> WeatherPageContent {
+    static func content(_ page: String, catalog: String, width: CGFloat, height: CGFloat? = nil) throws -> WeatherPageContent {
         let manifest = try References.json("forecast-captures.json")
         let fixture = page.hasPrefix("vc-london") ? "vc-london" : "kma-seoul"
         let place = try #require(manifest["places"]?[fixture]?.objectValue)
@@ -86,7 +111,7 @@ struct WeatherFitTests {
         for key in ["name", "address", "country", "location"] { record[key] = place[key] }
         let c = Catalog(code: catalog)
         var scope = ForecastScope(type: page.contains("daily") ? .mid : .short,
-                                  metrics: ChartMetrics(bodyWidth: width, bodyHeight: width > 900 ? 1024 : 852),
+                                  metrics: ChartMetrics(bodyWidth: width, bodyHeight: height ?? (width > 900 ? 1024 : 852)),
                                   fahrenheit: false, photoTheme: false,
                                   yesterday: YesterdayText(same: c("LOC_SAME_AS_YESTERDAY"), than: c("LOC_THAN_YESTERDAY")),
                                   expandShortChart: true)

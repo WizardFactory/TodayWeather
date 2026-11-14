@@ -87,4 +87,43 @@ struct WeatherLiveTests {
         f.shell.tapTab(.forecast)
         #expect(await eventually { (f.screens.scope?.scrolls ?? 0) > applies + 1 })
     }
+
+    /// CODEX-IN08-2: the page's sizes follow the window, as Cordova's `initSize` takes them from the WebView's area: one
+    /// live window of an iPad screen resizes to Split View's third and half and to a small Stage Manager window, at
+    /// `xxxLarge`. After each resize the sizes are the window's, the temperature with the sky image and every summary
+    /// line fit the main box (80 % of the width), and the page asks for no more than the window's width.
+    @Test func theSizesFollowTheWindow() async throws {
+        let screen = CGSize(width: 1024, height: 1366)
+        let f = WeatherTabTests.Fixture(WeatherTabTests.byPlace(), screenSize: screen)
+        f.screens.handle(.launch)
+        #expect(await eventually { f.screens.scope?.currentWeather != nil && !f.screens.session.loadingSelected })
+        let view = Live(screens: f.screens, tab: .forecast).environment(\.sizeCategory, .extraExtraExtraLarge)
+        let w = try Window(view, size: screen)
+        defer { w.window.isHidden = true }
+        for size in [CGSize(width: 320, height: 1032), CGSize(width: 678, height: 1032), CGSize(width: 500, height: 600),
+                     CGSize(width: 1024, height: 1366)] {
+            w.window.frame = CGRect(origin: .zero, size: size)
+            let followed = await eventually {
+                f.screens.scope?.metrics.bodyWidth == Double(size.width) && f.screens.scope?.metrics.bodyHeight == Double(size.height)
+            }
+            #expect(followed, "\(size): the sizes are the window's, not \(String(describing: f.screens.scope?.metrics.bodyWidth))")
+            let content = try #require(f.screens.pageContent)
+            let hero = try #require(content.page.hero)
+            let s = TextScale(.extraExtraExtraLarge)
+            let big = content.metrics.bigFontSize
+            let temperature = [CssRun(text: hero.temperature, size: big), CssRun(text: "˚", size: big / 2)]
+            let row = CssLine.width(temperature) + content.metrics.bigImageSize
+            let box = size.width * 0.8
+            #expect(row <= box + 0.5, "\(size): the temperature row \(row) fits the main box \(box)")
+            for text in [hero.summary] + (hero.summaryAir.map { [$0] } ?? []) {
+                for line in SummaryLines.lines(text, size: s(21), width: box) {
+                    let width = CssLine.width([CssRun(text: line, size: s(21))])
+                    #expect(width <= box + 0.5, "\(size): summary line \(line)")
+                }
+            }
+            try await Task.sleep(for: .milliseconds(300))
+            let fitting = w.host.view.sizeThatFits(CGSize(width: size.width, height: .greatestFiniteMagnitude))
+            #expect(fitting.width <= size.width + 0.5, "\(size): the page asks for \(fitting.width)")
+        }
+    }
 }
