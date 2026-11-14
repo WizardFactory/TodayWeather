@@ -204,7 +204,10 @@ instance restart is never treated as durable application state.
 `/health` proves process liveness only. Before a route receives traffic, later
 phases must prove configuration/keys, S3 role access, provider reservations,
 family readiness and bounded cold warm-up. The foundation does not yet implement
-that readiness gate or an IMDS watcher.
+that readiness gate. The log pipeline's Spot interruption watcher (LP-4,
+[`server2-logging.md`](server2-logging.md#spot-interruption-and-loss-without-notice))
+only stops the server and then the log collector in order on a notice; it does not
+mark the instance unready or remove routing.
 
 For a separately approved production drain, an IMDSv2 interruption/rebalance
 watcher marks the instance unready, removes new routing, stops new provider budget

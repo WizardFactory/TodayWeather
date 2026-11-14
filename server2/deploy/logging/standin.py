@@ -12,7 +12,8 @@ CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
 Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
-while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds.
+while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
+while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds.
 """
 import argparse
 import json
@@ -20,6 +21,7 @@ import os
 import re
 import signal
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -87,7 +89,7 @@ class Handler(BaseHTTPRequestHandler):
     def record(self, service, action, **fields):
         credential = re.search(r'Credential=([A-Z0-9]+)/', self.headers.get('Authorization', ''))
         entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')),
-                     key_id=credential.group(1) if credential else None, **fields)
+                     key_id=credential.group(1) if credential else None, at=time.time(), **fields)
         with self.server.lock:
             with open(self.server.state / 'operations.jsonl', 'a') as f:
                 f.write(json.dumps(entry, sort_keys=True) + '\n')
@@ -126,7 +128,10 @@ class Handler(BaseHTTPRequestHandler):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with open(path, 'a') as f:
                     for event in request.get('logEvents', []):
-                        f.write(json.dumps({'timestamp': event['timestamp'], 'message': event['message']}) + '\n')
+                        f.write(json.dumps({'timestamp': event['timestamp'], 'message': event['message'],
+                                            'stored_at': time.time()}) + '\n')
+                    f.flush()
+                    os.fsync(f.fileno())
             return self.reply(200, b'{}')
         return self.cw_error(400, 'UnknownOperationException', action)
 
@@ -151,6 +156,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(404, b'<Error><Code>NoSuchBucket</Code></Error>', 'application/xml')
         if not SAFE.match(key) or '..' in key.split('/'):
             return self.reply(400, b'<Error><Code>InvalidKey</Code></Error>', 'application/xml')
+        # Test fault: while <state>/slow-s3 exists, every object is stored and confirmed only
+        # after that many seconds (a slow upload).
+        slow = self.server.state / 'slow-s3'
+        if slow.exists():
+            time.sleep(float(slow.read_text().strip() or '0'))
         target = self.server.state / 's3' / key
         with self.server.lock:
             if target.exists():
@@ -158,14 +168,16 @@ class Handler(BaseHTTPRequestHandler):
                 self.record('s3', 'Overwrite', bucket=bucket, key=key)
             target.parent.mkdir(parents=True, exist_ok=True)
             temporary = target.with_name('.' + target.name + '.tmp')  # readers never see a partial object
-            temporary.write_bytes(body)
+            with open(temporary, 'wb') as f:
+                f.write(body)
+                f.flush()
+                os.fsync(f.fileno())  # a confirmed object survives a power-off of the host (LP-4 check)
             temporary.replace(target)
         # Test fault: while <state>/delay-s3 exists, a server object is stored at once but
         # confirmed only after that many seconds (a delayed confirmation).
         delay = self.server.state / 'delay-s3'
         if delay.exists() and '/server/' in key:
             self.record('s3', 'DelayedConfirmation', bucket=bucket, key=key)
-            import time
             time.sleep(float(delay.read_text().strip() or '0'))
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
 

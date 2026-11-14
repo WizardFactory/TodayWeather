@@ -1,0 +1,22 @@
+{
+  "task": "LogSpot2981",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2981",
+  "scope": "LP-4 of #2977: Spot interruption watcher (IMDSv2), ordered stop with a short drain on a notice, 80 s budget, 50 s S3 window for the 60 s loss bound without notice, checks. PR to master; no deployment or AWS change.",
+  "server2_paths": [
+    "server2/config/tasks/LogSpot2981.json",
+    "server2/deploy/logging/"
+  ],
+  "outside": [
+    {"path": "intent/issue-2981.md", "category": "documentation", "reason": "Task intent for LP-4"},
+    {"path": "specs/issue-2981.md", "category": "documentation", "reason": "Task specification for LP-4"},
+    {"path": "plans/issue-2981.md", "category": "documentation", "reason": "Task plan and user scenarios for LP-4"},
+    {"path": "docs/operations/server2-logging.md", "category": "documentation", "reason": "Interruption sequence, budget, loss without notice"},
+    {"path": "docs/operations/server2-infrastructure.md", "category": "documentation", "reason": "Watcher statement"},
+    {"path": "docs/architecture/diagrams/server2-logging.json", "category": "documentation", "reason": "Diagram: Spot watch in the instance lane"},
+    {"path": "docs/architecture/diagrams/server2-logging.html", "category": "documentation", "reason": "Regenerated diagram"},
+    {"path": "docs/operations/server2-logging-pipeline.pdf", "category": "documentation", "reason": "Manual step 9"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/manual.json", "category": "documentation", "reason": "Editable manual source"},
+    {"path": "docs/operations/assets/server2-logging-pipeline/8-interruption.png", "category": "documentation", "reason": "Actual capture of a Spot interruption"},
+    {"path": "docs/evidence/tasks/issue-2981/verification.md", "category": "documentation", "reason": "Selected verification evidence for LP-4"}
+  ]
+}

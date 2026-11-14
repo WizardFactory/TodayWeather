@@ -8,8 +8,9 @@
 # settings, then enables both units. Without --collector-tarball the pinned
 # release is downloaded. It does not install the server2 binary or its .env:
 # those come from the release procedure (/opt/server2/bin/server2 and
-# /opt/server2/config/.env). It never starts server2.service or the collector;
-# it starts only the status timer, which does nothing while the collector is stopped.
+# /opt/server2/config/.env). It never starts server2.service or the collector; it
+# starts the status timer, which does nothing while the collector is stopped, and the
+# Spot interruption watcher, which is idle unless the instance is a Spot instance.
 set -euo pipefail
 
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
@@ -46,16 +47,19 @@ getent passwd server2 >/dev/null || useradd --system --gid server2 --home-dir /o
 install -d -m 0755 /opt/server2 /opt/server2/bin /opt/server2/logging
 install -d -m 0750 -o root -g server2 /opt/server2/config
 install -m 0755 "$work/$member" /opt/server2/logging/vector
-install -m 0644 "$here/render.py" "$here/status.py" "$here/collector.json" /opt/server2/logging/
+install -m 0644 "$here/render.py" "$here/status.py" "$here/spot_watch.py" "$here/collector.json" /opt/server2/logging/
 install -m 0644 "$here/units/server2.service" "$here/units/server2-logs.service" \
-  "$here/units/server2-logs-status.service" "$here/units/server2-logs-status.timer" /etc/systemd/system/
+  "$here/units/server2-logs-status.service" "$here/units/server2-logs-status.timer" \
+  "$here/units/server2-logs-watch.service" /etc/systemd/system/
 install -m 0644 "$here/units/journald@server2.conf" /etc/systemd/journald@server2.conf
 install -d -m 0755 /etc/systemd/journald.conf.d
 install -m 0644 "$here/units/journald-system.conf" /etc/systemd/journald.conf.d/server2-system.conf
 
 systemctl daemon-reload
 systemctl restart systemd-journald.service
-systemctl enable server2.service server2-logs.service server2-logs-status.timer
+systemctl enable server2.service server2-logs.service server2-logs-status.timer server2-logs-watch.service
 # The status timer only acts while the collector runs (its service checks that).
 systemctl start server2-logs-status.timer
+# The interruption watcher protects this boot too, not only the next one (LP-4).
+systemctl restart server2-logs-watch.service
 echo "install.sh: installed $(/opt/server2/logging/vector --version | head -n 1)"

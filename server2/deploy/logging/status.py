@@ -32,7 +32,7 @@ DESTINATIONS = ('s3', 'cloudwatch')
 # The units the collector's readers include (render.UNITS). Positions are compared only
 # with their entries: journald's own lines in the namespace ("Journal started/stopped")
 # are never read, so a reader can never reach them.
-READ_UNITS = ('server2.service', 'server2-logs.service', 'server2-logs-status.service')
+READ_UNITS = ('server2.service', 'server2-logs.service', 'server2-logs-status.service', 'server2-logs-watch.service')
 UNIT_MATCHES = [f'_SYSTEMD_UNIT={unit}' for unit in READ_UNITS]
 COLLECTOR_SCHEMA = 1
 _SAMPLE = re.compile(r'^(\w+)\{([^}]*)\}\s+([0-9.eE+-]+)(?:\s+\d+)?$')
@@ -53,8 +53,12 @@ def parse_cursor(cursor):
 
 
 # A destination is behind when its oldest unconfirmed record is older than twice its
-# normal delivery window (S3 objects close every 60 s; CloudWatch batches within 1-10 s).
+# normal delivery window (S3 within 60 s, objects close every 50 s; CloudWatch within 10 s).
 BEHIND_SECONDS = {'s3': 120, 'cloudwatch': 20}
+# Written by spot_watch.py on a Spot interruption notice (LP-4): the stop drain then waits
+# at most this long, and the collector's own flush at stop ships the rest.
+INTERRUPTION_MARKER = '/run/server2-logs-watch/interruption'
+INTERRUPTION_DRAIN_SECONDS = 10
 
 
 class JournalError(Exception):
@@ -105,10 +109,10 @@ def checkpoint(state_dir, destination, source=None):
         return None
 
 
-def journal_boots(namespace='server2'):
+def journal_boots(namespace='server2', timeout=30):
     """Boot IDs of the namespace, oldest first."""
     result = subprocess.run(['journalctl', f'--namespace={namespace}', '--list-boots', '--no-pager', '-q'],
-                            capture_output=True, text=True, timeout=30)
+                            capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise JournalError('journalctl --list-boots failed')
     return [m.group(1) for m in re.finditer(r'^\s*-?\d+\s+([0-9a-f]{32})\b', result.stdout, re.M)]
@@ -341,11 +345,23 @@ def drain(state_dir, active, timeout, poll=0.5):
     # Readers and their targets: each destination's main reader up to the journal end, and
     # each earlier-boot reader (LP-3) up to its boot's last entry.
     targets = {(d, None): parse_cursor(target) for d in active}
-    for destination in active:
-        for item in backlog(state_dir).get(destination, []):
-            last = last_entry_of_boot(item['boot'], timeout=max(1.0, deadline - time.monotonic()))
-            if last:
-                targets[(destination, item['source'])] = parse_cursor(last)
+    # Every lookup shares the one deadline (CX-LP4-002): the boot list is read once, and no
+    # earlier-boot target is looked up once the time is spent.
+    # A destination with a planned reader whose target could not be looked up in time is
+    # not drained (CX-LP4-009).
+    plan = backlog_plan(state_dir)
+    unresolved = {d for d in active if any(not i.get('rotated') for i in plan.get(d, []))}
+    if unresolved and deadline > time.monotonic():
+        readers = backlog(state_dir, journal_boots(timeout=max(0.1, deadline - time.monotonic())))
+        unresolved = set()
+        for destination in active:
+            for item in readers.get(destination, []):
+                if deadline <= time.monotonic():
+                    unresolved.add(destination)
+                    break
+                last = last_entry_of_boot(item['boot'], timeout=max(0.1, deadline - time.monotonic()))
+                if last:
+                    targets[(destination, item['source'])] = parse_cursor(last)
     pending = set(targets)
     while pending:
         for key in sorted(pending, key=str):
@@ -358,7 +374,8 @@ def drain(state_dir, active, timeout, poll=0.5):
             break
         time.sleep(min(poll, max(0.0, deadline - time.monotonic())))
     waited = round(time.monotonic() - began, 1)
-    return {d: {'drained': not any(k[0] == d for k in pending), 'waited_seconds': waited} for d in active}
+    return {d: {'drained': d not in unresolved and not any(k[0] == d for k in pending), 'waited_seconds': waited}
+            for d in active}
 
 
 def counters(text):
@@ -408,8 +425,11 @@ def main(argv=None):
                          sort_keys=True), flush=True)
         return 0
     if args.moment == 'drain':
+        timeout = args.timeout
+        if Path(INTERRUPTION_MARKER).exists():
+            timeout = min(timeout, INTERRUPTION_DRAIN_SECONDS)  # inside the two-minute notice
         try:
-            result = drain(args.state, active, args.timeout)
+            result = drain(args.state, active, timeout)
         except (OSError, ValueError, KeyError, JournalError, subprocess.TimeoutExpired) as exc:
             result, error = None, type(exc).__name__
         complete = result is not None and all(r['drained'] for r in result.values())

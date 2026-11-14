@@ -62,8 +62,13 @@ def main():
     check('the user data ran to completion as root', result.returncode == 0, result.stderr.decode(errors='replace')[-500:])
     check('the collector was downloaded and verified against the pin',
           lc.run('/opt/server2/logging/vector', '--version', check=False).stdout.startswith('vector 0.61.0'))
-    for unit in ('server2.service', 'server2-logs.service', 'server2-logs-status.timer'):
+    for unit in ('server2.service', 'server2-logs.service', 'server2-logs-status.timer', 'server2-logs-watch.service'):
         check(f'{unit} is enabled for every boot', lc.systemctl('is-enabled', unit, check=False).stdout.strip() == 'enabled')
+    # LP-4: the boot configuration started the interruption watcher; on On-Demand it ends idle.
+    idle = lc.wait_until(lambda: any('server2 interruption watcher: idle (instance life cycle is on-demand)' in l
+                                     for l in lc.journal('server2-logs-watch.service')), 30)
+    check('the interruption watcher ran and is idle on On-Demand', idle is not None
+          and lc.systemctl('show', '-p', 'Result', '--value', 'server2-logs-watch.service').stdout.strip() == 'success')
     check('the collector is running', lc.wait_unit('server2-logs.service', {'active'}, 30) == 'active')
     starts = [json.loads(l) for l in lc.journal('server2-logs.service') if '"collector.started"' in l]
     entry['observations']['start_record'] = starts[-1] if starts else None
