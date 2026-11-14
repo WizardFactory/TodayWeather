@@ -261,16 +261,35 @@ def save_state_json(path, value):
         os.close(directory)
 
 
-def _load_state_json(path):
-    """(value, readable): a missing file is an empty state; an unreadable one is kept aside
-    as <name>.corrupt and reported, never silently treated as empty."""
+RECOVERY_FILE = 'backlog-recovery.json'
+
+
+def _load_state_json(path, recovery_file):
+    """A state file's content; a missing file is an empty state. An unreadable one is never
+    treated as empty: every destination is first recorded in the recovery file, which
+    persists until that destination's plan has been rebuilt and saved (also across a failed
+    start and while a destination is not selected), and only then is the file kept aside as
+    <name>.corrupt (CX-LP3-002)."""
     try:
-        return json.loads(path.read_text()), True
+        return json.loads(path.read_text())
     except FileNotFoundError:
-        return {}, True
+        return {}
     except ValueError:
+        pending = set(_recovery(recovery_file)) | set(DESTINATIONS) - {'local'}
+        save_state_json(recovery_file, sorted(pending))
         path.replace(path.with_name(path.name + '.corrupt'))
-        return {}, False
+        _warn('collector.backlog_state_recovered', file=path.name,
+              message='backlog state was unreadable; every earlier boot in the journal is shipped again')
+        return {}
+
+
+def _recovery(recovery_file):
+    try:
+        return json.loads(recovery_file.read_text())
+    except FileNotFoundError:
+        return []
+    except ValueError:
+        return sorted(set(DESTINATIONS) - {'local'})
 
 
 def _position(cursor, after):
@@ -302,17 +321,16 @@ def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=
     state_dir = Path(state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
     plan_file, starts_file = state_dir / 'backlog.json', state_dir / 'reader-start.json'
-    plan, plan_ok = _load_state_json(plan_file)
+    recovery_file = state_dir / RECOVERY_FILE
+    plan = _load_state_json(plan_file, recovery_file)
     # Boot in which a reader without a checkpoint started: it reads that boot from its
     # first entry, so a reader that never confirmed anything before a reboot (a destination
     # failing throughout) still has that whole boot to ship.
-    starts, starts_ok = _load_state_json(starts_file)
-    recovering = not (plan_ok and starts_ok)
-    if recovering:
-        # What was shipped is unknown: plan every earlier boot still in the journal. Readers
-        # resume from their own saved positions; the rest can repeat records, never lose them.
-        _warn('collector.backlog_state_recovered',
-              message='backlog state was unreadable; every earlier boot in the journal is shipped again')
+    starts = _load_state_json(starts_file, recovery_file)
+    # Destinations whose plan was lost: what they shipped is unknown, so every earlier boot
+    # still in the journal is planned. Readers resume from their own saved positions; the
+    # rest can repeat records, never lose them.
+    recovering = set(_recovery(recovery_file))
     boots = journal_boots() if boots is None else boots
     earlier = boots[:boots.index(current_boot)] if current_boot in boots else list(boots)
     for destination in destinations:
@@ -326,7 +344,7 @@ def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=
             boot = _cursor_fields(checkpoint).get('b')
         else:
             boot = starts.setdefault(destination, current_boot)
-        if recovering:
+        if destination in recovering:
             wanted = earlier
         elif boot == current_boot:
             wanted = []
@@ -376,6 +394,13 @@ def plan_backlog(state_dir, destinations, current_boot, boots=None, last_cursor=
     # (GEM-LP3-003); only the selected ones get readers.
     save_state_json(plan_file, plan)
     save_state_json(starts_file, starts)
+    if recovering:
+        # Recovered destinations leave the recovery file only after their plan is saved.
+        left = sorted(recovering - set(destinations))
+        if left:
+            save_state_json(recovery_file, left)
+        else:
+            recovery_file.unlink()
     return {d: items for d, items in plan.items() if d in destinations}
 
 

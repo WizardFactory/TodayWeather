@@ -286,6 +286,11 @@ def report_overruns(state_dir, active):
     """Print one record per new gap and return the cumulative counts of the active destinations."""
     state_file = Path(state_dir) / 'overrun-state.json'
     state = load_state(state_file)
+    # The boots are listed BEFORE the oldest entry is read (CX-LP3-004): rotation only
+    # removes the oldest boots, so a boot missing from this list was also gone when the
+    # oldest entry was read, and the check below has accounted for its loss.
+    plan = backlog_plan(state_dir)
+    boots = journal_boots() if any(plan.get(d) for d in active) else None
     oldest = oldest_entry()
     for destination, lost_from, lost_until, boundary in overruns(state_dir, oldest, state, active):
         entry = state.setdefault(destination, {'count': 0})
@@ -303,17 +308,15 @@ def report_overruns(state_dir, active):
     # remaining entry, not an earlier boot it never reads (LP-3).
     set_baselines(state_dir, first_entry_of_current_boot() if oldest else None, state, active)
     save_state(state_file, state)
-    prune_backlog(state_dir, active)
+    if boots is not None:
+        prune_backlog(state_dir, active, boots)
     return {d: state.get(d, {}).get('count', 0) for d in active}
 
 
-def prune_backlog(state_dir, active):
+def prune_backlog(state_dir, active, boots):
     """After the overrun check has accounted for them, drop the planned boots of active
-    destinations that left the journal (CX-LP3-004)."""
+    destinations that had left the journal before it ran (`boots`, listed before it)."""
     plan = backlog_plan(state_dir)
-    if not any(plan.get(d) for d in active):
-        return
-    boots = journal_boots()
     kept = {d: [i for i in items if d not in active or (not i.get('rotated') and i['boot'] in boots)]
             for d, items in plan.items()}
     kept = {d: items for d, items in kept.items() if items}

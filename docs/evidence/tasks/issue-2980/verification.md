@@ -59,6 +59,6 @@ Candidate `e50075d8`, after review round 1.
 - The user data was run by the check as root (`bash -s`), as cloud-init runs it; cloud-init itself and a real EC2 launch were not exercised. The pipeline files and the collector were downloaded from GitHub for real.
 - Instance metadata, S3 and CloudWatch Logs were stand-ins; IAM evaluation, real IMDS behaviour (hop limit, throttling) and real AWS were not exercised.
 - Two instances were simulated on one host (instance ID changed, journal and state emptied between them) against one destination stand-in, not two VMs.
-- The abrupt-stop repeat bound was exercised with a delayed S3 confirmation and a killed collector; power loss and kernel crashes were not produced. The bound under a fast backlog replay follows from Vector's buffer and batch defaults and was not measured.
+- The abrupt-stop repeat bound (the records after each reader's saved position) was exercised with one delayed S3 confirmation and a killed collector; several later batches confirmed before an earlier one, power loss and kernel crashes were not produced. The size of that range under a fast backlog replay was not measured.
 - The overrun of a planned earlier boot was checked offline; a real rotation of an unfinished earlier boot was not produced in the VM.
 - Amazon Linux 2023 and native x86_64 were not run.

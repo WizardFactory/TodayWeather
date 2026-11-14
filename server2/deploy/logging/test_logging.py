@@ -488,6 +488,24 @@ class IdentityAndBacklogTest(unittest.TestCase):
             self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text()), plan)
             self.assertFalse(list(Path(directory).glob('.*.tmp')))
 
+    def test_recovery_survives_a_failed_start_and_an_unselected_destination(self):  # CX-LP3-002 round 2
+        a, current = 'a' * 32, 'c' * 32
+        last = lambda arguments: 's=' + 'e' * 32 + ';i=90;b=x;m=1;t=1;x=1'
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
+            for destination in ('s3', 'cloudwatch'):
+                self.checkpoint(directory, f'journal_{destination}', f's={"e" * 32};i=40;b={current};m=1;t=1;x=1')
+            (Path(directory) / 'backlog.json').write_text('{"s3": [')
+            with mock.patch.object(render, 'journal_boots', side_effect=OSError('journalctl failed')):
+                with self.assertRaises(OSError):
+                    render.plan_backlog(directory, ['s3'], current, last_cursor=last)
+            # The next start still recovers, although backlog.json is now absent.
+            plan = render.plan_backlog(directory, ['cloudwatch'], current, boots=[a, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['cloudwatch']], [a])
+            self.assertEqual(json.loads((Path(directory) / 'backlog-recovery.json').read_text()), ['s3'])
+            plan = render.plan_backlog(directory, ['s3', 'cloudwatch'], current, boots=[a, current], last_cursor=last)
+            self.assertEqual([i['boot'] for i in plan['s3']], [a])
+            self.assertFalse((Path(directory) / 'backlog-recovery.json').exists())
+
     def test_an_unselected_destination_keeps_its_plan(self):  # GEM-LP3-003
         a, current = 'a' * 32, 'c' * 32
         last = lambda arguments: 's=' + 'e' * 32 + ';i=90;b=x;m=1;t=1;x=1'
@@ -1023,6 +1041,25 @@ class StatusTest(unittest.TestCase):
             record = json.loads(out.getvalue().splitlines()[0])
             self.assertEqual((record['event'], record['destination']), ('collector.journal_overrun', 's3'))
             self.assertEqual(record['lost_from'], status.iso(1_000))
+            self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text()), {})
+
+    def test_only_boots_gone_before_the_loss_check_are_pruned(self):  # CX-LP3-004 round 2
+        calls = []
+        item = {'boot': 'a' * 32, 'source': 'backlog_s3_aaaa', 'needed': ['a' * 32, 100, 1_000]}
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()) as out:
+            self.state(directory, s3=_cursor(300, 3_000))
+            self.backlog_state(directory, [item])
+            # The boot list is read first and still holds 'a'; then 'a' rotates before the oldest entry is read.
+            with mock.patch.object(status, 'journal_boots', side_effect=lambda *a: calls.append('boots') or ['a' * 32, 'b' * 32]), \
+                    mock.patch.object(status, 'oldest_entry', side_effect=lambda *a: calls.append('oldest') or _cursor(250, 2_500)):
+                status.report_overruns(directory, ('s3',))
+            self.assertEqual(calls[:2], ['boots', 'oldest'])
+            self.assertIn('collector.journal_overrun', out.getvalue())  # the loss is reported ...
+            self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text())['s3'], [item])  # ... and kept this time
+            with mock.patch.object(status, 'journal_boots', return_value=['b' * 32]), \
+                    mock.patch.object(status, 'oldest_entry', return_value=_cursor(250, 2_500)):
+                status.report_overruns(directory, ('s3',))
+            self.assertEqual(out.getvalue().count('collector.journal_overrun'), 1)  # not reported twice
             self.assertEqual(json.loads((Path(directory) / 'backlog.json').read_text()), {})
 
     def test_a_reader_of_an_earlier_boot_counts_from_its_own_position(self):  # GEM-LP3-002
