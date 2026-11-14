@@ -3,10 +3,11 @@
 
     check_upgrade.py dummy-plist <path>
     check_upgrade.py event-stored <data-container>
-    check_upgrade.py tests-passed <out> <phase> <xcresult>
+    check_upgrade.py tests-passed <out> <phase> <xcresult> [CordovaUpgradeTests|PushUpgradeTests]
     check_upgrade.py before <out> <data-container> <group-container> <localStorage|suite>
     check_upgrade.py after  <out> <data-container> <group-container> <localStorage|suite> <first|restart>
     check_upgrade.py final  <out> <data-container> <group-container> <localStorage|suite>
+    check_upgrade.py push   <out> <data-container> <group-container> <localStorage|suite> <token-a|token-b>
 
 The Firebase SDK files read here are internals of the SDK, observed on the iOS 26.5 simulator with
 FirebaseAnalytics 13 (native) and FirebaseX 2.0 / Firebase 12.14 (Cordova):
@@ -39,16 +40,19 @@ LOCAL_HOSTS = {"127.0.0.1", "localhost"}
 # They are skipped without the seed, so each must be reported as passed, not merely present.
 UPGRADE_TESTS = ["migratedStateMatchesTheCordovaState()", "deviceIdIsTheCordovaValue()", "sourcesAreKept()",
                  "aSecondRunChangesNothing()", "analyticsIsOffAlthoughCordovaOptedIn()"]
+# The push test (IN-04, TodayWeatherTests/PushUpgradeTests.swift), skipped without the token and the recorder.
+SUITE_TESTS = {"CordovaUpgradeTests": UPGRADE_TESTS,
+               "PushUpgradeTests": ["migratedAlarmsAndAlertsAreRegisteredAgain()"]}
 
 
-def test_results(xcresult):
-    """{test case name: result} of the CordovaUpgradeTests suite in an .xcresult (`xcresulttool`, Xcode 16+)."""
+def test_results(xcresult, suite="CordovaUpgradeTests"):
+    """{test case name: result} of `suite` in an .xcresult (`xcresulttool`, Xcode 16+)."""
     out = subprocess.run(["xcrun", "xcresulttool", "get", "test-results", "tests", "--path", xcresult],
                          check=True, capture_output=True, text=True).stdout
     found = {}
 
     def walk(node, suites):
-        if node.get("nodeType") == "Test Case" and "CordovaUpgradeTests" in suites:
+        if node.get("nodeType") == "Test Case" and suite in suites:
             found[node.get("name")] = node.get("result")
         for child in node.get("children", []):
             walk(child, suites + [node.get("name", "")])
@@ -58,11 +62,11 @@ def test_results(xcresult):
     return found
 
 
-def tests_passed(out, phase, xcresult):
+def tests_passed(out, phase, xcresult, suite="CordovaUpgradeTests"):
     c = Checks(out, f"tests-{phase}")
-    results = test_results(xcresult)
+    results = test_results(xcresult, suite)
     c.record("upgrade_tests", results)
-    for name in UPGRADE_TESTS:
+    for name in SUITE_TESTS[suite]:
         c.check(f"{name} ran and passed", results.get(name) == "Passed", results.get(name))
     c.finish()
 
@@ -163,12 +167,81 @@ def requests(c, out):
     c.check("no request for a production host or an API path elsewhere", not production, production)
 
 
+def push(c, out, data, seed, token):
+    """IN-04: the native requests (/v000903) on the recorder against the seeded records and the Cordova app's post
+    of the same records (/v000902, the seed's reference request)."""
+    entries = [json.loads(line) for line in open(os.path.join(out, "recorder", "requests.jsonl"), encoding="utf-8")]
+    native = [e for e in entries if e["path"].startswith("/v000903/")]
+    cordova = [e for e in entries if e["path"] == "/v000902/push-list" and e["method"] == "POST"]
+    stored = json.loads(seed["storage"]["pushData2"])
+    seeded_token = stored["fcmToken"]
+
+    def key(o):
+        return [o.get("cityIndex"), o.get("id"), o.get("category")]
+
+    def members(o):
+        # Members in order with their values, but for the app version and the token.
+        return [(k, v) for k, v in o.items() if k not in ("appVersion", "fcmToken")]
+
+    seeded_keys = sorted(key(r) for r in stored["pushList"])
+    c.record("native_requests", [{k: e.get(k) for k in ("time", "method", "path", "host", "headers")} for e in native])
+    c.record("cordova_reference_headers", [e.get("headers") for e in cordova])
+    changed = token != seeded_token
+    lines = [f"{e['method']} {e['path']}" for e in native]
+    expected = (["PUT /v000903/push"] if changed else []) + ["POST /v000903/push-list"] * 2
+    c.check("native requests: the replacement once for a changed token, the list once per open", lines == expected,
+            lines)
+    c.check("every native request reached the recorder on this Mac",
+            all((e.get("host") or "").split(":")[0] in LOCAL_HOSTS for e in native), [e.get("host") for e in native])
+    c.check("every native request has the Cordova Device-Id",
+            all((e.get("headers") or {}).get("Device-Id") == seed["deviceId"] for e in native))
+    c.check("one Cordova reference post of the seeded records", len(cordova) == 1, len(cordova))
+    ref = cordova[0] if cordova else {"headers": {}, "body": []}
+    ref_body = ref.get("body") if isinstance(ref.get("body"), list) else []
+    c.check("the Cordova reference posts every seeded record with type ios",
+            sorted(key(o) for o in ref_body) == seeded_keys and all(o.get("type") == "ios" for o in ref_body),
+            [key(o) for o in ref_body])
+    cordova_put = [e for e in entries if e["path"] == "/v000902/push" and e["method"] == "PUT"]
+    c.check("one Cordova reference token request (the seed's first token)",
+            len(cordova_put) == 1 and cordova_put[0].get("body") == {"newToken": seeded_token, "oldToken": None},
+            [e.get("body") for e in cordova_put])
+    if changed and native:
+        put = native[0]
+        c.check("replacement body", put.get("body") == {"newToken": token, "oldToken": seeded_token}, put.get("body"))
+        # The headers the system adds (Accept-Language) included: compared as the recorder received them.
+        ref_put = (cordova_put[0].get("headers") if cordova_put else None) or {}
+        c.check("replacement headers as in the Cordova token request", put.get("headers") == ref_put,
+                [put.get("headers"), ref_put])
+    posts = [e for e in native if e["path"] == "/v000903/push-list"]
+    for i, post in enumerate(posts, 1):
+        body = post.get("body") if isinstance(post.get("body"), list) else []
+        keys = [key(o) for o in body]
+        c.check(f"post {i}: every migrated alarm and alert once", sorted(keys) == seeded_keys, keys)
+        c.check(f"post {i}: type ios, the Cordova uuid and the token",
+                all(o.get("type") == "ios" and o.get("uuid") == seed["deviceId"] and o.get("fcmToken") == token
+                    for o in body))
+        headers = post.get("headers") or {}
+        for h in ("Content-Type", "Accept-Language", "Device-Id", "Accept"):
+            c.check(f"post {i}: {h} as in the Cordova post", headers.get(h) == ref["headers"].get(h),
+                    [headers.get(h), ref["headers"].get(h)])
+        diffs = [{"native": o, "cordova": r} for o in body for r in ref_body
+                 if key(o) == key(r) and members(o) != members(r)]
+        c.check(f"post {i}: records equal to the Cordova post (members, order, values) but for appVersion and "
+                "fcmToken", not diffs, diffs[:2])
+    state = json.load(open(os.path.join(data, "Library/Application Support/TodayWeather/app_state.json")))
+    c.check("the token is stored", state["push"]["fcmToken"] == token, state["push"]["fcmToken"])
+    c.check("the records are kept", sorted(key(r) for r in state["push"]["records"]) == seeded_keys)
+    log_path = os.path.join(data, "Library/Application Support/TodayWeather/push_replacements.json")
+    entries = json.load(open(log_path))["entries"] if os.path.exists(log_path) else []
+    c.check("every token replacement answered (the replacement log is empty)", entries == [], entries)
+
+
 def main():
     stage = sys.argv[1]
     if stage == "dummy-plist":
         return dummy_plist(sys.argv[2])
     if stage == "tests-passed":
-        return tests_passed(*sys.argv[2:5])
+        return tests_passed(*sys.argv[2:6])
     if stage == "event-stored":  # exit 0 once the SDK stored the seed's event (the app keeps running)
         m = measurement(sys.argv[2])
         sys.exit(0 if m is not None and "favorite_change" in m["events"] else 1)
@@ -176,6 +249,10 @@ def main():
     phase = sys.argv[6] if len(sys.argv) > 6 else None
     c = Checks(out, stage if stage != "after" else f"after-{phase}")
     seed = json.load(open(os.path.join(out, "recorder", "seeded.json")))
+    if stage == "push":
+        push(c, out, data, seed, phase)
+        requests(c, out)
+        c.finish()
     # cfprefsd writes the preference files some time after the app changed them (the app's own reads see the new
     # values at once), and the SDK's database can be caught while it is written: wait until the files hold the
     # values of this stage, at most 60 s, then check what they hold.

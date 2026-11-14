@@ -20,5 +20,15 @@
 	<false/>
 	<key>FirebaseAutomaticScreenReportingEnabled</key>
 	<false/>
+	<!-- The legacy server for push registration (IN-04): TW_SERVER_URL of Support/App.xcconfig, set by the ignored
+	     ios/Private.xcconfig. Empty without it: the app then sends nothing. -->
+	<key>TWServerURL</key>
+	<string>$(TW_SERVER_URL)</string>
+	<!-- As the Cordova build (cordova-plugin-firebasex-messaging): FCM data messages may start the app in the
+	     background. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

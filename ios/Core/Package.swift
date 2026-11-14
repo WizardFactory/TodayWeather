@@ -17,7 +17,7 @@ let package = Package(
     targets: [
         .target(name: "TWModel"),
         .target(name: "TWDomain", dependencies: ["TWModel"]),
-        .target(name: "TWData", dependencies: ["TWModel", "TWDomain"]),
+        .target(name: "TWData", dependencies: ["TWModel", "TWDomain", "TWStorage"]),
         .target(name: "TWStorage", dependencies: ["TWModel"]),
         // Images, translations, the town list and fonts copied from client/ by ios/tools/import_client_assets.py.
         // `.copy` keeps the directory tree and the bytes, so the provenance hashes hold in the built bundle.
@@ -25,9 +25,14 @@ let package = Package(
         // treat the bundle as the old layout and move its resource URL into that folder.
         .target(name: "TWResources", resources: [.copy("Client")]),
         .testTarget(name: "TWResourcesTests", dependencies: ["TWResources"]),
-        // The Cordova migration rules and readers, with a fixture of each storage layout.
+        // The Cordova migration rules and readers, with a fixture of each storage layout; the push requests against
+        // the Cordova iOS requests (Fixtures/push/push.json, written by ios/tools/push/generate.py).
         .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
+        // Push registration runs (PushSync: order, timing, interrupted processes) and the HTTP transport (IN-04).
+        // Golden: the Cordova requests on a virtual clock, written by ios/tools/push/generate.py.
+        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel"],
+                    resources: [.copy("Golden")]),
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
         // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by
         // ios/tools/corpus/compare_jsc.py; for those the iOS expectation is the JavaScriptCore output. The yesterday
