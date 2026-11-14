@@ -868,7 +868,7 @@ def spot_interruption_scenario(report):
     stopped = wait_until(lambda: wait_unit('server2-logs.service', {'inactive', 'failed'}, 1) in ('inactive', 'failed'), 130)
     total = round(time.monotonic() - began, 1)
     server_stop, collector_stop = unit_inactive_since('server2.service'), unit_inactive_since('server2-logs.service')
-    collector_stopping = unit_inactive_since('server2-logs.service', 'DeactivatingEnterTimestampMonotonic')
+    collector_stopping = unit_inactive_since('server2-logs.service', 'ActiveExitTimestampMonotonic')  # it began to stop
     (IMDS_STATE / 'instance-action').unlink(missing_ok=True)
     set_identity(INSTANCE_A)
     systemctl('stop', STANDIN_UNIT)
@@ -919,14 +919,14 @@ def spot_interruption_scenario(report):
 
 
 def slow_upload_scenario(report):
-    """LP-4 (CX-LP4-007): with every S3 upload taking 8 s (inside the 10 s request bound), a
-    new record still reaches S3 within 60 s."""
+    """LP-4 (CX-LP4-007): with every S3 upload taking 5 s (half the 10 s request bound, which
+    also covers the connection), a new record still reaches S3 within 60 s."""
     entry = report.scenario('s3-slow-upload', ['LP4-AC4'])
     check = lambda n, ok, d='': report.check(entry, n, ok, d)
     state = WORK / 'standin-slow'
     reset_host()
     start_standin(state)
-    (state / 'slow-s3').write_text('8')
+    (state / 'slow-s3').write_text('5')
     write_env(logging_env(sinks='s3'))
     systemctl('start', 'server2-logs.service', 'server2.service')
     check('server healthy', wait_health())
@@ -939,8 +939,9 @@ def slow_upload_scenario(report):
     target = produced[-1] if produced else None
     arrived = wait_until(lambda: target in delivered(state)[0]['s3']['server'], 75)
     seconds = round(time.monotonic() - began, 1) if arrived is not None else None
-    entry['observations']['s3_delivery_seconds_with_8_s_upload'] = seconds
-    check('a record reaches S3 within 60 s although each upload takes 8 s', seconds is not None and seconds <= 60, str(seconds))
+    entry['observations']['s3_delivery_seconds_with_5_s_upload'] = seconds
+    check('a record reaches S3 within 60 s although each upload takes 5 s', seconds is not None and seconds <= 60, str(seconds))
+    check('no upload was retried', not any(o['action'] == 'Overwrite' for o in delivered(state)[3]))
     (state / 'slow-s3').unlink()
     systemctl('stop', 'server2.service', 'server2-logs.service')
     systemctl('stop', STANDIN_UNIT)
