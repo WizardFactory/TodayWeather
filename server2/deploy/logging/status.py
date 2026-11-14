@@ -59,6 +59,9 @@ BEHIND_SECONDS = {'s3': 120, 'cloudwatch': 20}
 # at most this long, and the collector's own flush at stop ships the rest.
 INTERRUPTION_MARKER = '/run/server2-logs-watch/interruption'
 INTERRUPTION_DRAIN_SECONDS = 10
+# A marker belongs to one two-minute notice: an older one (left by a stop that completed
+# after the watcher ended, or an unreadable final state) has no effect (CX-LP4-011).
+INTERRUPTION_VALID_SECONDS = 120
 
 
 class JournalError(Exception):
@@ -426,7 +429,11 @@ def main(argv=None):
         return 0
     if args.moment == 'drain':
         timeout = args.timeout
-        if Path(INTERRUPTION_MARKER).exists():
+        try:
+            fresh = time.time() - Path(INTERRUPTION_MARKER).stat().st_mtime <= INTERRUPTION_VALID_SECONDS
+        except FileNotFoundError:
+            fresh = False
+        if fresh:
             timeout = min(timeout, INTERRUPTION_DRAIN_SECONDS)  # inside the two-minute notice
         try:
             result = drain(args.state, active, timeout)

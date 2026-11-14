@@ -747,9 +747,13 @@ class SpotWatchTest(unittest.TestCase):
             config = Path(directory) / 'vector.json'
             config.write_text(json.dumps({'sinks': {'s3': {}}}))
             marker = Path(directory) / 'interruption'
-            for present, expected in ((False, 75), (True, status.INTERRUPTION_DRAIN_SECONDS)):
+            import os, time as _time
+            for present, expected in ((False, 75), (True, status.INTERRUPTION_DRAIN_SECONDS), ('stale', 75)):
                 if present:
                     marker.write_text('x')
+                if present == 'stale':  # older than one notice: no effect (CX-LP4-011)
+                    old = _time.time() - status.INTERRUPTION_VALID_SECONDS - 5
+                    os.utime(marker, (old, old))
                 with mock.patch.object(status, 'INTERRUPTION_MARKER', str(marker)), \
                         mock.patch.object(status, 'drain', return_value={'s3': {'drained': True, 'waited_seconds': 0}}) as drain, \
                         contextlib.redirect_stdout(io.StringIO()):
