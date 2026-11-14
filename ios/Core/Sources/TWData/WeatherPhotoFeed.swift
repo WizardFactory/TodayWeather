@@ -100,17 +100,19 @@ public actor WeatherPhotoFeed {
     private let http: any HTTPGetting
     private let gap: Duration
     private let limit: Duration
+    private let clock: any AppClock
     private var running: Task<WeatherPhotos?, Never>?
 
     /// The loaded feed; nil until a load succeeded.
     public private(set) var photos: WeatherPhotos?
 
     public init(url: URL?, http: any HTTPGetting = URLSessionGet(), gap: Duration = WeatherPhotoFeed.attemptGap,
-                timeout: Duration = WeatherPhotoFeed.timeout) {
+                timeout: Duration = WeatherPhotoFeed.timeout, clock: any AppClock = SystemClock()) {
         self.url = url
         self.http = http
         self.gap = gap
         self.limit = timeout
+        self.clock = clock
     }
 
     /// The feed, loading it unless it is loaded; nil without a URL or after a failed load.
@@ -121,9 +123,11 @@ public actor WeatherPhotoFeed {
         if let running {
             task = running
         } else {
-            let http = self.http, gap = self.gap, limit = self.limit
+            let http = self.http, gap = self.gap, limit = self.limit, clock = self.clock
             task = Task {
-                let body = await firstSettled(attempts: Self.attempts, gap: gap, timeout: limit) { try await http.get(url) }
+                let body = await firstSettled(attempts: Self.attempts, gap: gap, timeout: limit, clock: clock) {
+                    try await http.get(url)
+                }
                 guard case .success(let data) = body, let feed = try? JSONValue.parse(data) else { return nil }
                 return WeatherPhotos.parse(feed)
             }
