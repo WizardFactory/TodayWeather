@@ -8,6 +8,7 @@ import TWStorage
 /// The weather requests (IN-08, #2957) on a virtual clock: the attempts, gaps and timeouts of `_retryGetHttp` against the
 /// Cordova code run in JavaScriptCore (Golden/weather-timed.json, ios/tools/weather/generate.py), the request path, unit
 /// parameters and `Accept-Language`, the address fallbacks with the gateway's 501, and the ten-minute gate.
+extension ClockedDataTests {
 @MainActor
 struct WeatherRequestTests {
     static let server = "https://server.test.invalid"
@@ -238,6 +239,7 @@ struct WeatherRequestTests {
         #expect(cold.cached(seoul)?.weather.jsonValue.jsonText == entry.weather.jsonValue.jsonText)
         #expect(cold.canLoad(seoul), "the gate lives in memory: a new process loads at once")
     }
+}
 }
 
 private extension JSONObject {
