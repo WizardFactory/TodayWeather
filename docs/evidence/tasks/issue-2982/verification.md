@@ -12,9 +12,15 @@ Selected evidence for [#2982](https://github.com/WizardFactory/TodayWeather/issu
 
 | Check | Result |
 | --- | --- |
-| `python3 -I server2/deploy/logging/test_logging.py` | 31 tests OK, including LP-5's 9. The policy check rejects 10 broader variants (extra action, group creation, retention change, wildcard resource, read-back, bucket listing, delete, service wildcard, condition, missing describe). The lifecycle check rejects an empty, weather or weather-parent prefix, a tag filter, and each missing action. The first run caught a real gap: an empty prefix rendered the filter as `/` and passed, so the check now rejects empty or slash-only prefixes. |
+| `python3 -I server2/deploy/logging/test_logging.py` | 31 tests OK, including LP-5's 9 (after review round 1 the lifecycle check also rejects `NewerNoncurrentVersions`, an extra early-expiry rule, a different period and a transition; the renderer rejects an `aws/` group and renders a normalized region). The policy check rejects 10 broader variants (extra action, group creation, retention change, wildcard resource, read-back, bucket listing, delete, service wildcard, condition, missing describe). The lifecycle check rejects an empty, weather or weather-parent prefix, a tag filter, and each missing action. The first run caught a real gap: an empty prefix rendered the filter as `/` and passed, so the check now rejects empty or slash-only prefixes. |
 | Renderer | Renders three files without placeholders; refuses a prefix inside a weather prefix, a malformed account or group (exit 2, nothing written). Actual capture: manual step 6. |
-| `linux_check.py` in the LP-1 disposable VM, allowed actions read from the role template | PASS, 80 checks (report SHA-256 `a8897b5908faa66b8494ca74fe28a9e2e9895c679379b35135484e57e7d99279`). Every delivery scenario used only actions the template grants. |
+| `linux_check.py` in the LP-1 disposable VM, allowed actions read from the role template | PASS, 80 checks in runs 1 and 2 (run 2 after the review correction to `render.py`) (report SHA-256 `a8897b5908faa66b8494ca74fe28a9e2e9895c679379b35135484e57e7d99279`). Every delivery scenario used only actions the template grants. |
+
+## Independent review
+
+| Reviewer | Head | Verdict | Findings and disposition |
+| --- | --- | --- | --- |
+| Codex `gpt-6.1-sol`, high (required) | `88963153` | CHANGES_REQUIRED | CX-LP5-001 (Required): the lifecycle check only required the actions to exist, so `NewerNoncurrentVersions=1` or an extra 1-day expiry rule passed → exact rules, fields and values. CX-LP5-002 (Required): an empty `--region` was normalized but the raw empty value was rendered into the ARNs → render the normalized settings. CX-LP5-003 (Recommended): `aws/` group names accepted → rejected by the collector and the renderer. Red (`correction-red`, 5 failures) then Green. |
 
 ## Limitations
 

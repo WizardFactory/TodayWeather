@@ -102,7 +102,7 @@ The collector reads these names, from its unit environment first and then from t
 | `SERVER2_LOG_S3_LEVEL` | `error`, `warn`, `info`, `debug`: minimum level shipped to S3 | `info` |
 | `SERVER2_LOG_CLOUDWATCH_LEVEL` | Same, for CloudWatch Logs | `warn` |
 | `SERVER2_LOG_S3_PREFIX` | Key prefix in the bucket, e.g. `logs/server2`; must not start with a weather data prefix (`raw`, `index`, `packs`, `summary`, `state`, `budgets`, `geocode`) | required with `s3` |
-| `SERVER2_LOG_CLOUDWATCH_GROUP` | An existing log group; the collector creates streams, never groups | required with `cloudwatch` |
+| `SERVER2_LOG_CLOUDWATCH_GROUP` | An existing log group; the collector creates streams, never groups. Names starting with `aws/` are reserved by AWS and rejected | required with `cloudwatch` |
 | `SERVER2_S3_BUCKET`, `SERVER2_S3_REGION` | The server's existing settings; the region (default `ap-northeast-2`) is also used for CloudWatch Logs | — |
 
 `SERVER2_LOG_LEVEL` still bounds what the process emits: a destination level below it receives nothing extra. The local journal is always kept. With `local` alone the collector unit is skipped ("condition failed") and nothing leaves the host. An unknown destination or level, a malformed name or a missing required name fails the collector unit with a message that names the variable and the rule but not the value; the server keeps running. A settings change takes effect at the next `systemctl restart server2-logs.service`.
@@ -151,7 +151,7 @@ aws logs describe-log-groups --log-group-name-prefix /server2/production --regio
 aws iam get-role-policy --role-name tw-server2-runtime --policy-name tw-server2-runtime-logs
 ```
 
-The templates and their checks are local: `test_logging.py` fails on any grant beyond the list above, and on a lifecycle filter that is empty or overlaps one of the eight weather prefixes of the [staging role policy](../../server2/deploy/staging/role-policy.template.json). The integration check accepts only collector calls granted by the role template. IAM evaluation against real AWS has not been exercised.
+The templates and their checks are local: `test_logging.py` fails on any grant beyond the list above, and on a lifecycle that is not exactly the two rules above (any other rule, field such as `NewerNoncurrentVersions` or `Transitions`, or period), or whose filter is empty or overlaps one of the eight weather prefixes of the [staging role policy](../../server2/deploy/staging/role-policy.template.json). The integration check accepts only collector calls granted by the role template. IAM evaluation against real AWS has not been exercised.
 
 ### What leaves the host
 

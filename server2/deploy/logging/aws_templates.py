@@ -108,20 +108,34 @@ def lifecycle_violations(lifecycle, log_prefix, data_prefixes):
                 problems.append(f"rule {rule.get('ID')}: filter overlaps weather prefix {data}")
         if rule.get('Status') != 'Enabled':
             problems.append(f"rule {rule.get('ID')}: not enabled")
-        expiration = rule.get('Expiration') or {}
-        if expiration.get('Days') == S3_RETENTION_DAYS:
+        # Exact fields and values (CX-LP5-001): an extra field such as NewerNoncurrentVersions
+        # or Transitions, or a different period, would change what is kept.
+        extra = set(rule) - {'ID', 'Status', 'Filter', 'Expiration', 'NoncurrentVersionExpiration',
+                             'AbortIncompleteMultipartUpload'}
+        if extra:
+            problems.append(f"rule {rule.get('ID')}: unexpected fields {sorted(extra)}")
+        expiration = rule.get('Expiration')
+        if expiration == {'Days': S3_RETENTION_DAYS}:
             actions.add('current')
-        if expiration.get('ExpiredObjectDeleteMarker') is True:
+        elif expiration == {'ExpiredObjectDeleteMarker': True}:
             actions.add('delete-markers')
-        if (rule.get('NoncurrentVersionExpiration') or {}).get('NoncurrentDays'):
+        elif expiration is not None:
+            problems.append(f"rule {rule.get('ID')}: Expiration must be Days={S3_RETENTION_DAYS} or ExpiredObjectDeleteMarker only")
+        noncurrent = rule.get('NoncurrentVersionExpiration')
+        if noncurrent == {'NoncurrentDays': 1}:
             actions.add('noncurrent')
-        if (rule.get('AbortIncompleteMultipartUpload') or {}).get('DaysAfterInitiation'):
+        elif noncurrent is not None:
+            problems.append(f"rule {rule.get('ID')}: NoncurrentVersionExpiration must be NoncurrentDays=1 only")
+        multipart = rule.get('AbortIncompleteMultipartUpload')
+        if multipart == {'DaysAfterInitiation': 1}:
             actions.add('multipart')
+        elif multipart is not None:
+            problems.append(f"rule {rule.get('ID')}: AbortIncompleteMultipartUpload must be DaysAfterInitiation=1 only")
     for needed in ('current', 'noncurrent', 'delete-markers', 'multipart'):
         if needed not in actions:
             problems.append(f'missing lifecycle action: {needed}')
-    if not lifecycle.get('Rules'):
-        problems.append('no lifecycle rule')
+    if len(lifecycle.get('Rules', [])) != 2 or set(lifecycle) != {'Rules'}:
+        problems.append('the lifecycle must be exactly the two reviewed rules')
     return problems
 
 
@@ -145,20 +159,21 @@ def main(argv=None):
     parser.add_argument('--out', required=True, help='new directory for the rendered files')
     args = parser.parse_args(argv)
     try:
-        # The same validation the collector applies to these settings.
-        render.settings({'SERVER2_LOG_SINKS': 's3,cloudwatch', 'SERVER2_S3_BUCKET': args.bucket,
-                         'SERVER2_LOG_S3_PREFIX': args.prefix, 'SERVER2_LOG_CLOUDWATCH_GROUP': args.group,
-                         'SERVER2_S3_REGION': args.region})
+        # The same validation and normalization the collector applies (CX-LP5-002: an
+        # empty region becomes server2's default, exactly as the collector would use it).
+        config = render.settings({'SERVER2_LOG_SINKS': 's3,cloudwatch', 'SERVER2_S3_BUCKET': args.bucket,
+                                  'SERVER2_LOG_S3_PREFIX': args.prefix, 'SERVER2_LOG_CLOUDWATCH_GROUP': args.group,
+                                  'SERVER2_S3_REGION': args.region})
     except render.SettingError as exc:
         print(f'aws_templates: {exc}', file=sys.stderr)
         return 2
     if not re.fullmatch(r'[0-9]{12}', args.account):
         print('aws_templates: --account must be a 12-digit AWS account ID', file=sys.stderr)
         return 2
-    values = {'BucketName': args.bucket, 'LogPrefix': args.prefix, 'LogGroupName': args.group,
-              'Region': args.region, 'AccountId': args.account}
+    values = {'BucketName': config['bucket'], 'LogPrefix': config['prefix'], 'LogGroupName': config['group'],
+              'Region': config['region'], 'AccountId': args.account}
     problems = policy_violations(load('role-policy')) + lifecycle_violations(
-        json.loads(fill(json.dumps(load('bucket-lifecycle')), values)), args.prefix, weather_prefixes())
+        json.loads(fill(json.dumps(load('bucket-lifecycle')), values)), config['prefix'], weather_prefixes())
     if problems:
         print('aws_templates: template check failed: ' + '; '.join(problems), file=sys.stderr)
         return 1

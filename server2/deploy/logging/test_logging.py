@@ -117,6 +117,7 @@ class SettingsTest(unittest.TestCase):
             (dict(COMPLETE, SERVER2_S3_REGION=SECRET), 'SERVER2_S3_REGION'),
             (dict(COMPLETE, SERVER2_S3_BUCKET=SECRET), 'SERVER2_S3_BUCKET'),
             (dict(COMPLETE, SERVER2_LOG_CLOUDWATCH_GROUP='bad group ' + SECRET), 'SERVER2_LOG_CLOUDWATCH_GROUP'),
+            (dict(COMPLETE, SERVER2_LOG_CLOUDWATCH_GROUP='aws/reserved'), 'SERVER2_LOG_CLOUDWATCH_GROUP'),  # CX-LP5-003
         ]
         for prefix in ('/logs', 'logs/', 'logs//a', 'logs/../raw', 'raw/v2/logs', 'state', 'logs/a b', SECRET + '?'):
             cases.append((dict(COMPLETE, SERVER2_LOG_S3_PREFIX=prefix), 'SERVER2_LOG_S3_PREFIX'))
@@ -390,6 +391,23 @@ class AwsTemplatesTest(unittest.TestCase):
             lifecycle = self.lifecycle()
             lifecycle['Rules'].pop(1)
             self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        with self.subTest('retention weakened by NewerNoncurrentVersions'):  # CX-LP5-001
+            lifecycle = self.lifecycle()
+            lifecycle['Rules'][0]['NoncurrentVersionExpiration']['NewerNoncurrentVersions'] = 1
+            self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        with self.subTest('extra early-expiry rule'):
+            lifecycle = self.lifecycle()
+            lifecycle['Rules'].append({'ID': 'early', 'Status': 'Enabled', 'Filter': {'Prefix': 'logs/server2/'},
+                                       'Expiration': {'Days': 1}})
+            self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        with self.subTest('different retention'):
+            lifecycle = self.lifecycle()
+            lifecycle['Rules'][0]['Expiration']['Days'] = 30
+            self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
+        with self.subTest('transition added'):
+            lifecycle = self.lifecycle()
+            lifecycle['Rules'][0]['Transitions'] = [{'Days': 30, 'StorageClass': 'GLACIER'}]
+            self.assertTrue(aws_templates.lifecycle_violations(lifecycle, 'logs/server2', data))
         with self.subTest('tag filter'):
             lifecycle = self.lifecycle()
             lifecycle['Rules'][0]['Filter'] = {'And': {'Prefix': 'logs/server2/', 'Tags': []}}
@@ -420,7 +438,15 @@ class AwsTemplatesTest(unittest.TestCase):
             policy = json.loads(Path(directory, 'ok', 'role-policy.json').read_text())
             self.assertIn('arn:aws:s3:::tw-server2-123456789012-apne2/logs/server2/*',
                           [s['Resource'] for s in policy['Statement']])
-            for bad in (['--prefix', 'raw/v2/logs'], ['--account', '12345'], ['--group', 'bad group']):
+            # CX-LP5-002: an empty region renders the normalized default, never an empty ARN field.
+            with contextlib.redirect_stdout(io.StringIO()):
+                region_args = list(args); region_args[region_args.index('--region') + 1] = ''
+                self.assertEqual(aws_templates.main(region_args + ['--out', directory + '/region']), 0)
+            rendered = Path(directory, 'region', 'role-policy.json').read_text()
+            self.assertNotIn('arn:aws:logs::', rendered)
+            self.assertIn('arn:aws:logs:ap-northeast-2:123456789012:', rendered)
+            for bad in (['--prefix', 'raw/v2/logs'], ['--account', '12345'], ['--group', 'bad group'],
+                        ['--group', 'aws/reserved']):
                 with self.subTest(bad), contextlib.redirect_stderr(io.StringIO()):
                     changed = list(args)
                     changed[changed.index(bad[0]) + 1] = bad[1]
