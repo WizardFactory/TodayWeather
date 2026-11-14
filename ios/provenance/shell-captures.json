@@ -1,0 +1,841 @@
+{
+ "tool": "ios/tools/shell-reference/capture.py",
+ "build": {
+  "recipe": "ios/tools/chart-reference/build-cordova.sh <out> http://127.0.0.1:18454",
+  "commit": "11b633d1e26b1e72903b4809c3a8253719a9e64d",
+  "client_version": "1.1.2",
+  "cordova_ios": "8.1.1",
+  "xcode": "Xcode 27.2",
+  "node": "v24.19.0",
+  "server": "http://127.0.0.1:18454",
+  "built_at": "2026-11-13T20:22:31Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+ },
+ "data": {
+  "served": "the kma-seoul response for GET /weather/v000903/coord/...",
+  "place": "회현동",
+  "settings": "defaults (startup page 0, refresh 0); themes light, dark, photo, old in turn"
+ },
+ "shellSources": [
+  {
+   "file": "client/www/index.html",
+   "appSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+   "tracked": true,
+   "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+   "matchesClient": true,
+   "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
+  },
+  {
+   "file": "client/www/templates/tabs.html",
+   "appSha256": "df534297a99e7e5733e83165435fdbf84eb7c356bf0d8d0e954a2ad4a0af9d9b",
+   "tracked": true,
+   "clientSha256": "df534297a99e7e5733e83165435fdbf84eb7c356bf0d8d0e954a2ad4a0af9d9b",
+   "matchesClient": true,
+   "lastCommit": "48a7f172b62ae5babdef9750db0974fd48a79b84"
+  },
+  {
+   "file": "client/www/js/app.js",
+   "appSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "tracked": true,
+   "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/controller.tabctrl.js",
+   "appSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "tracked": true,
+   "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/controller.settingctrl.js",
+   "appSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+   "tracked": true,
+   "clientSha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29",
+   "matchesClient": true,
+   "lastCommit": "a262c570efab4da418c557a95d036d1177cc5c49"
+  },
+  {
+   "file": "client/www/js/controller.setting.radio.js",
+   "appSha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f",
+   "tracked": true,
+   "clientSha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f",
+   "matchesClient": true,
+   "lastCommit": "7d5659396ed413144cb1ae63980a0b956ccba267"
+  },
+  {
+   "file": "client/www/js/service.util.js",
+   "appSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+   "tracked": true,
+   "clientSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/service.weatherutil.js",
+   "appSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "tracked": true,
+   "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/css/ionic.app.css",
+   "appSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/data/theme.js",
+   "appSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+   "tracked": true,
+   "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+   "matchesClient": true,
+   "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
+  }
+ ],
+ "runs": {
+  "ko-KR": {
+   "device": {
+    "name": "twios_cap_16",
+    "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-13T20:59:25Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "ko-KR",
+    "languages": [
+     "ko-KR"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "KR",
+    "utilLanguage": "ko-KR",
+    "translate": "ko",
+    "insets": {
+     "top": "5px",
+     "bottom": "34px",
+     "left": "0px",
+     "right": "0px"
+    },
+    "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready old-theme forecast"
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ],
+   "weatherAcceptLanguage": [
+    "ko-KR,ko;q=0.9"
+   ]
+  },
+  "en-US": {
+   "device": {
+    "name": "twios_cap_16",
+    "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-13T21:05:55Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "en-US",
+    "languages": [
+     "en-US"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "US",
+    "utilLanguage": "en-US",
+    "translate": "en",
+    "insets": {
+     "top": "5px",
+     "bottom": "34px",
+     "left": "0px",
+     "right": "0px"
+    },
+    "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready old-theme forecast"
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ],
+   "weatherAcceptLanguage": [
+    "en-US,en;q=0.9"
+   ]
+  }
+ },
+ "files": [
+  {
+   "path": "Core/Tests/TWDomainTests/ShellReference/languages.json",
+   "sha256": "17310d13c79e4a6bfd64c72aa61bbe50b768be8f211e285868296b3db4adb984"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-captures.json",
+   "sha256": "70db786c75f13d90e210892b71d90af2e15d2752fdc854118517c44472852d02"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-air-header.png",
+   "sha256": "ecfaadad84545ca5913a7b100df255ea63e9f97b3eb40204cacfb8a9b06cf6f8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-air-statusbar.png",
+   "sha256": "c0c42c482216c1f1e41280ae0b80638a8f834475248f8a59e0dd423d23909c6c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-air-tabs.png",
+   "sha256": "5fe664f17e324ff4b795f1905e5ce07e8972adb214a894133b8645de7d955853"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-dailyforecast-header.png",
+   "sha256": "ecfaadad84545ca5913a7b100df255ea63e9f97b3eb40204cacfb8a9b06cf6f8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-dailyforecast-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-dailyforecast-tabs.png",
+   "sha256": "a4f21a9a744ed86c10d9eabb5a7efc3e7dd497fe99f54fc84cdc516be5c1abec"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-forecast-header.png",
+   "sha256": "ecfaadad84545ca5913a7b100df255ea63e9f97b3eb40204cacfb8a9b06cf6f8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-forecast-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-forecast-tabs.png",
+   "sha256": "c55a96acb353b6f160519d873810edd2d3b422d54199095dec1d39b08a535f2d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-menu-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-menu.png",
+   "sha256": "10a9c8e13ec7c7c089205bd75dc12d1c3f778ad5d337de5c79f7266208b7cdf8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-search-header.png",
+   "sha256": "d6a0750bf11699e53a057647d0fe9e36558de959ff3241e6b8dde47311df2a7f"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-search-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark-search-tabs.png",
+   "sha256": "bb800167d0e4a1aa6615885597602ae138c805218bd13971fc88fdb8501efe7e"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-dark.json",
+   "sha256": "a588ac25db17f7405c668412f546927a9ddd430632ba6bebca40d4d88ad9487c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-air-header.png",
+   "sha256": "014f236f81c6052f0d64ba4ec814426934532ddc83c18cdab2e8896ff97251b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-air-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-air-tabs.png",
+   "sha256": "e7a08be3cc2c236e79f1669ed51e8dd0696cd1ddd2215c1579095c037a5a4db1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-dailyforecast-header.png",
+   "sha256": "014f236f81c6052f0d64ba4ec814426934532ddc83c18cdab2e8896ff97251b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-dailyforecast-statusbar.png",
+   "sha256": "80c3477ae8aba7c2519f396d2b6ef773cafee258c35921956a5fedab56a0b0d3"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-dailyforecast-tabs.png",
+   "sha256": "131551bd04f3cfc96741227fdb9a8aaec3573b4aa949bdb81c5156fbbca9b352"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-forecast-header.png",
+   "sha256": "014f236f81c6052f0d64ba4ec814426934532ddc83c18cdab2e8896ff97251b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-forecast-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-forecast-tabs.png",
+   "sha256": "f0c5c178331370c978203db98f2e8a5bd428c3bb07a2d8084b336606881e6835"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-menu-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-menu.png",
+   "sha256": "acd022f29b27bf374d2c17a56c5897e702f8224a578f6395edb132babd30a834"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-search-header.png",
+   "sha256": "5f3fad7f3977b38ce05b8993516aa1e1f3c4f101e6cc865bc615033f2c8bbd55"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-search-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light-search-tabs.png",
+   "sha256": "db00107193b4e8912e879d7c66cc348612de4bd743279b90d06182e2238cf92d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-light.json",
+   "sha256": "235ed77bb06dac220199144aaae2944a3c8142ddd85fc16a658172fc90a3aacf"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-air-header.png",
+   "sha256": "c4f312225ffc8de495b66e1ad17327166c6f9afb17600a156ebb0f3c7fa862b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-air-statusbar.png",
+   "sha256": "cdbca8ff3fb6b844730b456ac0f7b448143ce4f533b231cfb0c4f9e626814ee9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-air-tabs.png",
+   "sha256": "e7a08be3cc2c236e79f1669ed51e8dd0696cd1ddd2215c1579095c037a5a4db1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-dailyforecast-header.png",
+   "sha256": "00a3534fe1e5b0563362e29dd0b398f52d0d4937b3aa44f27d38aad2b4fd66e1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-dailyforecast-statusbar.png",
+   "sha256": "9bf4b9417fd231fa6b541fd0282f6d996102a12b356517d25a863983d5bcd695"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-dailyforecast-tabs.png",
+   "sha256": "90924d06d6db4d169dd499504d2ac8d2059ce04a7ec4a256ce5b4277deea39de"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-forecast-header.png",
+   "sha256": "af469a1b08a394c743902e7befb10eca16e7416dc68d0eff861a4a0578c4e327"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-forecast-statusbar.png",
+   "sha256": "3da59a334304cdc7091d15dace7cb285fa432abb3ec022804d0e85be007a73d1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-forecast-tabs.png",
+   "sha256": "882f9c97ab840b0dc418265ba059ca826cb46b1e960848661764f893734c0ace"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-menu-statusbar.png",
+   "sha256": "3da59a334304cdc7091d15dace7cb285fa432abb3ec022804d0e85be007a73d1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-menu.png",
+   "sha256": "74d1959ce711155ebbd44c501a4faaa89b6f0666fa30c60ed87ec8e1d011e970"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-search-header.png",
+   "sha256": "dc877c2f48e69eea81a025fc54fcdd9f732c30994e5f8e6af958ea140ce2974a"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-search-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old-search-tabs.png",
+   "sha256": "db00107193b4e8912e879d7c66cc348612de4bd743279b90d06182e2238cf92d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-old.json",
+   "sha256": "a87d8df5826988ecbc613df7c686c107efec2165d22698419cc0196cfd0acbae"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-air-header.png",
+   "sha256": "c4f312225ffc8de495b66e1ad17327166c6f9afb17600a156ebb0f3c7fa862b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-air-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-air-tabs.png",
+   "sha256": "e7a08be3cc2c236e79f1669ed51e8dd0696cd1ddd2215c1579095c037a5a4db1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-dailyforecast-header.png",
+   "sha256": "f7c76038d51fa3faeda0e51c12dce4ac6be6bb8b291e619085bfe52f720d0e6f"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-dailyforecast-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-dailyforecast-tabs.png",
+   "sha256": "131551bd04f3cfc96741227fdb9a8aaec3573b4aa949bdb81c5156fbbca9b352"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-forecast-header.png",
+   "sha256": "f7c76038d51fa3faeda0e51c12dce4ac6be6bb8b291e619085bfe52f720d0e6f"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-forecast-statusbar.png",
+   "sha256": "cdbca8ff3fb6b844730b456ac0f7b448143ce4f533b231cfb0c4f9e626814ee9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-forecast-tabs.png",
+   "sha256": "f0c5c178331370c978203db98f2e8a5bd428c3bb07a2d8084b336606881e6835"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-menu-statusbar.png",
+   "sha256": "cdbca8ff3fb6b844730b456ac0f7b448143ce4f533b231cfb0c4f9e626814ee9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-menu.png",
+   "sha256": "3dbf64b89e084b2f34e16a38e581927aa54a8e7ceeb27eb869a4d2a1e2ca9c3d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-search-header.png",
+   "sha256": "dc877c2f48e69eea81a025fc54fcdd9f732c30994e5f8e6af958ea140ce2974a"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-search-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo-search-tabs.png",
+   "sha256": "db00107193b4e8912e879d7c66cc348612de4bd743279b90d06182e2238cf92d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-photo.json",
+   "sha256": "3a912d9c4687889af05c44b6203fdc52af11f285f75db8cb6c8540d9990e5ae7"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-en-US-splash.png",
+   "sha256": "603ff67f7d2819d9ea4545eb8525efe28ee1d7eee5107d90dfaf0ef9ca3fe77d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-air-header.png",
+   "sha256": "ecfaadad84545ca5913a7b100df255ea63e9f97b3eb40204cacfb8a9b06cf6f8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-air-statusbar.png",
+   "sha256": "c0c42c482216c1f1e41280ae0b80638a8f834475248f8a59e0dd423d23909c6c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-air-tabs.png",
+   "sha256": "c7eaf7a37f4a4e1e5402af013bfd9a4e7a5d1010e65d46ca6abbb2226ccfc612"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-dailyforecast-header.png",
+   "sha256": "ecfaadad84545ca5913a7b100df255ea63e9f97b3eb40204cacfb8a9b06cf6f8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-dailyforecast-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-dailyforecast-tabs.png",
+   "sha256": "9b2fe81ac921edf27f689a5371afb126b8b4a9e6e3989d07812c8d910ee98336"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-forecast-header.png",
+   "sha256": "ecfaadad84545ca5913a7b100df255ea63e9f97b3eb40204cacfb8a9b06cf6f8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-forecast-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-forecast-tabs.png",
+   "sha256": "32731564735b91dca7b8e329f0d08ac84cca333c809d4aa5668443d04a578bdf"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-menu-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-menu.png",
+   "sha256": "a73b3cf755129e884b6012fc561375e28035a3367c236fa026f675f73ac8720e"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-search-header.png",
+   "sha256": "84a24913d1619a1243eb6850a1e3a2add70658e75b65ec68890feda1a183c268"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-search-statusbar.png",
+   "sha256": "f97c45c47a52417713d1c9af3d6c199e29357065c5af33ec8a10d33e9b49c916"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark-search-tabs.png",
+   "sha256": "96706f3d0ca9337ad9301d0b5eacaca23d701d63b81d3125bb54f27f353ccee4"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-dark.json",
+   "sha256": "477cdf7fe32fdf60b168c29e04437bbb7fbf7bff12ce942aba422b8aae89059b"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-air-header.png",
+   "sha256": "014f236f81c6052f0d64ba4ec814426934532ddc83c18cdab2e8896ff97251b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-air-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-air-tabs.png",
+   "sha256": "2161f9e0ddea01638cd7b9642fe125b616a1fcde9fe247d4876c18c102f4a7ef"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-dailyforecast-header.png",
+   "sha256": "014f236f81c6052f0d64ba4ec814426934532ddc83c18cdab2e8896ff97251b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-dailyforecast-statusbar.png",
+   "sha256": "4688fd544e97eacb3b24607d9dabc0ee2c9b10294369d54ba692d57045ff846a"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-dailyforecast-tabs.png",
+   "sha256": "05f81a48bf28dc3081bb773c731aefd836a1a0ce0164d46389240bb2d0c0d493"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-forecast-header.png",
+   "sha256": "014f236f81c6052f0d64ba4ec814426934532ddc83c18cdab2e8896ff97251b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-forecast-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-forecast-tabs.png",
+   "sha256": "ba1f63618c7f23782387cc85a411ba062410ea05b70526cda1caa5661be46a12"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-menu-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-menu.png",
+   "sha256": "dcae89fd9984b31bcec674640028977bc59bff08c0efa6f42ad20d96ef08cf8c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-search-header.png",
+   "sha256": "3bbfbfc82ca833182fde933c77c0b4803f1c296a0f62b5bdc17e27b9a0ec0548"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-search-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light-search-tabs.png",
+   "sha256": "ec3908dd41c079cfcac7c81fbb005c502822d43f21993ff45eaf688e7e3421e8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-light.json",
+   "sha256": "ccd26016153a3a3943bca6d43289a7aeb1c04587300cfad7bafaa1c1da82aa32"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-air-header.png",
+   "sha256": "c4f312225ffc8de495b66e1ad17327166c6f9afb17600a156ebb0f3c7fa862b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-air-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-air-tabs.png",
+   "sha256": "2161f9e0ddea01638cd7b9642fe125b616a1fcde9fe247d4876c18c102f4a7ef"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-dailyforecast-header.png",
+   "sha256": "00a3534fe1e5b0563362e29dd0b398f52d0d4937b3aa44f27d38aad2b4fd66e1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-dailyforecast-statusbar.png",
+   "sha256": "9bf4b9417fd231fa6b541fd0282f6d996102a12b356517d25a863983d5bcd695"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-dailyforecast-tabs.png",
+   "sha256": "74add33cee9484186318356c262125a5632ccf1392d71f702c23d59b0c5816b1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-forecast-header.png",
+   "sha256": "af469a1b08a394c743902e7befb10eca16e7416dc68d0eff861a4a0578c4e327"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-forecast-statusbar.png",
+   "sha256": "3da59a334304cdc7091d15dace7cb285fa432abb3ec022804d0e85be007a73d1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-forecast-tabs.png",
+   "sha256": "24952bd44c3b92eee3123d82d0e441e5afda2bc75587a1250adc0ce251207f68"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-menu-statusbar.png",
+   "sha256": "3da59a334304cdc7091d15dace7cb285fa432abb3ec022804d0e85be007a73d1"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-menu.png",
+   "sha256": "d35908bd28c433f22bd63526e9145a0a0c2d03adf279375b7241538a3d518850"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-search-header.png",
+   "sha256": "a473281e232001327bc1cd8959424cecdb2153badb0cc301719aa363099db223"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-search-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old-search-tabs.png",
+   "sha256": "ec3908dd41c079cfcac7c81fbb005c502822d43f21993ff45eaf688e7e3421e8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-old.json",
+   "sha256": "43af6759bd8a969b033126c376e5a5b831482979fbaf82b992f261c9ad288246"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-air-header.png",
+   "sha256": "c4f312225ffc8de495b66e1ad17327166c6f9afb17600a156ebb0f3c7fa862b9"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-air-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-air-tabs.png",
+   "sha256": "2161f9e0ddea01638cd7b9642fe125b616a1fcde9fe247d4876c18c102f4a7ef"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-dailyforecast-header.png",
+   "sha256": "f7c76038d51fa3faeda0e51c12dce4ac6be6bb8b291e619085bfe52f720d0e6f"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-dailyforecast-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-dailyforecast-tabs.png",
+   "sha256": "05f81a48bf28dc3081bb773c731aefd836a1a0ce0164d46389240bb2d0c0d493"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-forecast-header.png",
+   "sha256": "f7c76038d51fa3faeda0e51c12dce4ac6be6bb8b291e619085bfe52f720d0e6f"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-forecast-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-forecast-tabs.png",
+   "sha256": "ba1f63618c7f23782387cc85a411ba062410ea05b70526cda1caa5661be46a12"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-menu-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-menu.png",
+   "sha256": "a0bb31632736ddab9dcf6c8d4a3efc7ea5a517bbbb834c78b4563d46f9a24c16"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-search-header.png",
+   "sha256": "a473281e232001327bc1cd8959424cecdb2153badb0cc301719aa363099db223"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-search-statusbar.png",
+   "sha256": "6ee8468367137b419db67b20ad0307196598fc68b8e3be4476cdf7033619185d"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo-search-tabs.png",
+   "sha256": "ec3908dd41c079cfcac7c81fbb005c502822d43f21993ff45eaf688e7e3421e8"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-photo.json",
+   "sha256": "c830db6dfbaa75381b6cd5f323728ee444faf2e191c148227ad9002354329240"
+  },
+  {
+   "path": "TodayWeatherTests/ShellReference/shell-ko-KR-splash.png",
+   "sha256": "0f8d96d86484bd852533ad9a0ee327053b27b3d93a3a6a73a1bb9e48fd362d7b"
+  }
+ ]
+}

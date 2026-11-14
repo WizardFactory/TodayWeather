@@ -33,8 +33,10 @@ let package = Package(
         // ios/tools/corpus/compare_jsc.py; for those the iOS expectation is the JavaScriptCore output. The yesterday
         // texts come from the imported catalogs in TWResources, as the app reads them. ChartReference: the Cordova chart
         // scenes, copied from android/ by ios/tools/import_chart_reference.py and captured on iOS Simulators by
-        // ios/tools/chart-reference.
+        // ios/tools/chart-reference. ShellReference: how the Cordova iOS WebView reports the system languages, recorded by
+        // ios/tools/shell-reference (IN-07).
         .testTarget(name: "TWDomainTests", dependencies: ["TWDomain", "TWModel", "TWResources"],
-                    resources: [.copy("Corpus"), .copy("JavaScriptCore"), .copy("ChartReference")]),
+                    resources: [.copy("Corpus"), .copy("JavaScriptCore"), .copy("ChartReference"),
+                                .copy("ShellReference")]),
     ]
 )
