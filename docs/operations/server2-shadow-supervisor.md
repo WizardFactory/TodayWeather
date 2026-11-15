@@ -95,6 +95,17 @@ Ownership binding requires successful named-resource creation receipts, a prepar
 
 Audit frozen paid-provider prices against the actual enabled API products; admission does not establish those prices. Qualify the complete Linux Rust installation and the shortened watchdog/stop timing. The transfer model reserves contingency but does not establish a physical network or billing-system hard cap. Complete native-candidate installation checks, integrated CLI scenarios, manual/diagram verification, independent review and CI before acquiring the approved host. The shared-key headroom prerequisite remains waived; no dedicated-key check is reintroduced.
 
+## Offline run simulation
+
+`server2/tests/integration/shadow_simulation.py` steps the real decision code of a whole run with a simulated clock: the operator's `provision.lifecycle` with its SQLite journal, `guard.evaluate` with `estimate_cost`, and the reader's `Ledger` admission and stop rules. AWS is the offline `ProvisionCloud` fixture; SSH, the host's samples and HTTP outcomes are modelled. It needs no network, AWS or server process. From `server2/`:
+
+```sh
+python3 tests/integration/shadow_simulation.py --seeds 20 --output <file>.json
+python3 tests/integration/shadow_simulation.py --seeds 5 --scenario realistic-combined
+```
+
+Each scenario is a set of fault rates and events (operator poll failures, guard sample failures, provider quota signals, production 429/5xx/timeouts, operator-unreachable windows, S3/network/CPU rates, candidate exit). For each seed it reports whether the run reached 168 hours, the collected hours, the host's and operator's stop reasons, and whether the evidence could be fetched at the finish. Fault rates are inputs, not measurements; the export is judged by reachability, the log collector only as a reported unit state, and operator process death or host reboot are not modelled. `test_shadow_simulation.py` runs a short deterministic subset in CI. The baseline for this revision is in the [SR-1 evidence](../evidence/tasks/issue-2999/verification.md).
+
 ## Initial host installation component
 
 The private bundle binds twelve artifacts (eight for acquisition, four for the [log collector](#host-logs)) and a host-plan schema 4, including frozen cost inputs. `coordinator.py install-host --bundle <private-owned-bundle>` is Linux/root-only and accepts no installation-path or clock override. It refuses an existing task tree/unit, changed artifact, mismatched reader executable or expired original epoch. Installation writes an exclusive private tree, enables both original-deadline timers, confirms they are active, queues the log collector without waiting for it or checking it, starts the candidate, verifies its guard, and starts the reader last. A failed installation stops the three acquisition units and retains a failed receipt; it does not erase the directory, reuse the process grant or remove the expiry safety net. This internal host operation is not the complete cloud-launch command. Do not use it for an approved live capture until all launch gates above pass.

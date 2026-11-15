@@ -1,0 +1,348 @@
+{
+  "schema": 1,
+  "revision": "434ec250d1cb7c5fb3054bd7d1c522d5942c24c4",
+  "seeds": 20,
+  "deadline_hours": 168,
+  "scenarios": {
+    "ideal": {
+      "scenario": "ideal",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "observed-quota-at-3min": {
+      "scenario": "observed-quota-at-3min",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 0.05,
+      "min_collected_hours": 0.05,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    },
+    "shared-key-daily-429": {
+      "scenario": "shared-key-daily-429",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 14.925,
+      "min_collected_hours": 2.714,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    },
+    "production-429-1e-4": {
+      "scenario": "production-429-1e-4",
+      "seeds": 20,
+      "full_runs": 7,
+      "median_collected_hours": 134.003,
+      "min_collected_hours": 5.003,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "reader:http-429": 13,
+        "guard:collection_deadline": 7
+      }
+    },
+    "production-transient-1e-3": {
+      "scenario": "production-transient-1e-3",
+      "seeds": 20,
+      "full_runs": 10,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 4.003,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 10,
+        "reader:deadline": 10
+      }
+    },
+    "poll-failure-1e-4": {
+      "scenario": "poll-failure-1e-4",
+      "seeds": 20,
+      "full_runs": 10,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 5.234,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 10,
+        "operator-stop": 10
+      }
+    },
+    "poll-failure-1e-3": {
+      "scenario": "poll-failure-1e-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 11.85,
+      "min_collected_hours": 0.167,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "operator-stop": 20
+      }
+    },
+    "sample-failure-1e-5": {
+      "scenario": "sample-failure-1e-5",
+      "seeds": 20,
+      "full_runs": 13,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 14.933,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 13,
+        "guard:observation_unavailable": 7
+      }
+    },
+    "mac-sleeps-night-1": {
+      "scenario": "mac-sleeps-night-1",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 14.0,
+      "min_collected_hours": 14.0,
+      "evidence_retrievable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "acquisition_failed": 20
+      }
+    },
+    "operator-ip-change-day-3": {
+      "scenario": "operator-ip-change-day-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.0,
+      "min_collected_hours": 60.0,
+      "evidence_retrievable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "acquisition_failed": 20
+      }
+    },
+    "tx-observed-early-rate": {
+      "scenario": "tx-observed-early-rate",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 27.739,
+      "min_collected_hours": 27.739,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:network_ceiling": 20
+      }
+    },
+    "s3-measured-high": {
+      "scenario": "s3-measured-high",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 45.0,
+      "min_collected_hours": 45.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:s3_allowance": 20
+      }
+    },
+    "candidate-exit-day-3": {
+      "scenario": "candidate-exit-day-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.0,
+      "min_collected_hours": 60.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:observation_unavailable": 20
+      }
+    },
+    "realistic-combined": {
+      "scenario": "realistic-combined",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 10.769,
+      "min_collected_hours": 2.503,
+      "evidence_retrievable": 12,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "operator-stop": 2,
+        "guard:provider_auth_or_quota": 8,
+        "reader:deadline": 2,
+        "acquisition_failed": 8
+      }
+    }
+  },
+  "previous_8516c7d7": {
+    "ideal": {
+      "scenario": "ideal",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "observed-quota-at-3min": {
+      "scenario": "observed-quota-at-3min",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 0.08,
+      "min_collected_hours": 0.08,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    },
+    "shared-key-daily-429": {
+      "scenario": "shared-key-daily-429",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 14.93,
+      "min_collected_hours": 2.725,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    },
+    "production-429-1e-4": {
+      "scenario": "production-429-1e-4",
+      "seeds": 20,
+      "full_runs": 10,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 5.269,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "reader:http-429": 10,
+        "guard:collection_deadline": 10
+      }
+    },
+    "production-transient-1e-3": {
+      "scenario": "production-transient-1e-3",
+      "seeds": 20,
+      "full_runs": 13,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 12.034,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 13,
+        "reader:deadline": 7
+      }
+    },
+    "poll-failure-1e-4": {
+      "scenario": "poll-failure-1e-4",
+      "seeds": 20,
+      "full_runs": 5,
+      "median_collected_hours": 98.612,
+      "min_collected_hours": 1.174,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 5,
+        "operator-stop": 15
+      }
+    },
+    "poll-failure-1e-3": {
+      "scenario": "poll-failure-1e-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 12.875,
+      "min_collected_hours": 0.974,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "operator-stop": 20
+      }
+    },
+    "sample-failure-1e-5": {
+      "scenario": "sample-failure-1e-5",
+      "seeds": 20,
+      "full_runs": 14,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 20.781,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 14,
+        "guard:observation_unavailable": 6
+      }
+    },
+    "mac-sleeps-night-1": {
+      "scenario": "mac-sleeps-night-1",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 14.02,
+      "min_collected_hours": 14.02,
+      "evidence_retrievable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "acquisition_failed": 20
+      }
+    },
+    "operator-ip-change-day-3": {
+      "scenario": "operator-ip-change-day-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.025,
+      "min_collected_hours": 60.025,
+      "evidence_retrievable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "acquisition_failed": 20
+      }
+    },
+    "tx-observed-early-rate": {
+      "scenario": "tx-observed-early-rate",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 27.749,
+      "min_collected_hours": 27.749,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:network_ceiling": 20
+      }
+    },
+    "s3-measured-high": {
+      "scenario": "s3-measured-high",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 45.011,
+      "min_collected_hours": 45.011,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:s3_allowance": 20
+      }
+    },
+    "realistic-combined": {
+      "scenario": "realistic-combined",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 10.784,
+      "min_collected_hours": 2.725,
+      "evidence_retrievable": 11,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "acquisition_failed": 9,
+        "guard:provider_auth_or_quota": 9,
+        "reader:deadline": 2
+      }
+    }
+  },
+  "note": "Fault rates are scenario inputs, not measurements. 8516c7d7 figures used a reader model that shared the operator clock (corrected here)."
+}
