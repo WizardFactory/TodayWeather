@@ -1,10 +1,10 @@
 {
  "tool": "android/tools/parity-reference/capture.sh",
- "capturedAt": "2026-11-13T06:29:05.787Z",
+ "capturedAt": "2026-11-15T05:01:41.669Z",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "d3Version": "3.5.17",
   "sources": [
    {
@@ -121,7 +121,7 @@
  "displays": {
   "en-US": {
    "size": "360x780",
-   "capturedAt": "2026-11-13T06:29:35.809Z",
+   "capturedAt": "2026-11-15T05:02:09.235Z",
    "env": {
     "screen": {
      "width": 360,
@@ -139,7 +139,7 @@
   },
   "ko-KR": {
    "size": "360x780",
-   "capturedAt": "2026-11-13T06:29:05.787Z",
+   "capturedAt": "2026-11-15T05:01:41.669Z",
    "env": {
     "screen": {
      "width": 360,
@@ -160,7 +160,7 @@
  "files": [
   {
    "file": "en-US/capture.json",
-   "sha256": "e2f884a7e85a9715d353e1c8d3a2111c90941fff4b558bd7063b4be8ea395cc5"
+   "sha256": "22257794ac76de4dfe3f4c7bac3ecc6f43bb0df698a009039e8011fbae5f5c3d"
   },
   {
    "file": "en-US/kma-seoul.json",
@@ -200,7 +200,7 @@
   },
   {
    "file": "ko-KR/capture.json",
-   "sha256": "e10eb7571e2e718ac7087113aef3ee6a2b1dead87cbdfaa721febf70e5a9da19"
+   "sha256": "0f4567407ce8756b50e558291df230baefc076d0e728737c54ae8b61b60e9769"
   },
   {
    "file": "ko-KR/kma-seoul.json",

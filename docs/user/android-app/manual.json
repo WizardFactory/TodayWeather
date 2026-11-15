@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for Android: native app user manual",
-  "scenario": "Version 2.0.0 preview, Korean screens. English instructions retain Korean control labels. Live examples captured on 13 November 2026; weather, ads and Android dialogs may vary.",
+  "scenario": "Version 2.0.0 preview, Korean screens. English instructions retain Korean control labels. Live examples captured on 15 November 2026; weather, ads and Android dialogs may vary.",
   "steps": [
     {
       "title": "Read the first-launch notice",
@@ -186,7 +186,7 @@
     },
     {
       "title": "Open the menu",
-      "instruction": "Tap the three-line menu button. Swipe up in the menu to reach lower settings and information items.",
+      "instruction": "Tap the three-line menu button. Swipe up in the menu to reach lower settings and information items. The privacy choices are at the end of the menu.",
       "screenshot": "screenshots/26-menu.png",
       "caption": "The native app menu.",
       "expected": "The menu provides nationwide information, units, startup, refresh, theme and privacy controls. Some nationwide items appear only for the Korean region."

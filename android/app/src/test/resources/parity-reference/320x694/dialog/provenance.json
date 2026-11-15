@@ -1,9 +1,9 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK dialog",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/templates/tab-forecast.html",
@@ -175,7 +175,7 @@
   },
   {
    "file": "ko-KR/pollen.png",
-   "sha256": "e216aa78f5acf542ef8107716838312aaad89237eb4b6dfad7fbab48ed71c341"
+   "sha256": "df5330cfb35d9de58d655830143b5ed01cbfadc065efa0776c73e83231c799fd"
   },
   {
    "file": "ko-KR/retry.json",

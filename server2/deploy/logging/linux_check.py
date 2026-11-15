@@ -52,8 +52,37 @@ STANDIN_UNIT = 'server2-logging-standin.service'
 SYSTEMD_ENV = {'PATH', 'LANG', 'LANGUAGE', 'LC_ALL', 'USER', 'LOGNAME', 'HOME', 'SHELL', 'INVOCATION_ID',
                'JOURNAL_STREAM', 'SYSTEMD_EXEC_PID', 'RUNTIME_DIRECTORY', 'STATE_DIRECTORY', 'MEMORY_PRESSURE_WATCH',
                'MEMORY_PRESSURE_WRITE', 'CREDENTIALS_DIRECTORY', 'NOTIFY_SOCKET', 'TERM', 'LOG_NAMESPACE'}
-TEST_CREDENTIALS = {'AWS_ACCESS_KEY_ID': 'standin-test', 'AWS_SECRET_ACCESS_KEY': 'standin-test',
-                    'AWS_EC2_METADATA_DISABLED': 'true'}
+# No static AWS key anywhere: the collector takes credentials from the instance role
+# through the IMDS stand-in, as on EC2 (LP-3).
+IMDS_UNIT = 'server2-logging-imds.service'
+IMDS_STATE = WORK / 'imds'
+STANDIN_KEY_ID = 'ASIASTANDIN'
+INSTANCE_A, INSTANCE_B = 'i-0c0ffee0000000001', 'i-0c0ffee0000000002'
+
+
+def set_identity(instance_id, life_cycle='on-demand'):
+    (IMDS_STATE / 'instance-id').write_text(instance_id + '\n')
+    (IMDS_STATE / 'life-cycle').write_text(life_cycle + '\n')
+
+
+def setup_imds():
+    """EC2 instance metadata stand-in on 169.254.169.254:80 (loopback alias)."""
+    run('ip', 'addr', 'add', '169.254.169.254/32', 'dev', 'lo', check=False)
+    systemctl('stop', IMDS_UNIT, check=False)
+    systemctl('reset-failed', IMDS_UNIT, check=False)
+    shutil.rmtree(IMDS_STATE, ignore_errors=True)
+    IMDS_STATE.mkdir(parents=True)
+    set_identity(INSTANCE_A)
+    run('systemd-run', '--unit', IMDS_UNIT, '/usr/bin/python3', '-I', str(HERE / 'imds_standin.py'), '--state', str(IMDS_STATE))
+    for _ in range(200):
+        if (IMDS_STATE / 'ready').exists():
+            return
+        time.sleep(0.1)
+    raise SystemExit('IMDS stand-in did not start')
+
+
+def current_identity():
+    return (IMDS_STATE / 'instance-id').read_text().strip()
 
 
 def run(*args, check=True, **kwargs):
@@ -132,13 +161,14 @@ def start_standin(state):
 
 
 def reset_host():
-    """Stop both units and empty the server2 journal namespace and collector state."""
-    for unit in ('server2.service', 'server2-logs.service', 'server2-logs-status.service'):
+    """Stop the units and empty the server2 journal namespace and collector state."""
+    for unit in ('server2-logs-watch.service', 'server2.service', 'server2-logs.service', 'server2-logs-status.service'):
         systemctl('stop', unit, check=False)
         systemctl('reset-failed', unit, check=False)
     # Rotate, then delete every archived file: the namespace keeps running and the
     # new active file is empty. (Restarting the namespace repeatedly trips its start limit.)
     # The namespace daemon exits when idle; rotation needs it running.
+    Path('/run/server2-logs-watch/interruption').unlink(missing_ok=True)  # an earlier interruption's marker
     systemctl('start', 'systemd-journald@server2.service', check=False)
     run('journalctl', '--namespace=server2', '--rotate', check=False)
     time.sleep(1.5)
@@ -350,7 +380,7 @@ def restart_scenario(report):
     check('server healthy', wait_health())
     for i in range(5):
         http(f'/weather/v000903/coord/33.{i},127.0')
-    time.sleep(3)  # read, but the 60 s S3 object is still open
+    time.sleep(3)  # read, but the S3 object (50 s window) is still open
     seconds = stop_seconds('server2-logs.service')
     entry['observations']['collector_stop_seconds'] = seconds
     check('the collector stop waited for confirmation and stayed within its bound', seconds < 100, str(seconds))
@@ -476,6 +506,15 @@ def server_record_level(line):
     return None
 
 
+def _parsed(lines):
+    """JSON lines; a line torn by a power-off of the host (LP-4 check) is skipped."""
+    for line in lines:
+        try:
+            yield json.loads(line)
+        except ValueError:
+            continue
+
+
 def delivered(state):
     """Lines received by the stand-in, grouped by destination and source."""
     result = {'s3': collections.defaultdict(list), 'cloudwatch': collections.defaultdict(list)}
@@ -492,9 +531,9 @@ def delivered(state):
         streams.append(stream)
         text = path.read_text()
         complete = text[:text.rfind('\n') + 1]  # the stand-in may be appending right now
-        result['cloudwatch'][stream.split('/')[0]] += [json.loads(l)['message'] for l in complete.splitlines()]
+        result['cloudwatch'][stream.split('/')[0]] += [item['message'] for item in _parsed(complete.splitlines())]
     log = (state / 'operations.jsonl').read_text() if (state / 'operations.jsonl').exists() else ''
-    operations = [json.loads(l) for l in log[:log.rfind('\n') + 1].splitlines()]
+    operations = list(_parsed(log[:log.rfind('\n') + 1].splitlines()))
     return result, keys, streams, operations
 
 
@@ -553,7 +592,7 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     # Delivery while both units run (CX-LP1-003, CX-LP1-005). One clock starts before a
     # new request; each destination is then watched independently for the newest record
     # that request produced at or above its level.
-    bounds = {'s3': render.S3_BATCH_SECONDS + 10, 'cloudwatch': 10}
+    bounds = {'s3': 60, 'cloudwatch': 10}  # LP-4: the loss bound without a notice
     remote_levels = {d: lv for d, lv in (('s3', s3_level), ('cloudwatch', cloudwatch_level)) if d in sinks}
     if remote_levels:
         time.sleep(1.5)  # a preceding burst can exhaust the server's own per-second rate limit
@@ -607,7 +646,7 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     received, keys, streams, operations = delivered(state)
     entry['observations'].update(s3_keys=keys, cloudwatch_streams=streams,
                                  operations=collections.Counter(f"{o['service']}:{o['action']}" for o in operations))
-    machine = Path('/etc/machine-id').read_text().strip()
+    machine = current_identity()  # the instance ID from instance metadata (LP-3)
     boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip().replace('-', '')
     for destination, level in (('s3', s3_level), ('cloudwatch', cloudwatch_level)):
         if destination in sinks:
@@ -619,7 +658,8 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
             starts = [r for r in map(json.loads, received[destination]['collector']) if r['event'] == 'collector.started']
             check(f'{destination} holds the collector start record',
                   len(starts) == 1 and starts[0]['event'] == 'collector.started' and starts[0]['sinks'] == sinks
-                  and starts[0]['collector_version'] == 'vector 0.61.0' and starts[0]['instance_id'] == machine,
+                  and starts[0]['collector_version'] == 'vector 0.61.0' and starts[0]['instance_id'] == machine
+                  and starts[0]['instance_life_cycle'] == 'on-demand' and starts[0]['boot_id'] == boot,
                   json.dumps(starts)[:300])
             check(f'{destination} holds no readiness line', not any(l in received[destination]['server'] for l in readiness))
         else:
@@ -636,6 +676,11 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
     used = {(o['service'], o['action']) for o in operations}
     check('only actions granted by the role policy template were used', used <= allowed, str(sorted(used - allowed)))
     check('no object was overwritten', ('s3', 'Overwrite') not in used)
+    if remote:
+        check('every request was signed with the instance-role key from instance metadata',
+              operations and all(o['key_id'] == STANDIN_KEY_ID for o in operations
+                                 if o['action'] not in ('Unavailable', 'Overwrite')),
+              str({o['key_id'] for o in operations}))
     # Every destination, the local journal included (GEM-LP1-003).
     text = (all_received_text(state) if state.exists() else '') + '\n'.join(server_lines + collector_lines)
     check('destinations, the local journal included, hold no synthetic sensitive value', SYNTHETIC not in text)
@@ -645,13 +690,306 @@ def delivery_scenario(report, name, criteria, sinks, s3_level, cloudwatch_level,
         check('collector environment holds no .env value', vector_environ is not None
               and not any(SYNTHETIC in v for v in vector_environ.values()) and not (names & file_names),
               str(sorted(names)))
-        check('collector environment holds only systemd and test credential names',
-              names <= SYSTEMD_ENV | set(TEST_CREDENTIALS), str(sorted(names - SYSTEMD_ENV - set(TEST_CREDENTIALS))))
+        check('collector environment holds only systemd names (no AWS key)',
+              names <= SYSTEMD_ENV, str(sorted(names - SYSTEMD_ENV)))
     else:
         result = systemctl('show', '-p', 'ConditionResult', '--value', 'server2-logs.service').stdout.strip()
         check('collector is skipped when only local is selected', result == 'no', result)
         check('local-only start explains that nothing is shipped',
               any('only the local journal is selected' in l for l in collector_lines))
+    return entry
+
+
+def server_records():
+    """Server records at info or above with their journal sequence numbers, oldest first."""
+    out = run('journalctl', '--namespace=server2', '-u', 'server2.service', '-o', 'json', '--no-pager',
+              '--output-fields=MESSAGE,__CURSOR').stdout
+    records = []
+    for raw in out.splitlines():
+        entry = json.loads(raw)
+        message = entry.get('MESSAGE')
+        if isinstance(message, list):
+            message = bytes(message).decode('utf-8', 'replace')
+        if server_record_level(message) in ('info', 'warn', 'error'):
+            records.append((int(dict(p.split('=', 1) for p in entry['__CURSOR'].split(';'))['i'], 16), message))
+    return records
+
+
+def replacement_scenario(report):
+    """LP-3: two instance IDs in the same hour (an interrupted instance and its replacement,
+    with the identical configuration) write disjoint streams and keys, each holding exactly
+    that instance's records, and nothing is overwritten (CX-LP3-006, GEM-LP3-004). The two
+    instances are simulated on one host against one destination stand-in: the journal and
+    collector state are emptied between them, as on a new instance."""
+    entry = report.scenario('instance-replacement', ['LP3-AC2'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-replacement'
+    reset_host()
+    start_standin(state)
+    write_env(logging_env())
+    written = {}
+    for instance in (INSTANCE_A, INSTANCE_B):
+        set_identity(instance)
+        reset_host()  # a new instance's empty disk: no journal, no collector state
+        before = {message for _, message in server_records()}
+        systemctl('start', 'server2-logs.service')
+        systemctl('start', 'server2.service')
+        check(f'{instance}: server healthy', wait_health())
+        for i in range(3):
+            http(f'/weather/v000903/coord/31.{i},127.0')
+        systemctl('stop', 'server2.service', 'server2-logs.service')  # server first, then the drain
+        written[instance] = [message for _, message in server_records() if message not in before]
+    systemctl('stop', STANDIN_UNIT)
+    set_identity(INSTANCE_A)
+    received, keys, streams, operations = delivered(state)
+    hours = {re.search(r'hour=(\d\d)', k).group(1) for k in keys}
+    entry['observations'].update(hours=sorted(hours), streams=sorted(streams), keys=len(keys))
+    check('both instances wrote in the same hour', len(hours) == 1, str(sorted(hours)))
+    for instance in (INSTANCE_A, INSTANCE_B):
+        other = INSTANCE_B if instance == INSTANCE_A else INSTANCE_A
+        for source in ('server', 'collector'):
+            check(f'{instance}: its own {source} stream and {source} keys',
+                  f'{source}/{instance}/' in ' '.join(streams) and any(f'/{source}/' in k and f'/{instance}/' in k for k in keys))
+        own_keys = [k for k in keys if '/server/' in k and f'/{instance}/' in k]
+        in_keys = [line for k in own_keys for line in gzip.decompress((state / 's3' / k).read_bytes()).decode().splitlines()]
+        group_dir = state / 'cloudwatch' / GROUP.strip('/')
+        in_streams = [json.loads(l)['message'] for path in group_dir.glob(f'server/{instance}/*.jsonl')
+                      for l in path.read_text().splitlines()]
+        check(f'{instance}: its S3 keys hold exactly its records', sorted(in_keys) == sorted(written[instance]),
+              f'expected {len(written[instance])} got {len(in_keys)}')
+        check(f'{instance}: its CloudWatch stream holds exactly its records', sorted(in_streams) == sorted(written[instance]),
+              f'expected {len(written[instance])} got {len(in_streams)}')
+        check(f'{instance}: no record of {other} under its names', not set(in_keys + in_streams) & set(written[other]))
+    check('no object was overwritten', not any(o['action'] == 'Overwrite' for o in operations))
+    started = [json.loads(l) for l in received['s3']['collector'] if '"collector.started"' in l]
+    check('each instance announced itself in its start record', {r['instance_id'] for r in started} == {INSTANCE_A, INSTANCE_B})
+    return entry
+
+
+def abrupt_stop_scenario(report):
+    """LP-3 (CX-LP3-005): the collector is killed while S3 has received a server object but
+    its confirmation is delayed. After the automatic restart, nothing is lost, and every
+    repeated record lies after the position each destination had saved at the kill: the
+    documented repeat bound (records read but not yet confirmed in journal order)."""
+    entry = report.scenario('abrupt-stop', ['LP3-AC5'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-abrupt'
+    reset_host()
+    start_standin(state)
+    write_env(logging_env())
+    systemctl('start', 'server2-logs.service')
+    systemctl('start', 'server2.service')
+    check('server healthy', wait_health())
+    for i in range(5):  # S3 confirms a first object, so its saved position is inside the records
+        http(f'/weather/v000903/coord/35.{i},127.0')
+    confirmed = wait_until(lambda: Path('/var/lib/private/server2-logs/journal_s3/checkpoint.txt').exists()
+                           and any(o['action'] == 'PutObject' and '/server/' in o['key'] for o in delivered(state)[3]), 90)
+    check('S3 confirmed a first server object', confirmed is not None, str(confirmed))
+    (state / 'delay-s3').write_text('45')
+    for i in range(10):
+        http(f'/weather/v000903/coord/32.{i},127.0')
+    stored = wait_until(lambda: any(o['action'] == 'DelayedConfirmation' for o in delivered(state)[3]), 90)
+    check('S3 received a server object whose confirmation is delayed', stored is not None, str(stored))
+    for i in range(5):  # more records after the delayed object
+        http(f'/weather/v000903/coord/33.{i},127.0')
+    time.sleep(3)
+    def saved_position(destination):
+        # The collector rewrites the file in place; read until a complete cursor is seen.
+        path = Path(f'/var/lib/private/server2-logs/journal_{destination}/checkpoint.txt')
+        for _ in range(50):
+            fields = dict(p.split('=', 1) for p in (path.read_text() if path.exists() else '').strip().split(';') if '=' in p)
+            if 'i' in fields:
+                return int(fields['i'], 16)
+            time.sleep(0.02)
+        return 0  # nothing confirmed yet: every record is in the window
+    saved = {destination: saved_position(destination) for destination in ('s3', 'cloudwatch')}
+    pid = systemctl('show', '-p', 'MainPID', '--value', 'server2-logs.service').stdout.strip()
+    systemctl('kill', '-s', 'SIGKILL', '--kill-whom=main', 'server2-logs.service')
+    (state / 'delay-s3').unlink()
+    restarted = wait_until(lambda: systemctl('show', '-p', 'MainPID', '--value', 'server2-logs.service').stdout.strip()
+                           not in ('', '0', pid), 30)
+    check('the collector restarted by itself after the kill', restarted is not None, str(restarted))
+    for i in range(3):
+        http(f'/weather/v000903/coord/34.{i},127.0')
+    systemctl('stop', 'server2.service')
+    systemctl('stop', 'server2-logs.service')
+    systemctl('stop', STANDIN_UNIT)
+    records = server_records()
+    received = delivered(state)[0]
+    entry['observations'].update(saved_positions=saved, killed_pid=pid)
+    for destination in ('s3', 'cloudwatch'):
+        got = collections.Counter(received[destination]['server'])
+        expected = [message for _, message in records]
+        missing = [m for m in expected if m not in got]
+        repeated = {m for m, n in got.items() if n > 1}
+        window = {m for seq, m in records if seq > saved[destination]}
+        entry['observations'][f'{destination}_repeated'] = len(repeated)
+        entry['observations'][f'{destination}_window'] = len(window)
+        check(f'{destination}: nothing lost', not missing, f'{len(missing)} missing')
+        check(f'{destination}: every repeat lies after the position saved at the kill', repeated <= window,
+              f'{len(repeated - window)} outside')
+    check('the S3 window excludes the records confirmed before the delay', 0 < entry['observations']['s3_window'] < len(records),
+          f"{entry['observations']['s3_window']} of {len(records)}")
+    check('the delayed S3 object was sent again (the bound was exercised)', entry['observations']['s3_repeated'] > 0)
+    return entry
+
+
+WATCH_UNIT = 'server2-logs-watch.service'
+
+
+def unit_inactive_since(unit, field='InactiveEnterTimestampMonotonic'):
+    """Monotonic seconds (CLOCK_MONOTONIC) of a unit's last state change, or None."""
+    value = systemctl('show', '-p', field, '--value', unit).stdout.strip()
+    return int(value) / 1e6 if value and value != '0' else None
+
+
+def spot_interruption_scenario(report):
+    """LP-4 (#2981): a Spot interruption notice stops the server, then the collector,
+    inside the documented budget; the notice record reaches every destination before the
+    server's shutdown records, and every server record up to the server's stop arrives."""
+    entry = report.scenario('spot-interruption', ['LP4-AC1', 'LP4-AC2'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-interruption'
+    reset_host()
+    start_standin(state)
+    set_identity(INSTANCE_A, 'spot')
+    (IMDS_STATE / 'instance-action').unlink(missing_ok=True)
+    write_env(logging_env())
+    systemctl('start', 'server2-logs.service', 'server2.service')
+    systemctl('restart', WATCH_UNIT)
+    check('server healthy', wait_health())
+    check('the watcher is watching', wait_until(lambda: any('watching for a Spot interruption notice' in l
+                                                             for l in journal(WATCH_UNIT)), 20) is not None)
+    for i in range(20):
+        http(f'/weather/v000903/coord/36.{i},127.0')
+    began = time.monotonic()
+    action_time = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(time.time() + 120))
+    (IMDS_STATE / 'instance-action').write_text(json.dumps({'action': 'terminate', 'time': action_time}))
+    published_at = time.time()
+    stopped = wait_until(lambda: wait_unit('server2-logs.service', {'inactive', 'failed'}, 1) in ('inactive', 'failed'), 130)
+    total = round(time.monotonic() - began, 1)
+    server_stop, collector_stop = unit_inactive_since('server2.service'), unit_inactive_since('server2-logs.service')
+    collector_stopping = unit_inactive_since('server2-logs.service', 'ActiveExitTimestampMonotonic')  # it began to stop
+    (IMDS_STATE / 'instance-action').unlink(missing_ok=True)
+    set_identity(INSTANCE_A)
+    systemctl('stop', STANDIN_UNIT)
+    entry['observations'].update(notice_to_collector_stop_seconds=total,
+                                 server_stopped_before_collector_by_seconds=round(collector_stop - server_stop, 1)
+                                 if server_stop and collector_stop else None)
+    check('the server and the collector stopped', stopped is not None)
+    check('notice to collector stop within the 86 s budget (two-minute notice)', total <= 86, str(total))
+    check('the server unit had stopped before the collector began to stop', server_stop is not None
+          and collector_stopping is not None and server_stop <= collector_stopping, f'{server_stop} {collector_stopping}')
+    watch_lines = journal(WATCH_UNIT)
+    notices = [json.loads(l) for l in watch_lines if '"collector.interruption_notice"' in l]
+    check('one interruption record with the announced action and time', len(notices) == 1
+          and notices[0]['action'] == 'terminate' and notices[0]['action_time'] == action_time, str(notices)[:200])
+    if notices:
+        import datetime
+        seen = datetime.datetime.strptime(notices[0]['timestamp'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=datetime.timezone.utc)
+        detection = round(seen.timestamp() - published_at, 1)
+        entry['observations']['detection_seconds'] = detection
+        check('the notice was seen within 6 s of its publication', detection <= 6, str(detection))
+    # Every server record up to the unit's stop, at each destination. The server's shutdown
+    # records are identified by their own fields, not by time (CX-LP4-005), and the notice
+    # record must come before each of them at each destination.
+    records = server_records()
+    received = delivered(state)[0]
+    notice_line = next((l for l in watch_lines if '"collector.interruption_notice"' in l), None)
+    shutdown = [json.loads(m) for _, m in records if json.loads(m).get('component') == 'process'
+                and json.loads(m).get('stage') in ('shutdown', 'runtime_teardown')]
+    entry['observations']['server_shutdown_records'] = len(shutdown)
+    check('the server wrote shutdown records', len(shutdown) > 0)
+    progress = [json.loads(l) for l in watch_lines if '"collector.interruption_progress"' in l]
+    check('the stop progress record says the server stopped', len(progress) == 1 and progress[0]['server_stop'] == 'ok',
+          str(progress)[:200])
+    for destination in ('s3', 'cloudwatch'):
+        got = set(received[destination]['server'])
+        missing = [m for _, m in records if m not in got]
+        check(f'{destination}: every server record up to the stop arrived', not missing, f'{len(missing)} missing')
+        collector_lines = [json.loads(l) for l in received[destination]['collector'] if l.startswith('{')]
+        notice_at = [r['timestamp'] for r in collector_lines if r.get('event') == 'collector.interruption_notice']
+        shipped_shutdown = [json.loads(m) for m in received[destination]['server']
+                            if json.loads(m).get('component') == 'process' and json.loads(m).get('stage') in ('shutdown', 'runtime_teardown')]
+        check(f'{destination}: the interruption record arrived', notice_line in received[destination]['collector'] and len(notice_at) == 1)
+        check(f'{destination}: the interruption record precedes every shutdown record',
+              notice_at and shipped_shutdown and all(notice_at[0] < r['timestamp'] for r in shipped_shutdown),
+              f'{notice_at} vs {[r["timestamp"] for r in shipped_shutdown]}')
+        check(f'{destination}: the stop progress record arrived', any(r.get('event') == 'collector.interruption_progress' for r in collector_lines))
+    return entry
+
+
+def slow_upload_scenario(report):
+    """LP-4 (CX-LP4-007): with every S3 upload answered 5 s late (half the 10 s request bound),
+    a new record still reaches S3 within 60 s."""
+    entry = report.scenario('s3-slow-upload', ['LP4-AC4'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    state = WORK / 'standin-slow'
+    reset_host()
+    start_standin(state)
+    (state / 'slow-s3').write_text('5')
+    write_env(logging_env(sinks='s3'))
+    systemctl('start', 'server2-logs.service', 'server2.service')
+    check('server healthy', wait_health())
+    time.sleep(1.5)
+    before = len(journal('server2.service'))
+    began = time.monotonic()
+    http('/weather/v000903/coord/35.5,127.0')
+    time.sleep(0.5)
+    produced = [l for l in journal('server2.service')[before:] if server_record_level(l) in ('info', 'warn', 'error')]
+    target = produced[-1] if produced else None
+    arrived = wait_until(lambda: target in delivered(state)[0]['s3']['server'], 75)
+    seconds = round(time.monotonic() - began, 1) if arrived is not None else None
+    entry['observations']['s3_delivery_seconds_with_5_s_upload'] = seconds
+    check('a record reaches S3 within 60 s although each upload is answered 5 s late', seconds is not None and seconds <= 60, str(seconds))
+    attempts = collections.Counter(o['key'] for o in delivered(state)[3] if o['action'] == 'PutObject')
+    entry['observations']['upload_attempts_per_object'] = sorted(set(attempts.values()))
+    check('no upload was retried (one PutObject per key)', attempts and set(attempts.values()) == {1}, str(dict(attempts))[:200])
+    (state / 'slow-s3').unlink()
+    systemctl('stop', 'server2.service', 'server2-logs.service')
+    systemctl('stop', STANDIN_UNIT)
+    return entry
+
+
+def watcher_idle_scenario(report):
+    """LP-4: on an On-Demand instance and without instance metadata the watcher exits
+    successfully and stops nothing."""
+    entry = report.scenario('interruption-watcher-idle', ['LP4-AC5'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    reset_host()
+    write_env(server_env(SERVER2_LOG_SINKS='local'))
+    systemctl('start', 'server2.service')
+    check('server healthy', wait_health())
+    for name, prepare, seconds in (('on-demand', lambda: set_identity(INSTANCE_A, 'on-demand'), 20),
+                                   ('no instance metadata', lambda: systemctl('stop', IMDS_UNIT), 90)):
+        prepare()
+        systemctl('reset-failed', WATCH_UNIT, check=False)
+        systemctl('restart', WATCH_UNIT)
+        finished = wait_until(lambda: systemctl('show', '-p', 'ActiveState', '--value', WATCH_UNIT).stdout.strip()
+                              in ('inactive', 'failed'), seconds)
+        result = systemctl('show', '-p', 'Result', '--value', WATCH_UNIT).stdout.strip()
+        check(f'{name}: the watcher ended without error', finished is not None and result == 'success', result)
+        check(f'{name}: it says why it is idle', any('server2 interruption watcher: idle' in l for l in journal(WATCH_UNIT)))
+        check(f'{name}: the server keeps running', systemctl('is-active', 'server2.service', check=False).stdout.strip() == 'active')
+        entry['observations'][f'{name}_seconds'] = finished
+    setup_imds()
+    systemctl('stop', 'server2.service')
+    return entry
+
+
+def spot_warning_scenario(report):
+    """LP-3: with only the local journal selected, a Spot instance warns at collector start."""
+    entry = report.scenario('spot-local-only-warning', ['LP3-AC4'])
+    check = lambda n, ok, d='': report.check(entry, n, ok, d)
+    for life_cycle, expected in (('spot', True), ('on-demand', False)):
+        reset_host()
+        set_identity(INSTANCE_A, life_cycle)
+        write_env(server_env(SERVER2_LOG_SINKS='local'))
+        systemctl('start', 'server2-logs.service', check=False)
+        warned = any('"collector.local_only_on_spot"' in l for l in journal('server2-logs.service'))
+        check(f'{life_cycle}: warning {"written" if expected else "absent"}', warned == expected)
+    set_identity(INSTANCE_A)
+    reset_host()
     return entry
 
 
@@ -688,16 +1026,22 @@ def main():
     run('bash', str(HERE / 'install.sh'), '--collector-tarball', args.collector_tarball)
     shutil.copy(args.server_binary, '/opt/server2/bin/server2')
     os.chmod('/opt/server2/bin/server2', 0o755)
-    dropin = Path('/etc/systemd/system/server2-logs.service.d/zz-check-credentials.conf')
-    dropin.parent.mkdir(parents=True, exist_ok=True)
-    dropin.write_text('[Service]\n' + ''.join(f'Environment={k}={v}\n' for k, v in TEST_CREDENTIALS.items()))
+    # Earlier versions of this check used a credential drop-in; LP-3 uses instance metadata only.
+    Path('/etc/systemd/system/server2-logs.service.d/zz-check-credentials.conf').unlink(missing_ok=True)
     systemctl('daemon-reload')
     setup_tls_and_hosts()
+    setup_imds()
     report = Report()
     delivery_scenario(report, 'local-only', ['AC1', 'AC2'], ['local'], 'info', 'warn')
     delivery_scenario(report, 's3-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['s3'], 'info', 'warn', timed=('s3',))
     delivery_scenario(report, 'cloudwatch-only', ['AC1', 'AC2', 'AC4', 'AC5'], ['cloudwatch'], 'info', 'warn', timed=('cloudwatch',))
     delivery_scenario(report, 'all-destinations', ['AC1', 'AC2', 'AC4', 'AC5'], ['local', 's3', 'cloudwatch'], 'debug', 'error', burst=300, timed=('s3',))
+    replacement_scenario(report)
+    abrupt_stop_scenario(report)
+    spot_interruption_scenario(report)
+    watcher_idle_scenario(report)
+    slow_upload_scenario(report)
+    spot_warning_scenario(report)
     isolation_scenario(report)
     restart_scenario(report)
     outage_scenario(report)

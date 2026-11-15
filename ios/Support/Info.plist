@@ -36,5 +36,11 @@
 	     Empty without it: the mail then opens without a recipient. -->
 	<key>TWMailTo</key>
 	<string>$(TW_MAIL_TO)</string>
+	<!-- As the Cordova build (cordova-plugin-firebasex-messaging): FCM data messages may start the app in the
+	     background. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

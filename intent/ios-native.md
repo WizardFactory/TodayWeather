@@ -32,6 +32,8 @@ Settled:
 - **Start (AK, 2026-11-13):** now; the Android app is in open beta.
 - **Inherited from #2877 and AN-06:** the legacy server without changes; `v000903` for every call; Cordova anomalies kept except A01; S13–S16 not built; 12:00 AM in the alarm picker acts as Delete; the free-form weather-address fallback keeps its HTTP 501; the feedback mail keeps the device UUID (D37); widgets later.
 - **Deployment target (AK, 2026-11-13): iOS 17.0.** Xcode 27 simulates and debugs only iOS 17+; the Places SDK for iOS needs 17; iOS 15–16 were about 2.3% of the app's devices and keep Cordova 1.1.1.
+- **Server basis (AK, 2026-11-15):** "Legacy(server nodejs) 기준 개발임" and "이번 작업에서는 server2는 고려대상이 아님". The iOS app is designed and tested against the legacy Node server (`server/`) as it is; server2 is not considered in this work. Said during the IN-04 design re-review ([record](../docs/evidence/tasks/ios-in-04-design-review/README.md)).
+- **IN-04 acceptance (AK, 2026-11-15):** "수용기준은 android native app 과 동일", "백그라운드 완료 - android native app과 동일". The iOS app is a client of the production API; the server's stores are neither modelled nor verified by this work ([decision](../docs/evidence/tasks/ios-in-04-design-review/decision.md)).
 - **Place search:** the Places SDK for iOS with a key restricted to the bundle ID (AK issues it). Blocks IN-10 until then.
 
 Planning basis (the recommended defaults of #2948, accepted with "IN-18까지"; IN-06 records them):
