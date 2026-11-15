@@ -19,6 +19,10 @@ once per install, so the app cannot ask again with that prompt.
 - Legacy Cordova app only, and iOS only. The native iOS app (#2948) and Android are out of scope.
 - The elements are added to the iOS bundle by a build hook, so no shared Cordova source and no Android reference
   changes (plan approved; this replaces the Android recapture that #2990 lists).
+- Menu order (AK, 2026-11-15, after the first review): the privacy rows (선택적 이용 통계, 광고 개인정보 선택, the new
+  tracking row, 개인정보처리방침, 이용약관) move to the end of the side menu, after 정보, on iOS and Android. This edits
+  the shared `client/www/index.html` and the native Android `MenuRow` order, so the Android parity references and the
+  Android manuals' menu captures are renewed; the native iOS app (#2948) is left to its own program.
 - Notice text (Korean, AK): "TodayWeather는 광고 수익으로 운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을
   허용할 수 있습니다. 기능은 어느 쪽이든 같습니다." Button: "설정 열기". The other locales translate it.
 

@@ -62,6 +62,8 @@ The notice has no close control and stores no "hidden" state. It leaves only whe
 ### R3. Placement (AC2)
 
 - Menu row: directly after the `openAdPrivacy()` button in the side menu, in the same button style as its neighbours.
+  The privacy rows as a group sit at the end of the menu, after 정보 (About), on iOS and Android (AK, 2026-11-15); the
+  native Android menu (`MenuRow` in `ui/shell/Shell.kt`) follows the same order.
 - Notice: the last element inside `ion-content` of `tab-forecast.html`, `tab-dailyforecast.html` and `tab-air.html`,
   after the data-source credits. It scrolls with the page. It uses no `$ionicPopup`, `$ionicModal`, alert or backdrop.
 - Both call `cordova.plugins.diagnostic.switchToSettings`, which the app already uses for location and notifications.

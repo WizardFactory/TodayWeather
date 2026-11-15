@@ -72,9 +72,9 @@
    "crop": "bottom 58% of the capture (from 42% of its height), so that the notice is readable"
   },
   "07-menu-not-allowed.png": {
-   "capture": "denied-menu.png",
-   "capture_sha256": "26c6a355e7603e99c6f992f882a8f0c50a057f010bfe88cb4609816601017227",
-   "sha256": "0f7ef8cd8ecca6dc88f52d402da4c021ec71c71121a11678a06f255adcbfba94",
+   "capture": "menu2-denied-menu.png",
+   "capture_sha256": "021dd4f9967b50625d4906904a813e6cecdceb90cf2bcf67b3245f8113192a4d",
+   "sha256": "591c6e9e147be14500e0ffdedfc062e5b1e527c670a4f9c426ebd6029a6f9bba",
    "size": [
     720,
     1557
@@ -90,25 +90,26 @@
    ]
   },
   "09-menu-allowed.png": {
-   "capture": "allowed-menu.png",
-   "capture_sha256": "673ffec37e3dd0133beff41f7fb9ad6336fc7df4afc27c7d198715ea860a244f",
-   "sha256": "f7e769f2bd7e9e058270980b7e8835f8382abfcca632d167e429481f0805d99c",
+   "capture": "menu2-allowed-menu.png",
+   "capture_sha256": "ca4b78918fead4e34f534967947c2c23afbfe53d8050436df09ab3e4806f1f3f",
+   "sha256": "b2e31e796191dc22cbf46c9c1d03a7ce9379abcc1adb1879ee3bccf4edc1ccce",
    "size": [
     720,
-    1382
+    1409
    ],
-   "crop": "top 88.8% of the capture; the banner with a third-party ad is cut off"
+   "crop": "top 90.5% of the capture; the banner with a third-party ad is cut off"
   }
  },
  "additions_2990": {
   "pages": "6-9",
-  "client_source": "client/ of branch ios-tracking-settings-shortcut-2990 at 371aa49c (master 24a90bcd plus #2990 commits c0f9c6ac and 6db6825c)",
+  "client_source": "client/ of branch ios-tracking-settings-shortcut-2990 at 371aa49c (master 24a90bcd plus #2990 commits c0f9c6ac and 6db6825c); pages 7 and 9 from the same branch with the menu reorder (privacy rows at the end of the menu)",
   "build": "Cordova Debug iphoneos build of the same configuration as above, re-signed with the development profile; displayed version 1.1.2",
   "install": "in place over 1.1.2 (fresh install of 2026-11-15, city 서울, tracking not allowed)",
   "runs": {
    "denied-*": "XCUITest TrackingSettingsTests.testPagesAndMenu, 2026-11-15 03:12-03:14 KST",
    "open-notice-*": "TrackingSettingsTests.testOpenSettings with TW_FROM=notice, 03:15 KST",
-   "allowed-*": "TrackingSettingsTests.testPagesAndMenu after ATTFlowTests.testTrackingOn, 03:17-03:19 KST"
+   "allowed-*": "TrackingSettingsTests.testPagesAndMenu after ATTFlowTests.testTrackingOn, 03:17-03:19 KST",
+   "menu2-*": "Pages 7 and 9 after the privacy rows moved to the end of the menu: TrackingSettingsTests.testPagesAndMenu with tracking off and after ATTFlowTests.testTrackingOn, 2026-11-15 13:33-13:39 KST"
   },
   "privacy_review": "The header shows the saved place 서울. No ad creative, token or account name is shown; the banner of 09 is cropped."
  }

@@ -46,9 +46,9 @@
     },
     {
       "title": "Check the choice in the menu",
-      "instruction": "Open the menu with the button at the top left. Below 광고 개인정보 선택 (Ad privacy choices), the row 추적 허용 설정 · 허용 안 함 (Tracking permission · Not allowed) shows the current choice.",
+      "instruction": "Open the menu with the button at the top left and scroll to its end. The privacy rows are at the bottom, after 정보 (About). Below 광고 개인정보 선택 (Ad privacy choices), the row 추적 허용 설정 · 허용 안 함 (Tracking permission · Not allowed) shows the current choice.",
       "screenshot": "screenshots/07-menu-not-allowed.png",
-      "caption": "The menu with the tracking row while tracking is not allowed.",
+      "caption": "The end of the menu with the tracking row while tracking is not allowed.",
       "expected": "The row appears once the iOS prompt has been answered. It does not appear before that, or when tracking is restricted on the device."
     },
     {
