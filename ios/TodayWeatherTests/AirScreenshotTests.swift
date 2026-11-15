@@ -28,7 +28,12 @@ struct AirScreenshotTests {
         let content = try Self.content(state)
         let theme: Theme = state.hasSuffix("dark") ? .dark : .light
         var report: [String] = []
-        for block in entry["blocks"]?.arrayValue ?? [] {
+        // Every block of the state is compared: the manifest lists them under consecutive indexes from 0, one per block
+        // of the native page (CODEX-IN09-1), so a recapture that drops one cannot shrink the check unnoticed.
+        let blocks = try #require(entry["blocks"]?.arrayValue, "\(state) blocks")
+        #expect(blocks.map { Int($0["index"]?.numberValue?.double ?? -1) } == Array(0..<content.blocks.count),
+                "\(state): one reference per block")
+        for block in blocks {
             let index = Int(block["index"]?.numberValue?.double ?? -1)
             let name = "\(state)-\(index)"
             let kind = content.blocks[index]
@@ -121,7 +126,9 @@ struct AirScreenshotTests {
     private func number(_ v: JSONValue?) -> Double { v?.numberValue?.double ?? .nan }
 
     private func render(_ view: AnyView, width: Double, scale: Double) throws -> Bitmap {
-        let renderer = ImageRenderer(content: view.frame(width: width).environment(\.sizeCategory, .large))
+        // The references were captured with the simulator in Korean (CI's simulator is in English).
+        let renderer = ImageRenderer(content: view.frame(width: width).environment(\.sizeCategory, .large)
+            .environment(\.cssFallbackLanguage, "ko"))
         renderer.scale = scale
         renderer.proposedSize = ProposedViewSize(width: width, height: nil)
         return Bitmap(try #require(renderer.cgImage, "render"))
