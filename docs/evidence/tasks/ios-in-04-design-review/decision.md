@@ -39,8 +39,8 @@ Removed from PR #2975: the replacement log and its recovery rounds, the token hi
 recovery, and the Cordova timing (the list post three seconds after the open, sends that are not
 awaited) with its timed golden files. The timing was a Required finding of review round 1
 (CODEX-IN04-1); the Android app does not reproduce it, so under AK's decision it is not an
-acceptance criterion. The PR's first commit (`d3c156f3`) already had this shape (`PushSync` and
-`PushTokenQueue` ported from Android) and is the starting point.
+acceptance criterion. The PR's first commit (`d3c156f3`) already had this shape (`PushSync` ported
+from Android, with `PushTokenQueue` in place of WorkManager) and is the starting point.
 
 ## Tests, as for Android
 
