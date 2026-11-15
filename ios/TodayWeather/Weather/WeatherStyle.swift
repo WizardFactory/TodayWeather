@@ -121,9 +121,17 @@ struct CssRun {
     var face: Face = .system
 }
 
+extension EnvironmentValues {
+    /// The language whose fallback fonts the system text of `CssLine` uses, as a WebView without `lang` uses the
+    /// preferred languages; nil (the app) takes the system's. A screenshot test sets the language its references were
+    /// captured in, since a CJK compatibility character such as ㎍ comes from another font in another language.
+    @Entry var cssFallbackLanguage: String? = nil
+}
+
 /// One line of CSS text: its runs on one baseline (SwiftUI concatenated `Text`), placed so the baseline is where WebKit
 /// puts it in a line box of `line-height: normal` (each used font's ascent and descent rounded up to whole points).
 struct CssLine: View {
+    @Environment(\.cssFallbackLanguage) private var fallbackLanguage
     let runs: [CssRun]
     let color: CssColor
     var outline: CssColor? = nil
@@ -165,13 +173,33 @@ struct CssLine: View {
             let (i, run) = item
             let font: Font
             switch run.face {
-            case .system: font = .system(size: run.size, weight: run.weight)
+            case .system: font = fallbackLanguage.map { Self.system(run.size, run.weight, language: $0) }
+                ?? .system(size: run.size, weight: run.weight)
             case .ionicons: font = Glyphs.ionicons(run.size)
             case .material: font = Glyphs.material(run.size)
             }
             return result + Text(run.text).font(font).foregroundColor((run.color ?? color).color)
                 .baselineOffset(raise[i] ?? 0)
         }
+    }
+
+    /// The system font at `size` and `weight` with the fallback fonts of `language`.
+    static func system(_ size: CGFloat, _ weight: Font.Weight, language: String) -> Font {
+        let ui: UIFont.Weight = switch weight {
+        case .ultraLight: .ultraLight
+        case .thin: .thin
+        case .light: .light
+        case .medium: .medium
+        case .semibold: .semibold
+        case .bold: .bold
+        case .heavy: .heavy
+        case .black: .black
+        default: .regular
+        }
+        let base = UIFont.systemFont(ofSize: size, weight: ui) as CTFont
+        let cascade = CTFontCopyDefaultCascadeListForLanguages(base, [language] as CFArray)
+        let descriptor = CTFontDescriptorCreateWithAttributes([kCTFontCascadeListAttribute: cascade as Any] as CFDictionary)
+        return Font(CTFontCreateCopyWithAttributes(base, size, nil, descriptor))
     }
 
     var body: some View {

@@ -22,6 +22,9 @@ on:
       # Sources of ios/tools/weather/generate.py (the Cordova weather request timing in JavaScriptCore).
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
+      # Sources of ios/tools/air/generate.py (the air standards' grade and scale mapping in JavaScriptCore).
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
       # Sources of ios/tools/settings/generate.py (the Cordova settings, hand-offs and push re-post in JavaScriptCore).
       - "client/www/js/service.util.js"
       - "client/www/js/controller.units.js"
@@ -48,6 +51,8 @@ on:
       - "android/core-domain/src/test/resources/chart-reference/**"
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
       - "client/www/js/service.util.js"
       - "client/www/js/controller.units.js"
       - "client/www/js/controller.setting.radio.js"
@@ -71,13 +76,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets, golden corpus, chart scenes, push requests, weather request timing and settings steps are current
+      - name: Imported client assets, golden corpus, chart scenes, push requests, weather request timing, air scales and settings steps are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
           python3 ios/tools/import_chart_reference.py
           python3 ios/tools/push/generate.py
           python3 ios/tools/weather/generate.py
+          python3 ios/tools/air/generate.py
           python3 ios/tools/settings/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
@@ -89,6 +95,21 @@ jobs:
         run: >
           xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
           -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+      # The screenshot tests write their renders and difference images to the test host's tmp/chart-compare; keep
+      # them when a comparison fails, so a difference of the CI toolchain can be looked at.
+      - name: Collect the screenshot comparisons
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/screenshot-compare"
+          find "$HOME/Library/Developer/CoreSimulator/Devices" -path '*/tmp/chart-compare/*' -name '*.png' \
+            -exec cp {} "$RUNNER_TEMP/screenshot-compare/" \; || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshot-compare
+          path: ${{ runner.temp }}/screenshot-compare
+          if-no-files-found: ignore
+          retention-days: 7
   standalone:
     name: Build and test without client/, android/ and the legacy iOS directories
     runs-on: macos-26
