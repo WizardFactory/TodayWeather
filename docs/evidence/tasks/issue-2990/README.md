@@ -49,6 +49,15 @@ needs no change for that case. The device-wide switch was turned on again afterw
 On the simulator the Settings shortcut (`UIApplicationOpenSettingsURLString` through `cordova.plugins.diagnostic`)
 opened the Settings root page instead of TodayWeather's page; the iPhone opened the app's page (02, 03).
 
+## Menu order (2026-11-15, after the first review)
+
+AK moved the privacy rows to the end of the side menu on iOS and Android. On the iPhone, a build of commit 94a95c59
+showed 선택적 이용 통계 · 꺼짐, 광고 개인정보 선택, 추적 허용 설정 · 허용 안 함, 개인정보처리방침 and 이용약관 after 정보 with
+tracking off, and 추적 허용 설정 · 허용됨 after switching tracking on; the notice on the three pages was unchanged. The phone
+was restored to the plain 1.1.2 build with tracking off. Android: parity references recaptured from one Cordova debug APK
+of that revision; the native unit and screenshot tests pass. Captures are in the iOS manual (pages 7 and 9), the Cordova
+Android manual (pages 24, 36, 37) and the native Android manual (all pages, recaptured).
+
 ## Not covered
 
 - The EEA consent message and a device with tracking restricted (`restricted`): source and unit tests only.
