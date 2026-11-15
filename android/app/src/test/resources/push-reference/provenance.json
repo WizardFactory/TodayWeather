@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/push-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "964443f77cdba9aeae7f4b55118ac2dd2cd7fb579a25ce8ad17cc8b09b8c41e9",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -81,49 +81,37 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    },
    {
     "file": "client/www/lib/ionic-timepicker/dist/ionic-timepicker.bundle.min.js",
     "apkSha256": "d8161a05219a19760a75a9b0bc660848e9950b974a946682e1d67a0a49666b1a",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "d8161a05219a19760a75a9b0bc660848e9950b974a946682e1d67a0a49666b1a",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/js/ion.rangeSlider.min.js",
     "apkSha256": "1866877a7f6662f277f2ac8fb6d317a2a9cc7c41a97394208cf716a79bb8a013",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "1866877a7f6662f277f2ac8fb6d317a2a9cc7c41a97394208cf716a79bb8a013",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/css/ion.rangeSlider.css",
     "apkSha256": "0f326d6a4aa49534e54ad15ca793e30eeb29ba3ce6d35c9f15e9b447b5db1923",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "0f326d6a4aa49534e54ad15ca793e30eeb29ba3ce6d35c9f15e9b447b5db1923",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/css/ion.rangeSlider.skinFlat.css",
     "apkSha256": "ab3085180d4e3d4d75dc9aab23284432a192632957670dbdc116423b0c94a875",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "ab3085180d4e3d4d75dc9aab23284432a192632957670dbdc116423b0c94a875",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/img/sprite-skin-flat.png",
     "apkSha256": "f2f42c58a4ff4bdc0429d4e59fa2d3a9cb65f6651c5f18260d30d6e71ef56553",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "f2f42c58a4ff4bdc0429d4e59fa2d3a9cb65f6651c5f18260d30d6e71ef56553",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    }
   ]
  },
@@ -143,7 +131,7 @@
   "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
   "sdk": "36"
  },
- "display": "384x832 dp at density 2 (wm size 768x1664, wm density 320)",
+ "display": "384x832 dp at density 2; matrix captures record measured viewport.json per language",
  "language": "per-app locale ko-KR, then en-US",
  "install": "new install; the notification permission granted before the first start",
  "images": "cut from the screen (screencap): the whole WebView in the seven states",
@@ -155,7 +143,7 @@
   },
   {
    "file": "en-US/confirm.png",
-   "sha256": "2ce2f792f63c879edd74d010a66ecb9759e8b6c8a8a523a76bf8994141384daa"
+   "sha256": "2860a19c893e4fd758a2ecbdafcb23cc3d56d4a75c79e7dd46325322fa385614"
   },
   {
    "file": "en-US/equal.json",
@@ -171,7 +159,7 @@
   },
   {
    "file": "en-US/foreground.png",
-   "sha256": "e676e350c40c14c022822ef77106271b02efff46bab5703c98cc9e2ce8e45b77"
+   "sha256": "233b6d4e5cb1bf78d61d281bf474f704707c4f8c85d9d7afb5c229343fd5b486"
   },
   {
    "file": "en-US/intro.json",
@@ -179,7 +167,7 @@
   },
   {
    "file": "en-US/intro.png",
-   "sha256": "6c71c0ae1f0f2e1b9b1d2507938fa25bebfc64d85cf5e5e21a0feab50b710faa"
+   "sha256": "b713f8f70b5dd21ec7fa72c8b53d73740145086c3fcbffa8b40781af23217760"
   },
   {
    "file": "en-US/permission.json",
@@ -195,7 +183,7 @@
   },
   {
    "file": "en-US/picker.png",
-   "sha256": "1fbfafc90b3652b0a45256caf197f850e5405d2929eda24a3ce948bbe025f51d"
+   "sha256": "2f838b166962e7f0896c2f592351a30aa225438161553163988a74dc33b87bc4"
   },
   {
    "file": "en-US/requests.json",
@@ -231,7 +219,7 @@
   },
   {
    "file": "ko-KR/foreground.png",
-   "sha256": "229614e12a3b89132c4e270a28da1a86acbc7771b267c6768c195065694c27bf"
+   "sha256": "862831d0464fe7b84bd15a814f6f5f036dac314c56386a65fc22a5bbfdba6c73"
   },
   {
    "file": "ko-KR/intro.json",
@@ -247,7 +235,7 @@
   },
   {
    "file": "ko-KR/permission.png",
-   "sha256": "8c3957884c57e1b601dbb52af85018710167671d16ff4b4018dae5da02a9867d"
+   "sha256": "67ce50f36d2a15faa03e66389cd845fb2b30ea62fd3e71a7554201b3b633b74c"
   },
   {
    "file": "ko-KR/picker.json",

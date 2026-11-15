@@ -408,6 +408,7 @@ Sources: [AirCtrl](../../client/www/js/controller.air.js), [template](../../clie
 - **Wind map:** not a page. It opens `earth.nullschool.net` externally through `cordova.InAppBrowser.open(..., "_system")`, with a `window.open` fallback, and leaves the menu open ([SettingCtrl](../../client/www/js/controller.settingctrl.js#L39-L53)).
 - **Always listed:** units, startup page, update interval, theme, feedback (mail), store review and version.
 - **Remove ads:** shown when `Purchase.hasInAppPurchase` is true or a paid-app URL exists.
+- **Privacy rows last (#2990):** optional usage analytics, ad privacy choices, the iOS-only tracking permission row, privacy policy and terms follow About at the end of the menu; the native Android `MenuRow` order matches.
 - **About:** shown only when `Util.language` contains `ko`. It opens an alert with the product title and three lines: weather information from the Korea Meteorological Administration, air information from the Korea Environment Corporation, and a note that the data is unverified real-time data (`LOC_WEATHER_INFORMATION`, `LOC_KOREA_METEOROLOGICAL_ADMINISTRATION`, `LOC_AQI_INFORMATION`, `LOC_KOREA_ENVIRONMENT_CORPORATION`, `LOC_IT_IS_UNAUTHENTICATED_REALTIME_DATA_THERE_MAY_BE_ERRORS`; O10 in [screen-overlays.md](screen-overlays.md)).
 
 Some items open native/external destinations; they are not additional Angular pages. The guide menu item is present but disabled with `ng-if="false"`. See [Locale and region](#locale-and-region) and [Product and platform differences](#product-and-platform-differences).

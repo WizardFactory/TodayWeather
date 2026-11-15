@@ -18,6 +18,8 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import java.io.File
@@ -357,13 +359,13 @@ class SettingsScreenshotTest {
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
             Box(Modifier.size(bodySize(lang).first.dp, bodySize(lang).second.dp).testTag(ROOT)) {
-                SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.1", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
+                SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.2", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
                     MenuRow.ANALYTICS to LocalContext.current.getString(R.string.LOC_ANALYTICS_DISABLED)))) {}
                 if (open) About { texts[it] }.let { a -> IonicAlert(a.title, a.lines, a.ok, onClose = {}) }
             }
         }
-        rule.onNodeWithTag(ShellTags.row(MenuRow.ABOUT)).performScrollTo()
+        rule.onNodeWithTag(ShellTags.row(MenuRow.entries.last())).performScrollTo().performTouchInput { swipeUp() } // the end of the menu, as captured
         open = true
         rule.waitForIdle()
         compare("$lang/about", "$lang/about.png", rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels(), crop = false)
