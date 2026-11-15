@@ -115,7 +115,7 @@ class SimTime:
 class Host:
     """Unit model of the qualification host, from coordinator.py `host_units`.
 
-    Relations (each unit is `Restart=no`):
+    Relations (candidate, guard and reader are `Restart=no`):
     - candidate `ExecStopPost` stops the reader and the guard: a candidate exit, for any
       reason, ends the group, and the guard makes no further decision;
     - guard `ExecStopPost` stops the reader and the candidate: a guard stop (its own

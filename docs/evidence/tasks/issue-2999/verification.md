@@ -8,7 +8,7 @@ Revision: master `434ec250` (includes #2947, #2971 and #2977) plus this change; 
 
 ## Host model
 
-Taken from the generated units (`coordinator.py` `host_units`; every unit is `Restart=no`):
+Taken from the generated units (`coordinator.py` `host_units`; the candidate, guard and reader units are `Restart=no`, the log collector restarts on abnormal exit):
 
 | Event | Effect in the model | Source |
 | --- | --- | --- |
