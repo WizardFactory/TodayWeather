@@ -15,15 +15,15 @@ Credential-free module loading (#2589): requiring and constructing `controllerPu
 | Request | Purpose | Relevant input and behavior |
 | --- | --- | --- |
 | `POST /v000902/push-list` | Save a batch of settings | Array of records: `category=alarm` or `alert`, token, device type, city/id, location/town, units, language, enable flag and time settings. The client requires an FCM token before submitting; the server also accepts legacy registration IDs. |
-| `PUT /v000902/push` | Replace an existing device token | Requires truthy `newToken` + `oldToken`, or `newRegId` + `oldRegId`. Runs one `update` per collection (alarm and alert) in parallel, without `multi`: under Mongoose 5 defaults each changes one record holding the old token or registration ID, even when the device has several city records (library semantics, not executed; [route](../../server/routes/v000705/routePushNotification.js#L109-L153), [alarm](../../server/controllers/controllerPush.js#L50-L72), [alert](../../server/controllers/alert.push.controller.js#L1041-L1051)). It does not create a new alarm. |
-| `DELETE /v000902/push` | Remove settings | Token identifies the device. Only a truthy `cityIndex` narrows the query; a truthy `id` narrows it only inside that branch. `cityIndex=0` or an absent city index therefore removes by token within the selected category; omitted category targets both collections. |
+| `PUT /v000902/push` | Replace an existing device token | Requires truthy `newToken` + `oldToken`, or `newRegId` + `oldRegId`; otherwise 403. The [route](../../server/routes/v000705/routePushNotification.js) calls the selected store once per collection (alarm and alert), in parallel. Since #2626 the [Mongo store](../../server/lib/pushStore/mongo.js) runs each as one `update` with `multi: true`, on every record holding the old token or registration ID; a record moved onto a key that another record already has stays beside it. It does not create a new alarm. The stores differ: see [registration semantics per store](#registration-semantics-per-store-checked-2026-11-15). |
+| `DELETE /v000902/push` | Remove settings | Token identifies the device. Since #2626 `cityIndex` narrows the query whenever it is given (0 included), and `id` narrows it inside that branch whenever it is given (0 included). An absent or null `cityIndex` removes by token within the selected category; an omitted category targets both collections, and an unknown one returns 403. |
 | `POST /v000902/push` | Legacy single-record registration | Reused older handler writes an alarm record through `ControllerPush.updatePushInfo`. The current shared app uses the batch route. |
 
 The [v000902 router](../../server/routes/v000902/index.js) mounts [the reused push handler](../../server/routes/v000705/routePushNotification.js) and [the batch handler](../../server/routes/v000902/route.push.update.list.js). The [v000903 router](../../server/routes/v000903/index.js) reuses the same handlers. `POST /push-list` is an upload operation despite its name; it is not a list-read endpoint.
 
 [Current CloudFront evidence](../evidence/tasks/push-diagram/aws-routing.json) shows `/*/push` and `/*/push-list` targeting `tw-svc-spot.wizardfactory.net` directly, with HTTP port 80 to the origin. PUT, POST and DELETE are among the allowed methods; only GET and HEAD are configured as cached methods. This branch bypasses the API Gateway/Lambda path used for public weather and geocoding. The checked-in client base URL is a placeholder, so repository source alone does not establish every shipped app's host.
 
-The DELETE implementation uses truthiness rather than property presence. With `{fcmToken, cityIndex: 0, id: 1}`, both controllers build a token-only query, potentially removing settings for other cities. With a truthy city index and `id=0`, the id filter is ignored. This is an existing source behavior; no deletion was executed or code changed.
+Before #2626 the DELETE selector used truthiness, so `{fcmToken, cityIndex: 0, id: 1}` removed by token alone. [`makeRemoveSelector`](../../server/controllers/controllerPush.js) now tests for `undefined` and `null`, and both controllers use it. An `id` without a `cityIndex` still does not narrow the query. Source reading at `434ec250`; no deletion was executed.
 
 ## Token refresh and the 403 branch
 
@@ -75,7 +75,7 @@ Operations: [push store runbook](../operations/push-sqlite.md). Checks: [offline
 
 [Provider selection](../../server/controllers/controllerPush.js) first checks for `fcmToken`: Firebase Admin submits a message using the TodayWeather or TodayAir configuration. An iOS record without `fcmToken` returns `FCM token is required for iOS notifications`; it is neither sent nor reported as successful. Legacy Android registrations retain the GCM branch. The direct APNs fallback and its SDK, credentials configuration and unused feedback hook have been removed. FCM-mediated iOS delivery is unchanged; Firebase handles its APNs integration. Stored registrations are not deleted or disabled by this removal.
 
-The FCM payload contains notification title/body and a string `cityIndex`. An unregistered FCM token sets `enable:false` through the relevant controller with `update({fcmToken})` without `multi`, i.e. on one record with that token under Mongoose 5 defaults, not necessarily the record being sent (library semantics, not executed; [alarm](../../server/controllers/controllerPush.js#L42-L47), [alert](../../server/controllers/alert.push.controller.js#L1059-L1063)). Alert state is updated asynchronously before submission, so state persistence and provider acceptance are not one transaction. Alarm batch handling logs per-record send errors and continues. FCM callbacks report SDK acceptance or an error; SDK acceptance does not establish device delivery.
+The FCM payload contains notification title/body and a string `cityIndex`. An unregistered FCM token sets `enable:false` on every record with that token (since #2626 `update({fcmToken})` with `multi: true` in the [Mongo store](../../server/lib/pushStore/mongo.js), through `disableAlarmsByFcm` and `disableAlertsByFcm`; source reading, not executed), not only on the record being sent. Alert state is updated asynchronously before submission, so state persistence and provider acceptance are not one transaction. Alarm batch handling logs per-record send errors and continues. FCM callbacks report SDK acceptance or an error; SDK acceptance does not establish device delivery.
 
 [Push providers](../../server/lib/pushProviders.js) initialize Firebase on first send. Constructing service routers no longer reads Firebase service-account files. FCM retains Firebase Admin 5.13.1 and its two named apps; its installed Firestore dependency brings native grpc even though this application uses messaging, not Firestore. The Node 16 lock overrides grpc to 1.24.11. The application no longer reads `APN_*` settings or local APNs certificate/key files.
 
@@ -159,3 +159,29 @@ AK reports receipt on the older iOS app early last week (exact timestamp/version
 unknown); an app update is not an established repair requirement. Current enabled
 registrations with disabled matching generations remain an unresolved token/receipt
 investigation under #2626, separate from this reproduced transport defect.
+
+## Registration semantics per store (checked 2026-11-15)
+
+Source reading at `434ec250` for the iOS re-registration design
+([record](../evidence/tasks/ios-in-04-design-review/README.md)). The three stores
+answer the same routes with different rules, so a client must be reasoned about on
+each of them, not on the Mongo store alone. `T` is a token; `U` is the device UUID
+(`uuid` in a posted record; the S3 middleware also takes it from the `Device-Id` header).
+
+| Operation | S3 coordinator (`PUSH_STORE=s3`) | Mongo store (unset, the default) | SQLite store (`PUSH_STORE=sqlite`) |
+| --- | --- | --- | --- |
+| Identity of a record | One device object per `(product, type, U)`, with one endpoint token; inside it one record per `(category, cityIndex, id)`. Without `U`: the device already holding the token, else a token-keyed device. | One document per `(type, cityIndex, id, registrationId or else fcmToken)`; alarms and alerts are separate collections. | `rec_key`, the same key, unique per table. |
+| `POST /push-list` with token `T` | Sets the device's endpoint to `T` and merges the posted records into it. Other device objects holding `T` are merged into it. | Upserts each record by its key: creates documents under `T` when none exist and leaves documents under other tokens. An alert is found, then saved or updated (two steps). | Upsert by `rec_key`. |
+| Answer of `POST /push-list` | 200 with one `{n:1, nModified:1, ok:1}` per record; 403 for an invalid list; 503 when the store fails or times out. | 200 with one item per record. **An item whose save failed is `null`**: the route logs the error and continues. | As the Mongo store. |
+| `PUT /push {newToken, oldToken}` | Every device whose endpoint is `oldToken` gets `newToken`; a device already holding `newToken` is merged. No device holds `oldToken`: 200, nothing changes. | Every document holding `oldToken` gets `newToken` (`multi`). A document moved onto another document's key stays beside it: two documents, two notifications. | Every record of `oldToken`; on a key collision the newer record is kept. |
+| Duplicate cleanup | Not needed. | `removeDuplicateAlarms` groups by `registrationId` and skips records without one, so FCM-only duplicates stay. | No duplicates by construction. |
+| Requests applied out of order | The last applied request decides the endpoint token, until the next list post. | A late list post creates documents under its token; a late `PUT` can move documents onto documents. | As the Mongo store, without duplicates. |
+
+What follows for clients:
+
+- A list post with the current token leaves every posted record registered under that token in all three stores, when requests are applied one at a time. The token `PUT` has no such property.
+- A 200 answer of the list post proves the registration only together with its body (an array without `null`).
+- In the Mongo store two overlapping list posts can both create the same alert: the save is `find` then `save`, the alert schema has no unique index on the key, and the route runs the items of one list concurrently.
+- A coordinator merge of two device objects writes them one after the other; a failure between them can leave partial objects, so a 503 does not prove that nothing was written.
+
+Limits: the coordinator's [registry](../../server/lib/pushCoordinator/registry.js) was run in Node with in-memory storage on six requests (last applied request wins; a `PUT` from an unknown token answers `{n:0}`). The Mongo and SQLite stores were read, not run, in this check. Which store production uses is a dated observation ([2026-10-06 verification](../evidence/tasks/push-reliability-2683/verification.md)), not re-checked on 2026-11-15.
