@@ -82,10 +82,15 @@ final class AppLaunch {
         self.environment = environment
         locale = ShellLocale(preferredLanguages: environment.preferredLanguages)
         photos = WeatherPhotoFeed(url: environment.photosURL, http: http)
-        repository = WeatherRepository(baseURL: environment.serverURL, cacheDirectory: weatherCache, http: weatherHTTP)
+        // `weather_fetch` and `weather_load` go to the usage analytics (IN-15; sent only while the user opted in).
+        repository = WeatherRepository(baseURL: environment.serverURL, cacheDirectory: weatherCache, http: weatherHTTP,
+                                       telemetry: AppLaunch.weatherTelemetry)
         // The process started: the first entry event, before any notification tap or link of this launch.
         entries.submit(.launch)
     }
+
+    /// The weather path's analytics events, through `Monetization.track` (its schema and the opt-in decide what is sent).
+    static let weatherTelemetry: WeatherTelemetry = { name, params in Monetization.shared.track(name, params) }
 
     /// The state file of the app (`AppStateStore.standard()`, the file the migration wrote).
     private static func standardStore() -> AppStateStore {
@@ -103,10 +108,11 @@ final class AppLaunch {
         self.shell = shell
         let locale = self.locale
         let session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { locale.acceptLanguage },
-                                     photos: { [weak self] in self?.loadedPhotos }, loadPhotos: { [weak self] in self?.loadPhotos() })
+                                     photos: { [weak self] in self?.loadedPhotos }, loadPhotos: { [weak self] in self?.loadPhotos() },
+                                     telemetry: AppLaunch.weatherTelemetry)
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
-        // The push list is posted again after a unit change by IN-04's registration; until it is there, nothing is sent.
+        // A unit change posts the push list again through IN-04's registration (`AppPushUnits`).
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
                                 deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
         settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: AppPushUnits()),
