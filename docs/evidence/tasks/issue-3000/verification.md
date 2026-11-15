@@ -1,24 +1,24 @@
 # SR-2 verification: isolated failures no longer end the shadow run (#3000)
 
-Revision `13e37435` on master `ca3eb0f2`. Run on 2026-11-15: macOS with Python 3.11 for the offline checks; a disposable Lima VM (Ubuntu 24.04 aarch64) for the Linux check, with server2 built in the VM from this branch. Nothing contacted AWS, a provider or production.
+Revision `5e5c0090` (after independent review 1) on master `ca3eb0f2`. Run on 2026-11-15: macOS with Python 3.11 for the offline checks; a disposable Lima VM (Ubuntu 24.04 aarch64) for the Linux check, with server2 built in the VM from this branch. Nothing contacted AWS, a provider or production.
 
 ## Behaviour
 
-- **Guard.** A missing, stale or malformed observation (including unavailable accounting, metrics or diagnostics) counts as a miss; six consecutive misses (60 s) stop with `observation_lost`; a valid sample resets the count, which is kept in the decision state (schema 4, `misses`) across guard restarts. Other stops are unchanged and immediate.
-- **Operator.** A failed, timed-out or unvalidated status poll is reported (`poll: unreachable` with a count, then `poll: recovered`) and retried; it never stops, exports or terminates. Collection ends when the host reports stopped acquisition units (`host_stopped`), at the deadline, or on interrupt. An interrupt while collecting detaches (`operator_detached`) and `run` resumes observing the recorded install; reconnecting reuses the journaled SSH target.
+- **Guard.** A missing, stale or malformed observation (including unavailable accounting, metrics, or missing or wrongly typed diagnostics) counts as a miss; six consecutive misses (60 s) stop with `observation_lost`; a valid sample resets the count, which is kept in the decision state (schema 4, `misses`) across guard restarts. Other stops are unchanged and immediate.
+- **Operator.** A failed, timed-out or unvalidated status poll is reported (`poll: unreachable` with a count, then `poll: recovered`) and retried; it never stops, exports or terminates. The journal records `collection-started` the first time the install is confirmed started. Collection ends on a validated host stop (`host_stopped`: receipt `failed`, or the three acquisition units in known states with at least one `inactive` or `failed`; missing or unknown states are unreachable), at the deadline, or on interrupt. An interrupt while collecting detaches (`operator_detached`, CLI exit 0). A resumed `run` in the collecting phase makes no provisioning or install call: it reconnects through the journaled SSH target and polls, or finishes at once with retention and cleanup when the deadline has passed.
 - **Reader.** 401, 403, 429, redirects, 5xx, timeouts and oversize bodies are recorded with the attempt and the schedule continues; the summary reports failed attempts per origin. At least three failures with no success for 30 minutes end the reader (`origin-outage`).
 
 ## Checks
 
-- Red first (retained locally): guard/operator tests 7 failures and 3 errors, reader tests 6 failures and 2 errors, simulator subset 3 failures. Green: `test_shadow_supervisor.py` 112 OK, `test_paired_read.py` 18 OK, `test_shadow_simulation.py` 9 OK.
+- Red first (retained locally): guard/operator tests 7 failures and 3 errors, reader tests 6 failures and 2 errors, simulator subset 3 failures; after review 1, 7 failures and 2 errors for the new resume, validated-stop, deadline-on-resume, typed-diagnostics and CLI-detach tests. Green: `test_shadow_supervisor.py` 118 OK, `test_paired_read.py` 18 OK, `test_shadow_simulation.py` 9 OK.
 - Guard misses survive restarts: six separate `guard.py check` invocations with an unavailable sample return 0 five times and stop at the sixth.
-- Operator: with eight hours of failing polls (errors and timeouts) collection reaches the deadline with no stop, export or terminate before it, one instance and one install; an interrupt leaves the instance running and a second `run` resumes without a new install.
-- Linux check (`server2/deploy/shadow/linux_check.py`, all five scenarios, server2 SHA-256 `635b4bd8…` built in the VM, pinned Vector 0.61.0 aarch64): provider-stop 27/27, config-change 12/12, frozen-guard 11/11, collector-broken 6/6, tampered 2/2; overall PASS. Report: [linux-check.json](linux-check.json).
+- Operator: with eight hours of failing polls (errors and timeouts) collection reaches the deadline with no stop, export or terminate before it, one instance and one install; an interrupt leaves the instance running and a second `run` resumes without a new install or provisioning call, also when every resumed poll fails; a resume after the deadline finishes with evidence export and termination; unit states that are missing, partial or transitional do not end collection.
+- Linux check (`server2/deploy/shadow/linux_check.py`, all five scenarios, server2 SHA-256 `1eb4381b…` built in a fresh VM from `5e5c0090`, pinned Vector 0.61.0 aarch64): provider-stop 27/27, config-change 12/12, frozen-guard 11/11, collector-broken 6/6, tampered 2/2; overall PASS. Report: [linux-check.json](linux-check.json). The pre-review run at `13e37435` also passed 58/58.
 - Placement gate with `server2/config/tasks/ShadowContinue3000.json` and artifact policy: PASS.
 
 ## Simulation against the SR-1 baseline
 
-20 seeds per scenario; summary [simulation.json](simulation.json) (full per-seed report SHA-256 `aa2663c6099b342e55b818f1be11fc0b325c682f8c6c3f64f07b977dcc8ee96e`, retained locally).
+20 seeds per scenario at `5e5c0090`; summary [simulation.json](simulation.json) (full per-seed report SHA-256 `aa2663c6099b342e55b818f1be11fc0b325c682f8c6c3f64f07b977dcc8ee96e`, retained locally).
 
 | Scenario | Full runs /20 (SR-1 baseline) | Median hours (SR-1) | Evidence retrievable /20 (SR-1) | First stop cause |
 | --- | --- | --- | --- | --- |
