@@ -159,4 +159,29 @@ struct PrivacyRowsTests {
         try await Task.sleep(for: .milliseconds(50))
         #expect(off.sdk.events.isEmpty)
     }
+
+    /// The settings pages over the tabs (IN-12) are screens too, as the Cordova `units` and `setting-radio` states and
+    /// the Android `screenName` (CODEX-IN15-3): opening S07, then an S08 list, and going back to the tabs.
+    @Test func settingsPagesAreScreens() async throws {
+        let records = Records()
+        records.choice = "true"
+        records.collection = true
+        let pages = PageStack()
+        let sdk = Sdk()
+        let monetization = Monetization(analytics: UsageAnalytics(sdk: sdk, records: records, trafficType: "development"),
+                                        settings: nil, openURL: { _ in })
+        monetization.pageScreen = { pages.top.map(SettingsScreens.screenName) }
+        let shell = ShellFixture.shell(languages: ["ko-KR"])
+        monetization.attach(shell)
+        pages.top = .units
+        try await Task.sleep(for: .milliseconds(50))
+        pages.top = .list("temperatureUnit")
+        try await Task.sleep(for: .milliseconds(50))
+        pages.top = nil
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(sdk.events == ["screen_view tab.forecast", "screen_view units", "screen_view setting-radio",
+                               "screen_view tab.forecast"])
+    }
+
+    @MainActor @Observable final class PageStack { var top: SettingsPage? }
 }

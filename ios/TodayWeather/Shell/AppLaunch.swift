@@ -112,7 +112,7 @@ final class AppLaunch {
                                      telemetry: AppLaunch.weatherTelemetry)
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
-        // The push list is posted again after a unit change by IN-04's registration; until it is there, nothing is sent.
+        // A unit change posts the push list again through IN-04's registration (`AppPushUnits`).
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
                                 deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
         settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: AppPushUnits()),

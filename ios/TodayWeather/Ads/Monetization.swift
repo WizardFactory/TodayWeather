@@ -54,6 +54,7 @@ final class Monetization {
     /// Connects to the app's launch: each new shell gets the analytics choice, the menu rows and the screens. The
     /// previous `onShell` hook keeps running first.
     func connect(_ launch: AppLaunch) {
+        pageScreen = { [weak launch] in launch?.settings?.top.map(SettingsScreens.screenName) }
         let previous = launch.onShell
         launch.onShell = { [weak self] shell in
             previous(shell)
@@ -93,6 +94,10 @@ final class Monetization {
         return AnyView(BannerSlot(banner: banner))
     }
 
+    /// The Cordova state name of the page over the tabs (IN-12's settings pages), nil while the tabs show; `connect`
+    /// reads it from the app's `SettingsScreens`.
+    var pageScreen: @MainActor () -> String? = { nil }
+
     /// A new shell: the stored analytics choice applies, and the privacy rows and the screens connect.
     func attach(_ shell: ShellModel) {
         self.shell = shell
@@ -120,10 +125,11 @@ final class Monetization {
 
     // MARK: Screens
 
-    /// `$stateChangeSuccess` with the Cordova state names: S01 is `start`, the tabs `tab.<name>`.
+    /// `$stateChangeSuccess` with the Cordova state names: S01 is `start`, the tabs `tab.<name>`, a settings page over
+    /// the tabs `units` or `setting-radio` (IN-12; the Android `screenName`).
     private func observeScreens(_ shell: ShellModel) {
         let screen = withObservationTracking {
-            (shell.screen, shell.selected)
+            (shell.screen, shell.selected, pageScreen())
         } onChange: { [weak self, weak shell] in
             Task { @MainActor in
                 guard let self, let shell, self.shell === shell else { return }
@@ -132,7 +138,7 @@ final class Monetization {
         }
         switch screen.0 {
         case .start: analytics.screen("start")
-        case .tab: analytics.screen("tab.\(screen.1.rawValue)")
+        case .tab: analytics.screen(screen.2 ?? "tab.\(screen.1.rawValue)")
         }
         startAdsIfShown()
     }
