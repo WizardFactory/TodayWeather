@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh shell",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -73,25 +73,19 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    },
    {
     "file": "client/www/lib/ionic/js/ionic.bundle.js",
     "apkSha256": "615f0333bd00851b4fccf74d5bec2e0aa3831bfea11ccff033b45cb413a83654",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "615f0333bd00851b4fccf74d5bec2e0aa3831bfea11ccff033b45cb413a83654",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ionic/fonts/ionicons.ttf",
     "apkSha256": "2ba7f20b1d8990e17a47fe3d88e4c766628aaa2baf1dd30fca0a0db59836f5f9",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "2ba7f20b1d8990e17a47fe3d88e4c766628aaa2baf1dd30fca0a0db59836f5f9",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    }
   ]
  },
@@ -137,7 +131,7 @@
   },
   {
    "file": "en-US/light-menu.png",
-   "sha256": "cdf6ec6126717a0f4f9a0aa9f6099ee3428217783b7f6037f673c846e4424a58"
+   "sha256": "4efe8a6b07dd1c232e663c14e321eaafc520426308453e49a16cb0652ae8497b"
   },
   {
    "file": "en-US/light-tabs.png",
@@ -153,7 +147,7 @@
   },
   {
    "file": "en-US/old-menu.png",
-   "sha256": "18a018eeb7486c8acce3da5d80ecc058d10e998cd575239098a1d90f076c9078"
+   "sha256": "99f6771582e1e69880b2e1d789a460cc561ef876d146f8def4b69840eec1dc9d"
   },
   {
    "file": "en-US/old-tabs.png",
@@ -169,19 +163,19 @@
   },
   {
    "file": "en-US/photo-menu.png",
-   "sha256": "4ff9bbb8b827a32e1222dd9995ce26d852f35932af6abfd384b1fb04e20063eb"
+   "sha256": "b98a1c4c0ddd1f91314e5f7baf00946e57188b3e834298d4136e45d37fddb4aa"
   },
   {
    "file": "en-US/photo-scroll-176-background.png",
-   "sha256": "d831abcc7ba89807acdb70abe22ce1f09fd79eeaa4fe8d02ce1413cfb661d2c7"
+   "sha256": "44a29b061980962eefe7c13e4385cd5dbb91a31523d50101b58c1f5afcdabffc"
   },
   {
    "file": "en-US/photo-scroll-176.json",
-   "sha256": "ad983fd104f3d7db45fa8cadb806abf6b69f3ce35c5f7a732273431b6ae29756"
+   "sha256": "0c2891fa95e98670236122cf41f89c2c64c311ed5941752d93d8fbf522232a07"
   },
   {
    "file": "en-US/photo-scroll-176.png",
-   "sha256": "978a8d3515bf4d9af39b3815badc7cd992140214e0f637a00786c9dfe13247af"
+   "sha256": "2d6806664893cbaf42a46b279b93745a55e6c18899c7b71ffc94d9f6cc216543"
   },
   {
    "file": "en-US/photo-scroll-88-background.png",
@@ -189,11 +183,11 @@
   },
   {
    "file": "en-US/photo-scroll-88.json",
-   "sha256": "0829e56310a91b6ca2f0779a2ae7b6cfa18aadf95e3985da9edac09e565c1255"
+   "sha256": "08384025e3dfbb72950c2126fac233586e8c609557ed43211debdd24b1993cd3"
   },
   {
    "file": "en-US/photo-scroll-88.png",
-   "sha256": "9409a212b22a2dc8f4fbad92af54861bc15e3849ac5bd4cbe343474b907ed2a7"
+   "sha256": "98eec09e8b7ce92366c7a91c7c1ea9d341d8fbb00675fa4e6b7fdd12facf0a07"
   },
   {
    "file": "en-US/photo-tabs.png",
@@ -213,7 +207,7 @@
   },
   {
    "file": "ko-KR/dark-menu.png",
-   "sha256": "a5531f50692654009659e2effac5f7ac5556f8b7407d344f83ce59c9a12a92e3"
+   "sha256": "9077bcd40a95de3653d4a0a417b5d218131081854b5dcbb7c0c4e5e9578fbf03"
   },
   {
    "file": "ko-KR/dark-tabs.png",
@@ -245,7 +239,7 @@
   },
   {
    "file": "ko-KR/old-menu.png",
-   "sha256": "eca38bce1c719d5072fbf26656ec5ae89124e8743445f960212a1057d5779d18"
+   "sha256": "479a6297fcbe02a2ef51e4d5068bcad44a6630777fd75aaaf26c23ecb0d67f04"
   },
   {
    "file": "ko-KR/old-tabs.png",
@@ -265,15 +259,15 @@
   },
   {
    "file": "ko-KR/photo-scroll-176-background.png",
-   "sha256": "27302524133f1a2038b6131d110383ad353bb64d63de238da56ec46d25f204aa"
+   "sha256": "db8091cf80a2b51676601518b4fb8d3fd59ea9f84c33598d07fdf28cf0e53b1a"
   },
   {
    "file": "ko-KR/photo-scroll-176.json",
-   "sha256": "ad983fd104f3d7db45fa8cadb806abf6b69f3ce35c5f7a732273431b6ae29756"
+   "sha256": "0c2891fa95e98670236122cf41f89c2c64c311ed5941752d93d8fbf522232a07"
   },
   {
    "file": "ko-KR/photo-scroll-176.png",
-   "sha256": "62ed442764a7cc907d1602ce1244408cf4ea2dd6ec863faf4349937eca752f87"
+   "sha256": "141b7eddcd5efd0020a2dc14e81f6226389f1a07ed0dda896f617ab5680c53df"
   },
   {
    "file": "ko-KR/photo-scroll-88-background.png",
@@ -281,11 +275,11 @@
   },
   {
    "file": "ko-KR/photo-scroll-88.json",
-   "sha256": "0829e56310a91b6ca2f0779a2ae7b6cfa18aadf95e3985da9edac09e565c1255"
+   "sha256": "08384025e3dfbb72950c2126fac233586e8c609557ed43211debdd24b1993cd3"
   },
   {
    "file": "ko-KR/photo-scroll-88.png",
-   "sha256": "a073f409b55f5fea6efccf680699c180445f8dd8e9dc9f12df711af7635bea05"
+   "sha256": "2e59d4134066e52ecf4546ae61dc64dc746f25a6691c4d42181012b5d74a05d4"
   },
   {
    "file": "ko-KR/photo-tabs.png",

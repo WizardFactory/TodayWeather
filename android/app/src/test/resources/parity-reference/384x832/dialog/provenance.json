@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK dialog",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -89,9 +89,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -113,7 +111,7 @@
  "files": [
   {
    "file": "en-US/background.png",
-   "sha256": "4372c4fda602c88a0e886cf23f542f6e1cf4af581a7daa57f7decfe206766b14"
+   "sha256": "d2233f90ef113cd462a84d1bea8b4fc16e474ccbe40ca1dab03178c1b1f033dd"
   },
   {
    "file": "en-US/exit.json",
@@ -121,7 +119,7 @@
   },
   {
    "file": "en-US/exit.png",
-   "sha256": "98a96c3e81856dd683be8f631274b1bf2e2c80d5964ca5c8c8796bc10de8c08b"
+   "sha256": "c32a1dbcda0b97cd4e295e21603652617e6980fbde334aab7e5ed019e6b8d5d0"
   },
   {
    "file": "en-US/pollen.json",
@@ -129,7 +127,7 @@
   },
   {
    "file": "en-US/pollen.png",
-   "sha256": "7a7f1c98a3756849dd6919a959e3fc82f30221736e1aa6a654afe5492a89d575"
+   "sha256": "7437157d3fafda47397200386eae4648c5d7362ac1cfe34a80b4f951dd98db71"
   },
   {
    "file": "en-US/retry.json",
@@ -137,7 +135,7 @@
   },
   {
    "file": "en-US/retry.png",
-   "sha256": "3c0377076f26b34d34aee741bc90f83c928aafa999443ba6dfa7aeed6409a728"
+   "sha256": "912f487d768f8d6bbd930633e4780b51b82e791386e3a2d1f969b38257561841"
   },
   {
    "file": "en-US/source-airkorea.json",
@@ -145,7 +143,7 @@
   },
   {
    "file": "en-US/source-airkorea.png",
-   "sha256": "bde0a1b8f278a58ab541ef4a9883246967954eb268a15f7397ac31692cbf935c"
+   "sha256": "ea6cccf0d343b8e981d6ba1d303b89c5b5726da649a6ba8c733cc9a48da0980d"
   },
   {
    "file": "en-US/source-kaq.json",
@@ -153,7 +151,7 @@
   },
   {
    "file": "en-US/source-kaq.png",
-   "sha256": "c784cea4926afc803c00eaf551bc4c1168822e2a90d5f36049df8884dd744a0b"
+   "sha256": "90196d5ef9612f8d8e1eace6b86b20e084ca6b0f49adee969ee5044225a9317d"
   },
   {
    "file": "en-US/viewport.json",
@@ -161,7 +159,7 @@
   },
   {
    "file": "ko-KR/background.png",
-   "sha256": "66fc64a730b0c6c7afc301e5fa51975909e7775ef389fff7a8faa5d7610b4c5f"
+   "sha256": "6105af679e65fdfc4a8033102d910da072b48a82ed3281e67ea1bb3373f29acd"
   },
   {
    "file": "ko-KR/exit.json",
@@ -169,7 +167,7 @@
   },
   {
    "file": "ko-KR/exit.png",
-   "sha256": "137a037bb4b2d45450221889f5809b1c5b3965ed98e71ad9529834a429709536"
+   "sha256": "5761380ab4d1c9c137dd6681a4c7f9a82378fae9a3d5cb4a9e4ab5bcd080e4ef"
   },
   {
    "file": "ko-KR/pollen.json",
@@ -177,7 +175,7 @@
   },
   {
    "file": "ko-KR/pollen.png",
-   "sha256": "3d1a86a0f76b853be073424c97f15c580f260abc0502ecf329b8fc87f1afaf4b"
+   "sha256": "eaa7ea2b887be4c096206392d6b0bcf82b57292335d8ec17f34cbf9c151e74b9"
   },
   {
    "file": "ko-KR/retry.json",
@@ -185,7 +183,7 @@
   },
   {
    "file": "ko-KR/retry.png",
-   "sha256": "1f8d7bd1bfa4852e9921a34d8ee8b3f1f21ee4e13b818a037335c2e8aa63fd5f"
+   "sha256": "e228e885243c13f31a6b3fc3d40766e1eaa9e780699d13a00d1a12cd1c0e2389"
   },
   {
    "file": "ko-KR/source-airkorea.json",
@@ -193,7 +191,7 @@
   },
   {
    "file": "ko-KR/source-airkorea.png",
-   "sha256": "b575d226d4b58afeb98547047dc2cc0e984a67912150a956a149876ad3c5d027"
+   "sha256": "af2fe3c8caa680fa801af7043deaffc6c151530aad0825d993ad6ddce1d4d28f"
   },
   {
    "file": "ko-KR/source-kaq.json",
@@ -201,7 +199,7 @@
   },
   {
    "file": "ko-KR/source-kaq.png",
-   "sha256": "276700f18ac70cde2cda5ed0703e00043b1e409b1d8161f8929ab4ab46b125fc"
+   "sha256": "c871da72eccdfb7899b532e63b3b583ccd95dc3a642c9acd2c4eec80a4989fe7"
   },
   {
    "file": "ko-KR/viewport.json",

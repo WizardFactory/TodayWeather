@@ -1,0 +1,254 @@
+[
+ {
+  "name": "seoul",
+  "geoInfo": {
+   "location": {
+    "lat": 37.5665,
+    "long": 126.978
+   }
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/weather/v000903/coord/37.5665,126.978?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "london-us-units",
+  "geoInfo": {
+   "location": {
+    "lat": 51.51,
+    "long": -0.13
+   }
+  },
+  "units": {
+   "temperatureUnit": "F",
+   "windSpeedUnit": "mph",
+   "pressureUnit": "inHg",
+   "distanceUnit": "mi",
+   "precipitationUnit": "in",
+   "airUnit": "airnow"
+  },
+  "url": "https://server.test.invalid/weather/v000903/coord/51.51,-0.13?temperatureUnit=F&windSpeedUnit=mph&pressureUnit=inHg&distanceUnit=mi&precipitationUnit=in&airUnit=airnow&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "whole-degrees",
+  "geoInfo": {
+   "location": {
+    "lat": 37,
+    "long": 127
+   }
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "km/h",
+   "pressureUnit": "mb",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "aqicn"
+  },
+  "url": "https://server.test.invalid/weather/v000903/coord/37,127?temperatureUnit=C&windSpeedUnit=km/h&pressureUnit=mb&distanceUnit=km&precipitationUnit=mm&airUnit=aqicn&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "small-fraction",
+  "geoInfo": {
+   "location": {
+    "lat": 0.0005,
+    "long": -0.25
+   }
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/weather/v000903/coord/0.0005,-0.25?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "latitude-zero-uses-address",
+  "geoInfo": {
+   "location": {
+    "lat": 0,
+    "long": 126.9
+   },
+   "address": "대한민국 서울특별시 중구 명동"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/서울특별시/중구/명동?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-four-parts",
+  "geoInfo": {
+   "address": "대한민국 서울특별시 중구 명동"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/서울특별시/중구/명동?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-without-country",
+  "geoInfo": {
+   "address": "서울특별시 중구 명동"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/서울특별시/중구/명동?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-gu",
+  "geoInfo": {
+   "address": "대한민국 경기도 성남시 분당구"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/경기도/성남시분당구?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-five-parts",
+  "geoInfo": {
+   "address": "대한민국 경기도 성남시 분당구 정자동"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/경기도/성남시분당구/정자동?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-eup",
+  "geoInfo": {
+   "address": "대한민국 세종특별자치시 조치원읍"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/세종특별자치시/세종특별자치시/조치원읍?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-region-only",
+  "geoInfo": {
+   "address": "대한민국 서울특별시"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/v000903/kma/addr/서울특별시?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-free-form",
+  "geoInfo": {
+   "address": "United Kingdom London Westminster Abbey Road"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/weather/v000903/addr/United Kingdom London Westminster Abbey Road?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "address-country-only",
+  "geoInfo": {
+   "address": "대한민국"
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "url": "https://server.test.invalid/weather/v000903/addr/대한민국?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+  "timeout": 10000
+ },
+ {
+  "name": "no-location-or-address",
+  "geoInfo": {},
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "error": "rejected"
+ },
+ {
+  "name": "empty-address",
+  "geoInfo": {
+   "address": ""
+  },
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "error": "rejected"
+ }
+]

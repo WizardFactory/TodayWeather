@@ -8,7 +8,7 @@ const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 
 function harness({enabled = true, absent = false, config, debug = false} = {}) {
     let factory;
-    const events = [], logs = [], timers = [];
+    const events = [], logs = [], timers = [], props = [];
     let nativeEnabled = enabled;
     const window = {
         console: {info: x => logs.push(x), warn: x => logs.push(x)},
@@ -18,6 +18,7 @@ function harness({enabled = true, absent = false, config, debug = false} = {}) {
             setAnalyticsConsentMode(consent, done) { done(); },
             isAnalyticsCollectionEnabled(done) { done(enabled); },
             setAnalyticsCollectionEnabled(value, done) { nativeEnabled = value; done(); },
+            setUserProperty(name, value, done) { props.push([name, value]); done(); },
             logEvent(name, params, done) {
                 // Native Firebase owns persisted collection/consent, independently of its wrapper's query API.
                 if (nativeEnabled !== false && nativeEnabled !== 0) { events.push({name, params: JSON.parse(JSON.stringify(params))}); }
@@ -33,7 +34,7 @@ function harness({enabled = true, absent = false, config, debug = false} = {}) {
     // TwStorage.init reports the stored choice final (AN-17) before platformReady here, as on a start without a hand-back.
     const m = factory(window);
     m.storageReady(true);
-    return {m, events, logs, timers, window};
+    return {m, events, logs, timers, window, props};
 }
 
 function remote(values, {offline = false, pending = false} = {}) {
@@ -446,9 +447,9 @@ test('native banner load failure reports only a bounded numeric error code', () 
 
 // emi-indo-cordova-plugin-admob 3.0.4 Android: initialize() calls back success immediately, then UMP updates
 // asynchronously and fires on.consent.status.*; the SDK starts only if a cached status allows ads at initialize.
-function consentDevice({ios = false, updateMs = 1500} = {}) {
-    let factory, now = 0, cached = false, sdkStarts = 0, initializeCalls = 0;
-    const listeners = new Map(), timers = [];
+function consentDevice({ios = false, updateMs = 1500, cachedAtStart = false, failUpdate = false, privacy} = {}) {
+    let factory, now = 0, cached = cachedAtStart, sdkStarts = 0, initializeCalls = 0;
+    const listeners = new Map(), timers = [], logged = [], statuses = [], execs = [];
     const document = {
         addEventListener(n, fn) { if (!listeners.has(n)) listeners.set(n, new Set()); listeners.get(n).add(fn); },
         removeEventListener(n, fn) { listeners.get(n)?.delete(fn); }
@@ -457,26 +458,32 @@ function consentDevice({ios = false, updateMs = 1500} = {}) {
     const later = (ms, fn) => timers.push({at: now + ms, fn});
     const emi = {
         metaData() {},
-        initialize(options, success) {
+        initialize(options, success, error) {
             initializeCalls++;
             if (cached && sdkStarts === 0) { sdkStarts++; later(100, () => fire('on.sdkInitialization', {})); }
             later(updateMs, () => {
+                if (failUpdate) { if (ios) { error('network'); } else { fire('on.consent.info.update.failed', {}); } return; }
                 cached = true; fire('on.consent.info.update'); fire('on.consent.status.not_required');
                 if (ios) { success(); }
             });
             if (!ios) { success(); }
         }
     };
-    const cordova = {plugins: {emiAdmobPlugin: emi}};
+    // twAdPrivacyState is the read-only action the iOS prepare hook adds to the plugin (#2945).
+    const cordova = {plugins: {emiAdmobPlugin: emi}, exec(ok, fail, service, action, args) {
+        execs.push([service, action, args]);
+        if (privacy) { privacy(ok, fail); } else { fail('Invalid action'); }
+    }};
     vm.runInNewContext(read('www/js/service.admobemi.js'), {
         angular: {module() { return {factory(n, fn) { factory = fn; }}; }}, document, window: {cordova}, cordova,
         ionic: {Platform: {isIOS: () => ios, isAndroid: () => !ios}},
-        console: {log() {}, info() {}, warn() {}}, setTimeout: (fn, ms) => later(ms, fn), clientConfig: {releaseAds: true}
+        console: {log: x => logged.push(x), info() {}, warn() {}}, setTimeout: (fn, ms) => later(ms, fn), clientConfig: {releaseAds: true}
     });
     let ready = 0;
-    factory({ga: {trackException() {}}}, {track() {}}).init({bannerAdUnit: 'fixture'}, () => ready++, () => {});
+    factory({ga: {trackException() {}}}, {track() {}, setAdTrackingStatus: s => statuses.push(s)})
+        .init({bannerAdUnit: 'fixture'}, () => ready++, () => {});
     const run = until => { for (;;) { timers.sort((a, b) => a.at - b.at); const t = timers[0]; if (!t || t.at > until) break; timers.shift(); now = t.at; t.fn(); } };
-    return {run, state: () => ({ready, sdkStarts, initializeCalls})};
+    return {run, state: () => ({ready, sdkStarts, initializeCalls}), logged, statuses, execs};
 }
 
 test('first launch starts the Ads SDK once UMP reports its result, on Android and iOS', () => {
@@ -490,4 +497,74 @@ test('first launch starts the Ads SDK once UMP reports its result, on Android an
             assert.ok(initializeCalls <= 3, `bounded re-initialization, got ${initializeCalls}`);
         }
     }
+});
+
+// #2945: UMP shows the GDPR message, the IDFA explainer and the system ATT prompt inside the plugin's initialize call.
+test('iOS reports ready only after the consent flow answered, also when cached consent starts the SDK first', () => {
+    const d = consentDevice({ios: true, cachedAtStart: true, updateMs: 4000});
+    d.run(3999);
+    assert.deepEqual(d.state(), {ready: 0, sdkStarts: 1, initializeCalls: 1}, 'no banner while a prompt may be open');
+    d.run(30000);
+    assert.equal(d.state().ready, 1);
+    // Android has no ATT prompt and keeps its start from cached consent.
+    const a = consentDevice({cachedAtStart: true, updateMs: 4000});
+    a.run(200);
+    assert.equal(a.state().ready, 1);
+    assert.deepEqual(a.execs, []);
+});
+
+test('a failed iOS consent update keeps ads from cached consent and requests none without it', () => {
+    const cached = consentDevice({ios: true, cachedAtStart: true, failUpdate: true});
+    cached.run(30000);
+    assert.equal(cached.state().ready, 1);
+    const fresh = consentDevice({ios: true, failUpdate: true});
+    fresh.run(30000);
+    assert.deepEqual(fresh.state(), {ready: 0, sdkStarts: 0, initializeCalls: 1});
+});
+
+test('the iOS adapter logs the ATT status and request mode once and hands the status to measurement', () => {
+    const line = d => d.logged.filter(l => /"operation":"request_policy"/.test(l)).map(l => JSON.parse(l));
+    for (const [att, personalized] of [['authorized', true], ['denied', false], ['restricted', false], ['not_determined', false]]) {
+        const d = consentDevice({ios: true, privacy: ok => ok({att_status: att, personalized})});
+        d.run(30000);
+        assert.deepEqual(line(d), [{component: 'admob', operation: 'request_policy', att_status: att, personalized, result: 'applied'}]);
+        assert.deepEqual(d.statuses, [att]);
+        assert.deepEqual(d.execs.map(e => [e[0], e[1], e[2].length]), [['emiAdmobPlugin', 'twAdPrivacyState', 0]]);
+        assert.equal(d.state().ready, 1);
+    }
+    // A build without the action, a native error or an unexpected answer never blocks ads and never logs raw values.
+    for (const privacy of [undefined, (ok, fail) => fail('private'), () => { throw new Error('private'); }, () => {},
+        ok => ok({att_status: 'idfa-1234', personalized: 'yes'}), ok => ok(null)]) {
+        const d = consentDevice({ios: true, privacy});
+        d.run(30000);
+        assert.deepEqual(line(d), [{component: 'admob', operation: 'request_policy', att_status: 'unavailable', result: 'not_reported'}]);
+        assert.deepEqual(d.statuses, ['unavailable']);
+        assert.equal(d.state().ready, 1);
+        assert.doesNotMatch(d.logged.join('\n'), /private|idfa-1234/);
+    }
+});
+
+test('the app code never raises the ATT prompt itself', () => {
+    for (const file of fs.readdirSync(path.join(root, 'www/js')).filter(f => /^(service|controller|app)\b.*\.js$/.test(f))) {
+        assert.doesNotMatch(read('www/js/' + file), /requestIDFA|requestTrackingAuthorization/, file);
+    }
+});
+
+test('ATT status reaches Analytics only as an allowlisted user property after the Analytics choice', () => {
+    const on = harness(); on.m.init();
+    on.m.setAdTrackingStatus('authorized'); on.m.setAdTrackingStatus('authorized');
+    on.m.setAdTrackingStatus('idfa-1234'); on.m.setAdTrackingStatus(3); on.m.setAdTrackingStatus(undefined);
+    assert.deepEqual(on.props, [['att_status', 'authorized']]);
+    on.m.setAdTrackingStatus('denied');
+    assert.deepEqual(on.props.at(-1), ['att_status', 'denied']);
+    const off = harness({enabled: false}); off.m.init();
+    off.m.setAdTrackingStatus('denied');
+    assert.deepEqual(off.props, [], 'nothing before the choice');
+    off.m.setCollectionEnabled(true);
+    assert.deepEqual(off.props, [['att_status', 'denied']], 'applied once the user opts in');
+    off.m.setCollectionEnabled(false); off.m.setAdTrackingStatus('authorized');
+    assert.equal(off.props.length, 1, 'nothing after withdrawal');
+    const sql = read('analytics/ios-att-monetization.sql');
+    assert.match(sql, /user_properties[\s\S]*'att_status'/);
+    assert.match(sql, /GROUP BY event_date, app_version, att_status/);
 });

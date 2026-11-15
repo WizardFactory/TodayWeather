@@ -1,0 +1,90 @@
+{
+ "generator": "android/tools/corpus/generate.mjs",
+ "sources": [
+  {
+   "path": "client/www/js/service.weatherutil.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+  },
+  {
+   "path": "client/www/js/service.weatherinfo.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca"
+  },
+  {
+   "path": "client/www/js/controller.forecastctrl.js",
+   "commit": "72536d7d802e67b08fd748c25dd2d1e9436aa2da",
+   "sha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8"
+  },
+  {
+   "path": "client/www/js/controller.tabctrl.js",
+   "commit": "2154640a3acedf3f77759e5389fe102569c4c30d",
+   "sha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd"
+  },
+  {
+   "path": "client/www/js/controller.air.js",
+   "commit": "f0a744f1964e601237f6be31a78916a3b545edf4",
+   "sha256": "760b7e32832cc12d49c063b044a48f0726aa6460b744bae7c6a809418c04af6e"
+  },
+  {
+   "path": "client/www/js/controller.nation.js",
+   "commit": "38ce90a9165306713e943512bc17e691a44d3dea",
+   "sha256": "f6e551d1aeabf8d8c0f8ac80fd8dc1acd599fccc40f911ee5e1cb2099725f1df"
+  },
+  {
+   "path": "client/www/js/controller.nation.air.js",
+   "commit": "2341ca6dc1b7fdd41c1d07f1bb1636238271666a",
+   "sha256": "3507191eebbe090dd2aa0b98bcb15295b84a44d519726cfcb1e9f1087634fae7"
+  },
+  {
+   "path": "client/www/js/controller.kma.special.js",
+   "commit": "986f085de2d6b0b7d2e0c004ace8f4ea003baf3d",
+   "sha256": "2be626aaf8f0fd8091a8e5d9f726847d45d29f924167ae448172c5212fc95583"
+  },
+  {
+   "path": "client/www/js/service.push.js",
+   "commit": "def509aa5737962eb5f408dc127f6674c7869b4a",
+   "sha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140"
+  },
+  {
+   "path": "client/www/js/controller.units.js",
+   "commit": "71b55e62f3abe5e399d8a7092e86f7c686481c58",
+   "sha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18"
+  },
+  {
+   "path": "client/www/js/controller.setting.radio.js",
+   "commit": "7d5659396ed413144cb1ae63980a0b956ccba267",
+   "sha256": "03d5abb727ffa01ed1a086c9156da5852932a2cdda2560e576a2925a22b5e54f"
+  },
+  {
+   "path": "client/www/js/controller.settingctrl.js",
+   "commit": "a262c570efab4da418c557a95d036d1177cc5c49",
+   "sha256": "3ba6c939917210e84798c7c65ca0869acb627d09b0664f7a794a53e2a90c8a29"
+  },
+  {
+   "path": "client/www/js/service.util.js",
+   "commit": "2154640a3acedf3f77759e5389fe102569c4c30d",
+   "sha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c"
+  },
+  {
+   "path": "client/www/js/controller.push.js",
+   "commit": "e6421044f53c19e851a6a4af4dd5c5ac79890bfa",
+   "sha256": "0b89a4e6e05f34d681bfb543e1ba26055e09c4e0e3d80d78586f0396be1d7662"
+  },
+  {
+   "path": "client/www/locales/ko.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"
+  },
+  {
+   "path": "client/www/locales/en.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92"
+  },
+  {
+   "path": "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js",
+   "commit": "e3003844f5a77cf99619f21c82b0c0eb4b581c8e",
+   "sha256": "a5d37bdc91f7fe403c1ada87a5aa57954f36136b5f795fdb201aa714b1257ae2"
+  }
+ ]
+}

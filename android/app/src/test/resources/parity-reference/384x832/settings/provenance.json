@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK settings",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -137,9 +137,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -166,15 +164,15 @@
   },
   {
    "file": "en-US/about.png",
-   "sha256": "2b982e7a545f422537ec9510265cf25a019568fc72a8c4b5d7de9e31ab383e14"
+   "sha256": "74274b1fe26120ab3a6137aa01ccb210d3f71a10e7fcb35063c82b5907b2baac"
   },
   {
    "file": "en-US/daily-dark/daily-0.png",
-   "sha256": "5dc613d8deaf562e0914936a9423963c1242766de361bce2628a1913941326d0"
+   "sha256": "79d138e4218f7fc1e42c9d945ab6af7d1bf257eda694c32f4096cc5f02a9aa50"
   },
   {
    "file": "en-US/daily-dark/daily-1.png",
-   "sha256": "3a5d09c363d252cbb386f3cecc9a06d251cf134701f9dfc9a4131505fa3ea1a8"
+   "sha256": "d0873d1d73582971c729c581c7f02002c0cf4c5055fe455adf4eb474e115a9b4"
   },
   {
    "file": "en-US/daily-dark/daily-2.png",
@@ -182,7 +180,7 @@
   },
   {
    "file": "en-US/daily-dark/daily-3.png",
-   "sha256": "681fbd8ed0ead3779f7fbbf5d34bdf3b9dccdfed4f9342b30cbbac82812bd26b"
+   "sha256": "2bcb1efd1add8acc4ddaf4a89ba697f1cf8b79e7ef001528ffc98fdf00a9c95d"
   },
   {
    "file": "en-US/daily-dark/daily.json",
@@ -190,11 +188,11 @@
   },
   {
    "file": "en-US/daily-old/daily-0.png",
-   "sha256": "53c7de42aa0cb9bb56711e15cdf52a684e40b38a1ab6a94c175733ff10f2b63e"
+   "sha256": "1c973a91682496cd03a2ae47bd9c555f5f5e9e8e7f2d058e5edaaa079e4129a3"
   },
   {
    "file": "en-US/daily-old/daily-1.png",
-   "sha256": "143228218f0501ee328cc68034b6744ac130cc83be6c056a29143321fc72300c"
+   "sha256": "790ac93449747068803b2b6fc9d41a606c6b6b524d204fd7220e37fb5a1a59fe"
   },
   {
    "file": "en-US/daily-old/daily-2.png",
@@ -202,7 +200,7 @@
   },
   {
    "file": "en-US/daily-old/daily-3.png",
-   "sha256": "eab869c57232261d7e66f0cf872132c2fb3c5881fb7b73ef9c39d4f68162755d"
+   "sha256": "97def5a0e972ba4cc170a658d595cfb25114319336b543091e1769d5044e4d81"
   },
   {
    "file": "en-US/daily-old/daily.json",
@@ -210,11 +208,11 @@
   },
   {
    "file": "en-US/daily-photo/daily-0.png",
-   "sha256": "8274fbf583862446a044b3339e68bb92804c371905f1c7ecf5ec5dd286decf30"
+   "sha256": "dd7b854a69cdd6c649c271fdcdb240c4c865133620a60604daf4a7128390b3bd"
   },
   {
    "file": "en-US/daily-photo/daily-1.png",
-   "sha256": "38bd759bbe0c07a12462816d769c6bb264afc835d7f13ffa87558778ed63c728"
+   "sha256": "087a066c57bc1330870c2e3c3c0d10a703f5aec158e48f8277e137a4a2e66d60"
   },
   {
    "file": "en-US/daily-photo/daily-2.png",
@@ -222,7 +220,7 @@
   },
   {
    "file": "en-US/daily-photo/daily-3.png",
-   "sha256": "c3f3a315564333a53484bccf743f1e1057077327ce1ec734a9fb436cf69496d4"
+   "sha256": "309cb27fe5ccd351ac3dec1275e91ac6062081b2f4c06014ed5b2092a28c34f0"
   },
   {
    "file": "en-US/daily-photo/daily.json",
@@ -230,11 +228,11 @@
   },
   {
    "file": "en-US/hourly-dark/hourly-0.png",
-   "sha256": "5dc613d8deaf562e0914936a9423963c1242766de361bce2628a1913941326d0"
+   "sha256": "79d138e4218f7fc1e42c9d945ab6af7d1bf257eda694c32f4096cc5f02a9aa50"
   },
   {
    "file": "en-US/hourly-dark/hourly-1.png",
-   "sha256": "32291bdfadef0c6ffa5ed92356e73dc7d14cfbcf92d906b28549157c9d8d65bb"
+   "sha256": "875f249f78d25d02b56bfc3429e249ece353e68e61ff0c6e2a1fb06d749c0ed9"
   },
   {
    "file": "en-US/hourly-dark/hourly-2.png",
@@ -242,7 +240,7 @@
   },
   {
    "file": "en-US/hourly-dark/hourly-3.png",
-   "sha256": "650a78e2fabb8e3b1451ccdecfa7edec9f9964a949f1ff8e632f9f9657963519"
+   "sha256": "cbbe6891634034294b8e696fe0ca196973f963b536207ed4615445c67ba25c67"
   },
   {
    "file": "en-US/hourly-dark/hourly-4.png",
@@ -254,11 +252,11 @@
   },
   {
    "file": "en-US/hourly-old/hourly-0.png",
-   "sha256": "5b0fa17f9584b83bbefc3a3ca9af89b421e099bb9c1a6c76c32beafa4cd8a684"
+   "sha256": "1b6c8ab45e1a82ab281996ac6301b8ee693f9cd4487e2c2c32e14dd5350e7fe5"
   },
   {
    "file": "en-US/hourly-old/hourly-1.png",
-   "sha256": "e89ef972ce449e383c8c0715bdbf757fccdb986f582b0a22335e2908c43d7803"
+   "sha256": "c63f483b92935dfb78cfb0b86640f219ec827b4539fc74c1c9c61313afe3b512"
   },
   {
    "file": "en-US/hourly-old/hourly-2.png",
@@ -266,7 +264,7 @@
   },
   {
    "file": "en-US/hourly-old/hourly-3.png",
-   "sha256": "21231ae53b0a7b1949f495f9fadead29dfa2540363b869b665b8cef46353fdde"
+   "sha256": "c35e8f4c1a67c713c87f6d0469267a85eedc490ab4b0187df258c03dc39e5801"
   },
   {
    "file": "en-US/hourly-old/hourly-4.png",
@@ -278,11 +276,11 @@
   },
   {
    "file": "en-US/hourly-photo/hourly-0.png",
-   "sha256": "8274fbf583862446a044b3339e68bb92804c371905f1c7ecf5ec5dd286decf30"
+   "sha256": "dd7b854a69cdd6c649c271fdcdb240c4c865133620a60604daf4a7128390b3bd"
   },
   {
    "file": "en-US/hourly-photo/hourly-1.png",
-   "sha256": "93cea2d58066ee57501bc3e254b5e1d56a9967c0a376487e1047a71a6cd7c306"
+   "sha256": "e564838f2b20cb9902bda0877cf216792da6fef1ac52a9375cd64c6b61934380"
   },
   {
    "file": "en-US/hourly-photo/hourly-2.png",
@@ -290,7 +288,7 @@
   },
   {
    "file": "en-US/hourly-photo/hourly-3.png",
-   "sha256": "ab8c347d1ec4a8bcf0fe761f44b2cd37ab8fc32416dbb405e2104c9c793bee87"
+   "sha256": "08c8fbacb3287f283e307542d4bf66a439f101faa2a6d1ab5d2ff051cce63624"
   },
   {
    "file": "en-US/hourly-photo/hourly-4.png",
@@ -354,15 +352,15 @@
   },
   {
    "file": "ko-KR/about.png",
-   "sha256": "fda31f600125d0a87c1b47790cda3421b4101a420291e53904db52d79d355381"
+   "sha256": "a2bc38d434113477d78b27a302e7c4b32d21ac62c48b90c5980f25fa08927bff"
   },
   {
    "file": "ko-KR/daily-dark/daily-0.png",
-   "sha256": "5dc613d8deaf562e0914936a9423963c1242766de361bce2628a1913941326d0"
+   "sha256": "79d138e4218f7fc1e42c9d945ab6af7d1bf257eda694c32f4096cc5f02a9aa50"
   },
   {
    "file": "ko-KR/daily-dark/daily-1.png",
-   "sha256": "686bc227691d8a9403a8cbb782a1daa5084cdedf93faf8edbdb8175faa376ac1"
+   "sha256": "aee9a297e852bfa3566d0aa084bea7b5663c80eb32dc24bb1198df6957435f5a"
   },
   {
    "file": "ko-KR/daily-dark/daily-2.png",
@@ -370,7 +368,7 @@
   },
   {
    "file": "ko-KR/daily-dark/daily-3.png",
-   "sha256": "c5ea79fedf3af30e4a6bfb78e1835ae6d4284c20ccd02c2c7cd4c5a0089ed88b"
+   "sha256": "067b1084615b2febc19437687034381cd9f90ebf6bfbd6e46f5dcd319b593542"
   },
   {
    "file": "ko-KR/daily-dark/daily.json",
@@ -378,11 +376,11 @@
   },
   {
    "file": "ko-KR/daily-old/daily-0.png",
-   "sha256": "53c7de42aa0cb9bb56711e15cdf52a684e40b38a1ab6a94c175733ff10f2b63e"
+   "sha256": "1c973a91682496cd03a2ae47bd9c555f5f5e9e8e7f2d058e5edaaa079e4129a3"
   },
   {
    "file": "ko-KR/daily-old/daily-1.png",
-   "sha256": "ae85a9f893d1589099a859966f9065f3453efb84b95ad1cde1958f303172012c"
+   "sha256": "57b6d70d6a8b509dad171bd39b1933ede963df5590ced56e688612a13267bea6"
   },
   {
    "file": "ko-KR/daily-old/daily-2.png",
@@ -390,7 +388,7 @@
   },
   {
    "file": "ko-KR/daily-old/daily-3.png",
-   "sha256": "796c1d02c409e584fecfbe787a957302d9fa08d57568cebf9ed1cabae3bc666f"
+   "sha256": "6d323d922a43bbca8155d9199ce64fbfe6fb4b101da7c303c54e243ea591d2ac"
   },
   {
    "file": "ko-KR/daily-old/daily.json",
@@ -398,11 +396,11 @@
   },
   {
    "file": "ko-KR/daily-photo/daily-0.png",
-   "sha256": "8274fbf583862446a044b3339e68bb92804c371905f1c7ecf5ec5dd286decf30"
+   "sha256": "dd7b854a69cdd6c649c271fdcdb240c4c865133620a60604daf4a7128390b3bd"
   },
   {
    "file": "ko-KR/daily-photo/daily-1.png",
-   "sha256": "f8c0927b1b60e843eeae2f836e008808e976329ef916eeef17ec9b06cb2d75b4"
+   "sha256": "8d10e1c1749828cc362470a0c72a82d10425f4fa396cdb705d92a9d5c637e955"
   },
   {
    "file": "ko-KR/daily-photo/daily-2.png",
@@ -410,7 +408,7 @@
   },
   {
    "file": "ko-KR/daily-photo/daily-3.png",
-   "sha256": "863a2ea235157ea9a1e1bddf7d44e8a6265c0071c8ab74cded34a635d4045681"
+   "sha256": "02606e7aa7c09cbbdc7f89938330dd444e700c6adc9d5304ecb2978eac4252f0"
   },
   {
    "file": "ko-KR/daily-photo/daily.json",
@@ -418,11 +416,11 @@
   },
   {
    "file": "ko-KR/hourly-dark/hourly-0.png",
-   "sha256": "5dc613d8deaf562e0914936a9423963c1242766de361bce2628a1913941326d0"
+   "sha256": "79d138e4218f7fc1e42c9d945ab6af7d1bf257eda694c32f4096cc5f02a9aa50"
   },
   {
    "file": "ko-KR/hourly-dark/hourly-1.png",
-   "sha256": "e7128e61402cc38fba05a4d86ba173e0d0b484fe3831e20a29a7a2ba9f5e0a12"
+   "sha256": "8901eab53a0082b2844731a61141ed973830d20def3c4f471dd8610a2a5482a2"
   },
   {
    "file": "ko-KR/hourly-dark/hourly-2.png",
@@ -430,7 +428,7 @@
   },
   {
    "file": "ko-KR/hourly-dark/hourly-3.png",
-   "sha256": "f4b68db69374f026dce2f690b6d623313612c6b83750b1d23168e0ece4022ae5"
+   "sha256": "9f4880e9714e6fa43d6a755305ad30ec586d3e471caa0291b9c45360a0decdd0"
   },
   {
    "file": "ko-KR/hourly-dark/hourly-4.png",
@@ -442,11 +440,11 @@
   },
   {
    "file": "ko-KR/hourly-old/hourly-0.png",
-   "sha256": "5b0fa17f9584b83bbefc3a3ca9af89b421e099bb9c1a6c76c32beafa4cd8a684"
+   "sha256": "1b6c8ab45e1a82ab281996ac6301b8ee693f9cd4487e2c2c32e14dd5350e7fe5"
   },
   {
    "file": "ko-KR/hourly-old/hourly-1.png",
-   "sha256": "5085e0670fa2d91f5218476d63a94ec2e27d3ce9f3781ad1d7c1643bf6fb25a5"
+   "sha256": "f87575948ece45c6c97c0d4bfa0ef38fe566520dc4be78f1245c3e39c888dbe0"
   },
   {
    "file": "ko-KR/hourly-old/hourly-2.png",
@@ -454,7 +452,7 @@
   },
   {
    "file": "ko-KR/hourly-old/hourly-3.png",
-   "sha256": "92f2ad4657d606b54e808381ee940476936cf1e6b83fa9ab2a092bc7a77c74fb"
+   "sha256": "8345ec25a8526e38c99b8fef5b3b3377f1b1f190f05e9cc0a4c214f7ec8b623f"
   },
   {
    "file": "ko-KR/hourly-old/hourly-4.png",
@@ -466,11 +464,11 @@
   },
   {
    "file": "ko-KR/hourly-photo/hourly-0.png",
-   "sha256": "8274fbf583862446a044b3339e68bb92804c371905f1c7ecf5ec5dd286decf30"
+   "sha256": "dd7b854a69cdd6c649c271fdcdb240c4c865133620a60604daf4a7128390b3bd"
   },
   {
    "file": "ko-KR/hourly-photo/hourly-1.png",
-   "sha256": "5638bbc024538a28dd6db007b3e25b98dcec32f7f6c1841cc25dfe0462706b7a"
+   "sha256": "2d3722481490b9a8f7d574b7d8c6b03cab73cf5ea73e67ca982ebeb56b7f7432"
   },
   {
    "file": "ko-KR/hourly-photo/hourly-2.png",
@@ -478,7 +476,7 @@
   },
   {
    "file": "ko-KR/hourly-photo/hourly-3.png",
-   "sha256": "4041f0ce0e12ea51e2fcbb10fb31c5489216a96c109117a61f7184932a938612"
+   "sha256": "7c9c74edd37ec76e9c0b455821137cd58fcbd433af54dcf59d1a83c49b62bc6b"
   },
   {
    "file": "ko-KR/hourly-photo/hourly-4.png",

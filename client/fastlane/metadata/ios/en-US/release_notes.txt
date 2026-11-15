@@ -1,1 +1,1 @@
-Fixed the app freezing when location permission is denied. Improved stability on first launch.
+You can now choose whether to allow tracking for personalized ads. All features work the same if you decline.

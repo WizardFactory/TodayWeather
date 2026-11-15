@@ -154,6 +154,34 @@ See the [current privacy/data-flow worksheet](store-privacy-review.md) and the T
 
 Keep provider review and source/caution notices current; do not represent an unresolved item as verified. Provider presence in the code is not evidence of production activation or contractual permission. Store credits do not replace mandatory in-app notices. The client About menu now exposes the existing translated KMA/AirKorea notice in every locale. Provider-specific fallback air attribution, links/branding and equivalent Visual Crossing cautions in the app still need implementation after the provider set is confirmed. Firebase/AdMob data collection, UMP, ATT, Apple privacy declarations, age rating and Play Data safety require a separate account/binary review.
 
+## iOS App Tracking Transparency release steps (#2945)
+
+The build asks for ATT only when the AdMob IDFA explainer message is published. None of these steps is performed by a
+build or a merge; each needs AK's approval. Record each result in #2945.
+
+State on 2026-11-15: steps 1 to 4 are done for iOS 1.1.2, which is live since 2026-11-14, except the EEA checks of
+step 3. Step 5, the report, waits for adoption. The device record has the explainer and prompt order, Allow, a fresh install with a
+direct "Ask App Not to Track" answer, the relaunch without a second prompt and both request modes; see the
+[device evidence](../evidence/tasks/issue-2945/README.md). The message is published and live.
+
+1. In AdMob Privacy & messaging, create the IDFA explainer message for the iOS app and publish it. Keep the existing
+   GDPR message. Unpublishing the message is the switch that stops new ATT prompts without a release.
+2. Right after publishing, open a shipped build that has no purpose string (1.1.1 or earlier) on a device and confirm
+   that it starts, shows no ATT prompt and still loads ads. Unpublish the message if it misbehaves.
+3. On a device with a fresh install of the new build, record: the explainer and the system prompt in that order, no
+   second prompt after a relaunch, and the device console line `request_policy` for "Allow" (`authorized`,
+   `personalized: true`) and for "Ask App Not to Track" (`denied`, `personalized: false`). With the EEA debug
+   geography, record that the GDPR message comes first and what follows a refused GDPR message.
+   Keep the captures in the [iOS manual](../user/cordova-ios/README.md) and selected evidence under
+   `docs/evidence/tasks/issue-2945/`. Until the message is published the build shows no new screen.
+4. Submit the App Store privacy answers from the [privacy review](store-privacy-review.md#ios-app-tracking-transparency-2945)
+   and upload the updated policy pages with the procedure above.
+5. Report match rate, show rate and eCPM before and after the release as described in
+   [monetization](monetization.md#ios-app-tracking-transparency-measurement-2945).
+
+`npx cordova prepare ios` stops when a purpose string is missing or the AdMob plugin source no longer matches the
+reviewed anchors. After a string change, run prepare again; the hook refreshes the copies in `platforms/ios`.
+
 ## Developer website and app-ads.txt
 
 AK selected `https://todayweather.ai` on 2026-11-07 (#2871). It is the developer

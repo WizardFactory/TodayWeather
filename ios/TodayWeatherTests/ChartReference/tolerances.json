@@ -1,0 +1,107 @@
+{
+ "metric": {
+  "strong": "share of pixels whose largest RGB channel difference exceeds 64 after a 3x3 box blur of both images (ImageDiff in ChartScreenshotTests.swift, the AN-05 metric)",
+  "mean": "mean largest RGB channel difference without blur, 0-255",
+  "heightDifference": "absolute native minus Cordova wrapper height in pixels"
+ },
+ "rule": "a comparison passes when the widths are equal, strong <= recorded + margin.strong, mean <= recorded + margin.mean and the height difference <= recorded heightDifference + margin.heightDifference",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "recordedOn": "2026-11-13, IN-05: ImageRenderer at the capture's scale (2 at 375x667, 3 otherwise) on the iOS 26.5 simulator runtime (tw_cap_16), Xcode 27.2; references: Cordova 1.1.1 WKWebView captures on tw_cap_se3, tw_cap_16 and tw_cap_16promax (ios/provenance/chart-captures.json); measured values rounded up",
+ "why": "The geometry is the same scene (ChartSceneTests checks every element against the Cordova iOS scenes within 0.02 pt) and the wrapper heights match to the pixel. What remains is rasterization: WebKit places SVG and HTML glyphs on its own subpixel grid, while the native chart draws the same system font with CoreText at the exact scene coordinates, so glyph edges move by up to about one device pixel; image downsampling filters differ slightly. Snapping the native baselines to device pixels was tried and made 375x667 worse (strong 0.0018 to 0.0029), so it was not kept. The margins are the Android ones; the mutation checks recorded in plans/ios-native.md (IN-05) exceed them.",
+ "cases": {
+  "375x667-hourly-opening": {
+   "strong": 0.00183,
+   "mean": 1.464,
+   "heightDifference": 0
+  },
+  "375x667-hourly-start": {
+   "strong": 0.00099,
+   "mean": 1.292,
+   "heightDifference": 0
+  },
+  "375x667-hourly-end": {
+   "strong": 0.002,
+   "mean": 1.435,
+   "heightDifference": 0
+  },
+  "375x667-daily-opening": {
+   "strong": 0.00171,
+   "mean": 1.336,
+   "heightDifference": 0
+  },
+  "375x667-daily-start": {
+   "strong": 0.00187,
+   "mean": 1.336,
+   "heightDifference": 0
+  },
+  "375x667-daily-end": {
+   "strong": 0.00179,
+   "mean": 1.257,
+   "heightDifference": 0
+  },
+  "393x852-hourly-opening": {
+   "strong": 0.00595,
+   "mean": 1.697,
+   "heightDifference": 0
+  },
+  "393x852-hourly-start": {
+   "strong": 0.00552,
+   "mean": 1.617,
+   "heightDifference": 0
+  },
+  "393x852-hourly-end": {
+   "strong": 0.00691,
+   "mean": 1.8,
+   "heightDifference": 0
+  },
+  "393x852-daily-opening": {
+   "strong": 0.00452,
+   "mean": 1.321,
+   "heightDifference": 0
+  },
+  "393x852-daily-start": {
+   "strong": 0.00332,
+   "mean": 1.139,
+   "heightDifference": 0
+  },
+  "393x852-daily-end": {
+   "strong": 0.00333,
+   "mean": 1.069,
+   "heightDifference": 0
+  },
+  "440x956-hourly-opening": {
+   "strong": 0.00661,
+   "mean": 2.293,
+   "heightDifference": 0
+  },
+  "440x956-hourly-start": {
+   "strong": 0.00591,
+   "mean": 2.132,
+   "heightDifference": 0
+  },
+  "440x956-hourly-end": {
+   "strong": 0.00608,
+   "mean": 2.196,
+   "heightDifference": 0
+  },
+  "440x956-daily-opening": {
+   "strong": 0.00533,
+   "mean": 1.732,
+   "heightDifference": 0
+  },
+  "440x956-daily-start": {
+   "strong": 0.00536,
+   "mean": 1.655,
+   "heightDifference": 0
+  },
+  "440x956-daily-end": {
+   "strong": 0.00405,
+   "mean": 1.442,
+   "heightDifference": 0
+  }
+ }
+}

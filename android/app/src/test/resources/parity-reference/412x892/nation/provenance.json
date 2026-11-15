@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK nation",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -129,9 +129,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    },
    {
     "file": "client/www/img/kr.png",
@@ -166,7 +164,7 @@
   },
   {
    "file": "en-US/nation-air-pm2.5-dark.png",
-   "sha256": "267ef709882c4089673a598abe6806c9f1e4c1cb8345c7e99f0c333d3ce01597"
+   "sha256": "b38d41d06a14d7ab7c90437d3ae8b97194adf70da754dd6703dc3844e6f5d452"
   },
   {
    "file": "en-US/nation-air-pm2.5-old.json",
@@ -174,7 +172,7 @@
   },
   {
    "file": "en-US/nation-air-pm2.5-old.png",
-   "sha256": "f9925f44414ddd9de543d02156d997fc02dcb7cb0248895f5991c18ad0e8eca5"
+   "sha256": "7648a6e16f4500d52a84e3519c6ccf9e6331e39f50fb87a407d1cca1831f64ea"
   },
   {
    "file": "en-US/nation-air-pm2.5.json",
@@ -182,7 +180,7 @@
   },
   {
    "file": "en-US/nation-air-pm2.5.png",
-   "sha256": "4be97a24a41e0a34fb6aee73798bd331828b31f3a20d25fbe094f3f46f27e58b"
+   "sha256": "39baf621c890b257bf34e4ef4c243b68aa65dfe46e2c2d2234568d33bbf83765"
   },
   {
    "file": "en-US/nation-weather.json",
@@ -190,7 +188,7 @@
   },
   {
    "file": "en-US/nation-weather.png",
-   "sha256": "78fe4a2b816aa07a858a209d35abc26b259c809a8b06f7b9f02a85c213c5cb23"
+   "sha256": "c6839e4e975144a023c6d3d914cd1afbc2fc82a8e1c31bc55e3ba7f2304377fc"
   },
   {
    "file": "en-US/requests.json",
@@ -238,7 +236,7 @@
   },
   {
    "file": "ko-KR/nation-air-pm2.5-dark.png",
-   "sha256": "b9e903d5008479ae73d7a72410f05673d0d7f7eda3980bf833ecb0378cf7cd9b"
+   "sha256": "ca5a4421c9ceed553d7921c1e9180c74e766bbfa7e03c61ad75447c1bd87034b"
   },
   {
    "file": "ko-KR/nation-air-pm2.5-old.json",
@@ -246,7 +244,7 @@
   },
   {
    "file": "ko-KR/nation-air-pm2.5-old.png",
-   "sha256": "a0eb7525fbec3f2e5b03552b5816570f402f1c0c3a42471b4fee2d60bbe5ee55"
+   "sha256": "695d4cb7206fa68425a16ec683f1e104229f17415255c089327943552f2e4025"
   },
   {
    "file": "ko-KR/nation-air-pm2.5.json",
@@ -254,7 +252,7 @@
   },
   {
    "file": "ko-KR/nation-air-pm2.5.png",
-   "sha256": "aed4294bbec89811ca13181fa4627da57a2533b84de8bb696766edb813ac3ad6"
+   "sha256": "798fcde4046c57ccfc2026a4706479e40505bd323f1d3adf4849a4d5a6adb0f1"
   },
   {
    "file": "ko-KR/nation-weather.json",
@@ -262,7 +260,7 @@
   },
   {
    "file": "ko-KR/nation-weather.png",
-   "sha256": "85dd6e23c6688bdb21fd1e8928cc090542925feeb1a30a8c7cdafc634be2de38"
+   "sha256": "9ce8436e3ef75a83aee475a9382161f8c1d1673218647b01ded36a5a859c2625"
   },
   {
    "file": "ko-KR/requests.json",
