@@ -11,9 +11,9 @@ Selected evidence for [#2983](https://github.com/WizardFactory/TodayWeather/issu
 
 ## Checks on the candidate
 
-Candidate code `b3bd5388` (later commits are documentation and evidence only). The VM report names `55690214`, a since-squashed documentation commit on top of the same code.
+Candidate `7c413365` after review round 1 (later commits are evidence only). Round 0 ran the same checks on `55690214` (52 checks, PASS).
 
-- `server2/deploy/shadow/linux_check.py` on a disposable Lima VM: **PASS, 52 checks** ([`linux-check.json`](linux-check.json), SHA-256 `b84f8264a8fc0834d72a40608eb74e4843b750ac9bb657fe3c3e4fcf06291afb`).
+- `server2/deploy/shadow/linux_check.py` on a disposable Lima VM: **PASS, 58 checks** ([`linux-check.json`](linux-check.json), SHA-256 `c59605790ec51d0e20a7764d1b8e996a1d471a48c58d9f3ceafa0f140db9d25d`).
   - VM: Ubuntu 24.04, systemd 255, aarch64.
   - Server binary built in the VM from this branch's unchanged Rust sources (SHA-256 `2037140e…`).
   - Pinned Vector 0.61.0 aarch64 archive (`12d7e91d…`).
@@ -23,13 +23,14 @@ Candidate code `b3bd5388` (later commits are documentation and evidence only). T
 
 | Scenario | ACs | Observed |
 | --- | --- | --- |
-| provider-stop | LP6-AC1, AC2, AC3, AC4 | **Unit properties:** the candidate, guard and reader had `Restart=no`, `TimeoutStopSec=10s` and `LogNamespace=server2`, and none of them requires, wants or binds the collector. The guard had `WatchdogSec=30s` with SIGKILL. The deadline timers were at epoch + 168 h and + 170 h, and the 168 h stop leaves the collector running. The collector was active before the reader started.<br>**Stop:** the reader's request led the candidate to Kakao geocoding, which answered 401, and the guard stopped with `provider_auth_or_quota` (first rejection: `auth`, `geocode`, `provider_http`, 401).<br>**Retention:** the stop (reader, candidate, guard, collector in one job) drained in 50.7 s, and all four units ended inactive or failed.<br>**At the destination (`logs/server2/` of the run's state bucket):** 4 objects with `server` 6, `guard` 1, `reader` 1 and `collector` 1 records. They include the candidate's `warn` failing record (`cause: auth`, `status: 401`), the guard's decision with `stop: provider_auth_or_quota` and its latched diagnostics, and the reader's summary.<br>**Privacy and access:** no synthetic key, peer body marker, URL or loopback origin appeared. The collector only used `PutObject` on the state bucket. |
-| config-change | LP6-AC3 | Providers answered unusable 200 bodies, and the log destination answered 503 from the start. Installation still started everything. Appending a line to the candidate's `.env` stopped acquisition in 5.1 s with `binding_config_sha256`. After the destination recovered, the retention stop drained in 50.7 s, and the guard's stop record, the server, reader and collector records all arrived. |
+| provider-stop | LP6-AC1, AC2, AC3, AC4 | **Unit properties:** the candidate, guard and reader had `Restart=no`, `TimeoutStopSec=10s` and `LogNamespace=server2`, and none of them requires, wants, binds or is ordered after the collector. The guard had `WatchdogSec=30s` with SIGKILL. The deadline timers were at epoch + 168 h and + 170 h, and the 168 h stop leaves the collector running. The collector, queued without waiting, was running.<br>**Stop:** the reader's request led the candidate to Kakao geocoding, which answered 401, and the guard stopped with `provider_auth_or_quota` (first rejection: `auth`, `geocode`, `provider_http`, 401).<br>**Retention:** the stop (reader, candidate and guard, then the collector) drained in 50.6 s, and all four units ended inactive or failed.<br>**At the destination (`logs/server2/` of the run's state bucket):** 4 objects with `server` 6, `guard` 1, `reader` 1 and `collector` 1 records. They include the candidate's `warn` failing record (`cause: auth`, `status: 401`), the guard's decision with `stop: provider_auth_or_quota` and its latched diagnostics, and the reader's summary.<br>**Privacy and access:** no synthetic key, peer body marker, URL or loopback origin appeared. The collector only used `PutObject` on the state bucket. |
+| config-change | LP6-AC3 | Providers answered unusable 200 bodies, and the log destination answered 503 from the start. Installation still started everything. Appending a line to the candidate's `.env` stopped acquisition in 5.6 s with `binding_config_sha256`. After the destination recovered, the retention stop drained in 50.2 s, and the guard's stop record, the server, reader and collector records all arrived. |
 | frozen-guard | LP6-AC3 | With the collector stopped while the candidate and guard ran, a SIGSTOP of the guard led to its watchdog kill (`Result=watchdog`), and acquisition was inactive after 30.2 s. The restarted collector shipped the server records it had missed. |
+| collector-broken | LP6-AC3 | With the collector unable to start (its state directory path blocked; it ended `inactive` with `Result=exec-condition`), installation reported `started` and the candidate, guard and reader were active, with no stop decision. The retention stop completed. |
 | tampered | LP6-AC5 | A bundle whose `render.py` changed after preparation was refused by `install-host` with `{"error":"invalid or incomplete evidence"}`. No tree or unit was installed and nothing was started. |
 
 - **Offline suites:**
-  - `server2/tests/integration/test_shadow_supervisor.py`: 104 tests OK. They cover generated units, the collector unit map, the settings against `render.py`'s rules, journal settings equal to LP-1, install order and files, refusal of an unpinned or changed archive before the grant, wrong architecture, existing journal settings, an inactive collector, the remote stop command, a running collector blocking the export, the priced log PUTs, and the guard's record order.
+  - `server2/tests/integration/test_shadow_supervisor.py`: 106 tests OK. They cover generated units, the collector unit map, the settings against `render.py`'s rules, journal settings equal to LP-1, install order and files, refusal of an unpinned or changed archive before the grant, wrong architecture, existing journal settings, a failing collector start that does not block acquisition, the export of log objects (state bucket first, without raw metadata), the remote stop command, a running collector blocking the export, the priced log PUTs, and the guard's record order.
   - `server2/deploy/logging/test_logging.py`: 97 tests OK (2 need GNU `sha256sum` and are skipped on macOS), including the `--unit` map and its rejection.
   - `server2/tests/integration/test_paired_read.py`: 17 OK, including the one-line summary.
 - **Gates and diagrams:**
@@ -38,7 +39,11 @@ Candidate code `b3bd5388` (later commits are documentation and evidence only). T
 
 ## Independent review
 
-Recorded in the PR.
+| Reviewer | Head | Verdict | Findings and disposition |
+| --- | --- | --- | --- |
+| Codex `gpt-6.1-sol`, high (required) | `a7a83049` | CHANGES_REQUIRED | CX-LP6-001 (Required): installation waited for and required an active collector, and the acquisition units were ordered after it, so a failing or slow collector blocked acquisition (LP6-AC3) → no relation between the acquisition units and the collector; installation queues its start without waiting or checking (a rejected start is noted in the receipt); the retention stop runs two commands, acquisition and then the collector. CX-LP6-002 (Required): periodic status records closed an S3 object every 50 s, about 10,000 over 168 h, which exhausted the operator's 9,000 ordinary export reads → no periodic status unit on this host; the export reads the state bucket first; documented object bound. |
+| Gemini 4 Argon high (additional) | `a7a83049` | CHANGES_REQUIRED | GEM-LP6-001 (Required): same as CX-LP6-002; also suggested pricing the export reads → resolved as above; the operator's export reads are already inside the priced 100,000 reads. |
+| Grok (additional) | — | not run | Unavailable (quota), as in LP-3 and LP-4. |
 
 ## Limitations
 
