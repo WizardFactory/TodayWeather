@@ -416,6 +416,26 @@ class GuardTests(unittest.TestCase):
         s=host_sample();del s['metrics']['s3_reads']
         self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
 
+    def test_confirmed_stops_are_not_masked_by_a_partial_observation(self):
+        # CX-SR2-009: binding, listener, network and disk are decided from the sample's own
+        # fields before invalid accounting, metrics or diagnostics count as a miss.
+        m=host_manifest()
+        def broken(kind,s):
+            if kind=='accounting':s['accounting_valid']=False
+            elif kind=='metrics':del s['metrics']['s3_reads']
+            else:s['diagnostics']={'message':'free text'}
+        stops=[('pid',124,'binding_pid'),('listeners',[],'listener_binding'),
+               ('tx_bytes',500+4*guard.GiB,'network_ceiling'),('tx_bytes',499,'network_counter_reset'),
+               ('free_bytes',6*guard.GiB-1,'disk_reserve')]
+        for kind in ('accounting','metrics','diagnostics'):
+            for field,value,reason in stops:
+                with self.subTest(kind=kind,reason=reason):
+                    s=host_sample();s[field]=value;broken(kind,s)
+                    self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],reason)
+            s=host_sample();broken(kind,s)
+            d=guard.evaluate(m,s,None,1001)
+            self.assertEqual((d['stop'],d['misses']),(None,1))
+
     def test_stop_latches_and_manifest_cannot_change(self):
         m=host_manifest();s=host_sample();s['listeners']=[]
         prior=guard.evaluate(m,s,None,1001)
@@ -1695,8 +1715,9 @@ class LifecycleTests(unittest.TestCase):
                 else:units=answer
                 return cloud_json('HostObserve',dict(status='started',launch_sha256=expected,epoch=1000,
                     collection_until=1000+168*3600,cleanup_until=1000+170*3600,unit_states=units))
-        transport=Transport()
+        transport=Transport();failures=[]
         def connect(c,journal,r,*,now):
+            if failures:raise failures.pop(0)
             if journal.request('ssh-target') is None:
                 journal.prepare_request('ssh-target','BindSshTarget',binding,binding['instance'],now=now)
                 journal.record_receipt('ssh-target',cloud_json('BindSshTarget',{'bound':True}))
@@ -1704,6 +1725,7 @@ class LifecycleTests(unittest.TestCase):
         def pause(seconds):moment[0]+=seconds
         run=lambda:provision.lifecycle(cloud,j,plan['cloud'],root/'bundle',root/'result',connect,
                                        clock=lambda:moment[0],sleep=pause,progress=events.append)
+        run.connect_failures=failures  # errors raised by the next connector calls, in order
         return run,cloud,calls,events,moment,j
 
     def test_failed_polls_never_end_collection(self):
@@ -1778,6 +1800,33 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(sum(action=='install' for action,_ in calls),1)
                 resumed_ops=[op for op,_ in cloud.calls[before:]]
                 self.assertNotIn('CreateBucket',resumed_ops);self.assertNotIn('DescribeSubnets',resumed_ops)
+
+    def test_resume_survives_failing_reconnects(self):
+        # CX-SR2-008: the first reconnect of a resumed run is a poll like any other.
+        for error in (OSError('no route'),state.StateError('ssh target'),subprocess.TimeoutExpired('ssh',30)):
+            with self.subTest(error=type(error).__name__),tempfile.TemporaryDirectory() as temp:
+                run,cloud,calls,events,moment,j=self.interrupted_run(Path(temp),lambda poll,now:'active')
+                run.connect_failures.extend([error]*3)
+                result=run()
+                self.assertEqual(result['stop_reason'],'collection_deadline')
+                self.assertIsNone(result['failure_class'])
+                terminations=[op for op,_ in cloud.calls if op=='TerminateInstances']
+                stops=[at for action,at in calls if action=='stop']
+                self.assertTrue(stops and min(stops)>=1000+168*3600,stops[:1])
+                self.assertTrue(terminations)
+                self.assertIn('export',[action for action,_ in calls])
+                self.assertIn({'phase':'collecting','poll':'recovered','after':3},events)
+
+    def test_resume_after_the_deadline_with_a_failing_reconnect_still_finishes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            run,cloud,calls,events,moment,j=self.interrupted_run(root,lambda poll,now:'active')
+            moment[0]=1000+168*3600+5;run.connect_failures.append(OSError('no route'))
+            result=run()
+            self.assertEqual(result['stop_reason'],'collection_deadline')
+            self.assertIsNone(result['failure_class'])
+            self.assertTrue((root/'result/lifecycle.json').is_file())
+            self.assertEqual(cloud.instance['State']['Name'],'terminated')
 
     def test_only_a_validated_stop_ends_collection(self):
         # CX-SR2-002: unvalidated unit states are unreachable, not a stop.

@@ -127,19 +127,10 @@ def evaluate(manifest, sample, previous, now):
         # Unavailable, stale or malformed observations are tolerated while isolated.
         result['misses']=min(MISS_LIMIT,result['misses']+1)
         return stop('observation_lost') if result['misses']>=MISS_LIMIT else result
-    metrics=sample.get('metrics') if isinstance(sample,dict) else None
-    required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures'}
-    if (not isinstance(sample,dict) or not integer(sample.get('observed_at')) or not 0 <= now-sample['observed_at'] <= 30
-            or sample.get('accounting_valid') is not True
-            or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())):
+    if not isinstance(sample,dict) or not integer(sample.get('observed_at')) or not 0 <= now-sample['observed_at'] <= 30:
         return missed()
-    try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
-    except (GuardError,TypeError,ValueError,KeyError,AttributeError):return missed()
-    result['misses']=0
-    # Latest validated snapshot; latched with any stop so evidence distinguishes
-    # auth from quota, the first origin and conservative paid admissions.
-    result['diagnostics']=dict(diagnostics,observed_at=sample['observed_at'],
-                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'])
+    # Stops decided from the sample's own fields come before the miss decision, so invalid
+    # accounting, metrics or diagnostics never delay or rename them (CX-SR2-009).
     for key in ('pid','start_ticks','boot_id','binary_sha256','environment_sha256','config_sha256','config_directory','cgroup'):
         if type(sample.get(key)) is not type(manifest[key]) or sample[key]!=manifest[key]:
             return stop('binding_'+key)
@@ -155,6 +146,18 @@ def evaluate(manifest, sample, previous, now):
         return stop('network_ceiling')
     if not integer(sample.get('free_bytes')) or sample['free_bytes'] < 6*GiB:
         return stop('disk_reserve')
+    metrics=sample.get('metrics')
+    required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures'}
+    if (sample.get('accounting_valid') is not True
+            or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())):
+        return missed()
+    try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
+    except (GuardError,TypeError,ValueError,KeyError,AttributeError):return missed()
+    result['misses']=0
+    # Latest validated snapshot; latched with any later stop so evidence distinguishes
+    # auth from quota, the first origin and conservative paid admissions.
+    result['diagnostics']=dict(diagnostics,observed_at=sample['observed_at'],
+                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'])
     if metrics['auth_failures'] or metrics['quota_failures']:
         return stop('provider_auth_or_quota')
     for metric,allocation in [('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes')]:

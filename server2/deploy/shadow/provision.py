@@ -442,11 +442,9 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     remote=None;reason='collection_deadline';failure=None;detached=False
     collecting=collection_started(journal)
     try:
-        if collecting:
-            # Resume: no provisioning or install. A reconnect failure is unreachable.
-            remote=connector(cloud,journal,None,now=int(clock()))
-            return_to_collect=True
-        else:return_to_collect=False
+        # Resume: no provisioning or install. The collecting loop reconnects, so a failed
+        # reconnect is an unreachable poll, never a teardown (CX-SR2-008).
+        return_to_collect=collecting
         # Each resumed call reconciles exact original requests; elapsed run time
         # and generation grants are never refreshed by this startup allowance.
         until=min(int(clock())+STARTUP_SECONDS,journal.snapshot()['collection_until'])
@@ -489,6 +487,11 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
                 unreachable+=1
                 progress({'phase':'collecting','poll':'unreachable','consecutive':unreachable})
             sleep(min(60,max(0,journal.snapshot()['collection_until']-clock())))
+        if remote is None:
+            # Deadline reached unreachable (or resumed after it): one more attempt so the
+            # finish can retain host evidence; a failure leaves cleanup to the finish.
+            try:remote=connector(cloud,journal,None,now=int(clock()))
+            except (StateError,OSError,ValueError,subprocess.TimeoutExpired):remote=None
     except (StateError,OSError,ValueError,subprocess.TimeoutExpired) as error:
         reason='acquisition_failed';failure=type(error).__name__
     except KeyboardInterrupt:
