@@ -136,7 +136,7 @@ struct AirBlockView: View {
             }
         case .info:
             Card(title: nil, colors: colors.page, s: s) {
-                AirRows(rows: page.info ?? [], colors: colors.page, s: s, perform: actions.perform)
+                AirRows(rows: page.info ?? [], colors: colors.page, s: s, width: content.metrics.bodyWidth, perform: actions.perform)
             }
             .accessibilityIdentifier("air-info")
         case .stations:
@@ -200,7 +200,7 @@ private struct AirHeader: View {
 
     /// `min-height: headerHeight`, or the content with its padding when taller (larger text).
     var height: CGFloat {
-        let content = page.main.map { AirMainBox.height(main: $0, metrics: metrics, s: s, width: UIScreenWidth.value * 0.8) } ?? 0
+        let content = page.main.map { AirMainBox.height(main: $0, metrics: metrics, s: s, width: metrics.bodyWidth * 0.8) } ?? 0
         return max(metrics.headerHeight, WeatherMetrics.headerTop + content + 5)
     }
 

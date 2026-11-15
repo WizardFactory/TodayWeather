@@ -204,7 +204,13 @@ final class WeatherScreens {
     func windowChanged(_ size: CGSize) {
         guard size.width > 0, size.height > 0, size != screenSize else { return }
         screenSize = size
-        if let tab = visitTab, scope != nil { openVisit(tab) }
+        guard let tab = visitTab else { return }
+        // The air page measures the same way (AirCtrl's `initSize`), so its visit starts again too.
+        if tab == .air {
+            if airScope != nil { openAirVisit() }
+        } else if scope != nil {
+            openVisit(tab)
+        }
     }
 
     /// `loadWeatherPhotosEvent`: in the photo theme the page takes the selected place's new photo, without an apply (the
@@ -305,7 +311,9 @@ final class WeatherScreens {
             titleAccessory: accessory,
             actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
                                                onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
-            page: AnyView(AirPageView(content: content, theme: theme, actions: actions).accessibilityIdentifier("air-page")))
+            page: AnyView(AirPageView(content: content, theme: theme, actions: actions)
+                .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
+                .accessibilityIdentifier("air-page")))
     }
 
     /// Inside the title: the current position's location glyph (`location_on` while location is allowed, else
