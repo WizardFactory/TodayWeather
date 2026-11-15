@@ -109,7 +109,7 @@ final class AppLaunch {
         // The push list is posted again after a unit change by IN-04's registration; until it is there, nothing is sent.
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
                                 deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
-        settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: nil),
+        settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: AppPushUnits()),
                                    opener: SystemURLOpener(), mail: mail)
         shell.onEntry = { [weak weather] event in weather?.handle(event) }
         onShell(shell)
@@ -183,5 +183,13 @@ struct ShellLocale: Equatable {
         catalog = AppLanguage.catalog(webLanguage)
         region = AppLanguage.region(AppLanguage.webLanguages(preferredLanguages))
         acceptLanguage = AppLanguage.acceptLanguage(preferredLanguages)
+    }
+}
+
+/// The push re-post of a unit change (IN-12) for the app's push service (IN-04), which `AppStartup` creates after the
+/// shell; nothing is sent while it does not exist (no server URL, or the `Device-Id` not read yet).
+struct AppPushUnits: PushUnitsUpdating {
+    func updateUnits(_ state: AppState) {
+        MainActor.assumeIsolated { AppStartup.shared.push }?.updateUnits(state)
     }
 }

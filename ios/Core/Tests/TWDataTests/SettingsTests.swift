@@ -39,11 +39,13 @@ enum SettingsGolden {
     }
 
     /// The push request's context of the golden run (device, language, version, clock) in `zone`.
-    static func context(_ golden: JSONValue, zone: String) throws -> PushListPost.Context {
+    static func context(_ golden: JSONValue, zone: String, units: UnitSettings) throws -> PushRegistration.Context {
         let device = try #require(golden["device"])
         let now = try #require(golden["now"]?.numberValue?.double)
-        return PushListPost.Context(deviceId: string(device["uuid"]), language: "ko-KR", appVersion: string(device["version"]),
-                                    now: Date(timeIntervalSince1970: now / 1000), zone: try #require(TimeZone(identifier: zone)))
+        return PushRegistration.Context(deviceId: string(device["uuid"]), language: "ko-KR",
+                                        appVersion: string(device["version"]), units: units,
+                                        now: Date(timeIntervalSince1970: now / 1000),
+                                        zone: try #require(TimeZone(identifier: zone)))
     }
 
     /// The golden's `$http` request with the native path version.
@@ -155,13 +157,18 @@ struct HandoffTargetTests {
     }
 }
 
-/// `Push.updateUnits` on iOS: the list post after each unit change of every list, and the cases that send nothing.
-struct PushListPostTests {
+/// `Push.updateUnits` on iOS (`PushRegistration.onUnitsChanged`): the list post after each unit change of every list,
+/// and the cases that send nothing.
+struct PushUnitsPostTests {
+    static func post(_ state: AppState, _ golden: JSONValue, zone: String) throws -> PushRequest? {
+        let context = try SettingsGolden.context(golden, zone: zone, units: state.units)
+        return PushRegistration.onUnitsChanged(state.push, places: state.places, context: context).requests.first
+    }
+
     @Test func everyUnitChangePostsTheCordovaRequest() throws {
         let golden = try SettingsGolden.json()
         let places = SettingsGolden.places(golden)
         let records = (golden["pushList"]?.arrayValue ?? []).compactMap(\.objectValue)
-        let context = try SettingsGolden.context(golden, zone: "Asia/Seoul")
         var compared = 0
         for list in golden["lists"]?.arrayValue ?? [] where SettingLists.units.contains(SettingsGolden.string(list["name"])) {
             let name = SettingsGolden.string(list["name"])
@@ -172,7 +179,7 @@ struct PushListPostTests {
                                      push: PushState(fcmToken: "token-a", records: records))
                 let posts = (choice["trace"]?.arrayValue ?? []).filter { $0[0]?.stringValue == "$http" }
                 #expect(posts.count == 1, "\(name)=\(SettingsGolden.string(choice["value"])): one post")
-                let request = try #require(PushListPost.updateUnits(state, context: context))
+                let request = try #require(try Self.post(state, golden, zone: "Asia/Seoul"))
                 try Self.compare(request, posts[0][1], "\(name)=\(SettingsGolden.string(choice["value"]))")
                 compared += 1
             }
@@ -185,7 +192,6 @@ struct PushListPostTests {
         let places = SettingsGolden.places(golden)
         for c in golden["push"]?.arrayValue ?? [] {
             let name = SettingsGolden.string(c["name"])
-            let context = try SettingsGolden.context(golden, zone: SettingsGolden.string(c["zone"]))
             var units = UnitSettings.defaults(region: "KR")
             for key in UnitSettings.keys { if let v = c["units"]?[key]?.stringValue { units.setForTest(key, v) } }
             units.setForTest(SettingsGolden.string(c["unit"]), SettingsGolden.string(c["value"]))
@@ -193,7 +199,7 @@ struct PushListPostTests {
             let token = c["token"]?.stringValue
             let state = AppState(places: places, placeIndex: 1, units: units, push: PushState(fcmToken: token, records: records))
             let posts = (c["trace"]?.arrayValue ?? []).filter { $0[0]?.stringValue == "$http" }
-            let request = PushListPost.updateUnits(state, context: context)
+            let request = try Self.post(state, golden, zone: SettingsGolden.string(c["zone"]))
             if posts.isEmpty {
                 #expect(request == nil, "\(name): nothing is sent")
             } else {
@@ -202,7 +208,7 @@ struct PushListPostTests {
         }
     }
 
-    static func compare(_ request: PushListPost.Request, _ http: JSONValue?, _ name: String) throws {
+    static func compare(_ request: PushRequest, _ http: JSONValue?, _ name: String) throws {
         let expected = SettingsGolden.expected(try #require(http))
         #expect(request.method == expected.method, "\(name) method")
         #expect(request.path == expected.path, "\(name) path")

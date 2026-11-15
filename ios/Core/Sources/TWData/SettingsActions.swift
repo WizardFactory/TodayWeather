@@ -4,13 +4,13 @@ import TWModel
 import TWStorage
 
 /// The push registration's part in a unit change (`Push.updateUnits()`, #1845 in the Cordova app): the push list is
-/// posted again with the new units. IN-04 (#2953) owns the registration (the FCM token, the replacement log, the
-/// transport) and implements this; until it does, the app passes no implementation and nothing is sent.
+/// posted again with the new units. IN-04's `PushService` implements it with `PushSync.updateUnits()` (the Android
+/// `updateUnits`).
 ///
 /// The settings call it on the main actor right after the change is shown and queued for saving, with that state. It
-/// returns at once; the implementation sends the request itself, in its own order of events. What it sends is
-/// `PushListPost.updateUnits(state, context:)`: nothing without a record or a token, and nothing without a server URL
-/// or a `Device-Id` (no request can be built then).
+/// returns at once; the registration sends the request after the registrations before it, with the state as saved by
+/// then (`PushRegistration.onUnitsChanged`): nothing without a record or a token, nothing without a server URL or a
+/// `Device-Id`, and nothing when the save failed.
 public protocol PushUnitsUpdating: Sendable {
     func updateUnits(_ state: AppState)
 }
