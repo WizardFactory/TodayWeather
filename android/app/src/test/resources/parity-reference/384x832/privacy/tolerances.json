@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "2026-11-13, API36 nominal display and Robolectric SDK34",
- "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate.",
+ "why": "Four-size Korean/English menu choice states and analytics popup. Inspected both narrow-language popups and the wide English menu overlay: body line breaks, popup extent and buttons match; residuals are glyph rasterization/advances. Historical margins retained; every compared height matches. Privacy fit and behavior tests remain separate. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
  "cases": {
   "en-US/menu-off": {
    "heightDifference": 0,
@@ -35,8 +35,8 @@
   },
   "ko-KR/analytics-popup": {
    "heightDifference": 0,
-   "strong": 0.013222,
-   "mean": 4.664
+   "strong": 0.013527,
+   "mean": 5.006
   },
   "ko-KR/menu-allowed": {
    "heightDifference": 0,

@@ -84,7 +84,7 @@ import net.wizardfactory.todayweather.R
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 
-/** Rows of the side menu in Cordova order (client/www/index.html L97-L171); [krOnly] rows need region KR. */
+/** Rows of the side menu in Cordova order (the side menu list of client/www/index.html); [krOnly] rows need region KR. */
 enum class MenuRow(val textKey: Int, val krOnly: Boolean = false, val chevron: Boolean = false, val button: Boolean = false) {
     SPECIAL_WEATHER(R.string.LOC_TYPE_SPECIAL_WEATHER, krOnly = true, chevron = true),
     NATIONAL_WEATHER(R.string.LOC_NATIONAL_WEATHER, krOnly = true, chevron = true),
@@ -94,14 +94,15 @@ enum class MenuRow(val textKey: Int, val krOnly: Boolean = false, val chevron: B
     STARTUP_PAGE(R.string.LOC_STARTUP_PAGE),
     REFRESH_INTERVAL(R.string.LOC_REFRESH_INTERVAL),
     THEME(R.string.LOC_THEME_SETTING),
-    ANALYTICS(R.string.LOC_ANALYTICS_CHOICE, button = true),
-    AD_PRIVACY(R.string.LOC_AD_PRIVACY_CHOICES, button = true),
-    PRIVACY_POLICY(R.string.LOC_PRIVACY_POLICY, button = true),
-    TERMS(R.string.LOC_TERMS, button = true),
     SEND_FEEDBACK(R.string.LOC_SEND_FEEDBACK),
     RATE(R.string.LOC_RATE_THIS_APP),
     VERSION(R.string.LOC_VERSION),
     ABOUT(R.string.LOC_ABOUT),
+    // Privacy rows sit at the end of the menu, as in Cordova since #2990.
+    ANALYTICS(R.string.LOC_ANALYTICS_CHOICE, button = true),
+    AD_PRIVACY(R.string.LOC_AD_PRIVACY_CHOICES, button = true),
+    PRIVACY_POLICY(R.string.LOC_PRIVACY_POLICY, button = true),
+    TERMS(R.string.LOC_TERMS, button = true),
 }
 
 /** What the shell shows and how it reacts; screens (AN-08 and later) fill the tab pages and menu actions. */
@@ -401,6 +402,8 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
                     Spacer(Modifier.height(snapped(if (previous?.button == true) 10.dp else 9.dp)))
                     MenuButton(row, state.menuValues[row], colors, snapped(47.dp)) { onRow(row) }
                     if (rows.getOrNull(i + 1)?.button == false) Spacer(Modifier.height(snapped(9.dp)))
+                    // The last block ends the list with its 10 dp margin when the privacy rows come last (#2990).
+                    if (i == rows.lastIndex) Spacer(Modifier.height(snapped(10.dp)))
                 } else {
                     MenuItem(row, state, colors, snapped(1.dp), snapped(54.85.dp)) { onRow(row) }
                     if (rows.getOrNull(i + 1)?.button != false) Box(Modifier.fillMaxWidth().height(snapped(1.dp)).background(colors.menuBorder))

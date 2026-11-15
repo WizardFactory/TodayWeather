@@ -11,7 +11,7 @@
   "heightDifference": 0
  },
  "recordedOn": "Robolectric 4.17, SDK 34, native graphics, macOS arm64; the references are the captures in privacy-reference/<lang>",
- "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, larger for the Korean popup's ten lines and bold buttons than for the About popup. Geometry follows the WebView: the popup is AN-12's Ionic popup (250 dp, 49 dp head, the body on `line-height: normal` lines of 20 dp, buttons of 112.5 by 45 dp 5 dp apart at 0.87 opacity, a label too long for its button wrapping there as Chrome wraps the English 'Decline / withdraw'), its body broken where Chrome breaks it (chromeLines: the ten Korean and twelve English lines match the capture's line boxes in analytics-popup.json), and the menu is AN-07's.",
+ "why": "Residual differences are glyph rasterization: the emulator's Android 16 fonts against Robolectric's SDK 34 fonts, larger for the Korean popup's ten lines and bold buttons than for the About popup. Geometry follows the WebView: the popup is AN-12's Ionic popup (250 dp, 49 dp head, the body on `line-height: normal` lines of 20 dp, buttons of 112.5 by 45 dp 5 dp apart at 0.87 opacity, a label too long for its button wrapping there as Chrome wraps the English 'Decline / withdraw'), its body broken where Chrome breaks it (chromeLines: the ten Korean and twelve English lines match the capture's line boxes in analytics-popup.json), and the menu is AN-07's. 2026-11-15 (#2990): menu cases re-measured after the privacy rows moved to the end of the side menu; native and Cordova show the same rows, the residuals are glyph rasterization.",
  "cases": {
   "en-US/analytics-popup": {
    "strong": 0.00309,
@@ -29,8 +29,8 @@
    "heightDifference": 0
   },
   "ko-KR/analytics-popup": {
-   "strong": 0.01323,
-   "mean": 4.665,
+   "strong": 0.013527,
+   "mean": 5.006,
    "heightDifference": 0
   },
   "ko-KR/menu-allowed": {

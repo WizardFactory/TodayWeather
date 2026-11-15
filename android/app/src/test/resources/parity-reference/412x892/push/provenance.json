@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK push",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -167,7 +167,7 @@
   },
   {
    "file": "en-US/intro.png",
-   "sha256": "4facf7935335208bf719f209d4e32a32834c58fd36cd40dfdb4b66994f2eb160"
+   "sha256": "86c102165e8180882bc06296cbd3991a767f1d09bf08e45acc14e8ff64c12ce9"
   },
   {
    "file": "en-US/permission.json",
@@ -175,7 +175,7 @@
   },
   {
    "file": "en-US/permission.png",
-   "sha256": "b1196efa8f52b871af256d6621b4fc0d7bcf32b8f2bcd31edf37abb81aedde26"
+   "sha256": "7738e4c6913bfac6dd2ccf10675848d552d37b5306275d14177eba58bb030e01"
   },
   {
    "file": "en-US/picker.json",
@@ -215,7 +215,7 @@
   },
   {
    "file": "ko-KR/confirm.png",
-   "sha256": "64ea2e2bd2eea98a0bac29b726580141e19e3e410f5fe36f4dd92a97df7c969e"
+   "sha256": "4ca811539da8a20f58a992857fabcd9c5500ed87b19593970772ae0ca78c79fc"
   },
   {
    "file": "ko-KR/equal.json",
@@ -231,7 +231,7 @@
   },
   {
    "file": "ko-KR/foreground.png",
-   "sha256": "a2811d58836e3586b5e0fe13b42e5a834bca005d571938fe2e445b0060a012da"
+   "sha256": "7c7ecf36deb9441d5e0c14a318dfe1cb5a479d2e03146c1094de0941375580c2"
   },
   {
    "file": "ko-KR/intro.json",
@@ -239,7 +239,7 @@
   },
   {
    "file": "ko-KR/intro.png",
-   "sha256": "8b801a37e8bbe91f0dddac6749b5280dd10ada7263335f89fe3a406365f9e2c3"
+   "sha256": "b9ec6b28cad2f6fb35060f8f5037a667a1f3b47e99b111734145d5c18aaeeada"
   },
   {
    "file": "ko-KR/permission.json",
