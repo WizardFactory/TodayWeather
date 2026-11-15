@@ -9,9 +9,11 @@ Checks:
   request, a test banner loaded;
 - launch 3 (ATT allowed): request_policy authorized and personalized before the first banner request; the banner's
   outcome is recorded (a personalized request of Google's test unit can end in no fill, code 1);
-- analytics: no "Logging event" line in launches 1 and 2 and no event in the SDK's database after them; after the
-  stored grant (launch 3) screen_view is logged or stored, so the first checks are not vacuous. Whether the SDK took
-  debug mode in each launch is recorded. The SDK stores screen_view as "_vs".
+- every launch ran with the Analytics SDK started and its debug-level messages captured (the unified log each launch
+  streams at debug level, <name>.oslog), so the event checks read the SDK's debug log (CODEX-IN15-2);
+- analytics: no "Logging event:" line of the Analytics SDK in launches 1 and 2 and no event in the SDK's database after them; after the
+  stored grant (launch 3) the debug log shows screen_view logged, so the first checks are not vacuous. The SDK stores
+  screen_view as "_vs" (recorded, not sufficient alone).
 Exit 1 when a check fails.
 """
 import json
@@ -43,7 +45,8 @@ def events(out: Path, name: str):
 def main():
     out = Path(sys.argv[1])
     names = ["1-explainer", "2-denied", "3-allowed-opted-in"]
-    logs = {n: lines(out / f"{n}.log") for n in names}
+    # The console and the unified log of each launch (the SDK's debug log is in the latter).
+    logs = {n: lines(out / f"{n}.log") + lines(out / f"{n}.oslog") for n in names}
     checks = []
 
     def check(name, ok, detail=None):
@@ -72,15 +75,20 @@ def main():
         else:
             check(f"{name}: the banner request was answered", outcome, outcome[:2])
 
-    before = [l.strip() for n in names[:2] for l in logs[n] if "Logging event" in l]
+    # The SDK logs each event ("Logging event:") at the debug level of the unified log. A launch counts only when its
+    # stream holds the SDK's start and at least one of its debug-level messages, so an empty event list is a reading
+    # of the debug log, not a missing log (CODEX-IN15-2).
+    started = {n: any("[I-ACS023007] Analytics v." in l for l in logs[n]) for n in names}
+    debug = {n: any(" Db " in l and "[FirebaseAnalytics]]" in l for l in logs[n]) for n in names}
+    check("every launch started the Analytics SDK and its debug-level log was captured",
+          all(started.values()) and all(debug.values()), {"started": started, "debug_level_messages": debug})
+    before = [l.strip() for n in names[:2] for l in logs[n] if "Logging event:" in l]
     check("no analytics event logged before the opt-in", not before, before[:10])
     stored = {n: events(out, n) for n in names}
     check("no analytics event stored before the opt-in", all(not stored[n] for n in names[:2]), stored)
-    logged = [l.strip() for l in logs[names[2]] if "Logging event" in l and "screen_view" in l]
-    check("after the opt-in, screen_view is logged or stored",
-          logged or {"screen_view", "_vs"} & set(stored[names[2]] or []),
-          {"logged": logged[:3], "stored": stored[names[2]]})
-    debug = {n: any("To disable debug logging" in l for l in logs[n]) for n in names}
+    logged = [l.strip() for l in logs[names[2]] if "Logging event:" in l and "screen_view" in l]
+    check("after the opt-in, the debug log shows screen_view logged",
+          logged, {"logged": logged[:3], "stored": stored[names[2]]})
 
     summary = {"out": str(out), "passed": all(c["ok"] for c in checks), "checks": checks, "analytics_debug_logging_on": debug}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

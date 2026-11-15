@@ -72,6 +72,7 @@ public final class WeatherRepository {
     @ObservationIgnored private let cacheDirectory: URL?
     @ObservationIgnored private let http: any WeatherHTTP
     @ObservationIgnored private let clock: any AppClock
+    @ObservationIgnored private let telemetry: WeatherTelemetry?
     @ObservationIgnored private var loadTimes: [String: Date] = [:]
     @ObservationIgnored private var latestRequest: [String: Int] = [:]
     @ObservationIgnored private var requests = 0
@@ -82,11 +83,12 @@ public final class WeatherRepository {
     public private(set) var loading: Set<String> = []
 
     public init(baseURL: String?, cacheDirectory: URL?, http: any WeatherHTTP = URLSessionGet(),
-                clock: any AppClock = SystemClock()) {
+                clock: any AppClock = SystemClock(), telemetry: WeatherTelemetry? = nil) {
         self.baseURL = baseURL.flatMap { $0.isEmpty ? nil : $0 }
         self.cacheDirectory = cacheDirectory
         self.http = http
         self.clock = clock
+        self.telemetry = telemetry
     }
 
     /// `canLoadCity`: a disabled place never; otherwise not loaded in this process, or more than ten minutes ago.
@@ -115,10 +117,14 @@ public final class WeatherRepository {
     /// do, after `reloadCity`). `acceptLanguage` is the WebView's header (`ShellLocale.acceptLanguage`).
     public func load(_ place: Place, units: UnitSettings, acceptLanguage: String, force: Bool) async -> LoadResult {
         if place.disable || (!force && !canLoad(place)) { return .skipped }
+        let started = clock.now
         let location = place.location
         guard let text = WeatherRequests.url(base: baseURL ?? "", lat: location?.lat, long: location?.long,
                                              address: place.address, units: UnitSettings.keys.map { ($0, units.value($0)) })
-        else { return .failed(network: false, unconvertible: false) }
+        else {
+            fetched("invalid_input", since: started)
+            return .failed(network: false, unconvertible: false)
+        }
         let key = Self.key(place)
         requests += 1
         let request = requests
@@ -146,6 +152,9 @@ public final class WeatherRepository {
             return .converted(converted)
         }.value
         if latestRequest[key] == request { loading.remove(key) }
+        // `getWeatherByGeoInfo` reports each request once `$http` settled: a body parsed as JSON is a success, also
+        // when `convertWeatherData` later cannot convert it.
+        fetched(outcome.isNetwork ? "network_error" : "success", since: started)
         Self.log.info("weather response \(request, privacy: .public) \(String(describing: outcome.label), privacy: .public)")
         // An answer to a request a later one replaced counts for nothing, a failure included.
         guard latestRequest[key] == request else { return .superseded }
@@ -168,9 +177,17 @@ public final class WeatherRepository {
         }
     }
 
+    /// `Monetization.track('weather_fetch', …)` with the time since `started` on the clock.
+    private func fetched(_ outcome: String, since started: Date) {
+        telemetry?("weather_fetch", ["outcome": .text(outcome),
+                                     "duration_ms": .number((clock.now.timeIntervalSince(started) * 1000).rounded())])
+    }
+
     private enum Outcome: Sendable {
         case network, unconvertible
         case converted(JSONObject)
+
+        var isNetwork: Bool { if case .network = self { true } else { false } }
 
         var label: String {
             switch self {

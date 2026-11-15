@@ -72,8 +72,8 @@ final class Monetization {
         twAds?.setShowAds(show)
     }
 
-    /// An analytics event of the schema (`Monetization.track`); IN-08, IN-10 and IN-11 report weather, place and
-    /// location events through it.
+    /// An analytics event of the schema (`Monetization.track`): the weather path's `weather_fetch` and `weather_load`
+    /// (`AppLaunch.weatherTelemetry`); IN-10 and IN-11 add the place and location events.
     @discardableResult
     func track(_ name: String, _ params: [String: AnalyticsValue]) -> Bool {
         analytics.track(name, params)

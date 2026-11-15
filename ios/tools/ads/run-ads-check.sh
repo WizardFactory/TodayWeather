@@ -16,7 +16,9 @@
 # - Launch 2: the ATT answer "Ask App Not to Track" is written to the simulator's TCC database (simctl has no tracking
 #   service), as after the user's answer; no explainer, ads ready, npa requests, a test banner.
 # - Launch 3: ATT allowed and a stored analytics grant (both consent files, as the app writes them on 동의).
-# - Every launch passes -FIRAnalyticsDebugEnabled and has the SDK's persisted debug mode on; check_ads.py reads the consoles and the SDK's measurement database
+# - Every launch passes -FIRAnalyticsDebugEnabled and has the SDK's persisted debug mode on. The SDK writes its debug log
+#   to the unified log, which each launch streams (<name>.oslog) beside the console (<name>.log); check_ads.py reads
+#   both and the SDK's measurement database
 #   (as check_upgrade.py does) and writes summary.json; a screenshot ends each launch.
 set -eu
 UDID=$1
@@ -34,7 +36,7 @@ OUT=$(cd "$OUT" && pwd)
 TCC="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/TCC/TCC.db"
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 
-rm -rf "$OUT/TodayWeather.app" "$OUT"/*.log "$OUT"/*.png "$OUT"/*.sql*
+rm -rf "$OUT/TodayWeather.app" "$OUT"/*.log "$OUT"/*.oslog "$OUT"/*.png "$OUT"/*.sql*
 cp -R "$APP" "$OUT/TodayWeather.app"
 python3 "$HERE/../upgrade/check_upgrade.py" dummy-plist "$OUT/TodayWeather.app/GoogleService-Info.plist"
 
@@ -64,6 +66,13 @@ tracking() {
 
 launch() {
   log "launch $1 for $2 s"
+  # The Firebase SDK logs to the unified log, not to the console: stream the app's messages (debug level) beside it.
+  xcrun simctl spawn "$UDID" log stream --level debug --style compact --predicate 'process == "TodayWeather"' \
+    > "$OUT/$1.oslog" 2>&1 &
+  STREAM=$!
+  # Launch only once the stream is attached (it prints its header first), so the SDK's first lines are in it.
+  for _ in $(seq 1 120); do grep -q "^Timestamp" "$OUT/$1.oslog" 2>/dev/null && break; sleep 0.5; done
+  sleep 3
   SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" $BUNDLE \
     -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/$1.log" 2>&1 &
   CONSOLE=$!
@@ -71,6 +80,9 @@ launch() {
   xcrun simctl io "$UDID" screenshot "$OUT/$1.png" > /dev/null 2>&1 || true
   xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
   wait $CONSOLE 2>/dev/null || true
+  sleep 2
+  kill $STREAM 2>/dev/null || true
+  wait $STREAM 2>/dev/null || true
   MEASUREMENT="$DATA/Library/Application Support/Google/Measurement/google-app-measurement.sql"
   for suffix in "" -wal; do
     if [ -f "$MEASUREMENT$suffix" ]; then cp "$MEASUREMENT$suffix" "$OUT/$1.sql$suffix"; fi
