@@ -36,9 +36,42 @@ class SimulationSubsetTests(unittest.TestCase):
     def test_candidate_exit_ends_collection_and_keeps_cleanup(self):
         run = sim.run_once(sim.SCENARIOS['candidate-exit-day-3'], 0)
         self.assertFalse(run['full_run'])
-        self.assertEqual(run['host_stop'], 'guard:observation_unavailable')
-        self.assertAlmostEqual(run['collected_hours'], 60.0, delta=0.02)
+        # The exit is the cause; the guard then fails to observe the process and stops.
+        self.assertEqual(run['host_stop'], 'candidate-exit')
+        self.assertEqual(run['guard_stop'], 'observation_unavailable')
+        self.assertEqual(run['collected_hours'], 60.0)
         self.assertTrue(run['cleanup_complete'])
+
+    def test_reader_never_runs_past_the_time_bound(self):
+        # CX-SR1-001: a production 429 on the 56th production request (about 169 s) must not
+        # pre-empt a quota signal at 20 s, and no request may start after the bound.
+        scenario = sim.default_scenario(name='bound', quota_first_at=20,
+                                        reader_outcomes={('production', 56): {'status': 429, 'body_bytes': 0}})
+        run = sim.run_once(scenario, 0)
+        self.assertEqual(run['host_stop'], 'guard:provider_auth_or_quota', run)
+        self.assertLess(run['collected_hours'], 30 / 3600)
+        model = sim.ReaderModel(sim.default_scenario(), sim.random.Random(0), self.workdir())
+        model.advance(sim.EPOCH + 10)
+        started = model.ledger.db.execute('SELECT max(started) FROM attempts').fetchone()[0]
+        self.assertLessEqual(started, sim.EPOCH + 10)
+
+    def test_reader_exit_leaves_candidate_and_guard_until_the_operator_stops(self):
+        # CX-SR1-002: the reader unit stops alone; the guard keeps deciding until the
+        # operator's next poll sees the reader inactive and stops the run.
+        scenario = sim.default_scenario(name='reader-exit',
+                                        reader_outcomes={('production', 1): {'status': 429, 'body_bytes': 0}})
+        run = sim.run_once(scenario, 0)
+        self.assertEqual(run['host_stop'], 'reader:http-429', run)
+        self.assertEqual(run['operator_stop'], 'acquisition_failed')
+        self.assertLess(run['collected_hours'], 10 / 3600)
+        self.assertGreaterEqual(run['guard_samples_after_reader_exit'], 1)
+        self.assertLessEqual(run['operator_stop_after_reader_exit_s'], 70)
+
+    def workdir(self):
+        import tempfile
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        return temp.name
 
     def test_seeded_runs_are_deterministic(self):
         scenario = dict(sim.SCENARIOS['realistic-combined'])

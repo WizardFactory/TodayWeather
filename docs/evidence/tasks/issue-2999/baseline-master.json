@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "revision": "434ec250d1cb7c5fb3054bd7d1c522d5942c24c4",
+  "revision": "master 434ec250 + this change",
   "seeds": 20,
   "deadline_hours": 168,
   "scenarios": {
@@ -43,27 +43,27 @@
     "production-429-1e-4": {
       "scenario": "production-429-1e-4",
       "seeds": 20,
-      "full_runs": 7,
-      "median_collected_hours": 134.003,
-      "min_collected_hours": 5.003,
+      "full_runs": 8,
+      "median_collected_hours": 154.002,
+      "min_collected_hours": 5.013,
       "evidence_retrievable": 20,
       "cleanup_complete": 20,
       "stop_reasons": {
-        "reader:http-429": 13,
-        "guard:collection_deadline": 7
+        "reader:http-429": 12,
+        "guard:collection_deadline": 8
       }
     },
     "production-transient-1e-3": {
       "scenario": "production-transient-1e-3",
       "seeds": 20,
-      "full_runs": 10,
-      "median_collected_hours": 168.0,
-      "min_collected_hours": 4.003,
+      "full_runs": 5,
+      "median_collected_hours": 76.507,
+      "min_collected_hours": 2.509,
       "evidence_retrievable": 20,
       "cleanup_complete": 20,
       "stop_reasons": {
-        "guard:collection_deadline": 10,
-        "reader:deadline": 10
+        "guard:collection_deadline": 5,
+        "reader:deadline": 15
       }
     },
     "poll-failure-1e-4": {
@@ -83,7 +83,7 @@
       "scenario": "poll-failure-1e-3",
       "seeds": 20,
       "full_runs": 0,
-      "median_collected_hours": 11.85,
+      "median_collected_hours": 11.734,
       "min_collected_hours": 0.167,
       "evidence_retrievable": 20,
       "cleanup_complete": 20,
@@ -161,22 +161,22 @@
       "evidence_retrievable": 20,
       "cleanup_complete": 20,
       "stop_reasons": {
-        "guard:observation_unavailable": 20
+        "candidate-exit": 20
       }
     },
     "realistic-combined": {
       "scenario": "realistic-combined",
       "seeds": 20,
       "full_runs": 0,
-      "median_collected_hours": 10.769,
-      "min_collected_hours": 2.503,
-      "evidence_retrievable": 12,
+      "median_collected_hours": 11.65,
+      "min_collected_hours": 2.714,
+      "evidence_retrievable": 11,
       "cleanup_complete": 20,
       "stop_reasons": {
         "operator-stop": 2,
         "guard:provider_auth_or_quota": 8,
-        "reader:deadline": 2,
-        "acquisition_failed": 8
+        "reader:deadline": 1,
+        "acquisition_failed": 9
       }
     }
   },
@@ -344,5 +344,10 @@
       }
     }
   },
-  "note": "Fault rates are scenario inputs, not measurements. 8516c7d7 figures used a reader model that shared the operator clock (corrected here)."
+  "production_transient_extra_seeds_20_79": {
+    "seeds": 60,
+    "full_runs": 32,
+    "expected_share": 0.557
+  },
+  "note": "Fault rates are scenario inputs, not measurements. The 8516c7d7 run used a reader model that shared the operator clock, ran past its time bound and stopped the whole host on a reader exit (corrected here)."
 }

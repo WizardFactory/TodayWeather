@@ -70,6 +70,7 @@ def default_scenario(**changes):
         cpu_busy_fraction=0.25,      # of 2 vCPU
         ssh_down=[],                 # [(start_s, end_s)] relative to epoch; end None = forever
         candidate_exit_at=None,      # seconds after start when the candidate process exits
+        reader_outcomes={},          # {(origin, n): result} forces the n-th attempt's result (1-based)
     )
     sc.update(changes)
     return sc
@@ -112,6 +113,13 @@ class SimTime:
 
 
 class Host:
+    """Unit model of the qualification host (server2/deploy/shadow/coordinator.py host_units).
+
+    The guard samples every 10 s. A guard stop stops the candidate and the reader. A
+    reader exit stops only the reader (its unit has no stop hook); the candidate and the
+    guard keep running until the operator stops the run. A candidate exit also ends the
+    reader, which is bound to it. The log collector (#2977) is not an acquisition unit.
+    """
     def __init__(self, sc, rng, clock, workdir):
         self.sc, self.rng, self.clock = sc, rng, clock
         self.manifest = fx.host_manifest()
@@ -122,8 +130,12 @@ class Host:
         guard.validate(self.manifest)
         self.decision = None
         self.stepped = EPOCH
-        self.stopped_at = None
-        self.stop_cause = None
+        self.events = []             # (time, cause) in the order they happen
+        self.guard_end = None        # guard stop (candidate and reader stopped with it)
+        self.reader_end = None       # reader process exit
+        self.operator_end = None     # operator's stop of all units
+        self.candidate_end = None if sc['candidate_exit_at'] is None else EPOCH + sc['candidate_exit_at']
+        self.guard_samples_after_reader_exit = 0
         self.quota = 0
         if sc['quota_first_at'] is not None:
             self.next_quota = EPOCH + sc['quota_first_at']
@@ -135,17 +147,34 @@ class Host:
         rate = self.sc['quota_events_per_hour']
         return start + self.rng.expovariate(rate / HOUR) if rate else float('inf')
 
-    def active(self):
-        return self.stopped_at is None
+    def _record(self, at, cause):
+        self.events.append((at, cause))
 
-    def stop(self, cause, at=None):
-        if self.stopped_at is None:
-            self.stopped_at, self.stop_cause = (self.clock.now if at is None else at), cause
+    def guard_active(self):
+        return self.guard_end is None and self.operator_end is None
+
+    def candidate_active(self, t):
+        return self.guard_active() and (self.candidate_end is None or t < self.candidate_end)
+
+    def reader_active(self, t):
+        return self.candidate_active(t) and (self.reader_end is None or t < self.reader_end)
+
+    def collection_end(self):
+        ends = [x for x in (self.reader_end, self.guard_end, self.operator_end, self.candidate_end) if x is not None]
+        return min(ends + [DEADLINE])
+
+    def stop_cause(self):
+        return min(self.events)[1] if self.events else None
+
+    def operator_stop(self, at):
+        if self.operator_end is None:
+            self.operator_end = at
+            self._record(at, 'operator-stop')
 
     def sample(self, t):
         sc = self.sc
-        if sc['candidate_exit_at'] is not None and t >= EPOCH + sc['candidate_exit_at']:
-            return None
+        if self.candidate_end is not None and t >= self.candidate_end:
+            return None  # no /proc entry for a dead candidate: collection fails
         if self.rng.random() < sc['sample_failure']:
             return None
         elapsed_h = (t - EPOCH) / HOUR
@@ -164,20 +193,33 @@ class Host:
         return s
 
     def advance(self, until):
-        """Run the guard (10 s) and the reader up to `until` while units are active."""
-        while self.active() and self.stepped + 10 <= until:
+        """Run the reader and the guard (every 10 s) up to `until` while the guard runs."""
+        while self.guard_active() and self.stepped + 10 <= until:
             self.stepped += 10
-            self.reader.advance(self.stepped)
-            if self.reader.terminal is not None:
-                self.stop('reader:' + self.reader.terminal, self.stepped)
-                break
+            if self.reader_end is None:
+                bound = self.stepped if self.candidate_end is None else min(self.stepped, self.candidate_end)
+                self.reader.advance(bound)
+                if self.reader.terminal is not None:
+                    self.reader_end = self.reader.end_at
+                    self._record(self.reader_end, 'reader:' + self.reader.terminal)
+                elif self.candidate_end is not None and self.stepped >= self.candidate_end:
+                    self.reader_end = self.candidate_end
+                    self._record(self.candidate_end, 'candidate-exit')
+            if self.reader_end is not None and self.stepped > self.reader_end:
+                self.guard_samples_after_reader_exit += 1
             self.decision = guard.evaluate(self.manifest, self.sample(self.stepped), self.decision, int(self.stepped))
             if self.decision['stop']:
-                self.stop('guard:' + self.decision['stop'], self.stepped)
+                self.guard_end = self.stepped
+                self._record(self.stepped, 'guard:' + self.decision['stop'])
 
 
 class ReaderModel:
-    """Real Ledger decisions; scheduling mirrors paired_read.execute."""
+    """Real Ledger decisions; scheduling mirrors paired_read.execute.
+
+    A request is made only when its start time is within the bound given to advance();
+    its result is applied when it completes. The reader runs concurrently with the
+    operator and the guard, so its request durations advance its own clock only.
+    """
     def __init__(self, sc, rng, workdir):
         self.sc, self.rng = sc, rng
         self.cases = []
@@ -189,19 +231,25 @@ class ReaderModel:
                         candidate_sha256='a' * 64, cases=self.cases)
         identity = {'manifest': manifest, 'candidate': 'c', 'production': 'p', 'loopback_test': True,
                     'sampler_sha256': 'b' * 64}
-        # The reader runs concurrently with the operator and the guard: its request
-        # durations advance its own clock, never the shared one.
         self.clock = SimTime()
         self.fake = types.SimpleNamespace(time=self.clock.time, monotonic=self.clock.monotonic, sleep=self.clock.sleep)
         with patch.object(reader, 'time', self.fake):
             self.ledger = reader.Ledger(Path(workdir), identity, False)
         self.ledger.db.execute('PRAGMA synchronous=OFF')
-        self.cursor = EPOCH + 1  # reader time; may run ahead of the guard step by attempt durations
+        self.cursor = EPOCH + 1
         self.terminal = None
+        self.end_at = None
         self.completed = {'candidate': 0, 'production': 0}
         self.failed = {'candidate': 0, 'production': 0}
+        self.attempts = {'candidate': 0, 'production': 0}
+        self.steps = self._schedule()
+        self.next_start = None
 
     def outcome(self, origin):
+        self.attempts[origin] += 1
+        forced = self.sc['reader_outcomes'].get((origin, self.attempts[origin]))
+        if forced is not None:
+            return dict(forced)
         sc, r = self.sc, self.rng.random()
         prefix = 'production' if origin == 'production' else 'candidate'
         p429 = sc['production_429'] if prefix == 'production' else 0.0
@@ -214,36 +262,52 @@ class ReaderModel:
             return {'error': 'deadline'}
         return {'status': 200, 'body_bytes': 80000}
 
+    def _schedule(self):
+        """Generator: yields the start time of each next step and resumes to perform it."""
+        while True:
+            pass_start = self.cursor
+            yield pass_start
+            due = min((((pass_start - EPOCH - 1) // c['interval_seconds']) + 1) * c['interval_seconds'] + EPOCH + 1
+                      for c in self.cases)
+            for case in self.cases:
+                self.clock.now = max(self.clock.now, self.cursor)
+                slot = int((self.cursor - self.ledger.get('started')) // case['interval_seconds'])
+                if not self.ledger.claim_slot(case, slot):
+                    continue
+                for origin in ('candidate', 'production'):
+                    start = max(self.clock.now, self.ledger.get('last_attempt') + 1)
+                    yield start
+                    self.clock.now = start
+                    attempt = self.ledger.reserve(case, slot, origin)
+                    if attempt is None:
+                        self.terminal, self.end_at = self.ledger.get('terminal') or 'stopped', self.clock.now
+                        return
+                    result = self.outcome(origin)
+                    self.clock.now += 1.5 if 'status' in result else 20
+                    self.ledger.finish(attempt, result)
+                    key = 'completed' if result.get('status') == 200 else 'failed'
+                    getattr(self, key)[origin] += 1
+                    if self.ledger.get('terminal') is not None:
+                        self.terminal, self.end_at = self.ledger.get('terminal'), self.clock.now
+                        return
+                self.cursor = max(self.cursor, self.clock.now)
+            self.cursor = max(self.cursor, due)
+
     def advance(self, until):
         with patch.object(reader, 'time', self.fake):
-            while self.terminal is None and self.cursor <= until:
-                # Next due slot start across cases (only the current slot is eligible).
-                due = min((((self.cursor - EPOCH - 1) // c['interval_seconds']) + 1) * c['interval_seconds'] + EPOCH + 1
-                          for c in self.cases)
-                for case in self.cases:
-                    if self.terminal is not None:
-                        break
-                    self.clock.now = max(self.clock.now, self.cursor)
-                    slot = int((self.cursor - self.ledger.get('started')) // case['interval_seconds'])
-                    if not self.ledger.claim_slot(case, slot):
-                        continue
-                    for origin in ('candidate', 'production'):
-                        self.clock.now = max(self.clock.now, self.ledger.get('last_attempt') + 1)
-                        attempt = self.ledger.reserve(case, slot, origin)
-                        if attempt is None:
-                            self.terminal = self.ledger.get('terminal') or 'stopped'
-                            break
-                        result = self.outcome(origin)
-                        self.clock.now += 1.5 if 'status' in result else 20
-                        self.ledger.finish(attempt, result)
-                        key = 'completed' if result.get('status') == 200 else 'failed'
-                        getattr(self, key)[origin] += 1
-                        if self.ledger.get('terminal') is not None:
-                            self.terminal = self.ledger.get('terminal')
-                            break
-                    self.cursor = max(self.cursor, self.clock.now)
-                if self.terminal is None:
-                    self.cursor = max(self.cursor, due)
+            while self.terminal is None:
+                if self.next_start is None:
+                    try:
+                        self.next_start = next(self.steps)
+                    except StopIteration:
+                        return
+                if self.next_start > until:
+                    return
+                self.next_start = None
+                try:
+                    self.next_start = next(self.steps)
+                except StopIteration:
+                    return
 
 
 class Transport:
@@ -253,7 +317,6 @@ class Transport:
         self.binding = fx.RemoteTests.binding(unittest.TestCase())
         self.polls = 0
         self.poll_failures = 0
-        self.operator_stopped = False
         self.export_reachable = None
 
     def ssh_down(self):
@@ -263,12 +326,12 @@ class Transport:
     def invoke(self, action, **kwargs):
         if action == 'install':
             return state.CloudResult('empty_success', 'HostInstall')
-        self.host.advance(min(self.clock.now, DEADLINE))
+        now = min(self.clock.now, DEADLINE)
+        self.host.advance(now)
         if action == 'stop':
             if self.ssh_down():
                 return state.CloudResult('timeout', 'HostObserve')
-            self.host.stop('operator-stop')
-            self.operator_stopped = True
+            self.host.operator_stop(now)
             return state.CloudResult('empty_success', 'HostObserve')
         if action == 'export':
             self.export_reachable = not self.ssh_down()
@@ -277,11 +340,11 @@ class Transport:
         if self.ssh_down() or self.rng.random() < self.sc['poll_failure']:
             self.poll_failures += 1
             return state.CloudResult('timeout', 'HostObserve')
-        units = 'active' if self.host.active() else 'inactive'
-        # The log collector (#2977) is reported but is not an acquisition unit; it keeps
-        # running until the operator's stop, so it is active whenever SSH answers.
-        states = {s: units for s in ('candidate', 'reader', 'guard')}
-        states['logs'] = 'inactive' if self.operator_stopped else 'active'
+        state_of = lambda active: 'active' if active else 'inactive'
+        states = dict(candidate=state_of(self.host.candidate_active(now)), reader=state_of(self.host.reader_active(now)),
+                      guard=state_of(self.host.guard_active()),
+                      # The log collector keeps running until the operator's stop.
+                      logs=state_of(self.host.operator_end is None))
         return fx.cloud_json('HostObserve', dict(
             status='started', launch_sha256=self.launch_sha, epoch=EPOCH, collection_until=DEADLINE,
             cleanup_until=EPOCH + 170 * HOUR, unit_states=states))
@@ -312,14 +375,15 @@ def run_once(sc, seed):
             result = provision.lifecycle(cloud, journal, plan['cloud'], root / 'bundle', root / 'result', connect,
                                          clock=clock.time, sleep=clock.sleep)
         host.advance(min(clock.now, DEADLINE))
-        end = host.stopped_at if host.stopped_at is not None else min(clock.now, DEADLINE)
+        end = min(host.collection_end(), clock.now)
+        cause = host.stop_cause()
         return dict(
             seed=seed,
             operator_stop=result['stop_reason'],
             failure_class=result.get('failure_class'),
-            host_stop=host.stop_cause,
+            host_stop=cause,
             collected_hours=round(max(0.0, (end - EPOCH) / HOUR), 3),
-            full_run=(result['stop_reason'] == 'collection_deadline' and host.stop_cause in (None, 'operator-stop', 'guard:collection_deadline')),
+            full_run=(result['stop_reason'] == 'collection_deadline' and cause in (None, 'operator-stop', 'guard:collection_deadline')),
             evidence_retrievable=bool(transport.export_reachable),
             cleanup_complete=bool(result['cleanup'].get('complete')),
             instances_launched=sum(op == 'RunInstances' for op, _ in cloud.calls),
@@ -327,6 +391,10 @@ def run_once(sc, seed):
             completed_pairs=min(host.reader.completed.values()),
             reader_failed=host.reader.failed, reader_terminal=host.reader.terminal,
             guard_diagnostics=(host.decision or {}).get('diagnostics'),
+            guard_stop=(host.decision or {}).get('stop'),
+            guard_samples_after_reader_exit=host.guard_samples_after_reader_exit,
+            operator_stop_after_reader_exit_s=(None if host.reader_end is None or host.operator_end is None
+                                               else round(host.operator_end - host.reader_end, 1)),
         )
 
 
