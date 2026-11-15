@@ -18,6 +18,7 @@ Scenarios (one run ID each, the host reset in between):
                  before; after recovery the records still arrive (LP6-AC3)
   frozen-guard   the collector is stopped; a frozen guard is killed by its watchdog and
                  acquisition stops; the restarted collector ships what it missed (LP6-AC3)
+  collector-broken  the collector cannot start; installation still starts acquisition (LP6-AC3)
   tampered       a changed collector file in the bundle is refused before anything starts (LP6-AC5)
 
 The host is modified (units, /etc/hosts, CA store, iptables, journal namespace), so run
@@ -66,7 +67,7 @@ PROVIDERS = ('apis.data.go.kr', 'apihub.kma.go.kr', 'www.weather.go.kr', 'www.km
              'airquality.googleapis.com', 'fcm.googleapis.com', 'dapi.kakao.com', 'api.waqi.info',
              'weather.visualcrossing.com', 'api.openweathermap.org', 'api.openai.com')
 MARKER = 'PEER-BODY-MARKER-2983'
-RUNS = ('lp6-provider', 'lp6-config', 'lp6-frozen', 'lp6-tampered')
+RUNS = ('lp6-provider', 'lp6-config', 'lp6-frozen', 'lp6-broken', 'lp6-tampered')
 SOURCES = {'server', 'guard', 'reader', 'collector'}
 
 
@@ -208,6 +209,8 @@ def reset_host():
     time.sleep(1.5)
     run('journalctl', '--namespace=server2', '--vacuum-time=1s', check=False)
     systemctl('stop', 'systemd-journald@server2.service')
+    if Path('/var/lib/server2-logs').is_file():
+        Path('/var/lib/server2-logs').unlink()
     shutil.rmtree('/var/lib/server2-logs', ignore_errors=True)
     shutil.rmtree('/run/server2-logs', ignore_errors=True)
     (PEER_STATE / 'provider-status').unlink(missing_ok=True)
@@ -278,10 +281,11 @@ def receive(bundle, run_id):
 
 
 def retention_stop(name):
-    """The remote stop of retain_host_evidence (one stop job, collector last)."""
+    """The remote stop of retain_host_evidence: acquisition, then the collector (150 s SSH bound)."""
     started = time.monotonic()
-    result = subprocess.run(['/usr/bin/systemctl', 'stop'] + [f'{name}-{s}.service' for s in ('reader', 'candidate', 'guard', 'logs')],
-                            capture_output=True, text=True, timeout=150)
+    command = (f'/usr/bin/systemctl stop {name}-reader.service {name}-candidate.service {name}-guard.service'
+               f' && /usr/bin/systemctl stop {name}-logs.service')
+    result = subprocess.run(['/bin/sh', '-c', command], capture_output=True, text=True, timeout=150)
     states = {s: prop(f'{name}-{s}.service', 'ActiveState') for s in ('candidate', 'reader', 'guard', 'logs')}
     return result.returncode, time.monotonic() - started, states
 
@@ -326,8 +330,8 @@ def supervision_checks(report, entry, name, launch):
         report.check(entry, f'{suffix}: Restart=no, TimeoutStopSec=10, LogNamespace=server2',
                      prop(unit, 'Restart') == 'no' and prop(unit, 'TimeoutStopUSec') == '10s' and prop(unit, 'LogNamespace') == 'server2',
                      (prop(unit, 'Restart'), prop(unit, 'TimeoutStopUSec'), prop(unit, 'LogNamespace')))
-        report.check(entry, f'{suffix}: no dependency on the collector',
-                     f'{name}-logs.service' not in ' '.join(prop(unit, p) for p in ('Requires', 'Wants', 'BindsTo', 'Requisite', 'PartOf')))
+        report.check(entry, f'{suffix}: no dependency on or ordering after the collector',
+                     f'{name}-logs.service' not in ' '.join(prop(unit, p) for p in ('Requires', 'Wants', 'BindsTo', 'Requisite', 'PartOf', 'After')))
     guard = f'{name}-guard.service'
     report.check(entry, 'guard watchdog 30 s with SIGKILL', prop(guard, 'WatchdogUSec') == '30s' and prop(guard, 'WatchdogSignal') == '9',
                  (prop(guard, 'WatchdogUSec'), prop(guard, 'WatchdogSignal')))
@@ -395,7 +399,7 @@ def provider_stop(report, args, interface):
     if receipt is None or receipt.get('status') != 'started':
         return
     supervision_checks(report, entry, name, launch)
-    report.check(entry, 'collector active before the reader', prop(f'{name}-logs.service', 'ActiveState') == 'active')
+    report.check(entry, 'collector running', wait_until(lambda: prop(f'{name}-logs.service', 'ActiveState') == 'active', 20))
     stop = wait_stop(root)
     entry['observations']['guard_stop'] = stop
     entry['observations']['guard_diagnostics'] = (decision(root) or {}).get('diagnostics')
@@ -485,6 +489,26 @@ def frozen_guard(report, args, interface):
     delivery_checks(report, entry, run_id, ('server', 'collector'))
 
 
+def collector_broken(report, args, interface):
+    run_id = 'lp6-broken'; name = 'server2-shadow-' + run_id; root = Path('/opt/server2-shadow') / run_id
+    entry = report.scenario('collector-broken', ['LP6-AC3'])
+    reset_host(); start_standins(run_id)
+    (PEER_STATE / 'provider-status').write_text('200\n')
+    # The collector cannot start: its state directory path is taken by a file.
+    Path('/var/lib/server2-logs').write_text('blocked\n')
+    launch, result, receipt = install(report, entry, args, run_id, interface)
+    report.check(entry, 'install with a failing collector: started', receipt is not None and receipt.get('status') == 'started',
+                 result.stdout[-500:] + result.stderr[-1500:])
+    states = {s: prop(f'{name}-{s}.service', 'ActiveState') for s in ('candidate', 'guard', 'reader')}
+    report.check(entry, 'candidate, guard and reader active although the collector failed', set(states.values()) == {'active'}, states)
+    report.check(entry, 'the collector failed', wait_until(lambda: prop(f'{name}-logs.service', 'ActiveState') in ('failed', 'activating'), 20),
+                 prop(f'{name}-logs.service', 'ActiveState'))
+    report.check(entry, 'no stop decision', wait_stop(root, 12) is None, decision(root))
+    Path('/var/lib/server2-logs').unlink()
+    code, seconds, states = retention_stop(name)
+    report.check(entry, 'retention stop completes with the collector failed', code == 0 and seconds < 150, (code, seconds, states))
+
+
 def tampered(report, args, interface):
     run_id = 'lp6-tampered'; name = 'server2-shadow-' + run_id
     entry = report.scenario('tampered', ['LP6-AC5'])
@@ -508,7 +532,7 @@ def main():
     parser.add_argument('--collector-tarball', required=True, type=Path)
     parser.add_argument('--source-commit', required=True)
     parser.add_argument('--report', required=True, type=Path)
-    parser.add_argument('--scenario', action='append', choices=['provider-stop', 'config-change', 'frozen-guard', 'tampered'])
+    parser.add_argument('--scenario', action='append', choices=['provider-stop', 'config-change', 'frozen-guard', 'collector-broken', 'tampered'])
     args = parser.parse_args()
     if os.geteuid() != 0 or sys.platform != 'linux':
         raise SystemExit('run as root on a disposable Linux VM')
@@ -520,7 +544,7 @@ def main():
     started = time.time()
     try:
         for scenario, function in (('provider-stop', provider_stop), ('config-change', config_change),
-                                   ('frozen-guard', frozen_guard), ('tampered', tampered)):
+                                   ('frozen-guard', frozen_guard), ('collector-broken', collector_broken), ('tampered', tampered)):
             if args.scenario and scenario not in args.scenario:
                 continue
             try:

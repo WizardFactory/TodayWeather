@@ -293,7 +293,10 @@ def export_sources(cloud,journal,resources,destination):
             if os.path.exists(temporary):os.unlink(temporary)
     persist()
     try:
-        for bucket in r['buckets']:
+        # The state bucket first: its log objects (LP-6) hold the stop reasons and are
+        # few, so an export that runs out of its allowance on the candidate's objects
+        # still keeps them.
+        for bucket in (r['buckets'][1],r['buckets'][0]):
             for item in versions(cloud,bucket):
                 if item['DeleteMarker']: continue
                 identity={'bucket':bucket,'key':item['Key'],'version':item['VersionId']}
@@ -559,7 +562,7 @@ def log_sources(run_id):
     """Units the collector reads, and the source each is shipped as."""
     name='server2-shadow-'+run_id
     return {name+'-candidate.service':'server',name+'-guard.service':'guard',name+'-reader.service':'reader',
-            name+'-logs.service':'collector',name+'-logs-status.service':'collector'}
+            name+'-logs.service':'collector'}
 
 
 def logging_settings(launch):
@@ -682,10 +685,10 @@ def host_units(launch):
     coordinator=f'/usr/bin/python3 {root}/bin/coordinator.py'
     common='Restart=no\nTimeoutStopSec=10\nKillMode=control-group\nNoNewPrivileges=yes\n'
     # Output goes to the `server2` journal namespace, which the collector ships (LP-6).
-    # Ordered after the collector and the namespace's journald without requiring them:
-    # a stop of all of them stops these first, and the collector's stop drain ships
-    # their final records. The collector never starts, stops or delays these units.
-    logged=f'After=systemd-journald@server2.service {name}-logs.service\n'
+    # No relation to the collector unit at all, not even ordering: a pending or failing
+    # collector start can never delay or block acquisition. The retention stop stops
+    # these units first and the collector afterwards, in a separate command.
+    logged='After=systemd-journald@server2.service\n'
     journal='LogNamespace=server2\n'
     candidate=f'''[Unit]
 Description=Owned shadow candidate {plan['run_id']}
@@ -755,29 +758,13 @@ MemoryMax=512M
 [Install]
 WantedBy=multi-user.target
 '''
-    status=f'''[Unit]
-Description=Owned shadow log collector status {plan['run_id']}
-After={name}-logs.service systemd-journald@server2.service
-[Service]
-Type=oneshot
-LogNamespace=server2
-ExecCondition=/usr/bin/systemctl is-active --quiet {name}-logs.service
-ExecStart=/usr/bin/python3 -I {root}/bin/status.py periodic {state} {units}
-NoNewPrivileges=yes
-ProtectSystem=strict
-ReadWritePaths=-/var/lib/server2-logs
-ProtectHome=yes
-PrivateTmp=yes
-'''
-    status_timer=('[Unit]\nDescription=Shadow log collector status every 60 seconds\n'
-                  '[Timer]\nOnActiveSec=60\nOnUnitActiveSec=60\nAccuracySec=5\n[Install]\nWantedBy=timers.target\n')
     def timer(hours,service):
         when=datetime.datetime.fromtimestamp(launch['epoch']+hours*3600,datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         return f'[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar={when}\nAccuracySec=1s\nPersistent=true\nUnit={name}-{service}.service\n[Install]\nWantedBy=timers.target\n'
     return {name+'-candidate.service':candidate,name+'-guard.service':guardian,name+'-reader.service':reader,
             name+'-stop.service':stop,name+'-stop.timer':timer(168,'stop'),
             name+'-poweroff.service':off,name+'-poweroff.timer':timer(170,'poweroff'),
-            name+'-logs.service':collector,name+'-logs-status.service':status,name+'-logs-status.timer':status_timer}
+            name+'-logs.service':collector}
 
 
 def host_context(path):
@@ -979,10 +966,14 @@ def install_host_tree(bundle,root,unit_dir,system,*,now,machine):
         system.run('start',name+'-stop.timer',name+'-poweroff.timer')
         for suffix in ('stop.timer','poweroff.timer'):
             require(system.run('show','--property=ActiveState','--value',name+'-'+suffix)=='active','deadline timer inactive')
-        # The collector runs before the candidate starts, so its first records ship.
-        system.run('enable',name+'-logs.service',name+'-logs-status.timer')
-        system.run('start',name+'-logs.service',name+'-logs-status.timer')
-        require(system.run('show','--property=ActiveState','--value',name+'-logs.service')=='active','log collector inactive')
+        # Queued without waiting and without a check: acquisition never depends on the
+        # collector (the inspect step reports its state). It reads the namespace from
+        # the beginning of the boot, so it ships records written before it ran.
+        try:
+            system.run('enable',name+'-logs.service')
+            system.run('start','--no-block',name+'-logs.service')
+        except (StateError,OSError,subprocess.TimeoutExpired):
+            status['collector_start_failed']=True
         system.run('start',name+'-candidate.service')
         for suffix in ('candidate','guard'):
             require(system.run('show','--property=ActiveState','--value',name+'-'+suffix+'.service')=='active','candidate binding unavailable')

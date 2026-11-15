@@ -249,9 +249,10 @@ class Remote:
                     'capture_output=True,text=True,timeout=5,check=True).stdout.strip() '
                     'for s in ("candidate","reader","guard","logs")};print(json.dumps(receipt))')
             command='sudo -n /usr/bin/python3 -c '+shlex.quote(script)
-        # The acquisition units are ordered after the collector, so one stop job stops
-        # them first and the collector last, after its drain has shipped their records.
-        else:command='sudo -n /usr/bin/systemctl stop '+' '.join(name+'-'+suffix+'.service' for suffix in ('reader','candidate','guard','logs'))
+        # Acquisition first; only then the collector, whose stop drain ships their final
+        # records. Two commands: the units have no ordering relation to the collector.
+        else:command=('sudo -n /usr/bin/systemctl stop '+' '.join(name+'-'+suffix+'.service' for suffix in ('reader','candidate','guard'))
+                      +' && sudo -n /usr/bin/systemctl stop '+name+'-logs.service')
         argv=[self.ssh,'-F','/dev/null','-T','-i',str(self.identity),
               '-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes',
               '-o','UserKnownHostsFile='+str(self.known_hosts.absolute()),'-o','GlobalKnownHostsFile=/dev/null',
