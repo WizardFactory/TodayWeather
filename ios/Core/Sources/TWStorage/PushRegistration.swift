@@ -89,6 +89,19 @@ public enum PushRegistration {
         onStart(push, places: places, token: token, context: context, repost: false)
     }
 
+    /// `Push.updateUnits()` after a unit change on S08 (IN-12, #2961; #1845 in the Cordova app; the Android
+    /// `onUnitsChanged`): the repaired list posted again with `context.units`, when it has records and a token
+    /// (`pushList.length > 0`; `_postPushList` stops at "You have to register before post" without a token).
+    public static func onUnitsChanged(_ push: PushState, places: [Place], context: Context) -> Result {
+        var state = push
+        state.records = push.records.map { repair($0, places: places) }
+        state.type = platformType
+        guard !state.records.isEmpty, let token = state.fcmToken, !token.isEmpty else {
+            return Result(requests: [], state: state)
+        }
+        return Result(requests: [postList(state, context: context)], state: state)
+    }
+
     /// `_updateFcmToken(token)`: `PUT /push` replacing `old` (null when none was stored).
     public static func replacement(_ token: String, over old: String?, context: Context) -> PushRequest {
         PushRequest(method: "PUT", path: context.versionPath + "/push", headers: headers(context, language: false),

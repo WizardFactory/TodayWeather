@@ -1,0 +1,726 @@
+{
+ "source": "ios/tools/settings-reference/capture.py provenance, from the records settings-<lang>-<state>.json",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "place": {
+  "name": "회현동",
+  "address": "대한민국 서울특별시 중구 회현동",
+  "country": "KR",
+  "location": {
+   "lat": 37.56,
+   "long": 126.98
+  }
+ },
+ "webViewOrigin": {
+  "x": 0,
+  "y": 162
+ },
+ "states": {
+  "ko-KR/units": {
+   "crops": {
+    "page": "settings-ko-KR-units.png",
+    "statusBar": "settings-ko-KR-units-statusbar.png"
+   }
+  },
+  "ko-KR/radio-temperatureUnit": {
+   "crops": {
+    "page": "settings-ko-KR-radio-temperatureUnit.png",
+    "statusBar": "settings-ko-KR-radio-temperatureUnit-statusbar.png"
+   }
+  },
+  "ko-KR/radio-windSpeedUnit": {
+   "crops": {
+    "page": "settings-ko-KR-radio-windSpeedUnit.png",
+    "statusBar": "settings-ko-KR-radio-windSpeedUnit-statusbar.png"
+   }
+  },
+  "ko-KR/radio-pressureUnit": {
+   "crops": {
+    "page": "settings-ko-KR-radio-pressureUnit.png",
+    "statusBar": "settings-ko-KR-radio-pressureUnit-statusbar.png"
+   }
+  },
+  "ko-KR/radio-distanceUnit": {
+   "crops": {
+    "page": "settings-ko-KR-radio-distanceUnit.png",
+    "statusBar": "settings-ko-KR-radio-distanceUnit-statusbar.png"
+   }
+  },
+  "ko-KR/radio-precipitationUnit": {
+   "crops": {
+    "page": "settings-ko-KR-radio-precipitationUnit.png",
+    "statusBar": "settings-ko-KR-radio-precipitationUnit-statusbar.png"
+   }
+  },
+  "ko-KR/radio-airUnit": {
+   "crops": {
+    "page": "settings-ko-KR-radio-airUnit.png",
+    "statusBar": "settings-ko-KR-radio-airUnit-statusbar.png"
+   }
+  },
+  "ko-KR/radio-temperatureUnit-f": {
+   "crops": {
+    "page": "settings-ko-KR-radio-temperatureUnit-f.png",
+    "statusBar": "settings-ko-KR-radio-temperatureUnit-f-statusbar.png"
+   }
+  },
+  "ko-KR/units-f": {
+   "crops": {
+    "page": "settings-ko-KR-units-f.png",
+    "statusBar": "settings-ko-KR-units-f-statusbar.png"
+   }
+  },
+  "ko-KR/hourly-f": {
+   "units": {
+    "temperatureUnit": "F",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "theme": "light",
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(221, 221, 221)",
+     "vertical-align": "baseline",
+     "text-align": "start",
+     "visibility": "visible"
+    },
+    "className": "bar bar-header",
+    "title": {
+     "text": "회현동",
+     "rect": {
+      "x": 10,
+      "y": 5,
+      "w": 373,
+      "h": 43
+     },
+     "style": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+      "font-size": "17px",
+      "font-weight": "500",
+      "line-height": "44px",
+      "opacity": "1",
+      "text-shadow": "none",
+      "padding-top": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "padding-right": "0px",
+      "margin-top": "5px",
+      "margin-bottom": "0px",
+      "border-top-width": "0px",
+      "border-bottom-width": "0px",
+      "border-top-color": "rgb(0, 0, 0)",
+      "vertical-align": "baseline",
+      "text-align": "center",
+      "visibility": "visible"
+     }
+    },
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-bell-outline",
+      "rect": {
+       "x": 312,
+       "y": 10,
+       "w": 38,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-upload-outline",
+      "rect": {
+       "x": 350,
+       "y": 10,
+       "w": 34,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "file": "settings-ko-KR-hourly-f-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "pixels": {
+      "x": 0,
+      "y": 162,
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "file": "settings-ko-KR-hourly-f-1.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 274.875
+     },
+     "pixels": {
+      "x": 0,
+      "y": 309,
+      "width": 1179,
+      "height": 825
+     }
+    }
+   ]
+  },
+  "ko-KR/radio-startupPage": {
+   "crops": {
+    "page": "settings-ko-KR-radio-startupPage.png",
+    "statusBar": "settings-ko-KR-radio-startupPage-statusbar.png"
+   }
+  },
+  "ko-KR/radio-refreshInterval": {
+   "crops": {
+    "page": "settings-ko-KR-radio-refreshInterval.png",
+    "statusBar": "settings-ko-KR-radio-refreshInterval-statusbar.png"
+   }
+  },
+  "ko-KR/radio-theme": {
+   "crops": {
+    "page": "settings-ko-KR-radio-theme.png",
+    "statusBar": "settings-ko-KR-radio-theme-statusbar.png"
+   }
+  },
+  "ko-KR/radio-theme-dark": {
+   "crops": {
+    "page": "settings-ko-KR-radio-theme-dark.png",
+    "statusBar": "settings-ko-KR-radio-theme-dark-statusbar.png"
+   }
+  },
+  "ko-KR/hourly-dark": {
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "theme": "dark",
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(255, 255, 255)",
+     "background-color": "rgb(27, 27, 27)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(68, 68, 68)",
+     "vertical-align": "baseline",
+     "text-align": "start",
+     "visibility": "visible"
+    },
+    "className": "bar bar-header",
+    "title": {
+     "text": "회현동",
+     "rect": {
+      "x": 10,
+      "y": 5,
+      "w": 373,
+      "h": 43
+     },
+     "style": {
+      "color": "rgb(255, 255, 255)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+      "font-size": "17px",
+      "font-weight": "500",
+      "line-height": "44px",
+      "opacity": "1",
+      "text-shadow": "none",
+      "padding-top": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "padding-right": "0px",
+      "margin-top": "5px",
+      "margin-bottom": "0px",
+      "border-top-width": "0px",
+      "border-bottom-width": "0px",
+      "border-top-color": "rgb(255, 255, 255)",
+      "vertical-align": "baseline",
+      "text-align": "center",
+      "visibility": "visible"
+     }
+    },
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-bell-outline",
+      "rect": {
+       "x": 312,
+       "y": 10,
+       "w": 38,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-upload-outline",
+      "rect": {
+       "x": 350,
+       "y": 10,
+       "w": 34,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "file": "settings-ko-KR-hourly-dark-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "pixels": {
+      "x": 0,
+      "y": 162,
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "file": "settings-ko-KR-hourly-dark-1.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 274.875
+     },
+     "pixels": {
+      "x": 0,
+      "y": 309,
+      "width": 1179,
+      "height": 825
+     }
+    }
+   ]
+  },
+  "ko-KR/radio-theme-photo": {
+   "crops": {
+    "page": "settings-ko-KR-radio-theme-photo.png",
+    "statusBar": "settings-ko-KR-radio-theme-photo-statusbar.png"
+   }
+  },
+  "ko-KR/hourly-photo": {
+   "units": {
+    "temperatureUnit": "C",
+    "windSpeedUnit": "m/s",
+    "pressureUnit": "hPa",
+    "distanceUnit": "km",
+    "precipitationUnit": "mm",
+    "airUnit": "airkorea"
+   },
+   "theme": "photo",
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 393,
+     "h": 49
+    },
+    "style": {
+     "color": "rgb(255, 255, 255)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "border-top-color": "rgb(255, 255, 255)",
+     "vertical-align": "baseline",
+     "text-align": "start",
+     "visibility": "visible"
+    },
+    "className": "bar bar-header",
+    "title": {
+     "text": "회현동",
+     "rect": {
+      "x": 10,
+      "y": 5,
+      "w": 373,
+      "h": 43
+     },
+     "style": {
+      "color": "rgb(255, 255, 255)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+      "font-size": "17px",
+      "font-weight": "500",
+      "line-height": "44px",
+      "opacity": "1",
+      "text-shadow": "rgb(143, 143, 143) -0.5px -0.5px 0px, rgb(143, 143, 143) 0.5px -0.5px 0px, rgb(143, 143, 143) -0.5px 0.5px 0px, rgb(143, 143, 143) 0.5px 0.5px 0px",
+      "padding-top": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "padding-right": "0px",
+      "margin-top": "5px",
+      "margin-bottom": "0px",
+      "border-top-width": "0px",
+      "border-bottom-width": "0px",
+      "border-top-color": "rgb(255, 255, 255)",
+      "vertical-align": "baseline",
+      "text-align": "center",
+      "visibility": "visible"
+     }
+    },
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 10,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "rgb(143, 143, 143) -0.5px -0.5px 0px, rgb(143, 143, 143) 0.5px -0.5px 0px, rgb(143, 143, 143) -0.5px 0.5px 0px, rgb(143, 143, 143) 0.5px 0.5px 0px",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-bell-outline",
+      "rect": {
+       "x": 312,
+       "y": 10,
+       "w": 38,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "rgb(143, 143, 143) -0.5px -0.5px 0px, rgb(143, 143, 143) 0.5px -0.5px 0px, rgb(143, 143, 143) -0.5px 0.5px 0px, rgb(143, 143, 143) 0.5px 0.5px 0px",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-upload-outline",
+      "rect": {
+       "x": 350,
+       "y": 10,
+       "w": 34,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(255, 255, 255)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "rgb(143, 143, 143) -0.5px -0.5px 0px, rgb(143, 143, 143) 0.5px -0.5px 0px, rgb(143, 143, 143) -0.5px 0.5px 0px, rgb(143, 143, 143) 0.5px 0.5px 0px",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "border-top-color": "rgba(0, 0, 0, 0)",
+       "vertical-align": "top",
+       "text-align": "center",
+       "visibility": "visible"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "file": "settings-ko-KR-hourly-photo-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 393,
+      "h": 355
+     },
+     "pixels": {
+      "x": 0,
+      "y": 162,
+      "width": 1179,
+      "height": 1065
+     }
+    },
+    {
+     "index": 1,
+     "file": "settings-ko-KR-hourly-photo-1.png",
+     "rect": {
+      "x": 0,
+      "y": 49,
+      "w": 393,
+      "h": 274.875
+     },
+     "pixels": {
+      "x": 0,
+      "y": 309,
+      "width": 1179,
+      "height": 825
+     }
+    }
+   ]
+  },
+  "ko-KR/about": {
+   "crops": {
+    "page": "settings-ko-KR-about.png"
+   }
+  },
+  "en-US/units": {
+   "crops": {
+    "page": "settings-en-US-units.png",
+    "statusBar": "settings-en-US-units-statusbar.png"
+   }
+  },
+  "en-US/about": {
+   "crops": {
+    "page": "settings-en-US-about.png"
+   }
+  }
+ }
+}

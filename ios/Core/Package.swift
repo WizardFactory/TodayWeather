@@ -31,8 +31,10 @@ let package = Package(
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
         // Push registration runs (PushSync: order, interrupted processes) and the HTTP transport (IN-04). The weather
         // requests, retries, timeouts, late responses and the refresh gate and timer on a virtual clock (IN-08).
-        // Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py.
-        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel", "TWDomain"],
+        // Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py; the settings
+        // steps, hand-offs and push re-post (IN-12, ios/tools/settings/generate.py) and what the Cordova iOS build sent
+        // and opened in the settings capture (ios/tools/settings-reference). The catalogs of TWResources give the texts.
+        .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel", "TWDomain", "TWResources"],
                     resources: [.copy("Golden")]),
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and
         // the tree). JavaScriptCore: the values where JavaScriptCore differs from the Node corpus, recorded by
@@ -41,9 +43,11 @@ let package = Package(
         // scenes, copied from android/ by ios/tools/import_chart_reference.py and captured on iOS Simulators by
         // ios/tools/chart-reference. ShellReference: how the Cordova iOS WebView reports the system languages, recorded by
         // ios/tools/shell-reference (IN-07). ForecastReference: every element of the Cordova iOS weather pages, captured by
-        // ios/tools/forecast-reference (IN-08).
+        // ios/tools/forecast-reference (IN-08). AirReference: every element of the Cordova iOS air page, captured by
+        // ios/tools/air-reference, and the air standards' grade and scale mapping run in JavaScriptCore by
+        // ios/tools/air/generate.py (IN-09).
         .testTarget(name: "TWDomainTests", dependencies: ["TWDomain", "TWModel", "TWResources"],
                     resources: [.copy("Corpus"), .copy("JavaScriptCore"), .copy("ChartReference"),
-                                .copy("ShellReference"), .copy("ForecastReference")]),
+                                .copy("ShellReference"), .copy("ForecastReference"), .copy("AirReference")]),
     ]
 )
