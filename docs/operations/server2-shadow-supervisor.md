@@ -67,7 +67,7 @@ The [flow](../architecture/diagrams/server2-shadow-supervisor.html) describes th
 
 ## Host binding and offline preparation
 
-The guard compares the actual Linux process start ticks, boot identity, executable hash, exact process environment hash, working directory, `.env` hash, cgroup and loopback socket ownership. It samples every ten seconds; missing/stale observations, changed identity, disk reserve, network counter rollback, exhausted S3 allowance and classified auth/quota events latch a stop. Its systemd watchdog stops the owned candidate and reader if observations cease. Original collection and poweroff deadlines are separate calendar timers and do not move with a generation.
+The guard compares the actual Linux process start ticks, boot identity, executable hash, exact process environment hash, working directory, `.env` hash, cgroup and loopback socket ownership. It samples every ten seconds. A missing, stale or malformed observation (including unavailable accounting, metrics or diagnostics) counts as a miss; six consecutive misses (60 seconds) latch `observation_lost`, and a valid sample resets the count, which is kept in the decision state (schema 4, `misses`) across guard restarts. Changed identity, disk reserve, network counter rollback, exhausted S3 allowance and classified auth/quota events latch a stop at once. Its systemd watchdog stops the owned candidate and reader if observations cease. Original collection and poweroff deadlines are separate calendar timers and do not move with a generation.
 
 The opt-in `/internal/metrics` fields are `server2_shadow_s3_{reads,writes,put_bytes}_remaining` and `server2_runtime_{auth,quota}_failures_total`. Rejection signals are recorded before log filtering and queue admission, so dropped diagnostic logs cannot erase them. They count classified events, potentially more than one per provider request; they are not provider usage or billing counters. No shadow metrics appear when the opt-in allowance is absent.
 
@@ -173,8 +173,17 @@ python3 server2/deploy/shadow/provision.py finish --execute --state private-run 
 `run` provisions only the frozen one-host plan, authenticates SSH against the EC2
 console key, installs once, and observes the same install until the original
 expiry. Startup waiting is bounded to ten minutes, capped by the original collection deadline. Before the sole launch, a durable first attached-profile observation starts a five-minute settling delay for IAM-to-EC2 propagation. Restarting the coordinator does not refresh that delay. The delay reduces the observed race; it is not a cross-service readiness guarantee. A rejected or uncertain launch still fails closed without an automatic replacement. A lost installation reply
-causes inspection, never another upload. A guard stop, missing observation,
-interrupt or acquisition error enters evidence retention and exact cleanup.
+causes inspection, never another upload. While collecting, the host is the lifetime
+authority: a status poll that fails, times out or cannot be validated is reported
+(`"poll":"unreachable"` with a consecutive count, then `"poll":"recovered"`) and
+retried a minute later; it never stops, exports or terminates. Collection ends when
+the host reports that its acquisition units stopped (`host_stopped`, for example a
+guard stop or a reader exit), at the deadline, or on an operator interrupt. An
+interrupt while collecting detaches without touching the host (`operator_detached`);
+`run` with the same arguments resumes observing the recorded install, and `finish`
+ends the run. A resumed run reuses the SSH target authenticated earlier in the run
+rather than the console fingerprints. A startup failure, host stop, deadline or
+interrupt before collection enters evidence retention and exact cleanup.
 Termination propagation gets at most three additional cleanup-only checks; the
 first source export is preserved if termination delayed it. Existing partial
 exports are not repeated. An incomplete cleanup returns exit 1 and retained
@@ -187,6 +196,12 @@ AWS account using cleanup's protected reserve even if ordinary work is exhausted
 The local journal lock excludes a second coordinator. If the coordinator dies,
 the installed host timers still stop collection at 168h and terminate at 170h;
 resume `finish` to independently remove and verify the remaining resources.
+
+The paired reader records 401, 403, 429, redirects, 5xx, timeouts and oversize bodies
+with the attempt and continues its schedule; its summary reports failed attempts per
+origin. An origin that has failed at least three times with no success for 30 minutes
+ends the reader (`origin-outage`); its exit stops only the reader, and the operator's
+next poll finishes the run as `host_stopped`.
 
 Host-plan schema 4 explicitly lists native read families. `push` and duplicate
 families are rejected. The launched process uses only the run's raw bucket in

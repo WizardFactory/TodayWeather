@@ -23,6 +23,8 @@ from state import validate_cost_policy, estimate_cost
 
 GiB = 1024**3
 INTERVAL = 10
+# A single failed observation never ends a run: stop after this many in a row (60 s).
+MISS_LIMIT = 6
 
 
 class GuardError(ValueError):
@@ -101,12 +103,13 @@ def evaluate(manifest, sample, previous, now):
     validate(manifest)
     require(integer(now),'now')
     fingerprint = hashlib.sha256(canonical(manifest).encode()).hexdigest()
-    result = {'schema':3,'manifest_sha256':fingerprint,'last_seen':now,
-              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None}
+    result = {'schema':4,'manifest_sha256':fingerprint,'last_seen':now,
+              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None,'misses':0}
     if previous is not None:
         require(type(previous) is dict and set(previous)==set(result),'state_fields')
         require(previous['manifest_sha256']==fingerprint,'state_identity')
-        require(previous['schema']==3 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu']),'state_values')
+        require(previous['schema']==4 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu'])
+                and integer(previous['misses'],0,MISS_LIMIT),'state_values')
         require(previous['stop'] is None or isinstance(previous['stop'],str),'state_stop')
         if previous['diagnostics'] is not None:checked_stored_diagnostics(previous['diagnostics'])
         result.update(previous)
@@ -120,10 +123,23 @@ def evaluate(manifest, sample, previous, now):
         return stop('clock_rollback')
     if now >= manifest['epoch']+168*3600:
         return stop('collection_deadline')
-    if not isinstance(sample,dict):
-        return stop('observation_unavailable')
-    if not integer(sample.get('observed_at')) or not 0 <= now-sample['observed_at'] <= 30:
-        return stop('stale_observation')
+    def missed():
+        # Unavailable, stale or malformed observations are tolerated while isolated.
+        result['misses']=min(MISS_LIMIT,result['misses']+1)
+        return stop('observation_lost') if result['misses']>=MISS_LIMIT else result
+    metrics=sample.get('metrics') if isinstance(sample,dict) else None
+    required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures'}
+    if (not isinstance(sample,dict) or not integer(sample.get('observed_at')) or not 0 <= now-sample['observed_at'] <= 30
+            or sample.get('accounting_valid') is not True
+            or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())):
+        return missed()
+    try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
+    except GuardError:return missed()
+    result['misses']=0
+    # Latest validated snapshot; latched with any stop so evidence distinguishes
+    # auth from quota, the first origin and conservative paid admissions.
+    result['diagnostics']=dict(diagnostics,observed_at=sample['observed_at'],
+                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'])
     for key in ('pid','start_ticks','boot_id','binary_sha256','environment_sha256','config_sha256','config_directory','cgroup'):
         if type(sample.get(key)) is not type(manifest[key]) or sample[key]!=manifest[key]:
             return stop('binding_'+key)
@@ -139,18 +155,6 @@ def evaluate(manifest, sample, previous, now):
         return stop('network_ceiling')
     if not integer(sample.get('free_bytes')) or sample['free_bytes'] < 6*GiB:
         return stop('disk_reserve')
-    if sample.get('accounting_valid') is not True:
-        return stop('accounting_unavailable')
-    metrics=sample.get('metrics')
-    required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures'}
-    if type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values()):
-        return stop('metrics_unavailable')
-    try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
-    except GuardError:return stop('metrics_unavailable')
-    # Latest validated snapshot; latched with any stop so evidence distinguishes
-    # auth from quota, the first origin and conservative paid admissions.
-    result['diagnostics']=dict(diagnostics,observed_at=sample['observed_at'],
-                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'])
     if metrics['auth_failures'] or metrics['quota_failures']:
         return stop('provider_auth_or_quota')
     for metric,allocation in [('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes')]:

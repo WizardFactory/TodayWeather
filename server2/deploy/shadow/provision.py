@@ -385,7 +385,12 @@ class BudgetedRemote:
 
 
 def connect_remote(cloud,journal,resources,identity,*,now):
-    from remote import bind_target,scan_host,Remote
+    from remote import bind_target,scan_host,Remote,target
+    # A target authenticated earlier in this run stays the target: resuming must not
+    # depend on the console still showing the host-key fingerprints days later.
+    existing=journal.request('ssh-target')
+    if existing is not None and receipt_result(existing).payload=={'bound':True}:
+        return BudgetedRemote(Remote(target(existing['params']),identity,journal.directory/'known_hosts'),journal)
     try:binding=bind_target(cloud,journal,resources,scan_host,now=now)
     except StateError as error:
         if str(error) in ('SSH instance state','SSH endpoint','console has no SHA256 host fingerprints',
@@ -399,15 +404,23 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     """One host, one install, bounded startup, then observation until original expiry.
 
     A separate process restart is deliberately unsupported. Resumption observes
-    the recorded install and cannot issue it again. All exits attempt retention
-    and exact-owned cleanup, including cancellation before SSH is available.
+    the recorded install and cannot issue it again. Startup failures attempt
+    retention and exact-owned cleanup, including cancellation before SSH is
+    available.
+
+    While collecting, the host is the lifetime authority: its guard and timers
+    stop and power it off without this process. A status poll that fails, times
+    out or cannot be validated is reported and retried; it never stops, exports
+    or terminates. Collection ends here only when the host reports that it has
+    stopped, at the deadline, or when the operator interrupts, which detaches
+    without teardown so that `run` can resume or `finish` can end the run.
     """
     from coordinator import verify_bundle
     from remote import install_remote,inspect_install
     launch=verify_bundle(bundle)
     require(launch['generation']=='initial','only initial host generation is supported')
     require(not Path(destination).exists(),'finish destination already exists')
-    remote=None;reason='collection_deadline';failure=None
+    remote=None;reason='collection_deadline';failure=None;collecting=False;detached=False
     try:
         # Each resumed call reconciles exact original requests; elapsed run time
         # and generation grants are never refreshed by this startup allowance.
@@ -430,16 +443,30 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
             require(installed['status'] in ('pending','installing'),'host installation stopped')
             require(clock()<until,'installation timeout');sleep(5)
         progress({'phase':'collecting','collection_until':journal.snapshot()['collection_until']})
+        collecting=True;unreachable=0
         while clock()<journal.snapshot()['collection_until']:
             journal.active(int(clock()))
-            observed=inspect_install(remote,journal,launch)
-            require(observed['status']=='started','host acquisition stopped or unobservable')
+            try:status=inspect_install(remote,journal,launch)['status']
+            except (StateError,OSError,ValueError,subprocess.TimeoutExpired):status='pending'
+            if status=='started':
+                if unreachable:progress({'phase':'collecting','poll':'recovered','after':unreachable})
+                unreachable=0
+            elif status=='pending':
+                unreachable+=1
+                progress({'phase':'collecting','poll':'unreachable','consecutive':unreachable})
+            else:
+                # The host itself reports stopped units or a failed install.
+                reason='host_stopped';break
             sleep(min(60,max(0,journal.snapshot()['collection_until']-clock())))
     except (StateError,OSError,ValueError,subprocess.TimeoutExpired) as error:
         reason='acquisition_failed';failure=type(error).__name__
     except KeyboardInterrupt:
         reason='operator_interrupted'
+        if collecting:detached=True
     finally:
+        if detached:
+            progress({'phase':'detached','reason':'operator_detached'})
+            return {'schema':1,'detached':True,'stop_reason':'operator_detached'}
         if remote is not None and isinstance(remote,BudgetedRemote):remote.finalizing=True
         progress({'phase':'finishing','reason':reason})
         report=finish_run(cloud,remote,journal,destination,now=int(clock()))

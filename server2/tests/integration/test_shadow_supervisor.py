@@ -342,17 +342,53 @@ class GuardTests(unittest.TestCase):
         m=host_manifest();s=host_sample()
         s['listeners']=[['0.0.0.0',3000],['127.0.0.1',3001]]
         self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'listener_binding')
-        self.assertEqual(guard.evaluate(m,None,None,1001)['stop'],'observation_unavailable')
+        # SR-2: one unavailable or stale observation is a miss, not a stop.
+        first=guard.evaluate(m,None,None,1001)
+        self.assertIsNone(first['stop']);self.assertEqual(first['misses'],1)
         for timestamp in (900,1002):
             s=host_sample();s['observed_at']=timestamp
-            self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'stale_observation')
+            stale=guard.evaluate(m,s,None,1001)
+            self.assertIsNone(stale['stop']);self.assertEqual(stale['misses'],1)
+
+    def test_six_consecutive_missed_observations_stop_and_success_resets(self):
+        m=host_manifest();d=None
+        for i in range(5):
+            d=guard.evaluate(m,None,d,1001+10*i)
+            self.assertIsNone(d['stop']);self.assertEqual(d['misses'],i+1)
+        s=host_sample();s['observed_at']=1051
+        healthy=guard.evaluate(m,s,d,1051)
+        self.assertIsNone(healthy['stop']);self.assertEqual(healthy['misses'],0)
+        for kind in ('none','stale','metrics','accounting','diagnostics'):
+            d=healthy
+            for i in range(6):
+                now=1061+10*i;s=host_sample();s['observed_at']=now
+                if kind=='none':s=None
+                elif kind=='stale':s['observed_at']=now-31
+                elif kind=='metrics':del s['metrics']['s3_reads']
+                elif kind=='accounting':s['accounting_valid']=False
+                else:del s['diagnostics']
+                d=guard.evaluate(m,s,d,now)
+                self.assertEqual(d['stop'],'observation_lost' if i==5 else None,(kind,i))
+            self.assertEqual(d['misses'],6)
+            self.assertEqual(guard.evaluate(m,host_sample(),d,1200)['stop'],'observation_lost')
+
+    def test_missed_observations_survive_a_guard_restart(self):
+        # The count lives in the state file: six separate `check` invocations, one miss each.
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);mf=root/'manifest.json';sample=root/'sample.json';st=root/'guard.json'
+            mf.write_text(json.dumps(host_manifest()));sample.write_text('null')
+            for i in range(6):
+                command=[sys.executable,str(GUARD_SOURCE),'check','--manifest',str(mf),'--sample',str(sample),'--state',str(st),'--now',str(1001+10*i)]
+                p=subprocess.run(command,capture_output=True,text=True,timeout=5)
+                self.assertEqual(p.returncode,2 if i==5 else 0,p.stdout+p.stderr)
+                self.assertEqual(json.loads(st.read_text())['misses'],i+1)
+            self.assertEqual(json.loads(st.read_text())['stop'],'observation_lost')
 
     def test_network_disk_and_accounting_boundaries(self):
         m=host_manifest()
         for field,value,reason in [('tx_bytes',499,'network_counter_reset'),
                 ('tx_bytes',500+4*guard.GiB-128*1024**2,'network_ceiling'),
-                ('free_bytes',6*guard.GiB-1,'disk_reserve'),
-                ('accounting_valid',False,'accounting_unavailable')]:
+                ('free_bytes',6*guard.GiB-1,'disk_reserve')]:
             s=host_sample();s[field]=value
             self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],reason)
         s=host_sample();s['free_bytes']=6*guard.GiB
@@ -367,11 +403,12 @@ class GuardTests(unittest.TestCase):
             s=host_sample();s['metrics'][key]=0
             self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'s3_allowance')
         s=host_sample();del s['metrics']['s3_reads']
-        self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'metrics_unavailable')
+        self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
 
     def test_stop_latches_and_manifest_cannot_change(self):
-        m=host_manifest();prior=guard.evaluate(m,None,None,1001)
-        self.assertEqual(guard.evaluate(m,host_sample(),prior,1002)['stop'],'observation_unavailable')
+        m=host_manifest();s=host_sample();s['listeners']=[]
+        prior=guard.evaluate(m,s,None,1001)
+        self.assertEqual(guard.evaluate(m,host_sample(),prior,1002)['stop'],'listener_binding')
         changed=dict(m);changed['pid']=124
         with self.assertRaises(guard.GuardError):guard.evaluate(changed,host_sample(changed),prior,1002)
         prior=guard.evaluate(m,host_sample(),None,1001)
@@ -458,7 +495,7 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(healthy['diagnostics']['paid_units'],None)
         self.assertEqual(guard.evaluate(m,None,healthy,1002)['diagnostics'],healthy['diagnostics'])
         s=host_sample();del s['diagnostics']
-        self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'metrics_unavailable')
+        self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
 
     def test_diagnostic_vocabulary_equals_rust_serialization(self):
         import re
@@ -487,7 +524,7 @@ class GuardTests(unittest.TestCase):
         bad=[{'message':'free text'},dict(prior['diagnostics'],extra=1),dict(prior['diagnostics'],auth_failures=-1),
              dict(prior['diagnostics'],first_rejection=dict(cause='quota',origin='event',component='provider',stage='acquire',provider='https://x',status=None))]
         for diagnostics in bad:
-            for stop in (None,'observation_unavailable'):
+            for stop in (None,'observation_lost'):
                 tampered=dict(prior,diagnostics=diagnostics,stop=stop)
                 with self.assertRaises(guard.GuardError):guard.evaluate(m,host_sample(),tampered,1002)
         with tempfile.TemporaryDirectory() as temp:
@@ -1620,6 +1657,97 @@ class LifecycleTests(unittest.TestCase):
         delay=patch.object(provision,'IAM_PROPAGATION_SECONDS',0)
         delay.start();self.addCleanup(delay.stop)
 
+    def collecting(self,root,behaviour):
+        """Start a prepared run whose inspections follow behaviour(poll_number, clock)."""
+        source,host=HostBundleTests.files(self,root)
+        plan=dict(host=host,cloud=provisioning_plan(),allowance=dict(reads=10,writes=20,put_bytes=30))
+        provision.prepare_run(plan,source,root/'run',root/'bundle',now=1000)
+        j=J(root/'run');self.addCleanup(j.close);j.__enter__()
+        cloud=ProvisionCloud(j);moment=[1001];calls=[];events=[]
+        launch=operator.verify_bundle(root/'bundle')
+        expected=operator.hashlib.sha256((state.canonical(launch)+'\n').encode()).hexdigest()
+        binding=RemoteTests.binding(self)
+        class Transport:
+            polls=0
+            def __init__(inner):inner.binding=binding
+            def invoke(inner,action,**kwargs):
+                calls.append((action,moment[0]))
+                if action=='install':return state.CloudResult('empty_success','HostInstall')
+                if action=='stop':return state.CloudResult('empty_success','HostObserve')
+                if action=='export':return state.CloudResult('timeout','HostEvidence')
+                inner.polls+=1
+                answer=behaviour(inner.polls,moment[0])
+                if answer=='raise':raise OSError('network unreachable')
+                if answer=='timeout':return state.CloudResult('timeout','HostObserve')
+                units={s:answer for s in ('candidate','reader','guard')};units['logs']='active'
+                return cloud_json('HostObserve',dict(status='started',launch_sha256=expected,epoch=1000,
+                    collection_until=1000+168*3600,cleanup_until=1000+170*3600,unit_states=units))
+        transport=Transport()
+        def connect(c,journal,r,*,now):
+            if journal.request('ssh-target') is None:
+                journal.prepare_request('ssh-target','BindSshTarget',binding,binding['instance'],now=now)
+                journal.record_receipt('ssh-target',cloud_json('BindSshTarget',{'bound':True}))
+            return provision.BudgetedRemote(transport,journal)
+        def pause(seconds):moment[0]+=seconds
+        run=lambda:provision.lifecycle(cloud,j,plan['cloud'],root/'bundle',root/'result',connect,
+                                       clock=lambda:moment[0],sleep=pause,progress=events.append)
+        return run,cloud,calls,events,moment,j
+
+    def test_failed_polls_never_end_collection(self):
+        # SR-2: eight hours of unreachable polls (errors and timeouts), then recovery.
+        with tempfile.TemporaryDirectory() as temp:
+            def behaviour(poll,now):
+                if 10<=poll<490:return 'raise' if poll%2 else 'timeout'
+                return 'active'
+            run,cloud,calls,events,moment,j=self.collecting(Path(temp),behaviour)
+            result=run()
+            self.assertEqual(result['stop_reason'],'collection_deadline')
+            stops=[at for action,at in calls if action=='stop']
+            self.assertTrue(stops and min(stops)>=1000+168*3600,stops[:1])
+            self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
+            self.assertEqual(sum(action=='install' for action,_ in calls),1)
+            self.assertGreater(sum(action=='inspect' for action,_ in calls),10000)
+            unreachable=[e for e in events if e.get('poll')=='unreachable']
+            self.assertEqual(max(e['consecutive'] for e in unreachable),480)
+            self.assertTrue(any(e.get('poll')=='recovered' for e in events))
+
+    def test_host_stop_is_reported_and_finished(self):
+        with tempfile.TemporaryDirectory() as temp:
+            run,cloud,calls,events,moment,j=self.collecting(Path(temp),lambda poll,now:'active' if poll<5 else 'inactive')
+            result=run()
+            self.assertEqual(result['stop_reason'],'host_stopped')
+            self.assertEqual(cloud.instance['State']['Name'],'terminated')
+
+    def test_operator_interrupt_detaches_without_teardown_and_resumes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);pending={'interrupt':True}
+            def behaviour(poll,now):
+                if poll==5 and pending['interrupt']:
+                    pending['interrupt']=False;raise KeyboardInterrupt
+                return 'active'
+            run,cloud,calls,events,moment,j=self.collecting(root,behaviour)
+            result=run()
+            self.assertEqual(result,{'schema':1,'detached':True,'stop_reason':'operator_detached'})
+            self.assertEqual(cloud.instance['State']['Name'],'running')
+            self.assertFalse((root/'result').exists())
+            self.assertNotIn('stop',[action for action,_ in calls])
+            self.assertFalse(any(op=='TerminateInstances' for op,_ in cloud.calls))
+            resumed=run()
+            self.assertEqual(resumed['stop_reason'],'collection_deadline')
+            self.assertEqual(sum(action=='install' for action,_ in calls),1)
+            self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
+
+    def test_resume_reuses_the_journaled_ssh_target(self):
+        # Days later the console may no longer show the host-key fingerprints.
+        with tempfile.TemporaryDirectory() as temp:
+            with J(Path(temp)/'state',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                binding=RemoteTests.binding(self)
+                j.prepare_request('ssh-target','BindSshTarget',binding,binding['instance'],now=1001)
+                j.record_receipt('ssh-target',cloud_json('BindSshTarget',{'bound':True}))
+                identity=Path(temp)/'key';identity.write_text('fixture');identity.chmod(0o600)
+                bound=provision.connect_remote(FixtureCloud([]),j,owned_resources(),identity,now=1002)
+                self.assertEqual(bound.binding,binding)
+
     def test_one_host_install_monitor_and_cleanup_across_failure_paths(self):
         for mode in ('deadline','lost_install_ack','ssh_timeout','guard_stop','termination_delay'):
             with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
@@ -1680,7 +1808,7 @@ class LifecycleTests(unittest.TestCase):
                     self.assertEqual(j.snapshot()['generations'],1)
                     self.assertFalse(cloud.buckets)
                     self.assertEqual(cloud.instance['State']['Name'],'terminated')
-                    self.assertEqual(result['stop_reason'],'acquisition_failed' if mode in ('ssh_timeout','guard_stop') else 'collection_deadline')
+                    self.assertEqual(result['stop_reason'],{'ssh_timeout':'acquisition_failed','guard_stop':'host_stopped'}.get(mode,'collection_deadline'))
                     self.assertEqual(events[-1]['phase'],'finishing')
                     self.assertTrue((root/'result/lifecycle.json').is_file())
                     if mode=='termination_delay':

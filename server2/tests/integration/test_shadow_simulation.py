@@ -43,7 +43,8 @@ class SimulationSubsetTests(unittest.TestCase):
         self.assertLess(run['last_guard_step_s'], 60 * 3600)
         self.assertGreaterEqual(run['last_guard_step_s'], 60 * 3600 - 10)
         self.assertEqual(run['collected_hours'], 60.0)
-        self.assertEqual(run['operator_stop'], 'acquisition_failed')
+        # SR-2: the operator finishes because the host reports its units stopped.
+        self.assertEqual(run['operator_stop'], 'host_stopped')
         self.assertLessEqual(run['operator_stop_after_group_end_s'], 61)
         self.assertTrue(run['cleanup_complete'])
 
@@ -70,7 +71,11 @@ class SimulationSubsetTests(unittest.TestCase):
         self.assertIsNone(model.ledger.get('terminal'))
         self.assertEqual(model.ledger.db.execute('SELECT count(*) FROM attempts WHERE result IS NULL').fetchone()[0], 1)
         model.advance(sim.EPOCH + 4)
-        self.assertEqual((model.terminal, model.end_at), ('http-429', sim.EPOCH + 4))
+        # SR-2: the rejection is recorded with the attempt and the reader goes on.
+        self.assertIsNone(model.terminal)
+        row = model.ledger.db.execute("SELECT result FROM attempts WHERE origin='production' ORDER BY id LIMIT 1").fetchone()[0]
+        self.assertEqual(sim.json.loads(row)['status'], 429)
+        self.assertEqual(model.failed['production'], 1)
         # A candidate exit at 3 s comes first: it is the cause, and the request stays pending.
         run = sim.run_once(dict(rejected, candidate_exit_at=3), 0)
         self.assertEqual(run['host_stop'], 'candidate-exit', run)
@@ -79,13 +84,14 @@ class SimulationSubsetTests(unittest.TestCase):
 
     def test_reader_exit_leaves_candidate_and_guard_until_the_operator_stops(self):
         # CX-SR1-002: the reader unit stops alone; the guard keeps deciding until the
-        # operator's next poll sees the reader inactive and stops the run.
-        scenario = sim.default_scenario(name='reader-exit',
-                                        reader_outcomes={('production', 1): {'status': 429, 'body_bytes': 0}})
+        # operator's next poll sees the reader inactive and stops the run. Since SR-2 only a
+        # sustained outage ends the reader: production fails every request for 30 minutes.
+        scenario = sim.default_scenario(name='reader-exit', production_5xx=1.0)
         run = sim.run_once(scenario, 0)
-        self.assertEqual(run['host_stop'], 'reader:http-429', run)
-        self.assertEqual(run['operator_stop'], 'acquisition_failed')
-        self.assertLess(run['collected_hours'], 10 / 3600)
+        self.assertEqual(run['host_stop'], 'reader:origin-outage', run)
+        self.assertEqual(run['operator_stop'], 'host_stopped')
+        self.assertGreaterEqual(run['collected_hours'], 0.5)
+        self.assertLess(run['collected_hours'], 0.52)
         self.assertGreaterEqual(run['guard_samples_after_reader_exit'], 1)
         self.assertLessEqual(run['operator_stop_after_reader_exit_s'], 70)
 
@@ -94,6 +100,14 @@ class SimulationSubsetTests(unittest.TestCase):
         self.assertEqual((run['host_stop'], run['guard_stop']), ('guard:provider_auth_or_quota', 'provider_auth_or_quota'))
         self.assertEqual(run['group_end_s'], 20)
         self.assertEqual(run['reader_last_start_s'] <= 20, True)
+
+    def test_isolated_transient_failures_do_not_end_the_run(self):
+        # SR-2: operator poll failures, guard sample failures and production errors at these
+        # rates are recorded and the run reaches its deadline.
+        for name in ('poll-failure-1e-3', 'sample-failure-1e-5', 'production-transient-1e-3', 'production-429-1e-4'):
+            run = sim.run_once(sim.SCENARIOS[name], 0)
+            self.assertTrue(run['full_run'], (name, run))
+            self.assertEqual(run['collected_hours'], 168.0)
 
     def workdir(self):
         import tempfile
