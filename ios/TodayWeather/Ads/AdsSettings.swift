@@ -2,14 +2,14 @@ import Foundation
 
 /// The AdMob identifiers of the build (IN-15, #2964), from the Info.plist keys `GADApplicationIdentifier` and
 /// `TWAdMobBannerUnit`, which the build fills from `TW_ADMOB_APP_ID_IOS` and `TW_ADMOB_BANNER_IOS`
-/// (Support/TodayWeather.xcconfig). Debug builds always carry Google's test app ID and test banner unit, as the
+/// (Support/App.xcconfig). Debug builds always carry Google's test app ID and test banner unit, as the
 /// Cordova builds without `--release` did; Release builds take the private values of ios/Private.xcconfig.
 struct AdsSettings: Equatable {
     /// Google's documented sample app ID and test banner unit for iOS (client/package.json, make-client-config.mjs).
     static let testAppID = "ca-app-pub-3940256099942544~1458002511"
     static let testBannerUnit = "ca-app-pub-3940256099942544/2435281174"
 
-    /// The app ID of a Release build without the private value (Support/TodayWeather.xcconfig): no AdMob app has it,
+    /// The app ID of a Release build without the private value (Support/App.xcconfig): no AdMob app has it,
     /// and it only keeps the Ads SDK from stopping the app at launch.
     static let placeholderAppID = "ca-app-pub-0000000000000000~0000000000"
 

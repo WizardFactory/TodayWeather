@@ -28,8 +28,18 @@
 	<false/>
 	<key>FirebaseAutomaticScreenReportingEnabled</key>
 	<false/>
+	<!-- The legacy server (IN-04 push, IN-08 weather): TW_SERVER_URL, a private build input (the Cordova
+	     clientConfig.serverUrl), set by the ignored ios/Private.xcconfig. Empty without it: the app then sends nothing. -->
+	<key>TWServerURL</key>
+	<string>$(TW_SERVER_URL)</string>
+	<!-- As the Cordova build (cordova-plugin-firebasex-messaging): FCM data messages may start the app in the
+	     background. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<!-- AdMob (IN-15): the app ID and the banner unit, the private build inputs TW_ADMOB_APP_ID_IOS and
-	     TW_ADMOB_BANNER_IOS (Support/TodayWeather.xcconfig: Google's test values in Debug builds). A Release build
+	     TW_ADMOB_BANNER_IOS (Support/App.xcconfig: Google's test values in Debug builds). A Release build
 	     without valid values requests no ads. -->
 	<key>GADApplicationIdentifier</key>
 	<string>$(TW_ADMOB_APP_ID_IOS)</string>

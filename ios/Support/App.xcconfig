@@ -1,0 +1,24 @@
+// Build settings of the app target. Private values (never in Git) come from the ignored ios/Private.xcconfig; see
+// README.md, "Private inputs". Without it the values stay empty and the app sends nothing to the legacy server.
+//
+// TW_SERVER_URL: the legacy server (Cordova clientConfig.serverUrl), written into Info.plist as TWServerURL. In an
+// xcconfig `//` starts a comment, so write the URL as https:/$()/host.
+TW_SERVER_URL =
+
+// TW_WEATHER_PHOTOS_URL: the weather photo feed of the photo theme (IN-07), written into Info.plist as
+// TWWeatherPhotosURL. Empty without it: the photo theme shows no photo.
+TW_WEATHER_PHOTOS_URL =
+
+// TW_ADMOB_APP_ID_IOS, TW_ADMOB_BANNER_IOS: AdMob's app ID and banner unit (IN-15), written into Info.plist as
+// GADApplicationIdentifier and TWAdMobBannerUnit. Without TW_ADMOB_APP_ID_IOS a Release build carries this
+// placeholder, which no AdMob app has: the Google Mobile Ads SDK stops an app whose GADApplicationIdentifier is empty
+// at launch (GADInvalidInitializationException), and AdsSettings treats the placeholder as missing, so neither UMP nor
+// the Ads SDK starts and no ad is requested.
+TW_ADMOB_APP_ID_IOS = ca-app-pub-0000000000000000~0000000000
+
+#include? "../Private.xcconfig"
+
+// Debug builds always use Google's documented test app ID and test banner unit, whatever Private.xcconfig holds,
+// as the Cordova builds without --release did (client/scripts/make-client-config.mjs).
+TW_ADMOB_APP_ID_IOS[config=Debug] = ca-app-pub-3940256099942544~1458002511
+TW_ADMOB_BANNER_IOS[config=Debug] = ca-app-pub-3940256099942544/2435281174

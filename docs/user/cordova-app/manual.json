@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for Android: user manual (app 1.1.1)",
-  "scenario": "TodayWeather 1.1.1 on Android with Korean screens. Korean labels are followed by their English meaning. Weather values are live examples captured on 7 November 2026.",
+  "scenario": "TodayWeather 1.1.1 on Android with Korean screens. Korean labels are followed by their English meaning. Weather values are live examples captured on 7 November 2026. Pages 24, 36 and 37 were captured again on 15 November 2026 from a 1.1.2 build in which the privacy choices are at the end of the menu.",
   "steps": [
     {
       "title": "First launch: read the access notice",
@@ -165,7 +165,7 @@
     },
     {
       "title": "Open the menu",
-      "instruction": "Tap the menu button ☰ at the top left. The menu lists 기상특보 (Warnings), 전국날씨 (Nationwide weather), 전국미세먼지 (Nationwide air), 널스쿨 풍향 (wind map website), settings, privacy choices, 의견보내기 (Feedback) and 응원리뷰쓰기 (Rate this app).",
+      "instruction": "Tap the menu button ☰ at the top left. The menu lists 기상특보 (Warnings), 전국날씨 (Nationwide weather), 전국미세먼지 (Nationwide air), 널스쿨 풍향 (wind map website), settings, 의견보내기 (Feedback), 응원리뷰쓰기 (Rate this app), 버전 (Version) and 정보 (About); the privacy choices come last, below 정보.",
       "screenshot": "screenshots/24-menu.png",
       "caption": "The side menu (S06).",
       "expected": "Tap an item to open it; tap ← to close the menu."
@@ -249,14 +249,14 @@
     },
     {
       "title": "Data sources and version",
-      "instruction": "At the bottom of the menu, 버전 (Version) shows the app version. Tap 정보 (About) to see the data sources: weather from the Korea Meteorological Administration (기상청), air quality from the Ministry of Environment and the Korea Environment Corporation.",
+      "instruction": "Above the privacy choices at the end of the menu, 버전 (Version) shows the app version. Tap 정보 (About) to see the data sources: weather from the Korea Meteorological Administration (기상청), air quality from the Ministry of Environment and the Korea Environment Corporation.",
       "screenshot": "screenshots/36-about.png",
       "caption": "About: data sources and the note that real-time data is unverified and may contain errors (O10).",
       "expected": "Tap 확인 (OK) to close the notice."
     },
     {
       "title": "Usage analytics and privacy",
-      "instruction": "In the menu, tap 선택적 이용 통계 (Optional usage analytics). Tap 동의 (Agree) to allow analytics or 거부/철회 (Decline/Withdraw) to refuse; it stays off until you agree. 광고 개인정보 선택 (Ad privacy choices) opens Google's ad privacy form where one applies, or says it cannot open; on the Korean test device nothing appeared. 개인정보처리방침 and 이용약관 open the privacy policy and terms.",
+      "instruction": "At the end of the menu, tap 선택적 이용 통계 (Optional usage analytics). Tap 동의 (Agree) to allow analytics or 거부/철회 (Decline/Withdraw) to refuse; it stays off until you agree. 광고 개인정보 선택 (Ad privacy choices) opens Google's ad privacy form where one applies, or says it cannot open; on the Korean test device nothing appeared. 개인정보처리방침 and 이용약관 open the privacy policy and terms.",
       "screenshot": "screenshots/37-analytics-choice.png",
       "caption": "The usage analytics dialog over the menu (S06).",
       "expected": "The menu row shows the current choice (꺼짐 means Off). Weather works either way."

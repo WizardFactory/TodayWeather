@@ -14,8 +14,17 @@ on:
       - "android/app/provenance/cordova-fonts.json"
       # Source of ios/tools/import_corpus.py (the golden corpus copy).
       - "android/core-domain/src/test/resources/corpus/**"
+      # Sources of ios/tools/push/generate.py (the Cordova iOS push requests).
+      - "client/www/js/service.push.js"
+      - "client/www/js/service.weatherutil.js"
       # Source of ios/tools/import_chart_reference.py (the Cordova chart scenes captured for Android).
       - "android/core-domain/src/test/resources/chart-reference/**"
+      # Sources of ios/tools/weather/generate.py (the Cordova weather request timing in JavaScriptCore).
+      - "client/www/js/service.weatherutil.js"
+      - "client/www/js/service.weatherinfo.js"
+      # Sources of ios/tools/air/generate.py (the air standards' grade and scale mapping in JavaScriptCore).
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
       # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
       - "client/resources/ios/tracking/**"
       - "client/config.xml"
@@ -37,7 +46,13 @@ on:
       - "android/app/src/main/res/font/ionicons.ttf"
       - "android/app/provenance/cordova-fonts.json"
       - "android/core-domain/src/test/resources/corpus/**"
+      - "client/www/js/service.push.js"
+      - "client/www/js/service.weatherutil.js"
       - "android/core-domain/src/test/resources/chart-reference/**"
+      - "client/www/js/service.weatherutil.js"
+      - "client/www/js/service.weatherinfo.js"
+      - "client/www/js/controller.tabctrl.js"
+      - "client/www/js/controller.air.js"
       # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
       - "client/resources/ios/tracking/**"
       - "client/config.xml"
@@ -57,16 +72,19 @@ jobs:
   build:
     name: Build and test (with client import check)
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets, golden corpus, chart scenes and ad privacy entries are current
+      - name: Imported client assets, golden corpus, chart scenes, push requests, weather request timing, air scales and ad privacy entries are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
           python3 ios/tools/import_chart_reference.py
+          python3 ios/tools/push/generate.py
+          python3 ios/tools/weather/generate.py
+          python3 ios/tools/air/generate.py
           python3 ios/tools/import_ad_privacy.py
           python3 ios/tools/ads/generate.py
           git diff --exit-code -- ios
@@ -79,10 +97,25 @@ jobs:
         run: >
           xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
           -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+      # The screenshot tests write their renders and difference images to the test host's tmp/chart-compare; keep
+      # them when a comparison fails, so a difference of the CI toolchain can be looked at.
+      - name: Collect the screenshot comparisons
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/screenshot-compare"
+          find "$HOME/Library/Developer/CoreSimulator/Devices" -path '*/tmp/chart-compare/*' -name '*.png' \
+            -exec cp {} "$RUNNER_TEMP/screenshot-compare/" \; || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshot-compare
+          path: ${{ runner.temp }}/screenshot-compare
+          if-no-files-found: ignore
+          retention-days: 7
   standalone:
     name: Build and test without client/, android/ and the legacy iOS directories
     runs-on: macos-26
-    timeout-minutes: 40
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Remove the directories the iOS build must not read

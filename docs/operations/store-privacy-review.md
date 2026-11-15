@@ -45,7 +45,7 @@ These are candidate selections, not submitted answers. Collection includes SDK b
 | Crash/performance diagnostics | Collected by enabled SDKs | Final archive privacy report and account retention |
 | Support contact/content | Review optional-disclosure criteria before selection | Final inbox and support process; no in-app account registration |
 | Linked to user (Apple) | Include data associated with device identifiers; lack of login is insufficient | Final per-data-type treatment |
-| Tracking (Apple) | Yes, after ATT permission: Device ID (advertising identifier) used by AdMob for third-party advertising and measurement | Allow, and the `denied` state after switching tracking off in Settings, verified on a device on 2026-11-13; a direct decline in the prompt and the Xcode privacy report of the final archive remain (#2945) |
+| Tracking (Apple) | Yes, after ATT permission: Device ID (advertising identifier) used by AdMob for third-party advertising and measurement | Allow (2026-11-13) and a direct decline after a fresh install (2026-11-15) verified on a device; answers published with 1.1.2; the Xcode privacy report of the final archive remains (#2945) |
 | Shared (Play) | AdMob sharing must be included | Assess service-provider exceptions per recipient instead of applying them to every SDK |
 | Ephemeral-only location | Not established | URL logs, caches and stored push coordinates prevent a blanket assertion |
 | All data encrypted in transit | Not verified | Recheck every user-data network hop |
@@ -89,9 +89,30 @@ iPhone the explainer came before the system prompt, the prompt showed the Korean
 `authorized` with a personalized request, turning tracking off gave `denied` with `npa=1`, no second prompt appeared,
 and a 1.1.1 build without a purpose string showed no prompt and kept running.
 
-Remaining gates: a direct "Ask App Not to Track" answer in the prompt; a fresh-install run; whether the ATT alert
-follows a refused GDPR message; the App Store privacy answers. The updated policy pages were uploaded on 2026-11-13
+The App Store privacy answers were published on 2026-11-13 and 1.1.2 was approved. Remaining gate: whether the ATT
+alert follows a refused GDPR message. The updated policy pages were uploaded on 2026-11-13
 ([record](../evidence/tasks/issue-2945/README.md#policy-page-upload-2026-11-13)).
+
+### Settings shortcut for users who did not allow tracking (#2990)
+
+AK decided on 2026-11-15 that iOS shows the tracking choice again without a new prompt. Apple permits "a shortcut to
+Settings" for a user who turned tracking off for the app
+([User Privacy and Data Use](https://developer.apple.com/app-store/user-privacy-and-data-use/)); it forbids manipulation,
+gating and incentives (App Review Guidelines 5.1.1(iv) and 5.1.2(i)).
+
+- The side menu shows 추적 허용 설정 (Tracking permission) with 허용됨 or 허용 안 함 below 광고 개인정보 선택 for
+  `authorized` and `denied`.
+- While the status is `denied`, the hourly, daily and air pages end with AK's text "TodayWeather는 광고 수익으로
+  운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다." and the
+  button 설정 열기 (Open Settings). It is page content, has no close control (AK's choice) and blocks nothing.
+- Both open Settings > TodayWeather. The status comes from the read-only `twAdPrivacyState` action; nothing prompts.
+- The elements exist only in the iOS bundle, added at build time by
+  [`ios-tracking-settings.js`](../../client/scripts/ios-tracking-settings.js) from
+  [`client/resources/ios/tracking-settings/`](../../client/resources/ios/tracking-settings/). Android does not show them.
+- Review risk: a notice on three pages that cannot be closed is the part most likely to be read as pressure. The wording
+  states the choice and its effect only. Explain it in the App Review notes of the release that ships it (see the
+  [release runbook](cordova-store-release.md#ios-tracking-settings-shortcut-2990)).
+- Device evidence: [#2990 record](../evidence/tasks/issue-2990/README.md).
 
 ## Decisions and remaining publication gates
 

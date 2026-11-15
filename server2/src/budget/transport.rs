@@ -57,6 +57,8 @@ impl BudgetTransport for HttpS3Transport {
             .bucket
             .get_object(Some(&credentials), key)
             .sign(Duration::from_secs(30));
+        self.admit(crate::storage::allowance::Attempt::Read)
+            .map_err(|_| BudgetError::Transport)?;
         let mut response = self
             .client
             .get(url)
@@ -143,6 +145,8 @@ impl BudgetTransport for HttpS3Transport {
             .headers_mut()
             .insert("content-type", "application/json");
         let url = action.sign(Duration::from_secs(30));
+        self.admit(crate::storage::allowance::Attempt::Put(body.len()))
+            .map_err(|_| BudgetError::Transport)?;
         let mut response = self
             .client
             .put(url)

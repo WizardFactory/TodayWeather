@@ -1,0 +1,16 @@
+{
+  "task": "ShadowSim2999",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2999",
+  "scope": "SR-1 of #2998: offline simulation of the shadow supervisor's 168-hour run over the real operator, guard and reader decision code; a short deterministic subset in CI; master baseline as evidence. No supervisor, server or reader behaviour change; no deployment, AWS change or qualification run.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowSim2999.json",
+    "server2/tests/integration/shadow_simulation.py",
+    "server2/tests/integration/test_shadow_simulation.py",
+    "server2/tools/ci.py"
+  ],
+  "outside": [
+    {"path": "docs/operations/server2-shadow-supervisor.md", "category": "documentation", "reason": "How to run the offline run simulation and read its result"},
+    {"path": "docs/evidence/tasks/issue-2999/verification.md", "category": "documentation", "reason": "Selected verification evidence and master baseline for SR-1"},
+    {"path": "docs/evidence/tasks/issue-2999/baseline-master.json", "category": "documentation", "reason": "Master baseline summary per scenario"}
+  ]
+}

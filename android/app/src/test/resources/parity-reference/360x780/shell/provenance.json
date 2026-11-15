@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/parity-reference/capture.sh shell",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -115,7 +115,7 @@
   },
   {
    "file": "en-US/dark-menu.png",
-   "sha256": "b46eaa45ce586d26261c9102d78392b94f485d429453c7639a01930df32733f7"
+   "sha256": "e09aec423fc0de0a6e8d2a6970162888addc280aa7ed880ab69670ffd195745e"
   },
   {
    "file": "en-US/dark-tabs.png",
@@ -123,7 +123,7 @@
   },
   {
    "file": "en-US/dark.json",
-   "sha256": "e5a692d1741dd5f44bd00856875cc6553eac56ac0307443f26ae5c60f4e5905e"
+   "sha256": "0f8bb0c931874895317b63a2150062e074bef0d7a847b782251d6ecdee2889e2"
   },
   {
    "file": "en-US/light-header.png",
@@ -131,7 +131,7 @@
   },
   {
    "file": "en-US/light-menu.png",
-   "sha256": "7089c48901d07011060ce3bfcf21f87050b3263bd8082e732b2133a0fe25ad85"
+   "sha256": "123c80e2cbfd4e0d4edd10c28be06d3a2ac396cd9a59a75bf26d2fe850b81347"
   },
   {
    "file": "en-US/light-tabs.png",
@@ -139,7 +139,7 @@
   },
   {
    "file": "en-US/light.json",
-   "sha256": "560056b141abaa7949c12f77e649603ce09a5a5b42d942e06bf3dca038af9c1b"
+   "sha256": "32b08bf4333e934351b03b11a40b3bdeddf8c9ef6c75caafa651e01c4ae418ff"
   },
   {
    "file": "en-US/old-header.png",
@@ -147,7 +147,7 @@
   },
   {
    "file": "en-US/old-menu.png",
-   "sha256": "e0d25c1a89cfbe615616e3e896de13b5aed5287d47bf34a9779108b572d5747e"
+   "sha256": "ed44e5a9f845d1aa2a228162b000f6354f37ee6cdea720d4513fa768cbec29c4"
   },
   {
    "file": "en-US/old-tabs.png",
@@ -155,7 +155,7 @@
   },
   {
    "file": "en-US/old.json",
-   "sha256": "bf471060c6d19df2b9df6607bd2e41585c580487538dae6d01ec4e1933c82c0d"
+   "sha256": "ee07cab813a791527e8ea373b58c2ab7e98e865afae6dfda201a5c8fdd236a29"
   },
   {
    "file": "en-US/photo-header.png",
@@ -163,7 +163,7 @@
   },
   {
    "file": "en-US/photo-menu.png",
-   "sha256": "a27a4f7b2c2f29034aafda2b56d0b1c2946f95902713e785c4a808f8fb073a69"
+   "sha256": "cda14ce9bfee6f3faa4f232b09b61fc604ea2a16fffa53c142a36008f65962f2"
   },
   {
    "file": "en-US/photo-scroll-176-background.png",
@@ -195,7 +195,7 @@
   },
   {
    "file": "en-US/photo.json",
-   "sha256": "f8acf432674a7fee2206cecdc1410b1cc6b7139bb76290c5b592f82c4cb88d1f"
+   "sha256": "5e89413f1681945f51cfd7aeff2189d3857032876593484ed408b8e24107b716"
   },
   {
    "file": "en-US/viewport.json",
@@ -207,7 +207,7 @@
   },
   {
    "file": "ko-KR/dark-menu.png",
-   "sha256": "89b2fcfd4a66c319a31c7751d8c5a4a3c780be3ea33b7335ea6dceb743f83836"
+   "sha256": "48d888bc80c7beadfc6a13c204ed6e16c40debeb43640c2d9be44ff643c977d1"
   },
   {
    "file": "ko-KR/dark-tabs.png",
@@ -215,7 +215,7 @@
   },
   {
    "file": "ko-KR/dark.json",
-   "sha256": "504adf1fe280c52b8a887be88b15b0d73d82b2e040145a96c534a089c2bf4012"
+   "sha256": "85c43b5285b5358e87109b20c9ddc289cb2b82b04e62a837c89a7a71d4d151c6"
   },
   {
    "file": "ko-KR/light-header.png",
@@ -223,7 +223,7 @@
   },
   {
    "file": "ko-KR/light-menu.png",
-   "sha256": "6f48659216021c28caa22713b500a50b63ce746a05be3789c28dc3f77f7bab74"
+   "sha256": "95205d687b5977f9952012ea1b4d0422571478b8ca067af890b6e91d62df427f"
   },
   {
    "file": "ko-KR/light-tabs.png",
@@ -231,7 +231,7 @@
   },
   {
    "file": "ko-KR/light.json",
-   "sha256": "5069154db718cb3770be2e589913218c8339944094fc1cfed4a0ca16aa7c2978"
+   "sha256": "a383996fb34269446acbafea2cbf432c721bd6b4111c0f2d98e5c5e5337e9fcd"
   },
   {
    "file": "ko-KR/old-header.png",
@@ -239,7 +239,7 @@
   },
   {
    "file": "ko-KR/old-menu.png",
-   "sha256": "36331471d8972880fd5e3525442339b1b59ac3b26aff96288ad429762a2c1280"
+   "sha256": "00cfd13a62d6ee395eff8acdbcfba153fec7064b649584a4e48f8dad19d55f2b"
   },
   {
    "file": "ko-KR/old-tabs.png",
@@ -247,7 +247,7 @@
   },
   {
    "file": "ko-KR/old.json",
-   "sha256": "dc1f7c39c358069002766d0727d797d137b22f8442882dcb722082ef63e96571"
+   "sha256": "095c367bc744eb18d7d4ed75728dae760c890a61bfb3e79f37e7f686b503ec06"
   },
   {
    "file": "ko-KR/photo-header.png",
@@ -255,7 +255,7 @@
   },
   {
    "file": "ko-KR/photo-menu.png",
-   "sha256": "acc78bca339ac983690c0d4a4732379e270cdaf839f94b73cb05b3eb7f65deef"
+   "sha256": "c9a30605d753b18ef4a47fc84cf66de78586d914f5a2d8afacc002505cdcb82e"
   },
   {
    "file": "ko-KR/photo-scroll-176-background.png",
@@ -287,7 +287,7 @@
   },
   {
    "file": "ko-KR/photo.json",
-   "sha256": "d3caff14cf0324fee2f0c45b9cab5c2e0db84e30217109b768183d0c27dcffda"
+   "sha256": "0b15132bd50f66387a149ffc0e2d51011b3596e4c2c753bc44a5ffd76290dff2"
   },
   {
    "file": "ko-KR/viewport.json",

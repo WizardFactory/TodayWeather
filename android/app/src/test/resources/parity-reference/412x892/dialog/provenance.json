@@ -1,9 +1,9 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK dialog",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/templates/tab-forecast.html",
@@ -151,7 +151,7 @@
   },
   {
    "file": "en-US/source-kaq.png",
-   "sha256": "85e4020bdc4ebc06a6d09da50914d787f72935d2d19354baf00e98bc7fd75b50"
+   "sha256": "84cd10fd2f249feb43d049b2d01a754767c0ead8ccb8a5e4a2b39f896727d3a5"
   },
   {
    "file": "en-US/viewport.json",

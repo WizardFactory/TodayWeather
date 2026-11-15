@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/settings-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "964443f77cdba9aeae7f4b55118ac2dd2cd7fb579a25ce8ad17cc8b09b8c41e9",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -137,9 +137,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -154,7 +152,7 @@
   "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
   "sdk": "36"
  },
- "display": "384x832 dp at density 2 (wm size 768x1664, wm density 320)",
+ "display": "384x832 dp at density 2; matrix captures record measured viewport.json per language",
  "language": "per-app locale ko-KR, then en-US",
  "images": "cut from the screen (screencap): a settings page from its top to 20 CSS px under its list, the About state whole, the weather page block by block (tools/emulator/page-blocks.mjs)",
  "server": "a stand-in inside the WebView: corpus fixtures kma-seoul (°C) and kma-seoul-f (°F) by the requested units, photo.png (photo.mjs) for every sky of the feed, 200 for the push list",
@@ -166,7 +164,7 @@
   },
   {
    "file": "en-US/about.png",
-   "sha256": "20dd059b51bd22805c0813c3a37666e064fab3f4662575791d97eee0ee0a4c28"
+   "sha256": "be1a4c7e114be370876c7a8f8ed809f3484e3bb1d6694725571f73a8f206bf09"
   },
   {
    "file": "en-US/requests.json",
@@ -182,11 +180,11 @@
   },
   {
    "file": "ko-KR/about.json",
-   "sha256": "4084d1508cae9bd5044e24a5500a7341d28e72804095b3333f78286302ff915e"
+   "sha256": "1f67edac895ae0c787c4c052732ed10698896eae2aaba25d2fa40f4a64d19ce5"
   },
   {
    "file": "ko-KR/about.png",
-   "sha256": "a2bc38d434113477d78b27a302e7c4b32d21ac62c48b90c5980f25fa08927bff"
+   "sha256": "0951753b107b4b09478375156b60c5b5108202ce6f3b91d036e12bc58d774620"
   },
   {
    "file": "ko-KR/hourly-dark/hourly-0.png",
@@ -366,7 +364,7 @@
   },
   {
    "file": "ko-KR/requests.json",
-   "sha256": "74f216c187ac6e2bae9550bd5ab526cbdf2b260d410c7863244f01104d4eb18e"
+   "sha256": "873977eb5703848c8881e8a17e4c22180aea41532bd00aa1fff2673aefbac4f7"
   },
   {
    "file": "ko-KR/units-dark.json",

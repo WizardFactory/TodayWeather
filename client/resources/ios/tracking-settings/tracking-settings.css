@@ -1,0 +1,21 @@
+/* iOS only (#2990): the tracking notice at the end of the hourly, daily and air pages. Part of the page; scrolls with it.
+   The page theme styles the surrounding .card; the inner block holds the notice's own spacing. */
+tw-tracking-notice {
+    display: block;
+}
+.tw-tracking-body {
+    padding: 4px 16px;
+    text-align: center;
+}
+.tw-tracking-body p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: normal;
+    color: inherit;
+}
+.tw-tracking-body .tw-tracking-settings {
+    color: inherit;
+    border-color: currentColor;
+    background: transparent;
+}

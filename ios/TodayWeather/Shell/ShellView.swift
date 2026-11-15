@@ -7,6 +7,8 @@ import UIKit
 /// shell's own default shows the selected place's name over an empty page.
 struct TabContent {
     var title: String = ""
+    /// What follows the title inside it (IN-08: the current position's location glyph or the loading spinner).
+    var titleAccessory: AnyView? = nil
     var actions: AnyView = AnyView(EmptyView())
     var page: AnyView = AnyView(Color.clear)
 }
@@ -43,7 +45,8 @@ struct RootView: View {
             if let shell = launch.shell {
                 switch shell.screen {
                 case .start: StartPlaceholder(model: shell)
-                case .tab: ShellView(model: shell, banner: Monetization.shared.bannerView)
+                case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } },
+                                     banner: Monetization.shared.bannerView)
                 }
             } else {
                 SplashView()
@@ -114,8 +117,8 @@ struct StartPlaceholder: View {
 /// the header bar keeping the side insets clear.
 struct ShellView: View {
     let model: ShellModel
-    /// The page of a tab; IN-08 and later give it. Nil: the shell's default.
-    var content: ((ShellTab) -> TabContent)? = nil
+    /// The page of a tab; IN-08 and later give it. Nil (or nil for a tab): the shell's default.
+    var content: ((ShellTab) -> TabContent?)? = nil
     /// The banner while it shows (IN-15). The slot is under the tab bar, above the home indicator, as the AdMob plugin
     /// put it (`EmiBannerManager.updateBannerLayout`: the WebView ends at the banner's top, the banner sits on the
     /// home indicator's inset, black below and beside it).
@@ -136,7 +139,7 @@ struct ShellView: View {
 struct ShellFrame: View {
     let model: ShellModel
     let insets: ShellInsets
-    var content: ((ShellTab) -> TabContent)? = nil
+    var content: ((ShellTab) -> TabContent?)? = nil
     var banner: AnyView? = nil
     /// The banner with the strip below it (IN-15).
     @State private var bannerHeight: CGFloat = 0
@@ -150,14 +153,15 @@ struct ShellFrame: View {
     var body: some View {
         let colors = ShellColors.of(model.theme, tab: model.selected)
         let catalog = Catalog(code: model.locale.catalog)
-        let tab = content?(model.selected) ?? defaultContent(model.selected)
+        let tab = content.flatMap { $0(model.selected) } ?? defaultContent(model.selected)
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 colors.statusBar.color.frame(height: insets.statusBar)
                 ZStack(alignment: .top) {
                     tab.page.frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
-                    HeaderBar(colors: colors, title: tab.title, insets: insets, onMenu: model.openMenu) { tab.actions }
+                    HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, insets: insets,
+                              onMenu: model.openMenu) { tab.actions }
                 }
                 .frame(maxHeight: .infinity)
                 TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
@@ -203,6 +207,7 @@ struct ShellFrame: View {
 struct BarFrame<Leading: View, Trailing: View>: View {
     let colors: ShellColors
     let title: String
+    var titleAccessory: AnyView? = nil
     let insets: ShellInsets
     let titleIdentifier: String
     /// How far WebKit puts the title below where SwiftUI centers it on the 44 pt line (measured: 1 pt in a tab's
@@ -214,11 +219,14 @@ struct BarFrame<Leading: View, Trailing: View>: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Text(title)
-                .font(.system(size: titleSize, weight: .medium))
-                .foregroundStyle(colors.headerText.color)
-                .outlined(colors.headerOutline)
-                .lineLimit(1)
+            HStack(spacing: 0) {
+                Text(title)
+                    .font(.system(size: titleSize, weight: .medium))
+                    .foregroundStyle(colors.headerText.color)
+                    .outlined(colors.headerOutline)
+                    .lineLimit(1)
+                if let titleAccessory { titleAccessory }
+            }
                 // WebKit puts the baseline of a 44 pt line 1 pt lower than SwiftUI centers the text (measured).
                 .offset(y: titleOffset)
                 .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight)
@@ -248,12 +256,13 @@ struct BarFrame<Leading: View, Trailing: View>: View {
 struct HeaderBar<Actions: View>: View {
     let colors: ShellColors
     let title: String
+    var titleAccessory: AnyView? = nil
     let insets: ShellInsets
     let onMenu: () -> Void
     @ViewBuilder let actions: () -> Actions
 
     var body: some View {
-        BarFrame(colors: colors, title: title, insets: insets, titleIdentifier: "shell-title") {
+        BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, insets: insets, titleIdentifier: "shell-title") {
             BarButton(glyph: Glyphs.navicon, colors: colors, width: 40, action: onMenu)
                 .accessibilityLabel("menu")
                 .accessibilityIdentifier("shell-menu-button")
@@ -488,34 +497,39 @@ struct MenuRows: View {
 }
 
 /// An Ionic popup (`$ionicPopup.show`): the backdrop darkens the page (40 % black), a 250 pt popup in its middle,
-/// white at 90 %: the title (15 pt, medium), the lines (14 pt) and the buttons side by side. Only its buttons close it.
+/// white at 90 %: the title (15 pt, medium), the lines (14 pt) and the buttons side by side, each size at the default
+/// text size and scaled with Dynamic Type (CODEX-IN07-1). Only its buttons close it.
 struct IonicPopupView: View {
     let popup: Popup
     let onTap: (Int) -> Void
+    @ScaledMetric(relativeTo: .headline) private var titleSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .body) private var lineSize: CGFloat = 14
+    @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .body) private var buttonHeight: CGFloat = 45
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.4).contentShape(Rectangle()).onTapGesture {}
             VStack(spacing: 0) {
                 if !popup.title.isEmpty {
-                    Text(popup.title).font(.system(size: 15, weight: .medium)).multilineTextAlignment(.center)
+                    Text(popup.title).font(.system(size: titleSize, weight: .medium)).multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 10).padding(.top, 15)
                 }
                 Color(white: 0.933).frame(height: 1).padding(.top, 15)
                 ScrollView {
-                    Text(popup.lines.joined(separator: "\n")).font(.system(size: 14))
+                    Text(popup.lines.joined(separator: "\n")).font(.system(size: lineSize))
                         .frame(maxWidth: .infinity, alignment: .leading).padding(10)
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 5) {
                     ForEach(Array(popup.buttons.enumerated()), id: \.offset) { index, button in
                         Button { onTap(index) } label: {
-                            Text(button.text).font(.system(size: 15, weight: .bold))
+                            Text(button.text).font(.system(size: buttonSize, weight: .bold))
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(button.style == .standard ? CssColor(0x444444).color : .white)
                                 .padding(.horizontal, 13)
-                                .frame(maxWidth: .infinity, minHeight: 45)
+                                .frame(maxWidth: .infinity, minHeight: buttonHeight)
                                 .background(buttonColor(button.style))
                                 .clipShape(RoundedRectangle(cornerRadius: 2))
                         }

@@ -1,9 +1,9 @@
 {
  "tool": "android/tools/parity-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/templates/tab-forecast.html",
@@ -143,7 +143,7 @@
   },
   {
    "file": "en-US/kma-seoul/hourly-3.png",
-   "sha256": "ce954287e93ac0180f07ffa8e49962966301514fb26fd54e0968700eb11cbbdc"
+   "sha256": "39ffc9d47f08532ef0e92640ccf34c82252c38dabf9f722e97da61b2300b4102"
   },
   {
    "file": "en-US/kma-seoul/hourly-4.png",
@@ -155,7 +155,7 @@
   },
   {
    "file": "en-US/vc-london/daily-0.png",
-   "sha256": "958711197a0650d3a1b0e5d6a9afc02178cc4986fab4131c78d107fb14324aff"
+   "sha256": "d8c97f344ae554e9188a1a74bf90e339df7f84c537cc0a5b9277948cb0dffad2"
   },
   {
    "file": "en-US/vc-london/daily-1.png",

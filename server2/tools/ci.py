@@ -63,6 +63,11 @@ def main():
                      '--rounds', '20', '--report', str(root/'reports/server2-kma-checkpoint/ci.json')])
     # S19: shadow tool unit tests, then the integrated release smoke (scenarios, paired
     # replay with self-check, cache-aware rollback). The two reused smokes ran above.
+    # Shadow supervisor checks use offline cloud/process fixtures only.
+    commands.insert(3, [sys.executable, 'tests/integration/test_shadow_supervisor.py'])
+    # SR-1 (#2999): short deterministic subset of the 168-hour supervisor simulation.
+    commands.insert(3, [sys.executable, 'tests/integration/test_shadow_simulation.py'])
+    commands.insert(3, [sys.executable, 'tests/integration/test_paired_read.py'])
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow.py'])
     commands.insert(4, [sys.executable, 'tests/integration/test_native_rollback.py'])
     # S19b orchestration controls; existing runtime checks remain unchanged.
@@ -105,6 +110,10 @@ def main():
     # artifact tests; inserted last so the positional inserts above keep their order.
     commands.insert(commands.index([sys.executable, 'tools/test_verify_artifact.py']) + 1,
                     [sys.executable, 'tools/verification/test_kma_client_validation.py'])
+    # #2978 log pipeline: settings, rendering and unit files, offline. The systemd and
+    # collector behaviour is checked by deploy/logging/linux_check.py in a disposable VM.
+    commands.insert(commands.index([sys.executable, 'tools/test_verify_artifact.py']) + 1,
+                    [sys.executable, 'deploy/logging/test_logging.py'])
     for command in commands:
         print('+',' '.join(command),flush=True);subprocess.run(command,check=True)
 

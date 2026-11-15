@@ -1,0 +1,13 @@
+{
+  "title": "Shadow supervisor: prepare and recover",
+  "scenario": "Operator guide, schema 5 journal / schema 4 host plan. Screenshot: actual offline CLI with fixture artifacts on 2026-11-13; selected JSON fields. No cloud run is shown. Requires Python 3.11+, an approved manifest and a qualified Linux candidate.",
+  "steps": [
+    {
+      "title": "Prepare once, inspect, then execute only the qualified run",
+      "instruction": "From the repository, use server2/deploy/shadow/provision.py prepare --state RUN --bundle BUNDLE --plan PLAN.json --source SOURCE, then inspect --state RUN --bundle BUNDLE. Prepare fixes the original 168h collection and 170h cleanup deadlines and consumes the initial grant. Keep the journal and private bundle. Do not create a replacement journal after failure.",
+      "screenshot": "cli-output.png",
+      "caption": "Both offline commands retain the same epoch and one generation. Duplicate prepare and run without --execute return exit 2. The screenshot abbreviates local paths.",
+      "expected": "After review and CI, run --execute with the same state/bundle, existing SSH identity and new output directory. On interruption, use finish --execute --state RUN --output NEW with the original AWS account/profile; SSH identity is optional for cleanup. Inspect retained cleanup evidence on exit 1. Missing bodies stay incomplete; cleanup success never proves weather parity. See ../server2-shadow-supervisor.md for exact commands and prerequisites."
+    }
+  ]
+}

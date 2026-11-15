@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PutLogObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::${BucketName}/${LogPrefix}/*"
+    },
+    {
+      "Sid": "WriteLogStreams",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:${Region}:${AccountId}:log-group:${LogGroupName}:log-stream:*"
+    },
+    {
+      "Sid": "FindLogStreams",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": [
+        "arn:aws:logs:${Region}:${AccountId}:log-group:${LogGroupName}",
+        "arn:aws:logs:${Region}:${AccountId}:log-group:${LogGroupName}:*"
+      ]
+    }
+  ]
+}
