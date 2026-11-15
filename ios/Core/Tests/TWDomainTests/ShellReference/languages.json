@@ -1,0 +1,152 @@
+{
+ "source": "ios/tools/shell-reference/capture.py languages: the Cordova iOS build's WKWebView after setting the simulator's AppleLanguages and AppleLocale; Accept-Language as the WebView sent it with an XHR",
+ "build": {
+  "commit": "11b633d1e26b1e72903b4809c3a8253719a9e64d",
+  "client_version": "1.1.2",
+  "xcode": "Xcode 27.2"
+ },
+ "device": {
+  "name": "twios_cap_16",
+  "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+ },
+ "capturedAt": "2026-11-13T20:36:31Z",
+ "cases": [
+  {
+   "appleLanguages": [
+    "ko-KR"
+   ],
+   "appleLocale": "ko_KR",
+   "navigatorLanguage": "ko-KR",
+   "navigatorLanguages": [
+    "ko-KR"
+   ],
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "en-US"
+   ],
+   "appleLocale": "en_US",
+   "navigatorLanguage": "en-US",
+   "navigatorLanguages": [
+    "en-US"
+   ],
+   "acceptLanguage": "en-US,en;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "en-KR"
+   ],
+   "appleLocale": "en_KR",
+   "navigatorLanguage": "en-US",
+   "navigatorLanguages": [
+    "en-US"
+   ],
+   "acceptLanguage": "en-US,en;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "ko-KR",
+    "en-US"
+   ],
+   "appleLocale": "ko_KR",
+   "navigatorLanguage": "ko-KR",
+   "navigatorLanguages": [
+    "ko-KR"
+   ],
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "en-US",
+    "ko-KR"
+   ],
+   "appleLocale": "en_US",
+   "navigatorLanguage": "en-US",
+   "navigatorLanguages": [
+    "en-US"
+   ],
+   "acceptLanguage": "en-US,en;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "ja-JP"
+   ],
+   "appleLocale": "ja_JP",
+   "navigatorLanguage": "ja",
+   "navigatorLanguages": [
+    "ja"
+   ],
+   "acceptLanguage": "ja"
+  },
+  {
+   "appleLanguages": [
+    "de-AT"
+   ],
+   "appleLocale": "de_AT",
+   "navigatorLanguage": "de-DE",
+   "navigatorLanguages": [
+    "de-DE"
+   ],
+   "acceptLanguage": "de-DE,de;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "zh-Hans-CN"
+   ],
+   "appleLocale": "zh_CN",
+   "navigatorLanguage": "zh-CN",
+   "navigatorLanguages": [
+    "zh-CN"
+   ],
+   "acceptLanguage": "zh-CN,zh-Hans;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "zh-Hant-TW"
+   ],
+   "appleLocale": "zh_TW",
+   "navigatorLanguage": "zh-TW",
+   "navigatorLanguages": [
+    "zh-TW"
+   ],
+   "acceptLanguage": "zh-TW,zh-Hant;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "zh-Hant-HK"
+   ],
+   "appleLocale": "zh_HK",
+   "navigatorLanguage": "zh-HK",
+   "navigatorLanguages": [
+    "zh-HK"
+   ],
+   "acceptLanguage": "zh-HK,zh-Hant;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "fr-FR",
+    "ko-KR"
+   ],
+   "appleLocale": "fr_FR",
+   "navigatorLanguage": "fr-FR",
+   "navigatorLanguages": [
+    "fr-FR"
+   ],
+   "acceptLanguage": "fr-FR,fr;q=0.9"
+  },
+  {
+   "appleLanguages": [
+    "ko"
+   ],
+   "appleLocale": "ko",
+   "navigatorLanguage": "ko-KR",
+   "navigatorLanguages": [
+    "ko-KR"
+   ],
+   "acceptLanguage": "ko-KR,ko;q=0.9"
+  }
+ ]
+}

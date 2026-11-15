@@ -1,0 +1,78 @@
+{
+ "source": "ios/tools/shell-reference/capture.py run",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "fixture": "kma-seoul (Core/Tests/TWDomainTests/Corpus/inputs/kma-seoul.json) as the place 회현동",
+ "themes": [
+  "light",
+  "dark",
+  "photo",
+  "old"
+ ],
+ "languages": {
+  "ko-KR": {
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "ko-KR",
+    "languages": [
+     "ko-KR"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "KR",
+    "utilLanguage": "ko-KR",
+    "translate": "ko",
+    "insets": {
+     "top": "5px",
+     "bottom": "34px",
+     "left": "0px",
+     "right": "0px"
+    },
+    "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready old-theme forecast"
+   },
+   "webViewOrigin": {
+    "x": 0,
+    "y": 162
+   }
+  },
+  "en-US": {
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "en-US",
+    "languages": [
+     "en-US"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "US",
+    "utilLanguage": "en-US",
+    "translate": "en",
+    "insets": {
+     "top": "5px",
+     "bottom": "34px",
+     "left": "0px",
+     "right": "0px"
+    },
+    "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready old-theme forecast"
+   },
+   "webViewOrigin": {
+    "x": 0,
+    "y": 162
+   }
+  }
+ }
+}

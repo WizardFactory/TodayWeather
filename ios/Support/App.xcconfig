@@ -5,4 +5,8 @@
 // xcconfig `//` starts a comment, so write the URL as https:/$()/host.
 TW_SERVER_URL =
 
+// TW_WEATHER_PHOTOS_URL: the weather photo feed of the photo theme (IN-07), written into Info.plist as
+// TWWeatherPhotosURL. Empty without it: the photo theme shows no photo.
+TW_WEATHER_PHOTOS_URL =
+
 #include? "../Private.xcconfig"
