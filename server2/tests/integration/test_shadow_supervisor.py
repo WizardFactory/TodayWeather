@@ -312,6 +312,23 @@ def host_sample(m=None):
 
 
 class GuardTests(unittest.TestCase):
+    def test_stop_record_is_written_before_the_units_stop(self):
+        # LP-6 (#2983): stopping the candidate stops the guard's own unit, which can end
+        # the guard during stop_units; its record must already be flushed by then.
+        import contextlib,io
+        from unittest import mock
+        out=io.StringIO()
+        def killed(manifest):
+            self.assertEqual(json.loads(out.getvalue()),{'stop':'provider_auth_or_quota'})
+            raise KeyboardInterrupt
+        with contextlib.redirect_stdout(out),mock.patch.object(guard,'stop_units',side_effect=killed) as stop:
+            with self.assertRaises(KeyboardInterrupt):guard.report_stop({'stop':'provider_auth_or_quota'},host_manifest(),True)
+        stop.assert_called_once()
+        out=io.StringIO()
+        with contextlib.redirect_stdout(out),mock.patch.object(guard,'stop_units') as stop:
+            guard.report_stop({'stop':'disk_reserve'},host_manifest(),False)
+        stop.assert_not_called();self.assertEqual(json.loads(out.getvalue()),{'stop':'disk_reserve'})
+
     def test_healthy_binding_and_thresholds(self):
         m=host_manifest();s=host_sample(m)
         result=guard.evaluate(m,s,None,1001)
