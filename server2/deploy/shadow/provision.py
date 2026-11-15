@@ -399,6 +399,14 @@ def mark_collection_started(journal,*,now):
         journal.record_receipt('collection-started',CloudResult('json','CollectionStarted',{'started':True}))
 
 
+def bound_target(journal):
+    """True when an SSH target was authenticated earlier in this run."""
+    try:
+        existing=journal.request('ssh-target')
+        return existing is not None and existing['receipt'] is not None and receipt_result(existing).payload=={'bound':True}
+    except Exception:return False
+
+
 def connect_remote(cloud,journal,resources,identity,*,now):
     from remote import bind_target,scan_host,Remote,target
     # A target authenticated earlier in this run stays the target: resuming must not
@@ -429,10 +437,12 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     lifetime authority: a connector or status-poll failure of any kind is an
     unreachable poll, retried a minute later; an interrupt or a local failure
     (journal, progress output) detaches without touching the host
-    (`operator_detached`, `operator_failed`). Startup failures keep retention and
-    exact cleanup. Finishing makes one reconnect attempt for host evidence if
-    needed and always proceeds to retention and cleanup, also after an
-    interrupt. A resumed `run` makes no provisioning or install call.
+    (`operator_detached`, `operator_failed`); the phase is read from the journal
+    when the event happens. Startup failures keep retention and exact cleanup.
+    Every finish without a connection first makes one reconnect attempt through
+    the journaled SSH target for host evidence. An interrupt inside retention or
+    cleanup stops the process as before (`finish` resumes it). A resumed `run`
+    makes no provisioning or install call.
     """
     from coordinator import verify_bundle
     from remote import install_remote,inspect_install
@@ -442,11 +452,15 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     remote=None;reason='collection_deadline';failure=None;detached=None
     resumed=collection_started(journal)
     collection_until=journal.snapshot()['collection_until']
-    # Phase (design-round3.md): startup until the journal records collection-started;
-    # collecting until the loop ends or the deadline passes; finishing afterwards. An
-    # interrupt or a local failure detaches only while collecting.
-    phase='startup' if not resumed else ('collecting' if clock()<collection_until else 'finishing')
-    def collecting():return phase=='collecting' and clock()<collection_until
+    # Phase (design-round4.md): startup until the journal records collection-started,
+    # collecting until the loop ends or the deadline passes, finishing otherwise (also a
+    # resume after the deadline without the marker). An interrupt or a local failure
+    # detaches only while collecting, decided from the journal when it happens.
+    phase='finishing' if clock()>=collection_until else ('collecting' if resumed else 'startup')
+    def collecting():
+        if phase=='finishing' or clock()>=collection_until:return False
+        try:return collection_started(journal)
+        except Exception:return phase=='collecting'
     try:
         if phase=='startup':
             # Each call reconciles exact original requests; elapsed run time and
@@ -494,11 +508,6 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
                     progress({'phase':'collecting','poll':'unreachable','consecutive':unreachable})
                 sleep(min(60,max(0,collection_until-clock())))
             phase='finishing'
-        if remote is None:
-            # Finishing without a connection (deadline reached unreachable, or resumed
-            # after it): one attempt so the finish can retain host evidence.
-            try:remote=connector(cloud,journal,None,now=int(clock()))
-            except Exception:remote=None
     except KeyboardInterrupt:
         if collecting():detached='operator_detached'
         elif phase=='startup':reason='operator_interrupted'
@@ -516,6 +525,13 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
             try:progress({'phase':'detached','reason':detached})
             except Exception:pass
             return record
+        phase='finishing'
+        if remote is None and bound_target(journal):
+            # Every finish without a connection (deadline reached unreachable, a resume after
+            # the deadline, also without the marker) makes one attempt through the journaled
+            # SSH target so retention can reach the host; a failure or interrupt skips it.
+            try:remote=connector(cloud,journal,None,now=int(clock()))
+            except (Exception,KeyboardInterrupt):remote=None
         if remote is not None and isinstance(remote,BudgetedRemote):remote.finalizing=True
         progress({'phase':'finishing','reason':reason})
         report=finish_run(cloud,remote,journal,destination,now=int(clock()))

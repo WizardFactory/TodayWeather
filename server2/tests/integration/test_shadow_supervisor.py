@@ -1705,6 +1705,7 @@ class LifecycleTests(unittest.TestCase):
             def invoke(inner,action,**kwargs):
                 calls.append((action,moment[0]))
                 if action=='inspect':fault('poll')
+                if action=='install':fault('install')
                 if action=='install':return state.CloudResult('empty_success','HostInstall')
                 if action=='stop':inner.stopped=True;return state.CloudResult('empty_success','HostObserve')
                 if action=='export':return state.CloudResult('timeout','HostEvidence')
@@ -1877,6 +1878,49 @@ class LifecycleTests(unittest.TestCase):
                     if expect=='retry':
                         self.assertTrue(stops)
                         self.assertIn('export',[a for a,_ in calls[before:]])
+        # Startup (before the marker): unchanged, every event finishes with cleanup.
+        for point in ('connect','install'):
+            for error in kinds:
+                with self.subTest(phase='startup',point=point,error=type(error).__name__),tempfile.TemporaryDirectory() as temp:
+                    run,cloud,calls,events,moment,j=self.collecting(Path(temp),lambda poll,now:'active')
+                    run.faults[point]=(1,error)
+                    if isinstance(error,RuntimeError):
+                        with self.assertRaises(RuntimeError):run()
+                    else:
+                        expected='operator_interrupted' if isinstance(error,KeyboardInterrupt) else 'acquisition_failed'
+                        self.assertEqual(run()['stop_reason'],expected)
+                    self.assertEqual(cloud.instance['State']['Name'],'terminated')
+                    self.assertIsNone(j.request('collection-started'))
+        # Marker boundary (CX-SR2-013): a failure right after collection-started is stored
+        # is a collecting event, read from the journal when it happens.
+        from unittest.mock import patch
+        real=provision.mark_collection_started
+        for error in kinds:
+            with self.subTest(phase='marker',error=type(error).__name__),tempfile.TemporaryDirectory() as temp:
+                run,cloud,calls,events,moment,j=self.collecting(Path(temp),lambda poll,now:'active')
+                def marked(journal,*,now,error=error):
+                    real(journal,now=now);raise error
+                with patch.object(provision,'mark_collection_started',marked):result=run()
+                self.assertIsNotNone(j.request('collection-started'))
+                self.assertTrue(result['detached'],result)
+                self.assertEqual(result['stop_reason'],'operator_detached' if isinstance(error,KeyboardInterrupt) else 'operator_failed')
+                self.assertTrue(untouched(cloud,calls))
+        # Marker-less resume after the deadline (CX-SR2-013): the install ran but the process
+        # died before storing the marker; the finish reconnects and retains host evidence.
+        class Crash(BaseException):pass
+        def crash(*args,**kwargs):raise Crash()
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            run,cloud,calls,events,moment,j=self.collecting(root,lambda poll,now:'active')
+            with patch.object(provision,'mark_collection_started',crash),patch.object(provision,'finish_run',crash):
+                with self.assertRaises(Crash):run()
+            self.assertIsNone(j.request('collection-started'))
+            self.assertEqual(cloud.instance['State']['Name'],'running')
+            moment[0]=until+5;before=len(calls)
+            result=run()
+            self.assertEqual(result['stop_reason'],'collection_deadline',result)
+            self.assertIn('export',[a for a,_ in calls[before:]])
+            self.assertEqual(cloud.instance['State']['Name'],'terminated')
         # The CLI reports a detach as success and an operator failure as an error.
         from unittest.mock import patch
         import io,contextlib

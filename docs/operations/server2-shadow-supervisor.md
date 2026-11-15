@@ -185,15 +185,19 @@ ends the run. The collecting phase is recorded in the journal (`collection-start
 the first time the install is confirmed started. A resumed `run` in that phase makes
 no provisioning or install call: it reconnects through the SSH target authenticated
 earlier in the run (not the console fingerprints) inside the collecting loop, so a
-failed reconnect, including the first after a resume, is an unreachable poll; at or
-after the collection deadline it makes one more reconnect attempt for evidence
-retention and then finishes with cleanup, also when that attempt fails. The phase
-decides every other event: while collecting (before the deadline), any connector or
-status-poll error is an unreachable poll, an interrupt detaches with exit 0, and a
-local failure (the journal, the progress output) detaches with exit 1
-(`operator_failed` and its failure class), all without touching the host; once
-collection has ended, an interrupt no longer detaches and retention and cleanup go
-on. Only a validated host stop ends collection: the
+failed reconnect, including the first after a resume, is an unreachable poll; every
+finish without a connection (the deadline reached while unreachable, a resume at or
+after the deadline, also one whose install never stored the collecting marker)
+makes one reconnect attempt through the journaled SSH target for evidence retention
+and then cleans up, also when that attempt fails or is interrupted. The phase is read
+from the journal and the clock when an event happens: while collecting (marker
+stored, before the deadline), any connector or status-poll error is an unreachable
+poll, an interrupt detaches with exit 0, and a local failure (the journal, the
+progress output) detaches with exit 1 (`operator_failed` and its failure class), all
+without touching the host; outside collecting, an interrupt or failure before the
+finish leads to the finish. An interrupt during retention or cleanup themselves stops
+the process as before; the journal keeps the exact resources and `finish` resumes
+them (a resumable, evidence-first finish is SR-5). Only a validated host stop ends collection: the
 receipt reports `failed`, or all three acquisition units with known systemd states
 and at least one `inactive` or `failed`; missing or unknown unit states are
 unreachable. An interrupt during collection prints the detach record and exits 0. A
