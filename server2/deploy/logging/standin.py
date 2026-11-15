@@ -14,6 +14,9 @@ with --log-group, as on AWS, where the instance role cannot create them.
 Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
 while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
 while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds.
+Data buckets (--data-bucket, the shadow check of LP-6): an empty, writable weather
+bucket for the server itself; GET/HEAD of a missing key answer 404 NoSuchKey, a list
+answers the stored keys, a PUT with If-None-Match: * of an existing key answers 412.
 """
 import argparse
 import json
@@ -147,9 +150,14 @@ class Handler(BaseHTTPRequestHandler):
                   'DELETE': 'DeleteObject', 'POST': 'PostObject'}.get(self.command, self.command)
         if self.command == 'GET' and not key:
             action = 'ListObjects'
+        # The fail-s3 fault is a log destination outage; data buckets stay available.
+        if bucket not in self.server.data_buckets and self.unavailable('s3'):
+            return None
         body = self.body() if self.command in ('PUT', 'POST') else b''
         self.record('s3', action, bucket=bucket, key=key,
                     content_encoding=self.headers.get('Content-Encoding'), content_type=self.headers.get('Content-Type'))
+        if bucket in self.server.data_buckets:
+            return self.data_bucket(action, bucket, key, body, split.query)
         if action != 'PutObject':
             return self.reply(403, b'<Error><Code>AccessDenied</Code></Error>', 'application/xml')
         if bucket != self.server.bucket:
@@ -181,6 +189,38 @@ class Handler(BaseHTTPRequestHandler):
             time.sleep(float(delay.read_text().strip() or '0'))
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
 
+    def data_bucket(self, action, bucket, key, body, query):
+        from urllib.parse import parse_qs
+        from xml.sax.saxutils import escape
+        root = self.server.state / 'data' / bucket
+        if key and (not SAFE.match(key) or '..' in key.split('/')):
+            return self.reply(400, b'<Error><Code>InvalidKey</Code></Error>', 'application/xml')
+        target = root / key
+        with self.server.lock:
+            if action == 'ListObjects':
+                prefix = parse_qs(query).get('prefix', [''])[0]
+                keys = sorted(str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()) if root.exists() else []
+                keys = [k for k in keys if k.startswith(prefix)]
+                items = ''.join(f'<Contents><Key>{escape(k)}</Key><Size>{(root / k).stat().st_size}</Size></Contents>' for k in keys)
+                xml = (f'<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>{bucket}</Name>'
+                       f'<Prefix>{escape(prefix)}</Prefix><KeyCount>{len(keys)}</KeyCount><IsTruncated>false</IsTruncated>{items}</ListBucketResult>')
+                return self.reply(200, xml.encode(), 'application/xml')
+            if action in ('GetObject', 'HeadObject'):
+                if not target.is_file():
+                    return self.reply(404, b'' if action == 'HeadObject' else b'<Error><Code>NoSuchKey</Code></Error>', 'application/xml')
+                data = target.read_bytes()
+                return self.reply(200, b'' if action == 'HeadObject' else data, 'application/octet-stream',
+                                  {'ETag': '"%d"' % len(data)})
+            if action == 'PutObject':
+                if self.headers.get('If-None-Match') == '*' and target.exists():
+                    return self.reply(412, b'<Error><Code>PreconditionFailed</Code></Error>', 'application/xml')
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(body)
+                return self.reply(200, b'', 'application/xml', {'ETag': '"%d"' % len(body)})
+            if action == 'HeadBucket':
+                return self.reply(200, b'', 'application/xml')
+        return self.reply(403, b'<Error><Code>AccessDenied</Code></Error>', 'application/xml')
+
     def unavailable(self, service):
         """Test fault: while <state>/fail-<service> exists, that service answers 503."""
         if (self.server.state / f'fail-{service}').exists():
@@ -194,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if self.headers.get('X-Amz-Target', '').startswith('Logs_20140328.'):
                 return None if self.unavailable('logs') else self.logs()
-            return None if self.unavailable('s3') else self.s3()
+            return self.s3()
         except (ValueError, KeyError, json.JSONDecodeError) as exc:
             return self.reply(400, json.dumps({'__type': 'StandinBadRequest', 'message': type(exc).__name__}).encode())
 
@@ -207,6 +247,7 @@ def main():
     parser.add_argument('--port', type=int, required=True)
     parser.add_argument('--bucket', required=True)
     parser.add_argument('--log-group', action='append', default=[])
+    parser.add_argument('--data-bucket', action='append', default=[], help='an empty writable weather bucket (LP-6 check)')
     parser.add_argument('--tls-cert', help='serve HTTPS with this test certificate')
     parser.add_argument('--tls-key')
     args = parser.parse_args()
@@ -220,6 +261,7 @@ def main():
         server.socket = context.wrap_socket(server.socket, server_side=True)
     server.daemon_threads = True
     server.state, server.bucket, server.groups = state, args.bucket, set(args.log_group)
+    server.data_buckets = set(args.data_bucket)
     server.streams, server.lock = {}, threading.Lock()
     # Streams survive a restart of the stand-in (a host reboot), as they do on AWS.
     for group in server.groups:

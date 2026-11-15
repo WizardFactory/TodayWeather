@@ -293,7 +293,10 @@ def export_sources(cloud,journal,resources,destination):
             if os.path.exists(temporary):os.unlink(temporary)
     persist()
     try:
-        for bucket in r['buckets']:
+        # The state bucket first: its log objects (LP-6) hold the stop reasons and are
+        # few, so an export that runs out of its allowance on the candidate's objects
+        # still keeps them.
+        for bucket in (r['buckets'][1],r['buckets'][0]):
             for item in versions(cloud,bucket):
                 if item['DeleteMarker']: continue
                 identity={'bucket':bucket,'key':item['Key'],'version':item['VersionId']}
@@ -520,7 +523,53 @@ def cleanup(cloud,journal,resources,*,source_destination=None):
             'qualification':'not_assessed','actions':actions,'independent_inventory':proof}
 
 
-HOST_ARTIFACTS={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env'}
+# The log collector (LP-6, #2983) travels in the bundle like the other artifacts: the
+# pinned collector archive and its pin, and the renderer and status recorder of
+# server2/deploy/logging. They ship the candidate, guard and reader output to the run's
+# `-state` bucket, which the cleanup exports before deleting it.
+HOST_ARTIFACTS={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env',
+                'collector.tar.gz','collector.json','render.py','status.py'}
+LOG_PREFIX='logs/server2'
+# Failures and stop reasons only: warn keeps the log objects small next to the
+# candidate's own objects, which share the operator's export allowance.
+LOG_LEVEL='warn'
+# The LP-1 journal namespace settings (server2/deploy/logging/units/journald@server2.conf).
+LOG_JOURNAL=('[Journal]\nStorage=persistent\nCompress=yes\nSystemMaxUse=1G\nSystemKeepFree=2G\n'
+             'RateLimitIntervalSec=0\nRateLimitBurst=0\n')
+
+
+def collector_member(bundle):
+    """The architecture and binary member of the bundled collector archive.
+
+    The archive must be exactly one of the archives pinned by the bundled
+    collector.json, the check install.sh makes on a server2 host.
+    """
+    bundle=Path(bundle);pin_path=bundle/'collector.json'
+    require(not pin_path.is_symlink() and pin_path.stat().st_size<=65536,'collector pin')
+    pin=json.loads(pin_path.read_text())
+    artifacts=pin.get('artifacts') if type(pin) is dict else None
+    require(type(artifacts) is dict,'collector pin')
+    digest=artifact_hash(bundle/'collector.tar.gz')
+    found=[(arch,item.get('binary')) for arch,item in artifacts.items()
+           if type(item) is dict and item.get('sha256')==digest]
+    require(len(found)==1 and isinstance(found[0][1],str)
+            and re.fullmatch(r'\./vector-[a-z0-9_]{1,20}-unknown-linux-musl/bin/vector',found[0][1]),
+            'collector archive not pinned')
+    return found[0]
+
+
+def log_sources(run_id):
+    """Units the collector reads, and the source each is shipped as."""
+    name='server2-shadow-'+run_id
+    return {name+'-candidate.service':'server',name+'-guard.service':'guard',name+'-reader.service':'reader',
+            name+'-logs.service':'collector'}
+
+
+def logging_settings(launch):
+    """The collector's destination settings (render.py rules): the run's state bucket."""
+    run_id=launch_plan(launch)['plan']['run_id']
+    return (f'SERVER2_LOG_SINKS=s3\nSERVER2_LOG_S3_LEVEL={LOG_LEVEL}\nSERVER2_LOG_S3_PREFIX={LOG_PREFIX}\n'
+            f'SERVER2_S3_BUCKET=server2-shadow-{run_id}-state\nSERVER2_S3_REGION=ap-northeast-2\n')
 
 
 def host_plan(plan):
@@ -577,6 +626,7 @@ def prepare_generation(journal,plan,source,destination,generation,allowance,*,no
     for name,expected in plan['artifacts'].items():
         path=source/name
         require(not path.is_symlink() and path.is_file() and artifact_hash(path)==expected,'source artifact binding')
+    collector_member(source)
     journal.reserve_generation(generation,allowance,now=now)
     destination.mkdir(mode=0o700)
     for name,expected in plan['artifacts'].items():
@@ -603,6 +653,7 @@ def verify_bundle(path):
         require(artifact.is_file() and not artifact.is_symlink()
                 and artifact_hash(artifact)==expected,'bundle artifact binding')
     require((path/'config.env').stat().st_mode&0o077==0,'private configuration')
+    collector_member(path)
     return launch
 
 
@@ -633,20 +684,26 @@ def host_units(launch):
     plan=launch['plan'];name='server2-shadow-'+plan['run_id'];root='/opt/server2-shadow/'+plan['run_id']
     coordinator=f'/usr/bin/python3 {root}/bin/coordinator.py'
     common='Restart=no\nTimeoutStopSec=10\nKillMode=control-group\nNoNewPrivileges=yes\n'
+    # Output goes to the `server2` journal namespace, which the collector ships (LP-6).
+    # No relation to the collector unit at all, not even ordering: a pending or failing
+    # collector start can never delay or block acquisition. The retention stop stops
+    # these units first and the collector afterwards, in a separate command.
+    logged='After=systemd-journald@server2.service\n'
+    journal='LogNamespace=server2\n'
     candidate=f'''[Unit]
 Description=Owned shadow candidate {plan['run_id']}
-[Service]
+{logged}[Service]
 Type=exec
-WorkingDirectory={root}/config
+{journal}WorkingDirectory={root}/config
 ExecStart={coordinator} exec-candidate --launch {root}/launch.json
 ExecStartPost={coordinator} bind-host --launch {root}/launch.json
 ExecStopPost=/usr/bin/systemctl --no-block stop {name}-reader.service {name}-guard.service
 {common}'''
     guardian=f'''[Unit]
 Description=Owned shadow guard {plan['run_id']}
-[Service]
+{logged}[Service]
 Type=exec
-ExecStart=/usr/bin/python3 {root}/bin/guard.py run --manifest {root}/state/guard.json --state {root}/state/decision.json
+{journal}ExecStart=/usr/bin/python3 {root}/bin/guard.py run --manifest {root}/state/guard.json --state {root}/state/decision.json
 ExecStopPost=/usr/bin/systemctl --no-block stop {name}-reader.service {name}-candidate.service
 WatchdogSec=30
 WatchdogSignal=SIGKILL
@@ -656,9 +713,9 @@ NotifyAccess=main
 Description=Owned paired reader {plan['run_id']}
 BindsTo={name}-guard.service {name}-candidate.service
 After={name}-guard.service {name}-candidate.service
-[Service]
+{logged}[Service]
 Type=exec
-ExecStart=/usr/bin/python3 {root}/bin/paired_read.py --manifest {root}/reader.json --candidate http://127.0.0.1:{plan['port']} --candidate-binary {root}/bin/server2 --state {root}/data/paired --execute
+{journal}ExecStart=/usr/bin/python3 {root}/bin/paired_read.py --manifest {root}/reader.json --candidate http://127.0.0.1:{plan['port']} --candidate-binary {root}/bin/server2 --state {root}/data/paired --execute
 {common}'''
     stop=f'''[Unit]
 Description=Original collection deadline {plan['run_id']}
@@ -672,12 +729,42 @@ Description=Original host deadline {plan['run_id']}
 Type=oneshot
 ExecStart=/usr/bin/systemctl poweroff
 '''
+    units=' '.join(f'--unit {unit}={source}' for unit,source in sorted(log_sources(plan['run_id']).items()))
+    state='--state /var/lib/server2-logs'
+    collector=f'''[Unit]
+Description=Owned shadow log collector {plan['run_id']}
+After=network-online.target systemd-journald@server2.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+[Service]
+Type=exec
+StateDirectory=server2-logs
+RuntimeDirectory=server2-logs
+LogNamespace=server2
+ExecCondition=/usr/bin/python3 -I {root}/bin/render.py --env-file {root}/config/logging.env {state} --output /run/server2-logs/vector.json --version-file {root}/bin/collector.json {units}
+ExecStartPre=/usr/bin/python3 -I {root}/bin/status.py start {state} {units}
+ExecStart={root}/bin/vector --config /run/server2-logs/vector.json --graceful-shutdown-limit-secs 20
+ExecStop=/usr/bin/python3 -I {root}/bin/status.py drain {state} --timeout 75 --main-pid=${{MAINPID}} {units}
+Restart=on-abnormal
+RestartForceExitStatus=0
+RestartSec=5
+TimeoutStopSec=100
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=512M
+[Install]
+WantedBy=multi-user.target
+'''
     def timer(hours,service):
         when=datetime.datetime.fromtimestamp(launch['epoch']+hours*3600,datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         return f'[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar={when}\nAccuracySec=1s\nPersistent=true\nUnit={name}-{service}.service\n[Install]\nWantedBy=timers.target\n'
     return {name+'-candidate.service':candidate,name+'-guard.service':guardian,name+'-reader.service':reader,
             name+'-stop.service':stop,name+'-stop.timer':timer(168,'stop'),
-            name+'-poweroff.service':off,name+'-poweroff.timer':timer(170,'poweroff')}
+            name+'-poweroff.service':off,name+'-poweroff.timer':timer(170,'poweroff'),
+            name+'-logs.service':collector}
 
 
 def host_context(path):
@@ -799,15 +886,37 @@ def verify_launch_expiry(run_id, epoch, unit_dir, system):
             require(system.run('show','--property=ActiveState','--value',unit)=='active','launch expiry inactive')
 
 
-def install_host_tree(bundle,root,unit_dir,system,*,now):
+def extract_collector(archive,member,destination):
+    """Write the pinned archive's collector binary to an exclusively created file."""
+    import tarfile
+    with tarfile.open(archive,mode='r:gz') as bundle:
+        item=bundle.getmember(member)
+        require(item.isfile() and 0<item.size<=512*1024**2,'collector binary')
+        fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o700)
+        with os.fdopen(fd,'wb') as output,bundle.extractfile(item) as source:
+            total=0
+            while block:=source.read(1024**2):
+                total+=len(block);require(total<=item.size,'collector binary')
+                output.write(block)
+            require(total==item.size,'collector binary')
+            output.flush();os.fsync(output.fileno())
+
+
+def install_host_tree(bundle,root,unit_dir,system,*,now,machine):
     """Initial-only installation transaction; caller supplies the fixed host paths.
 
     This helper permits a private test filesystem and systemd fixture. The live
-    wrapper accepts neither a destination nor a clock override. A partial tree is
-    a consumed installation, never a retry target. Failures retain it for audit.
+    wrapper accepts neither a destination nor a clock or architecture override. A
+    partial tree is a consumed installation, never a retry target. Failures retain
+    it for audit. The journal namespace settings are written beside the unit
+    directory (/etc/systemd/journald@server2.conf on the host).
     """
     bundle=Path(bundle);root=Path(root);unit_dir=Path(unit_dir)
     launch=verify_bundle(bundle);name='server2-shadow-'+launch['plan']['run_id']
+    architecture,member=collector_member(bundle)
+    require(architecture==machine,'collector architecture')
+    journal_settings=unit_dir.parent/'journald@server2.conf'
+    require(not journal_settings.exists() and not journal_settings.is_symlink(),'existing journal namespace settings')
     require(launch['generation']=='initial','host restart connector unavailable')
     require(type(now) is int and launch['epoch']<=now<launch['epoch']+168*3600,'original install deadline')
     require(not root.exists() and not root.is_symlink(),'existing installation')
@@ -832,6 +941,10 @@ def install_host_tree(bundle,root,unit_dir,system,*,now):
             destination=root/'config/.env' if artifact=='config.env' else root/'reader.json' if artifact=='reader.json' else root/'bin'/artifact
             exclusive_copy(bundle/artifact,destination,0o700 if artifact=='server2' else 0o600)
             require(artifact_hash(destination)==expected,'installation changed artifact')
+        extract_collector(root/'bin/collector.tar.gz',member,root/'bin/vector')
+        fd=os.open(root/'config/logging.env',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+        with os.fdopen(fd,'w') as stream:
+            stream.write(logging_settings(launch));stream.flush();os.fsync(stream.fileno())
         fd=os.open(root/'launch.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
         with os.fdopen(fd,'wb') as stream:
             stream.write(frozen_launch);stream.flush();os.fsync(stream.fileno())
@@ -844,11 +957,23 @@ def install_host_tree(bundle,root,unit_dir,system,*,now):
             with os.fdopen(fd,'w') as stream:
                 stream.write(content);stream.flush();os.fsync(stream.fileno())
         sync_directory(unit_dir)
+        fd=os.open(journal_settings,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o644)
+        with os.fdopen(fd,'w') as stream:
+            stream.write(LOG_JOURNAL);stream.flush();os.fsync(stream.fileno())
+        sync_directory(journal_settings.parent)
         system.run('daemon-reload')
         system.run('enable',name+'-stop.timer',name+'-poweroff.timer')
         system.run('start',name+'-stop.timer',name+'-poweroff.timer')
         for suffix in ('stop.timer','poweroff.timer'):
             require(system.run('show','--property=ActiveState','--value',name+'-'+suffix)=='active','deadline timer inactive')
+        # Queued without waiting and without a check: acquisition never depends on the
+        # collector (the inspect step reports its state). It reads the namespace from
+        # the beginning of the boot, so it ships records written before it ran.
+        try:
+            system.run('enable',name+'-logs.service')
+            system.run('start','--no-block',name+'-logs.service')
+        except (StateError,OSError,subprocess.TimeoutExpired):
+            status['collector_start_failed']=True
         system.run('start',name+'-candidate.service')
         for suffix in ('candidate','guard'):
             require(system.run('show','--property=ActiveState','--value',name+'-'+suffix+'.service')=='active','candidate binding unavailable')
@@ -860,6 +985,7 @@ def install_host_tree(bundle,root,unit_dir,system,*,now):
     except BaseException:
         # Timers remain installed/running. Never stop the immutable poweroff
         # safety net merely because installation or evidence saving failed.
+        # The collector keeps running and ships the stopped units' records.
         status['status']='failed'
         try:system.run('stop',name+'-reader.service',name+'-candidate.service',name+'-guard.service')
         except (StateError,OSError,subprocess.TimeoutExpired):status['stop_unconfirmed']=True
@@ -888,8 +1014,9 @@ def install_host(bundle):
     if not parent.exists():parent.mkdir(mode=0o700);sync_directory(parent.parent)
     st=parent.lstat()
     require(not parent.is_symlink() and st.st_uid==0 and st.st_mode&0o077==0,'private install parent')
+    import platform
     return install_host_tree(bundle,parent/launch['plan']['run_id'],Path('/etc/systemd/system'),
-                             HostSystem(),now=int(time.time()))
+                             HostSystem(),now=int(time.time()),machine=platform.machine())
 
 
 def main():

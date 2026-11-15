@@ -272,6 +272,15 @@ class CostTests(unittest.TestCase):
         busy=state.estimate_cost(cost_policy(),1000,1000+168*3600,cpu_seconds=2*168*3600)
         self.assertEqual(busy['stop'],'aws_accrued_cost')
 
+    def test_log_object_puts_are_priced(self):
+        from decimal import Decimal
+        free=cost_policy();free['rates']['s3_write']='0.000000001'
+        with_puts=Decimal(state.estimate_cost(cost_policy(),1000,1000,cpu_seconds=0)['accrued_upper_usd'])
+        without=Decimal(state.estimate_cost(free,1000,1000,cpu_seconds=0)['accrued_upper_usd'])
+        self.assertEqual(state.LOG_WRITES,50_000)
+        self.assertGreaterEqual(state.LOG_WRITES,4*72*170)
+        self.assertAlmostEqual(float(with_puts-without),150_000*(0.0000045-0.000000001),places=6)
+
     def test_unknown_price_or_high_projected_cost_cannot_continue(self):
         missing=cost_policy();del missing['rates']['outbound_gb']
         with self.assertRaises(E):state.estimate_cost(missing,1000,1001,cpu_seconds=0)
@@ -303,6 +312,23 @@ def host_sample(m=None):
 
 
 class GuardTests(unittest.TestCase):
+    def test_stop_record_is_written_before_the_units_stop(self):
+        # LP-6 (#2983): stopping the candidate stops the guard's own unit, which can end
+        # the guard during stop_units; its record must already be flushed by then.
+        import contextlib,io
+        from unittest import mock
+        out=io.StringIO()
+        def killed(manifest):
+            self.assertEqual(json.loads(out.getvalue()),{'stop':'provider_auth_or_quota'})
+            raise KeyboardInterrupt
+        with contextlib.redirect_stdout(out),mock.patch.object(guard,'stop_units',side_effect=killed) as stop:
+            with self.assertRaises(KeyboardInterrupt):guard.report_stop({'stop':'provider_auth_or_quota'},host_manifest(),True)
+        stop.assert_called_once()
+        out=io.StringIO()
+        with contextlib.redirect_stdout(out),mock.patch.object(guard,'stop_units') as stop:
+            guard.report_stop({'stop':'disk_reserve'},host_manifest(),False)
+        stop.assert_not_called();self.assertEqual(json.loads(out.getvalue()),{'stop':'disk_reserve'})
+
     def test_healthy_binding_and_thresholds(self):
         m=host_manifest();s=host_sample(m)
         result=guard.evaluate(m,s,None,1001)
@@ -663,8 +689,10 @@ else:
             self.assertEqual(params,{'Bucket':r['buckets'][0],'Key':'raw/a','VersionId':'original-v1','Range':f'bytes=0-{len(raw)-1}'})
             kwargs['output'].write_bytes(raw)
             return cloud_json('GetObject',{'Metadata':{},'LastModified':'2026-11-13T07:00:00Z','VersionId':'original-v1','ContentLength':len(raw),'ContentRange':f'bytes 0-{len(raw)-1}/{len(raw)}'})
-        cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[item]})),
-                            ('GetObject',body),('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False}))])
+        # The state bucket (log objects) is exported first (CX-LP6-002).
+        cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False})),
+                            ('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[item]})),
+                            ('GetObject',body)])
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
@@ -675,6 +703,26 @@ else:
                 self.assertEqual(entry['sha256'],operator.hashlib.sha256(raw).hexdigest())
                 self.assertEqual(j.reserve_control()['export_bytes'],len(raw))
                 with self.assertRaises(FileExistsError):operator.export_sources(cloud,j,r,root/'evidence')
+
+    def test_log_objects_export_first_without_raw_metadata(self):
+        # LP-6: log objects in the state bucket carry no raw-v2 metadata and are exported
+        # before the candidate's objects, so an exhausted allowance still keeps them.
+        log=b'{"stop":"provider_auth_or_quota"}\n';r=owned_resources()
+        key='logs/server2/guard/dt=2026-11-15/hour=01/i-0c0ffee0000002983/'+'b'*32+'-20261115T010000Z-u.ndjson.gz'
+        item={'Key':key,'VersionId':'log-v1','Size':len(log)}
+        def body(params,kwargs):
+            self.assertEqual(params['Bucket'],r['buckets'][1])
+            kwargs['output'].write_bytes(log)
+            return cloud_json('GetObject',{'Metadata':{},'LastModified':'2026-11-15T01:00:50Z','VersionId':'log-v1','ContentLength':len(log),'ContentRange':f'bytes 0-{len(log)-1}/{len(log)}'})
+        cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[item]})),('GetObject',body),
+                            ('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False}))])
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                result=operator.export_sources(cloud,j,r,root/'evidence')
+                self.assertTrue(result['complete'])
+                self.assertEqual(result['objects'][0]['key'],key)
+                self.assertEqual((root/'evidence'/result['objects'][0]['file']).read_bytes(),log)
 
     def test_export_exhaustion_and_wrong_version_are_incomplete(self):
         for exhausted in (True,False):
@@ -841,12 +889,28 @@ class PaidPolicyTests(unittest.TestCase):
         with self.assertRaises(E):state.validate_paid_policy(policy,1000)
         with self.assertRaisesRegex(E,'freshness'):state.validate_paid_policy(paid_policy(),1000+8*86400)
 
+COLLECTOR_MEMBER='./vector-x86_64-unknown-linux-musl/bin/vector'
+
+
+def collector_fixture(source,binary=b'#!/bin/sh\nexit 0\n'):
+    """A collector archive with the release layout, and a pin naming it (LP-6)."""
+    import io,tarfile
+    with tarfile.open(source/'collector.tar.gz','w:gz') as archive:
+        item=tarfile.TarInfo(COLLECTOR_MEMBER);item.size=len(binary);item.mode=0o755
+        archive.addfile(item,io.BytesIO(binary))
+    pin=dict(collector='vector',version='0.61.0',artifacts=dict(x86_64=dict(
+        url='https://github.com/vectordotdev/vector/releases/download/v0.61.0/fixture.tar.gz',
+        sha256=operator.artifact_hash(source/'collector.tar.gz'),binary=COLLECTOR_MEMBER)))
+    (source/'collector.json').write_text(json.dumps(pin))
+
+
 class HostBundleTests(unittest.TestCase):
     def files(self,root):
         source=root/'source';source.mkdir()
-        for name in operator.HOST_ARTIFACTS:
+        for name in operator.HOST_ARTIFACTS-{'collector.tar.gz','collector.json'}:
             (source/name).write_bytes(('fixture '+name).encode())
-            (source/name).chmod(0o600)
+        collector_fixture(source)
+        for name in operator.HOST_ARTIFACTS:(source/name).chmod(0o600)
         plan=dict(schema=4,native_families=['kma'],run_id='test1',source_commit='c'*40,port=3000,interface='ens5',cost_policy=cost_policy(),paid_policy=paid_policy(),
                   artifacts={n:operator.artifact_hash(source/n) for n in operator.HOST_ARTIFACTS})
         return source,plan
@@ -893,6 +957,20 @@ class HostBundleTests(unittest.TestCase):
                 with self.assertRaises(E):operator.prepare_generation(j,plan,source,root/'second','restart-1',allocation,now=1002)
                 self.assertEqual(j.snapshot()['generations'],1)
 
+    def test_unpinned_collector_archive_is_refused_before_the_grant(self):
+        for defect in ('archive','pin'):
+            with self.subTest(defect=defect),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);source,plan=self.files(root)
+                if defect=='archive':collector_fixture(source,binary=b'changed collector');(source/'collector.json').write_text(json.dumps(json.loads((source/'collector.json').read_text())|{'artifacts':{}}))
+                else:(source/'collector.json').write_text(json.dumps(dict(artifacts=dict(x86_64=dict(sha256='f'*64,binary=COLLECTOR_MEMBER)))))
+                for name in ('collector.tar.gz','collector.json'):plan['artifacts'][name]=operator.artifact_hash(source/name)
+                sha=operator.hashlib.sha256(state.canonical(plan).encode()).hexdigest()
+                with J(root/'journal',create=True,run_id='test1',manifest_sha=sha,epoch=1000) as j:
+                    with self.assertRaisesRegex(E,'collector'):
+                        operator.prepare_generation(j,plan,source,root/'bundle','initial',dict(reads=10,writes=20,put_bytes=30),now=1001)
+                    self.assertEqual(j.snapshot()['generations'],0)
+                    self.assertFalse((root/'bundle').exists())
+
     def test_changed_plan_cannot_consume_an_existing_journal(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);source,plan=self.files(root)
@@ -916,6 +994,7 @@ class HostBundleTests(unittest.TestCase):
             self.assertEqual(guard.INTERVAL,10)
             self.assertIn('TimeoutStopSec=10',units['server2-shadow-test1-candidate.service'])
             self.assertNotIn('AWS_SECRET',state.canonical(units))
+            self.assertEqual(len(units),8)
             env=operator.candidate_environment(first)
             self.assertEqual(env['SERVER2_SHADOW_S3_LIMITS'],'10,20,30')
             self.assertEqual(env['SERVER2_SHADOW_PROVIDER_UNITS'],'0,400,400,0')
@@ -926,13 +1005,69 @@ class HostBundleTests(unittest.TestCase):
             result=subprocess.run(command,capture_output=True,text=True,timeout=5)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             self.assertFalse(json.loads(result.stdout)['executed'])
-            self.assertEqual(len(list((root/'units').iterdir())),7)
+            self.assertEqual(len(list((root/'units').iterdir())),8)
             (source/'server2').write_bytes(b'wrong executable')
             command[-1]=str(root/'rejected-units')
             result=subprocess.run(command,capture_output=True,text=True,timeout=5)
             self.assertEqual(result.returncode,2)
             self.assertFalse((root/'rejected-units').exists())
 
+
+
+class HostLoggingTests(unittest.TestCase):
+    """LP-6 (#2983): the host's candidate, guard and reader output is shipped."""
+    def launch(self,root):
+        _,plan=HostBundleTests.files(self,root)
+        return dict(plan=plan,epoch=1000,generation='initial',allowance=dict(reads=10,writes=20,put_bytes=30))
+
+    def test_acquisition_units_log_to_the_namespace_without_depending_on_the_collector(self):
+        with tempfile.TemporaryDirectory() as temp:
+            units=operator.host_units(self.launch(Path(temp)));name='server2-shadow-test1-'
+            for suffix in ('candidate','guard','reader'):
+                unit=units[name+suffix+'.service']
+                self.assertIn('\nLogNamespace=server2\n',unit)
+                self.assertIn('\nAfter=systemd-journald@server2.service\n',unit)
+                # No relation to the collector at all, not even ordering (CX-LP6-001).
+                self.assertNotIn('logs.service',unit)
+                self.assertIn('Restart=no\nTimeoutStopSec=10\n',unit)
+            self.assertIn('WatchdogSec=30\nWatchdogSignal=SIGKILL\n',units[name+'guard.service'])
+            self.assertNotIn('LogNamespace',units[name+'stop.service']+units[name+'poweroff.service'])
+
+    def test_collector_units_read_the_owned_units_with_their_sources(self):
+        with tempfile.TemporaryDirectory() as temp:
+            units=operator.host_units(self.launch(Path(temp)));name='server2-shadow-test1-'
+            collector=units[name+'logs.service'];root='/opt/server2-shadow/test1'
+            mapping=' '.join(['--unit '+name+'candidate.service=server','--unit '+name+'guard.service=guard',
+                              '--unit '+name+'logs.service=collector','--unit '+name+'reader.service=reader'])
+            for command in ('ExecCondition=/usr/bin/python3 -I '+root+'/bin/render.py --env-file '+root+'/config/logging.env',
+                            'ExecStartPre=/usr/bin/python3 -I '+root+'/bin/status.py start',
+                            'ExecStop=/usr/bin/python3 -I '+root+'/bin/status.py drain'):
+                line=[l for l in collector.splitlines() if l.startswith(command)]
+                self.assertEqual(len(line),1,command);self.assertTrue(line[0].endswith(mapping),line[0])
+            self.assertIn('ExecStart='+root+'/bin/vector --config /run/server2-logs/vector.json',collector)
+            self.assertIn('--timeout 75 --main-pid=${MAINPID}',collector)
+            self.assertIn('TimeoutStopSec=100\n',collector);self.assertIn('RestartForceExitStatus=0\n',collector)
+            self.assertIn('--version-file '+root+'/bin/collector.json',collector)
+            # No periodic status records: they would add an object every 50 s (CX-LP6-002).
+            self.assertFalse(any('status' in unit for unit in units if unit.startswith(name+'logs')))
+
+    def test_settings_select_the_run_state_bucket_under_the_collector_rules(self):
+        import importlib
+        logging_dir=SOURCE.parents[1]/'logging'
+        sys.path.insert(0,str(logging_dir))
+        try:render=importlib.import_module('render')
+        finally:sys.path.remove(str(logging_dir))
+        with tempfile.TemporaryDirectory() as temp:
+            text=operator.logging_settings(self.launch(Path(temp)))
+        values=render.parse_dotenv(text)
+        config=render.settings({name:values.get(name) for name in render.ALLOWED})
+        self.assertEqual(config['sinks'],['s3'])
+        self.assertEqual(values['SERVER2_S3_BUCKET'],'server2-shadow-test1-state')
+        self.assertEqual(values['SERVER2_LOG_S3_PREFIX'],'logs/server2')
+        self.assertEqual(config['s3_level'],'warn')
+        self.assertNotIn('KEY',text)
+        reviewed=(logging_dir/'units/journald@server2.conf').read_text()
+        self.assertEqual(operator.LOG_JOURNAL,''.join(line+'\n' for line in reviewed.splitlines() if line and not line.startswith('#')))
 
 
 class CleanupTests(unittest.TestCase):
@@ -1059,7 +1194,7 @@ class HostInstallTests(unittest.TestCase):
         (root/'units').mkdir(exist_ok=True)
         for unit,content in operator.launch_expiry_units(launch['plan']['run_id'],launch['epoch']).items():
             (root/'units'/unit).write_text(content)
-        return operator.install_host_tree(source,root/'host',root/'units',system,now=now)
+        return operator.install_host_tree(source,root/'host',root/'units',system,now=now,machine='x86_64')
 
     def test_install_starts_timers_before_candidate_and_reader_last(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1071,7 +1206,18 @@ class HostInstallTests(unittest.TestCase):
             self.assertEqual((root/'host/config/.env').stat().st_mode&0o777,0o600)
             starts=[call for call in system.calls if call[0]=='start']
             self.assertEqual(starts,[('start','server2-shadow-test1-stop.timer','server2-shadow-test1-poweroff.timer'),
+                ('start','--no-block','server2-shadow-test1-logs.service'),
                 ('start','server2-shadow-test1-candidate.service'),('start','server2-shadow-test1-reader.service')])
+            self.assertIn(('enable','server2-shadow-test1-logs.service'),system.calls)
+            # The collector's state is never awaited or checked before acquisition starts.
+            self.assertNotIn(('show','--property=ActiveState','--value','server2-shadow-test1-logs.service'),system.calls)
+            self.assertEqual((root/'host/bin/vector').read_bytes(),b'#!/bin/sh\nexit 0\n')
+            self.assertEqual((root/'host/bin/vector').stat().st_mode&0o777,0o700)
+            self.assertEqual((root/'host/config/logging.env').read_text(),operator.logging_settings(launch))
+            self.assertEqual((root/'host/config/logging.env').stat().st_mode&0o777,0o600)
+            self.assertEqual((root/'journald@server2.conf').read_text(),operator.LOG_JOURNAL)
+            for name in ('collector.tar.gz','collector.json','render.py','status.py'):
+                self.assertEqual(operator.artifact_hash(root/'host/bin'/name),launch['plan']['artifacts'][name])
             self.assertTrue((root/'host/state/install.json').is_file())
             before=list(system.calls)
             with self.assertRaises(E):self.install(source,root,system)
@@ -1092,7 +1238,7 @@ class HostInstallTests(unittest.TestCase):
                         return super().run(*args)
                 system=System()
                 with self.assertRaises(E):
-                    operator.install_host_tree(source,root/'host',units,system,now=1001)
+                    operator.install_host_tree(source,root/'host',units,system,now=1001,machine='x86_64')
                 self.assertFalse((root/'host').exists())
                 self.assertFalse(any(call[0]=='start' for call in system.calls))
 
@@ -1106,6 +1252,36 @@ class HostInstallTests(unittest.TestCase):
             self.assertEqual(json.loads((root/'host/state/install.json').read_text())['status'],'failed')
             self.assertFalse(any(c==('start','server2-shadow-test1-reader.service') for c in system.calls))
             with self.assertRaises(E):self.install(source,root,self.System())
+
+    def test_collector_architecture_settings_or_start_failure_refuse_the_candidate(self):
+        for defect in ('architecture','journal-settings','collector-changed'):
+            with self.subTest(defect=defect),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);source,launch=self.bundle(root)
+                class System(self.System):
+                    def run(inner,*args):
+                        if defect=='collector-inactive' and args[-1]=='server2-shadow-test1-logs.service' and args[0]=='show' and 'ActiveState' in args[1]:
+                            inner.calls.append(args);return 'failed'
+                        return super().run(*args)
+                system=System()
+                if defect=='journal-settings':(root/'journald@server2.conf').write_text('[Journal]\n')
+                if defect=='collector-changed':(source/'render.py').write_text('changed renderer')
+                launch_units=root/'units';launch_units.mkdir()
+                for unit,content in operator.launch_expiry_units('test1',1000).items():(launch_units/unit).write_text(content)
+                with self.assertRaises(E):
+                    operator.install_host_tree(source,root/'host',launch_units,system,now=1001,
+                                               machine='aarch64' if defect=='architecture' else 'x86_64')
+                self.assertFalse(any(c==('start','server2-shadow-test1-candidate.service') for c in system.calls))
+                self.assertFalse((root/'host').exists())
+
+    def test_a_failing_collector_start_never_blocks_acquisition(self):
+        # CX-LP6-001: acquisition starts whatever the collector does.
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);source,_=self.bundle(root)
+            system=self.System(('start','--no-block','server2-shadow-test1-logs.service'))
+            result=self.install(source,root,system)
+            self.assertEqual(result['status'],'started');self.assertTrue(result['collector_start_failed'])
+            self.assertIn(('start','server2-shadow-test1-candidate.service'),system.calls)
+            self.assertEqual(system.calls[-1],('show','--property=ActiveState','--value','server2-shadow-test1-reader.service'))
 
     def test_changed_bundle_expiry_and_existing_unit_fail_before_install(self):
         for defect in ('changed','expired','unit','reader-hash'):
@@ -1177,7 +1353,7 @@ class RemoteTests(unittest.TestCase):
                             return state.CloudResult('timeout','HostInstall')
                         if inner.unavailable:return state.CloudResult('timeout','HostObserve')
                         return cloud_json('HostObserve',dict(status='started',epoch=1000,
-                            unit_states=dict(candidate='active' if inner.active else 'inactive',reader='active',guard='active'),
+                            unit_states=dict(candidate='active' if inner.active else 'inactive',reader='active',guard='active',logs='failed'),
                             collection_until=1000+168*3600,cleanup_until=1000+170*3600,
                             launch_sha256=operator.hashlib.sha256((state.canonical(launch)+'\n').encode()).hexdigest()))
                 transport=Transport()
@@ -1192,6 +1368,23 @@ class RemoteTests(unittest.TestCase):
                 with self.assertRaises(E):remote.install_remote(transport,j,root/'bundle',now=1004)
                 self.assertEqual(transport.uploads,1)
 
+    def test_running_collector_blocks_the_evidence_export(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
+                b=self.binding();j.prepare_request('ssh-target','BindSshTarget',b,b['instance'],now=1001)
+                j.prepare_request('host-install','HostInstall',{'launch_sha256':'a'*64},'host-install',now=1001)
+                class Transport:
+                    binding=b
+                    calls=[]
+                    def invoke(inner,action,**kwargs):
+                        inner.calls.append(action)
+                        if action=='stop':return state.CloudResult('empty_success','HostObserve')
+                        return cloud_json('HostObserve',dict(launch_sha256='a'*64,unit_states=dict(
+                            candidate='inactive',reader='inactive',guard='failed',logs='active')))
+                transport=Transport();report=remote.retain_host_evidence(transport,j,root/'retained')
+                self.assertFalse(report['complete']);self.assertEqual(transport.calls,['stop','inspect'])
+
     def test_actual_ssh_subprocess_pins_key_and_disables_ambient_config(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);identity=root/'identity';identity.write_text('fixture only');identity.chmod(0o600)
@@ -1204,6 +1397,11 @@ class RemoteTests(unittest.TestCase):
             self.assertIn('StrictHostKeyChecking=yes',args);self.assertIn('IdentitiesOnly=yes',args)
             self.assertIn('GlobalKnownHostsFile=/dev/null',args);self.assertIn('ForwardAgent=no',args)
             self.assertEqual((root/'known_hosts').stat().st_mode&0o077,0)
+            self.assertEqual(transport.invoke('stop').kind,'empty_success')
+            # Acquisition first, then the collector (its drain ships their final records).
+            self.assertEqual(json.loads(record.read_text())[-1],'sudo -n /usr/bin/systemctl stop '+' '.join(
+                'server2-shadow-test1-'+s+'.service' for s in ('reader','candidate','guard'))
+                +' && sudo -n /usr/bin/systemctl stop server2-shadow-test1-logs.service')
             with self.assertRaises(E):transport.invoke('arbitrary shell')
             (root/'known_hosts').write_text('changed')
             with self.assertRaises(E):remote.Remote(self.binding(),identity,root/'known_hosts',ssh=str(executable))
@@ -1264,7 +1462,7 @@ class RemoteTests(unittest.TestCase):
                 reader={'candidate_sha256':'a'*64}
                 (host/'launch.json').write_text(state.canonical(launch)+'\n');(host/'reader.json').write_text(json.dumps(reader))
                 expected=operator.artifact_hash(host/'launch.json')
-                receipt=dict(status='started',launch_sha256=expected,unit_states=dict(candidate='inactive',reader='inactive',guard='inactive'))
+                receipt=dict(status='started',launch_sha256=expected,unit_states=dict(candidate='inactive',reader='inactive',guard='inactive',logs='inactive'))
                 for name in ('install','guard','decision'):(host/'state'/f'{name}.json').write_text(json.dumps(receipt))
                 body=b'original response bytes\x00\xff';result=dict(status=200,body_bytes=len(body),body_sha256=operator.hashlib.sha256(body).hexdigest())
                 paired=host/'data/paired';(paired/'1.json').write_text(json.dumps(result))

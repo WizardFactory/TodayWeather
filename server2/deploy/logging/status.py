@@ -34,6 +34,13 @@ DESTINATIONS = ('s3', 'cloudwatch')
 # are never read, so a reader can never reach them.
 READ_UNITS = ('server2.service', 'server2-logs.service', 'server2-logs-status.service', 'server2-logs-watch.service')
 UNIT_MATCHES = [f'_SYSTEMD_UNIT={unit}' for unit in READ_UNITS]
+
+
+def use_units(pairs):
+    """Read the units given to render.py with --unit (UNIT=SOURCE) instead of the defaults."""
+    global READ_UNITS
+    READ_UNITS = tuple(pair.partition('=')[0] for pair in pairs)
+    UNIT_MATCHES[:] = [f'_SYSTEMD_UNIT={unit}' for unit in READ_UNITS]
 COLLECTOR_SCHEMA = 1
 _SAMPLE = re.compile(r'^(\w+)\{([^}]*)\}\s+([0-9.eE+-]+)(?:\s+\d+)?$')
 
@@ -414,11 +421,15 @@ def active_destinations(config):
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Collector loss visibility records.')
     parser.add_argument('moment', choices=('start', 'periodic', 'drain'))
+    parser.add_argument('--unit', action='append', default=[], metavar='UNIT=SOURCE',
+                        help='the units the collector reads, as given to render.py (default: the server2 host units)')
     parser.add_argument('--state', default='/var/lib/server2-logs', help='collector state directory')
     parser.add_argument('--config', default='/run/server2-logs/vector.json', help='rendered collector configuration')
     parser.add_argument('--timeout', type=float, default=75, help='drain: seconds to wait for confirmations')
     parser.add_argument('--main-pid', help='drain: the collector process (systemd ${MAINPID}); empty when it has already exited')
     args = parser.parse_args(argv)
+    if args.unit:
+        use_units(args.unit)
     active = active_destinations(args.config)
     if args.moment == 'drain' and args.main_pid == '':
         # The collector exited by itself (systemd knows no main process any more): nobody

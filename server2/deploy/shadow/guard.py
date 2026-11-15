@@ -371,6 +371,17 @@ def stop_units(manifest):
     require(result.returncode==0,'stop_units_failed')
 
 
+def report_stop(decision,manifest,stop):
+    """Write the stop record, then stop the units (LP-6, #2983).
+
+    Stopping the candidate also stops this unit (the candidate's ExecStopPost), which
+    can end this process before a later write; the record is flushed first, so the
+    host's collector ships it.
+    """
+    print(canonical(decision),flush=True)
+    if stop:stop_units(manifest)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=['check','run'])
@@ -403,17 +414,17 @@ def main():
                 decision=evaluate(manifest,sample,prior,now)
                 save(args.state,decision)
                 if decision['stop']:
-                    if args.action=='run':stop_units(manifest)
-                    print(canonical(decision));return 2
+                    report_stop(decision,manifest,args.action=='run');return 2
                 if args.action=='check':print(canonical(decision));return 0
                 watchdog()
                 time.sleep(max(0,INTERVAL-(time.monotonic()-cycle_start)))
         finally:os.close(lock)
     except (GuardError,ValueError,OSError,subprocess.SubprocessError):
-        if args.action=='run' and manifest is not None and sys.platform=='linux' and os.geteuid()==0:
-            try:stop_units(manifest)
-            except (GuardError,OSError,subprocess.SubprocessError):pass
-        print(canonical({'stop':'guard_failed','detail':'observation or state unavailable'}));return 2
+        failed={'stop':'guard_failed','detail':'observation or state unavailable'}
+        try:report_stop(failed,manifest,args.action=='run' and manifest is not None
+                        and sys.platform=='linux' and os.geteuid()==0)
+        except (GuardError,OSError,subprocess.SubprocessError):pass
+        return 2
 
 
 if __name__=='__main__':

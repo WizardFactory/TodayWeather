@@ -206,6 +206,35 @@ class RenderTest(unittest.TestCase):
             self.assertIn('parsed.schema != 1', transform['source'])
             self.assertIn('parsed.collector_schema != 1', transform['source'])
 
+    def test_unit_map_of_the_qualification_host(self):
+        # LP-6 (#2983): the shadow host names its own units and ships its guard and reader.
+        saved = dict(render.UNITS)
+        self.addCleanup(lambda: (render.UNITS.clear(), render.UNITS.update(saved)))
+        render.use_units(['a-candidate.service=server', 'a-guard.service=guard', 'a-reader.service=reader',
+                          'a-logs.service=collector'])
+        out = self.rendered(SERVER2_LOG_SINKS='s3')
+        self.assertEqual(out['sources']['journal_s3']['include_units'],
+                         ['a-candidate.service', 'a-guard.service', 'a-reader.service', 'a-logs.service'])
+        program = out['transforms']['select_s3']['source']
+        self.assertIn('if unit == "a-guard.service" { "guard" }', program)
+        self.assertIn('if unit == "a-reader.service" { "reader" }', program)
+        # Guard and reader lines leave the host only as non-empty JSON objects.
+        self.assertIn('} else {\n  if length(parsed) == 0 { abort }\n}', program)
+
+    def test_invalid_unit_maps_are_rejected(self):
+        saved = dict(render.UNITS)
+        self.addCleanup(lambda: (render.UNITS.clear(), render.UNITS.update(saved)))
+        for pairs in (['a.service=other', 'b.service=collector'], ['a.service=server'],
+                      ['a b.service=server', 'b.service=collector'], ['a.timer=server', 'b.service=collector'], ['b.service']):
+            with self.subTest(pairs=pairs), self.assertRaises(render.SettingError):
+                render.use_units(pairs)
+            self.assertEqual(render.UNITS, saved)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as stderr:
+            code = render.main(['--env-file', '/nonexistent', '--state', '/nonexistent', '--output', '/nonexistent/v.json',
+                                '--version-file', str(HERE / 'collector.json'), '--unit', 'a.service=server'], environ={})
+        self.assertEqual(code, 255)
+        self.assertIn('--unit', stderr.getvalue())
+
     def test_rendered_configuration_holds_only_allowlisted_values(self):
         with tempfile.TemporaryDirectory() as directory:
             env = Path(directory) / '.env'
@@ -1097,6 +1126,16 @@ class StatusTest(unittest.TestCase):
         for call in run.call_args_list:
             self.assertEqual([a for a in call.args[0] if a.startswith('_SYSTEMD_UNIT=')],
                              [f'_SYSTEMD_UNIT={u}' for u in render.UNITS])
+
+    def test_unit_map_selects_the_read_units(self):
+        saved = (status.READ_UNITS, list(status.UNIT_MATCHES))
+        def restore():
+            status.READ_UNITS = saved[0]
+            status.UNIT_MATCHES[:] = saved[1]
+        self.addCleanup(restore)
+        status.use_units(['a-candidate.service=server', 'a-logs.service=collector'])
+        self.assertEqual(status.READ_UNITS, ('a-candidate.service', 'a-logs.service'))
+        self.assertEqual(status.UNIT_MATCHES, ['_SYSTEMD_UNIT=a-candidate.service', '_SYSTEMD_UNIT=a-logs.service'])
 
     def test_new_baseline_is_the_current_boot_start(self):
         with tempfile.TemporaryDirectory() as directory, \
