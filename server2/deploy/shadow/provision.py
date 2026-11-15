@@ -526,14 +526,18 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
             except Exception:pass
             return record
         phase='finishing'
-        if remote is None and bound_target(journal):
-            # Every finish without a connection (deadline reached unreachable, a resume after
-            # the deadline, also without the marker) makes one attempt through the journaled
-            # SSH target so retention can reach the host; a failure or interrupt skips it.
-            try:remote=connector(cloud,journal,None,now=int(clock()))
-            except (Exception,KeyboardInterrupt):remote=None
+        # Steps before the finish never prevent it: an error or interrupt in any of them
+        # skips that step (design-round4.md).
+        try:
+            if remote is None and bound_target(journal):
+                # Every finish without a connection (deadline reached unreachable, a resume
+                # after the deadline, also without the marker) makes one attempt through the
+                # journaled SSH target so retention can reach the host.
+                remote=connector(cloud,journal,None,now=int(clock()))
+        except (Exception,KeyboardInterrupt):remote=None
         if remote is not None and isinstance(remote,BudgetedRemote):remote.finalizing=True
-        progress({'phase':'finishing','reason':reason})
+        try:progress({'phase':'finishing','reason':reason})
+        except (Exception,KeyboardInterrupt):pass
         report=finish_run(cloud,remote,journal,destination,now=int(clock()))
         # Termination/role removal may still be propagating. Retry observations
         # and exact cleanup only, without repeating evidence export or launches.

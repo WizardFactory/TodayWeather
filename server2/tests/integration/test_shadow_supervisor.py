@@ -1836,6 +1836,7 @@ class LifecycleTests(unittest.TestCase):
         # Circuit breaker after CX-SR2-011 (design-round3.md): per phase and call site, an
         # interrupt or error either detaches with the host untouched, retries as an
         # unreachable poll, or finishes with retention and cleanup.
+        import contextlib
         until=1000+168*3600
         kinds=[KeyboardInterrupt(),OSError('io'),state.StateError('state'),subprocess.TimeoutExpired('ssh',30),RuntimeError('bug')]
         def untouched(cloud,calls):
@@ -1849,16 +1850,21 @@ class LifecycleTests(unittest.TestCase):
                 if point in ('connect','poll') and not interrupt:expect='retry'
                 else:expect='detached' if interrupt else 'failed'
                 cases.append(('collecting',point,error,expect))
-        # Finishing (resumed after the deadline): the final reconnect.
-        for error in kinds:cases.append(('finishing','connect',error,'finish'))
+        # Finishing (resumed after the deadline): every step before the finish itself, i.e.
+        # the target check, the reconnect and the finishing progress record (CX-SR2-012).
+        for point in ('target','connect','progress'):
+            for error in kinds:cases.append(('finishing',point,error,'finish'))
         for phase,point,error,expect in cases:
             with self.subTest(phase=phase,point=point,error=type(error).__name__),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp)
                 run,cloud,calls,events,moment,j=self.interrupted_run(root,lambda poll,now:'active')
                 before=len(calls)
                 if phase=='finishing':moment[0]=until+5
-                run.faults[point]=(1,error)
-                result=run()
+                from unittest.mock import patch
+                def target(journal,error=error):raise error
+                with patch.object(provision,'bound_target',target) if point=='target' else contextlib.nullcontext():
+                    if point!='target':run.faults[point]=(1,error)
+                    result=run()
                 if expect=='detached':
                     self.assertEqual(result,{'schema':1,'detached':True,'stop_reason':'operator_detached'})
                     self.assertTrue(untouched(cloud,calls))
