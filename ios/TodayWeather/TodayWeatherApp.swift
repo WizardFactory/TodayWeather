@@ -9,6 +9,11 @@ struct TodayWeatherApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var wasInBackground = false
 
+    init() {
+        // IN-15: ads, usage analytics and crash reporting follow the shell, which the migration creates.
+        Monetization.shared.connect(AppLaunch.shared)
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView(launch: AppLaunch.shared)

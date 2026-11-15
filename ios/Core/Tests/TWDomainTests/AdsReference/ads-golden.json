@@ -1,0 +1,4726 @@
+{
+ "generator": "ios/tools/ads/generate.py (the C rule compiled with cc; cases.js in the macOS JavaScriptCore shell)",
+ "sources": [
+  {
+   "path": "client/scripts/ios-ad-request-rule.h",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "sha256": "5842233c1282ecf8a0461de22fd5099ce06feb48eb89f425743faf59fa5b1120"
+  },
+  {
+   "path": "client/www/js/service.monetization.js",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "sha256": "f0442f33135cd9405c64b5de103fb213976a5934e4678fad85372f17f837e103"
+  },
+  {
+   "path": "client/www/js/service.admobemi.js",
+   "commit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124",
+   "sha256": "0f670ba5bf25bec6ec2c5bd962845fd8ea53d76311d9123b1d7f6d966cc7538f"
+  }
+ ],
+ "requestRule": [
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": -1,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 0,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "not_determined",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 1,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "restricted",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 2,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "denied",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "authorized",
+   "personalized": false
+  },
+  {
+   "att": 3,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 3,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "authorized",
+   "personalized": true
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 4,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 0,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 1,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": 2,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": null,
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1101",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "0111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1110",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1111111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1011111111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "10110000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "0000",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1\u00001",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "11\u000011",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1x11",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "１111",
+   "attName": "unavailable",
+   "personalized": false
+  },
+  {
+   "att": 99,
+   "gdprApplies": -1,
+   "purposeConsents": "1111\u00000",
+   "attName": "unavailable",
+   "personalized": false
+  }
+ ],
+ "remoteConfig": [
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": false
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "false",
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": false,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": false
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "30"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 30
+   },
+   "ready": true,
+   "rejected": false
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "120"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 120
+   },
+   "ready": true,
+   "rejected": false
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "121"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "005"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 5
+   },
+   "ready": true,
+   "rejected": false
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "false",
+    "tw_banner_delay_seconds": "0000000000000000000000000120"
+   },
+   "policy": {
+    "enabled": false,
+    "delaySeconds": 120
+   },
+   "ready": true,
+   "rejected": false
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "99999999999999999999999"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "-1"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "1.5"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "1e2"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": " 5"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "5\n"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": ""
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "١٢"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true",
+    "tw_banner_delay_seconds": "１２"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "TRUE",
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "1",
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "true ",
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "",
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_delay_seconds": "0"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {
+    "tw_banner_enabled": "false"
+   },
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  },
+  {
+   "values": {},
+   "policy": {
+    "enabled": true,
+    "delaySeconds": 0
+   },
+   "ready": true,
+   "rejected": true
+  }
+ ],
+ "track": [
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": 1234
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "success",
+    "duration_ms": 1234,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": 1234
+   },
+   "release": false,
+   "result": true,
+   "sent": {
+    "outcome": "success",
+    "duration_ms": 1234,
+    "measurement_version": 1,
+    "traffic_type": "development"
+   }
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "network_error",
+    "duration_ms": 0
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "network_error",
+    "duration_ms": 0,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "invalid_input",
+    "duration_ms": 600000
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "invalid_input",
+    "duration_ms": 600000,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": 600001
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": 1.5
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": -1
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": {
+     "$number": "-0"
+    }
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "success",
+    "duration_ms": 0,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": {
+     "$number": "NaN"
+    }
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": {
+     "$number": "Infinity"
+    }
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": "12"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "invalid_response",
+    "duration_ms": 12
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "weather_fetch",
+   "params": {
+    "outcome": "success",
+    "duration_ms": 5,
+    "place": "Seoul"
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "success",
+    "duration_ms": 5,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "weather_load",
+   "params": {
+    "outcome": "invalid_response",
+    "duration_ms": 250
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "invalid_response",
+    "duration_ms": 250,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "weather_load",
+   "params": {
+    "outcome": "invalid_input",
+    "duration_ms": 250
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "favorite_change",
+   "params": {
+    "action": "add"
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "action": "add",
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "favorite_change",
+   "params": {
+    "action": "remove"
+   },
+   "release": false,
+   "result": true,
+   "sent": {
+    "action": "remove",
+    "measurement_version": 1,
+    "traffic_type": "development"
+   }
+  },
+  {
+   "name": "favorite_change",
+   "params": {
+    "action": "Add"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "location_permission",
+   "params": {
+    "outcome": "granted"
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "granted",
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "location_permission",
+   "params": {
+    "outcome": "unknown"
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "outcome": "unknown",
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "location_permission",
+   "params": {
+    "outcome": "restricted"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "ad_lifecycle",
+   "params": {
+    "action": "request",
+    "ad_format": "banner"
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "action": "request",
+    "ad_format": "banner",
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "ad_lifecycle",
+   "params": {
+    "action": "consent_failed",
+    "ad_format": "banner"
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "action": "consent_failed",
+    "ad_format": "banner",
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "ad_lifecycle",
+   "params": {
+    "action": "show",
+    "ad_format": "interstitial"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "ad_lifecycle",
+   "params": {
+    "action": "click",
+    "ad_format": "banner"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "ad_load_error",
+   "params": {
+    "ad_format": "banner",
+    "error_code": 3
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "ad_format": "banner",
+    "error_code": 3,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "ad_load_error",
+   "params": {
+    "ad_format": "banner",
+    "error_code": 999
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "ad_format": "banner",
+    "error_code": 999,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "ad_load_error",
+   "params": {
+    "ad_format": "banner",
+    "error_code": 1000
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "ad_policy_exposure",
+   "params": {
+    "delay_seconds": 0
+   },
+   "release": true,
+   "result": true,
+   "sent": {
+    "delay_seconds": 0,
+    "measurement_version": 1,
+    "traffic_type": "production"
+   }
+  },
+  {
+   "name": "ad_policy_exposure",
+   "params": {
+    "delay_seconds": 120
+   },
+   "release": false,
+   "result": true,
+   "sent": {
+    "delay_seconds": 120,
+    "measurement_version": 1,
+    "traffic_type": "development"
+   }
+  },
+  {
+   "name": "ad_policy_exposure",
+   "params": {
+    "delay_seconds": 121
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "screen_view",
+   "params": {
+    "screen_name": "tab",
+    "screen_class": "Cordova"
+   },
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "app_open",
+   "params": {},
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "constructor",
+   "params": {},
+   "release": true,
+   "result": false,
+   "sent": null
+  },
+  {
+   "name": "toString",
+   "params": {},
+   "release": true,
+   "result": false,
+   "sent": null
+  }
+ ],
+ "screens": [
+  {
+   "calls": [
+    "tab.forecast",
+    "tab.forecast",
+    "units",
+    "bogus",
+    "tab.air",
+    "tab.air",
+    "tab.forecast"
+   ],
+   "sent": [
+    {
+     "screen_name": "tab.forecast",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "units",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "tab.air",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "tab.forecast",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    }
+   ]
+  },
+  {
+   "calls": [
+    "start",
+    "guide",
+    "setting-radio",
+    "setting-push",
+    "kma-special",
+    "nation",
+    "nation-air",
+    "tab",
+    "tab.search",
+    "tab.dailyforecast",
+    "tab.weather",
+    "Tab.air"
+   ],
+   "sent": [
+    {
+     "screen_name": "start",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "guide",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "setting-radio",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "setting-push",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "kma-special",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "nation",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "nation-air",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "tab",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "tab.search",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "tab.dailyforecast",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    },
+    {
+     "screen_name": "tab.weather",
+     "screen_class": "Cordova",
+     "measurement_version": 1,
+     "traffic_type": "production"
+    }
+   ]
+  }
+ ],
+ "trackingStatus": [
+  {
+   "before": [
+    "not_determined"
+   ],
+   "after": [],
+   "set": [
+    {
+     "name": "att_status",
+     "value": "not_determined"
+    }
+   ]
+  },
+  {
+   "before": [],
+   "after": [
+    "authorized",
+    "authorized",
+    "denied"
+   ],
+   "set": [
+    {
+     "name": "att_status",
+     "value": "authorized"
+    },
+    {
+     "name": "att_status",
+     "value": "denied"
+    }
+   ]
+  },
+  {
+   "before": [
+    "bogus",
+    "unavailable"
+   ],
+   "after": [
+    "restricted",
+    "bogus"
+   ],
+   "set": [
+    {
+     "name": "att_status",
+     "value": "unavailable"
+    },
+    {
+     "name": "att_status",
+     "value": "restricted"
+    }
+   ]
+  }
+ ],
+ "requestPolicy": [
+  {
+   "state": {
+    "att_status": "authorized",
+    "personalized": true
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"authorized\",\"personalized\":true,\"result\":\"applied\"}"
+   ],
+   "status": [
+    "authorized"
+   ],
+   "ready": 1
+  },
+  {
+   "state": {
+    "att_status": "authorized",
+    "personalized": false
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"authorized\",\"personalized\":false,\"result\":\"applied\"}"
+   ],
+   "status": [
+    "authorized"
+   ],
+   "ready": 1
+  },
+  {
+   "state": {
+    "att_status": "denied",
+    "personalized": false
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"denied\",\"personalized\":false,\"result\":\"applied\"}"
+   ],
+   "status": [
+    "denied"
+   ],
+   "ready": 1
+  },
+  {
+   "state": {
+    "att_status": "restricted",
+    "personalized": false
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"restricted\",\"personalized\":false,\"result\":\"applied\"}"
+   ],
+   "status": [
+    "restricted"
+   ],
+   "ready": 1
+  },
+  {
+   "state": {
+    "att_status": "not_determined",
+    "personalized": false
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"not_determined\",\"personalized\":false,\"result\":\"applied\"}"
+   ],
+   "status": [
+    "not_determined"
+   ],
+   "ready": 1
+  },
+  {
+   "state": {
+    "att_status": "unavailable",
+    "personalized": false
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"unavailable\",\"result\":\"not_reported\"}"
+   ],
+   "status": [
+    "unavailable"
+   ],
+   "ready": 1
+  },
+  {
+   "state": {
+    "att_status": "unavailable",
+    "personalized": true
+   },
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"unavailable\",\"result\":\"not_reported\"}"
+   ],
+   "status": [
+    "unavailable"
+   ],
+   "ready": 1
+  },
+  {
+   "state": null,
+   "lines": [
+    "{\"component\":\"admob\",\"operation\":\"request_policy\",\"att_status\":\"unavailable\",\"result\":\"not_reported\"}"
+   ],
+   "status": [
+    "unavailable"
+   ],
+   "ready": 1
+  }
+ ]
+}

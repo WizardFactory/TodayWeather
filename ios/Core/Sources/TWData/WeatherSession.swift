@@ -43,6 +43,7 @@ public final class WeatherSession {
     @ObservationIgnored private let loadPhotos: () -> Void
     @ObservationIgnored private let clock: any AppClock
     @ObservationIgnored private let random: () -> Double
+    @ObservationIgnored private let telemetry: WeatherTelemetry?
     @ObservationIgnored private var timer: Task<Void, Never>?
 
     /// The retry confirmation is open (`LOC_ERROR`, `LOC_FAIL_TO_GET_WEATHER_INFO`, `LOC_CLOSE` and `LOC_OK`).
@@ -54,7 +55,8 @@ public final class WeatherSession {
 
     public init(repository: WeatherRepository, holder: AppStateHolder, acceptLanguage: @escaping () -> String,
                 photos: @escaping () -> WeatherPhotos? = { nil }, loadPhotos: @escaping () -> Void = {},
-                clock: any AppClock = SystemClock(), random: @escaping () -> Double = { Double.random(in: 0..<1) }) {
+                clock: any AppClock = SystemClock(), random: @escaping () -> Double = { Double.random(in: 0..<1) },
+                telemetry: WeatherTelemetry? = nil) {
         self.repository = repository
         self.holder = holder
         self.acceptLanguage = acceptLanguage
@@ -62,6 +64,7 @@ public final class WeatherSession {
         self.loadPhotos = loadPhotos
         self.clock = clock
         self.random = random
+        self.telemetry = telemetry
     }
 
     /// The selected place, as `WeatherInfo.getCityOfIndex(getCityIndex())`.
@@ -163,7 +166,18 @@ public final class WeatherSession {
         let language = acceptLanguage()
         Task { @MainActor [weak self] in
             guard let self else { return }
+            let started = clock.now
             let result = await repository.load(place, units: units, acceptLanguage: language, force: false)
+            // `updateWeatherData` reports each load; an answer a later request replaced applies nowhere, so it is no load.
+            let outcome: String? = switch result {
+            case .loaded: "success"
+            case .failed(let network, _): network ? "network_error" : "invalid_response"
+            case .skipped, .superseded: nil
+            }
+            if let outcome {
+                telemetry?("weather_load", ["outcome": .text(outcome),
+                                            "duration_ms": .number((clock.now.timeIntervalSince(started) * 1000).rounded())])
+            }
             switch result {
             case .loaded(let key, let entry, let updated): save(key: key, entry: entry, updated: updated)
             // `showRetryConfirm(strError, strFailToGetWeatherInfo, 'weather')`; one at a time.

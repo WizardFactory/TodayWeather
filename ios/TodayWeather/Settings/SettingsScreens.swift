@@ -64,6 +64,16 @@ enum SettingsPage: Equatable {
     case list(String)
 }
 
+extension SettingsScreens {
+    /// The Cordova state of a page (`screen_view`): S07 is `units`, an S08 list `setting-radio`.
+    static func screenName(_ page: SettingsPage) -> String {
+        switch page {
+        case .units: "units"
+        case .list: "setting-radio"
+        }
+    }
+}
+
 /// The settings pages S07 and S08 and the menu's hand-offs (IN-12, #2961), connected to the shell's menu rows
 /// (`ShellModel.onMenuRow`): 단위설정 and the three lists open their page (the menu closed first), 널스쿨 풍향 opens the wind
 /// map and keeps the menu open, 의견보내기 opens the mail and 응원리뷰쓰기 the App Store page (the menu closed first), About
