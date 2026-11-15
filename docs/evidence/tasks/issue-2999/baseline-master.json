@@ -69,21 +69,21 @@
     "poll-failure-1e-4": {
       "scenario": "poll-failure-1e-4",
       "seeds": 20,
-      "full_runs": 10,
+      "full_runs": 12,
       "median_collected_hours": 168.0,
       "min_collected_hours": 5.234,
       "evidence_retrievable": 20,
       "cleanup_complete": 20,
       "stop_reasons": {
-        "guard:collection_deadline": 10,
-        "operator-stop": 10
+        "guard:collection_deadline": 12,
+        "operator-stop": 8
       }
     },
     "poll-failure-1e-3": {
       "scenario": "poll-failure-1e-3",
       "seeds": 20,
       "full_runs": 0,
-      "median_collected_hours": 11.734,
+      "median_collected_hours": 12.767,
       "min_collected_hours": 0.167,
       "evidence_retrievable": 20,
       "cleanup_complete": 20,
@@ -349,5 +349,5 @@
     "full_runs": 32,
     "expected_share": 0.557
   },
-  "note": "Fault rates are scenario inputs, not measurements. The 8516c7d7 run used a reader model that shared the operator clock, ran past its time bound and stopped the whole host on a reader exit (corrected here)."
+  "note": "Fault rates are scenario inputs, not measurements. The 8516c7d7 run used a draft model with a shared reader/operator clock, results applied before completion, and a reader exit that stopped the whole host (all corrected here)."
 }
