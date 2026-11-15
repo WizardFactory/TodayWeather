@@ -168,7 +168,9 @@ class PairedReadTests(unittest.TestCase):
             with self.subTest(status=status):
                 a, b = self.peer(status=status), self.peer()
                 state = self.path / f'continue-{status}'
-                result = capture.execute(manifest(), a.origin, b.origin, state, self.binary, loopback_test=True)
+                # One slot per origin (interval 100 s); 5 s leaves room for the 1 s spacing
+                # between the two requests on a loaded machine.
+                result = capture.execute(manifest(duration=5), a.origin, b.origin, state, self.binary, loopback_test=True)
                 self.assertEqual(result['attempts'], {'candidate': 1, 'production': 1})
                 self.assertEqual(len(a.requests), 1)
                 self.assertEqual(len(b.requests), 1)
