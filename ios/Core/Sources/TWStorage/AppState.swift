@@ -235,7 +235,7 @@ public struct MigrationInfo: Hashable, Sendable {
 
 extension JSString {
     /// Code-unit equality of two optional texts (both absent counts as equal).
-    static func same(_ a: String?, _ b: String?) -> Bool {
+    public static func same(_ a: String?, _ b: String?) -> Bool {
         switch (a, b) {
         case (nil, nil): true
         case let (a?, b?): equal(a, b)

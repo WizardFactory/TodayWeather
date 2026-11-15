@@ -3,14 +3,17 @@
 
     python3 recorder.py <port> <out-dir>
 
-Every request is appended to <out-dir>/requests.jsonl and answered locally (404 for API paths, 200 for the
-harness paths), so nothing the app sends leaves the Mac. The seed script posts:
+Every request is appended to <out-dir>/requests.jsonl and answered locally (200 for the push paths `/v00090x/push`
+and `/v00090x/push-list` and the harness paths, 404 for other API paths), so nothing the app sends leaves the Mac.
+Push requests are recorded with their headers and JSON body (IN-04): the Cordova app's (/v000902) and the native
+app's (/v000903). The seed script posts:
 - /__tw/observed: a request the page started (XHR or fetch) with its URL, so requests to other hosts are seen too;
 - /__tw/seeded: the state it wrote, saved as <out-dir>/seeded.json.
 CORS headers allow the app://localhost origin. Stop it with SIGTERM.
 """
 import json
 import os
+import re
 import sys
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -19,6 +22,8 @@ PORT = int(sys.argv[1])
 OUT = sys.argv[2]
 os.makedirs(OUT, exist_ok=True)
 LOG = os.path.join(OUT, "requests.jsonl")
+PUSH = re.compile(r"^/v00090\d/push(-list)?$")
+HEADERS = ["Content-Type", "Accept-Language", "Device-Id", "Accept"]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -34,6 +39,12 @@ class Handler(BaseHTTPRequestHandler):
                 entry["observed"] = json.loads(body.decode("utf-8"))
             except ValueError:
                 entry["observed"] = {"unparsable": body.decode("utf-8", "replace")[:200]}
+        if PUSH.match(self.path):
+            entry["headers"] = {h: self.headers.get(h) for h in HEADERS if self.headers.get(h) is not None}
+            try:
+                entry["body"] = json.loads(body.decode("utf-8"))
+            except ValueError:
+                entry["body"] = {"unparsable": body.decode("utf-8", "replace")[:200]}
         with open(LOG, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
@@ -57,7 +68,7 @@ class Handler(BaseHTTPRequestHandler):
             with open(os.path.join(OUT, "seeded.json"), "wb") as f:
                 f.write(body)
             return self._reply(200, b"{}")
-        if self.path.startswith("/__tw/"):
+        if self.path.startswith("/__tw/") or (PUSH.match(self.path) and self.command in ("PUT", "POST")):
             return self._reply(200, b"{}")
         return self._reply(404, b"{}")
 

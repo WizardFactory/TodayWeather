@@ -14,6 +14,9 @@ on:
       - "android/app/provenance/cordova-fonts.json"
       # Source of ios/tools/import_corpus.py (the golden corpus copy).
       - "android/core-domain/src/test/resources/corpus/**"
+      # Sources of ios/tools/push/generate.py (the Cordova iOS push requests).
+      - "client/www/js/service.push.js"
+      - "client/www/js/service.weatherutil.js"
       # Source of ios/tools/import_chart_reference.py (the Cordova chart scenes captured for Android).
       - "android/core-domain/src/test/resources/chart-reference/**"
       # Sources of ios/tools/weather/generate.py (the Cordova weather request timing in JavaScriptCore).
@@ -33,6 +36,8 @@ on:
       - "android/app/src/main/res/font/ionicons.ttf"
       - "android/app/provenance/cordova-fonts.json"
       - "android/core-domain/src/test/resources/corpus/**"
+      - "client/www/js/service.push.js"
+      - "client/www/js/service.weatherutil.js"
       - "android/core-domain/src/test/resources/chart-reference/**"
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
@@ -53,11 +58,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets, golden corpus, chart scenes and weather request timing are current
+      - name: Imported client assets, golden corpus, chart scenes, push requests and weather request timing are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
           python3 ios/tools/import_chart_reference.py
+          python3 ios/tools/push/generate.py
           python3 ios/tools/weather/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
