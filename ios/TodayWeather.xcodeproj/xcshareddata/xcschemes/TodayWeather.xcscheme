@@ -29,7 +29,8 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
          <TestableReference
-            skipped = "NO">
+            skipped = "NO"
+            parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7A1000000000000000000402"
@@ -75,6 +76,16 @@
                BlueprintIdentifier = "TWDomainTests"
                BuildableName = "TWDomainTests"
                BlueprintName = "TWDomainTests"
+               ReferencedContainer = "container:Core">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TWDataTests"
+               BuildableName = "TWDataTests"
+               BlueprintName = "TWDataTests"
                ReferencedContainer = "container:Core">
             </BuildableReference>
          </TestableReference>

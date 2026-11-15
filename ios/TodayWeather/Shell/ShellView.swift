@@ -7,6 +7,8 @@ import UIKit
 /// shell's own default shows the selected place's name over an empty page.
 struct TabContent {
     var title: String = ""
+    /// What follows the title inside it (IN-08: the current position's location glyph or the loading spinner).
+    var titleAccessory: AnyView? = nil
     var actions: AnyView = AnyView(EmptyView())
     var page: AnyView = AnyView(Color.clear)
 }
@@ -43,7 +45,7 @@ struct RootView: View {
             if let shell = launch.shell {
                 switch shell.screen {
                 case .start: StartPlaceholder(model: shell)
-                case .tab: ShellView(model: shell)
+                case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } })
                 }
             } else {
                 SplashView()
@@ -112,8 +114,8 @@ struct StartPlaceholder: View {
 /// the header bar keeping the side insets clear.
 struct ShellView: View {
     let model: ShellModel
-    /// The page of a tab; IN-08 and later give it. Nil: the shell's default.
-    var content: ((ShellTab) -> TabContent)? = nil
+    /// The page of a tab; IN-08 and later give it. Nil (or nil for a tab): the shell's default.
+    var content: ((ShellTab) -> TabContent?)? = nil
     /// The banner while it shows (IN-15). The slot is under the tab bar, above the home indicator; where the Cordova
     /// banner sits is IN-15's to measure.
     var banner: AnyView? = nil
@@ -133,20 +135,21 @@ struct ShellView: View {
 struct ShellFrame: View {
     let model: ShellModel
     let insets: ShellInsets
-    var content: ((ShellTab) -> TabContent)? = nil
+    var content: ((ShellTab) -> TabContent?)? = nil
     var banner: AnyView? = nil
 
     var body: some View {
         let colors = ShellColors.of(model.theme, tab: model.selected)
         let catalog = Catalog(code: model.locale.catalog)
-        let tab = content?(model.selected) ?? defaultContent(model.selected)
+        let tab = content.flatMap { $0(model.selected) } ?? defaultContent(model.selected)
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 colors.statusBar.color.frame(height: insets.statusBar)
                 ZStack(alignment: .top) {
                     tab.page.frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
-                    HeaderBar(colors: colors, title: tab.title, insets: insets, onMenu: model.openMenu) { tab.actions }
+                    HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, insets: insets,
+                              onMenu: model.openMenu) { tab.actions }
                 }
                 .frame(maxHeight: .infinity)
                 TabBar(selected: model.selected, colors: colors, catalog: catalog,
@@ -189,6 +192,7 @@ struct ShellFrame: View {
 struct BarFrame<Leading: View, Trailing: View>: View {
     let colors: ShellColors
     let title: String
+    var titleAccessory: AnyView? = nil
     let insets: ShellInsets
     let titleIdentifier: String
     /// How far WebKit puts the title below where SwiftUI centers it on the 44 pt line (measured: 1 pt in a tab's
@@ -200,11 +204,14 @@ struct BarFrame<Leading: View, Trailing: View>: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Text(title)
-                .font(.system(size: titleSize, weight: .medium))
-                .foregroundStyle(colors.headerText.color)
-                .outlined(colors.headerOutline)
-                .lineLimit(1)
+            HStack(spacing: 0) {
+                Text(title)
+                    .font(.system(size: titleSize, weight: .medium))
+                    .foregroundStyle(colors.headerText.color)
+                    .outlined(colors.headerOutline)
+                    .lineLimit(1)
+                if let titleAccessory { titleAccessory }
+            }
                 // WebKit puts the baseline of a 44 pt line 1 pt lower than SwiftUI centers the text (measured).
                 .offset(y: titleOffset)
                 .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight)
@@ -234,12 +241,13 @@ struct BarFrame<Leading: View, Trailing: View>: View {
 struct HeaderBar<Actions: View>: View {
     let colors: ShellColors
     let title: String
+    var titleAccessory: AnyView? = nil
     let insets: ShellInsets
     let onMenu: () -> Void
     @ViewBuilder let actions: () -> Actions
 
     var body: some View {
-        BarFrame(colors: colors, title: title, insets: insets, titleIdentifier: "shell-title") {
+        BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, insets: insets, titleIdentifier: "shell-title") {
             BarButton(glyph: Glyphs.navicon, colors: colors, width: 40, action: onMenu)
                 .accessibilityLabel("menu")
                 .accessibilityIdentifier("shell-menu-button")
