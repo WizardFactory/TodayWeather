@@ -12,7 +12,7 @@ final class HeldTransport: PushTransport, @unchecked Sendable {
     private var sent: [PushRequest] = []
     private var held: Bool
     private var waiting: [CheckedContinuation<Void, Never>] = []
-    private var counters: [(Int, CheckedContinuation<Void, Never>)] = []
+    private var counters: [UUID: (Int, CheckedContinuation<Void, Never>)] = [:]
     let status: Int?
 
     init(status: Int? = 200, held: Bool = false) {
@@ -26,9 +26,9 @@ final class HeldTransport: PushTransport, @unchecked Sendable {
         let due: [CheckedContinuation<Void, Never>] = lock.withLock {
             sent.append(request)
             let n = sent.count
-            let ready = counters.filter { $0.0 <= n }.map(\.1)
-            counters.removeAll { $0.0 <= n }
-            return ready
+            let ready = counters.filter { $0.value.0 <= n }
+            for id in ready.keys { counters.removeValue(forKey: id) }
+            return ready.values.map(\.1)
         }
         for c in due { c.resume() }
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
@@ -41,15 +41,22 @@ final class HeldTransport: PushTransport, @unchecked Sendable {
         return status
     }
 
-    /// Returns once at least `count` requests were sent.
+    /// Returns once at least `count` requests were sent, or at once when the waiting task is cancelled (the suite's
+    /// time limit), so a registration that never sends fails its test instead of holding the run.
     func waitForRequests(_ count: Int) async {
-        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-            let ready = lock.withLock {
-                if sent.count >= count { return true }
-                counters.append((count, c))
-                return false
+        let id = UUID()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+                let ready = lock.withLock {
+                    if sent.count >= count || Task.isCancelled { return true }
+                    counters[id] = (count, c)
+                    return false
+                }
+                if ready { c.resume() }
             }
-            if ready { c.resume() }
+        } onCancel: {
+            let waiter = lock.withLock { counters.removeValue(forKey: id) }
+            waiter?.1.resume()
         }
     }
 
@@ -328,6 +335,46 @@ struct PushSyncTests {
         let transport = HeldTransport()
         _ = try await files.process(transport).sync.drain()
         #expect(replacement(transport.requests.first) == ["token-a", "token-b"])
+        #expect(files.storedToken == "token-b")
+        #expect(try files.queue.pending().isEmpty)
+    }
+
+    /// CODEX-IN04A-1: a token is queued when it arrives, also while an earlier registration is in flight (the
+    /// Android app hands it to WorkManager at once). If the process ends then, the next one registers both in order.
+    @Test func aTokenArrivingDuringARegistrationIsQueuedAtOnce() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let inFlight = HeldTransport(held: true)
+        let store1 = ProcessStore(files.file)
+        let process1 = try files.process(inFlight, store: store1).sync
+        #expect(process1.enqueue(token: "token-b"))
+        let task = Task { await process1.drain() }
+        await inFlight.waitForRequests(1)
+        #expect(process1.enqueue(token: "token-c"))
+        #expect(try files.queue.pending() == ["token-b", "token-c"], "queued before B's PUT answered")
+        store1.end() // process 1 ends with B's PUT in flight
+
+        let transport = HeldTransport()
+        _ = try await files.process(transport).sync.drain() // process 2, a background start
+        #expect(transport.requests.map(replacement) == [["token-a", "token-b"], ["token-b", "token-c"]])
+        #expect(files.storedToken == "token-c")
+        #expect(try files.queue.pending().isEmpty)
+        inFlight.release()
+        _ = await task.value
+    }
+
+    /// CODEX-IN04A-2: a queued token leaves the queue only once a save holding it succeeded. The holder keeps a
+    /// change whose save failed in memory; a later registration of the same token must not take that for stored.
+    @Test func aTokenLeavesTheQueueOnlyAfterASuccessfulSave() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let failing = ProcessStore(files.file, failures: 2)
+        let sync = try files.process(HeldTransport(), store: failing).sync
+        #expect(await sync.receive(token: "token-b")) // PUT sent, save 1 fails
+        _ = await sync.drain() // the holder shows token-b; save 2 fails
+        #expect(files.storedToken == "token-a")
+        #expect(try files.queue.pending() == ["token-b"])
+        _ = await sync.drain() // save 3 succeeds
         #expect(files.storedToken == "token-b")
         #expect(try files.queue.pending().isEmpty)
     }

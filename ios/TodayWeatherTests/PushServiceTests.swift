@@ -98,6 +98,7 @@ struct PushServiceTests {
                                   transport: transport)
         service.resume()
         service.receive(token: "token-c")
+        #expect(try queue.pending() == ["token-c"], "queued when it arrives (CODEX-IN04A-1)")
         for _ in 0..<100 where (try? store.load())?.push.fcmToken != "token-c" {
             try await Task.sleep(for: .milliseconds(50))
         }

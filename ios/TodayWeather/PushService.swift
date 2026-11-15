@@ -26,12 +26,13 @@ struct FirebaseTokenProvider: PushTokenProvider {
 /// on iOS, in the order of the Android app (AN-04, `PushSync`). `open()` runs once per opened process (the Cordova web
 /// page's `Push.init`); `resume()` (every process start, also in the background) registers the tokens an earlier
 /// process queued but did not finish; `receive(token:)` is the token callback. The process start and tokens reach
-/// `PushSync` in the order they came, through one stream and one task this service owns.
+/// `PushSync` in the order they came: a token is queued when it arrives, and one stream and one task this service
+/// owns run the registrations.
 @MainActor
 final class PushService {
     private enum Event: Sendable {
-        case start
-        case token(String)
+        /// Register the queued tokens (a process start, or a token queued).
+        case drain
     }
 
     let sync: PushSync
@@ -58,8 +59,7 @@ final class PushService {
         consumer = Task {
             for await event in stream {
                 switch event {
-                case .start: await sync.drain()
-                case .token(let token): await sync.receive(token: token)
+                case .drain: await sync.drain()
                 }
             }
         }
@@ -104,12 +104,15 @@ final class PushService {
 
     /// The process started: tokens an earlier process queued are registered.
     func resume() {
-        events.yield(.start)
+        events.yield(.drain)
     }
 
-    /// A token FCM delivered (the Cordova token callback).
+    /// A token FCM delivered (the Cordova token callback): queued at once, in order of arrival, then registered
+    /// after the registrations before it (CODEX-IN04A-1). A token that cannot be queued (its file cannot be written)
+    /// is not registered; the next open reads the current token from FCM.
     func receive(token: String) {
-        events.yield(.token(token))
+        if !sync.enqueue(token: token) { log.error("token not queued; the next open reads it from FCM") }
+        events.yield(.drain)
     }
 }
 

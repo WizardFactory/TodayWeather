@@ -65,16 +65,23 @@ public actor PushSync {
         }
     }
 
-    /// Stores `token` in the queue and registers the queued tokens (the Android `onNewToken`, which enqueues the
-    /// work). A blank token is ignored, as the Cordova token callback ignores it. False when it could not be queued.
-    @discardableResult
-    public func receive(token: String) async -> Bool {
+    /// Stores `token` in the queue at once, without waiting for a registration in flight (the Android `onNewToken`
+    /// hands it to WorkManager at once; CODEX-IN04A-1). A blank token is ignored, as the Cordova token callback ignores
+    /// it. False when it could not be queued. `drain()` registers it.
+    public nonisolated func enqueue(token: String) -> Bool {
         guard PushRegistration.accepts(token) else { return true }
         do {
             try queue.append(token)
+            return true
         } catch {
             return false
         }
+    }
+
+    /// `enqueue(token:)`, then the registration of the queued tokens.
+    @discardableResult
+    public func receive(token: String) async -> Bool {
+        guard enqueue(token: token) else { return false }
         _ = await drain()
         return true
     }
@@ -91,19 +98,22 @@ public actor PushSync {
             guard let current = await state.pushState(), let ctx = context(current) else { break }
             let result = PushRegistration.onTokenRefresh(current.push, places: current.places, token: token,
                                                          context: ctx)
-            guard let outcome = await send(result, over: current) else { break }
+            // The token leaves the queue only after a save holding it succeeded, also when the state shows it
+            // already (a change whose save failed stays shown; CODEX-IN04A-2).
+            guard let outcome = await send(result, over: current, alwaysStore: true) else { break }
             outcomes.append(outcome)
             guard (try? queue.removeFirst(token)) != nil else { break }
         }
         return outcomes
     }
 
-    /// Sends the requests in order, each after the answer to the one before, then stores a changed token over the
-    /// state as it is now. Nil when the token cannot be stored (the queue keeps it for the next process).
-    private func send(_ result: PushRegistration.Result, over current: AppState) async -> Outcome? {
+    /// Sends the requests in order, each after the answer to the one before, then stores a changed token (with
+    /// `alwaysStore`, the token in any case) over the state as it is now. Nil when the token cannot be stored (the
+    /// queue keeps it for the next process).
+    private func send(_ result: PushRegistration.Result, over current: AppState, alwaysStore: Bool = false) async -> Outcome? {
         var statuses: [Int?] = []
         for request in result.requests { statuses.append(await transport.send(request)) }
-        if !JSString.same(result.state.fcmToken, current.push.fcmToken) {
+        if alwaysStore || !JSString.same(result.state.fcmToken, current.push.fcmToken) {
             do {
                 try await state.storePushToken(result.state.fcmToken)
             } catch {

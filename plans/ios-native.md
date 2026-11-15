@@ -203,7 +203,12 @@ The bar for review (AK, 2026-11-15): the Android app's behaviour. An outcome on 
 
 First version (`d3c156f3`): the request, queue and sync tests ran first against compiling stubs and 15 of 19 failed with assertion failures (the 4 others hold for an empty result); all passed against the implementation. The golden requests equal the Android corpus for the shared cases but for `type` and the device ID.
 
-Return to the Android shape (2026-11-15), on master `bb25a753` merged in: the request goldens are unchanged (`generate.py` writes the same `push.json`). `PushSyncTests` follow the Android `PushSyncTest` and add the process-end case of `PushTokenWorkTest` (#2953 AC3). They were written for the new `PushSync`; instead of a Red run against stubs, three mutations of it were run once and each was caught: the token stored before the requests (the round-2 shape: the AC3 test fails), registrations not serialized (both order tests fail), a token kept in memory only (the AC3 test, the unstored-token test and the no-context test fail).
+Return to the Android shape (2026-11-15, d3f0bbeb), on master `bb25a753` merged in: the request goldens are unchanged (`generate.py` writes the same `push.json`). `PushSyncTests` follow the Android `PushSyncTest` and add the process-end case of `PushTokenWorkTest` (#2953 AC3). They were written for the new `PushSync`; instead of a Red run against stubs, three mutations of it were run once and each was caught: the token stored before the requests (the round-2 shape: the AC3 test fails), registrations not serialized (both order tests fail), a token kept in memory only (the AC3 test, the unstored-token test and the no-context test fail).
+
+Review round 1 of the new count (Codex, CODEX-IN04A-1..2, both Required), each test-first:
+
+- CODEX-IN04A-1: `PushService` handed a token to its event stream, and the stream's task queued it only after the registration before it had answered; a process that ended meanwhile lost it (the Android app hands a token to WorkManager at once). The token is now queued when it arrives (`PushSync.enqueue`, synchronous) and the stream only runs the registrations. Red: `aTokenArrivingDuringARegistrationIsQueuedAtOnce` failed (no-op `enqueue`); `PushServiceTests.aTokenIsRegisteredWithoutAnOpen` also checks the queue right after `receive`.
+- CODEX-IN04A-2: `AppStateHolder.update` keeps a change whose save failed in memory, so a later registration of the same queued token found it "stored" and removed it from the queue while the file still held the old token. A queued token now leaves the queue only after a save holding it succeeded. Red: `aTokenLeavesTheQueueOnlyAfterASuccessfulSave` failed on the queue and the stored token.
 
 ## IN-05 — hourly and daily charts in SwiftUI (#2954)
 
