@@ -482,34 +482,39 @@ struct MenuRows: View {
 }
 
 /// An Ionic popup (`$ionicPopup.show`): the backdrop darkens the page (40 % black), a 250 pt popup in its middle,
-/// white at 90 %: the title (15 pt, medium), the lines (14 pt) and the buttons side by side. Only its buttons close it.
+/// white at 90 %: the title (15 pt, medium), the lines (14 pt) and the buttons side by side, each size at the default
+/// text size and scaled with Dynamic Type (CODEX-IN07-1). Only its buttons close it.
 struct IonicPopupView: View {
     let popup: Popup
     let onTap: (Int) -> Void
+    @ScaledMetric(relativeTo: .headline) private var titleSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .body) private var lineSize: CGFloat = 14
+    @ScaledMetric(relativeTo: .body) private var buttonSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .body) private var buttonHeight: CGFloat = 45
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.4).contentShape(Rectangle()).onTapGesture {}
             VStack(spacing: 0) {
                 if !popup.title.isEmpty {
-                    Text(popup.title).font(.system(size: 15, weight: .medium)).multilineTextAlignment(.center)
+                    Text(popup.title).font(.system(size: titleSize, weight: .medium)).multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 10).padding(.top, 15)
                 }
                 Color(white: 0.933).frame(height: 1).padding(.top, 15)
                 ScrollView {
-                    Text(popup.lines.joined(separator: "\n")).font(.system(size: 14))
+                    Text(popup.lines.joined(separator: "\n")).font(.system(size: lineSize))
                         .frame(maxWidth: .infinity, alignment: .leading).padding(10)
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 5) {
                     ForEach(Array(popup.buttons.enumerated()), id: \.offset) { index, button in
                         Button { onTap(index) } label: {
-                            Text(button.text).font(.system(size: 15, weight: .bold))
+                            Text(button.text).font(.system(size: buttonSize, weight: .bold))
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(button.style == .standard ? CssColor(0x444444).color : .white)
                                 .padding(.horizontal, 13)
-                                .frame(maxWidth: .infinity, minHeight: 45)
+                                .frame(maxWidth: .infinity, minHeight: buttonHeight)
                                 .background(buttonColor(button.style))
                                 .clipShape(RoundedRectangle(cornerRadius: 2))
                         }

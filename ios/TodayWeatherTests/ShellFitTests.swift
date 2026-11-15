@@ -77,6 +77,32 @@ struct ShellFitTests {
         }
     }
 
+    /// A popup's texts follow Dynamic Type (CODEX-IN07-1): at `xxxLarge` the title, the lines and the buttons are
+    /// larger than at the default size, and the popup and its buttons stay inside the smallest windows.
+    @Test func popupsScaleAndFit() async throws {
+        var heights: [DynamicTypeSize: CGFloat] = [:]
+        for dynamicType in [DynamicTypeSize.large, .xxxLarge] {
+            for (name, size) in [Self.sizes[2], Self.sizes[4], Self.sizes[5], Self.sizes[6]] {
+                let shell = ShellFixture.shell(ShellFixture.state(), languages: ["de-DE"])
+                shell.show(Popup(title: "TodayWeather", lines: ["Eine längere Zeile, die umbrechen muss.", "Zweite Zeile"],
+                                 buttons: [.init(text: "Abbrechen") {}, .init(text: "Einstellungen öffnen", style: .positive) {}]))
+                let hosted = try HostedView(ShellView(model: shell), size: size, dynamicType: dynamicType)
+                defer { hosted.close() }
+                try await hosted.settle(200)
+                let popup = try #require(hosted.element("popup"), "\(name) \(dynamicType)").accessibilityFrame
+                #expect(popup.minX >= -0.5 && popup.maxX <= size.width + 0.5, "\(name) \(dynamicType) popup \(popup)")
+                #expect(popup.minY >= -0.5 && popup.maxY <= size.height + 0.5, "\(name) \(dynamicType) popup \(popup)")
+                for index in 0..<2 {
+                    let button = try #require(hosted.element("popup-button-\(index)")).accessibilityFrame
+                    #expect(button.minX >= popup.minX - 0.5 && button.maxX <= popup.maxX + 0.5, "\(name) \(dynamicType) button \(index)")
+                }
+                if name == Self.sizes[5].0 { heights[dynamicType] = popup.height }
+            }
+        }
+        let large = try #require(heights[.large]), xxxLarge = try #require(heights[.xxxLarge])
+        #expect(xxxLarge > large * 1.15, "the popup grows with the text size (fixed paddings): \(large) → \(xxxLarge)")
+    }
+
     private func checkTabs(_ hosted: HostedView, _ shell: ShellModel, _ size: CGSize, _ dynamicType: DynamicTypeSize,
                            _ where_: String) throws {
         let catalog = Catalog(code: shell.locale.catalog)

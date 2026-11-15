@@ -29,8 +29,7 @@ Screenshots of the explainer, the prompt and the setting are in the [iOS manual]
 
 ## Limits
 
-- The prompt was answered with Allow only. A direct "Ask App Not to Track" answer was not run; the `denied` state was reached by switching tracking off in Settings after Allow.
-- No fresh install on this phone: it would delete the saved place and alarms. The run started from an updated install whose tracking status was not determined.
+- The run of 13 November answered the prompt with Allow only and started from an updated install; the fresh-install run of 15 November below covers the direct decline.
 - The order with the European consent message, and what follows a refused consent message, were not run.
 - The request mode comes from the console line of the same native function that builds the request; the network request was not captured.
 - One run each; the no-fill results describe single moments, not fill rates.
@@ -38,6 +37,21 @@ Screenshots of the explainer, the prompt and the setting are in the [iOS manual]
 - Another automation used the same phone during the run and brought another app to the front once; it did not change the recorded results.
 
 The raw console logs and full-size captures stay outside the repository, because the logs contain the push token.
+
+## Fresh install and direct decline (2026-11-15)
+
+AK approved deleting the app on the phone without restoring its data. The released 1.1.2 binary (App Store build from
+master `11b633d1`, re-signed with the development profile) was installed after uninstalling TodayWeather; the AdMob IDFA
+message was live.
+
+| Step | Observation | Console extract |
+| --- | --- | --- |
+| First launch | Start screen with the access notice; no ad request and no prompt there | - |
+| City 서울 chosen | Weather screen, then the explainer; no banner request while it was open | [07](07-fresh-install-decline.txt) |
+| 계속, then 앱에 추적 금지 요청 in the system prompt | `denied`, `personalized: false`; banner created and a non-personalized ad shown | [07](07-fresh-install-decline.txt) |
+| Relaunch | No prompt; `denied`, `personalized: false`; that request ended with code 1 (no fill) | [08](08-fresh-install-relaunch.txt) |
+
+No other system prompt appeared during the first launch. The order with the European consent message was not run.
 
 ## Policy page upload (2026-11-13)
 

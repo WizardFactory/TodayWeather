@@ -159,9 +159,9 @@ Keep provider review and source/caution notices current; do not represent an unr
 The build asks for ATT only when the AdMob IDFA explainer message is published. None of these steps is performed by a
 build or a merge; each needs AK's approval. Record each result in #2945.
 
-State on 2026-11-13: steps 1 and 2 are done. Of step 3, the device record has the explainer and prompt order, the Allow
-answer, the relaunch without a second prompt, and the `denied` state after switching tracking off in Settings. It does
-not have a direct "Ask App Not to Track" answer in the prompt, a fresh install or the EEA checks; see the
+State on 2026-11-15: steps 1 to 4 are done for iOS 1.1.2, which is live since 2026-11-14, except the EEA checks of
+step 3. Step 5, the report, waits for adoption. The device record has the explainer and prompt order, Allow, a fresh install with a
+direct "Ask App Not to Track" answer, the relaunch without a second prompt and both request modes; see the
 [device evidence](../evidence/tasks/issue-2945/README.md). The message is published and live.
 
 1. In AdMob Privacy & messaging, create the IDFA explainer message for the iOS app and publish it. Keep the existing

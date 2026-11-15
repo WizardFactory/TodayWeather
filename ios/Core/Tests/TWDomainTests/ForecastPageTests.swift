@@ -134,9 +134,17 @@ struct ForecastPageTests {
         }
         if let aqi = page.dailyAqi { cards.append(["title:\(aqi.title)"] + (aqi.cells ?? []).flatMap(cell)) }
         if let days = page.dayDetails {
-            cards.append(["title:\(ko["LOC_DETAIL_WEATHER"])"] + days.flatMap { d in
-                ["text:\(d.title)"] + d.rows.flatMap { ["img:\($0.image.name)"] + runs($0.value) + ["sub:\($0.label)"] }
-            })
+            // Built step by step: Swift 6.3 (Xcode 26.6) cannot type-check the nested concatenation in time.
+            var card: [String] = ["title:\(ko["LOC_DETAIL_WEATHER"])"]
+            for d in days {
+                card.append("text:\(d.title)")
+                for row in d.rows {
+                    card.append("img:\(row.image.name)")
+                    card += runs(row.value)
+                    card.append("sub:\(row.label)")
+                }
+            }
+            cards.append(card)
         }
         if page.attribution != nil { cards.append(["text:\(Attribution.visualCrossingText)"]) }
         return cards

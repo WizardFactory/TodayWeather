@@ -30,9 +30,14 @@ final class WeatherScreens {
     /// The pollutant in the URL (`/tab/air?code=`): set by `goAirInfoPage(code)`, kept while the weather tabs change the
     /// path (`$location.path`), cleared by the Locations tab (`href="#/tab/search"`). The Air tab opens on it.
     private(set) var airLink: String?
+    /// The session's `applyEvent` count the visit last applied (CODEX-IN08-1): only a new one applies the weather again.
+    @ObservationIgnored private var appliedEvents = -1
+    /// Page visits opened so far: each is a new chart identity (CODEX-IN08-3).
+    private(set) var visits = 0
     @ObservationIgnored private var retryShown = false
-    /// The screen size in points (`screen.width`, `screen.height`), for the chart and header sizes.
-    @ObservationIgnored var screenSize: CGSize
+    /// The window's size in points, for the chart and header sizes (`initSize`'s `bodyWidth` and `bodyHeight`; CODEX-IN08-2):
+    /// the screen until the page reports its window, then the window as it is resized.
+    @ObservationIgnored private(set) var screenSize: CGSize
 
     init(session: WeatherSession, shell: ShellModel, screenSize: CGSize) {
         self.session = session
@@ -69,14 +74,17 @@ final class WeatherScreens {
     // MARK: - The page's scope
 
     /// Keeps the shown page's scope current: a new visit when a weather tab opens, an apply at each `applyEvent`, the
-    /// retry confirmation while the session asks for it.
+    /// selected place's photo when the feed gives it one (`loadWeatherPhotosEvent`), the retry confirmation while the
+    /// session asks for it. The holder replaces the whole state on every save, so a change is told apart here: the
+    /// expander and the settings apply nothing (CODEX-IN08-1).
     private func observe() {
         withObservationTracking {
             _ = shell.selected
             _ = shell.screen
             _ = session.applies
             _ = session.retry
-            _ = shell.holder.state?.settings.theme
+            _ = session.selected?.photo
+            // The units page's air standard goes to the air visit as it is (`changeAirUnitEvent`).
             _ = shell.holder.state?.units.airUnit
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -96,7 +104,13 @@ final class WeatherScreens {
             visitTab = nil
         } else if tab == .forecast || tab == .dailyforecast {
             airScope = nil
-            if visitTab != tab || scope == nil { openVisit(tab) } else { applySelected() }
+            if visitTab != tab || scope == nil {
+                openVisit(tab)
+            } else if session.applies != appliedEvents {
+                applySelected()
+            } else {
+                photoLoaded()
+            }
         } else if tab == .air {
             scope = nil
             if visitTab != tab || airScope == nil { openAirVisit() } else { applyAir() }
@@ -168,6 +182,8 @@ final class WeatherScreens {
         let enabled = PlaceIndex.enabledCount(state.places.map(\.disable))
         // No enabled place: Cordova opens the start choice O02 instead (IN-10).
         visit.open(selectedRecord(), enabledCount: enabled, hasPush: hasPush(state))
+        appliedEvents = session.applies
+        visits += 1
         scope = visit
     }
 
@@ -177,7 +193,28 @@ final class WeatherScreens {
         visit.fahrenheit = state.units.temperatureUnit == "F"
         visit.photoTheme = state.settings.theme == "photo"
         visit.apply(selectedRecord(), hasPush: hasPush(state))
+        appliedEvents = session.applies
         scope = visit
+    }
+
+    /// The page's window has a new size (it opened, rotated or was resized). Cordova's `initSize` measures once per page
+    /// visit, from `window.screen` (the WebView filled the screen); the native window can be smaller than the screen (Split
+    /// View, Stage Manager) and change while the page is open, so the visit starts again with the window's sizes: the
+    /// header, the fonts and the chart columns follow it, and the charts open at today's position again.
+    func windowChanged(_ size: CGSize) {
+        guard size.width > 0, size.height > 0, size != screenSize else { return }
+        screenSize = size
+        if let tab = visitTab, scope != nil { openVisit(tab) }
+    }
+
+    /// `loadWeatherPhotosEvent`: in the photo theme the page takes the selected place's new photo, without an apply (the
+    /// charts stay where they are).
+    private func photoLoaded() {
+        guard var visit = scope, let state = shell.holder.state else { return }
+        visit.photoTheme = state.settings.theme == "photo"
+        let before = visit.photo
+        visit.photoLoaded(selectedRecord())
+        if visit.photo != before { scope = visit }
     }
 
     private func selectedRecord() -> JSONObject? {
@@ -208,7 +245,9 @@ final class WeatherScreens {
     var pageContent: WeatherPageContent? {
         guard let scope, let state = shell.holder.state else { return nil }
         let photo = scope.photo?.stringValue.flatMap { URL(string: $0) }
-        return WeatherPageContent(scope: scope, units: Self.units(state.units), texts: texts, photo: photo)
+        var content = WeatherPageContent(scope: scope, units: Self.units(state.units), texts: texts, photo: photo)
+        content.visit = visits
+        return content
     }
 
     /// The air page model of the shown visit.
@@ -234,6 +273,7 @@ final class WeatherScreens {
             actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
                                                onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
             page: AnyView(WeatherPageView(content: content, theme: theme, actions: actions)
+                .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
                 .accessibilityIdentifier("forecast-page-\(tab.rawValue)")))
     }
 

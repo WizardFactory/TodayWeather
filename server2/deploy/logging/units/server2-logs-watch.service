@@ -1,0 +1,29 @@
+# server2 Spot interruption watcher (LP-4, #2981): polls instance metadata every 4 s;
+# on a notice it records it and stops server2.service, then server2-logs.service.
+# Idle (exits successfully) on On-Demand instances and without instance metadata.
+[Unit]
+Description=server2 Spot interruption watcher
+# LogNamespace= orders a unit after its journal's sockets only; ordering after the
+# namespace's journald service makes a shutdown stop this unit before its journal, so its
+# final lines are kept (found by the LP-4 reboot check: they were lost otherwise).
+After=network-online.target systemd-journald@server2.service
+Wants=network-online.target
+# Ordered before both units, so a host shutdown stops the watcher only after them: its
+# interruption marker stays readable for the collector's stop drain (GEM-LP4-002).
+Before=server2.service server2-logs.service
+
+[Service]
+Type=exec
+# Root: it stops the two units; it reads only instance metadata.
+ExecStart=/usr/bin/python3 -I /opt/server2/logging/spot_watch.py
+RuntimeDirectory=server2-logs-watch
+RuntimeDirectoryPreserve=yes
+LogNamespace=server2
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

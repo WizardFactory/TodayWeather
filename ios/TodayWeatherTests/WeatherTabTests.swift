@@ -44,7 +44,7 @@ struct WeatherTabTests {
         let screens: WeatherScreens
 
         @MainActor
-        init(_ behavior: @escaping @Sendable (URL) -> Server.Behavior) {
+        init(_ behavior: @escaping @Sendable (URL) -> Server.Behavior, screenSize: CGSize = CGSize(width: 393, height: 852)) {
             server = Server(behavior)
             holder = AppStateHolder(store: Memory())
             let seoul = Place(currentPosition: false, disable: false, name: "회현동", address: "대한민국 서울특별시 중구 회현동",
@@ -56,7 +56,7 @@ struct WeatherTabTests {
             shell = ShellModel(holder: holder, locale: ShellLocale(preferredLanguages: ["ko-KR"]), version: "test")
             let repository = WeatherRepository(baseURL: "https://server.test.invalid", cacheDirectory: nil, http: server)
             let session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { "ko-KR,ko;q=0.9" })
-            screens = WeatherScreens(session: session, shell: shell, screenSize: CGSize(width: 393, height: 852))
+            screens = WeatherScreens(session: session, shell: shell, screenSize: screenSize)
         }
     }
 
@@ -73,9 +73,9 @@ struct WeatherTabTests {
         return { url in url.path.contains("37.56,126.98") ? .answer(seoul, s) : .answer(london, l) }
     }
 
-    // Generous: the screenshot suites (IN-05, IN-07, IN-08) render synchronously on the main actor and may hold it for
-    // minutes in a full run; the wait ends as soon as the condition holds.
-    private func eventually(_ seconds: Double = 900, _ condition: () -> Bool) async -> Bool {
+    // The app-hosted tests run one at a time (the scheme's `parallelizable = "NO"`), so no screenshot suite holds the
+    // main actor meanwhile; the wait ends as soon as the condition holds.
+    private func eventually(_ seconds: Double = 30, _ condition: () -> Bool) async -> Bool {
         let end = Date().addingTimeInterval(seconds)
         while Date() < end {
             if condition() { return true }

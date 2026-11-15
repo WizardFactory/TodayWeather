@@ -1,0 +1,3 @@
+2026-11-15 01:40:21 {"component":"admob","operation":"request_policy","att_status":"denied","personalized":false,"result":"applied"}
+2026-11-15 01:40:21 Set options of emi AdMob
+2026-11-15 01:40:22 create banner view
