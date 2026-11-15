@@ -109,13 +109,12 @@ public enum PushRegistration {
     }
 
     /// A token replacing `old` is a first token (Cordova's `!self.pushData.fcmToken`: null and "" alike); its
-    /// replacement is followed by the list post. Every path decides this here, the replay included (CODEX-IN04-9).
+    /// replacement is followed by the list post.
     public static func isFirst(over old: String?) -> Bool {
         old?.isEmpty ?? true
     }
 
-    /// The token callback takes `token` (it ignores a blank one). An ignored value is no observation of the token
-    /// either: every path decides this here (CODEX-IN04-10).
+    /// The token callback takes `token` (it ignores a blank one); so do the open and the token queue.
     public static func accepts(_ token: String?) -> Bool {
         token.map { !isBlank($0) } ?? false
     }

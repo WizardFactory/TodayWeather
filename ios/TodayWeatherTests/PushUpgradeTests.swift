@@ -10,8 +10,8 @@ import UIKit
 /// IN-03 upgrade checks: the open registration of the updated app, with the token from a test double
 /// (`TW_UPGRADE_TOKEN`: `token-a`, the token the Cordova app stored, or `token-b`) and the requests sent over HTTP to
 /// the local recorder (`TW_UPGRADE_RECORDER`). The test build has no server URL, so the app's own starts sent nothing.
-/// The test goes through the app's start path (IN-04 review, CODEX-IN04-2): an `AppStartup` whose push service the test
-/// builds (`makePush`: the recorder, the fixed token, the app's own state file and replacement log) runs the migration
+/// The test goes through the app's start path: an `AppStartup` whose push service the test builds (`makePush`: the
+/// recorder, the fixed token, the app's own state holder and token queue) runs the migration
 /// and `Device-Id` read, sends nothing at its start, and runs the open registration when the process becomes active
 /// (`UIApplication.didBecomeActiveNotification`, posted by the test). `TW_UPGRADE_PUSH_RUN` is `first` (the first
 /// open after the update) or `again` (the next one). The host side (check_upgrade.py `push`) checks the recorded
@@ -35,12 +35,11 @@ struct PushUpgradeTests {
         let records = state.push.records
         #expect(records.count == 4)
 
-        let store = try AppStateStore.standard()
-        let replacements = try PushReplacementLog.standard()
+        let queue = try PushTokenQueue.standard()
         let startup = AppStartup()
         startup.makePush = { id in
-            PushService(serverURL: recorder, deviceId: id, tokenProvider: FixedTokenProvider(token: token), store: store,
-                        log: replacements)
+            PushService(serverURL: recorder, deviceId: id, tokenProvider: FixedTokenProvider(token: token),
+                        state: AppLaunch.shared.holder, queue: queue)
         }
         startup.start(UIApplication.shared)
         #expect(startup.deviceId == deviceId)
@@ -69,7 +68,8 @@ struct PushUpgradeTests {
             #expect(object["uuid"]?.stringValue == seed.deviceId)
             #expect(object["fcmToken"]?.stringValue == token)
         }
+        await AppLaunch.shared.holder.saved()
         #expect(try AppStateStore.standard().load()?.push.fcmToken == token)
-        #expect(try PushReplacementLog.standard().entries().isEmpty, "every replacement answered")
+        #expect(try PushTokenQueue.standard().pending().isEmpty)
     }
 }

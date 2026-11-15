@@ -11,9 +11,10 @@ import UIKit
 /// tried again when protected data becomes available and at the next start. So an unreadable source is never
 /// recorded as the user's state, and `CDVUUID` is never replaced because its file could not be read.
 ///
-/// After the migration, push (IN-04, #2953): tokens FCM delivered are registered in every process; the open
-/// registration (the Cordova `Push.init`) runs once, when the process first becomes active, so not for a start in
-/// the background (a push or a background task) until the user opens the app.
+/// After the migration, push (IN-04, #2953, as the Android app): tokens FCM delivered, and tokens an earlier process
+/// queued, are registered in every process, also one started in the background; the open registration (the Cordova
+/// `Push.init`) runs once, when the process first becomes active, so not for a start in the background (a push or a
+/// background task) until the user opens the app.
 @MainActor
 final class AppStartup {
     static let shared = AppStartup()
@@ -35,10 +36,10 @@ final class AppStartup {
     private let messaging = MessagingBridge()
     private var activeObserver: NSObjectProtocol?
     /// The app's dependencies, replaced only by app-hosted tests on their own instances (the app has no test mode):
-    /// the migrated state (`migratedState()`), and the push service for a `Device-Id` (the build's server and the
-    /// Firebase token, `PushService.production`).
+    /// the migrated state (`migratedState()`), and the push service for a `Device-Id` (the build's server, the
+    /// Firebase token and the app's state holder, `PushService.production`).
     var migrate: () throws -> AppState = { try AppStartup.migratedState() }
-    var makePush: (String) -> PushService? = { PushService.production(deviceId: $0) }
+    var makePush: (String) -> PushService? = { PushService.production(deviceId: $0, state: AppLaunch.shared.holder) }
     /// Tokens FCM delivered before the push service existed, in order of arrival.
     private var tokensBeforePush: [String] = []
     /// The open registration of this process, once it started.

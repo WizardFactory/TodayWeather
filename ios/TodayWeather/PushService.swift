@@ -23,10 +23,10 @@ struct FirebaseTokenProvider: PushTokenProvider {
 }
 
 /// Push registration with the legacy server after the migration (IN-04, #2953): what the Cordova `Push` service does
-/// on iOS, on the `PushSync` timeline. `open()` runs once per opened process (the Cordova web page's `Push.init`);
-/// `resume()` (the process start) sends again the replacements an earlier process left in `PushReplacementLog`;
-/// `receive(token:)` is the token callback. The process start and tokens reach `PushSync` in the order they came, through
-/// one stream and one task this service owns.
+/// on iOS, in the order of the Android app (AN-04, `PushSync`). `open()` runs once per opened process (the Cordova web
+/// page's `Push.init`); `resume()` (every process start, also in the background) registers the tokens an earlier
+/// process queued but did not finish; `receive(token:)` is the token callback. The process start and tokens reach
+/// `PushSync` in the order they came, through one stream and one task this service owns.
 @MainActor
 final class PushService {
     private enum Event: Sendable {
@@ -41,16 +41,14 @@ final class PushService {
     private let events: AsyncStream<Event>.Continuation
     private let consumer: Task<Void, Never>
 
-    /// `serverURL`: the legacy server; `deviceId`: the `CDVUUID` (`DeviceIdentity`); `repostDelay`: the wait before the
-    /// list post of an open (the Cordova 3-second timer).
-    init(serverURL: String, deviceId: String, tokenProvider: any PushTokenProvider, store: AppStateStore,
-         log replacements: PushReplacementLog, transport: (any PushTransport)? = nil,
-         repostDelay: Duration = .seconds(3), bundle: Bundle = .main) {
+    /// `serverURL`: the legacy server; `deviceId`: the `CDVUUID` (`DeviceIdentity`); `state`: the app state's single
+    /// writer (`AppStateHolder`); `queue`: the tokens waiting for registration.
+    init(serverURL: String, deviceId: String, tokenProvider: any PushTokenProvider, state: any PushStateAccess,
+         queue: PushTokenQueue, transport: (any PushTransport)? = nil, bundle: Bundle = .main) {
         self.tokenProvider = tokenProvider
         let appVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-        let sync = PushSync(store: store, log: replacements,
-                            transport: transport ?? HTTPPushTransport(baseURL: serverURL),
-                            repostDelay: repostDelay) { state in
+        let sync = PushSync(state: state, queue: queue,
+                            transport: transport ?? HTTPPushTransport(baseURL: serverURL)) { state in
             PushRegistration.Context(deviceId: deviceId, language: CordovaLanguage.navigatorLanguage(),
                                      appVersion: appVersion, units: state.units, now: Date(), zone: .current)
         }
@@ -60,8 +58,8 @@ final class PushService {
         consumer = Task {
             for await event in stream {
                 switch event {
-                case .start: await sync.start()
-                case .token(let token): await sync.tokenArrived(token)
+                case .start: await sync.drain()
+                case .token(let token): await sync.receive(token: token)
                 }
             }
         }
@@ -71,16 +69,15 @@ final class PushService {
         events.finish()
     }
 
-    /// The service of this build: the server from `TWServerURL` (Info.plist, from the private `Private.xcconfig`)
-    /// and the Firebase token. Nil without a server URL: the app then sends nothing.
-    static func production(deviceId: String, bundle: Bundle = .main) -> PushService? {
+    /// The service of this build: the server from `TWServerURL` (Info.plist, from the private `Private.xcconfig`),
+    /// the Firebase token and the app's state holder. Nil without a server URL: the app then sends nothing.
+    static func production(deviceId: String, state: any PushStateAccess, bundle: Bundle = .main) -> PushService? {
         guard let url = serverURL(bundle.object(forInfoDictionaryKey: "TWServerURL") as? String),
-              let store = try? AppStateStore.standard(),
-              let replacements = try? PushReplacementLog.standard() else {
+              let queue = try? PushTokenQueue.standard() else {
             return nil
         }
-        return PushService(serverURL: url, deviceId: deviceId, tokenProvider: FirebaseTokenProvider(), store: store,
-                           log: replacements, bundle: bundle)
+        return PushService(serverURL: url, deviceId: deviceId, tokenProvider: FirebaseTokenProvider(), state: state,
+                           queue: queue, bundle: bundle)
     }
 
     /// The `TWServerURL` value when it is an http(s) URL with a host; nil for an empty or other value.
@@ -105,7 +102,7 @@ final class PushService {
         }
     }
 
-    /// The process started: replacements an earlier process left are sent again.
+    /// The process started: tokens an earlier process queued are registered.
     func resume() {
         events.yield(.start)
     }

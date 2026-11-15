@@ -18,10 +18,18 @@ final class RecordingPushTransport: PushTransport, @unchecked Sendable {
     private var sent: [PushRequest] = []
     var requests: [PushRequest] { lock.withLock { sent } }
 
-    func start(_ request: PushRequest) -> PushReply {
+    func send(_ request: PushRequest) async -> Int? {
         lock.withLock { sent.append(request) }
-        return .finished(200)
+        return 200
     }
+}
+
+/// The test's own state holder over `store`, loaded with what `store` holds (as the app's holder after the migration).
+@MainActor
+func holder(_ store: AppStateStore) throws -> AppStateHolder {
+    let holder = AppStateHolder(store: store)
+    if let state = try store.load() { holder.load(state) }
+    return holder
 }
 
 /// Runs inside the app on a simulator (IN-04, #2953).
@@ -46,20 +54,22 @@ struct PushServiceTests {
         #expect(AppStartup.shared.openRequested)
     }
 
-    /// The real start path (IN-04 review, CODEX-IN04-2): an `AppStartup` with the migrated state and a push service
-    /// given by the test (recording transport, fixed token, its own files; so it runs with or without the App Group)
+    /// The real start path: an `AppStartup` with the migrated state and a push service
+    /// given by the test (recording transport, fixed token, its own files and state holder; so it runs with or without
+    /// the App Group)
     /// sends nothing when it starts, and runs the open registration when the process becomes active, once.
     @Test func theFirstActivationRunsTheOpenRegistration() async throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-push-\(UUID().uuidString)")
         let store = AppStateStore(url: dir.appendingPathComponent("app_state.json"))
-        let replacements = PushReplacementLog(url: dir.appendingPathComponent("push_replacements.json"))
+        let queue = PushTokenQueue(url: dir.appendingPathComponent("push_tokens.json"))
         try store.save(Self.state(token: "token-a"))
+        let state = try holder(store)
         let transport = RecordingPushTransport()
         let startup = AppStartup()
         startup.migrate = { Self.state(token: "token-a") }
         startup.makePush = { id in
             PushService(serverURL: "https://push.test.invalid", deviceId: id, tokenProvider: FixedTokenProvider(token: "token-b"),
-                        store: store, log: replacements, transport: transport, repostDelay: .milliseconds(50))
+                        state: state, queue: queue, transport: transport)
         }
         startup.start(UIApplication.shared)
         #expect(startup.push != nil)
@@ -73,6 +83,29 @@ struct PushServiceTests {
         NotificationCenter.default.post(name: UIApplication.didBecomeActiveNotification, object: UIApplication.shared)
         try await Task.sleep(for: .milliseconds(300))
         #expect(transport.requests.count == 2, "once per process")
+    }
+
+    /// A token delivered before the open is queued and registered in the process (the Android `onNewToken`), also
+    /// when the process was started in the background and never opened: the replacement, then the stored token.
+    @Test func aTokenIsRegisteredWithoutAnOpen() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-push-\(UUID().uuidString)")
+        let store = AppStateStore(url: dir.appendingPathComponent("app_state.json"))
+        let queue = PushTokenQueue(url: dir.appendingPathComponent("push_tokens.json"))
+        try store.save(Self.state(token: "token-a"))
+        let transport = RecordingPushTransport()
+        let service = PushService(serverURL: "https://push.test.invalid", deviceId: "DEVICE",
+                                  tokenProvider: FixedTokenProvider(token: nil), state: try holder(store), queue: queue,
+                                  transport: transport)
+        service.resume()
+        service.receive(token: "token-c")
+        for _ in 0..<100 where (try? store.load())?.push.fcmToken != "token-c" {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(transport.requests.map(\.method) == ["PUT"])
+        #expect(transport.requests.first?.body["oldToken"] == "token-a")
+        #expect(transport.requests.first?.body["newToken"] == "token-c")
+        #expect(try store.load()?.push.fcmToken == "token-c")
+        #expect(try queue.pending().isEmpty)
     }
 
     static func state(token: String) -> AppState {
@@ -100,9 +133,9 @@ struct PushServiceTests {
                                 migration: MigrationInfo(source: "", migratedAtMillis: 0, keys: [:])))
         let transport = RecordingPushTransport()
         let service = PushService(serverURL: "https://push.test.invalid", deviceId: "DEVICE",
-                                  tokenProvider: FixedTokenProvider(token: "token-b"), store: store,
-                                  log: PushReplacementLog(url: dir.appendingPathComponent("push_replacements.json")),
-                                  transport: transport, repostDelay: .zero)
+                                  tokenProvider: FixedTokenProvider(token: "token-b"), state: try holder(store),
+                                  queue: PushTokenQueue(url: dir.appendingPathComponent("push_tokens.json")),
+                                  transport: transport)
         let outcome = try #require(await service.open()?.value)
         #expect(service.open() == nil, "once")
         #expect(outcome.requests.map(\.method) == ["PUT", "POST"])
