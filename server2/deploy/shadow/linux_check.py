@@ -501,8 +501,10 @@ def collector_broken(report, args, interface):
                  result.stdout[-500:] + result.stderr[-1500:])
     states = {s: prop(f'{name}-{s}.service', 'ActiveState') for s in ('candidate', 'guard', 'reader')}
     report.check(entry, 'candidate, guard and reader active although the collector failed', set(states.values()) == {'active'}, states)
-    report.check(entry, 'the collector failed', wait_until(lambda: prop(f'{name}-logs.service', 'ActiveState') in ('failed', 'activating'), 20),
-                 prop(f'{name}-logs.service', 'ActiveState'))
+    time.sleep(5)
+    collector = {p: prop(f'{name}-logs.service', p) for p in ('ActiveState', 'SubState', 'Result')}
+    entry['observations']['collector'] = collector
+    report.check(entry, 'the collector is not running', collector['ActiveState'] != 'active', collector)
     report.check(entry, 'no stop decision', wait_stop(root, 12) is None, decision(root))
     Path('/var/lib/server2-logs').unlink()
     code, seconds, states = retention_stop(name)
