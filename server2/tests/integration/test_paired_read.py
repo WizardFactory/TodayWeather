@@ -328,7 +328,8 @@ class PairedReadTests(unittest.TestCase):
                 self.assertEqual(result['terminal'], 'duration-complete')
                 self.assertGreaterEqual(result['attempts'][failing], 3)
                 self.assertEqual(result['failed'], {failing: result['attempts'][failing]})
-                self.assertEqual(len(a.requests), len(b.requests))
+                # The last pair may be incomplete when the duration ends between its two requests (CX-SR2-005).
+                self.assertLessEqual(abs(len(a.requests) - len(b.requests)), 1)
 
     def test_a_success_ends_the_outage_window(self):
         m = manifest(duration=10 * capture.OUTAGE_SECONDS)

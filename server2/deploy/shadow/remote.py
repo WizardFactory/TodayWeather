@@ -322,6 +322,10 @@ def install_remote(remote,journal,bundle,*,now):
     return inspect_install(remote,journal,launch)
 
 
+# systemd ActiveState values.
+UNIT_STATES={'active','reloading','inactive','failed','activating','deactivating','maintenance','refreshing'}
+
+
 def inspect_install(remote,journal,launch):
     """Observe the one recorded install, including after acquisition expires."""
     current=journal.snapshot()
@@ -340,8 +344,14 @@ def inspect_install(remote,journal,launch):
     require(receipt.get('status') in ('started','failed','installing'),'installation status')
     units=receipt.get('unit_states')
     # The collector's state is reported, but acquisition is the three owned units.
-    active=type(units) is dict and {k:v for k,v in units.items() if k!='logs'}==dict(candidate='active',reader='active',guard='active')
-    return {'status':receipt['status'] if receipt['status']!='started' or active else 'stopped','receipt':receipt}
+    owned=[units.get(k) for k in ('candidate','reader','guard')] if type(units) is dict else []
+    if receipt['status']!='started':return {'status':receipt['status'],'receipt':receipt}
+    if owned==['active']*3:return {'status':'started','receipt':receipt}
+    # Only a validated stop counts as stopped: all three states known, at least one ended.
+    if (len(owned)==3 and all(isinstance(v,str) and v in UNIT_STATES for v in owned)
+            and any(v in ('inactive','failed') for v in owned)):
+        return {'status':'stopped','receipt':receipt}
+    return {'status':'pending','reason':'unit_states_unvalidated','receipt':receipt}
 
 
 def retain_host_evidence(remote,journal,destination):

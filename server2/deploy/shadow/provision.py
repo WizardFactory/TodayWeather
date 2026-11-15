@@ -384,6 +384,21 @@ class BudgetedRemote:
         return self.remote.invoke(action,**kwargs)
 
 
+def collection_started(journal):
+    """True once the install was confirmed started: the run is in its collecting phase."""
+    request=journal.request('collection-started')
+    return request is not None and request['receipt'] is not None and receipt_result(request).payload=={'started':True}
+
+
+def mark_collection_started(journal,*,now):
+    request=journal.request('collection-started')
+    if request is None:
+        journal.prepare_request('collection-started','CollectionStarted',{'started':True},'collection-started',now=now)
+        request=journal.request('collection-started')
+    if request['receipt'] is None:
+        journal.record_receipt('collection-started',CloudResult('json','CollectionStarted',{'started':True}))
+
+
 def connect_remote(cloud,journal,resources,identity,*,now):
     from remote import bind_target,scan_host,Remote,target
     # A target authenticated earlier in this run stays the target: resuming must not
@@ -408,55 +423,71 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     retention and exact-owned cleanup, including cancellation before SSH is
     available.
 
-    While collecting, the host is the lifetime authority: its guard and timers
-    stop and power it off without this process. A status poll that fails, times
-    out or cannot be validated is reported and retried; it never stops, exports
-    or terminates. Collection ends here only when the host reports that it has
-    stopped, at the deadline, or when the operator interrupts, which detaches
-    without teardown so that `run` can resume or `finish` can end the run.
+    The collecting phase begins when the journal records `collection-started`,
+    the first time the install is confirmed started. From then on the host is the
+    lifetime authority: its guard and timers stop and power it off without this
+    process. A status poll that fails, times out or cannot be validated is
+    reported and retried; it never stops, exports or terminates. Collection ends
+    here only on a validated host stop, at the deadline, or when the operator
+    interrupts, which detaches without teardown. A resumed `run` in the
+    collecting phase makes no provisioning or install call: it reconnects through
+    the journaled SSH target and polls, or finishes at once if the deadline has
+    passed.
     """
     from coordinator import verify_bundle
     from remote import install_remote,inspect_install
     launch=verify_bundle(bundle)
     require(launch['generation']=='initial','only initial host generation is supported')
     require(not Path(destination).exists(),'finish destination already exists')
-    remote=None;reason='collection_deadline';failure=None;collecting=False;detached=False
+    remote=None;reason='collection_deadline';failure=None;detached=False
+    collecting=collection_started(journal)
     try:
+        if collecting:
+            # Resume: no provisioning or install. A reconnect failure is unreachable.
+            remote=connector(cloud,journal,None,now=int(clock()))
+            return_to_collect=True
+        else:return_to_collect=False
         # Each resumed call reconciles exact original requests; elapsed run time
         # and generation grants are never refreshed by this startup allowance.
         until=min(int(clock())+STARTUP_SECONDS,journal.snapshot()['collection_until'])
-        while True:
+        while not return_to_collect:
             journal.active(int(clock()))
             provisioned=provision_resources(cloud,journal,plan,now=int(clock()))
             if provisioned['status']=='bound':break
             progress({'phase':'provision_pending','reason':provisioned['reason']})
             require(clock()<until,'startup timeout')
             sleep(5)
-        while remote is None:
+        while remote is None and not return_to_collect:
             journal.active(int(clock()))
             remote=connector(cloud,journal,provisioned['resources'],now=int(clock()))
             if remote is None:
                 require(clock()<until,'SSH readiness timeout');sleep(5)
-        while True:
+        while not return_to_collect:
             installed=install_remote(remote,journal,bundle,now=int(clock()))
             if installed['status']=='started':break
             require(installed['status'] in ('pending','installing'),'host installation stopped')
             require(clock()<until,'installation timeout');sleep(5)
-        progress({'phase':'collecting','collection_until':journal.snapshot()['collection_until']})
-        collecting=True;unreachable=0
+        if not collecting:
+            mark_collection_started(journal,now=int(clock()));collecting=True
+        progress({'phase':'collecting','collection_until':journal.snapshot()['collection_until'],
+                  'resumed':return_to_collect})
+        unreachable=0
         while clock()<journal.snapshot()['collection_until']:
-            journal.active(int(clock()))
-            try:status=inspect_install(remote,journal,launch)['status']
+            journal.observe(int(clock()))
+            status='pending'
+            try:
+                if remote is None:remote=connector(cloud,journal,None,now=int(clock()))
+                if remote is not None:status=inspect_install(remote,journal,launch)['status']
             except (StateError,OSError,ValueError,subprocess.TimeoutExpired):status='pending'
             if status=='started':
                 if unreachable:progress({'phase':'collecting','poll':'recovered','after':unreachable})
                 unreachable=0
-            elif status=='pending':
+            elif status in ('stopped','failed'):
+                # A validated stop reported by the host (remote.inspect_install).
+                reason='host_stopped';break
+            else:
                 unreachable+=1
                 progress({'phase':'collecting','poll':'unreachable','consecutive':unreachable})
-            else:
-                # The host itself reports stopped units or a failed install.
-                reason='host_stopped';break
             sleep(min(60,max(0,journal.snapshot()['collection_until']-clock())))
     except (StateError,OSError,ValueError,subprocess.TimeoutExpired) as error:
         reason='acquisition_failed';failure=type(error).__name__
@@ -523,7 +554,8 @@ def live_command(args):
             grant=journal.db.execute('SELECT reads,writes,put_bytes FROM generations WHERE id=?',('initial',)).fetchone()
             require(journal.snapshot()['generations']==1 and grant==tuple(launch['allowance'][k] for k in Journal.CAPS),
                     'initial generation grant')
-            journal.active(int(time.time()))
+            # A run past its deadline still reaches the lifecycle, which finishes it.
+            journal.observe(int(time.time()))
         context={key:plan[key] for key in ('run_id','region','account')}
         cloud=Aws(journal,context,executable=args.aws_executable,profile=args.profile,cleanup=args.command=='finish')
         if args.command=='run':
@@ -561,6 +593,7 @@ def main():
     try:
         if args.command in ('run','finish'):
             result=live_command(args);print(canonical(result))
+            if result.get('detached'):return 0  # the host keeps collecting; resume with run
             return 0 if result['cleanup'].get('complete') else 1
         require(args.bundle is not None,'bundle required')
         if args.command=='prepare':

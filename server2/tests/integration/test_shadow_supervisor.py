@@ -372,6 +372,17 @@ class GuardTests(unittest.TestCase):
             self.assertEqual(d['misses'],6)
             self.assertEqual(guard.evaluate(m,host_sample(),d,1200)['stop'],'observation_lost')
 
+    def test_wrongly_typed_diagnostics_are_a_miss_not_a_crash(self):
+        # CX-SR2-004.
+        m=host_manifest()
+        for first in ({'cause':[],'origin':'event','component':'provider','stage':'acquire','provider':'none','status':None},
+                      {'cause':'quota','origin':{},'component':'provider','stage':'acquire','provider':'none','status':None}):
+            s=host_sample();s['diagnostics']=dict(s['diagnostics'],first_rejection=first)
+            d=guard.evaluate(m,s,None,1001)
+            self.assertIsNone(d['stop']);self.assertEqual(d['misses'],1)
+        s=host_sample();s['diagnostics']=dict(s['diagnostics'],paid_units={'visual_crossing':[]})
+        self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
+
     def test_missed_observations_survive_a_guard_restart(self):
         # The count lives in the state file: six separate `check` invocations, one miss each.
         with tempfile.TemporaryDirectory() as temp:
@@ -1668,18 +1679,20 @@ class LifecycleTests(unittest.TestCase):
         expected=operator.hashlib.sha256((state.canonical(launch)+'\n').encode()).hexdigest()
         binding=RemoteTests.binding(self)
         class Transport:
-            polls=0
+            polls=0;stopped=False
             def __init__(inner):inner.binding=binding
             def invoke(inner,action,**kwargs):
                 calls.append((action,moment[0]))
                 if action=='install':return state.CloudResult('empty_success','HostInstall')
-                if action=='stop':return state.CloudResult('empty_success','HostObserve')
+                if action=='stop':inner.stopped=True;return state.CloudResult('empty_success','HostObserve')
                 if action=='export':return state.CloudResult('timeout','HostEvidence')
                 inner.polls+=1
-                answer=behaviour(inner.polls,moment[0])
+                # After the operator's stop the host reports every unit inactive.
+                answer='inactive' if inner.stopped else behaviour(inner.polls,moment[0])
                 if answer=='raise':raise OSError('network unreachable')
                 if answer=='timeout':return state.CloudResult('timeout','HostObserve')
-                units={s:answer for s in ('candidate','reader','guard')};units['logs']='active'
+                if isinstance(answer,str):units={s:answer for s in ('candidate','reader','guard')};units['logs']='inactive' if inner.stopped else 'active'
+                else:units=answer
                 return cloud_json('HostObserve',dict(status='started',launch_sha256=expected,epoch=1000,
                     collection_until=1000+168*3600,cleanup_until=1000+170*3600,unit_states=units))
         transport=Transport()
@@ -1736,6 +1749,92 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(resumed['stop_reason'],'collection_deadline')
             self.assertEqual(sum(action=='install' for action,_ in calls),1)
             self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
+
+    def interrupted_run(self,root,after_interrupt):
+        """Collect, interrupt at poll 5, then serve later polls with after_interrupt(poll, clock)."""
+        state_={'interrupted':False}
+        def behaviour(poll,now):
+            if not state_['interrupted']:
+                if poll==5:
+                    state_['interrupted']=True;raise KeyboardInterrupt
+                return 'active'
+            return after_interrupt(poll,now)
+        run,cloud,calls,events,moment,j=self.collecting(root,behaviour)
+        self.assertEqual(run()['stop_reason'],'operator_detached')
+        self.assertIsNotNone(j.request('collection-started'))
+        return run,cloud,calls,events,moment,j
+
+    def test_resume_with_failing_polls_never_tears_down(self):
+        # CX-SR2-001: a resumed run is in the collecting phase from its first poll.
+        for failure in ('timeout','raise'):
+            with self.subTest(failure=failure),tempfile.TemporaryDirectory() as temp:
+                run,cloud,calls,events,moment,j=self.interrupted_run(Path(temp),lambda poll,now:failure)
+                before=len(cloud.calls)
+                result=run()
+                self.assertEqual(result['stop_reason'],'collection_deadline')
+                stops=[at for action,at in calls if action=='stop']
+                self.assertTrue(stops and min(stops)>=1000+168*3600,stops[:1])
+                self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
+                self.assertEqual(sum(action=='install' for action,_ in calls),1)
+                resumed_ops=[op for op,_ in cloud.calls[before:]]
+                self.assertNotIn('CreateBucket',resumed_ops);self.assertNotIn('DescribeSubnets',resumed_ops)
+
+    def test_only_a_validated_stop_ends_collection(self):
+        # CX-SR2-002: unvalidated unit states are unreachable, not a stop.
+        for units,expected in ((None,'collection_deadline'),({'candidate':'active'},'collection_deadline'),
+                               ({'candidate':'deactivating','reader':'active','guard':'active'},'collection_deadline'),
+                               ({'candidate':'active','reader':'inactive','guard':'active'},'host_stopped'),
+                               ({'candidate':'failed','reader':'inactive','guard':'inactive'},'host_stopped')):
+            with self.subTest(units=units),tempfile.TemporaryDirectory() as temp:
+                odd=lambda poll,now:units if poll>=5 and poll<10 else 'active'
+                run,cloud,calls,events,moment,j=self.collecting(Path(temp),odd)
+                self.assertEqual(run()['stop_reason'],expected)
+
+    def test_resume_after_the_deadline_finishes_with_evidence_and_cleanup(self):
+        # CX-SR2-003: no polling, straight to retention and cleanup.
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            run,cloud,calls,events,moment,j=self.interrupted_run(root,lambda poll,now:'active')
+            moment[0]=1000+168*3600+5
+            polls=sum(action=='inspect' for action,_ in calls)
+            result=run()
+            self.assertEqual(result['stop_reason'],'collection_deadline')
+            self.assertTrue((root/'result/lifecycle.json').is_file())
+            self.assertIn('export',[action for action,_ in calls])
+            self.assertEqual(cloud.instance['State']['Name'],'terminated')
+            self.assertEqual(sum(action=='inspect' for action,_ in calls)-polls,1)  # the stopped-state check only
+
+    def test_live_run_after_the_deadline_reaches_the_lifecycle(self):
+        # CX-SR2-003: live_command observes the journal instead of requiring it active.
+        from unittest.mock import patch
+        import argparse,time as _time
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);source,host=HostBundleTests.files(self,root)
+            plan=dict(host=host,cloud=provisioning_plan(),allowance=dict(reads=10,writes=20,put_bytes=30))
+            provision.prepare_run(plan,source,root/'run',root/'bundle',now=1000)
+            identity=root/'key';identity.write_text('fixture');identity.chmod(0o600)
+            args=argparse.Namespace(command='run',execute=True,state=root/'run',bundle=root/'bundle',identity=identity,
+                                    output=root/'out',aws_executable='/usr/bin/false',profile=None)
+            seen=[]
+            # The AWS client is out of scope here: only the journal check before the lifecycle.
+            with patch.object(provision,'lifecycle',lambda *a,**k:seen.append(1) or {'stop_reason':'collection_deadline'}),\
+                 patch.object(sys.modules['coordinator'],'Aws',lambda *a,**k:object()),\
+                 patch.object(provision.time,'time',return_value=1000+168*3600+60):
+                provision.live_command(args)
+            self.assertEqual(seen,[1])
+
+    def test_cli_reports_a_detach_as_success(self):
+        # CX-SR2-006.
+        from unittest.mock import patch
+        import io,contextlib
+        detached={'schema':1,'detached':True,'stop_reason':'operator_detached'}
+        out=io.StringIO()
+        with patch.object(provision,'live_command',lambda args:detached),\
+             patch.object(sys,'argv',['provision.py','run','--execute','--state','s','--bundle','b','--identity','/k','--output','o']),\
+             contextlib.redirect_stdout(out):
+            code=provision.main()
+        self.assertEqual(code,0)
+        self.assertEqual(json.loads(out.getvalue().splitlines()[-1]),detached)
 
     def test_resume_reuses_the_journaled_ssh_target(self):
         # Days later the console may no longer show the host-key fingerprints.

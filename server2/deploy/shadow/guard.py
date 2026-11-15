@@ -134,7 +134,7 @@ def evaluate(manifest, sample, previous, now):
             or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())):
         return missed()
     try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
-    except GuardError:return missed()
+    except (GuardError,TypeError,ValueError,KeyError,AttributeError):return missed()
     result['misses']=0
     # Latest validated snapshot; latched with any stop so evidence distinguishes
     # auth from quota, the first origin and conservative paid admissions.
@@ -193,7 +193,7 @@ def checked_diagnostics(value):
     first=value['first_rejection']
     if first is not None:
         require(type(first) is dict and set(first)==set(VOCABULARY)|{'status'},'diagnostic_first')
-        require(all(first[k] in v for k,v in VOCABULARY.items()),'diagnostic_vocabulary')
+        require(all(isinstance(first[k],str) and first[k] in v for k,v in VOCABULARY.items()),'diagnostic_vocabulary')
         require(first['status'] is None or integer(first['status'],100,599),'diagnostic_status')
     paid=value['paid_units']
     if paid is not None:
