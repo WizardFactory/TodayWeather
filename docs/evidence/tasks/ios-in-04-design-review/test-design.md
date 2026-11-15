@@ -1,5 +1,7 @@
 # IN-04 test design (revised 2026-11-15)
 
+**Not adopted** (see `decision.md`): the tests follow the Android app's. Kept as the record of the proposal.
+
 Companion to `design.md`. Scope (AK, 2026-11-15): the legacy Node server only; server2 is not considered. This is the plan for the tests; no test listed here as new has been written or run. Verification mode: TDD (each new behaviour is shown failing first), plus a conformance check of the test server models against the real server code, plus the simulator upgrade smoke.
 
 ## 1. What went wrong in the tests before

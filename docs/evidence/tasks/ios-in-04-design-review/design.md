@@ -1,6 +1,8 @@
 # IN-04 design, revised: latest intent and one reassertion bit (2026-11-15)
 
-Status: **proposed, not implemented.** Scope (AK, 2026-11-15): the legacy Node server (`server/`) is the development basis; server2 is not considered in this work. It replaces the design note of IN-04 in `plans/ios-native.md` (that section is on the PR branch) once AK has answered the open questions at the end. Evidence: `evidence.md`. Tests: `test-design.md`. PR #2975 (head a8fd96e1) stays as it is until then.
+Status: **proposal, not adopted.** AK decided on 2026-11-15 that acceptance and background completion equal the Android native app and withdrew the store questions; see `decision.md`. The text below is the proposal as it was put to AK.
+
+Status at the time of writing: proposed, not implemented. Scope (AK, 2026-11-15): the legacy Node server (`server/`) is the development basis; server2 is not considered in this work. It replaces the design note of IN-04 in `plans/ios-native.md` (that section is on the PR branch) once AK has answered the open questions at the end. Evidence: `evidence.md`. Tests: `test-design.md`. PR #2975 (head a8fd96e1) stays as it is until then.
 
 ## Problem
 

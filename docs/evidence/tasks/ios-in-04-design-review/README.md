@@ -4,7 +4,9 @@ Record of the design re-review of iOS push re-registration (IN-04,
 [#2953](https://github.com/WizardFactory/TodayWeather/issues/2953),
 [PR #2975](https://github.com/WizardFactory/TodayWeather/pull/2975) at head `a8fd96e1`).
 It is a design and a test design. **Nothing in it is implemented, and no new test was
-written or run.** The design is proposed; the open questions at its end wait for AK.
+written or run.** AK answered the proposal's open questions on the same day: the iOS app
+follows the Android native app, and the proposal is not adopted. Read
+[decision.md](decision.md) first.
 
 ## Why it was done
 
@@ -31,9 +33,10 @@ any further implementation. The causes found:
 
 | File | Content |
 | --- | --- |
+| [decision.md](decision.md) | AK's decisions and the adopted design: the Android behaviour (AN-04) on iOS, and its tests. |
 | [evidence.md](evidence.md) | The facts the design rests on: the issue's requirements, the three legacy push stores per operation, what the Cordova and Android apps do, the PR's state, the review history by cause. |
-| [design.md](design.md) | The proposed design: registration "completed" defined per store, the latest token plus one `reassertRequired` bit, recovery by the list post only, residual cases, alternatives and the open questions. |
-| [test-design.md](test-design.md) | Three store models with their oracles, the conformance check of the models against the real server modules, fixed scenario classes, and the disposition of the existing tests. |
+| [design.md](design.md) | The proposal, not adopted: registration "completed" defined per store, the latest token plus one `reassertRequired` bit, recovery by the list post only, residual cases, alternatives and the open questions. |
+| [test-design.md](test-design.md) | The proposal's tests, not adopted: three store models with their oracles, the conformance check of the models against the real server modules, fixed scenario classes, and the disposition of the existing tests. |
 
 The store semantics are also maintained in
 [push notifications](../../../architecture/push-notifications.md#registration-semantics-per-store-checked-2026-11-15).
