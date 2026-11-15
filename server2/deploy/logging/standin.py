@@ -12,7 +12,11 @@ CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
 Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
-while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds.
+while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
+while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds.
+Data buckets (--data-bucket, the shadow check of LP-6): an empty, writable weather
+bucket for the server itself; GET/HEAD of a missing key answer 404 NoSuchKey, a list
+answers the stored keys, a PUT with If-None-Match: * of an existing key answers 412.
 """
 import argparse
 import json
@@ -20,6 +24,7 @@ import os
 import re
 import signal
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -87,7 +92,7 @@ class Handler(BaseHTTPRequestHandler):
     def record(self, service, action, **fields):
         credential = re.search(r'Credential=([A-Z0-9]+)/', self.headers.get('Authorization', ''))
         entry = dict(service=service, action=action, signed=bool(self.headers.get('Authorization')),
-                     key_id=credential.group(1) if credential else None, **fields)
+                     key_id=credential.group(1) if credential else None, at=time.time(), **fields)
         with self.server.lock:
             with open(self.server.state / 'operations.jsonl', 'a') as f:
                 f.write(json.dumps(entry, sort_keys=True) + '\n')
@@ -126,7 +131,10 @@ class Handler(BaseHTTPRequestHandler):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with open(path, 'a') as f:
                     for event in request.get('logEvents', []):
-                        f.write(json.dumps({'timestamp': event['timestamp'], 'message': event['message']}) + '\n')
+                        f.write(json.dumps({'timestamp': event['timestamp'], 'message': event['message'],
+                                            'stored_at': time.time()}) + '\n')
+                    f.flush()
+                    os.fsync(f.fileno())
             return self.reply(200, b'{}')
         return self.cw_error(400, 'UnknownOperationException', action)
 
@@ -142,15 +150,25 @@ class Handler(BaseHTTPRequestHandler):
                   'DELETE': 'DeleteObject', 'POST': 'PostObject'}.get(self.command, self.command)
         if self.command == 'GET' and not key:
             action = 'ListObjects'
+        # The fail-s3 fault is a log destination outage; data buckets stay available.
+        if bucket not in self.server.data_buckets and self.unavailable('s3'):
+            return None
         body = self.body() if self.command in ('PUT', 'POST') else b''
         self.record('s3', action, bucket=bucket, key=key,
                     content_encoding=self.headers.get('Content-Encoding'), content_type=self.headers.get('Content-Type'))
+        if bucket in self.server.data_buckets:
+            return self.data_bucket(action, bucket, key, body, split.query)
         if action != 'PutObject':
             return self.reply(403, b'<Error><Code>AccessDenied</Code></Error>', 'application/xml')
         if bucket != self.server.bucket:
             return self.reply(404, b'<Error><Code>NoSuchBucket</Code></Error>', 'application/xml')
         if not SAFE.match(key) or '..' in key.split('/'):
             return self.reply(400, b'<Error><Code>InvalidKey</Code></Error>', 'application/xml')
+        # Test fault: while <state>/slow-s3 exists, every object is stored and confirmed only
+        # after that many seconds (a slow upload).
+        slow = self.server.state / 'slow-s3'
+        if slow.exists():
+            time.sleep(float(slow.read_text().strip() or '0'))
         target = self.server.state / 's3' / key
         with self.server.lock:
             if target.exists():
@@ -158,16 +176,50 @@ class Handler(BaseHTTPRequestHandler):
                 self.record('s3', 'Overwrite', bucket=bucket, key=key)
             target.parent.mkdir(parents=True, exist_ok=True)
             temporary = target.with_name('.' + target.name + '.tmp')  # readers never see a partial object
-            temporary.write_bytes(body)
+            with open(temporary, 'wb') as f:
+                f.write(body)
+                f.flush()
+                os.fsync(f.fileno())  # a confirmed object survives a power-off of the host (LP-4 check)
             temporary.replace(target)
         # Test fault: while <state>/delay-s3 exists, a server object is stored at once but
         # confirmed only after that many seconds (a delayed confirmation).
         delay = self.server.state / 'delay-s3'
         if delay.exists() and '/server/' in key:
             self.record('s3', 'DelayedConfirmation', bucket=bucket, key=key)
-            import time
             time.sleep(float(delay.read_text().strip() or '0'))
         return self.reply(200, b'', 'application/xml', {'ETag': '"standin"'})
+
+    def data_bucket(self, action, bucket, key, body, query):
+        from urllib.parse import parse_qs
+        from xml.sax.saxutils import escape
+        root = self.server.state / 'data' / bucket
+        if key and (not SAFE.match(key) or '..' in key.split('/')):
+            return self.reply(400, b'<Error><Code>InvalidKey</Code></Error>', 'application/xml')
+        target = root / key
+        with self.server.lock:
+            if action == 'ListObjects':
+                prefix = parse_qs(query).get('prefix', [''])[0]
+                keys = sorted(str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()) if root.exists() else []
+                keys = [k for k in keys if k.startswith(prefix)]
+                items = ''.join(f'<Contents><Key>{escape(k)}</Key><Size>{(root / k).stat().st_size}</Size></Contents>' for k in keys)
+                xml = (f'<?xml version="1.0" encoding="UTF-8"?><ListBucketResult><Name>{bucket}</Name>'
+                       f'<Prefix>{escape(prefix)}</Prefix><KeyCount>{len(keys)}</KeyCount><IsTruncated>false</IsTruncated>{items}</ListBucketResult>')
+                return self.reply(200, xml.encode(), 'application/xml')
+            if action in ('GetObject', 'HeadObject'):
+                if not target.is_file():
+                    return self.reply(404, b'' if action == 'HeadObject' else b'<Error><Code>NoSuchKey</Code></Error>', 'application/xml')
+                data = target.read_bytes()
+                return self.reply(200, b'' if action == 'HeadObject' else data, 'application/octet-stream',
+                                  {'ETag': '"%d"' % len(data)})
+            if action == 'PutObject':
+                if self.headers.get('If-None-Match') == '*' and target.exists():
+                    return self.reply(412, b'<Error><Code>PreconditionFailed</Code></Error>', 'application/xml')
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(body)
+                return self.reply(200, b'', 'application/xml', {'ETag': '"%d"' % len(body)})
+            if action == 'HeadBucket':
+                return self.reply(200, b'', 'application/xml')
+        return self.reply(403, b'<Error><Code>AccessDenied</Code></Error>', 'application/xml')
 
     def unavailable(self, service):
         """Test fault: while <state>/fail-<service> exists, that service answers 503."""
@@ -182,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if self.headers.get('X-Amz-Target', '').startswith('Logs_20140328.'):
                 return None if self.unavailable('logs') else self.logs()
-            return None if self.unavailable('s3') else self.s3()
+            return self.s3()
         except (ValueError, KeyError, json.JSONDecodeError) as exc:
             return self.reply(400, json.dumps({'__type': 'StandinBadRequest', 'message': type(exc).__name__}).encode())
 
@@ -195,6 +247,7 @@ def main():
     parser.add_argument('--port', type=int, required=True)
     parser.add_argument('--bucket', required=True)
     parser.add_argument('--log-group', action='append', default=[])
+    parser.add_argument('--data-bucket', action='append', default=[], help='an empty writable weather bucket (LP-6 check)')
     parser.add_argument('--tls-cert', help='serve HTTPS with this test certificate')
     parser.add_argument('--tls-key')
     args = parser.parse_args()
@@ -208,6 +261,7 @@ def main():
         server.socket = context.wrap_socket(server.socket, server_side=True)
     server.daemon_threads = True
     server.state, server.bucket, server.groups = state, args.bucket, set(args.log_group)
+    server.data_buckets = set(args.data_bucket)
     server.streams, server.lock = {}, threading.Lock()
     # Streams survive a restart of the stand-in (a host reboot), as they do on AWS.
     for group in server.groups:

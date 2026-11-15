@@ -32,9 +32,9 @@ sys.path.insert(0, str(HERE))
 import render  # noqa: E402
 
 # The files a host needs; checks and stand-ins stay out of user data.
-BUNDLE = ('install.sh', 'render.py', 'status.py', 'collector.json', 'units/server2.service',
+BUNDLE = ('install.sh', 'render.py', 'status.py', 'spot_watch.py', 'collector.json', 'units/server2.service',
           'units/server2-logs.service', 'units/server2-logs-status.service', 'units/server2-logs-status.timer',
-          'units/journald@server2.conf', 'units/journald-system.conf')
+          'units/server2-logs-watch.service', 'units/journald@server2.conf', 'units/journald-system.conf')
 REPOSITORY = 'https://raw.githubusercontent.com/WizardFactory/TodayWeather'
 PATH_IN_REPOSITORY = 'server2/deploy/logging'
 EC2_USER_DATA_LIMIT = 16 * 1024
@@ -89,6 +89,8 @@ def script(values, revision, digests, repository=REPOSITORY):
               'bash "$bundle/install.sh"',
               '# The collector starts now and at every boot; it ships from its first record.',
               'systemctl start server2-logs.service || true',
+              '# The Spot interruption watcher (LP-4); idle on On-Demand instances.',
+              'systemctl start server2-logs-watch.service || true',
               f'echo "server2 log pipeline: boot configuration applied ({revision[:12]})"']
     return '\n'.join(parts) + '\n'
 

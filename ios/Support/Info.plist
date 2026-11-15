@@ -28,5 +28,9 @@
 	<false/>
 	<key>FirebaseAutomaticScreenReportingEnabled</key>
 	<false/>
+	<!-- The legacy server (IN-04 push, IN-08 weather): TW_SERVER_URL, a private build input (the Cordova
+	     clientConfig.serverUrl), set by the ignored ios/Private.xcconfig. Empty without it: the app then sends nothing. -->
+	<key>TWServerURL</key>
+	<string>$(TW_SERVER_URL)</string>
 </dict>
 </plist>

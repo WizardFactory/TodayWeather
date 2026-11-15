@@ -1,0 +1,13 @@
+{
+  "title": "Bounded paired reads: CLI quick start",
+  "scenario": "S1-S3: Python 3.10+, two owned local HTTP peers and a matching candidate file. This fixture capture does not establish live product parity. See the adjacent operations guide for the manifest schema, production prerequisites and conditional reads (S4).",
+  "steps": [
+    {
+      "title": "Preview, capture, then inspect before resuming",
+      "instruction": "Run paired_read.py with --manifest and --candidate for a dry preview. Add --execute --state and --candidate-binary only after the parent run is qualified. For two local peers, add --loopback-test --production with the second loopback origin. The excerpt below is actual output from that CLI sequence.",
+      "screenshot": "cli-output.png",
+      "caption": "Two different raw responses were retained. The subsequent --resume was refused because this run had already reached its duration. No production requests were sent.",
+      "expected": "Inspect terminal, attempts and pending. Duration completion is not a product PASS. Ordinary interruption may resume the unchanged run; terminal errors/duration cannot. Preserve evidence and complete the separate cloud cleanup."
+    }
+  ]
+}

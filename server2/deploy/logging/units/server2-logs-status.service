@@ -3,7 +3,10 @@
 # The record goes to the server2 journal namespace; the collector ships it.
 [Unit]
 Description=server2 log collector status record
-After=server2-logs.service
+# LogNamespace= orders a unit after its journal's sockets only; ordering after the
+# namespace's journald service makes a shutdown stop this unit before its journal, so its
+# final lines are kept (found by the LP-4 reboot check: they were lost otherwise).
+After=server2-logs.service systemd-journald@server2.service
 
 [Service]
 Type=oneshot

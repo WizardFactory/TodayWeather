@@ -7,6 +7,7 @@ key on the host. Values are read from files in --state on every request, so a ch
 change the instance ID (a "replacement instance") without restarting the stand-in:
 
   <state>/instance-id, <state>/life-cycle   current values
+  <state>/instance-action                   Spot interruption notice JSON (absent: 404, as on EC2)
   <state>/requests.jsonl                    one line per request (path and token use)
 
 Bind it to 169.254.169.254:80 (add the address to the loopback interface first).
@@ -71,6 +72,10 @@ class Handler(BaseHTTPRequestHandler):
             '/latest/meta-data/placement/region': 'ap-northeast-2',
             '/latest/dynamic/instance-identity/document': json.dumps({'region': 'ap-northeast-2'}),
         }
+        # Spot interruption notice (LP-4): present only while <state>/instance-action exists.
+        notice = self.value('instance-action', '')
+        if notice:
+            routes['/latest/meta-data/spot/instance-action'] = notice
         body = routes.get(self.path)
         if body is None:
             return self.reply(404)

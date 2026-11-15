@@ -5,7 +5,10 @@
 # the collector's stop drain (LP-2) then ships the server's final records.
 [Unit]
 Description=server2 weather origin
-After=network-online.target server2-logs.service
+# LogNamespace= orders a unit after its journal's sockets only; ordering after the
+# namespace's journald service makes a shutdown stop this unit before its journal, so its
+# final lines are kept (found by the LP-4 reboot check: they were lost otherwise).
+After=network-online.target server2-logs.service systemd-journald@server2.service
 Wants=network-online.target
 
 [Service]
