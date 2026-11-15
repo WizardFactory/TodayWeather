@@ -281,7 +281,8 @@ struct SettingsActionsTests {
                 let f = try Fixture()
                 f.session.reload(.initial)
                 await f.clock.advance(by: 1000)
-                #expect(f.http.attempts.count == 1)
+                // The request goes out after work that touches no clock, so `advance` can return before it: wait for it.
+                #expect(await eventually { f.http.attempts.count == 1 })
                 f.actions.opened(name)
                 #expect(f.actions.value(name) == list["page"]?["value"]?.stringValue, "\(name): the checked value")
                 f.actions.choose(name, value: value)
@@ -303,7 +304,7 @@ struct SettingsActionsTests {
                 // `_resetUpdateTimeCities`: every place reloads, then `reloadEvent 'resume'` loads the selected one.
                 let reloads = trace.filter { $0[0]?.stringValue == "WeatherInfo.reloadCity" }.count
                 #expect(reloads == 3 && trace.last?[1]?.stringValue == "reloadEvent" && trace.last?[2]?.stringValue == "resume")
-                #expect(f.http.attempts.count == 2, "\(name)=\(value): the weather is requested again")
+                #expect(await eventually { f.http.attempts.count == 2 }, "\(name)=\(value): the weather is requested again")
                 let query = f.http.attempts.last?.url.query ?? ""
                 for key in UnitSettings.keys {
                     #expect(query.contains("\(key)=\(state.units.value(key))"), "\(name)=\(value): \(key) in \(query)")
@@ -318,10 +319,11 @@ struct SettingsActionsTests {
         let f = try Fixture()
         f.session.reload(.initial)
         await f.clock.advance(by: 1000)
+        #expect(await eventually { f.http.attempts.count == 1 })
         f.actions.opened("refreshInterval")
         f.actions.choose("refreshInterval", value: "30")
         await f.clock.advance(by: 1000)
-        #expect(f.http.attempts.count == 2)
+        #expect(await eventually { f.http.attempts.count == 2 })
         await f.clock.advance(by: 29 * 60_000)
         #expect(f.http.attempts.count == 2)
         await f.clock.advance(by: 60_000)
@@ -342,7 +344,7 @@ struct SettingsActionsTests {
         await f.clock.advance(by: 1000)
         #expect(f.holder.state?.units.temperatureUnit == "F")
         #expect(f.push.calls.isEmpty)
-        #expect(f.http.attempts.count == 1)
+        #expect(await eventually { f.http.attempts.count == 1 })
     }
 
     /// The same value again (the radio does not call `valueChanged` then; `setUnit` would refuse it) changes nothing and
@@ -414,9 +416,10 @@ struct SettingsCaptureTests {
         let f = try SettingsActionsTests.Fixture()
         f.session.reload(.initial)
         await f.clock.advance(by: 1000)
+        #expect(await eventually { f.http.attempts.count == 1 })
         f.actions.choose(name, value: value)
         await f.clock.advance(by: 1000)
-        #expect(f.http.attempts.count == 2)
+        #expect(await eventually { f.http.attempts.count == 2 })
         let url = try #require(f.http.attempts.last?.url)
         #expect(url.path + "?" + (url.query ?? "") == expected["path"]?.stringValue, "\(step)")
         #expect(f.http.attempts.last?.headers["Accept-Language"] == expected["acceptLanguage"]?.stringValue)
