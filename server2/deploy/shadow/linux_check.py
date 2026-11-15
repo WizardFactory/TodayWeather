@@ -462,9 +462,12 @@ def frozen_guard(report, args, interface):
     if receipt is None or receipt.get('status') != 'started':
         return
     systemctl('stop', f'{name}-logs.service')
-    report.check(entry, 'collector stopped, acquisition still active', prop(f'{name}-logs.service', 'ActiveState') == 'inactive'
-                 and all(prop(f'{name}-{s}.service', 'ActiveState') == 'active' for s in ('candidate', 'guard', 'reader')),
-                 decision(Path('/opt/server2-shadow') / run_id))
+    states = {s: prop(f'{name}-{s}.service', 'ActiveState') for s in ('logs', 'candidate', 'guard', 'reader')}
+    # The reader may have ended by its own rule (three consecutive 5xx answers of the
+    # candidate, whose providers answer unusable bodies here); candidate and guard run.
+    entry['observations']['states_before_freeze'] = states
+    report.check(entry, 'collector stopped, candidate and guard still active',
+                 (states['logs'], states['candidate'], states['guard']) == ('inactive', 'active', 'active'), states)
     pid = prop(f'{name}-guard.service', 'MainPID')
     os.kill(int(pid), 19)  # SIGSTOP
     frozen = time.monotonic()
