@@ -423,84 +423,99 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     retention and exact-owned cleanup, including cancellation before SSH is
     available.
 
-    The collecting phase begins when the journal records `collection-started`,
-    the first time the install is confirmed started. From then on the host is the
-    lifetime authority: its guard and timers stop and power it off without this
-    process. A status poll that fails, times out or cannot be validated is
-    reported and retried; it never stops, exports or terminates. Collection ends
-    here only on a validated host stop, at the deadline, or when the operator
-    interrupts, which detaches without teardown. A resumed `run` in the
-    collecting phase makes no provisioning or install call: it reconnects through
-    the journaled SSH target and polls, or finishes at once if the deadline has
-    passed.
+    Phases: startup until the journal records `collection-started` (the first
+    time the install is confirmed started), collecting until a validated host
+    stop or the deadline, then finishing. While collecting the host is the
+    lifetime authority: a connector or status-poll failure of any kind is an
+    unreachable poll, retried a minute later; an interrupt or a local failure
+    (journal, progress output) detaches without touching the host
+    (`operator_detached`, `operator_failed`). Startup failures keep retention and
+    exact cleanup. Finishing makes one reconnect attempt for host evidence if
+    needed and always proceeds to retention and cleanup, also after an
+    interrupt. A resumed `run` makes no provisioning or install call.
     """
     from coordinator import verify_bundle
     from remote import install_remote,inspect_install
     launch=verify_bundle(bundle)
     require(launch['generation']=='initial','only initial host generation is supported')
     require(not Path(destination).exists(),'finish destination already exists')
-    remote=None;reason='collection_deadline';failure=None;detached=False
-    collecting=collection_started(journal)
+    remote=None;reason='collection_deadline';failure=None;detached=None
+    resumed=collection_started(journal)
+    collection_until=journal.snapshot()['collection_until']
+    # Phase (design-round3.md): startup until the journal records collection-started;
+    # collecting until the loop ends or the deadline passes; finishing afterwards. An
+    # interrupt or a local failure detaches only while collecting.
+    phase='startup' if not resumed else ('collecting' if clock()<collection_until else 'finishing')
+    def collecting():return phase=='collecting' and clock()<collection_until
     try:
-        # Resume: no provisioning or install. The collecting loop reconnects, so a failed
-        # reconnect is an unreachable poll, never a teardown (CX-SR2-008).
-        return_to_collect=collecting
-        # Each resumed call reconciles exact original requests; elapsed run time
-        # and generation grants are never refreshed by this startup allowance.
-        until=min(int(clock())+STARTUP_SECONDS,journal.snapshot()['collection_until'])
-        while not return_to_collect:
-            journal.active(int(clock()))
-            provisioned=provision_resources(cloud,journal,plan,now=int(clock()))
-            if provisioned['status']=='bound':break
-            progress({'phase':'provision_pending','reason':provisioned['reason']})
-            require(clock()<until,'startup timeout')
-            sleep(5)
-        while remote is None and not return_to_collect:
-            journal.active(int(clock()))
-            remote=connector(cloud,journal,provisioned['resources'],now=int(clock()))
-            if remote is None:
-                require(clock()<until,'SSH readiness timeout');sleep(5)
-        while not return_to_collect:
-            installed=install_remote(remote,journal,bundle,now=int(clock()))
-            if installed['status']=='started':break
-            require(installed['status'] in ('pending','installing'),'host installation stopped')
-            require(clock()<until,'installation timeout');sleep(5)
-        if not collecting:
-            mark_collection_started(journal,now=int(clock()));collecting=True
-        progress({'phase':'collecting','collection_until':journal.snapshot()['collection_until'],
-                  'resumed':return_to_collect})
-        unreachable=0
-        while clock()<journal.snapshot()['collection_until']:
-            journal.observe(int(clock()))
-            status='pending'
-            try:
-                if remote is None:remote=connector(cloud,journal,None,now=int(clock()))
-                if remote is not None:status=inspect_install(remote,journal,launch)['status']
-            except (StateError,OSError,ValueError,subprocess.TimeoutExpired):status='pending'
-            if status=='started':
-                if unreachable:progress({'phase':'collecting','poll':'recovered','after':unreachable})
-                unreachable=0
-            elif status in ('stopped','failed'):
-                # A validated stop reported by the host (remote.inspect_install).
-                reason='host_stopped';break
-            else:
-                unreachable+=1
-                progress({'phase':'collecting','poll':'unreachable','consecutive':unreachable})
-            sleep(min(60,max(0,journal.snapshot()['collection_until']-clock())))
+        if phase=='startup':
+            # Each call reconciles exact original requests; elapsed run time and
+            # generation grants are never refreshed by this startup allowance.
+            until=min(int(clock())+STARTUP_SECONDS,collection_until)
+            while True:
+                journal.active(int(clock()))
+                provisioned=provision_resources(cloud,journal,plan,now=int(clock()))
+                if provisioned['status']=='bound':break
+                progress({'phase':'provision_pending','reason':provisioned['reason']})
+                require(clock()<until,'startup timeout')
+                sleep(5)
+            while remote is None:
+                journal.active(int(clock()))
+                remote=connector(cloud,journal,provisioned['resources'],now=int(clock()))
+                if remote is None:
+                    require(clock()<until,'SSH readiness timeout');sleep(5)
+            while True:
+                installed=install_remote(remote,journal,bundle,now=int(clock()))
+                if installed['status']=='started':break
+                require(installed['status'] in ('pending','installing'),'host installation stopped')
+                require(clock()<until,'installation timeout');sleep(5)
+            mark_collection_started(journal,now=int(clock()))
+            phase='collecting'
+        if phase=='collecting':
+            # A resumed run makes no provisioning or install call; the loop reconnects
+            # through the journaled SSH target, so a failed reconnect is an unreachable poll.
+            progress({'phase':'collecting','collection_until':collection_until,'resumed':resumed})
+            unreachable=0
+            while clock()<collection_until:
+                journal.observe(int(clock()))
+                status='pending'
+                try:
+                    if remote is None:remote=connector(cloud,journal,None,now=int(clock()))
+                    if remote is not None:status=inspect_install(remote,journal,launch)['status']
+                except Exception:status='pending'  # host-side: never a teardown
+                if status=='started':
+                    if unreachable:progress({'phase':'collecting','poll':'recovered','after':unreachable})
+                    unreachable=0
+                elif status in ('stopped','failed'):
+                    # A validated stop reported by the host (remote.inspect_install).
+                    reason='host_stopped';break
+                else:
+                    unreachable+=1
+                    progress({'phase':'collecting','poll':'unreachable','consecutive':unreachable})
+                sleep(min(60,max(0,collection_until-clock())))
+            phase='finishing'
         if remote is None:
-            # Deadline reached unreachable (or resumed after it): one more attempt so the
-            # finish can retain host evidence; a failure leaves cleanup to the finish.
+            # Finishing without a connection (deadline reached unreachable, or resumed
+            # after it): one attempt so the finish can retain host evidence.
             try:remote=connector(cloud,journal,None,now=int(clock()))
-            except (StateError,OSError,ValueError,subprocess.TimeoutExpired):remote=None
-    except (StateError,OSError,ValueError,subprocess.TimeoutExpired) as error:
-        reason='acquisition_failed';failure=type(error).__name__
+            except Exception:remote=None
     except KeyboardInterrupt:
-        reason='operator_interrupted'
-        if collecting:detached=True
+        if collecting():detached='operator_detached'
+        elif phase=='startup':reason='operator_interrupted'
+        # finishing: the interrupt does not change the reason; retention and cleanup go on.
+    except Exception as error:
+        if collecting():detached='operator_failed';failure=type(error).__name__
+        elif phase=='startup' and isinstance(error,(StateError,OSError,ValueError,subprocess.TimeoutExpired)):
+            reason='acquisition_failed';failure=type(error).__name__
+        else:raise
     finally:
         if detached:
-            progress({'phase':'detached','reason':'operator_detached'})
-            return {'schema':1,'detached':True,'stop_reason':'operator_detached'}
+            # The host keeps its own guard and deadline timers; run or finish resumes.
+            record={'schema':1,'detached':True,'stop_reason':detached}
+            if failure:record['failure_class']=failure
+            try:progress({'phase':'detached','reason':detached})
+            except Exception:pass
+            return record
         if remote is not None and isinstance(remote,BudgetedRemote):remote.finalizing=True
         progress({'phase':'finishing','reason':reason})
         report=finish_run(cloud,remote,journal,destination,now=int(clock()))
@@ -596,7 +611,8 @@ def main():
     try:
         if args.command in ('run','finish'):
             result=live_command(args);print(canonical(result))
-            if result.get('detached'):return 0  # the host keeps collecting; resume with run
+            # The host keeps collecting; resume with run. A local failure is still an error.
+            if result.get('detached'):return 0 if result['stop_reason']=='operator_detached' else 1
             return 0 if result['cleanup'].get('complete') else 1
         require(args.bundle is not None,'bundle required')
         if args.command=='prepare':

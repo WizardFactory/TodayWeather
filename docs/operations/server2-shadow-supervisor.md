@@ -67,7 +67,7 @@ The [flow](../architecture/diagrams/server2-shadow-supervisor.html) describes th
 
 ## Host binding and offline preparation
 
-The guard compares the actual Linux process start ticks, boot identity, executable hash, exact process environment hash, working directory, `.env` hash, cgroup and loopback socket ownership. It samples every ten seconds. A missing, stale or malformed observation (including unavailable accounting, metrics or diagnostics) counts as a miss; six consecutive misses (60 seconds) latch `observation_lost`, and a valid sample resets the count, which is kept in the decision state (schema 4, `misses`) across guard restarts. Changed identity, listener ownership, network counter rollback or ceiling and disk reserve are decided from the sample's own fields before accounting, metrics and diagnostics are validated, so a partial observation never delays or renames them; together with exhausted S3 allowance and classified auth/quota events they latch a stop at once. Its systemd watchdog stops the owned candidate and reader if observations cease. Original collection and poweroff deadlines are separate calendar timers and do not move with a generation.
+The guard compares the actual Linux process start ticks, boot identity, executable hash, exact process environment hash, working directory, `.env` hash, cgroup and loopback socket ownership. It samples every ten seconds. A missing, stale or malformed observation (including unavailable accounting, metrics or diagnostics) counts as a miss; six consecutive misses (60 seconds) latch `observation_lost`, and a valid sample resets the count, which is kept in the decision state (schema 4, `misses`) across guard restarts. Changed identity, listener ownership, network counter rollback or ceiling and disk reserve are decided from the sample's own fields before accounting, metrics and diagnostics are validated, so a partial observation never delays or renames them; a missing identity field is a changed identity, as before, not a miss; together with exhausted S3 allowance and classified auth/quota events they latch a stop at once. Its systemd watchdog stops the owned candidate and reader if observations cease. Original collection and poweroff deadlines are separate calendar timers and do not move with a generation.
 
 The opt-in `/internal/metrics` fields are `server2_shadow_s3_{reads,writes,put_bytes}_remaining` and `server2_runtime_{auth,quota}_failures_total`. Rejection signals are recorded before log filtering and queue admission, so dropped diagnostic logs cannot erase them. They count classified events, potentially more than one per provider request; they are not provider usage or billing counters. No shadow metrics appear when the opt-in allowance is absent.
 
@@ -187,7 +187,13 @@ no provisioning or install call: it reconnects through the SSH target authentica
 earlier in the run (not the console fingerprints) inside the collecting loop, so a
 failed reconnect, including the first after a resume, is an unreachable poll; at or
 after the collection deadline it makes one more reconnect attempt for evidence
-retention and then finishes with cleanup, also when that attempt fails. Only a validated host stop ends collection: the
+retention and then finishes with cleanup, also when that attempt fails. The phase
+decides every other event: while collecting (before the deadline), any connector or
+status-poll error is an unreachable poll, an interrupt detaches with exit 0, and a
+local failure (the journal, the progress output) detaches with exit 1
+(`operator_failed` and its failure class), all without touching the host; once
+collection has ended, an interrupt no longer detaches and retention and cleanup go
+on. Only a validated host stop ends collection: the
 receipt reports `failed`, or all three acquisition units with known systemd states
 and at least one `inactive` or `failed`; missing or unknown unit states are
 unreachable. An interrupt during collection prints the detach record and exits 0. A

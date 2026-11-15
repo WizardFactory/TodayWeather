@@ -424,7 +424,8 @@ class GuardTests(unittest.TestCase):
             if kind=='accounting':s['accounting_valid']=False
             elif kind=='metrics':del s['metrics']['s3_reads']
             else:s['diagnostics']={'message':'free text'}
-        stops=[('pid',124,'binding_pid'),('listeners',[],'listener_binding'),
+        stops=[('pid',124,'binding_pid'),('pid',None,'binding_pid'),('binary_sha256',None,'binding_binary_sha256'),
+               ('listeners',[],'listener_binding'),
                ('tx_bytes',500+4*guard.GiB,'network_ceiling'),('tx_bytes',499,'network_counter_reset'),
                ('free_bytes',6*guard.GiB-1,'disk_reserve')]
         for kind in ('accounting','metrics','diagnostics'):
@@ -1703,6 +1704,7 @@ class LifecycleTests(unittest.TestCase):
             def __init__(inner):inner.binding=binding
             def invoke(inner,action,**kwargs):
                 calls.append((action,moment[0]))
+                if action=='inspect':fault('poll')
                 if action=='install':return state.CloudResult('empty_success','HostInstall')
                 if action=='stop':inner.stopped=True;return state.CloudResult('empty_success','HostObserve')
                 if action=='export':return state.CloudResult('timeout','HostEvidence')
@@ -1715,17 +1717,29 @@ class LifecycleTests(unittest.TestCase):
                 else:units=answer
                 return cloud_json('HostObserve',dict(status='started',launch_sha256=expected,epoch=1000,
                     collection_until=1000+168*3600,cleanup_until=1000+170*3600,unit_states=units))
-        transport=Transport();failures=[]
+        transport=Transport();failures=[];faults={}
+        def fault(point):
+            # faults[point]=(n, error): raise error at the n-th call of that site from now on.
+            if point in faults:
+                n,error=faults[point];faults[point]=(n-1,error)
+                if n<=1:del faults[point];raise error
         def connect(c,journal,r,*,now):
+            fault('connect')
             if failures:raise failures.pop(0)
             if journal.request('ssh-target') is None:
                 journal.prepare_request('ssh-target','BindSshTarget',binding,binding['instance'],now=now)
                 journal.record_receipt('ssh-target',cloud_json('BindSshTarget',{'bound':True}))
             return provision.BudgetedRemote(transport,journal)
-        def pause(seconds):moment[0]+=seconds
-        run=lambda:provision.lifecycle(cloud,j,plan['cloud'],root/'bundle',root/'result',connect,
-                                       clock=lambda:moment[0],sleep=pause,progress=events.append)
+        def pause(seconds):fault('sleep');moment[0]+=seconds
+        def report(event):fault('progress');events.append(event)
+        class Observed:
+            # The real journal; observe() can be faulted like the other call sites.
+            def __getattr__(inner,name):return getattr(j,name)
+            def observe(inner,now):fault('observe');return j.observe(now)
+        run=lambda:provision.lifecycle(cloud,Observed(),plan['cloud'],root/'bundle',root/'result',connect,
+                                       clock=lambda:moment[0],sleep=pause,progress=report)
         run.connect_failures=failures  # errors raised by the next connector calls, in order
+        run.faults=faults
         return run,cloud,calls,events,moment,j
 
     def test_failed_polls_never_end_collection(self):
@@ -1816,6 +1830,62 @@ class LifecycleTests(unittest.TestCase):
                 self.assertTrue(terminations)
                 self.assertIn('export',[action for action,_ in calls])
                 self.assertIn({'phase':'collecting','poll':'recovered','after':3},events)
+
+    def test_every_interrupt_and_fault_follows_the_phase_table(self):
+        # Circuit breaker after CX-SR2-011 (design-round3.md): per phase and call site, an
+        # interrupt or error either detaches with the host untouched, retries as an
+        # unreachable poll, or finishes with retention and cleanup.
+        until=1000+168*3600
+        kinds=[KeyboardInterrupt(),OSError('io'),state.StateError('state'),subprocess.TimeoutExpired('ssh',30),RuntimeError('bug')]
+        def untouched(cloud,calls):
+            return (cloud.instance['State']['Name']=='running' and not any(a in ('stop','export') for a,_ in calls)
+                    and not any(op=='TerminateInstances' for op,_ in cloud.calls))
+        cases=[]
+        # Collecting (resumed before the deadline): first call of each site after the resume.
+        for point in ('connect','poll','sleep','progress','observe'):
+            for error in kinds:
+                interrupt=isinstance(error,KeyboardInterrupt)
+                if point in ('connect','poll') and not interrupt:expect='retry'
+                else:expect='detached' if interrupt else 'failed'
+                cases.append(('collecting',point,error,expect))
+        # Finishing (resumed after the deadline): the final reconnect.
+        for error in kinds:cases.append(('finishing','connect',error,'finish'))
+        for phase,point,error,expect in cases:
+            with self.subTest(phase=phase,point=point,error=type(error).__name__),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp)
+                run,cloud,calls,events,moment,j=self.interrupted_run(root,lambda poll,now:'active')
+                before=len(calls)
+                if phase=='finishing':moment[0]=until+5
+                run.faults[point]=(1,error)
+                result=run()
+                if expect=='detached':
+                    self.assertEqual(result,{'schema':1,'detached':True,'stop_reason':'operator_detached'})
+                    self.assertTrue(untouched(cloud,calls))
+                elif expect=='failed':
+                    self.assertEqual((result['detached'],result['stop_reason'],result['failure_class']),
+                                     (True,'operator_failed',type(error).__name__))
+                    self.assertTrue(untouched(cloud,calls))
+                    self.assertFalse((root/'result').exists())
+                else:
+                    self.assertEqual(result['stop_reason'],'collection_deadline',result)
+                    self.assertEqual(cloud.instance['State']['Name'],'terminated')
+                    self.assertTrue((root/'result/lifecycle.json').is_file())
+                    # Nothing reaches the host before the deadline; without a reconnect the
+                    # finish cannot stop it over SSH and only terminates the instance.
+                    stops=[at for action,at in calls[before:] if action=='stop']
+                    self.assertTrue(all(at>=until for at in stops),stops[:1])
+                    if expect=='retry':
+                        self.assertTrue(stops)
+                        self.assertIn('export',[a for a,_ in calls[before:]])
+        # The CLI reports a detach as success and an operator failure as an error.
+        from unittest.mock import patch
+        import io,contextlib
+        for outcome,code in (({'schema':1,'detached':True,'stop_reason':'operator_detached'},0),
+                             ({'schema':1,'detached':True,'stop_reason':'operator_failed','failure_class':'OSError'},1)):
+            with patch.object(provision,'live_command',lambda args,o=outcome:o),\
+                 patch.object(sys,'argv',['provision.py','run','--execute','--state','s','--bundle','b','--identity','/k','--output','o']),\
+                 contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(provision.main(),code)
 
     def test_resume_after_the_deadline_with_a_failing_reconnect_still_finishes(self):
         with tempfile.TemporaryDirectory() as temp:
