@@ -80,7 +80,7 @@
      "timezoneOffset": 540,
      "package": "todayWeather",
      "uuid": "<device-id>",
-     "appVersion": "1.1.1",
+     "appVersion": "1.1.2",
      "fcmToken": "capture-token",
      "pushTime": 82800,
      "dayOfWeek": [
@@ -146,7 +146,7 @@
      "timezoneOffset": 540,
      "package": "todayWeather",
      "uuid": "<device-id>",
-     "appVersion": "1.1.1",
+     "appVersion": "1.1.2",
      "fcmToken": "capture-token",
      "pushTime": 82800,
      "dayOfWeek": [

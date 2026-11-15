@@ -5754,7 +5754,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Scope</h3>
         </div>
         <ul>
-          <li>Process contract: issue 2802. Host pipeline: LP-1 to LP-5 (issues 2978-2982) of issue 2977.</li>
+          <li>Process contract: issue 2802. Host pipeline: LP-1 to LP-6 (issues 2978-2983) of issue 2977.</li>
           <li>Destinations are chosen by SERVER2_LOG_SINKS; local alone skips the collector.</li>
           <li>Not deployment evidence; no AWS resource is created by these files.</li>
         </ul>
@@ -5792,7 +5792,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <li>A start check reads only SERVER2_LOG_* and bucket/region; local alone skips the collector, invalid settings fail it.</li>
           <li>The server does not require the collector; a shutdown stops the server first, then the collector drains until delivery is confirmed (at most 75 s).</li>
           <li>Each remote destination has its own journal reader, level filter and checkpoint.</li>
-          <li>Only schema-1 server records at or above the level, and collector records, leave the host.</li>
+          <li>Only schema-1 server records at or above the level, and collector records, leave the host; on the qualification host also guard and reader JSON objects (LP-6).</li>
           <li>Loss is visible per destination: status records, overrun records and loopback counters (LP-2).</li>
           <li>Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3).</li>
           <li>A Spot notice is recorded, then the server and the collector stop in order within 86 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4).</li>

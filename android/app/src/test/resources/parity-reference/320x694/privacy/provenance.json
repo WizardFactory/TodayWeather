@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK privacy",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -104,7 +104,7 @@
  "files": [
   {
    "file": "en-US/actions.json",
-   "sha256": "52ae790fc1c4cea47e4932f9a11847d3738e462e934605929ff6f70f4657f481"
+   "sha256": "dcb125fc25faf29a97a9fdfc0a00de02d7a82f90818947f985d14c42b2bde7d8"
   },
   {
    "file": "en-US/analytics-popup.json",
@@ -112,23 +112,23 @@
   },
   {
    "file": "en-US/analytics-popup.png",
-   "sha256": "61ddb6f109b0bbf2e80c3413889736b80957febcd8ce555743a8e74efbec3f92"
+   "sha256": "106cb846e02b1314261d43475538bdc04d34c18a4f93356d6c66d02ef53b6e0f"
   },
   {
    "file": "en-US/menu-allowed.json",
-   "sha256": "b3d3d67b2950a0b651a0a9d0c56540a269dabd77a3a5656d509f5f8b786ebe68"
+   "sha256": "bfccd1b1f2798a4a10178a1b5be019624c92bcfeb822f9920f108daf609c10f6"
   },
   {
    "file": "en-US/menu-allowed.png",
-   "sha256": "3f93b5e3eaf764476ebc6c36d038359e1ad867612819f8431a73d1460c01c7f4"
+   "sha256": "09fc2a767581810d10379d4479bf5ffb0282ecae4a498e385b78ea390375ce5c"
   },
   {
    "file": "en-US/menu-off.json",
-   "sha256": "0db58481cbf1cf985ba7a4543bba668b6e4baafa2fe30e74a8c9cc06aad3999a"
+   "sha256": "d1b0500a2ddcd519b9a534d5fcd0478092b4f17dc283dc2bc33c34db23425823"
   },
   {
    "file": "en-US/menu-off.png",
-   "sha256": "a672f3539551f4ed0cf8d094764e8e2baf2100d73fea5b6ad20aad3196be124c"
+   "sha256": "8dc618ccdf2d6b9ef9d955067b89798ee5c412b59ea3a364e877b5394ee83b8d"
   },
   {
    "file": "en-US/viewport.json",
@@ -136,7 +136,7 @@
   },
   {
    "file": "ko-KR/actions.json",
-   "sha256": "254c7af5b00fbf476695cc35e2bf568aa7c1aaf8102939aa3cb6b961eb86a70e"
+   "sha256": "da9d52bf103593571fc37ed2c7f63c03891787adfe47b3c2beb3df0a1b6ff1a1"
   },
   {
    "file": "ko-KR/analytics-popup.json",
@@ -144,23 +144,23 @@
   },
   {
    "file": "ko-KR/analytics-popup.png",
-   "sha256": "7a3638130084b2b785ea93b1fda58f977da08f37e08a296aae581da7c7119053"
+   "sha256": "4baa72d3b892442cc9481f04e1cffebd5e30c0038f8b9d6a019dcf2f71726430"
   },
   {
    "file": "ko-KR/menu-allowed.json",
-   "sha256": "3b9843eb67e1507077f668372805e996b00478d889a18c29fc6e6bedd009d64d"
+   "sha256": "48103d6d3a3f13254af9d409b57260e4f69af879c1e9329cccdc7ef9c2c1c9b5"
   },
   {
    "file": "ko-KR/menu-allowed.png",
-   "sha256": "b3986b20df647452aead20ae436fcec5cb041a6499cc038728220a61fe52cf3e"
+   "sha256": "cb83f522a309873be2303cd4abcd0c6ae06930f88e7dbf1c945d750b5b314e95"
   },
   {
    "file": "ko-KR/menu-off.json",
-   "sha256": "81ae780e1c7d5521226e4d742b0bf47e4bf0e2c485eef936e37a4fc352fe8970"
+   "sha256": "cf34824b69a09435037c97ed3dbe5b4fe9ed06dd0186e8fe161df4e84d2ccb54"
   },
   {
    "file": "ko-KR/menu-off.png",
-   "sha256": "ad8889f1321bc3c37f6ff4c851d759fb465b5fbdc88740c36ce675410d5f622d"
+   "sha256": "6fa5bee98681aaeb4f03618002fd05ccd09bc742f04d6aa715cc92ad26a810f1"
   },
   {
    "file": "ko-KR/viewport.json",

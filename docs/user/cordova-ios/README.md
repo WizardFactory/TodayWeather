@@ -1,8 +1,9 @@
 # TodayWeather for iOS: ad tracking permission
 
-[Read the 5-page PDF](manual.pdf). The [editable source](manual.json) holds the same steps. The [screenshots](screenshots/) are actual captures from an iPhone, with their [provenance](screenshots/provenance.json).
+[Read the 9-page PDF](manual.pdf). The [editable source](manual.json) holds the same steps. The [screenshots](screenshots/) are actual captures from an iPhone, with their [provenance](screenshots/provenance.json).
 
-The manual covers the App Tracking Transparency flow added in #2945 (pull request #2949): the explanation, the iOS prompt, the app without tracking, and the setting to change the answer. The rest of the app is described in the [Android manual of the same Cordova app](../cordova-app/README.md).
+The manual covers the App Tracking Transparency flow added in #2945 (pull request #2949): the explanation, the iOS prompt, the app without tracking, and the setting to change the answer. Pages 6 to 9 cover the
+notice and the menu row added in #2990, which lead a user who did not allow tracking to that setting. The rest of the app is described in the [Android manual of the same Cordova app](../cordova-app/README.md).
 
 | Page | User task |
 | --- | --- |
@@ -10,12 +11,18 @@ The manual covers the App Tracking Transparency flow added in #2945 (pull reques
 | 2 | Answer the iOS prompt |
 | 3 | Use the app without tracking |
 | 4-5 | Find the setting and turn tracking off or on |
+| 6 | Read the notice at the end of the hourly, daily and air pages |
+| 7 | Check the choice in the menu |
+| 8 | Open Settings from the notice or the menu row |
+| 9 | See the row after tracking is allowed |
 
 ## Not shown
 
 - The captures start from an update over 1.1.1. A later fresh install showed the same explanation and prompt after a city was chosen on the start screen ([evidence](../../evidence/tasks/issue-2945/README.md#fresh-install-and-direct-decline-2026-11-15)).
 - The consent message for European regulations, which comes before the prompt where it applies.
-- An ad. With tracking allowed the banner showed a third-party ad, which is left out.
+- An ad. With tracking allowed the banner showed a third-party ad, which is left out (page 9 is cropped above the banner).
+- The daily and air pages with the notice; they end the same way as the hourly page on page 6. The
+  [#2990 evidence](../../evidence/tasks/issue-2990/README.md) records all three.
 
 ## Reproduce
 

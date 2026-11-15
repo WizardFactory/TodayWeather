@@ -64,6 +64,7 @@ impl SummaryTransport for HttpS3Transport {
             .bucket
             .get_object(Some(&credentials), key)
             .sign(Duration::from_secs(30));
+        self.admit(crate::storage::allowance::Attempt::Read)?;
         let response = self
             .client
             .get(url)
@@ -99,6 +100,7 @@ impl SummaryTransport for HttpS3Transport {
             .headers_mut()
             .insert("content-type", "application/json");
         let url = action.sign(Duration::from_secs(30));
+        self.admit(crate::storage::allowance::Attempt::Put(payload.len()))?;
         let response = self
             .client
             .put(url)

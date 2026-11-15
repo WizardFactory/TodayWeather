@@ -1,0 +1,26 @@
+{
+  "task": "LogShadow2983",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/2983",
+  "scope": "LP-6 of #2977: the qualification host ships its candidate, guard and reader output through the log pipeline to the run's state bucket; unit-to-source map for the collector; guard writes its stop record first; disposable-VM check. PR to master; no deployment, AWS change or qualification run.",
+  "server2_paths": [
+    "server2/config/tasks/LogShadow2983.json",
+    "server2/deploy/logging/",
+    "server2/deploy/shadow/",
+    "server2/tools/shadow/paired_read.py",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tests/integration/test_paired_read.py"
+  ],
+  "outside": [
+    {"path": "intent/issue-2983.md", "category": "documentation", "reason": "Task intent for LP-6"},
+    {"path": "specs/issue-2983.md", "category": "documentation", "reason": "Task specification for LP-6"},
+    {"path": "plans/issue-2983.md", "category": "documentation", "reason": "Task plan and user scenarios for LP-6"},
+    {"path": "docs/operations/server2-logging.md", "category": "documentation", "reason": "Qualification host section"},
+    {"path": "docs/operations/server2-shadow-supervisor.md", "category": "documentation", "reason": "Host logs, bundle, install, retention stop and cost"},
+    {"path": "docs/architecture/diagrams/server2-shadow-supervisor.json", "category": "documentation", "reason": "Diagram: host log shipping"},
+    {"path": "docs/architecture/diagrams/server2-shadow-supervisor.html", "category": "documentation", "reason": "Regenerated diagram"},
+    {"path": "docs/architecture/diagrams/server2-logging.json", "category": "documentation", "reason": "Diagram cards: LP-6 sources"},
+    {"path": "docs/architecture/diagrams/server2-logging.html", "category": "documentation", "reason": "Regenerated diagram"},
+    {"path": "docs/evidence/tasks/issue-2983/verification.md", "category": "documentation", "reason": "Selected verification evidence for LP-6"},
+    {"path": "docs/evidence/tasks/issue-2983/linux-check.json", "category": "documentation", "reason": "Disposable-VM check report"}
+  ]
+}

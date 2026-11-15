@@ -163,6 +163,7 @@ impl CatalogTransport for HttpS3Transport {
                     .bucket
                     .get_object(Some(&credentials), key)
                     .sign(Duration::from_secs(30));
+                self.admit(crate::storage::allowance::Attempt::Read)?;
                 let response = self
                     .client
                     .get(url)
@@ -233,6 +234,7 @@ impl CatalogTransport for HttpS3Transport {
                     .headers_mut()
                     .insert("content-type", "application/json");
                 let url = action.sign(Duration::from_secs(30));
+                self.admit(crate::storage::allowance::Attempt::Put(body.len()))?;
                 let response = self
                     .client
                     .put(url)
@@ -281,6 +283,7 @@ impl CatalogTransport for HttpS3Transport {
                     action.with_continuation_token(token);
                 }
                 let url = action.sign(Duration::from_secs(30));
+                self.admit(crate::storage::allowance::Attempt::List)?;
                 let response = self
                     .client
                     .get(url)

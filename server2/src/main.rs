@@ -13,6 +13,8 @@ fn run() -> Result<(), Cause> {
     let env = DotEnv::load(Path::new(server2::dotenv::FILE)).map_err(|_| Cause::Dotenv)?;
     let var = move |name: &str| env.var(name);
     observability::init(&var);
+    server2::storage::allowance::install_process(&var).map_err(|_| Cause::Configuration)?;
+    server2::budget::qualification::install_process(&var).map_err(|_| Cause::Configuration)?;
     let config = Config::from_vars(&var).map_err(|error| match error.as_str() {
         "invalid PORT" => Cause::InvalidPort,
         "invalid OPENSHIFT_NODEJS_PORT" => Cause::InvalidOpenshiftPort,

@@ -1,9 +1,9 @@
 {
  "tool": "android/tools/parity-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/templates/tab-air.html",

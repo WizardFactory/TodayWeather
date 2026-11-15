@@ -25,11 +25,13 @@ let package = Package(
         // treat the bundle as the old layout and move its resource URL into that folder.
         .target(name: "TWResources", resources: [.copy("Client")]),
         .testTarget(name: "TWResourcesTests", dependencies: ["TWResources"]),
-        // The Cordova migration rules and readers, with a fixture of each storage layout.
+        // The Cordova migration rules and readers, with a fixture of each storage layout; the push requests against
+        // the Cordova iOS requests (Fixtures/push/push.json, written by ios/tools/push/generate.py).
         .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
-        // The weather requests, retries, timeouts, late responses and the refresh gate and timer on a virtual clock
-        // (IN-08). Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py.
+        // Push registration runs (PushSync: order, interrupted processes) and the HTTP transport (IN-04). The weather
+        // requests, retries, timeouts, late responses and the refresh gate and timer on a virtual clock (IN-08).
+        // Golden: the Cordova request timing in JavaScriptCore, written by ios/tools/weather/generate.py.
         .testTarget(name: "TWDataTests", dependencies: ["TWData", "TWStorage", "TWModel", "TWDomain"],
                     resources: [.copy("Golden")]),
         // Corpus: the golden corpus copied from android/ by ios/tools/import_corpus.py (`.copy` keeps the bytes and

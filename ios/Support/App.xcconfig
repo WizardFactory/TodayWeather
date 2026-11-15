@@ -1,0 +1,12 @@
+// Build settings of the app target. Private values (never in Git) come from the ignored ios/Private.xcconfig; see
+// README.md, "Private inputs". Without it the values stay empty and the app sends nothing to the legacy server.
+//
+// TW_SERVER_URL: the legacy server (Cordova clientConfig.serverUrl), written into Info.plist as TWServerURL. In an
+// xcconfig `//` starts a comment, so write the URL as https:/$()/host.
+TW_SERVER_URL =
+
+// TW_WEATHER_PHOTOS_URL: the weather photo feed of the photo theme (IN-07), written into Info.plist as
+// TWWeatherPhotosURL. Empty without it: the photo theme shows no photo.
+TW_WEATHER_PHOTOS_URL =
+
+#include? "../Private.xcconfig"
