@@ -7,9 +7,9 @@
    "dapi.kakao.com",
    "todayweather.wizardfactory.net"
   ],
-  "seconds": 319,
-  "server_binary_sha256": "1eb4381bd8b5251a2e791032b108f81755ad9bb3d705bc20db542045f69c16c8",
-  "source_commit": "5e5c009002fc65c97c81647e465c3b025ff13826"
+  "seconds": 367,
+  "server_binary_sha256": "28e34597baddecb50f30223ad7b0aae2cda29e6cd4656d238465bc6e95232c2c",
+  "source_commit": "62b88e41bbb4ab069787442cb4a4de9874e6c1b5"
  },
  "passed": true,
  "scenarios": [
@@ -22,7 +22,7 @@
     },
     {
      "check": "install-host answered one JSON object: started",
-     "detail": "b'{\"cleanup_until\":1795361363,\"collection_until\":1795354163,\"epoch\":1794749363,\"launch_sha256\":\"46b58fb368b1302a55c8dd59cea6d646f1eeaaf7875942c452c6b81afb35ac1b\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795366611,\"collection_until\":1795359411,\"epoch\":1794754611,\"launch_sha256\":\"207e01c395cbcfc33f76fc11a156f833ff103718b247b0133b60e8009d6162a9\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
@@ -62,12 +62,12 @@
     },
     {
      "check": "stop deadline at epoch + 168 h",
-     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-22 13:29:23 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-stop.service\n[Install]\nWantedBy=timers.target\n",
+     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-22 14:56:51 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-stop.service\n[Install]\nWantedBy=timers.target\n",
      "passed": true
     },
     {
      "check": "poweroff deadline at epoch + 170 h",
-     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-22 15:29:23 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-poweroff.service\n[Install]\nWantedBy=timers.target\n",
+     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-22 16:56:51 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-poweroff.service\n[Install]\nWantedBy=timers.target\n",
      "passed": true
     },
     {
@@ -92,7 +92,7 @@
     },
     {
      "check": "retention stop drained the collector within the SSH bound (150 s)",
-     "detail": "(0, 50.764354440999995)",
+     "detail": "(0, 50.240247805000024)",
      "passed": true
     },
     {
@@ -137,12 +137,12 @@
     },
     {
      "check": "candidate's failing record at the destination (LP6-AC2)",
-     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T13:29:27.500432892Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"provider_http\",\"trace_id\":\"4bd249948dd52ecd000000000000000a\",\"operation_id\":\"0000000000000012\",\"parent_operation_id\":\"000000000000000d\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":47,\"status\":401,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T13:29:27.500470852Z\",\"level\":\"warn\",\"event\":\"operation.action\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"4bd249948dd52ecd000000000000000a\",\"operation_id\":\"000000000000000d\",\"parent_operation_id\":\"000000000000000c\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"rotate_key\",\"outcome\":\"failed\",\"status\":401,\"attempt\":1}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T13:29:27.500477977Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"4bd249948dd52ecd000000000000000a\",\"operation_id\":\"000000000000000d\",\"parent_operation_id\":\"000000000000000c\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":51,\"source\":\"src/observability.rs\",\"line\":1371}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T13:29:27.500495436Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"lookup\",\"trace_id\":\"4bd249948dd52ecd000000000000000a\",\"operation_id\":\"000000000000000c\",\"parent_operation_id\":\"000000000000000b\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":51,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T13:29:27.500541812Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"http\",\"stage\":\"request\",\"trace_id\":\"4bd249948dd52ecd000000000000000a\",\"operation_id\":\"000000000",
+     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T14:57:04.167893445Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"provider_http\",\"trace_id\":\"8f4290c358aab12e000000000000000a\",\"operation_id\":\"0000000000000012\",\"parent_operation_id\":\"000000000000000d\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":45,\"status\":401,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T14:57:04.167951009Z\",\"level\":\"warn\",\"event\":\"operation.action\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"8f4290c358aab12e000000000000000a\",\"operation_id\":\"000000000000000d\",\"parent_operation_id\":\"000000000000000c\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"rotate_key\",\"outcome\":\"failed\",\"status\":401,\"attempt\":1}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T14:57:04.167956427Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"8f4290c358aab12e000000000000000a\",\"operation_id\":\"000000000000000d\",\"parent_operation_id\":\"000000000000000c\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":50,\"source\":\"src/observability.rs\",\"line\":1371}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T14:57:04.167990065Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"lookup\",\"trace_id\":\"8f4290c358aab12e000000000000000a\",\"operation_id\":\"000000000000000c\",\"parent_operation_id\":\"000000000000000b\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":50,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T14:57:04.168056924Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"http\",\"stage\":\"request\",\"trace_id\":\"8f4290c358aab12e000000000000000a\",\"operation_id\":\"000000000",
      "passed": true
     },
     {
      "check": "guard's stop record at the destination (LP6-AC2)",
-     "detail": "[{'diagnostics': {'auth_failures': 2, 'first_rejection': {'cause': 'auth', 'component': 'geocode', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 401}, 'local_paid_exhaustions': 0, 'observed_at': 1794749377, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'quota_failures': 0}, 'last_cpu': 354, 'last_seen': 1794749377, 'last_tx': 1544653, 'manifest_sha256': '76159759291525d7ff4a6feb2163ab6eb07ba6a0999786213aa9011bbadab4f1', 'misses': 0, 'schema': 4, 'stop': 'provider_auth_or_quota'}]",
+     "detail": "[{'diagnostics': {'auth_failures': 2, 'first_rejection': {'cause': 'auth', 'component': 'geocode', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 401}, 'local_paid_exhaustions': 0, 'observed_at': 1794754633, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'quota_failures': 0}, 'last_cpu': 563, 'last_seen': 1794754633, 'last_tx': 1511853, 'manifest_sha256': '27248f92524a9f679b2ed06517dca4526f1885c86da8640ef720ce945dd63cb0', 'misses': 0, 'schema': 4, 'stop': 'provider_auth_or_quota'}]",
      "passed": true
     },
     {
@@ -165,7 +165,7 @@
       "build_revision": "unknown",
       "cause": "auth",
       "component": "geocode",
-      "duration_ms": 47,
+      "duration_ms": 45,
       "event": "operation.finished",
       "level": "warn",
       "line": 1465,
@@ -178,8 +178,8 @@
       "source": "src/observability.rs",
       "stage": "provider_http",
       "status": 401,
-      "timestamp": "2026-11-15T13:29:27.500432892Z",
-      "trace_id": "4bd249948dd52ecd000000000000000a"
+      "timestamp": "2026-11-15T14:57:04.167893445Z",
+      "trace_id": "8f4290c358aab12e000000000000000a"
      }
     ],
     "guard_diagnostics": {
@@ -193,7 +193,7 @@
       "status": 401
      },
      "local_paid_exhaustions": 0,
-     "observed_at": 1794749377,
+     "observed_at": 1794754633,
      "paid_units": {
       "google": {
        "initial": 100,
@@ -227,7 +227,7 @@
         "status": 401
        },
        "local_paid_exhaustions": 0,
-       "observed_at": 1794749377,
+       "observed_at": 1794754633,
        "paid_units": {
         "google": {
          "initial": 100,
@@ -248,10 +248,10 @@
        },
        "quota_failures": 0
       },
-      "last_cpu": 354,
-      "last_seen": 1794749377,
-      "last_tx": 1544653,
-      "manifest_sha256": "76159759291525d7ff4a6feb2163ab6eb07ba6a0999786213aa9011bbadab4f1",
+      "last_cpu": 563,
+      "last_seen": 1794754633,
+      "last_tx": 1511853,
+      "manifest_sha256": "27248f92524a9f679b2ed06517dca4526f1885c86da8640ef720ce945dd63cb0",
       "misses": 0,
       "schema": 4,
       "stop": "provider_auth_or_quota"
@@ -259,7 +259,7 @@
     ],
     "guard_stop": "provider_auth_or_quota",
     "install_output_bytes": 191,
-    "install_seconds": 2.8,
+    "install_seconds": 11.2,
     "objects": 4,
     "reader_record": [
      {
@@ -282,7 +282,7 @@
      "reader": 1,
      "server": 6
     },
-    "retention_stop_seconds": 50.8
+    "retention_stop_seconds": 50.2
    }
   },
   {
@@ -294,22 +294,22 @@
     },
     {
      "check": "install with the destination unreachable: started",
-     "detail": "b'{\"cleanup_until\":1795361431,\"collection_until\":1795354231,\"epoch\":1794749431,\"launch_sha256\":\"66a8bd5c94507cb492e56ef58e695913254ed4ec52ab0e53a0a198a5478d995a\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795366687,\"collection_until\":1795359487,\"epoch\":1794754687,\"launch_sha256\":\"2a6fff9e8680fcec7a7f6eddf55636845a3936870fe80d26f74dbe461b8035b3\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
      "check": "no stop before the change",
-     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794749444, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'quota_failures': 0}, 'last_cpu': 359, 'last_seen': 1794749444, 'last_tx': 1546849, 'manifest_sha256': 'ad52970ba8a0ae31025e64f6d63a5e8ca116a86c0322828d59e999ad2e700e16', 'misses': 0, 'schema': 4, 'stop': None}",
+     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794754705, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'quota_failures': 0}, 'last_cpu': 573, 'last_seen': 1794754705, 'last_tx': 1513791, 'manifest_sha256': 'dc1c0a57568a1fadb5a170a7bbe6803c44e47a2daab0587e8c21eab9b9954d5a', 'misses': 0, 'schema': 4, 'stop': None}",
      "passed": true
     },
     {
      "check": "a changed .env stops acquisition within one sample and the unit stop (25 s)",
-     "detail": "('binding_config_sha256', 5.59331849900002)",
+     "detail": "('binding_config_sha256', 5.577263303999985)",
      "passed": true
     },
     {
      "check": "retention stop after recovery drained within 150 s",
-     "detail": "(0, 50.21648532400002)",
+     "detail": "(0, 50.71965592599997)",
      "passed": true
     },
     {
@@ -355,15 +355,15 @@
    "observations": {
     "guard_stop": "binding_config_sha256",
     "install_output_bytes": 191,
-    "install_seconds": 2.7,
+    "install_seconds": 7.0,
     "objects": 4,
     "records_per_source": {
      "collector": 1,
      "guard": 1,
      "reader": 1,
-     "server": 4
+     "server": 5
     },
-    "retention_stop_seconds": 50.2,
+    "retention_stop_seconds": 50.7,
     "stop_seconds": 5.6
    }
   },
@@ -376,7 +376,7 @@
     },
     {
      "check": "install: started",
-     "detail": "b'{\"cleanup_until\":1795361508,\"collection_until\":1795354308,\"epoch\":1794749508,\"launch_sha256\":\"3d59547f690909cca949f5b1f54415ba849e9e5a6e4aaf9a62d0cc21e1ddf2ec\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795366772,\"collection_until\":1795359572,\"epoch\":1794754772,\"launch_sha256\":\"43eb9e7f595fed2de5ab6e61fd6f977127bd9787c014e4505170f25d511d20dd\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
@@ -386,7 +386,7 @@
     },
     {
      "check": "the watchdog killed the frozen guard and acquisition stopped (within 30 s + 10 s + one sample)",
-     "detail": "30.124950780000006",
+     "detail": "30.497051204",
      "passed": true
     },
     {
@@ -396,7 +396,7 @@
     },
     {
      "check": "restarted collector drained within 150 s",
-     "detail": "(0, 51.72119436700001)",
+     "detail": "(0, 50.98694118700007)",
      "passed": true
     },
     {
@@ -431,12 +431,12 @@
    "id": "frozen-guard",
    "observations": {
     "install_output_bytes": 191,
-    "install_seconds": 2.5,
-    "objects": 5,
+    "install_seconds": 11.7,
+    "objects": 7,
     "records_per_source": {
      "collector": 3,
      "reader": 1,
-     "server": 16
+     "server": 23
     },
     "states_before_freeze": {
      "candidate": "active",
@@ -444,7 +444,7 @@
      "logs": "inactive",
      "reader": "active"
     },
-    "watchdog_stop_seconds": 30.1
+    "watchdog_stop_seconds": 30.5
    }
   },
   {
@@ -456,7 +456,7 @@
     },
     {
      "check": "install with a failing collector: started",
-     "detail": "b'{\"cleanup_until\":1795361646,\"collection_until\":1795354446,\"epoch\":1794749646,\"launch_sha256\":\"fb0a3a36c9d43cf8ea24597bdb42884d2d703c8b93ea84b658b128c9e87d8823\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795366924,\"collection_until\":1795359724,\"epoch\":1794754924,\"launch_sha256\":\"0fd0e3c62f703beb4f8fbf9f4444f58e6341d2d8640cb8782571d5c6dd393934\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
@@ -471,12 +471,12 @@
     },
     {
      "check": "no stop decision",
-     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794749660, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'quota_failures': 0}, 'last_cpu': 370, 'last_seen': 1794749660, 'last_tx': 1550859, 'manifest_sha256': '58b2dcde42eb058b493716bbb52e916f85e7c1afec19def1e7f630795b59e822', 'misses': 0, 'schema': 4, 'stop': None}",
+     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794754950, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'quota_failures': 0}, 'last_cpu': 611, 'last_seen': 1794754950, 'last_tx': 1518103, 'manifest_sha256': '13fd80a209f59855529e665d8adf0956da833d915acfab9ead0abf432f42355a', 'misses': 0, 'schema': 4, 'stop': None}",
      "passed": true
     },
     {
      "check": "retention stop completes with the collector failed",
-     "detail": "(0, 0.10663020200001938, {'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'})",
+     "detail": "(0, 0.18310419800002364, {'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'})",
      "passed": true
     }
    ],
@@ -491,7 +491,7 @@
      "SubState": "dead"
     },
     "install_output_bytes": 191,
-    "install_seconds": 2.9
+    "install_seconds": 14.2
    }
   },
   {
