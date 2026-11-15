@@ -73,8 +73,7 @@ struct WeatherScreenshotTests {
 
     /// A block as the capture cut it: the header block with the shell's header bar over it (the bar with the place's
     /// title and the page's buttons, 5 pt of safe area above its 44 pt), a chart at its opening position.
-    static func blockView(_ block: WeatherBlock, content: WeatherPageContent, page: String) -> AnyView {
-        let theme = Theme.light
+    static func blockView(_ block: WeatherBlock, content: WeatherPageContent, page: String, theme: Theme = .light) -> AnyView {
         let tab: ShellTab = content.type == .short ? .forecast : .dailyforecast
         switch block {
         case .header:

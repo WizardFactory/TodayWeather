@@ -42,6 +42,8 @@ final class AppLaunch {
     @ObservationIgnored let repository: WeatherRepository
     /// The weather pages S03 and S04 (IN-08), created with the shell.
     private(set) var weather: WeatherScreens?
+    /// The settings pages S07 and S08 and the menu's hand-offs (IN-12), created with the shell.
+    private(set) var settings: SettingsScreens?
     /// The shell, created with the state; nil until the migration has finished.
     private(set) var shell: ShellModel?
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "launch")
@@ -59,13 +61,16 @@ final class AppLaunch {
         var version: String
         /// The legacy server (Cordova `clientConfig.serverUrl`); nil without the private input.
         var serverURL: String? = nil
+        /// The feedback address (Cordova `clientConfig.mailTo`, Info.plist `TWMailTo`); empty without the private input.
+        var mailTo: String = ""
 
         static var system: Environment {
             let info = Bundle.main.infoDictionary ?? [:]
             let photos = (info["TWWeatherPhotosURL"] as? String).flatMap { $0.isEmpty ? nil : URL(string: $0) }
             let server = (info["TWServerURL"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             return Environment(preferredLanguages: Locale.preferredLanguages, photosURL: photos,
-                               version: info["CFBundleShortVersionString"] as? String ?? "", serverURL: server)
+                               version: info["CFBundleShortVersionString"] as? String ?? "", serverURL: server,
+                               mailTo: info["TWMailTo"] as? String ?? "")
         }
     }
 
@@ -101,6 +106,11 @@ final class AppLaunch {
                                      photos: { [weak self] in self?.loadedPhotos }, loadPhotos: { [weak self] in self?.loadPhotos() })
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
+        // The push list is posted again after a unit change by IN-04's registration; until it is there, nothing is sent.
+        let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
+                                deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
+        settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: AppPushUnits()),
+                                   opener: SystemURLOpener(), mail: mail)
         shell.onEntry = { [weak weather] event in weather?.handle(event) }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
@@ -173,5 +183,13 @@ struct ShellLocale: Equatable {
         catalog = AppLanguage.catalog(webLanguage)
         region = AppLanguage.region(AppLanguage.webLanguages(preferredLanguages))
         acceptLanguage = AppLanguage.acceptLanguage(preferredLanguages)
+    }
+}
+
+/// The push re-post of a unit change (IN-12) for the app's push service (IN-04), which `AppStartup` creates after the
+/// shell; nothing is sent while it does not exist (no server URL, or the `Device-Id` not read yet).
+struct AppPushUnits: PushUnitsUpdating {
+    func updateUnits(_ state: AppState) {
+        MainActor.assumeIsolated { AppStartup.shared.push }?.updateUnits(state)
     }
 }
