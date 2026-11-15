@@ -161,7 +161,7 @@
    "step": "about back",
    "page": "#/tab/forecast",
    "popups": 0,
-   "menu": false,
+   "menu": true,
    "choice": false,
    "stored": "false",
    "opened": [
@@ -183,7 +183,7 @@
    "popupTexts": [],
    "early": {
     "popups": 0,
-    "menu": false
+    "menu": true
    }
   }
  ]

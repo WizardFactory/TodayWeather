@@ -1,7 +1,7 @@
 {
  "tool": "android/tools/privacy-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "e90ac9f2b19522233beb33af0026923417798338b887314f5714ef79f1750553",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
   "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
@@ -23,19 +23,19 @@
    },
    {
     "file": "client/www/js/service.monetization.js",
-    "apkSha256": "239fa7b10b109c726b8ea1410376fa0a8e5b99d1ea728dafcc48588bb4a44b7d",
+    "apkSha256": "f0442f33135cd9405c64b5de103fb213976a5934e4678fad85372f17f837e103",
     "tracked": true,
-    "clientSha256": "239fa7b10b109c726b8ea1410376fa0a8e5b99d1ea728dafcc48588bb4a44b7d",
+    "clientSha256": "f0442f33135cd9405c64b5de103fb213976a5934e4678fad85372f17f837e103",
     "matchesClient": true,
-    "lastCommit": "b1a8a01a16d02582e1ab1c88cbd035d7b345292d"
+    "lastCommit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124"
    },
    {
     "file": "client/www/js/service.admobemi.js",
-    "apkSha256": "7f516ea8707661b42ba22f35791761ef0df917d83e29eae1c83c9fdf9a178a2e",
+    "apkSha256": "0f670ba5bf25bec6ec2c5bd962845fd8ea53d76311d9123b1d7f6d966cc7538f",
     "tracked": true,
-    "clientSha256": "7f516ea8707661b42ba22f35791761ef0df917d83e29eae1c83c9fdf9a178a2e",
+    "clientSha256": "0f670ba5bf25bec6ec2c5bd962845fd8ea53d76311d9123b1d7f6d966cc7538f",
     "matchesClient": true,
-    "lastCommit": "7543f541a75d091095bf60dc9c01aa7df5f6a554"
+    "lastCommit": "f7cce5338ebbbf8d33978fd72ca1b5c1fc72c124"
    },
    {
     "file": "client/www/js/service.twads.js",
@@ -81,9 +81,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -98,7 +96,7 @@
   "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
   "sdk": "36"
  },
- "display": "WebView 384x762 dp at density 2 (Override size: 768x1620, wm density 320)",
+ "display": "WebView 384x762 dp at density 2 (Override size: 768x1664, wm density 320)",
  "language": "per-app locale ko-KR, then en-US",
  "images": "cut from the screen (screencap): the whole WebView with the analytics popup over the menu, and with the menu after the opt-in",
  "server": "a stand-in inside the WebView: corpus fixture kma-seoul for the weather; the emulator is offline",
@@ -110,35 +108,35 @@
   },
   {
    "file": "en-US/analytics-popup.json",
-   "sha256": "3c4d7303a1ba65b6b0b5ee39d36700a2cfc6fce9c23c75839c1409aab8874224"
+   "sha256": "778ea221a83b75058db9b6f7bbb26e987694bd912dbdb00b306efc741fa2381e"
   },
   {
    "file": "en-US/analytics-popup.png",
-   "sha256": "026704d4bc5ac05323382eb4150a950994bfb84005f4d0952afb22707a942e36"
+   "sha256": "12e99218bbfded8e6e735cffbb9b8c7913d7f760e3260fb9769a586e4c0d9fcc"
   },
   {
    "file": "en-US/menu-allowed.json",
-   "sha256": "ac49bcb4aa8cb1696502e34c9293b9d1d4794edf2ddfc59bdcdb3894e5e5de0e"
+   "sha256": "76ea03c685b4ac49fec9f9a393c9847d9f35cedf6c29ea5b2084d7fcbb06b75a"
   },
   {
    "file": "en-US/menu-allowed.png",
-   "sha256": "e8b606498c87703a95ed7d6b5082506a4a2b8814dcea322ef94a5f5f5fe548f1"
+   "sha256": "263a41965998aafc0f017fe7a4d6edda326cba8b0c3938b8e502855f432f2b5a"
   },
   {
    "file": "en-US/menu-off.json",
-   "sha256": "163dd6919a28453eece557dfabbd03fc8dcc2266df16f853b7c39eb555e0d38c"
+   "sha256": "596a4695416840be7f3d7cb1637b85136605bbb627e060ae53e2fc708e6c78a3"
   },
   {
    "file": "en-US/menu-off.png",
-   "sha256": "57c1faa400e4e063e3b8bd6080b02854fbeece54c519ea7216a11c7c6037cf0d"
+   "sha256": "bf52da83c479d8bbe4fbac4bb7d7d99c07c37d46e8ee2681f12c51aceb8714db"
   },
   {
    "file": "ko-KR/actions.json",
-   "sha256": "1050410b11a6f0b18ad07061e1eae7a8f5634dbcbac736ec2c94fe1bbcbb96c8"
+   "sha256": "254c7af5b00fbf476695cc35e2bf568aa7c1aaf8102939aa3cb6b961eb86a70e"
   },
   {
    "file": "ko-KR/analytics-popup.json",
-   "sha256": "b2dbce4d30cfe159151a1a274bbb64ee44071664d038fb776479ade96b8672c0"
+   "sha256": "4bc5817a0b0f69a9d1c916354056e9859319c03223b6e8e82346d7776694220c"
   },
   {
    "file": "ko-KR/analytics-popup.png",
@@ -146,7 +144,7 @@
   },
   {
    "file": "ko-KR/menu-allowed.json",
-   "sha256": "da67e77122291216ab4e515e8fb97b678f690722eef061bb956dc2213b84c71a"
+   "sha256": "f9631df1959e2217f544138e650f84200b3c3e520d7069e2c337cc30deb4d4a3"
   },
   {
    "file": "ko-KR/menu-allowed.png",
@@ -154,7 +152,7 @@
   },
   {
    "file": "ko-KR/menu-off.json",
-   "sha256": "f405e3ab9f09b418b97bfff1592c0190179f83144333bc2b76970d314eb1b937"
+   "sha256": "02c696af814a67be5248ee76cdfc98618243d4bd9fe5e754fc828737b748c1bc"
   },
   {
    "file": "ko-KR/menu-off.png",

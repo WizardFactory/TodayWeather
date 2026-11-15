@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK start",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -73,9 +73,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    }
   ]
  },
@@ -102,7 +100,7 @@
   },
   {
    "file": "en-US/access.png",
-   "sha256": "e4d4a2f728670a7a6d4175439e905db7b0bdc922adb8e77d14e5b295cc508986"
+   "sha256": "71bcb20f7475be555f59fc1466cc9ae16545f483cb3d46ac71eee082f728f7a0"
   },
   {
    "file": "en-US/start.json",
@@ -110,7 +108,7 @@
   },
   {
    "file": "en-US/start.png",
-   "sha256": "6e39e91d9f321b815c991ca1cc69c36c5d0af66b0981f4b133d1194c96827983"
+   "sha256": "6a4df6b2460cc02da6b8fb0b05adf00ef687f2a62d1c8d0d5b5f89513862bbc5"
   },
   {
    "file": "en-US/viewport.json",
@@ -122,7 +120,7 @@
   },
   {
    "file": "ko-KR/access.png",
-   "sha256": "5c08be3381d83cad41fc773271ab12a36a31005b7fbb4c9c122f3e97933823a0"
+   "sha256": "b55ecf806602548017323530f0e9642287e08efa551a533a744bba322ab65dc0"
   },
   {
    "file": "ko-KR/start.json",
@@ -130,7 +128,7 @@
   },
   {
    "file": "ko-KR/start.png",
-   "sha256": "992740c84faf3605c70607c728b85798692f0704b5332623eaf15c99dc9b0c9e"
+   "sha256": "6103c103caae4fba849b30dbda992885e646d88f67ac59bd2da86f3366563485"
   },
   {
    "file": "ko-KR/viewport.json",

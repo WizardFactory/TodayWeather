@@ -1,0 +1,7 @@
+2026-11-13 18:31:40 {"component":"admob","operation":"request_policy","att_status":"denied","personalized":false,"result":"applied"}
+2026-11-13 18:31:40 Set options of emi AdMob
+2026-11-13 18:31:40 {"component":"admob","operation":"banner_load","cause":"load_failed","error_code":1,"result":"failed"}
+2026-11-13 18:31:40 Fail to create banner view
+2026-11-13 18:32:14 {"component":"admob","operation":"banner_load","cause":"load_failed","error_code":1,"result":"failed"}
+2026-11-13 18:32:45 {"component":"admob","operation":"banner_load","cause":"load_failed","error_code":1,"result":"failed"}
+2026-11-13 18:33:15 {"component":"admob","operation":"banner_load","cause":"load_failed","error_code":1,"result":"failed"}

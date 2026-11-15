@@ -140,5 +140,36 @@
     "legacy_registration_migration": true,
     "retirement_contract": "AK later instruction: no legacy dependency or precollection after go-live; S20 must verify request-time acquisition and partial missing-data/error behavior"
   },
-  "scale_out": "plan only: independent caches, S3 CAS/reservations/fetch/capture ownership and bounded warm-up; no shared cache"
+  "scale_out": "plan only: independent caches, S3 CAS/reservations/fetch/capture ownership and bounded warm-up; no shared cache",
+  "log_pipeline": {
+    "status": "defined, not provisioned (#2982); the owner applies the rendered templates",
+    "provisioned": false,
+    "renderer": "server2/deploy/logging/aws_templates.py",
+    "role_policy": {
+      "name": "tw-server2-runtime-logs",
+      "type": "inline",
+      "role": "tw-server2-runtime",
+      "template": "server2/deploy/logging/aws/role-policy.template.json",
+      "grants": [
+        "s3:PutObject on <bucket>/<prefix>/*",
+        "logs:CreateLogStream, logs:PutLogEvents on the group's streams",
+        "logs:DescribeLogStreams on the group"
+      ]
+    },
+    "bucket_lifecycle": {
+      "template": "server2/deploy/logging/aws/bucket-lifecycle.template.json",
+      "prefix": "SERVER2_LOG_S3_PREFIX",
+      "current_version_days": 90,
+      "noncurrent_version_days": 1,
+      "expired_delete_markers": "removed",
+      "incomplete_multipart_days": 1
+    },
+    "log_group": {
+      "template": "server2/deploy/logging/aws/log-group.template.json",
+      "name": "SERVER2_LOG_CLOUDWATCH_GROUP",
+      "class": "STANDARD",
+      "retention_days": 30
+    },
+    "retention_decision": "AK 2026-11-14: CloudWatch Logs 30 days, S3 log objects 90 days"
+  }
 }

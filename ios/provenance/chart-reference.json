@@ -1,0 +1,221 @@
+{
+ "tool": "ios/tools/import_chart_reference.py",
+ "generator": "android/tools/chart-reference/capture.sh",
+ "license": "Same repository and license as android/ and client/ (TodayWeather, WizardFactory)",
+ "skipped": {
+  "rule": "PNG captures of the Android WebView and the Android screenshot tolerances are not copied",
+  "files": [
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul/daily-end.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul/daily-opening.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul/daily-start.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul/hourly-end.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul/hourly-opening.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul/hourly-start.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul/daily-end.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul/daily-opening.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul/daily-start.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul/hourly-end.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul/hourly-opening.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul/hourly-start.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul/daily-end.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul/daily-opening.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul/daily-start.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul/hourly-end.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul/hourly-opening.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul/hourly-start.png",
+    "reason": "Android WebView capture (PNG)"
+   },
+   {
+    "source": "android/core-domain/src/test/resources/chart-reference/tolerances.json",
+    "reason": "screenshot tolerances of the Android renderer (Robolectric), not used on iOS"
+   }
+  ]
+ },
+ "files": [
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/360x780/capture.json",
+   "commit": "b2a1d14b23148594bca9d796c6ee51fd54d3ca74",
+   "source_sha256": "399ef0e183788854dd2ef35ec0583325dbd12087d86f42f1e7348547d07af257",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/360x780/capture.json",
+   "output_sha256": "399ef0e183788854dd2ef35ec0583325dbd12087d86f42f1e7348547d07af257"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/360x780/kma-seoul.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "e2c4f5a6f04a2bbf04724c6369a7e19f1d2ae5ffedcd858b9e4818956b311cda",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/360x780/kma-seoul.json",
+   "output_sha256": "e2c4f5a6f04a2bbf04724c6369a7e19f1d2ae5ffedcd858b9e4818956b311cda"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/360x780/vc-london.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "863fee0d189c4f64de8787449c26b8aa12b20d5a7580eaf36a3a6ec4572ae7c4",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/360x780/vc-london.json",
+   "output_sha256": "863fee0d189c4f64de8787449c26b8aa12b20d5a7580eaf36a3a6ec4572ae7c4"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/capture.json",
+   "commit": "b2a1d14b23148594bca9d796c6ee51fd54d3ca74",
+   "source_sha256": "cd4631a61262143433643af4b5f53892d8b1e2f4703f9588c3d0477ba6622b4c",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/capture.json",
+   "output_sha256": "cd4631a61262143433643af4b5f53892d8b1e2f4703f9588c3d0477ba6622b4c"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-current-index-first.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "b48cc90f969d81faeef56e7f743567341e7dfd1c1c971b063d80dd5a111c384b",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-current-index-first.json",
+   "output_sha256": "b48cc90f969d81faeef56e7f743567341e7dfd1c1c971b063d80dd5a111c384b"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-jeju.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "b63eb86c5f3988ccdae0c77a76fd50312022f92f056e97fb6400855e24683927",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-jeju.json",
+   "output_sha256": "b63eb86c5f3988ccdae0c77a76fd50312022f92f056e97fb6400855e24683927"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-midnight-today-first-day.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "2ff3129ab3160fa50a2a8f7a22f5629d3b9519419f4fd038a78ba46a1e35414f",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-midnight-today-first-day.json",
+   "output_sha256": "2ff3129ab3160fa50a2a8f7a22f5629d3b9519419f4fd038a78ba46a1e35414f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-rain-everywhere.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "2434782a5145cbe559815fc0b331e187d7422b273c85271c99f8a9856152803a",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-rain-everywhere.json",
+   "output_sha256": "2434782a5145cbe559815fc0b331e187d7422b273c85271c99f8a9856152803a"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul-fahrenheit.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "697f22742582f820b3cb768b7dc791da549a68c3bee8af544e715322be67a3c1",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-seoul-fahrenheit.json",
+   "output_sha256": "697f22742582f820b3cb768b7dc791da549a68c3bee8af544e715322be67a3c1"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul-sharp.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "a6442377ff3545791d1178f766425af9a45a522efbc067572bfee7dd3846ce4c",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-seoul-sharp.json",
+   "output_sha256": "a6442377ff3545791d1178f766425af9a45a522efbc067572bfee7dd3846ce4c"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/kma-seoul.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "2dd95b9bd6f5a56a3809d1a8a63c624fa7b6cdf3a98745260ccfc42635268fe8",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/kma-seoul.json",
+   "output_sha256": "2dd95b9bd6f5a56a3809d1a8a63c624fa7b6cdf3a98745260ccfc42635268fe8"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/vc-london.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "41b2a40054ea3289bc042a12a1d8921a4e9030a4b4b50c493ebce5ab186524f9",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/vc-london.json",
+   "output_sha256": "41b2a40054ea3289bc042a12a1d8921a4e9030a4b4b50c493ebce5ab186524f9"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/vc-newyork.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "b42bd55deb85231292ebb80c4ecccca3e7bb30755a50d47fe088ad3307a2e469",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/vc-newyork.json",
+   "output_sha256": "b42bd55deb85231292ebb80c4ecccca3e7bb30755a50d47fe088ad3307a2e469"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/vc-sydney.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "a60711d86a7cb94ec6aa39d0d83ba97e7558cc9a89efba419087079d5f0cfdb5",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/vc-sydney.json",
+   "output_sha256": "a60711d86a7cb94ec6aa39d0d83ba97e7558cc9a89efba419087079d5f0cfdb5"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/384x832/vc-tokyo.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "d0485a3101666777aec0520aaab19a8c7384a65a38c060f7066a33bff9ca07aa",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/384x832/vc-tokyo.json",
+   "output_sha256": "d0485a3101666777aec0520aaab19a8c7384a65a38c060f7066a33bff9ca07aa"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/412x892/capture.json",
+   "commit": "b2a1d14b23148594bca9d796c6ee51fd54d3ca74",
+   "source_sha256": "3c84fce0b6ba1425694553e115e6c43d49c92ef6b8a151e54aeb91f40eee0c2f",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/412x892/capture.json",
+   "output_sha256": "3c84fce0b6ba1425694553e115e6c43d49c92ef6b8a151e54aeb91f40eee0c2f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/412x892/kma-seoul.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "f48b962467ce5e317f5ee4a20f730ae7e904faf4ccd2000244549db62021931f",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/412x892/kma-seoul.json",
+   "output_sha256": "f48b962467ce5e317f5ee4a20f730ae7e904faf4ccd2000244549db62021931f"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/412x892/vc-london.json",
+   "commit": "b40f8a6b51ce24f274019e6cabe1130223469cb7",
+   "source_sha256": "2568a9df7a7454f45575a6b8d1dc97197573f89f4a497c91fa0044a7b386f1b1",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/412x892/vc-london.json",
+   "output_sha256": "2568a9df7a7454f45575a6b8d1dc97197573f89f4a497c91fa0044a7b386f1b1"
+  },
+  {
+   "source": "android/core-domain/src/test/resources/chart-reference/provenance.json",
+   "commit": "b2a1d14b23148594bca9d796c6ee51fd54d3ca74",
+   "source_sha256": "150e442f9b0ee48932db9988a367f14d4c24704329ad8629cb3cc7763ba531b7",
+   "output": "Core/Tests/TWDomainTests/ChartReference/android/provenance.json",
+   "output_sha256": "150e442f9b0ee48932db9988a367f14d4c24704329ad8629cb3cc7763ba531b7"
+  }
+ ]
+}

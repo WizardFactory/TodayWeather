@@ -1,0 +1,2 @@
+2026-11-13 18:24:17 Set options of emi AdMob
+2026-11-13 18:24:18 create banner view

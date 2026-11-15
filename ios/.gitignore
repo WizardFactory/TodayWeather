@@ -1,0 +1,13 @@
+# Build output
+build/
+DerivedData/
+Core/.build/
+Core/.swiftpm/
+*.xcresult
+# Per-user Xcode state
+xcuserdata/
+*.xcuserstate
+TodayWeather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/
+# Private inputs (never in Git): see README.md, "Private inputs"
+Private.xcconfig
+GoogleService-Info.plist

@@ -21,6 +21,22 @@ angular.module('service.monetization', [])
                 run_id: operation === 'remote_config' ? configRun : operation === 'collection' ? 'consent-' + collectionRevision : undefined,
                 action: result === 'applied' ? 'use_validated_policy' : 'retain_current_state', result: result});
         }
+        // iOS App Tracking Transparency status for the #2945 report: one fixed word as a user property, so that Firebase's
+        // automatic ad_impression rows carry it. Like every event, it is sent only after the Analytics choice.
+        var trackingStatuses = ['authorized', 'denied', 'restricted', 'not_determined', 'unavailable'];
+        var trackingStatus, sentTrackingStatus;
+        function applyTrackingStatus() {
+            var sdk = $window.FirebasexAnalytics;
+            if (!enabled || !trackingStatus || trackingStatus === sentTrackingStatus || !sdk || !sdk.setUserProperty) { return; }
+            sentTrackingStatus = trackingStatus;
+            try { sdk.setUserProperty('att_status', trackingStatus, function() {}, function() { log('analytics', 'bridge_error'); }); }
+            catch (e) { log('analytics', 'bridge_error'); }
+        }
+        obj.setAdTrackingStatus = function(status) {
+            if (trackingStatuses.indexOf(status) === -1) { return; }
+            trackingStatus = status;
+            applyTrackingStatus();
+        };
         function emit(name, params) {
             var sdk = $window.FirebasexAnalytics;
             if (!enabled || !sdk) { return false; }
@@ -121,6 +137,7 @@ angular.module('service.monetization', [])
                     call('setAnalyticsCollectionEnabled', true, function() {
                         if (!current()) { finish(false); return; }
                         enabled = true; log('collection', 'enabled');
+                        applyTrackingStatus();
                         if (pendingScreen) { obj.screen(pendingScreen); }
                         finish(true);
                     }, failed);
@@ -128,7 +145,7 @@ angular.module('service.monetization', [])
             }, failed);
         }
         function applyCollection(value, callback) {
-            enabled = false; lastScreen = undefined;
+            enabled = false; lastScreen = undefined; sentTrackingStatus = undefined;
             nextCollection = {value: value, callback: callback, revision: ++collectionRevision};
             drainCollection();
         }

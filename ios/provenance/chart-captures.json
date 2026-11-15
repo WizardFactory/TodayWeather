@@ -1,0 +1,402 @@
+{
+ "tool": "ios/tools/chart-reference/capture.py",
+ "build": {
+  "recipe": "ios/tools/chart-reference/build-cordova.sh",
+  "commit": "f2245b6834a94b5a9a2f356032799ddae1bfe7d3",
+  "client_version": "1.1.1",
+  "cordova_ios": "8.1.1",
+  "xcode": "Xcode 27.2",
+  "node": "v24.19.0",
+  "server": "http://127.0.0.1:18453",
+  "built_at": "2026-11-13T07:15:09Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+ },
+ "data": {
+  "fixtures": "ios/Core/Tests/TWDomainTests/Corpus/conversion (copy of the AN-02 golden corpus)",
+  "served": "the fixture's response for GET /weather/v000903/coord/...; kma-seoul-sharp is kma-seoul with current.liveTime \"2400\"",
+  "language": "ko-KR",
+  "theme": "light"
+ },
+ "chartSources": [
+  {
+   "file": "client/www/js/app.js",
+   "appSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "tracked": true,
+   "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/controller.forecastctrl.js",
+   "appSha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8",
+   "tracked": true,
+   "clientSha256": "15116a38393d91835d506a1de7a823be8bbdffea7b2dcb258c112d17575536d8",
+   "matchesClient": true,
+   "lastCommit": "72536d7d802e67b08fd748c25dd2d1e9436aa2da"
+  },
+  {
+   "file": "client/www/js/controller.tabctrl.js",
+   "appSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "tracked": true,
+   "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/service.weatherutil.js",
+   "appSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "tracked": true,
+   "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/service.weatherinfo.js",
+   "appSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "tracked": true,
+   "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/templates/tab-forecast.html",
+   "appSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
+   "tracked": true,
+   "clientSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
+   "matchesClient": true,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  },
+  {
+   "file": "client/www/templates/tab-dailyforecast.html",
+   "appSha256": "02ce9d47c24b740d02e17e13d0c2a0d7d227ff6b1ca44c3c5bf7cd3a6ff16f6a",
+   "tracked": true,
+   "clientSha256": "02ce9d47c24b740d02e17e13d0c2a0d7d227ff6b1ca44c3c5bf7cd3a6ff16f6a",
+   "matchesClient": true,
+   "lastCommit": "1e88c0ac09e6395d6248f0ba818002f7acb1599b"
+  },
+  {
+   "file": "client/www/css/ionic.app.css",
+   "appSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/d3/d3.js",
+   "appSha256": "81f43003a3e5919b0ba96bb86d4e215cfadb4eace2c66d01e4c76f04b23e39ab",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/data/theme.js",
+   "appSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+   "tracked": true,
+   "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
+   "matchesClient": true,
+   "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
+  }
+ ],
+ "sizes": {
+  "375x667": {
+   "device": {
+    "name": "tw_cap_se3",
+    "udid": "52E0C852-6471-487A-A2B5-99E41E0CA3D4",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation"
+   },
+   "capturedAt": "2026-11-13T08:06:17Z",
+   "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+   "devicePixelRatio": 2,
+   "viewport": {
+    "width": 375,
+    "height": 667
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "fixtures": [
+    "kma-seoul",
+    "vc-london"
+   ]
+  },
+  "393x852": {
+   "device": {
+    "name": "tw_cap_16",
+    "udid": "9CAAD5CA-A41F-4C19-808E-907D3E1F6F48",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-13T08:10:41Z",
+   "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+   "devicePixelRatio": 3,
+   "viewport": {
+    "width": 393,
+    "height": 852
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "fixtures": [
+    "kma-seoul",
+    "vc-london",
+    "kma-jeju",
+    "vc-newyork",
+    "vc-sydney",
+    "vc-tokyo",
+    "kma-seoul-fahrenheit",
+    "kma-rain-everywhere",
+    "kma-current-index-first",
+    "kma-midnight-today-first-day",
+    "kma-seoul-sharp"
+   ]
+  },
+  "440x956": {
+   "device": {
+    "name": "tw_cap_16promax",
+    "udid": "C07BFC9B-AB5D-42CC-B7B5-ABF70B07E50B",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+   },
+   "capturedAt": "2026-11-13T08:13:14Z",
+   "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+   "devicePixelRatio": 3,
+   "viewport": {
+    "width": 440,
+    "height": 956
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    },
+    {
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "fixtures": [
+    "kma-seoul",
+    "vc-london"
+   ]
+  }
+ },
+ "files": [
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/375x667/capture.json",
+   "sha256": "9406746b07014c3ed5f2d080d7ee5d492a21a9457416e78fc8d94b354a52a921"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/375x667/kma-seoul.json",
+   "sha256": "e405dc0b0fff0fd87c019503a5b2afb716b487565b64b9c02c4abc75c5f53dd5"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/375x667/vc-london.json",
+   "sha256": "aa063d8e14fdaf130b7a7792c9aff0b93a52c1e8e72924da1ce3e7ce1506c0ca"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/capture.json",
+   "sha256": "408a9b64c8e615bf6c1d6c7eb1bb27e9d4b1b3850d5d94b82887bd3e6e7183fb"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-current-index-first.json",
+   "sha256": "3cf1c9d5ec1465ea2e46487bc1c530eac99f7d19940113fa63d8db539f896d94"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-jeju.json",
+   "sha256": "75327a82a8b3289789a676601b1d7db02bdced46533609a8f653d9830ba66c21"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-midnight-today-first-day.json",
+   "sha256": "78721210826e817e21838e8e0f0773d6273eb708b75fae6cb6cc1be0b7952291"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-rain-everywhere.json",
+   "sha256": "3bc141164ca011d43f4930d2eeaa2b5b504e934b69f05b7ea992e64601f128f8"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-seoul-fahrenheit.json",
+   "sha256": "c24fdfd593557878199259843a9a8611c37e9f889431ccaf59e763ddae863bda"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-seoul-sharp.json",
+   "sha256": "dc21771072b586f1291cfd4f4763a1ac016b3b173950456d24af219349671242"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/kma-seoul.json",
+   "sha256": "b079d09102d48824433756b5f2e24603c2ecc9b6e2b3121eabb4d6b0d8d08391"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/vc-london.json",
+   "sha256": "67939574dbc48d3948cb52a3fd02743ce081880809bec56aedf5f54479601a17"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/vc-newyork.json",
+   "sha256": "bc0c965bb2c305eb042a72f1d59c42b875479ee95f8a73803fb13431536c488d"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/vc-sydney.json",
+   "sha256": "188c51bf9d7a545a821b183f3192fc997c6f7767b508d1b69f2f6b3e9504347e"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/393x852/vc-tokyo.json",
+   "sha256": "1ed6d2e8e66d74c3c542de7f90a932c61d18c22df45a347e3c5d912e2af11d56"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/440x956/capture.json",
+   "sha256": "69949695a61eef9b1dacf3ecd4eb69946a0dd045e4785aaebd323861741df230"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/440x956/kma-seoul.json",
+   "sha256": "3118c20b3553a69653e2fd258013f15ee9121e50ab7d554fcb8c842d92c57545"
+  },
+  {
+   "path": "Core/Tests/TWDomainTests/ChartReference/ios/440x956/vc-london.json",
+   "sha256": "ed4d8a2eeb196572fc03af2722c7899cc01b83be2bebc369ddafb3365ef95bd8"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/375x667-daily-end.png",
+   "sha256": "ecad2b8faed7da2dcc25cc67af561536a5a5b41307956982154511ef426f4b53"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/375x667-daily-opening.png",
+   "sha256": "8a26ccada901350445ddc00c4501b0e5aa7f2b91e77735569acd0e3dfaff0e00"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/375x667-daily-start.png",
+   "sha256": "117f3f8564b3c43d9fc7b39d7b85bead865e4468915d70856e52bbffafc62586"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/375x667-hourly-end.png",
+   "sha256": "53c4527ced95108ca4bb748eea8da6e544605d2ae5c17848d4335a8587c20807"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/375x667-hourly-opening.png",
+   "sha256": "cf6891574c5815129ea250d01a74c84dd14b15d786ac983d7793bdd915f47d4e"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/375x667-hourly-start.png",
+   "sha256": "8d4a54bf5d958e410f23bceda2fe623f25ae09dd2548c7a2e88d590cb453656d"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/393x852-daily-end.png",
+   "sha256": "781cb93b8c85b8fc300b5ae069c9a40bd674a8e6d4ac0876fdeb0f74f34b7d1a"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/393x852-daily-opening.png",
+   "sha256": "8371d1d2247dad510c018cfc7b84e99bdd10774bd19f1e7071b785652b39d7c7"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/393x852-daily-start.png",
+   "sha256": "477b3205e731f9f0e5b5962b84254e24baa30ca44e2260cb1e1b856352acab49"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/393x852-hourly-end.png",
+   "sha256": "c0c0076364a99f660f133ba997cf7d17260a2aa2e80b30cd455f6eb3c949f949"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/393x852-hourly-opening.png",
+   "sha256": "141f7b2ffa8a83f47005b344cf65ee9d147e5fd3189fca2d7734baf7ee5df33d"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/393x852-hourly-start.png",
+   "sha256": "ffbe3360247e8e114be9ca283547fb79b9dc5d3ca2693a3afd8858840cd70851"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/440x956-daily-end.png",
+   "sha256": "737d95f7d2b1d50826376d42efe2a6754741e77e6c28918c530dbcad20878cd3"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/440x956-daily-opening.png",
+   "sha256": "e975728a4177bb691432372d061b111ec1a093133f69daa6e10ba96ab86524d8"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/440x956-daily-start.png",
+   "sha256": "481bdb1c0e68b5ab693119d79185f1ed62058a317277cc5d1aa7d348c9a5f8ba"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/440x956-hourly-end.png",
+   "sha256": "989c89f959cb90aa33869575cbca8f7426d951ece06a4abd154b4dbf14f3a9f7"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/440x956-hourly-opening.png",
+   "sha256": "8d0c2a52e4380b0d24f144300c631e6f86fafbebcfabfe5ab90a57cabc478147"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/440x956-hourly-start.png",
+   "sha256": "a097ba838ded99972b6bc035a22b263c0fcbed6a09145ce80dfd8714958bd61d"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/captures.json",
+   "sha256": "540595acb5f16d8b059ce2f605d11a6192a79209f174ae010f7fb9e9c6669e1d"
+  },
+  {
+   "path": "TodayWeatherTests/ChartReference/kma-seoul.input.json",
+   "sha256": "ec2a645f69200df2609792d64d9c9ea90dafaa2d1daadbf2566df1d75a7b6b31"
+  }
+ ]
+}

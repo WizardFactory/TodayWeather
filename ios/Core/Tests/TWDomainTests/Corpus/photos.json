@@ -1,0 +1,1241 @@
+{
+ "request": {
+  "url": "https://photos.test.invalid/list.json",
+  "timeout": 20000
+ },
+ "feeds": [
+  {
+   "name": "feed",
+   "feed": [
+    {
+     "id": "sun-1",
+     "tags": [
+      "sun"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-1.jpg"
+     }
+    },
+    {
+     "id": "sun-2",
+     "tags": [
+      "sun"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-2.jpg"
+     }
+    },
+    {
+     "id": "sun-3",
+     "tags": [
+      "sun"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-3.jpg"
+     }
+    },
+    {
+     "id": "sun-small-1",
+     "tags": [
+      "sun",
+      "smallcloud"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-small-1.jpg"
+     }
+    },
+    {
+     "id": "sun-small-2",
+     "tags": [
+      "smallcloud",
+      "sun"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-small-2.jpg"
+     }
+    },
+    {
+     "id": "sun-big-1",
+     "tags": [
+      "sun",
+      "bigcloud"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-big-1.jpg"
+     }
+    },
+    {
+     "id": "moon-1",
+     "tags": [
+      "moon"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/moon-1.jpg"
+     }
+    },
+    {
+     "id": "moon-small-1",
+     "tags": [
+      "moon",
+      "smallcloud"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/moon-small-1.jpg"
+     }
+    },
+    {
+     "id": "moon-big-1",
+     "tags": [
+      "bigcloud",
+      "moon"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/moon-big-1.jpg"
+     }
+    },
+    {
+     "id": "cloud-1",
+     "tags": [
+      "cloud"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/cloud-1.jpg"
+     }
+    },
+    {
+     "id": "cloud-2",
+     "tags": [
+      "cloud"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/cloud-2.jpg"
+     }
+    },
+    {
+     "id": "rain-1",
+     "tags": [
+      "rain"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/rain-1.jpg"
+     }
+    },
+    {
+     "id": "rain-sun-1",
+     "tags": [
+      "sun",
+      "rain"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/rain-sun-1.jpg"
+     }
+    },
+    {
+     "id": "snow-1",
+     "tags": [
+      "snow"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/snow-1.jpg"
+     }
+    },
+    {
+     "id": "lightning-1",
+     "tags": [
+      "rain",
+      "lightning"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/lightning-1.jpg"
+     }
+    },
+    {
+     "id": "null-tag-1",
+     "tags": [
+      null,
+      "sun"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/null-tag-1.jpg"
+     }
+    },
+    {
+     "id": "fog-1",
+     "tags": [
+      "fog"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/fog-1.jpg"
+     }
+    },
+    {
+     "id": "string-tags-1",
+     "tags": "sun",
+     "twUrls": {
+      "regular": "https://photos.test.invalid/string-tags-1.jpg"
+     }
+    },
+    {
+     "id": "no-tags-1",
+     "twUrls": {
+      "regular": "https://photos.test.invalid/no-tags-1.jpg"
+     }
+    },
+    7
+   ],
+   "groups": {
+    "lightning": [
+     "lightning-1"
+    ],
+    "rain": [
+     "rain-1",
+     "rain-sun-1"
+    ],
+    "snow": [
+     "snow-1"
+    ],
+    "sun_smallcloud": [
+     "sun-small-1",
+     "sun-small-2"
+    ],
+    "sun_bigcloud": [
+     "sun-big-1"
+    ],
+    "sun": [
+     "sun-1",
+     "sun-2",
+     "sun-3",
+     "null-tag-1"
+    ],
+    "moon_smallcloud": [
+     "moon-small-1"
+    ],
+    "moon_bigcloud": [
+     "moon-big-1"
+    ],
+    "moon": [
+     "moon-1"
+    ],
+    "cloud": [
+     "cloud-1",
+     "cloud-2"
+    ]
+   }
+  },
+  {
+   "name": "null-item",
+   "feed": [
+    {
+     "id": "cloud-1",
+     "tags": [
+      "cloud"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/cloud-1.jpg"
+     }
+    },
+    null,
+    {
+     "id": "sun-1",
+     "tags": [
+      "sun"
+     ],
+     "twUrls": {
+      "regular": "https://photos.test.invalid/sun-1.jpg"
+     }
+    }
+   ],
+   "groups": {
+    "lightning": [],
+    "rain": [],
+    "snow": [],
+    "sun_smallcloud": [],
+    "sun_bigcloud": [],
+    "sun": [],
+    "moon_smallcloud": [],
+    "moon_bigcloud": [],
+    "moon": [],
+    "cloud": [
+     "cloud-1"
+    ]
+   }
+  }
+ ],
+ "cases": [
+  {
+   "skyIcon": "cloud",
+   "random": 0,
+   "photo": "https://photos.test.invalid/cloud-1.jpg"
+  },
+  {
+   "skyIcon": "cloud",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/cloud-1.jpg"
+  },
+  {
+   "skyIcon": "cloud",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/cloud-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/cloud-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/cloud-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/cloud-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "cloud_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon",
+   "random": 0,
+   "photo": "https://photos.test.invalid/moon-1.jpg"
+  },
+  {
+   "skyIcon": "moon",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/moon-1.jpg"
+  },
+  {
+   "skyIcon": "moon",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/moon-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud",
+   "random": 0,
+   "photo": "https://photos.test.invalid/moon-big-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/moon-big-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/moon-big-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/moon-big-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/moon-big-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/moon-big-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_bigcloud_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/moon-1.jpg"
+  },
+  {
+   "skyIcon": "moon_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/moon-1.jpg"
+  },
+  {
+   "skyIcon": "moon_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/moon-1.jpg"
+  },
+  {
+   "skyIcon": "moon_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud",
+   "random": 0,
+   "photo": "https://photos.test.invalid/moon-small-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/moon-small-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/moon-small-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/moon-small-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/moon-small-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/moon-small-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_smallcloud_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "moon_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "moon_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun",
+   "random": 0,
+   "photo": "https://photos.test.invalid/sun-1.jpg"
+  },
+  {
+   "skyIcon": "sun",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/sun-2.jpg"
+  },
+  {
+   "skyIcon": "sun",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/sun-3.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud",
+   "random": 0,
+   "photo": "https://photos.test.invalid/sun-big-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/sun-big-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/sun-big-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/sun-big-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/sun-big-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/sun-big-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_bigcloud_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/sun-1.jpg"
+  },
+  {
+   "skyIcon": "sun_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/sun-2.jpg"
+  },
+  {
+   "skyIcon": "sun_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/sun-3.jpg"
+  },
+  {
+   "skyIcon": "sun_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud",
+   "random": 0,
+   "photo": "https://photos.test.invalid/sun-small-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/sun-small-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/sun-small-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_fog",
+   "random": 0,
+   "photo": "https://photos.test.invalid/sun-small-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_fog",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/sun-small-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_fog",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/sun-small-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rain",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rain",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rain",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rain_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rain_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rain_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rainsnow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rainsnow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rainsnow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/rain-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rainsnow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rainsnow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_rainsnow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_smallcloud_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_snow",
+   "random": 0,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_snow",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_snow",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/snow-1.jpg"
+  },
+  {
+   "skyIcon": "sun_snow_lightning",
+   "random": 0,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_snow_lightning",
+   "random": 0.5,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "sun_snow_lightning",
+   "random": 0.999,
+   "photo": "https://photos.test.invalid/lightning-1.jpg"
+  },
+  {
+   "skyIcon": "",
+   "random": 0,
+   "photo": null
+  },
+  {
+   "skyIcon": "",
+   "random": 0.5,
+   "photo": null
+  },
+  {
+   "skyIcon": "",
+   "random": 0.999,
+   "photo": null
+  },
+  {
+   "skyIcon": null,
+   "random": 0,
+   "photo": null
+  },
+  {
+   "skyIcon": null,
+   "random": 0.5,
+   "photo": null
+  },
+  {
+   "skyIcon": null,
+   "random": 0.999,
+   "photo": null
+  }
+ ]
+}

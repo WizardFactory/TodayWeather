@@ -15,6 +15,32 @@ angular.module('service.admobemi', [])
             return window.cordova && cordova.plugins && cordova.plugins.emiAdmobPlugin;
         }
 
+        var attStatuses = ['authorized', 'denied', 'restricted', 'not_determined'];
+        /**
+         * iOS (#2945): writes the App Tracking Transparency status and the request mode that the native rule applies
+         * (scripts/ios-ad-privacy.js) to the device console, and hands the status to measurement. twAdPrivacyState
+         * only reads; the app never raises the ATT prompt itself, UMP does. A build without the action gives no
+         * answer, so a short timer keeps ads from waiting on this report.
+         */
+        function reportRequestPolicy(done) {
+            var settled = false;
+            function finish(state) {
+                if (settled) { return; }
+                settled = true;
+                var known = !!state && attStatuses.indexOf(state.att_status) !== -1 && typeof state.personalized === 'boolean';
+                var status = known ? state.att_status : 'unavailable';
+                // console.log, as for load failures: iOS does not forward console.info to the device console.
+                console.log(JSON.stringify(known ?
+                    {component: 'admob', operation: 'request_policy', att_status: status, personalized: state.personalized, result: 'applied'} :
+                    {component: 'admob', operation: 'request_policy', att_status: status, result: 'not_reported'}));
+                Monetization.setAdTrackingStatus(status);
+                done();
+            }
+            setTimeout(function () { finish(); }, 2000);
+            try { cordova.exec(finish, function () { finish(); }, 'emiAdmobPlugin', 'twAdPrivacyState', []); }
+            catch (e) { finish(); }
+        }
+
         /**
          * Loads the banner without showing it; success runs once it has loaded.
          * isOverlapping false shrinks the web view by the banner height (legacy overlap:false).
@@ -96,11 +122,22 @@ angular.module('service.admobemi', [])
             });
 
             var started = false;
+            /**
+             * iOS (#2945): UMP shows the GDPR message, the IDFA explainer and the system ATT prompt inside the plugin's
+             * initialize call. Ready means the SDK started and that call answered, so no banner is requested while a
+             * prompt may be open, also when cached consent starts the SDK first. Android has no ATT prompt.
+             */
+            var isIOS = ionic.Platform.isIOS(), consentAnswered = !isIOS, reported = false;
+            function ready() {
+                if (!started || !consentAnswered || reported) { return; }
+                reported = true;
+                if (isIOS) { reportRequestPolicy(success); } else { success(); }
+            }
             document.addEventListener('on.sdkInitialization', function onInit(data) {
                 document.removeEventListener('on.sdkInitialization', onInit);
                 started = true;
                 console.info({component: 'admob', operation: 'initialize', result: 'ready'});
-                success();
+                ready();
             });
             document.addEventListener('on.banner.failed.load', function (event) {
                 lifecycle('failed');
@@ -152,6 +189,9 @@ angular.module('service.admobemi', [])
              * units start the SDK without UMP so the ad path stays testable.
              */
             function onConsentError(reason) {
+                // An error is an answer too: ads from cached consent continue, as before.
+                consentAnswered = true;
+                ready();
                 console.warn({component: 'admob', operation: 'consent', cause: 'ump_error', action: 'retain_gate', result: 'not_ready'});
                 lifecycle('consent_failed');
                 // A consent decision (not a UMP failure) must never be bypassed.
@@ -173,7 +213,11 @@ angular.module('service.admobemi', [])
             // at once, before the consent update, so a retry from that callback would run before consent is cached
             // and use up the only retry: the first session then never starts the SDK (#2871). Android waits for
             // the consent status events above instead.
-            plugin().initialize(options, ionic.Platform.isIOS() ? startAfterConsent : function () {}, onConsentError);
+            plugin().initialize(options, isIOS ? function () {
+                consentAnswered = true;
+                ready();
+                startAfterConsent();
+            } : function () {}, onConsentError);
         };
 
         return obj;

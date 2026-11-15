@@ -1,0 +1,65 @@
+{
+ "description": "Actual captures of TodayWeather on an iPhone for docs/user/cordova-ios/manual.json. Live production weather and the published AdMob IDFA message at capture time; not fixtures.",
+ "client_source": "client/ of master c8b7f8c8 (identical to PR #2949 head 853893b3)",
+ "build": "Cordova 13 / cordova-ios 8.1.1 Debug iphoneos build with the release ad configuration, re-signed with the development profile; displayed version 1.1.1",
+ "device": {
+  "model": "iPhone 12 Pro Max",
+  "os": "iOS 26",
+  "language": "ko",
+  "install": "in place over 1.1.1; saved place and alarms kept"
+ },
+ "runs": {
+  "allow-*": "XCUITest ATTFlowTests.testAllow, 2026-11-13 18:27-18:29 KST",
+  "off2-*": "ATTFlowTests.testTrackingOff, 18:31 KST",
+  "denied-*": "ATTFlowTests.testObserve after the switch was turned off, 18:31-18:34 KST"
+ },
+ "processing": "downscaled to 720 px width, 256-color palette",
+ "privacy_review": "The status bar and header show the device's saved place; AK accepted this on 2026-11-13. No ad creative, token or account name is shown.",
+ "images": {
+  "01-explainer.png": {
+   "capture": "allow-01-first-explainer.png",
+   "capture_sha256": "f688078c485f5aa232fff4ddbb8f0e3642b7cc1676b353f67582438bde88a0a5",
+   "sha256": "c94af4144c8f819bd16c0e2170e2e189dfea513c29ec79badc7d3ce1db391e38",
+   "size": [
+    720,
+    1558
+   ]
+  },
+  "02-system-prompt.png": {
+   "capture": "allow-02-after-continue-system.png",
+   "capture_sha256": "9c14979404ee625a041557d7e31ad34dfe41037682eed2a16c25a62ed9b5bc95",
+   "sha256": "cbab5feeff22c716e52a3d04cbfe7286487e695cf61e5dafd8714f76729f8578",
+   "size": [
+    720,
+    1558
+   ]
+  },
+  "03-settings-tracking-on.png": {
+   "capture": "off2-settings-app.png",
+   "capture_sha256": "abc60059616a7caff516cdb92c7ea81eb55f169120db85b22176b65d5b5fca3f",
+   "sha256": "e720dd96ce43511879178455185be16f317eb4a3a00a8607c330afb130186bee",
+   "size": [
+    720,
+    1558
+   ]
+  },
+  "04-settings-tracking-off.png": {
+   "capture": "off2-settings-app-after.png",
+   "capture_sha256": "f922e7022f2324e6bd9a95da32552206c58929404b45bdca4b9c24abd0c4b6f1",
+   "sha256": "d6ee7800355788f841eeac238eebe77e5f9e9345c7cd0a1ba03a32bc5764d988",
+   "size": [
+    720,
+    1558
+   ]
+  },
+  "05-weather-after-decline.png": {
+   "capture": "denied-04-settled.png",
+   "capture_sha256": "15d50ee5dd4375a0b3e16f8391011fbd0fd24c897d36c8a4ecf7e634ef46d107",
+   "sha256": "c76e29f78758ef174a3fae632acbc686d1892d788696ea5c0a20775f1e006904",
+   "size": [
+    720,
+    1558
+   ]
+  }
+ }
+}

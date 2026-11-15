@@ -1,8 +1,8 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK push",
  "cordovaApk": {
-  "sha256": "45018f60bf5612aee3503dcccb1a308c5246ab04c8dde52b06f8842846d5b5c1",
-  "versionCode": "200100",
+  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "versionCode": "100091",
   "versionName": "1.1.1",
   "sources": [
    {
@@ -81,49 +81,37 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    },
    {
     "file": "client/www/lib/ionic-timepicker/dist/ionic-timepicker.bundle.min.js",
     "apkSha256": "d8161a05219a19760a75a9b0bc660848e9950b974a946682e1d67a0a49666b1a",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "d8161a05219a19760a75a9b0bc660848e9950b974a946682e1d67a0a49666b1a",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/js/ion.rangeSlider.min.js",
     "apkSha256": "1866877a7f6662f277f2ac8fb6d317a2a9cc7c41a97394208cf716a79bb8a013",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "1866877a7f6662f277f2ac8fb6d317a2a9cc7c41a97394208cf716a79bb8a013",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/css/ion.rangeSlider.css",
     "apkSha256": "0f326d6a4aa49534e54ad15ca793e30eeb29ba3ce6d35c9f15e9b447b5db1923",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "0f326d6a4aa49534e54ad15ca793e30eeb29ba3ce6d35c9f15e9b447b5db1923",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/css/ion.rangeSlider.skinFlat.css",
     "apkSha256": "ab3085180d4e3d4d75dc9aab23284432a192632957670dbdc116423b0c94a875",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "ab3085180d4e3d4d75dc9aab23284432a192632957670dbdc116423b0c94a875",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    },
    {
     "file": "client/www/lib/ion.rangeSlider/img/sprite-skin-flat.png",
     "apkSha256": "f2f42c58a4ff4bdc0429d4e59fa2d3a9cb65f6651c5f18260d30d6e71ef56553",
     "tracked": false,
-    "generatedFrom": "client/bower.json",
-    "clientSha256": "f2f42c58a4ff4bdc0429d4e59fa2d3a9cb65f6651c5f18260d30d6e71ef56553",
-    "matchesClient": true
+    "generatedFrom": "client/bower.json"
    }
   ]
  },
@@ -155,7 +143,7 @@
   },
   {
    "file": "en-US/confirm.png",
-   "sha256": "9e3a31b96fc1a7e232522c0a9de52db32e9d98e82e8720d53418c8d823299fc5"
+   "sha256": "2860a19c893e4fd758a2ecbdafcb23cc3d56d4a75c79e7dd46325322fa385614"
   },
   {
    "file": "en-US/equal.json",
@@ -163,7 +151,7 @@
   },
   {
    "file": "en-US/equal.png",
-   "sha256": "fc9d3e0c210508e4f75d4d4ea3ce533f96f96ceb6264a022de96c07c85e58def"
+   "sha256": "20e94a9f1daa240861f7145c7673166508beb7887f678a9111c2b657292bdb75"
   },
   {
    "file": "en-US/foreground.json",
@@ -171,7 +159,7 @@
   },
   {
    "file": "en-US/foreground.png",
-   "sha256": "0c31cfbcb63b9e0c4174094234e257704cf7ec34ccf7945bff6210bf1d9eab55"
+   "sha256": "233b6d4e5cb1bf78d61d281bf474f704707c4f8c85d9d7afb5c229343fd5b486"
   },
   {
    "file": "en-US/intro.json",
@@ -179,7 +167,7 @@
   },
   {
    "file": "en-US/intro.png",
-   "sha256": "f5941f2a59c3d5966a52a05176f7537d44990c8fc1df23e66b446087d0515394"
+   "sha256": "6c71c0ae1f0f2e1b9b1d2507938fa25bebfc64d85cf5e5e21a0feab50b710faa"
   },
   {
    "file": "en-US/permission.json",
@@ -187,7 +175,7 @@
   },
   {
    "file": "en-US/permission.png",
-   "sha256": "b3b663d788aa1fed4dfc5c0a7f8be999e81b20a4fa1169f7358ef9345b0a2e64"
+   "sha256": "70aa5b13b7bbfacd28e1645e40224e663b32994de4394c8f9504d198d98d9ee5"
   },
   {
    "file": "en-US/picker.json",
@@ -195,7 +183,7 @@
   },
   {
    "file": "en-US/picker.png",
-   "sha256": "9294b642a4638b102d060a6e8374211eebd8e1f232f3d59b1ff991fe7efb5557"
+   "sha256": "1fbfafc90b3652b0a45256caf197f850e5405d2929eda24a3ce948bbe025f51d"
   },
   {
    "file": "en-US/requests.json",
@@ -207,7 +195,7 @@
   },
   {
    "file": "en-US/settings-dark.png",
-   "sha256": "1c946b1a38869edb9803df5f0ebbd403e2d0efb52df38b69e588bb40508008b6"
+   "sha256": "4fd7006075508aeda80d6560d43d3f85817974dac288b5a3667be7c9b22394b3"
   },
   {
    "file": "en-US/settings.json",
@@ -215,7 +203,7 @@
   },
   {
    "file": "en-US/settings.png",
-   "sha256": "579f9ece19ea4b6ccc79232b91042694eba036b86923da91e28ad5105f99cf57"
+   "sha256": "65895a0618884754b7317cd49b5db5613613fbf09221af09176c1da914bc8001"
   },
   {
    "file": "en-US/viewport.json",
@@ -227,7 +215,7 @@
   },
   {
    "file": "ko-KR/confirm.png",
-   "sha256": "dd3e6aa00bc860ca9bbaf8846cdf245a808d3d2d7ffeed1a1ef2a549a18f8230"
+   "sha256": "5c5769b7efadba89cfb3cdeb65570db215422cad705e5f21b81178867d226120"
   },
   {
    "file": "ko-KR/equal.json",
@@ -235,7 +223,7 @@
   },
   {
    "file": "ko-KR/equal.png",
-   "sha256": "20f99e5888bcd8b7333eb321827cddabff2410e35dc3600047d76f5e00667d99"
+   "sha256": "c5bd0a51926477a0a91ccc0d9fc71dd24f88609f821611ed2adc7b70da8961b0"
   },
   {
    "file": "ko-KR/foreground.json",
@@ -243,7 +231,7 @@
   },
   {
    "file": "ko-KR/foreground.png",
-   "sha256": "f0a5c70eb64760b34c10cab29544a30e2b6598b86c957555312f1f9ab0a81824"
+   "sha256": "229614e12a3b89132c4e270a28da1a86acbc7771b267c6768c195065694c27bf"
   },
   {
    "file": "ko-KR/intro.json",
@@ -251,7 +239,7 @@
   },
   {
    "file": "ko-KR/intro.png",
-   "sha256": "594bff07b6227afc602c76161fc566f4acb8ac272c9458eb04c0d1ecccc70b14"
+   "sha256": "50600566864752605cbf48c0999d27fc3ee866e3090efedadd6ae00878ca9403"
   },
   {
    "file": "ko-KR/permission.json",
@@ -259,7 +247,7 @@
   },
   {
    "file": "ko-KR/permission.png",
-   "sha256": "3abfbc7d1688f9edaef6752a4f6081d4c1bbb2931c93c5cf91029e8ce8dabc50"
+   "sha256": "67ce50f36d2a15faa03e66389cd845fb2b30ea62fd3e71a7554201b3b633b74c"
   },
   {
    "file": "ko-KR/picker.json",
@@ -267,7 +255,7 @@
   },
   {
    "file": "ko-KR/picker.png",
-   "sha256": "09ac148c69d77ea494924fbc9fa82aba59b48a9b5d136092cfbcf409d6ede2f5"
+   "sha256": "9750c9e684f304c55d2e9f7b895c22fb9bbb5ec8b81942c043939cb852f9960d"
   },
   {
    "file": "ko-KR/requests.json",
@@ -279,7 +267,7 @@
   },
   {
    "file": "ko-KR/settings-dark.png",
-   "sha256": "74b88bdc95b3fd86de35530bb37aae82394431bc96b5d2e77b06315b41706dec"
+   "sha256": "043094fbd6d3a38f935640f2b98c873004d766bc703fbe46ff74c5c14ce7383d"
   },
   {
    "file": "ko-KR/settings.json",
@@ -287,7 +275,7 @@
   },
   {
    "file": "ko-KR/settings.png",
-   "sha256": "7a6b260f81eeb6da050a903783d58cdd8b0eb720197e65e92d47a7be7401d3fc"
+   "sha256": "19ed20415403de6dcb63b187ae64976c2ba55e9e818d74ab65a2c49730b674ba"
   },
   {
    "file": "ko-KR/viewport.json",
