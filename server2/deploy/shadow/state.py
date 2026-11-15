@@ -431,6 +431,9 @@ class Journal:
         self.close()
 
 
+# Log object PUTs of the host's collector (LP-6, #2983). Their storage and export
+# fall inside the 20 GB storage and the operator's 2 GiB export allowance.
+LOG_WRITES=50_000
 PRICE_KEYS={'ec2_hour','ipv4_hour','gp3_gb_month','s3_gb_month','s3_read',
             's3_write','cpu_vcpu_hour','outbound_gb'}
 
@@ -494,7 +497,8 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds):
     CPU is all host nonidle time, not merely the candidate and not credit balance.
     Ignore earned T3 credits/free tiers. Project two busy vCPUs through the
     original 170-hour cleanup deadline. Assume full storage for the entire time,
-    all 100,000 request allowances consumed, and a 48-GiB transfer reservation:
+    all 100,000 request allowances consumed, 50,000 log object PUTs (four sources,
+    one object per 50 s each, through 170 hours: 48,960), and a 48-GiB transfer reservation:
     4 host threshold + 2 original bodies + 2 paired evidence + 8 control
     envelopes + 32 contingency for protocol/termination overrun. This is a
     conservative cost model, not proof of a 48-GiB wire-level ceiling.
@@ -510,7 +514,8 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds):
     # the usual monthly allocation and binary-volume/storage units.
     gib=Decimal(1024**3)/Decimal(10**9)
     hourly=rates['ec2_hour']+rates['ipv4_hour']+(32*rates['gp3_gb_month']+20*rates['s3_gb_month'])*gib/672
-    fixed=100_000*(rates['s3_read']+rates['s3_write'])+48*gib*rates['outbound_gb']
+    fixed=(100_000*(rates['s3_read']+rates['s3_write'])+LOG_WRITES*rates['s3_write']
+           +48*gib*rates['outbound_gb'])
     accrued=hours*hourly+Decimal(cpu_seconds)/3600*rates['cpu_vcpu_hour']+fixed
     remaining=max(0,total-elapsed)
     projected=accrued+Decimal(remaining)/3600*(hourly+2*rates['cpu_vcpu_hour'])

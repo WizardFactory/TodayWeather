@@ -397,7 +397,8 @@ def main():
                            args.candidate_binary, args.resume, args.loopback_test)
         else:
             require(not args.resume, 'resume requires execute')
-        print(json.dumps(plan, indent=2))
+        # One line: the host ships its summary as one record (LP-6, #2983).
+        print(json.dumps(plan, sort_keys=True, separators=(',', ':')))
         return 0 if plan.get('terminal') in (None, 'duration-complete') else 2
     except (ValueError, OSError, sqlite3.Error) as error:
         print(f'refused: {error}', file=sys.stderr)

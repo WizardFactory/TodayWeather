@@ -107,7 +107,7 @@ st=parent.lstat()
 assert not parent.is_symlink() and st.st_uid==0 and st.st_mode&0o077==0
 stage=parent/run_id
 stage.mkdir(mode=0o700)
-expected={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env','launch.json'}
+expected={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env','collector.tar.gz','collector.json','render.py','status.py','launch.json'}
 seen=set();total=0
 with tarfile.open(fileobj=sys.stdin.buffer,mode='r|') as archive:
  for item in archive:
@@ -247,9 +247,11 @@ class Remote:
                     'receipt["unit_states"]={s:subprocess.run(["/usr/bin/systemctl","show",'
                     '"--property=ActiveState","--value",'+repr(name)+'+"-"+s+".service"],'
                     'capture_output=True,text=True,timeout=5,check=True).stdout.strip() '
-                    'for s in ("candidate","reader","guard")};print(json.dumps(receipt))')
+                    'for s in ("candidate","reader","guard","logs")};print(json.dumps(receipt))')
             command='sudo -n /usr/bin/python3 -c '+shlex.quote(script)
-        else:command='sudo -n /usr/bin/systemctl stop '+' '.join(name+'-'+suffix+'.service' for suffix in ('reader','candidate','guard'))
+        # The acquisition units are ordered after the collector, so one stop job stops
+        # them first and the collector last, after its drain has shipped their records.
+        else:command='sudo -n /usr/bin/systemctl stop '+' '.join(name+'-'+suffix+'.service' for suffix in ('reader','candidate','guard','logs'))
         argv=[self.ssh,'-F','/dev/null','-T','-i',str(self.identity),
               '-o','BatchMode=yes','-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes',
               '-o','UserKnownHostsFile='+str(self.known_hosts.absolute()),'-o','GlobalKnownHostsFile=/dev/null',
@@ -270,8 +272,10 @@ class Remote:
             except subprocess.TimeoutExpired:return CloudResult('timeout','HostEvidence')
             except (OSError,StateError):return CloudResult('command_error','HostEvidence')
         try:
+            # A stop waits for the collector's drain: units 10 s, then drain 75 s and
+            # collector shutdown 20 s (TimeoutStopSec=100), inside 150 s.
             result=subprocess.run(argv,stdin=archive if archive is not None else subprocess.DEVNULL,
-                                  capture_output=True,text=True,timeout=120,check=False)
+                                  capture_output=True,text=True,timeout=150 if action=='stop' else 120,check=False)
         except subprocess.TimeoutExpired:return CloudResult('timeout','HostInstall' if action=='install' else 'HostObserve')
         except OSError:return CloudResult('command_error','HostInstall' if action=='install' else 'HostObserve')
         operation='HostInstall' if action=='install' else 'HostObserve'
@@ -333,7 +337,9 @@ def inspect_install(remote,journal,launch):
             and receipt.get('collection_until')==current['collection_until']
             and receipt.get('cleanup_until')==current['cleanup_until'],'remote installation receipt binding')
     require(receipt.get('status') in ('started','failed','installing'),'installation status')
-    active=receipt.get('unit_states')==dict(candidate='active',reader='active',guard='active')
+    units=receipt.get('unit_states')
+    # The collector's state is reported, but acquisition is the three owned units.
+    active=type(units) is dict and {k:v for k,v in units.items() if k!='logs'}==dict(candidate='active',reader='active',guard='active')
     return {'status':receipt['status'] if receipt['status']!='started' or active else 'stopped','receipt':receipt}
 
 
@@ -360,7 +366,7 @@ def retain_host_evidence(remote,journal,destination):
         require(observed.kind=='json' and observed.payload.get('launch_sha256')==install['params']['launch_sha256'],
                 'stopped receipt binding')
         units=observed.payload.get('unit_states')
-        require(type(units) is dict and set(units)=={'candidate','reader','guard'}
+        require(type(units) is dict and set(units)=={'candidate','reader','guard','logs'}
                 and all(v in ('inactive','failed') for v in units.values()),'acquisition not stopped')
         journal.prepare_request('host-evidence','HostEvidence',{'target':remote.binding},'host-evidence',
                                 now=int(time.time()),cleanup=True)

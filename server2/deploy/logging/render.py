@@ -35,6 +35,24 @@ DEFAULTS = {'SERVER2_LOG_SINKS': 'local', 'SERVER2_LOG_S3_LEVEL': 'info', 'SERVE
 NAMESPACE = 'server2'
 UNITS = {'server2.service': 'server', 'server2-logs.service': 'collector',
          'server2-logs-status.service': 'collector', 'server2-logs-watch.service': 'collector'}
+# Sources a unit can be shipped as (LP-6, #2983): the qualification host adds its shadow
+# guard and paired reader. Their output leaves the host only as JSON objects.
+SOURCES = ('server', 'collector', 'guard', 'reader')
+
+
+def use_units(pairs):
+    """Replace the unit-to-source map with `UNIT=SOURCE` pairs (a host whose units are not
+    the LP-1 ones, such as the qualification host). At least one collector unit is required."""
+    mapping = {}
+    for pair in pairs:
+        unit, _, source = pair.partition('=')
+        if not re.fullmatch(r'[A-Za-z0-9@._:-]{1,200}\.service', unit) or source not in SOURCES:
+            raise SettingError('--unit', 'use UNIT.service=SOURCE with a source of ' + ', '.join(SOURCES))
+        mapping[unit] = source
+    if 'collector' not in mapping.values():
+        raise SettingError('--unit', 'the collector\'s own unit must be mapped to collector')
+    UNITS.clear()
+    UNITS.update(mapping)
 # Loopback-only Prometheus endpoint with the collector's own counters (LP-2, #2979).
 METRICS_ADDRESS = '127.0.0.1:9598'
 # First segments of the weather data prefixes in the same bucket (staging role policy).
@@ -412,11 +430,12 @@ def readers(plan):
 
 
 def _filter_program(min_level):
-    """VRL: keep a server schema-1 record at or above `min_level`, or a collector record.
+    """VRL: keep a server schema-1 record at or above `min_level`, a collector record, or
+    a guard or reader line that is a JSON object (their fixed-vocabulary records, LP-6).
 
-    Everything else (the stdout readiness line, abort messages, the collector's own
-    diagnostics) is dropped from this destination and stays in the journal only.
-    The shipped message is the original line, unchanged.
+    Everything else (the stdout readiness line, abort messages, tracebacks, the reader's
+    `refused:` lines, the collector's own diagnostics) is dropped from this destination
+    and stays in the journal only. The shipped message is the original line, unchanged.
     """
     units = ' else '.join(f'if unit == "{u}" {{ "{s}" }}' for u, s in UNITS.items())
     ranks = ' else '.join(f'if level == "{name}" {{ {rank} }}' for name, rank in LEVELS.items())
@@ -430,8 +449,10 @@ if source == "server" {{
   level = string(parsed.level) ?? ""
   rank = {ranks} else {{ -1 }}
   if rank < {LEVELS[min_level]} {{ abort }}
-}} else {{
+}} else if source == "collector" {{
   if parsed.collector_schema != {COLLECTOR_SCHEMA} {{ abort }}
+}} else {{
+  if length(parsed) == 0 {{ abort }}
 }}
 boot = downcase(string(._BOOT_ID) ?? "unknown")
 . = {{"message": line, "timestamp": .timestamp, "log_source": source, "log_boot": boot}}
@@ -523,9 +544,13 @@ def main(argv=None, environ=None):
     parser.add_argument('--state', required=True, help='collector data directory (journal checkpoints)')
     parser.add_argument('--output', required=True, help='rendered collector configuration')
     parser.add_argument('--version-file', required=True, help='pinned collector manifest (collector.json)')
+    parser.add_argument('--unit', action='append', default=[], metavar='UNIT=SOURCE',
+                        help='ship this unit as this source (repeatable; default: the server2 host units)')
     args = parser.parse_args(argv)
     environ = os.environ if environ is None else environ
     try:
+        if args.unit:
+            use_units(args.unit)
         try:
             text = Path(args.env_file).read_text(encoding='utf-8', errors='replace')
         except FileNotFoundError:

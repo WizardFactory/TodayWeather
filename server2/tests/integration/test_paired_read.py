@@ -131,6 +131,8 @@ class PairedReadTests(unittest.TestCase):
                                  '--candidate', p.origin, '--state', str(state)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)['planned_attempts_per_origin'], 1)
+        # One line: a host ships it as one record (LP-6, #2983).
+        self.assertEqual(result.stdout.count('\n'), 1)
         self.assertFalse(state.exists())
         self.assertEqual(p.requests, [])
 
