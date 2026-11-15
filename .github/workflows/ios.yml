@@ -81,6 +81,21 @@ jobs:
         run: >
           xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather -destination "$SIMULATOR"
           -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO test
+      # The screenshot tests write their renders and difference images to the test host's tmp/chart-compare; keep
+      # them when a comparison fails, so a difference of the CI toolchain can be looked at.
+      - name: Collect the screenshot comparisons
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/screenshot-compare"
+          find "$HOME/Library/Developer/CoreSimulator/Devices" -path '*/tmp/chart-compare/*' -name '*.png' \
+            -exec cp {} "$RUNNER_TEMP/screenshot-compare/" \; || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshot-compare
+          path: ${{ runner.temp }}/screenshot-compare
+          if-no-files-found: ignore
+          retention-days: 7
   standalone:
     name: Build and test without client/, android/ and the legacy iOS directories
     runs-on: macos-26
