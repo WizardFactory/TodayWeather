@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK nation",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -188,7 +188,7 @@
   },
   {
    "file": "en-US/nation-weather.png",
-   "sha256": "c6839e4e975144a023c6d3d914cd1afbc2fc82a8e1c31bc55e3ba7f2304377fc"
+   "sha256": "56d5450cdbf2f55399cc165128f1e712b6c011ecc8573b0d7f4a6332631b9ed2"
   },
   {
    "file": "en-US/requests.json",

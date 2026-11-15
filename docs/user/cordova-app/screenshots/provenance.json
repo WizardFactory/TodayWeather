@@ -1,6 +1,6 @@
 {
   "description": "Actual captures of the TodayWeather Cordova app for docs/user/cordova-app/manual.json. Live production weather at capture time; not fixtures.",
-  "client_source": "97b57689a9dc65eb8f2306c5f60b63498bcf00d7 (client/ unchanged)",
+  "client_source": "97b57689a9dc65eb8f2306c5f60b63498bcf00d7 (client/ unchanged); 24, 36 and 37 recaptured on 2026-11-15 from branch ios-tracking-settings-shortcut-2990 (#2990: privacy rows at the end of the menu, version 1.1.2)",
   "build": "Cordova 13 debug build (cordova-android 15.1.0) with scripts/verification/rewrite/native/tw-harness.js injected into a copy of the platform www; Google test ad units; Firebase config from private release inputs (not in Git)",
   "device": {
     "emulator": "Android emulator AVD flo_api36_phone (Pixel 8 profile)",
@@ -45,6 +45,35 @@
       "scenarios": "S1, M1, M2, M3 done",
       "checks": "37 ok / 0 fail",
       "unclassified_errors": 0
+    },
+    {
+      "id": "full-ko-2990",
+      "harness_mode": "full",
+      "harness_revision": "branch ios-tracking-settings-shortcut-2990 at 94a95c59 (client/ with the privacy rows at the end of the menu)",
+      "started": "2026-11-15T06:37Z",
+      "finished": "2026-11-15T06:45Z",
+      "scenarios": "S1-S9 all done",
+      "checks": "100 ok / 0 fail",
+      "unclassified_errors": 0,
+      "device": "task-owned AVD tw_api36_capture (Pixel 8 profile, API 36, 1080x2400, 420 dpi, ko-KR, Asia/Seoul)",
+      "used_for": [
+        "24-menu.png",
+        "36-about.png"
+      ]
+    },
+    {
+      "id": "manual-ko-2990",
+      "harness_mode": "manual",
+      "harness_revision": "same as full-ko-2990",
+      "started": "2026-11-15T06:45Z",
+      "finished": "2026-11-15T06:47Z",
+      "scenarios": "S1, M1-M3 done",
+      "checks": "37 ok / 0 fail",
+      "unclassified_errors": 0,
+      "device": "same as full-ko-2990",
+      "used_for": [
+        "37-analytics-choice.png"
+      ]
     }
   ],
   "writes": "Push writes (PUT /push, POST /push-list, DELETE) were answered locally by the harness; no production writes. The analytics choice stayed at its default (off); the notification dialogs were closed without saving.",
@@ -237,11 +266,11 @@
     },
     {
       "file": "24-menu.png",
-      "sha256": "8aeb46f9c17f358903b963da52869ac722fb21f264023a4c6390e608fe3a8f9b",
+      "sha256": "e4e5b514914e281551e092ecab4e2206e5da4916dd16a4a887fdd5abe8ea0260",
       "screen": "S06",
-      "run": "full-ko",
+      "run": "full-ko-2990",
       "capture": "11-s2-menu",
-      "source_sha256": "5e336faa2ff91c2fa94116b9f05bdd742badcf7718a14692d8005b29fceea320"
+      "source_sha256": "d86026be72fe6bda82e07838a0c77b0cd578c3db9ec2fb2516c8289345c724c2"
     },
     {
       "file": "25-units.png",
@@ -333,19 +362,19 @@
     },
     {
       "file": "36-about.png",
-      "sha256": "16a1624ff8c4a8303dfd014ee9acf199974d93668ddfa040a6d9541786d2269a",
+      "sha256": "97ccac0966f80f3e0ed8afe06e941b78004511edb9c3ea97a37870ea971a2831",
       "screen": "O10",
-      "run": "full-ko",
+      "run": "full-ko-2990",
       "capture": "29-s3-info-popup",
-      "source_sha256": "2fc32c9880e06a61a44e9517c5d4a35b5a04455a146db8b4d064e2fc8b9eac6c"
+      "source_sha256": "2be71ffa5b76c750c83febbe24a48422002296dcc230698acf3743c3958cee0c"
     },
     {
       "file": "37-analytics-choice.png",
-      "sha256": "aab95efdc87562a4117f2767f4415bff994abf6bff9c91a6ce6ad1161171ac79",
+      "sha256": "990ad4f1bdaddb0b12c59ed17a54e0dc7d7586519064f770bd002249e97d93cf",
       "screen": "S06",
-      "run": "manual-ko",
+      "run": "manual-ko-2990",
       "capture": "10-m1-analytics-choice",
-      "source_sha256": "9ad7245bfdebe25b5562dda3c1aa270b0da105f2bb30d3561a51d5327e75c1d3"
+      "source_sha256": "dad9ac195e6be4c5a7622ba5def1cabb11705475531e7f868218124935a23cd5"
     },
     {
       "file": "38-share.png",

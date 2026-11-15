@@ -234,9 +234,9 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
-    /** As captured: Cordova 1.1.1, default settings, analytics not chosen. */
+    /** As captured: Cordova 1.1.2, default settings, analytics not chosen. */
     @Composable
-    private fun state(theme: Theme) = ShellState(theme, region, Tab.HOURLY, "1.1.1", mapOf(
+    private fun state(theme: Theme) = ShellState(theme, region, Tab.HOURLY, "1.1.2", mapOf(
         MenuRow.STARTUP_PAGE to stringResource(R.string.LOC_HOURLY_FORECAST),
         MenuRow.REFRESH_INTERVAL to stringResource(R.string.LOC_MANUAL),
         MenuRow.THEME to stringResource(when (theme) {

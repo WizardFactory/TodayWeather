@@ -2,10 +2,10 @@
   "schema": 1,
   "product": "TodayWeather Android native 2.0.0 preview",
   "runtime": "Kotlin / Jetpack Compose; no Ionic or Cordova runtime",
-  "product_base_commit": "1ba03849a691b09d47773b885f92a65cf17b9e28",
-  "capture_date": "2026-11-13",
+  "product_base_commit": "559b239ecbe2e837acecd4936bb0337579f8d139",
+  "capture_date": "2026-11-15",
   "environment": {
-    "device": "owned Pixel 8 API 36 Google APIs emulator",
+    "device": "owned Pixel 8 API 36 Google APIs emulator (AVD tw_api36_capture)",
     "system_locale": "ko-KR (primary), en-US (secondary)",
     "app_locale": "ko-KR",
     "timezone": "Asia/Seoul",
@@ -32,8 +32,8 @@
   ],
   "build_type": "debug; Google sample AdMob identifiers",
   "apk_sha256": {
-    "app-debug.apk": "e218f7f640c7da5611abd7011db2ef4abfb5e61745a668791cf9914b8f48cac7",
-    "app-debug-androidTest.apk": "0339134950180186413253e0d2dd6f2f053279492eecef8f6355bf5e6f816ee7"
+    "app-debug.apk": "34eb858f26ee2094767a2346289bc09293bbb4f6f0806e45163132167e87134e",
+    "app-debug-androidTest.apk": "7a0857c8658ef7cf9e1ee70420fe00a48e84606c38359b7a8003ff426d77ed87"
   },
   "safety": {
     "product_push": "intercepted by TestTodayWeatherApp; no token argument",
@@ -47,443 +47,443 @@
   "processing": "RGB, Lanczos 1080x2400 -> 720x1600, 256-color MEDIANCUT without dithering; no screen content replaced or redrawn",
   "screenshots": {
     "screenshots/01-access-notice.png": {
-      "sha256": "cf02d7297887b478cbb8bbe1d4e468ed9d1c182efbdc9b0da07e21a6dd1fcf68",
+      "sha256": "d45c8a3ea0d763f1ae946d73b5dfff3365d88ee794a0fb84f105959ae228d21f",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "5c2330efcc1516a53eb3ed32a68dfd9394e8d9cd8c5e532b2a02ab9110fb0bc7",
-      "captured_at": "2026-11-12T22:31:06.514Z",
+      "raw_sha256": "d8aa801ad5b138be5528f2ae8c3402c4dc097468dd3333f3b3dbbc2e97c31150",
+      "captured_at": "2026-11-15T06:50:15.624Z",
       "app_language": "ko"
     },
     "screenshots/02-start.png": {
-      "sha256": "ce1948d0f7adb98f81f116c80eb733c3a7564d5dd3d7292dc75602d02aeb33d7",
+      "sha256": "07a7e69e8f38e57bac2026329906f8441a960962b96ed2e769d58044162c47cd",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "fdb0e41c42e61ceca6037ecf3d99a2785f9d32ab989862eb7a5188b7eeea1c69",
-      "captured_at": "2026-11-12T22:31:07.272Z",
+      "raw_sha256": "d76d370f50f800c62a1e686de424c4effa0b90db5bc3fa7c707ef8dbd135cce9",
+      "captured_at": "2026-11-15T06:50:16.429Z",
       "app_language": "ko"
     },
     "screenshots/03-location-permission.png": {
-      "sha256": "9974354e2d7b6aa210c4c9b88df81d11cf3a2b4a88d9387636433a09b0c1c6a9",
+      "sha256": "1ab97971dfa8e45ee69c763980fadf05584c67ee8ffa56257c757fb0481c6352",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "52ef7ebc137378173dbdc6442863efbfcf61e6ba382176db3dc0ea173ba576d3",
-      "captured_at": "2026-11-12T22:31:08.275Z",
+      "raw_sha256": "c7f5d79445d63db8f7f1a92451c751ee715b46fab78f3a86088732bf7388f613",
+      "captured_at": "2026-11-15T06:50:18.367Z",
       "app_language": "ko"
     },
     "screenshots/04-current-location.png": {
-      "sha256": "248ba5816132d8090d9d717a9af98b26929584c4973d2ea089c38461cf5648e6",
+      "sha256": "5a02e7731c6b56d3515ee4567552b472d0022309c13fe431870c42bcc3e838d6",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "2264db89f14135e9ee50bcb01710cf82a3f1a2589f5f0c3801de1dbda324f532",
-      "captured_at": "2026-11-12T22:31:15.102Z",
+      "raw_sha256": "5fea74a778fdde34a9a802c293be4c2bdd1840493f189736bb2710b83a4095b7",
+      "captured_at": "2026-11-15T06:50:27.091Z",
       "app_language": "ko"
     },
     "screenshots/05-hourly.png": {
-      "sha256": "0ce72537f71b7c108f79f770b597f5de187f4b926a50f395cceb3213c7db88cb",
+      "sha256": "65f4cc018eee413bb645c0f891a5b1a152508bae42e276f6ad7b99e4ed51fcd4",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "59b5a990a0062bb48d98c867cb1c644b01e8782be800ccc01782b39f525477f3",
-      "captured_at": "2026-11-12T22:31:20.510Z",
+      "raw_sha256": "c613827cb559d7b6007e89f279915ed14f5200838b2624e4e1254b8dd840f668",
+      "captured_at": "2026-11-15T06:50:36.839Z",
       "app_language": "ko"
     },
     "screenshots/06-hourly-expanded.png": {
-      "sha256": "98a4429516fae0cd4b5479c4ba8d149692c658ff6bc51119eb4af79685460b2a",
+      "sha256": "527b5256d1fa2fb42dfd1c6b957b9f35ffb556a3c4434f12e2a5aea188b967fc",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "f40d2f958691382cf9230260826d9bec526c056447794aad18b7e2d7911aa256",
-      "captured_at": "2026-11-12T22:31:21.314Z",
+      "raw_sha256": "c65b60d82582bd8598cf13e98b8f8af6d0900da3db07a4a09ff8cd4089ec81f4",
+      "captured_at": "2026-11-15T06:50:37.717Z",
       "app_language": "ko"
     },
     "screenshots/07-hourly-past.png": {
-      "sha256": "2e55dd6d53f6ce0dffd8d4b78406bc6096684f93aeeb5521c968cca9e2fcb29c",
+      "sha256": "29635a4ba83f8284b0616de4dd287b753c4b15042aeb7e29392362716279c32e",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "7317323fd358eb7df0b4381e6c5ec0e909e7b3b086b1cbd77e873f7ee4012779",
-      "captured_at": "2026-11-12T22:31:22.554Z",
+      "raw_sha256": "920f86c1b00c32e65f350e41cc650f8cb96d764e64e8e4e4d7ccb5a7dd0e8c49",
+      "captured_at": "2026-11-15T06:50:39.171Z",
       "app_language": "ko"
     },
     "screenshots/08-hourly-future.png": {
-      "sha256": "962915ea52060da310ab8ea616148c3e4b448b2ba0b634847e4ed82b96fb7621",
+      "sha256": "deabb69ee5f5f127ba6407b2c9486f300a12b96b13551b9b33bd247ed1d5760e",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "df9e2fcf37e7943d9e4d5ddc258b9e97a698c356533c2c6041bc9d1adad434da",
-      "captured_at": "2026-11-12T22:31:23.828Z",
+      "raw_sha256": "67f7016ce17e31f0fd2fe314428197fa5821b10344af4db7a2bfd53b44385130",
+      "captured_at": "2026-11-15T06:50:40.620Z",
       "app_language": "ko"
     },
     "screenshots/09-daily.png": {
-      "sha256": "f981d5b4c6266bbfcf6aef004b1e57a9cedb38b22ddf4f450e3554c17df605a1",
+      "sha256": "360d44d4f0c96fd204236c98f40dda127d21464092a826fd46d315b3e2c7f63c",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "59a8d636dc646b4e35dba03716fba3f0546555e47ed9df2fa10297a8b7ff39d7",
-      "captured_at": "2026-11-12T22:31:25.544Z",
+      "raw_sha256": "d560ed46dd3623e0dc14efecae7b11d3d353779c0d457b80875f19f3f43ca42b",
+      "captured_at": "2026-11-15T06:50:42.380Z",
       "app_language": "ko"
     },
     "screenshots/10-daily-past.png": {
-      "sha256": "9610f663e9879cf01e41f5c41e16d1daac991c83d6614cfd563a167a72fac92b",
+      "sha256": "a72937f3dc896e2493dcfafefa29c9130789ea57b308ccfec804eeb736fd328a",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "ea8477b02dbba700e35b72cdde3159c4d6540a282ce922811a1efd19578ae195",
-      "captured_at": "2026-11-12T22:31:26.710Z",
+      "raw_sha256": "f3c825effef500aeaa29af5968bf048a418248a62814156f650e809f6c43de81",
+      "captured_at": "2026-11-15T06:50:43.659Z",
       "app_language": "ko"
     },
     "screenshots/11-daily-future.png": {
-      "sha256": "d022f485ca0c6347b8d032545984fa779272e0e015abad39a1b8ca29f3c8a2ac",
+      "sha256": "20348cf051193e0e1889b1f6c6c09ad413795e5c5eb85af9a56fde159f4730eb",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "eff6c5f626fe330b219b27ca7c7a4d7fca42609dee3a7f81aa70d7a7cb37080f",
-      "captured_at": "2026-11-12T22:31:27.858Z",
+      "raw_sha256": "a657ca4d80c749a9ffdaeaac67327fc01e6f65257fc359a8e028f16a9d155a44",
+      "captured_at": "2026-11-15T06:50:44.897Z",
       "app_language": "ko"
     },
     "screenshots/12-air.png": {
-      "sha256": "2e3696a3f66c4d7eea6a1aaa33ff74ad50c9eea189a0db377a82724de3ea5b93",
+      "sha256": "46b254586363ca78d25fc9515d4fd47b31c15ed0921aeeb87c445a4762c58f5d",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "c96aa287dd0186ee0cd3aba321257caa3b8f1743dcf949196d60af2ab8564a15",
-      "captured_at": "2026-11-12T22:31:29.491Z",
+      "raw_sha256": "63e305258621047a342b5d90ff588db73694c59cbb3349b67cb0f8a8b504e921",
+      "captured_at": "2026-11-15T06:50:46.601Z",
       "app_language": "ko"
     },
     "screenshots/13-air-pm25.png": {
-      "sha256": "33f34cb08f2c32315e8805e3807c7ab7fe5b349bd1223fc8f498f3b652e2c6de",
+      "sha256": "935a0af18a29445cbf7f04d1193a25ad026f63afabaa9ca9b36ba67e76a22f2f",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "25c5cdde26076d33570225b5ee6c87673508d80c5885a0c0cd1184d1532014aa",
-      "captured_at": "2026-11-12T22:31:30.302Z",
+      "raw_sha256": "623af4b58cfdf62cccc4aaa90c1da3eafedbec2206c796cdf509148b8c3da40d",
+      "captured_at": "2026-11-15T06:50:47.416Z",
       "app_language": "ko"
     },
     "screenshots/14-stations.png": {
-      "sha256": "88c28130c4a68d7c677ddb206d736334a686603badcbf77e717631b963072be7",
+      "sha256": "4b3354d069e8d2db98aa8ea1dc2e9c76b00846727855fc0b5c0e78a23b54090f",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "14fff299df12ad7027c6a1806532579fa1fe82e9a5afee901d00fc97806db7b6",
-      "captured_at": "2026-11-12T22:31:31.072Z",
+      "raw_sha256": "bf031089365d9d4203cac72d41dc2b2ec4d1d1c400f1fa1301059a6408722e9a",
+      "captured_at": "2026-11-15T06:50:48.209Z",
       "app_language": "ko"
     },
     "screenshots/15-station-selected.png": {
-      "sha256": "e048fd345a357b54709c3074bbe57c09b24758058c3e6a3e6e380ded3ff9425f",
+      "sha256": "f44b4c8726b10338e3ecff1e953c572a9289189f6e50121e296682e2feff861c",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "33a07a8ace4747c3286086b97a1c6be514fe125cbab0bec7bdf3427e071dedd0",
-      "captured_at": "2026-11-12T22:31:31.907Z",
+      "raw_sha256": "3dc550e157dd079ecf828c98a8d51c575f750bd2c3669502e66b5bc7ef65f7b8",
+      "captured_at": "2026-11-15T06:50:49.224Z",
       "app_language": "ko"
     },
     "screenshots/16-places.png": {
-      "sha256": "1eb4de19a37c1042e2e327a867647482ae2b19f759f83e47fb7078e8214f1b7a",
+      "sha256": "c4113bf016ac5db36434b41d6eb7288f98b5d51781beef33f4e78bf49bd1326e",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "9dd9072c934c96fa7fa038aaf0d57910946133bb73c30f229470269346657655",
-      "captured_at": "2026-11-12T22:31:38.329Z",
+      "raw_sha256": "858d6ac8cd13d3d05f671a281223be708ee4ca0631144c14c09cf27dc5de0d5a",
+      "captured_at": "2026-11-15T06:51:00.084Z",
       "app_language": "ko"
     },
     "screenshots/17-place-search.png": {
-      "sha256": "36292fc3f605ef84fa8f693a0f3772aec9773f145ffd4588c9fd19c3c091a15f",
+      "sha256": "f4ba1e06cc71a4a02791afc54191d0d5e59aa69525fc06962443b0bdbc8eca1a",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "a2038e9945a450ac564093c538433b35a9a77e8e1fb334a647a5c11517c86b76",
-      "captured_at": "2026-11-12T22:31:40.091Z",
+      "raw_sha256": "6b9b2efe46e61ef215e67b36ede8e874f7b38f0bc69f5298ae27178195fca6a0",
+      "captured_at": "2026-11-15T06:51:02.762Z",
       "app_language": "ko"
     },
     "screenshots/18-busan.png": {
-      "sha256": "8c0667805eb9a7efe2ffda0469f51fbab075d283ac0e60717f7ac0da5b49f5b0",
+      "sha256": "c5e3a8176b611cfa27d798b3f4e65b57ac65b09cf0b5599840a2c2b7060c356b",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "fce19f0b3e143c6b9a644822e5e2e3f271bf7df41452216c183044bff81d387a",
-      "captured_at": "2026-11-12T22:31:41.321Z",
+      "raw_sha256": "cd4620084ce2922dd723878113210c816a985f6f4d1467256caf4a068b3362d6",
+      "captured_at": "2026-11-15T06:51:04.234Z",
       "app_language": "ko"
     },
     "screenshots/19-switch-seoul.png": {
-      "sha256": "927fbf0967ab3d3b92626a5ed25abd943877db23d154700b1c43a55f9ced25c5",
+      "sha256": "c0c8080bd619d6b8520841afa5b590f2bd49e9e750c84786c9a4f73039bfaef7",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "916c90c7731a170d4d877a7aed239c68c9f22b767886fb9a3dc56aae1ee66ba5",
-      "captured_at": "2026-11-12T22:31:42.132Z",
+      "raw_sha256": "6d6b3381c2ab1b6fc8c47b820300a9555aa4d68beb69b11affa3ae09d389a6a7",
+      "captured_at": "2026-11-15T06:51:05.695Z",
       "app_language": "ko"
     },
     "screenshots/20-london.png": {
-      "sha256": "45ea309aecb731695f3005777240b56d47b77e0c731e20bc90b4b29544d30149",
+      "sha256": "3ea00d6637a8673a7acf491a969996913c1320d44a7fc33248a1e5875e124706",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "9e6771a2080a8e823384b461d0c892e199b9d5ebff65cf24f3ab61255b324d49",
-      "captured_at": "2026-11-12T22:31:47.513Z",
+      "raw_sha256": "131e8d86e49de8fd26ffcb9accb34dedb9df02091d4a0d744a3f764594d56e94",
+      "captured_at": "2026-11-15T06:51:11.729Z",
       "app_language": "ko"
     },
     "screenshots/21-delete-place.png": {
-      "sha256": "77cbe3e5df6ef0b2ab9427ff4e8109567bc50dc5e5a47dea39d6eb3f38533224",
+      "sha256": "350776efd222b83778c4acd5446b806a2f97bd0dbc670a83c08bd1e3ff1f37e9",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "48346e5dbf5bbbb2d746fc21a7989ed84d0ada5fda1525e24a7b86fa4ddf86ce",
-      "captured_at": "2026-11-12T22:31:49.190Z",
+      "raw_sha256": "10b28512ba1f9a3058702bdc4d62bf2db3bac6b1703425d594b62fcd34240aab",
+      "captured_at": "2026-11-15T06:51:14.042Z",
       "app_language": "ko"
     },
     "screenshots/22-place-deleted.png": {
-      "sha256": "10e6288ddd182c820643fe2041b9290bd17fb7bd9b0d335588ba57994529f441",
+      "sha256": "0dcf48f44999b28ec1473c0fe8f0e11d909990a1b88868bb4128564568c0e5e2",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "3f9352913030374f69cb6f0eb93735f9696b060d1f529205084c6654ae473462",
-      "captured_at": "2026-11-12T22:31:49.938Z",
+      "raw_sha256": "18ff9f595961b6720402aed62bc678792827fcbbb589839521807cd5f00de156",
+      "captured_at": "2026-11-15T06:51:14.822Z",
       "app_language": "ko"
     },
     "screenshots/23a-notification-permission.png": {
-      "sha256": "03502f057a367b648b1df75ee1396e1498b2f39512790abd0770e729c0c095ce",
+      "sha256": "03ab471eb60286fe485a346d24da6050bf6c45fc3b0e68c309c507fe2ddf8523",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "611a9e7c766977a6c3c289eb882379387027e16f3cd0bff62c8db50c4a6acd1f",
-      "captured_at": "2026-11-12T22:31:55.899Z",
+      "raw_sha256": "df4fade779834105052cc9011fe4d6961251258d79482da374804f628a22ad48",
+      "captured_at": "2026-11-15T06:51:23.969Z",
       "app_language": "ko"
     },
     "screenshots/23-alarms.png": {
-      "sha256": "54bc531babda9b6f0267138bddda6bc5e36831dd1c0800b1d6e9fdcc1bb6f5ae",
+      "sha256": "7f4bfd19ff587e034e131cf93e74088e1609996cb94c14c4b9812848d9963892",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "3b940913b0db36a6638216815826786229bd83f498827ac417b795e0ab877f95",
-      "captured_at": "2026-11-12T22:31:57.328Z",
+      "raw_sha256": "0b53349a8c11f64f6a5e536bd0a72493eb04e7fa0390b7ca1fa4fa3022f54c63",
+      "captured_at": "2026-11-15T06:51:25.453Z",
       "app_language": "ko"
     },
     "screenshots/24-time-picker.png": {
-      "sha256": "77f44cc9b1f58de9ebab3623a795b10f56d19fd3c18ef9d16be7bffb855f55eb",
+      "sha256": "a9e2c7cf85e930482b075e258abf1b3b90079c46b1c7a9206f49a5c252032c87",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "3f10eac99dd7914bdd13bc414f1d3eeacd572c515a3e549dba4978877073da19",
-      "captured_at": "2026-11-12T22:31:58.185Z",
+      "raw_sha256": "0002cedafd862f55c33c6f6740089314cc7b8733ca99c5f5b9c20bd4029606b4",
+      "captured_at": "2026-11-15T06:51:26.349Z",
       "app_language": "ko"
     },
     "screenshots/25-alarm-confirmation.png": {
-      "sha256": "6fa64f03710445b55dd38a1be0c1a9b1e1211faa0a50f69a90acd3afaecf585c",
+      "sha256": "0085fa9d051370d0e33c8077db69be983af1b3d7ba29749ef010784e9141e01e",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "3e118617e0fa97e150cc69e1cf61edf84a132302da184992bc305947227bb035",
-      "captured_at": "2026-11-12T22:31:59.110Z",
+      "raw_sha256": "bffc71867f29303beb09219a46868215d687de8c3d6209f4a7c72a44cb16bddd",
+      "captured_at": "2026-11-15T06:51:27.357Z",
       "app_language": "ko"
     },
     "screenshots/26-menu.png": {
-      "sha256": "cc9da7603ba857d624eb2285ae357a568bfc9bd6808663bf66dcd304ac4e177e",
+      "sha256": "fc07a1eb8c16b4ba592b2ef64c021d2e4d8d0563f57fb1d62a0659bde0aa0dd0",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "ef3ec62954be71af399a361830778444e88a80c2cd151a784852445fd9323a1a",
-      "captured_at": "2026-11-12T22:32:04.648Z",
+      "raw_sha256": "8ee1246f254a678c8cdf0542ff64127f3e88ca7e6d628223fd567c6c251514a8",
+      "captured_at": "2026-11-15T06:51:36.065Z",
       "app_language": "ko"
     },
     "screenshots/27-units.png": {
-      "sha256": "7d5d86fc5cd4e67e6a7c3f93c6cc4d0074bc8d214abf87674cbde107a2e067a0",
+      "sha256": "261306f9159afb1f15721dc2b369b228930eec1d4774cd8b0ca68256d6cc2645",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "8e2d495986a3dd78d7fb5a357d1ad09b74448daab615597d8f5e52b6d407f998",
-      "captured_at": "2026-11-12T22:32:05.970Z",
+      "raw_sha256": "75a503fe996cb703705704143fbd47b09d9fdb8d6fce4d70c91459040b79050f",
+      "captured_at": "2026-11-15T06:51:37.090Z",
       "app_language": "ko"
     },
     "screenshots/28-temperature.png": {
-      "sha256": "7ced61468a6e6da79e32f642980da794b180118f291eaab1308e8367063618c5",
+      "sha256": "fa01df010b939d4857c3617114ae811b3c361699b4b91c9257c4609a1b55fcf4",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "e3e9dd4928da606a461dfe12afca265f5159b3809bae8912746debff69061e82",
-      "captured_at": "2026-11-12T22:32:06.728Z",
+      "raw_sha256": "eb2001cdb97a7ef63800010a98633a7eba654ab284e7882bc8d2fe8e5552caca",
+      "captured_at": "2026-11-15T06:51:37.913Z",
       "app_language": "ko"
     },
     "screenshots/29-fahrenheit.png": {
-      "sha256": "9d8510b943c1d5318952ec758d9c449c5cb4f659ebaa8a44e515b8088760701d",
+      "sha256": "a8e85687bbd872fb40be939d41cede939bc7229c4a3a642b54bd6589c71b7bee",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "06727394c2e1409d1be8ed7be02f0180477dda81b8d5e2040b728fd7929d5ebd",
-      "captured_at": "2026-11-12T22:32:07.533Z",
+      "raw_sha256": "13c9e8090391645996feb6baabfcb9c336becc7b7aac686f1cc5c97f2edd8a25",
+      "captured_at": "2026-11-15T06:51:38.759Z",
       "app_language": "ko"
     },
     "screenshots/30-startup-page.png": {
-      "sha256": "157f704a82660f8534e5e42eed27b086e172f482f8acd507e5618c383a7bfdf0",
+      "sha256": "340a2d79a16ba938f19a87d28f037029a6f85ba773770bbbceb5e3f5e4b8a9a3",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "4fcab73243507cda82c6254ef2d9ceb5f242cc5baf09c5c972cab0e60e13cf97",
-      "captured_at": "2026-11-12T22:32:08.589Z",
+      "raw_sha256": "41aa0bcad62c3fd0678074f2d0380245225096740828f8cc3b7ab49bdc1f542a",
+      "captured_at": "2026-11-15T06:51:40.669Z",
       "app_language": "ko"
     },
     "screenshots/31-refresh.png": {
-      "sha256": "7e58fb1eb4764b53268b41cb09fe311d57f36189edb1b5c7408ca30ae3db8ebe",
+      "sha256": "eea60c1cb50b98a896cd8d1cf304c3f9233d09d063b429e36fa18a5e273255e6",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "db40dda53489eb48b9a9bc746d72b232ad1433e8b950acee2702434de929cf38",
-      "captured_at": "2026-11-12T22:32:09.555Z",
+      "raw_sha256": "56ccd1a32cbdfdfc1ab6da4fea54867f6f600bd1048f9373eb2d44cbc663f5ee",
+      "captured_at": "2026-11-15T06:51:41.963Z",
       "app_language": "ko"
     },
     "screenshots/32-dark-theme.png": {
-      "sha256": "9c1b92a3ea7d4fcbfdb1256230dfd4955c33102bc5d5e82bb209fd76c3e1018d",
+      "sha256": "8341f9d134ce777264901c27407d9dab3c8bb6743490f08b7376816173d3ba37",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "f6a731ad3188b6acc43c3da647140672949c1ccdfda8d1b0807442df46bf8380",
-      "captured_at": "2026-11-12T22:32:10.669Z",
+      "raw_sha256": "3a32b84f93f4da3299b4f7ba779b05634cb3dc339026bace72728be83402cc93",
+      "captured_at": "2026-11-15T06:51:44.380Z",
       "app_language": "ko"
     },
     "screenshots/33-dark-weather.png": {
-      "sha256": "0252ed260e8e73fa465ac88a963c71fc25a034ad6624f38a9cd3c52b2e58f7a9",
+      "sha256": "c35c384324c8e7398cedab7fef8a7d97aa6b733a555b83ab1712259deb22575b",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "1ea40969ad6c0bd07f3f4785c64281a7e9bda51a0aef37ccda961b79c322ee56",
-      "captured_at": "2026-11-12T22:32:11.425Z",
+      "raw_sha256": "4670928fa73ab8c5f18d5326044de4b6864c6e7289e11eabe87331b478ce7840",
+      "captured_at": "2026-11-15T06:51:45.256Z",
       "app_language": "ko"
     },
     "screenshots/34-photo-theme.png": {
-      "sha256": "ecc294eda598c01b70a404c5a20bedd4be23824535a67824d684047a662fd66e",
+      "sha256": "c4158b6f9959d1f6e2a9ffa2a423036051cbbb83d73f0fc69f25667f89863102",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "786fb372c389c95a86e2828d81d510385d749e0ae41196acad825dce6eb9f6ab",
-      "captured_at": "2026-11-12T22:32:13.796Z",
+      "raw_sha256": "b2b7d0bb8afe8211377cc5ffcaa8799aa5c0071d2b8d4a365eda2bb338200c81",
+      "captured_at": "2026-11-15T06:51:50.926Z",
       "app_language": "ko"
     },
     "screenshots/35-warnings.png": {
-      "sha256": "33974ee9587be0cf98b3d925e9a7cf7f6510bfdfb8c679c165ff152c0f897547",
+      "sha256": "5f2b802e89bd29d46288fdabe3382bf75f4fd1f074796f95939e1b093d3f57c5",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "0afbeec422d55aa17e566d0a6d064546e1e0b745d269c750c53a61e1fff6b561",
-      "captured_at": "2026-11-12T22:32:20.785Z",
+      "raw_sha256": "30b5b3c8c06361a6d54c4bdde99db74fd77fdd0561d70bf8120ff1f554cc58e9",
+      "captured_at": "2026-11-15T06:52:00.856Z",
       "app_language": "ko"
     },
     "screenshots/36-national-weather.png": {
-      "sha256": "af1f4bfa2508fdf17bc9b99050b97e984845b23c55fa526ce6bcf1a677e5cce4",
+      "sha256": "46400ef49a663ece5ea5820c1e06c9754ea2e9f3486381db4d1c1bde379c3186",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "0347d33e5faaa5cf1038d3e3c15a490ee357415b0af9fe80b5491672dbe01963",
-      "captured_at": "2026-11-12T22:32:25.097Z",
+      "raw_sha256": "8dac2c2c3aebc2eeb2e5e9b0dde31b96f0ecd7ad3fab292c64aec0207b4d93b1",
+      "captured_at": "2026-11-15T06:52:07.404Z",
       "app_language": "ko"
     },
     "screenshots/37-national-wind.png": {
-      "sha256": "19d64c96480b2eda290b13aa315c5f416273e892c8075b6502fbe068da1fa4bc",
+      "sha256": "dc8f9efb8e08451b9118e0b139897da562ff8a7d936dfb081e3e028db6dcf414",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "c33672a134aee5af55f73fb5f6ad8a2b7a539697d863d2fb5ef03facd12f7a16",
-      "captured_at": "2026-11-12T22:32:25.894Z",
+      "raw_sha256": "b3f3a668c62655319e7398cb47e20bdc756c3c62d80b0c5a18ba2b3bf0d007e4",
+      "captured_at": "2026-11-15T06:52:08.214Z",
       "app_language": "ko"
     },
     "screenshots/38-national-air.png": {
-      "sha256": "b23fa4c54a8f3552b9814690103b9adfb8e78e4dac97dd25508db6bcd091c031",
+      "sha256": "a0b5b4697b7fc9778b1ccf102d47e2e6e188ca113fa6de5ab76dedca8d3eb0eb",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "f8dfcb49f074ebe6315dde635017b5ead2cb4f24950ec188c015d6c9ea7c55a8",
-      "captured_at": "2026-11-12T22:32:27.324Z",
+      "raw_sha256": "939c2c8e897088654d45e3304a64b993174389755c9c8e0074d790c8d8c3b379",
+      "captured_at": "2026-11-15T06:52:10.246Z",
       "app_language": "ko"
     },
     "screenshots/39-about.png": {
-      "sha256": "cb5df6f71c67768c1dd2be55694b762ad56a0e2abe5b7cecb95324e899dca9db",
+      "sha256": "86b8c0e33e9fdd274664c1b8bce5869a5fe48d31953f7b98b398eee362cb7a7f",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "0ba4f6446f03b771b8d2d8d305b6a35b390fe1de75d08d8c5d920c51d97b8dff",
-      "captured_at": "2026-11-12T22:32:32.930Z",
+      "raw_sha256": "73d95f67ab7513c6bf2f7ff550e23d79f169713bc12d2ab9d4206fc63d8a58f8",
+      "captured_at": "2026-11-15T06:52:18.245Z",
       "app_language": "ko"
     },
     "screenshots/40-analytics.png": {
-      "sha256": "509e0ee31c945d610f9d242e03119f4ae0f3ab34e83d76d78297c207a0079938",
+      "sha256": "89bf62afb7a9d9d1ea3f537f8936c717f0dc7d5b567490ec73e9540b8b866095",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "c2d43e3495560ea0567dd38b7979a262c8ecc49ecf0f56628ce12b88fbc50db2",
-      "captured_at": "2026-11-12T22:32:33.954Z",
+      "raw_sha256": "3b18d74e1877566130fe46fcc7d822ec599676d979a0ce1f07d4f70bb36f2da5",
+      "captured_at": "2026-11-15T06:52:19.300Z",
       "app_language": "ko"
     },
     "screenshots/41-ad-privacy.png": {
-      "sha256": "54ad3d41dfb443c6904995d4df753e6d4e9113b0960888bcfea45d06749bab14",
+      "sha256": "154cab8d59cce063abe74fd7eacf92d3b0c0a7968872bb6c9ed4b679440a7ed5",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "10a10d035221fe0ca4b8ba1a484f808316aaba2d9ea466650f101965afc1bf4c",
-      "captured_at": "2026-11-12T22:32:34.952Z",
+      "raw_sha256": "bd1c7816fca429fb74efb950775c6862d35271825676a9a791421e59bdc7f6c5",
+      "captured_at": "2026-11-15T06:52:20.333Z",
       "app_language": "ko"
     },
     "screenshots/42-share-chooser.png": {
-      "sha256": "7c4c07a58fbc127cdc80f05ec1894de04662d65d91545fd308dceed6422c3d5e",
+      "sha256": "d3d631e61296d00fcb8071efc966371787cfcbdfb84be2beebd35ad2e96716fa",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "c6484e2de832f86729a63b06499fc6bc541eb8f699a57f78f12e00aa62b31b7a",
-      "captured_at": "2026-11-12T22:32:37.927Z",
+      "raw_sha256": "1ec7369584bc11da218eb344ae1ad2000e8d8757c1fffc26b0fe7257e08e774a",
+      "captured_at": "2026-11-15T06:52:23.188Z",
       "app_language": "ko"
     },
     "screenshots/43-exit.png": {
-      "sha256": "660180dedfeaf06c0de0914b5885d038909e46a28ef8348fcc36ef58cb4ec83b",
+      "sha256": "7560fb29d02b99986080bf7ae85817521e564fa8fc8d29de1c67aa2b5621938a",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "87d7483ca4f917c52e707cbaddc0cec51d5b9ba84acae5f6c630b45efe4db7f2",
-      "captured_at": "2026-11-12T22:32:39.686Z",
+      "raw_sha256": "c09fed989d0ca1ba48177d4969086e64319532b8f60975c2dd1f847a1b9eb384",
+      "captured_at": "2026-11-15T06:52:25.001Z",
       "app_language": "ko"
     }
   },
@@ -880,7 +880,7 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/settings/SettingsPages.kt": "ad54ccbc98bcc03b6e270834d500f98deba30967ebc42eca201d197675e61aa1",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "cef43aa621afc0b89aadbaa51c958000409dc9122d2d87c4519d111fc1fb5266",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Popup.kt": "b9902e4bae319182e85063f5f1859a69677e4a359aa73f16664b9d38ec17b034",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "f81c5980ff2a2aea01c50d4b08a6e1926df10a790ad1098c21a30224805f7834",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "145dd3e7fd0aa3cf899da8adaa0bbf4fd92a73a495422647c78fd26de4041d2f",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/ShellColors.kt": "8fd2cdb579e2af28c0c987f59476e39f640ae08be0592eed3a6574e5627cf984",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/SystemBars.kt": "09520a8ccf1aff7b0818ff2daf29d382aedccab7552c91a4f23da4a9cba498d2",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/LocationPopups.kt": "da51561865338e046444e7e441e75de9fa6eb3e7fda8d7f0c18c76ebc1473be5",
@@ -973,8 +973,8 @@
     "android/settings.gradle.kts": "bebd82b1565efeb97319d8d900368f779736fde0c3ddb7a646183f2ff9a86bcf",
     "android/tools/manual/capture.sh": "28ea606533415a98c56881fdd5ac7e1b94fba7d6477f7d22b67ca1b9bafe7ce4"
   },
-  "manual_sha256": "0da8cb76d4663c329b62d34d5eb5daf52118dced918872b5c098f5f04c8ece05",
-  "pdf_sha256": "ba5ff71c679d7c2bd6961cc011b49c5701506359e8c3cc9a11cd15578e354e3a",
+  "manual_sha256": "49285522fb593740655f5d019ca1b90a7452560122599061bdccb08bb52c9503",
+  "pdf_sha256": "9bd522b220cb5d117d69a7162253efd0b8706cecf9ff5f505b0ad20babe0de5a",
   "limitations": [
     "API36 emulator captures; not a release APK or physical-device certification",
     "Live values, test advertisements, forecasts, available warning bulletins and Android dialogs vary",
