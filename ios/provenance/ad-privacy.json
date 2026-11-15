@@ -2,8 +2,8 @@
  "tool": "ios/tools/import_ad_privacy.py",
  "config": {
   "source": "client/config.xml",
-  "commit": "449ddc6db64ea6e83e0039bd2015eb9724dc2e69",
-  "sha256": "ad127cd824a8fc307d5847a35f0da16743021fec7456ca2a236c308d3d6dd5ad"
+  "commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
+  "sha256": "f78ae5012426410800cba59ab2b05e52416684ab00f6324b70f6cacd00382aca"
  },
  "tracking": [
   {
