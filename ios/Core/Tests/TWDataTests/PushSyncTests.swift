@@ -379,6 +379,56 @@ struct PushSyncTests {
         #expect(try files.queue.pending().isEmpty)
     }
 
+    /// IN-12's unit change (the Android `updateUnits`): the list posted again with the units saved by then.
+    @Test func aUnitChangePostsTheListWithTheSavedUnits() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let transport = HeldTransport()
+        let (sync, holder) = try files.process(transport)
+        holder.change { $0.units.temperatureUnit = "F" }
+        let outcome = await sync.updateUnits()
+        #expect(outcome?.requests.map(\.method) == ["POST"])
+        let posted = try #require(transport.requests.first?.body[0])
+        #expect(posted["units"]?["temperatureUnit"] == "F")
+        #expect(posted["fcmToken"] == "token-a")
+        #expect(files.storedToken == "token-a")
+    }
+
+    /// A unit change while a token's registration is in flight waits for it and posts with the new token.
+    @Test func aUnitChangeWaitsForARegistrationInFlight() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let transport = HeldTransport(held: true)
+        let (sync, holder) = try files.process(transport)
+        async let registered = sync.receive(token: "token-b")
+        await transport.waitForRequests(1)
+        holder.change { $0.units.temperatureUnit = "F" }
+        async let units = sync.updateUnits()
+        transport.release()
+        _ = await (registered, units)
+        #expect(transport.requests.map(\.method) == ["PUT", "POST"])
+        #expect(transport.requests.last?.body[0]?["fcmToken"] == "token-b")
+        #expect(transport.requests.last?.body[0]?["units"]?["temperatureUnit"] == "F")
+    }
+
+    /// Nothing is sent when the unit change could not be saved, nor without records or a token.
+    @Test func aUnitChangeSendsNothingUnsavedOrWithoutAToken() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let failing = ProcessStore(files.file, failures: 2)
+        let transport = HeldTransport()
+        let (sync, holder) = try files.process(transport, store: failing)
+        holder.change { $0.units.temperatureUnit = "F" } // save 1 fails
+        #expect(await sync.updateUnits() == nil) // save 2 fails
+        #expect(transport.requests.isEmpty)
+
+        let none = Files()
+        try none.seed(token: nil)
+        let quiet = HeldTransport()
+        #expect(try await none.process(quiet).sync.updateUnits()?.requests.isEmpty == true)
+        #expect(quiet.requests.isEmpty)
+    }
+
     /// The token is stored through the holder over the state as it is then: a change the UI made while the requests
     /// were in flight stays.
     @Test func storingTheTokenKeepsAChangeMadeMeanwhile() async throws {

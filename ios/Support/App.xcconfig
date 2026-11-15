@@ -9,6 +9,10 @@ TW_SERVER_URL =
 // TWWeatherPhotosURL. Empty without it: the photo theme shows no photo.
 TW_WEATHER_PHOTOS_URL =
 
+// TW_MAIL_TO: the feedback address of 의견보내기 (IN-12), written into Info.plist as TWMailTo. Empty without it: the
+// mail opens without a recipient.
+TW_MAIL_TO =
+
 // TW_ADMOB_APP_ID_IOS, TW_ADMOB_BANNER_IOS: AdMob's app ID and banner unit (IN-15), written into Info.plist as
 // GADApplicationIdentifier and TWAdMobBannerUnit. Without TW_ADMOB_APP_ID_IOS a Release build carries this
 // placeholder, which no AdMob app has: the Google Mobile Ads SDK stops an app whose GADApplicationIdentifier is empty

@@ -9,6 +9,8 @@ public protocol PushStateAccess: Sendable {
     func pushState() async -> AppState?
     /// Stores `token` as the push token over the state as it is now; throws when it could not be saved.
     func storePushToken(_ token: String?) async throws
+    /// The state once every change asked for before has been saved; throws when that save failed.
+    func savedPushState() async throws -> AppState
 }
 
 extension AppStateHolder: PushStateAccess {
@@ -16,6 +18,10 @@ extension AppStateHolder: PushStateAccess {
 
     public func storePushToken(_ token: String?) async throws {
         try await update { $0.push.fcmToken = token }
+    }
+
+    public func savedPushState() async throws -> AppState {
+        try await update { _ in }
     }
 }
 
@@ -84,6 +90,18 @@ public actor PushSync {
         guard enqueue(token: token) else { return false }
         _ = await drain()
         return true
+    }
+
+    /// `Push.updateUnits()` after a unit change (IN-12; the Android `updateUnits`): the list posted again with the
+    /// units saved by then, after the registrations before it. The state is read once the changes asked for before
+    /// are saved; when that save fails nothing is sent (the next open posts the list with the units then saved).
+    @discardableResult
+    public func updateUnits() async -> Outcome? {
+        await serialized { [self] in
+            guard let current = try? await self.state.savedPushState(), let ctx = self.context(current) else { return nil }
+            let result = PushRegistration.onUnitsChanged(current.push, places: current.places, context: ctx)
+            return await self.send(result, over: current)
+        }
     }
 
     /// Registers the queued tokens in order of arrival (each like the Cordova token callback while the app runs).

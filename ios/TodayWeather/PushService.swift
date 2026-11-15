@@ -29,10 +29,12 @@ struct FirebaseTokenProvider: PushTokenProvider {
 /// `PushSync` in the order they came: a token is queued when it arrives, and one stream and one task this service
 /// owns run the registrations.
 @MainActor
-final class PushService {
+final class PushService: PushUnitsUpdating {
     private enum Event: Sendable {
         /// Register the queued tokens (a process start, or a token queued).
         case drain
+        /// Post the list again after a unit change (IN-12).
+        case units
     }
 
     let sync: PushSync
@@ -60,6 +62,7 @@ final class PushService {
             for await event in stream {
                 switch event {
                 case .drain: await sync.drain()
+                case .units: await sync.updateUnits()
                 }
             }
         }
@@ -103,6 +106,12 @@ final class PushService {
     }
 
     /// The process started: tokens an earlier process queued are registered.
+    /// A unit changed on S08 (`Push.updateUnits()`, IN-12): the list is posted again after the registrations before it,
+    /// with the state as saved by then.
+    nonisolated func updateUnits(_ state: AppState) {
+        events.yield(.units)
+    }
+
     func resume() {
         events.yield(.drain)
     }
