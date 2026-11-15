@@ -1,6 +1,6 @@
 # SR-2 verification: isolated failures no longer end the shadow run (#3000)
 
-Revision `3f634c5f` (after independent review 4) on master `ca3eb0f2`. Run on 2026-11-15 and 2026-11-16: macOS with Python 3.11.15 for the offline checks at this revision (earlier rounds of this PR partly ran under the system Python 3.9.6); a disposable Lima VM (Ubuntu 24.04 aarch64) for the Linux check, with server2 built in the VM from this branch. Nothing contacted AWS, a provider or production.
+Revision `ae2c96cc` (after independent review 5) on master `ca3eb0f2`. Run on 2026-11-15 and 2026-11-16: macOS with Python 3.11.15 for the offline checks at this revision (earlier rounds of this PR partly ran under the system Python 3.9.6); a disposable Lima VM (Ubuntu 24.04 aarch64) for the Linux check, with server2 built in the VM from this branch. Nothing contacted AWS, a provider or production.
 
 ## Behaviour
 
@@ -10,7 +10,7 @@ Revision `3f634c5f` (after independent review 4) on master `ca3eb0f2`. Run on 20
 
 ## Checks
 
-- Red first (retained locally): guard/operator tests 7 failures and 3 errors, reader tests 6 failures and 2 errors, simulator subset 3 failures; after review 1, 7 failures and 2 errors for the new resume, validated-stop, deadline-on-resume, typed-diagnostics and CLI-detach tests; after review 2, 19 failures for the failing-reconnect resume and the confirmed-stop-not-masked tests; after review 3, 5 failures and 15 errors in a fault-injection test that drives the lifecycle with an interrupt and four error types at every call site in each phase; after review 4, 1 failure and 5 errors for its marker-boundary and marker-less expired-resume cases. Green at this revision with Python 3.11.15: `test_shadow_supervisor.py` 122 OK, `test_paired_read.py` 18 OK, `test_shadow_simulation.py` 9 OK. The reader's continue test now allows 5 s for its one request pair, which a loaded machine needed.
+- Red first (retained locally): guard/operator tests 7 failures and 3 errors, reader tests 6 failures and 2 errors, simulator subset 3 failures; after review 1, 7 failures and 2 errors for the new resume, validated-stop, deadline-on-resume, typed-diagnostics and CLI-detach tests; after review 2, 19 failures for the failing-reconnect resume and the confirmed-stop-not-masked tests; after review 3, 5 failures and 15 errors in a fault-injection test that drives the lifecycle with an interrupt and four error types at every call site in each phase; after review 4, 1 failure and 5 errors for its marker-boundary and marker-less expired-resume cases; after review 5, an interrupt escaping the lifecycle from the steps before the finish (target check, finishing record), now guarded and covered by the same table test. Green at this revision with Python 3.11.15: `test_shadow_supervisor.py` 122 OK, `test_paired_read.py` 18 OK, `test_shadow_simulation.py` 9 OK. The reader's continue test now allows 5 s for its one request pair, which a loaded machine needed.
 - Guard misses survive restarts: six separate `guard.py check` invocations with an unavailable sample return 0 five times and stop at the sixth.
 - Operator: with eight hours of failing polls (errors and timeouts) collection reaches the deadline with no stop, export or terminate before it, one instance and one install; an interrupt leaves the instance running and a second `run` resumes without a new install or provisioning call, also when every resumed poll fails; a resume whose reconnects fail (`OSError`, state error, timeout) keeps collecting to the deadline; a resume after the deadline finishes with evidence export and termination, also when its reconnect fails; unit states that are missing, partial or transitional do not end collection.
 - Linux check (`server2/deploy/shadow/linux_check.py`, all five scenarios, server2 SHA-256 `28e34597…` built in a fresh VM from `62b88e41`; the host-side files it exercises (guard, remote, coordinator) are unchanged since, and later commits change the operator lifecycle and tests, pinned Vector 0.61.0 aarch64): provider-stop 27/27, config-change 12/12, frozen-guard 11/11, collector-broken 6/6, tampered 2/2; overall PASS. Report: [linux-check.json](linux-check.json). The runs at `13e37435` and `5e5c0090` also passed 58/58.
@@ -18,7 +18,7 @@ Revision `3f634c5f` (after independent review 4) on master `ca3eb0f2`. Run on 20
 
 ## Simulation against the SR-1 baseline
 
-20 seeds per scenario at `3f634c5f` (Python 3.11.15, one process per scenario); summary [simulation.json](simulation.json) (full per-seed report SHA-256 `20c1f9b822d5df439b6f6077ce2a8ca77276bbc7d170538eadf89d6fafbf25b9`, retained locally).
+20 seeds per scenario at `3f634c5f` (`ae2c96cc` only guards the two steps before the finish, which the simulator does not interrupt) (Python 3.11.15, one process per scenario); summary [simulation.json](simulation.json) (full per-seed report SHA-256 `20c1f9b822d5df439b6f6077ce2a8ca77276bbc7d170538eadf89d6fafbf25b9`, retained locally).
 
 | Scenario | Full runs /20 (SR-1 baseline) | Median hours (SR-1) | Evidence retrievable /20 (SR-1) | First stop cause |
 | --- | --- | --- | --- | --- |
