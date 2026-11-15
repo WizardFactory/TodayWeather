@@ -182,6 +182,24 @@ direct "Ask App Not to Track" answer, the relaunch without a second prompt and b
 `npx cordova prepare ios` stops when a purpose string is missing or the AdMob plugin source no longer matches the
 reviewed anchors. After a string change, run prepare again; the hook refreshes the copies in `platforms/ios`.
 
+## iOS tracking settings shortcut (#2990)
+
+The first iOS version after 1.1.2 that contains #2990 shows the tracking row in the menu and, while tracking is not
+allowed, a notice at the end of the hourly, daily and air pages ([privacy review](store-privacy-review.md#settings-shortcut-for-users-who-did-not-allow-tracking-2990)).
+No store answer changes. Releasing it needs AK's approval like any version.
+
+- `npx cordova prepare ios` adds the elements to `platforms/ios/www` and stops, naming the file, when
+  `client/www/index.html` or one of the three tab templates no longer has its insertion point, a locale text is missing,
+  or `client/www/locales` defines one of the `LOC_TRACKING_*` keys. Review the template change, then adjust the anchor in
+  [`ios-tracking-settings.js`](../../client/scripts/ios-tracking-settings.js) and its
+  [test](../../client/test/ios-tracking-settings.test.cjs).
+- App Review note to add for that version: "Users who did not allow tracking see a short notice at the end of three
+  weather pages and a menu row that open the app's page in iOS Settings. The app does not show the tracking prompt
+  again, and every feature works the same whatever the choice."
+- Before submitting, confirm on a device with tracking off that the notice and row appear and open Settings >
+  TodayWeather, and that they change after the switch is turned on (see the
+  [#2990 evidence](../evidence/tasks/issue-2990/README.md)).
+
 ## Developer website and app-ads.txt
 
 AK selected `https://todayweather.ai` on 2026-11-07 (#2871). It is the developer

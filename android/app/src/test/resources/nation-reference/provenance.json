@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/nation-reference/capture.sh",
  "cordovaApk": {
-  "sha256": "964443f77cdba9aeae7f4b55118ac2dd2cd7fb579a25ce8ad17cc8b09b8c41e9",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -129,9 +129,7 @@
     "file": "client/www/css/ionic.app.css",
     "apkSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
     "tracked": false,
-    "generatedFrom": "client/scss/ionic.app.scss",
-    "clientSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
-    "matchesClient": true
+    "generatedFrom": "client/scss/ionic.app.scss"
    },
    {
     "file": "client/www/img/kr.png",
@@ -154,7 +152,7 @@
   "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE2A.250530.026.F3/13894323:userdebug/dev-keys",
   "sdk": "36"
  },
- "display": "384x832 dp at density 2 (wm size 768x1664, wm density 320)",
+ "display": "384x832 dp at density 2; matrix captures record measured viewport.json per language",
  "language": "per-app locale ko-KR, then en-KR (English with the region Korea, so the Korean menu rows show)",
  "images": "cut from the screen (screencap): S10 and S11 from the top of the page to 20 CSS px under the map; S12 and the loading, empty and failed states as the screen shows them; each S12 card whole (stitched when taller than the screen under the header)",
  "server": "a stand-in inside the WebView: corpus fixture kma-seoul for the place, corpus inputs nation.json for /v000903/nation/KR and special.json for /v000903/kma/special; an empty answer, a 500 and a 4 s late answer where a state needs one",
@@ -218,7 +216,7 @@
   },
   {
    "file": "ko-KR/nation-air-co.png",
-   "sha256": "bddcfc9ac3234252ca5ece61aa9e0c02d4d896715b19b6b6463e259bd8791305"
+   "sha256": "265e965fb3c685c9686087ee75eb5a093b534d4b760eb0678e2c229c6a3ba9de"
   },
   {
    "file": "ko-KR/nation-air-failed.json",
@@ -234,7 +232,7 @@
   },
   {
    "file": "ko-KR/nation-air-no2.png",
-   "sha256": "ddf796eb66e2f0e652d16aa362d92a1fd6e101578af7143f4ecf6d6d6acaab96"
+   "sha256": "13efa7ed51186a7e3e5d1e67339ce643f5f33d93b167395d0205896a7f04f214"
   },
   {
    "file": "ko-KR/nation-air-o3.json",
@@ -250,7 +248,7 @@
   },
   {
    "file": "ko-KR/nation-air-pm10.png",
-   "sha256": "28ea0ec1f11cdd0cb1cd10c6fdea2e8166dbc94e6bbbcdfd7a11481b416714b2"
+   "sha256": "dbf98e0ab8681183393a6683b25da8639bc8c68690195d0b8cf357013135875e"
   },
   {
    "file": "ko-KR/nation-air-pm2.5-airnow.json",
@@ -282,7 +280,7 @@
   },
   {
    "file": "ko-KR/nation-loading.png",
-   "sha256": "6092f295306ec14844fd8dc1baa5404d38f99fd7d9534531370e49d55d831f1d"
+   "sha256": "950c867fb99124589e4b129e43b68e207908b9ffe6a72d27d6a6a130efd6cda4"
   },
   {
    "file": "ko-KR/nation-rain.json",

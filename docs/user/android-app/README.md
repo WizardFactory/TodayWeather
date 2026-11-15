@@ -9,7 +9,8 @@ startup/refresh settings, themes, nationwide information, privacy, sharing and e
 The app screens are Korean; the instructions are English with Korean control labels.
 The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1.
 
-The screenshots were captured from the running native app on 13 November 2026,
+The screenshots were captured from the running native app on 15 November 2026
+(all 44 again after the privacy rows moved to the end of the menu, #2990),
 using an owned API36 emulator at 1080×2400 pixels, 420dpi, font scale 1.0,
 Korean app/system language and Asia/Seoul time. Saved places are seeded for later
 sections. Weather, geocoding, nationwide data and Google Places search use the

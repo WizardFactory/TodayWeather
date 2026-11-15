@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK settings",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -160,11 +160,11 @@
  "files": [
   {
    "file": "en-US/about.json",
-   "sha256": "7c085215007f1c01878ed030a1f9533405d130053198d737dae4b9c4d0f19301"
+   "sha256": "e1bdefcd1fb8744abb6806d3c2e41be96ae33adbe3283d00394ad5e7c367781c"
   },
   {
    "file": "en-US/about.png",
-   "sha256": "20cca14708aaf6edb75d559ba1ae4925e91e909509817390adebe4eba02adc1e"
+   "sha256": "3ab3bad0a8b2c7828dcc8fedf51dab0ba506e8775909c60b686bb8b0ce17e593"
   },
   {
    "file": "en-US/daily-dark/daily-0.png",
@@ -348,11 +348,11 @@
   },
   {
    "file": "ko-KR/about.json",
-   "sha256": "3d8a118e00c648d2691186fd1e82215d2111e5ab57c5c8a8c369bbf5949c4b5e"
+   "sha256": "0ced028fb65b179b02f3f920b1486f2dd6159d10b137f8b33a2942941871a108"
   },
   {
    "file": "ko-KR/about.png",
-   "sha256": "babe2be069f6125b9fedcb2860db20f0f8054e342542aa1325ca30f017a2b0ca"
+   "sha256": "e86828e18f5d14ab7cfd3be5a0f1a3a1a711cb235906848ebd1a2e62ccf6e4d9"
   },
   {
    "file": "ko-KR/daily-dark/daily-0.png",

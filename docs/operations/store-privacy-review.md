@@ -93,6 +93,27 @@ The App Store privacy answers were published on 2026-11-13 and 1.1.2 was approve
 alert follows a refused GDPR message. The updated policy pages were uploaded on 2026-11-13
 ([record](../evidence/tasks/issue-2945/README.md#policy-page-upload-2026-11-13)).
 
+### Settings shortcut for users who did not allow tracking (#2990)
+
+AK decided on 2026-11-15 that iOS shows the tracking choice again without a new prompt. Apple permits "a shortcut to
+Settings" for a user who turned tracking off for the app
+([User Privacy and Data Use](https://developer.apple.com/app-store/user-privacy-and-data-use/)); it forbids manipulation,
+gating and incentives (App Review Guidelines 5.1.1(iv) and 5.1.2(i)).
+
+- The side menu shows 추적 허용 설정 (Tracking permission) with 허용됨 or 허용 안 함 below 광고 개인정보 선택 for
+  `authorized` and `denied`.
+- While the status is `denied`, the hourly, daily and air pages end with AK's text "TodayWeather는 광고 수익으로
+  운영됩니다. 관심사에 맞는 광고를 원하면 iOS 설정에서 추적을 허용할 수 있습니다. 기능은 어느 쪽이든 같습니다." and the
+  button 설정 열기 (Open Settings). It is page content, has no close control (AK's choice) and blocks nothing.
+- Both open Settings > TodayWeather. The status comes from the read-only `twAdPrivacyState` action; nothing prompts.
+- The elements exist only in the iOS bundle, added at build time by
+  [`ios-tracking-settings.js`](../../client/scripts/ios-tracking-settings.js) from
+  [`client/resources/ios/tracking-settings/`](../../client/resources/ios/tracking-settings/). Android does not show them.
+- Review risk: a notice on three pages that cannot be closed is the part most likely to be read as pressure. The wording
+  states the choice and its effect only. Explain it in the App Review notes of the release that ships it (see the
+  [release runbook](cordova-store-release.md#ios-tracking-settings-shortcut-2990)).
+- Device evidence: [#2990 record](../evidence/tasks/issue-2990/README.md).
+
 ## Decisions and remaining publication gates
 
 AK answered all operator/contact/consent/scope questions on2026-10-01. The app changes and KO/EN/JA privacy/terms/support documents implement those directions; review banners remain because operating retention, recipient/country details, secure deletion verification and physical-device evidence are incomplete. The [retention runbook](store-data-retention.md) contains the operating limits, evidence gates and mailbox procedure. These choices do not approve guessed store declarations.

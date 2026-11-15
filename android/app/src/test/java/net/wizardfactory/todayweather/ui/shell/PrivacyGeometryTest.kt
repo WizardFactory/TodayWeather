@@ -15,6 +15,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
 import java.io.File
@@ -61,7 +63,7 @@ class PrivacyGeometryTest {
         rule.setContent {
             val texts = forecastTexts(LocalContext.current)
             Box(Modifier.size(384.dp, 762.dp).testTag(ROOT)) {
-                SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.1", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
+                SideMenu(ShellState(Theme.LIGHT, region, Tab.HOURLY, "1.1.2", mapOf(MenuRow.STARTUP_PAGE to texts["LOC_HOURLY_FORECAST"],
                     MenuRow.REFRESH_INTERVAL to texts["LOC_MANUAL"], MenuRow.THEME to texts["LOC_LIGHT_THEME"],
                     MenuRow.ANALYTICS to stringResource(R.string.LOC_ANALYTICS_DISABLED)))) {}
                 IonicPopup(stringResource(R.string.LOC_ANALYTICS_CHOICE), listOf(stringResource(R.string.LOC_ANALYTICS_DETAIL)),
@@ -69,7 +71,7 @@ class PrivacyGeometryTest {
                     onBack = {})
             }
         }
-        rule.onNodeWithTag(ShellTags.row(MenuRow.ABOUT)).performScrollTo()
+        rule.onNodeWithTag(ShellTags.row(MenuRow.entries.last())).performScrollTo().performTouchInput { swipeUp() } // the end of the menu, as captured
         rule.waitForIdle()
         val parts = capture["parts"]!!.jsonArray.map { it.jsonObject }
         fun part(cls: String) = parts.filter { it["cls"]!!.jsonPrimitive.content == cls }.map { it["rect"]!!.jsonObject }

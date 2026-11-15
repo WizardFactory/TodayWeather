@@ -1,15 +1,15 @@
 {
  "tool": "android/tools/parity-reference/capture.sh APK push",
  "cordovaApk": {
-  "sha256": "f6a7949732f57e924ed1fa808ad7f134ad25785aa49fc0e3a0166f130f07db45",
+  "sha256": "32098179cea827d1a3023121c567c25e9411402e4f1afbea073915e274341665",
   "versionCode": "100091",
-  "versionName": "1.1.1",
+  "versionName": "1.1.2",
   "sources": [
    {
     "file": "client/www/index.html",
-    "apkSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "apkSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "tracked": true,
-    "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
+    "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
     "matchesClient": true,
     "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
    },
@@ -143,7 +143,7 @@
   },
   {
    "file": "en-US/confirm.png",
-   "sha256": "2e3137dac6a50b9f0a86c455ef78c78417eddad3330a1cbb259221e141782903"
+   "sha256": "e08ae3069cd8e95e38811a5fbcb93fb11f4638b64869d9535e073a16afeaf144"
   },
   {
    "file": "en-US/equal.json",
@@ -159,7 +159,7 @@
   },
   {
    "file": "en-US/foreground.png",
-   "sha256": "152df4982c2ba089c01f12d5d40c91ac8f650d940e8c8a7a4a6190b22803d583"
+   "sha256": "c73c1d8b40d282cc64676592b72470bec6af1f117da3182ac899189cd9db6459"
   },
   {
    "file": "en-US/intro.json",
@@ -167,7 +167,7 @@
   },
   {
    "file": "en-US/intro.png",
-   "sha256": "d72d70f3515dc64864215c28a93a90d4af2e1e66bb6f44deff16e422e41d3c4b"
+   "sha256": "ef53faac784ae5594270b29918e291aee356b4bd4d8c7bf07648ce698c0250bd"
   },
   {
    "file": "en-US/permission.json",
@@ -175,7 +175,7 @@
   },
   {
    "file": "en-US/permission.png",
-   "sha256": "67f9ac3da729f7f29ca1ff8f0dde37358bb6d46eb8c2144b1437f977b2a44f5e"
+   "sha256": "61058a88b074611d60e33d271e02d301f684371524abf0a5032130f84886e6ff"
   },
   {
    "file": "en-US/picker.json",
@@ -183,7 +183,7 @@
   },
   {
    "file": "en-US/picker.png",
-   "sha256": "95e9c2cc9715ef94bb3ba1dbf9352eb785b9ecc105e5daa6d2b80d9d4fd8694d"
+   "sha256": "99341342937cdb18758b5e38d3abf84c9026a9ad4e2f17a1e35b4e3f4acce5d4"
   },
   {
    "file": "en-US/requests.json",
@@ -255,7 +255,7 @@
   },
   {
    "file": "ko-KR/picker.png",
-   "sha256": "8233baff34cb159c24a04097e72a58240c1b4b4435abceb75eef94ee2444a5a3"
+   "sha256": "987f164fd8032d1d47bdad3a14e05387ce16190afbdac8ae1cf7f38ecd0a42d9"
   },
   {
    "file": "ko-KR/requests.json",
