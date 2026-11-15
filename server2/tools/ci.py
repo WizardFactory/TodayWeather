@@ -65,6 +65,8 @@ def main():
     # replay with self-check, cache-aware rollback). The two reused smokes ran above.
     # Shadow supervisor checks use offline cloud/process fixtures only.
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow_supervisor.py'])
+    # SR-1 (#2999): short deterministic subset of the 168-hour supervisor simulation.
+    commands.insert(3, [sys.executable, 'tests/integration/test_shadow_simulation.py'])
     commands.insert(3, [sys.executable, 'tests/integration/test_paired_read.py'])
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow.py'])
     commands.insert(4, [sys.executable, 'tests/integration/test_native_rollback.py'])
