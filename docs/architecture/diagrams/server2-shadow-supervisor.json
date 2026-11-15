@@ -58,12 +58,20 @@
       "sublabel": "fixed deadline"
     },
     {
+      "id": "logs",
+      "lane": "owner",
+      "col": 4,
+      "type": "backend",
+      "label": "Ship host logs",
+      "sublabel": "journal to state bucket"
+    },
+    {
       "id": "stop",
       "lane": "cleanup",
       "col": 3,
       "type": "security",
       "label": "Stop acquisition",
-      "sublabel": "deadline or guard"
+      "sublabel": "deadline or guard; drain"
     },
     {
       "id": "export",
@@ -112,6 +120,12 @@
       "variant": "security"
     },
     {
+      "from": "collect",
+      "to": "logs",
+      "variant": "default",
+      "label": "candidate, guard, reader"
+    },
+    {
       "from": "stop",
       "to": "export",
       "variant": "default"
@@ -125,6 +139,12 @@
       "from": "clean",
       "to": "verified",
       "variant": "default"
+    },
+    {
+      "from": "logs",
+      "to": "export",
+      "variant": "default",
+      "label": "drained, then exported"
     }
   ],
   "cards": [
@@ -144,6 +164,15 @@
         "48 GiB cost model includes termination contingency",
         "Control envelopes and cleanup budgets are separate",
         "Missing original linkage stays incomplete; no live PASS"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Host logs (LP-6)",
+      "items": [
+        "Candidate, guard and reader write to the server2 journal namespace; the collector ships them to logs/server2 in the run's state bucket.",
+        "Server records at warn and above; guard and reader only as JSON objects; no URL, body or key.",
+        "The collector never starts, stops or delays acquisition; the retention stop drains it before export."
       ]
     }
   ]

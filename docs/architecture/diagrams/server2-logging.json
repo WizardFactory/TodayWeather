@@ -2,7 +2,7 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "server2 logging \u2014 process contract and host pipeline",
+    "title": "server2 logging — process contract and host pipeline",
     "locale": "en",
     "quality_profile": "showcase",
     "output": "docs/architecture/diagrams/server2-logging.html"
@@ -301,7 +301,7 @@
       "dot": "cyan",
       "title": "Scope",
       "items": [
-        "Process contract: issue 2802. Host pipeline: LP-1 to LP-5 (issues 2978-2982) of issue 2977.",
+        "Process contract: issue 2802. Host pipeline: LP-1 to LP-6 (issues 2978-2983) of issue 2977.",
         "Destinations are chosen by SERVER2_LOG_SINKS; local alone skips the collector.",
         "Not deployment evidence; no AWS resource is created by these files."
       ]
@@ -330,7 +330,7 @@
         "A start check reads only SERVER2_LOG_* and bucket/region; local alone skips the collector, invalid settings fail it.",
         "The server does not require the collector; a shutdown stops the server first, then the collector drains until delivery is confirmed (at most 75 s).",
         "Each remote destination has its own journal reader, level filter and checkpoint.",
-        "Only schema-1 server records at or above the level, and collector records, leave the host.",
+        "Only schema-1 server records at or above the level, and collector records, leave the host; on the qualification host also guard and reader JSON objects (LP-6).",
         "Loss is visible per destination: status records, overrun records and loopback counters (LP-2).",
         "Boot configuration alone starts shipping; names carry the instance ID (IMDSv2) and boot ID, and an earlier boot on a surviving disk is shipped by its own reader (LP-3).",
         "A Spot notice is recorded, then the server and the collector stop in order within 86 s; without a notice a record is lost only if younger than 60 s (S3) or 10 s (CloudWatch) (LP-4)."
