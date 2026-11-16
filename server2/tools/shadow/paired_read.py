@@ -24,6 +24,9 @@ MAX_DURATION = 168 * 3600
 MAX_ATTEMPTS = 6000
 MAX_BODY = 2 * 1024 * 1024
 REQUEST_SECONDS = 20
+# An origin that keeps failing for this long, with at least three failures and no
+# success in between, is gone: stop. Shorter failures are recorded and the run continues.
+OUTAGE_SECONDS = 1800
 COORDINATES = ('37.566,126.978', '35.1796,129.0756', '37.7519,128.8761',
                '33.4996,126.5312', '40.7128,-74.006', '35.6762,139.6503')
 ADDRESS = quote('서울특별시 종로구 송월동', safe='')
@@ -216,24 +219,36 @@ class Ledger:
             origin = row[0]
             self.db.execute('UPDATE attempts SET result=? WHERE id=?', (canonical(result), attempt))
             status = result.get('status', 0)
+            failed = bool(result.get('error') or status >= 500 or status in (401, 403, 429)
+                          or (300 <= status < 400 and status != 304))
             failures = self.get('failures')
-            failures[origin] = failures.get(origin, 0) + 1 if result.get('error') or status >= 500 else 0
+            since = self.failing_since()
+            if failed:
+                failures[origin] = failures.get(origin, 0) + 1
+                since.setdefault(origin, time.time())
+            else:
+                failures[origin] = 0
+                since.pop(origin, None)
             self.put('failures', failures)
-            reason = None
-            if result.get('error') in ('deadline', 'oversize'):
-                reason = result['error']
-            elif status in (401, 403, 429):
-                reason = f'http-{status}'
-            elif 300 <= status < 400 and status != 304:
-                reason = 'redirect'
-            elif failures[origin] >= 3:
-                reason = 'consecutive-failures'
-            if reason:
-                self.put('terminal', reason)
+            self.put('failing_since', since)
+            # Rejections, redirects, server errors, timeouts and oversize bodies are recorded
+            # with the attempt. Only a sustained outage of one origin ends the run.
+            if failed and failures[origin] >= 3 and time.time() - since[origin] >= OUTAGE_SECONDS:
+                self.put('terminal', 'origin-outage')
+
+    def failing_since(self):
+        row = self.db.execute('SELECT value FROM meta WHERE key=?', ('failing_since',)).fetchone()
+        return json.loads(row[0]) if row else {}
 
     def summary(self):
+        failed = {}
+        for origin, raw in self.db.execute('SELECT origin,result FROM attempts WHERE result IS NOT NULL'):
+            outcome = json.loads(raw)
+            status = outcome.get('status', 0)
+            if outcome.get('error') or status >= 500 or status in (401, 403, 429) or (300 <= status < 400 and status != 304):
+                failed[origin] = failed.get(origin, 0) + 1
         return {'terminal': self.get('terminal'), 'attempts': dict(self.db.execute(
-            'SELECT origin,count(*) FROM attempts GROUP BY origin')), 'pending': self.db.execute(
+            'SELECT origin,count(*) FROM attempts GROUP BY origin')), 'failed': failed, 'pending': self.db.execute(
             'SELECT count(*) FROM attempts WHERE result IS NULL').fetchone()[0],
             'skipped_conditionals': self.db.execute('SELECT count(*) FROM skips').fetchone()[0],
             'qualification': 'not assessed'}

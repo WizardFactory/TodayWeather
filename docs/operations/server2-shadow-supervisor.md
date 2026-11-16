@@ -67,11 +67,11 @@ The [flow](../architecture/diagrams/server2-shadow-supervisor.html) describes th
 
 ## Host binding and offline preparation
 
-The guard compares the actual Linux process start ticks, boot identity, executable hash, exact process environment hash, working directory, `.env` hash, cgroup and loopback socket ownership. It samples every ten seconds; missing/stale observations, changed identity, disk reserve, network counter rollback, exhausted S3 allowance and classified auth/quota events latch a stop. Its systemd watchdog stops the owned candidate and reader if observations cease. Original collection and poweroff deadlines are separate calendar timers and do not move with a generation.
+The guard compares the actual Linux process start ticks, boot identity, executable hash, exact process environment hash, working directory, `.env` hash, cgroup and loopback socket ownership. It samples every ten seconds. A missing, stale or malformed observation (including unavailable accounting, metrics or diagnostics) counts as a miss; six consecutive misses (60 seconds) latch `observation_lost`, and a valid sample resets the count, which is kept in the decision state (schema 4, `misses`) across guard restarts. Changed identity, listener ownership, network counter rollback or ceiling and disk reserve are decided from the sample's own fields before accounting, metrics and diagnostics are validated, so a partial observation never delays or renames them; a missing identity field is a changed identity, as before, not a miss; together with exhausted S3 allowance and classified auth/quota events they latch a stop at once. Its systemd watchdog stops the owned candidate and reader if observations cease. Original collection and poweroff deadlines are separate calendar timers and do not move with a generation.
 
 The opt-in `/internal/metrics` fields are `server2_shadow_s3_{reads,writes,put_bytes}_remaining` and `server2_runtime_{auth,quota}_failures_total`. Rejection signals are recorded before log filtering and queue admission, so dropped diagnostic logs cannot erase them. They count classified events, potentially more than one per provider request; they are not provider usage or billing counters. No shadow metrics appear when the opt-in allowance is absent.
 
-Stop diagnostics use the same opt-in endpoint. `server2_runtime_local_paid_exhaustions_total` counts quota signals caused by the local paid-unit allocation rather than a provider response. `server2_runtime_first_rejection_info{cause,origin,component,stage,provider,status}` identifies the first counted auth/quota signal with fixed vocabulary only; `origin="local_paid_allowance"` means no provider request was sent, and `provider`/`status` are `none` when the originating record lacked them. When the paid allowance is installed, `server2_shadow_paid_units_{initial,remaining}{provider}` report conservative admitted-unit snapshots, not billed usage. The guard validates these values on every sample and stores the latest snapshot, including the auth and quota counts, in the `diagnostics` field of `decision.json` (schema 3). A stop latches that snapshot, and the existing evidence export retains `decision.json`. Malformed diagnostics stop acquisition as `metrics_unavailable`; stop and cleanup behavior is otherwise unchanged.
+Stop diagnostics use the same opt-in endpoint. `server2_runtime_local_paid_exhaustions_total` counts quota signals caused by the local paid-unit allocation rather than a provider response. `server2_runtime_first_rejection_info{cause,origin,component,stage,provider,status}` identifies the first counted auth/quota signal with fixed vocabulary only; `origin="local_paid_allowance"` means no provider request was sent, and `provider`/`status` are `none` when the originating record lacked them. When the paid allowance is installed, `server2_shadow_paid_units_{initial,remaining}{provider}` report conservative admitted-unit snapshots, not billed usage. The guard validates these values on every sample and stores the latest snapshot, including the auth and quota counts, in the `diagnostics` field of `decision.json` (schema 4). A stop latches that snapshot, and the existing evidence export retains `decision.json`. Malformed or wrongly typed diagnostics count as a missed observation (six in a row stop with `observation_lost`).
 
 `prepare_generation` verifies the frozen plan against the journal and copies an exclusive private bundle only after consuming its allocation. A changed artifact, conflicting plan, reused generation or existing destination is refused. `bootstrap.sh --check <new-output-directory>` verifies the bundle hashes and renders eight systemd unit/timer files (seven for acquisition and its deadlines, one for the log collector). It does not install them, launch a process or call AWS. The internal candidate launcher clears ambient environment overrides and consumes a local one-use marker before `execve`; the host restart/reader-resume connector is not yet exposed.
 
@@ -173,8 +173,36 @@ python3 server2/deploy/shadow/provision.py finish --execute --state private-run 
 `run` provisions only the frozen one-host plan, authenticates SSH against the EC2
 console key, installs once, and observes the same install until the original
 expiry. Startup waiting is bounded to ten minutes, capped by the original collection deadline. Before the sole launch, a durable first attached-profile observation starts a five-minute settling delay for IAM-to-EC2 propagation. Restarting the coordinator does not refresh that delay. The delay reduces the observed race; it is not a cross-service readiness guarantee. A rejected or uncertain launch still fails closed without an automatic replacement. A lost installation reply
-causes inspection, never another upload. A guard stop, missing observation,
-interrupt or acquisition error enters evidence retention and exact cleanup.
+causes inspection, never another upload. While collecting, the host is the lifetime
+authority: a status poll that fails, times out or cannot be validated is reported
+(`"poll":"unreachable"` with a consecutive count, then `"poll":"recovered"`) and
+retried a minute later; it never stops, exports or terminates. Collection ends when
+the host reports that its acquisition units stopped (`host_stopped`, for example a
+guard stop or a reader exit), at the deadline, or on an operator interrupt. An
+interrupt while collecting detaches without touching the host (`operator_detached`);
+`run` with the same arguments resumes observing the recorded install, and `finish`
+ends the run. The collecting phase is recorded in the journal (`collection-started`)
+the first time the install is confirmed started. A resumed `run` in that phase makes
+no provisioning or install call: it reconnects through the SSH target authenticated
+earlier in the run (not the console fingerprints) inside the collecting loop, so a
+failed reconnect, including the first after a resume, is an unreachable poll; every
+finish without a connection (the deadline reached while unreachable, a resume at or
+after the deadline, also one whose install never stored the collecting marker)
+makes one reconnect attempt through the journaled SSH target for evidence retention
+and then cleans up, also when that attempt fails or is interrupted. The phase is read
+from the journal and the clock when an event happens: while collecting (marker
+stored, before the deadline), any connector or status-poll error is an unreachable
+poll, an interrupt detaches with exit 0, and a local failure (the journal, the
+progress output) detaches with exit 1 (`operator_failed` and its failure class), all
+without touching the host; outside collecting, an interrupt or failure before the
+finish leads to the finish. An interrupt during retention or cleanup themselves stops
+the process as before; the journal keeps the exact resources and `finish` resumes
+them (a resumable, evidence-first finish is SR-5). Only a validated host stop ends collection: the
+receipt reports `failed`, or all three acquisition units with known systemd states
+and at least one `inactive` or `failed`; missing or unknown unit states are
+unreachable. An interrupt during collection prints the detach record and exits 0. A
+startup failure, a host stop, the deadline or an interrupt before collection enters
+evidence retention and exact cleanup.
 Termination propagation gets at most three additional cleanup-only checks; the
 first source export is preserved if termination delayed it. Existing partial
 exports are not repeated. An incomplete cleanup returns exit 1 and retained
@@ -187,6 +215,12 @@ AWS account using cleanup's protected reserve even if ordinary work is exhausted
 The local journal lock excludes a second coordinator. If the coordinator dies,
 the installed host timers still stop collection at 168h and terminate at 170h;
 resume `finish` to independently remove and verify the remaining resources.
+
+The paired reader records 401, 403, 429, redirects, 5xx, timeouts and oversize bodies
+with the attempt and continues its schedule; its summary reports failed attempts per
+origin. An origin that has failed at least three times with no success for 30 minutes
+ends the reader (`origin-outage`); its exit stops only the reader, and the operator's
+next poll finishes the run as `host_stopped`.
 
 Host-plan schema 4 explicitly lists native read families. `push` and duplicate
 families are rejected. The launched process uses only the run's raw bucket in
