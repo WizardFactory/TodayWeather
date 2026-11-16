@@ -54,7 +54,7 @@ final class Monetization {
     /// Connects to the app's launch: each new shell gets the analytics choice, the menu rows and the screens. The
     /// previous `onShell` hook keeps running first.
     func connect(_ launch: AppLaunch) {
-        pageScreen = { [weak launch] in launch?.settings?.top.map(SettingsScreens.screenName) }
+        pageScreen = { [weak launch] in launch?.pageScreen }
         let previous = launch.onShell
         launch.onShell = { [weak self] shell in
             previous(shell)
@@ -94,8 +94,8 @@ final class Monetization {
         return AnyView(BannerSlot(banner: banner))
     }
 
-    /// The Cordova state name of the page over the tabs (IN-12's settings pages), nil while the tabs show; `connect`
-    /// reads it from the app's `SettingsScreens`.
+    /// The Cordova state name of the page over the tabs (IN-12's settings pages, IN-13's nationwide pages), nil while
+    /// the tabs show; `connect` reads it from the app's launch (`AppLaunch.pageScreen`).
     var pageScreen: @MainActor () -> String? = { nil }
 
     /// A new shell: the stored analytics choice applies, and the privacy rows and the screens connect.

@@ -59,7 +59,7 @@ struct RootView: View {
                     if let start = launch.startPage { StartView(page: start) } else { SplashView() }
                 case .tab: ShellView(model: shell, content: { launch.tabContent($0) },
                                      banner: Monetization.shared.bannerView,
-                                     page: launch.settings.map { settings in settings.pageView })
+                                     page: launch.pageView)
                 }
             } else {
                 SplashView()
