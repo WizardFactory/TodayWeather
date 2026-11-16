@@ -24,7 +24,7 @@ final class PlacesScreens {
     @ObservationIgnored private let search: (any PlaceSearch)?
     @ObservationIgnored private let towns: () -> TownSearch?
     @ObservationIgnored private let openURL: (URL) -> Void
-    /// The bell of a row (`OnOpenSettingPush(index)`, the alarms page S09): IN-14 connects it.
+    /// The bell of a row (`OnOpenSettingPush(index)`, the alarms page S09, IN-14).
     @ObservationIgnored var onBell: (Int) -> Void = { _ in }
 
     /// The visit shown now; a new one each time the tab opens.
@@ -82,6 +82,12 @@ final class PlacesScreens {
         if let found = page.found, let name = found["name"]?.stringValue, query.word != name {
             query.show(word: name)
         }
+    }
+
+    /// Back from S09 (IN-14): the tab's page starts anew while it shows (`cache: false`), so the bells are read again.
+    func reopen() {
+        guard visitOpen else { return }
+        openVisit()
     }
 
     /// SearchCtrl's `init` for a new visit.

@@ -54,7 +54,10 @@ final class Monetization {
     /// Connects to the app's launch: each new shell gets the analytics choice, the menu rows and the screens. The
     /// previous `onShell` hook keeps running first.
     func connect(_ launch: AppLaunch) {
-        pageScreen = { [weak launch] in launch?.settings?.top.map(SettingsScreens.screenName) }
+        pageScreen = { [weak launch] in
+            // S09 (IN-14) is the Cordova state `setting-push`.
+            launch?.alarms?.page != nil ? "setting-push" : launch?.settings?.top.map(SettingsScreens.screenName)
+        }
         let previous = launch.onShell
         launch.onShell = { [weak self] shell in
             previous(shell)

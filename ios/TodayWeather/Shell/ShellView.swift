@@ -59,7 +59,10 @@ struct RootView: View {
                     if let start = launch.startPage { StartView(page: start) } else { SplashView() }
                 case .tab: ShellView(model: shell, content: { launch.tabContent($0) },
                                      banner: Monetization.shared.bannerView,
-                                     page: launch.settings.map { settings in settings.pageView })
+                                     page: { insets in
+                                         // S09 (IN-14) over the settings pages (IN-12); each is opened from the tabs.
+                                         launch.alarms?.pageView(insets) ?? launch.settings?.pageView(insets)
+                                     })
                 }
             } else {
                 SplashView()
@@ -544,12 +547,20 @@ struct IonicPopupView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 10).padding(.top, 15)
                 }
-                Color(white: 0.933).frame(height: 1).padding(.top, 15)
+                // `.popup-head` keeps its 15 pt padding above and below an empty title (`$ionicPopup.alert` without one,
+                // O13 of IN-14: 31 pt in the capture).
+                Color(white: 0.933).frame(height: 1).padding(.top, popup.title.isEmpty ? 30 : 15)
                 // WebKit lays the 14 px lines 18 pt apart (measured in the About capture, IN-12), more than the
                 // system font's own line height.
+                // Each line takes its whole 18 pt line box, the text centered in it, as in WebKit (IN-14: a three-line
+                // popup was 4 px shorter than the Cordova one with the spacing between the lines only).
+                let gap = max(0, lineSize * 18 / 14 - UIFont.systemFont(ofSize: lineSize).lineHeight)
                 let lines = Text(Self.syllableBreaks(popup.lines.joined(separator: "\n"))).font(.system(size: lineSize))
-                    .lineSpacing(max(0, lineSize * 18 / 14 - UIFont.systemFont(ofSize: lineSize).lineHeight))
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                    .lineSpacing(gap)
+                    .padding(.vertical, gap / 2)
+                    // WebKit lays text out in 1/64 px units, so a line 0.01 pt wider than the box still fits (IN-14's
+                    // English O06 fills its first line to 230.009 pt).
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10).padding(.horizontal, 9.99)
                 if scrolls {
                     ScrollView { lines }.fixedSize(horizontal: false, vertical: true)
                 } else {

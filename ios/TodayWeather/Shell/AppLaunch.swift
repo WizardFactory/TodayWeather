@@ -3,6 +3,7 @@ import Network
 import os
 import TWData
 import TWDomain
+import TWModel
 import TWStorage
 import UIKit
 
@@ -46,6 +47,8 @@ final class AppLaunch {
     private(set) var settings: SettingsScreens?
     /// The saved places S02 (IN-11), created with the shell.
     private(set) var places: PlacesScreens?
+    /// S09, O06, O07 and the notification taps (IN-14), created with the shell.
+    private(set) var alarms: AlarmsScreens?
     /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
     private(set) var startPage: StartPage?
     /// The device's location (IN-10), created with the shell.
@@ -142,9 +145,38 @@ final class AppLaunch {
                                 deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
         settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: AppPushUnits()),
                                    opener: SystemURLOpener(), mail: mail)
+        alarms = makeAlarms(shell, weather: weather)
         shell.onEntry = { [weak weather] event in weather?.handle(event) }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
+        // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`).
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            self?.alarms?.showIntroIfDue()
+        }
+    }
+
+    /// S09 for a new shell (IN-14): the bells of the weather pages (the selected place) and of S02 (the row's place) open a
+    /// visit; a save posts through IN-04's push service; the return starts the tabs' pages anew (`cache: false`).
+    private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
+        let holder = self.holder
+        let alarms = AlarmsScreens(shell: shell, makePage: {
+            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
+                      post: { index in AppStartup.shared.push?.postPlace(index) },
+                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
+        }, postList: { AppStartup.shared.push?.postList() })
+        weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
+        places?.onBell = { [weak alarms] index in alarms?.open(fav: index) }
+        alarms.onClosed = { [weak self] in
+            self?.places?.reopen()
+            self?.weather?.reopen()
+        }
+        return alarms
+    }
+
+    /// A message that arrived while the app shows (O07, IN-14); nothing before the shell exists.
+    func message(_ payload: JSONObject) {
+        alarms?.showMessage(payload)
     }
 
     /// The process's UI started: the photo feed loads when the app opens and when a network comes back
@@ -192,6 +224,10 @@ final class AppLaunch {
         log.info("entry event \(String(describing: event), privacy: .public)")
         // `checkLocationMode` on each return to the foreground (app.js `resume`), IN-10.
         if event == .resume { location?.check() }
+        if case .notification(let cityIndex) = event {
+            if let session = weather?.session { alarms?.notificationTapped(cityIndex, session: session) }
+            return
+        }
         shell?.handle(event)
     }
 

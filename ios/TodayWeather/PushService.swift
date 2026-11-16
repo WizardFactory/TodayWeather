@@ -37,6 +37,10 @@ final class PushService: PushUnitsUpdating {
         case units
         /// Remove a place's alarms (IN-11).
         case removeCity(Int)
+        /// Post a place's list after an S09 save (IN-14).
+        case postPlace(Int)
+        /// Post the whole list after O06's OK (IN-14).
+        case postList
     }
 
     let sync: PushSync
@@ -66,6 +70,8 @@ final class PushService: PushUnitsUpdating {
                 case .drain: await sync.drain()
                 case .units: await sync.updateUnits()
                 case .removeCity(let index): await sync.removeCity(index)
+                case .postPlace(let index): await sync.postPlace(index)
+                case .postList: await sync.postList()
                 }
             }
         }
@@ -121,6 +127,17 @@ final class PushService: PushUnitsUpdating {
         events.yield(.removeCity(index))
     }
 
+    /// S09 saved a place's alarms (`_postPushList` of `updatePushListByCityIndex`, IN-14): the place's list as saved is
+    /// posted after the registrations before it.
+    func postPlace(_ index: Int) {
+        events.yield(.postPlace(index))
+    }
+
+    /// O06's OK (`enableAlertForOldAlarm(true)`, IN-14): the whole list as saved is posted after the registrations before it.
+    func postList() {
+        events.yield(.postList)
+    }
+
     func resume() {
         events.yield(.drain)
     }
@@ -132,6 +149,12 @@ final class PushService: PushUnitsUpdating {
         if !sync.enqueue(token: token) { log.error("token not queued; the next open reads it from FCM") }
         events.yield(.drain)
     }
+}
+
+/// Firebase is configured in this build (`GoogleService-Info.plist`): the push plugin runs (`Push.inited`, IN-14).
+@MainActor
+enum FirebasePush {
+    static var configured: Bool { FirebaseApp.app() != nil }
 }
 
 /// `navigator.language` of the Cordova app's WKWebView: the first preferred language of the device.
@@ -150,7 +173,7 @@ final class MessagingBridge: NSObject, MessagingDelegate {
     }
 
     /// With Firebase configured: receive tokens, and register for remote notifications when the user allowed
-    /// notifications (as the Cordova build did after the permission; asking for it is IN-14), so FCM gets the APNs
+    /// notifications (as the Cordova build did after the permission; S09 asks for it, IN-14), so FCM gets the APNs
     /// token it needs for its own.
     @MainActor
     func start(_ application: UIApplication) {
