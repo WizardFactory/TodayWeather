@@ -429,7 +429,7 @@ class GuardTests(unittest.TestCase):
 
     def test_storage_authorization_counts_within_one_hour(self):
         # CX-SR3-002: isolated rejections spread over the week never add up to a stop; 20
-        # within one hour stop (a broken role fails every call and passes that in a minute).
+        # within one fixed hourly window stop (a broken role fails every storage call).
         m=host_manifest();self.assertEqual(guard.STORAGE_AUTH_WINDOW,3600)
         def walk(points):
             prior=None
