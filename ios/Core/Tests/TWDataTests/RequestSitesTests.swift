@@ -104,6 +104,20 @@ struct RequestSitesTests {
         ], "the sources using an E4 SDK")
     }
 
+    /// Reads of a URL's contents (`Data(contentsOf:)`, `String(contentsOf:)`) are the reviewed local files: the state
+    /// file, the consent files, the weather cache, the bundled fonts and towns and the file probe. A new one, which could
+    /// read a remote URL past the transports, changes the list (CODEX-IN18P1-4).
+    @Test func urlReadsAreTheReviewedLocalFiles() {
+        #expect(Self.filesMatching(#"\b(?:Data|String|NSData|NSString)\(\s*contentsOf:"#) == [
+            "Core/Sources/TWData/WeatherRepository.swift",
+            "Core/Sources/TWStorage/AppStateStore.swift",
+            "Core/Sources/TWStorage/FileProbe.swift",
+            "TodayWeather/Ads/AnalyticsConsentFiles.swift",
+            "TodayWeather/Chart/ChartStyle.swift",
+            "TodayWeather/Start/StartPage.swift",
+        ], "the sources reading a URL's contents")
+    }
+
     /// Every package product the app links is reviewed: it sends no request (the local core), or it is an E4 SDK. The
     /// pins of `Package.resolved` are the E4 SDKs and their dependencies.
     @Test func everyProductIsReviewed() throws {
