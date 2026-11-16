@@ -2510,6 +2510,34 @@ class EvidenceCase(unittest.TestCase):
 
 
 class EvidenceCopyTests(EvidenceCase):
+    def test_reader_stopped_is_its_lock_released_not_a_systemd_timestamp(self):
+        # Linux check finding: systemd 255 unloads a cleanly stopped unit without references,
+        # after which `systemctl show` reports zero timestamps (ExecMainExitTimestamp empty), as
+        # for a unit never started. The reader holds data/paired/owner.lock (flock, shared with
+        # its children) for its whole life, so a free lock is the stop.
+        import fcntl
+        lock=self.tree.paired/'owner.lock'
+        self.assertFalse(self.copy.reader_gone(lock))            # never started: no lock file
+        lock.write_text('');held=os.open(lock,os.O_RDWR)
+        try:
+            fcntl.flock(held,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            self.assertFalse(self.copy.reader_gone(lock))        # running
+        finally:
+            os.close(held)
+        self.assertTrue(self.copy.reader_gone(lock))             # stopped (lock released)
+        self.assertTrue(lock.exists())                           # probing never deletes or creates
+        calls=[]
+        def show(argv,**k):
+            calls.append(argv);return subprocess.CompletedProcess(argv,0,'ActiveState=inactive\nExecMainExitTimestamp=\n','')
+        from unittest import mock
+        with mock.patch.object(self.copy.subprocess,'run',show):
+            self.assertTrue(self.copy.reader_stopped(self.copy.systemd_unit_state('r.service',lock)))
+            fd=os.open(lock,os.O_RDWR);fcntl.flock(fd,fcntl.LOCK_EX)
+            try:self.assertFalse(self.copy.reader_stopped(self.copy.systemd_unit_state('r.service',lock)))
+            finally:os.close(fd)
+        with mock.patch.object(self.copy.subprocess,'run',lambda argv,**k:subprocess.CompletedProcess(argv,0,'ActiveState=deactivating\n','')):
+            self.assertFalse(self.copy.reader_stopped(self.copy.systemd_unit_state('r.service',lock)))
+
     def test_a_generation_puts_batch_then_ledger_then_index_last(self):
         self.host.attempt(1);self.host.attempt(2);self.host.attempt(3,'pending');self.host.attempt(4,'capture-failure')
         result=self.run_copy()

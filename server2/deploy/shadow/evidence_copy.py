@@ -16,7 +16,7 @@ Every run takes an exclusive lock on `state/copy.lock` and is the only writer of
      if any), then `ledger-<g>.sqlite3`, then `index-<g>.json` last: the index is the
      commit point. State changes only after the index PUT succeeded.
 A generation is `final` when `state/final.requested` exists (or this is the finalizer)
-and the reader unit has stopped (ActiveState inactive or failed with an exit time);
+and the reader has stopped (unit inactive or failed and its owner.lock free);
 the request stays until a final generation commits, so any later run retries it.
 Nothing starts at or after epoch + 170 h - 10 min, and every wait and PUT ends there.
 Output is one JSON line per event with a fixed vocabulary: never a key, URL,
@@ -183,7 +183,7 @@ def request_final(tree, now):
 
 
 def reader_stopped(unit):
-    """ActiveState inactive or failed, with an exit time: the reader ran and has ended."""
+    """ActiveState inactive or failed, and the reader known to have ended (its lock free)."""
     active, exited = unit
     return active in ('inactive', 'failed') and bool(exited) and exited != 'n/a'
 
@@ -514,12 +514,41 @@ class S3Client:
             conn.close()
 
 
-def systemd_unit_state(unit):
-    answer = subprocess.run(['/usr/bin/systemctl', 'show', '--property=ActiveState',
-                             '--property=ExecMainExitTimestamp', unit],
+def reader_gone(lock):
+    """True when the reader ran and no process holds its lock any more.
+
+    paired_read holds an exclusive flock on data/paired/owner.lock for its whole life and its
+    children share that open file description, so the lock is free only when all of them have
+    exited. A missing file means the reader never started. The probe opens the file read-only
+    (never creating it) and releases a shared lock at once.
+    """
+    try:
+        fd = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW)
+    except FileNotFoundError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return False
+    else:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return True
+    finally:
+        os.close(fd)
+
+
+def systemd_unit_state(unit, lock):
+    """(ActiveState, ended): ended is non-empty only when the reader's lock is free.
+
+    Not ExecMainExitTimestamp: systemd unloads a cleanly stopped unit that nothing references,
+    after which `systemctl show` reports it like a unit never started (empty timestamps).
+    """
+    answer = subprocess.run(['/usr/bin/systemctl', 'show', '--property=ActiveState', unit],
                             capture_output=True, text=True, timeout=5, check=False, stdin=subprocess.DEVNULL)
     values = dict(line.partition('=')[::2] for line in answer.stdout.splitlines())
-    return values.get('ActiveState', 'unknown'), values.get('ExecMainExitTimestamp', '')
+    active = values.get('ActiveState', 'unknown')
+    ended = 'lock-free' if active in ('inactive', 'failed') and reader_gone(lock) else ''
+    return active, ended
 
 
 def main(argv=None):
@@ -543,7 +572,7 @@ def main(argv=None):
         return cached['value']
     client = S3Client(tree.bucket, REGION, credentials)
     result = run(tree, final=args.final, put=client.put, clock=time.time,
-                 unit_state=lambda: systemd_unit_state(tree.reader_unit))
+                 unit_state=lambda: systemd_unit_state(tree.reader_unit, tree.paired / 'owner.lock'))
     return 0 if result['status'] in ('committed', 'skipped') else 1
 
 
