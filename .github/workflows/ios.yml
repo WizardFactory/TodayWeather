@@ -40,6 +40,11 @@ on:
       # Sources of the S02 captures (ios/tools/places-reference, IN-11).
       - "client/www/templates/tab-search.html"
       - "client/www/js/controller.searchctrl.js"
+      # Sources of ios/tools/push/generate.py's S09 goldens (alarms.js) and of the S09 captures
+      # (ios/tools/push-reference, IN-14).
+      - "client/www/js/controller.push.js"
+      - "client/www/templates/setting-push.html"
+      - "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js"
       # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
       - "client/resources/ios/tracking/**"
       - "client/config.xml"
@@ -81,6 +86,11 @@ on:
       # Sources of the S02 captures (ios/tools/places-reference, IN-11).
       - "client/www/templates/tab-search.html"
       - "client/www/js/controller.searchctrl.js"
+      # Sources of ios/tools/push/generate.py's S09 goldens (alarms.js) and of the S09 captures
+      # (ios/tools/push-reference, IN-14).
+      - "client/www/js/controller.push.js"
+      - "client/www/templates/setting-push.html"
+      - "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js"
       # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
       - "client/resources/ios/tracking/**"
       - "client/config.xml"
@@ -105,7 +115,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets, golden corpus, chart scenes, push requests, weather request timing, air scales, settings steps and ad privacy entries are current
+      - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps and ad privacy entries are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py

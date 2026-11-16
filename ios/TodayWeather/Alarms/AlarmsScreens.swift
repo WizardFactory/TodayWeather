@@ -225,27 +225,42 @@ final class NotificationEvents: NSObject, UNUserNotificationCenterDelegate, @unc
         UNUserNotificationCenter.current().delegate = self
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification)
-        async -> UNNotificationPresentationOptions {
+    // The completion-handler forms, each answered on the main thread: UIKit updates its snapshot when a response's handler
+    // is called, and asserts off the main thread (the async form resumed on a background executor crashed the app on a
+    // tap, seen on the simulator).
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let info = notification.request.content.userInfo
         let payload = Self.payload(info)
         let aps = payload["aps"]?.objectValue
-        let foreground = info["notification_foreground"] != nil
-        let messageType = payload["messageType"]?.stringValue
-        await MainActor.run {
-            if messageType != "data" { AppLaunch.shared.message(payload) }
-        }
-        guard foreground else { return [] }
         var options: UNNotificationPresentationOptions = []
-        if aps?["alert"] != nil { options.formUnion([.list, .banner]) }
-        if aps?["badge"] != nil { options.insert(.badge) }
-        if aps?["sound"] != nil { options.insert(.sound) }
-        return options
+        if info["notification_foreground"] != nil {
+            if aps?["alert"] != nil { options.formUnion([.list, .banner]) }
+            if aps?["badge"] != nil { options.insert(.badge) }
+            if aps?["sound"] != nil { options.insert(.sound) }
+        }
+        let message = payload["messageType"]?.stringValue != "data"
+        let handler = Handler(completionHandler)
+        DispatchQueue.main.async {
+            if message { MainActor.assumeIsolated { AppLaunch.shared.message(payload) } }
+            handler.call(options)
+        }
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
         let cityIndex = Self.payload(response.notification.request.content.userInfo)["cityIndex"]?.stringValue
-        await MainActor.run { AppLaunch.shared.entries.submit(.notification(cityIndex: cityIndex)) }
+        let handler = Handler(completionHandler)
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated { AppLaunch.shared.entries.submit(.notification(cityIndex: cityIndex)) }
+            handler.call(())
+        }
+    }
+
+    /// A completion handler UserNotifications gives, called once on the main thread.
+    private final class Handler<Value>: @unchecked Sendable {
+        let call: (Value) -> Void
+        init(_ call: @escaping (Value) -> Void) { self.call = call }
     }
 
     /// The APNs `userInfo` as JSON (what the plugin hands the web page); values JSON cannot hold are left out.
