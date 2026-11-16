@@ -100,10 +100,12 @@ struct CurrentPositionTests {
         #expect(f.session.positionRetry == nil, "a grant shows nothing")
         #expect(f.location.locationOn == 1)
         // The app's state change handler sends `reloadEvent 'locationOn'`, which reloads the selected current position.
+        // It loads the saved position, and the lookup it starts finds the new one, which loads too: both requests run
+        // at once (as TabCtrl's did), so either can be sent last.
         f.session.reload(.locationOn)
         await f.answer(2)
-        #expect(await eventually { f.paths.count == 3 })
-        #expect(f.paths.last == "/weather/v000903/coord/37.501,127.04")
+        #expect(await eventually(30) { f.paths.count == 3 })
+        #expect(f.paths.dropFirst().contains("/weather/v000903/coord/37.501,127.04"), "\(f.paths)")
         #expect(f.events.outcomes("location_permission", "outcome") == ["denied", "granted"])
     }
 
