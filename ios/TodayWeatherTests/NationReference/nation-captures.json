@@ -1,0 +1,430 @@
+{
+ "source": "ios/tools/nation-reference/capture.py provenance, from the records nation-<state>.json",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "language": "ko-KR",
+ "env": {
+  "language": "ko-KR",
+  "languages": [
+   "ko-KR"
+  ],
+  "region": "KR",
+  "package": "todayWeather",
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  }
+ },
+ "menu": {
+  "rows": [
+   {
+    "click": "clickMenu('kma-special')",
+    "text": "기상특보"
+   },
+   {
+    "click": "clickMenu('nation')",
+    "text": "전국날씨"
+   },
+   {
+    "click": "clickMenu('nation-air')",
+    "text": "전국미세먼지"
+   },
+   {
+    "click": "clickMenu('nullschool')",
+    "text": "널스쿨 풍향"
+   },
+   {
+    "click": "clickMenu('units')",
+    "text": "단위설정"
+   },
+   {
+    "click": "settingRadio('startupPage')",
+    "text": "시작 페이지 시간별날씨"
+   },
+   {
+    "click": "settingRadio('refreshInterval')",
+    "text": "업데이트 주기 수동"
+   },
+   {
+    "click": "settingRadio('theme')",
+    "text": "테마 설정 밝은 테마"
+   },
+   {
+    "click": "clickMenu('sendMail')",
+    "text": "의견보내기"
+   },
+   {
+    "click": "clickMenu('openMarket')",
+    "text": "응원리뷰쓰기"
+   },
+   {
+    "click": "clickMenu('openInfo')",
+    "text": "정보"
+   },
+   {
+    "click": "chooseAnalytics()",
+    "text": "선택적 이용 통계 · 꺼짐"
+   },
+   {
+    "click": "openAdPrivacy()",
+    "text": "광고 개인정보 선택"
+   },
+   {
+    "click": "openPolicy('privacy')",
+    "text": "개인정보처리방침"
+   },
+   {
+    "click": "openPolicy('terms')",
+    "text": "이용약관"
+   }
+  ]
+ },
+ "webViewOrigin": {
+  "x": 0,
+  "y": 162
+ },
+ "states": {
+  "nation-loading": {
+   "crops": {
+    "page": "nation-nation-loading.png",
+    "statusBar": "nation-nation-loading-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready loading-active",
+   "scrollTop": 0
+  },
+  "nation-weather": {
+   "crops": {
+    "page": "nation-nation-weather.png",
+    "statusBar": "nation-nation-weather-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-rain": {
+   "crops": {
+    "page": "nation-nation-rain.png",
+    "statusBar": "nation-nation-rain-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-wind": {
+   "crops": {
+    "page": "nation-nation-wind.png",
+    "statusBar": "nation-nation-wind-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-pm2.5": {
+   "crops": {
+    "page": "nation-nation-air-pm2.5.png",
+    "statusBar": "nation-nation-air-pm2.5-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-pm10": {
+   "crops": {
+    "page": "nation-nation-air-pm10.png",
+    "statusBar": "nation-nation-air-pm10-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-o3": {
+   "crops": {
+    "page": "nation-nation-air-o3.png",
+    "statusBar": "nation-nation-air-o3-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-no2": {
+   "crops": {
+    "page": "nation-nation-air-no2.png",
+    "statusBar": "nation-nation-air-no2-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-so2": {
+   "crops": {
+    "page": "nation-nation-air-so2.png",
+    "statusBar": "nation-nation-air-so2-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-co": {
+   "crops": {
+    "page": "nation-nation-air-co.png",
+    "statusBar": "nation-nation-air-co-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "warnings": {
+   "crops": {
+    "page": "nation-warnings.png",
+    "statusBar": "nation-warnings-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "warnings-1": {
+   "crops": {
+    "page": "nation-warnings-1.png",
+    "statusBar": "nation-warnings-1-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 749
+  },
+  "warnings-2": {
+   "crops": {
+    "page": "nation-warnings-2.png",
+    "statusBar": "nation-warnings-2-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 1498
+  },
+  "warnings-3": {
+   "crops": {
+    "page": "nation-warnings-3.png",
+    "statusBar": "nation-warnings-3-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 2247
+  },
+  "warnings-4": {
+   "crops": {
+    "page": "nation-warnings-4.png",
+    "statusBar": "nation-warnings-4-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 2996
+  },
+  "warnings-5": {
+   "crops": {
+    "page": "nation-warnings-5.png",
+    "statusBar": "nation-warnings-5-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 3644
+  },
+  "nation-weather-failed": {
+   "crops": {
+    "page": "nation-nation-weather-failed.png",
+    "statusBar": "nation-nation-weather-failed-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-air-failed": {
+   "crops": {
+    "page": "nation-nation-air-failed.png",
+    "statusBar": "nation-nation-air-failed-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-weather-empty": {
+   "crops": {
+    "page": "nation-nation-weather-empty.png",
+    "statusBar": "nation-nation-weather-empty-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "warnings-empty": {
+   "crops": {
+    "page": "nation-warnings-empty.png",
+    "statusBar": "nation-warnings-empty-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "warnings-failed": {
+   "crops": {
+    "page": "nation-warnings-failed.png",
+    "statusBar": "nation-warnings-failed-statusbar.png"
+   },
+   "theme": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+   "scrollTop": 0
+  },
+  "nation-weather-dark": {
+   "crops": {
+    "page": "nation-nation-weather-dark.png",
+    "statusBar": "nation-nation-weather-dark-statusbar.png"
+   },
+   "theme": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready dark-theme",
+   "scrollTop": 0
+  },
+  "warnings-dark": {
+   "crops": {
+    "page": "nation-warnings-dark.png",
+    "statusBar": "nation-warnings-dark-statusbar.png"
+   },
+   "theme": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready dark-theme",
+   "scrollTop": 0
+  }
+ },
+ "requests": [
+  {
+   "step": "place",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": null,
+   "fixture": "kma-seoul",
+   "at": 4.3
+  },
+  {
+   "step": "place",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": null,
+   "fixture": "kma-seoul",
+   "at": 4.6
+  },
+  {
+   "step": "open-nation-late",
+   "path": "/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 5,
+    "how": "late"
+   },
+   "fixture": null,
+   "at": 9.3
+  },
+  {
+   "step": "open-nation-air",
+   "path": "/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 0,
+    "how": "ok"
+   },
+   "fixture": null,
+   "at": 32.6
+  },
+  {
+   "step": "open-kma-special",
+   "path": "/v000903/kma/special",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 0,
+    "how": "ok"
+   },
+   "fixture": null,
+   "at": 58.6
+  },
+  {
+   "step": "open-nation-failed",
+   "path": "/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 500,
+    "delay": 0,
+    "how": "fail"
+   },
+   "fixture": null,
+   "at": 89.0
+  },
+  {
+   "step": "open-nation-air-failed",
+   "path": "/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 500,
+    "delay": 0,
+    "how": "fail"
+   },
+   "fixture": null,
+   "at": 96.9
+  },
+  {
+   "step": "open-nation-empty",
+   "path": "/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 0,
+    "how": "empty"
+   },
+   "fixture": null,
+   "at": 105.3
+  },
+  {
+   "step": "open-kma-special-empty",
+   "path": "/v000903/kma/special",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 0,
+    "how": "empty"
+   },
+   "fixture": null,
+   "at": 114.1
+  },
+  {
+   "step": "open-kma-special-failed",
+   "path": "/v000903/kma/special",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 500,
+    "delay": 0,
+    "how": "fail"
+   },
+   "fixture": null,
+   "at": 122.5
+  },
+  {
+   "step": "theme-dark",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": null,
+   "fixture": "kma-seoul",
+   "at": 135.5
+  },
+  {
+   "step": "open-nation-dark",
+   "path": "/v000903/nation/KR?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 0,
+    "how": "ok"
+   },
+   "fixture": null,
+   "at": 140.1
+  },
+  {
+   "step": "open-kma-special-dark",
+   "path": "/v000903/kma/special",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": {
+    "status": 200,
+    "delay": 0,
+    "how": "ok"
+   },
+   "fixture": null,
+   "at": 150.5
+  },
+  {
+   "step": "theme-light",
+   "path": "/weather/v000903/coord/37.56,126.98?temperatureUnit=C&windSpeedUnit=m/s&pressureUnit=hPa&distanceUnit=km&precipitationUnit=mm&airUnit=airkorea&airForecastSource=kaq",
+   "acceptLanguage": "ko-KR,ko;q=0.9",
+   "answer": null,
+   "fixture": "kma-seoul",
+   "at": 165.2
+  }
+ ]
+}

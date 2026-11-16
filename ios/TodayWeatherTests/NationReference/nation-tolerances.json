@@ -1,0 +1,127 @@
+{
+ "metric": "AN-05 ImageDiff: strong = share of pixels differing by more than 64 in a channel, mean = mean absolute channel difference, heightDifference in pixels",
+ "measured": "Xcode 27.2, iOS 26.5 simulator twios_in13_dev, rendered with Korean fallback fonts (cssFallbackLanguage ko) against the captures of ios/tools/nation-reference (393x852 pt, scale 3)",
+ "margin": {
+  "strong": 0.002,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "reasons": "What remains is glyph rasterization (CoreText in ImageRenderer against WebKit's text), the map image's filtering and, in nation-loading, the bubbles spinner's animation phase. The margin is the headroom IN-12 and IN-09 needed for CI's Xcode 26.6.",
+ "cases": {
+  "nation-air-co": {
+   "strong": 0.0,
+   "mean": 0.47,
+   "heightDifference": 0
+  },
+  "nation-air-failed": {
+   "strong": 0.0,
+   "mean": 0.21,
+   "heightDifference": 0
+  },
+  "nation-air-no2": {
+   "strong": 0.0,
+   "mean": 0.73,
+   "heightDifference": 0
+  },
+  "nation-air-o3": {
+   "strong": 0.0002,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "nation-air-pm10": {
+   "strong": 0.0,
+   "mean": 0.29,
+   "heightDifference": 0
+  },
+  "nation-air-pm2.5": {
+   "strong": 0.0,
+   "mean": 0.27,
+   "heightDifference": 0
+  },
+  "nation-air-so2": {
+   "strong": 0.0,
+   "mean": 0.78,
+   "heightDifference": 0
+  },
+  "nation-loading": {
+   "strong": 0.0006,
+   "mean": 0.32,
+   "heightDifference": 0
+  },
+  "nation-rain": {
+   "strong": 0.0001,
+   "mean": 0.53,
+   "heightDifference": 0
+  },
+  "nation-weather": {
+   "strong": 0.0001,
+   "mean": 0.58,
+   "heightDifference": 0
+  },
+  "nation-weather-dark": {
+   "strong": 0.0001,
+   "mean": 0.58,
+   "heightDifference": 0
+  },
+  "nation-weather-empty": {
+   "strong": 0.0001,
+   "mean": 0.38,
+   "heightDifference": 0
+  },
+  "nation-weather-failed": {
+   "strong": 0.0001,
+   "mean": 0.38,
+   "heightDifference": 0
+  },
+  "nation-wind": {
+   "strong": 0.0001,
+   "mean": 0.64,
+   "heightDifference": 0
+  },
+  "warnings": {
+   "strong": 0.0,
+   "mean": 0.06,
+   "heightDifference": 0
+  },
+  "warnings-1": {
+   "strong": 0.0,
+   "mean": 0.06,
+   "heightDifference": 0
+  },
+  "warnings-2": {
+   "strong": 0.0001,
+   "mean": 0.07,
+   "heightDifference": 0
+  },
+  "warnings-3": {
+   "strong": 0.0,
+   "mean": 0.06,
+   "heightDifference": 0
+  },
+  "warnings-4": {
+   "strong": 0.0003,
+   "mean": 0.08,
+   "heightDifference": 0
+  },
+  "warnings-5": {
+   "strong": 0.0,
+   "mean": 0.02,
+   "heightDifference": 0
+  },
+  "warnings-dark": {
+   "strong": 0.0,
+   "mean": 0.06,
+   "heightDifference": 0
+  },
+  "warnings-empty": {
+   "strong": 0.0,
+   "mean": 0.05,
+   "heightDifference": 0
+  },
+  "warnings-failed": {
+   "strong": 0.0,
+   "mean": 0.05,
+   "heightDifference": 0
+  }
+ }
+}
