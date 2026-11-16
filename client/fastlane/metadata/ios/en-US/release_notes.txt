@@ -1,1 +1,1 @@
-You can now choose whether to allow tracking for personalized ads. All features work the same if you decline.
+If you have not allowed tracking for personalized ads, the hourly, daily and air pages and the new "Tracking permission" menu row now open iOS Settings directly. Privacy items moved to the end of the menu.
