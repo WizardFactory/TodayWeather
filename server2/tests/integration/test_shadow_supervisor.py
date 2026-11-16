@@ -427,6 +427,31 @@ class GuardTests(unittest.TestCase):
         s=host_sample();del s['metrics']['s3_reads']
         self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
 
+    def test_storage_authorization_counts_within_one_hour(self):
+        # CX-SR3-002: isolated rejections spread over the week never add up to a stop; 20
+        # within one hour stop (a broken role fails every call and passes that in a minute).
+        m=host_manifest();self.assertEqual(guard.STORAGE_AUTH_WINDOW,3600)
+        def walk(points):
+            prior=None
+            for t,count in points:
+                s=host_sample();s['observed_at']=t;s['metrics']['storage_auth_failures']=count
+                prior=guard.evaluate(m,s,prior,t)
+                if prior['stop']:return prior,t
+            return prior,None
+        d,at=walk([(1001+30000*i,i) for i in range(1,21)])   # 20 rejections over 167 h
+        self.assertIsNone(at,d)
+        d,at=walk([(1001,0),(1001+600,15),(1001+3700,15),(1001+3800,30)])
+        self.assertIsNone(at,d)   # 15 in the first hour, 15 in the second
+        d,at=walk([(1001,0),(1001+600,15),(1001+3700,15),(1001+3800,34),(1001+3900,35)])
+        self.assertEqual((d['stop'],at),('s3_authorization',1001+3900))
+        # A role broken from the start stops at the first sample, and one that breaks just as
+        # an hour ends stops at the first sample after it (the failures since the last sample
+        # belong to the new hour).
+        d,at=walk([(1001,25)])
+        self.assertEqual((d['stop'],at),('s3_authorization',1001))
+        d,at=walk([(1001,0),(1000+3590,0),(1000+3600,20)])
+        self.assertEqual((d['stop'],at),('s3_authorization',1000+3600))
+
     def test_confirmed_stops_are_not_masked_by_a_partial_observation(self):
         # CX-SR2-009: binding, listener, network and disk are decided from the sample's own
         # fields before invalid accounting, metrics or diagnostics count as a miss.

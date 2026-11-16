@@ -654,6 +654,99 @@ mod wire_tests {
             3
         );
     }
+    /// CX-SR3-001: real provider transports against a loopback server count each 401/403/429
+    /// response exactly once under its source; other statuses are not counted.
+    #[tokio::test]
+    async fn provider_transport_counts_case() {
+        use crate::budget::Provider;
+        use crate::providers::{
+            HttpProviderTransport, HttpPublicTransport, ProviderKey, ProviderTransport,
+            PublicRequest, PublicTransport, Request, ResponseFormat,
+        };
+        if std::env::var("SHADOW_TRANSPORT_CHILD").is_err() {
+            return;
+        }
+        super::install_process(&|_| Some("2,3,8".into())).unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let root = format!("http://{}", listener.local_addr().unwrap());
+        let app = axum::Router::new().fallback(|uri: axum::http::Uri| async move {
+            match uri.path() {
+                p if p.ends_with("/getVilageFcst") => axum::http::StatusCode::TOO_MANY_REQUESTS,
+                p if p.ends_with("/getMsrstnList") => axum::http::StatusCode::OK,
+                "/vc" => axum::http::StatusCode::UNAUTHORIZED,
+                _ => axum::http::StatusCode::FORBIDDEN,
+            }
+        });
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let funded = HttpProviderTransport::new(1024).unwrap();
+        let send = |path: &str, provider: Provider, format: ResponseFormat| Request {
+            endpoint: reqwest::Url::parse(&format!("{root}{path}")).unwrap(),
+            key: ProviderKey("fixture".into()),
+            provider,
+            format,
+        };
+        for _ in 0..2 {
+            let _ = funded
+                .send(&send(
+                    "/1360000/VilageFcstInfoService_2.0/getVilageFcst",
+                    Provider::DataGoKr,
+                    ResponseFormat::DataType,
+                ))
+                .await;
+        }
+        let _ = funded
+            .send(&send(
+                "/B552584/MsrstnInfoInqireSvc/getMsrstnList",
+                Provider::DataGoKr,
+                ResponseFormat::ReturnType,
+            ))
+            .await;
+        let _ = funded
+            .send(&send(
+                "/vc",
+                Provider::VisualCrossing,
+                ResponseFormat::DataType,
+            ))
+            .await;
+        let public = HttpPublicTransport::new(1024).unwrap();
+        let page =
+            PublicRequest::new(reqwest::Url::parse(&format!("{root}/page")).unwrap()).unwrap();
+        let _ = public.fetch(&page).await;
+        server.abort();
+        let metrics = crate::observability::render_metrics();
+        let lines: Vec<_> = metrics
+            .lines()
+            .filter(|l| l.starts_with("server2_runtime_provider_http_rejections_total"))
+            .collect();
+        assert_eq!(
+            lines,
+            [
+                r#"server2_runtime_provider_http_rejections_total{source="vilage_fcst",status="429"} 2"#,
+                r#"server2_runtime_provider_http_rejections_total{source="visual_crossing",status="401"} 1"#,
+                r#"server2_runtime_provider_http_rejections_total{source="public_other",status="403"} 1"#,
+            ],
+            "{metrics}"
+        );
+    }
+    #[test]
+    fn provider_transports_count_each_rejection_once_by_source() {
+        let result = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "storage::allowance::wire_tests::provider_transport_counts_case",
+                "--nocapture",
+            ])
+            .env("SHADOW_TRANSPORT_CHILD", "1")
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{} {}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(String::from_utf8_lossy(&result.stdout).contains("1 passed"));
+    }
     #[test]
     fn diagnostic_metrics_retain_first_origin_and_paid_units() {
         for mode in ["event", "local"] {

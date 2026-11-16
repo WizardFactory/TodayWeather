@@ -29,6 +29,9 @@ MISS_LIMIT = 6
 # broken role fails every S3 call and passes this quickly; an isolated clock-skew
 # rejection does not. Provider rejections never stop the run.
 STORAGE_AUTH_LIMIT = 20
+# ... within one hour (CX-SR3-002): isolated rejections spread over the week, each perhaps
+# recorded by more than one operation, never add up to a stop.
+STORAGE_AUTH_WINDOW = 3600
 
 
 class GuardError(ValueError):
@@ -108,13 +111,16 @@ def evaluate(manifest, sample, previous, now):
     require(integer(now),'now')
     fingerprint = hashlib.sha256(canonical(manifest).encode()).hexdigest()
     result = {'schema':5,'manifest_sha256':fingerprint,'last_seen':now,
-              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None,'misses':0}
+              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None,'misses':0,
+              'storage_auth_window':None}
     if previous is not None:
         require(type(previous) is dict and set(previous)==set(result),'state_fields')
         require(previous['manifest_sha256']==fingerprint,'state_identity')
         require(previous['schema']==5 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu'])
                 and integer(previous['misses'],0,MISS_LIMIT),'state_values')
         require(previous['stop'] is None or isinstance(previous['stop'],str),'state_stop')
+        window=previous['storage_auth_window']
+        require(window is None or (type(window) is list and len(window)==3 and all(integer(v) for v in window)),'state_window')
         if previous['diagnostics'] is not None:checked_stored_diagnostics(previous['diagnostics'])
         result.update(previous)
         result['last_seen']=max(now,previous['last_seen'])
@@ -165,8 +171,16 @@ def evaluate(manifest, sample, previous, now):
                                auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'],
                                storage_auth_failures=metrics['storage_auth_failures'])
     # Provider rejections and local budget exhaustion are handled by the runtime and are
-    # evidence, not stop reasons (SR-3). Only storage/credential authorization stops.
-    if metrics['storage_auth_failures'] >= STORAGE_AUTH_LIMIT:
+    # evidence, not stop reasons (SR-3). Only storage/credential authorization stops: 20
+    # within one hour. The window is [start, count at start, count at the last sample]; a new
+    # hour starts from the last sample's count, so failures since then belong to it (the
+    # process starts at 0).
+    count=metrics['storage_auth_failures']
+    start,base,last=result['storage_auth_window'] or [manifest['epoch'],0,0]
+    if count<last:start,base=now,count            # counter reset: a new process
+    elif now-start>=STORAGE_AUTH_WINDOW:start,base=now,last
+    result['storage_auth_window']=[start,base,count]
+    if count-base >= STORAGE_AUTH_LIMIT:
         return stop('s3_authorization')
     for metric,allocation in [('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes')]:
         if not 0 < metrics[metric] <= manifest['allowance'][allocation]:
