@@ -65,7 +65,11 @@ It is created with mode 0700. `ledger.sqlite3` records every admission before
 sending; numbered `.body` files contain the raw bytes, and `.json` files contain
 status, selected cache headers, byte counts and SHA-256. Timing and terminal
 outcomes are in the ledger. A timeout can leave a pending/partial evidence file;
-only a completed ledger result establishes a completed attempt. Keep all files
+only a completed ledger result establishes a completed attempt. When the sampler
+itself has to stop a child (its absolute deadline passed or the child exited with an
+error), the result is `{"error": "deadline"|"worker-exit", "captured": false}` with no
+body fields: nothing was captured and no files are expected. A child's own timeout
+still writes its files with `error: deadline` and the body fields. Keep all files
 private. No cookies, authorization headers or arbitrary response headers are
 retained. Response bodies can contain public API data; do not publish them
 without the parent retention review.
