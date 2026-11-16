@@ -1,0 +1,3609 @@
+{
+ "generator": "ios/tools/handback/generate.py (reader.js in the macOS JavaScriptCore shell)",
+ "sources": [
+  {
+   "path": "client/www/js/service.storage.js",
+   "commit": "716cac7cce0caa0cd98d03f840994e902fffb198",
+   "sha256": "61ca0b39a5951337aec478d96f67664cdf46f49e633cc5cd981edce9409ab5ec"
+  },
+  {
+   "path": "client/local-plugins/cordova-plugin-app-preferences/www/apppreferences.js",
+   "commit": "4781b414bd58115764a9d0f9bdbfe0560ecb8865",
+   "sha256": "452b1c396c7c735a979ed88f1a9a68224eea1e0802a6133f1d69225d0c90ce6d"
+  },
+  {
+   "path": "client/local-plugins/cordova-plugin-app-preferences/src/ios/AppPreferences.m",
+   "commit": "d9a6d4b41b8455015986a56848c177899436a6d9",
+   "sha256": "d621244af2efb8c16a5aa81e644190cbdea0f3e813e53a69b2cb4f7dcbd0d2bd"
+  }
+ ],
+ "note": "Starts of the fallback Cordova iOS build (TwStorage.init) over every prefix of the native hand-back's suite writes. Outcome per start: [S stale WebView state | W new hand-back | P previous native hand-back | H waits | M mix, trusted (storageReady), the claim's generation or null]. Suite values: {string} NSString, {number} NSNumber, {bool}, {data} NSData.",
+ "keys": [
+  "cities",
+  "cityIndex",
+  "cityList",
+  "units",
+  "settingsInfo",
+  "pushData2",
+  "pushData",
+  "expandShortChart",
+  "startVersion",
+  "appVersion",
+  "disableUpdateInfo",
+  "twAnalyticsConsentV1"
+ ],
+ "cases": [
+  {
+   "name": "first hand-back over the 1.1.1 suite",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}",
+    "pushData": "{\"alarmList\":[{\"cityIndex\":2}]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": "true",
+    "twAnalyticsConsentV1": "true"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]"
+    },
+    "cityIndex": {
+     "string": "2"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}"
+    },
+    "pushData": {
+     "string": "{\"alarmList\":[{\"cityIndex\":2}]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "disableUpdateInfo": {
+     "string": "true"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":1,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ],
+    [
+     "cities",
+     "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    ],
+    [
+     "cityList",
+     "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    ],
+    [
+     "units",
+     "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    ],
+    [
+     "settingsInfo",
+     "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    ],
+    [
+     "pushData2",
+     "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    ],
+    [
+     "pushData",
+     null
+    ],
+    [
+     "disableUpdateInfo",
+     null
+    ],
+    [
+     "twAnalyticsConsentV1",
+     "true"
+    ],
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":1,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "S",
+     true,
+     1,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "W",
+     true,
+     2,
+     "true"
+    ]
+   ],
+   "resumed": [
+    {
+     "after": 1,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cities",
+       "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "pushData",
+       null
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 2,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "pushData",
+       null
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 3,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "pushData",
+       null
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 4,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "pushData",
+       null
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 5,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "pushData",
+       null
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 6,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "pushData",
+       null
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 7,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "disableUpdateInfo",
+       null
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 8,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 9,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":2,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       3,
+       "true"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "over an earlier hand-back",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}",
+    "pushData": "{\"alarmList\":[{\"cityIndex\":2}]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": "true",
+    "twAnalyticsConsentV1": "true"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "string": "1"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "false"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":3,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":4,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ],
+    [
+     "cities",
+     "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    ],
+    [
+     "cityIndex",
+     "2"
+    ],
+    [
+     "cityList",
+     "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    ],
+    [
+     "units",
+     "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    ],
+    [
+     "settingsInfo",
+     "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    ],
+    [
+     "pushData2",
+     "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    ],
+    [
+     "twAnalyticsConsentV1",
+     "true"
+    ],
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":4,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "P",
+     true,
+     4,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "W",
+     true,
+     5,
+     "true"
+    ]
+   ],
+   "resumed": [
+    {
+     "after": 1,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cities",
+       "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 2,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 3,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 4,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 5,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 6,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 7,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 8,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "over a claim the native app adopted",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "1",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "twAnalyticsConsentV1": "false",
+    "twHandBackApplied": "3"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "string": "1"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "false"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":4,\"writer\":\"cordova\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ],
+    [
+     "cities",
+     "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    ],
+    [
+     "cityIndex",
+     "2"
+    ],
+    [
+     "cityList",
+     "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    ],
+    [
+     "units",
+     "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    ],
+    [
+     "settingsInfo",
+     "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    ],
+    [
+     "pushData2",
+     "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    ],
+    [
+     "twAnalyticsConsentV1",
+     "true"
+    ],
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "S",
+     true,
+     4,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "false"
+    ],
+    [
+     "W",
+     true,
+     6,
+     "true"
+    ]
+   ],
+   "resumed": [
+    {
+     "after": 1,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cities",
+       "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 2,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 3,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 4,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 5,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 6,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 7,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 8,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "false"
+      ],
+      [
+       "W",
+       true,
+       7,
+       "true"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "one key changed",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}",
+    "pushData": "{\"alarmList\":[{\"cityIndex\":2}]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": "true",
+    "twAnalyticsConsentV1": "true"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "string": "2"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "true"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":6,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":7,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ],
+    [
+     "settingsInfo",
+     "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    ],
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":7,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "P",
+     true,
+     7,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "W",
+     true,
+     8,
+     "true"
+    ]
+   ],
+   "resumed": [
+    {
+     "after": 1,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":8,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":8,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       9,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 2,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":8,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       9,
+       "true"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "unchanged",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}",
+    "pushData": "{\"alarmList\":[{\"cityIndex\":2}]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": "true",
+    "twAnalyticsConsentV1": "true"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "string": "2"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "true"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":7,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [],
+   "outcomes": [
+    [
+     "W",
+     true,
+     8,
+     "true"
+    ]
+   ],
+   "resumed": []
+  },
+  {
+   "name": "a claim over the same texts",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}",
+    "pushData": "{\"alarmList\":[{\"cityIndex\":2}]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": "true",
+    "twAnalyticsConsentV1": "true"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "string": "2"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "true"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":8,\"writer\":\"cordova\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":9,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "S",
+     true,
+     8,
+     "true"
+    ],
+    [
+     "W",
+     true,
+     10,
+     "true"
+    ]
+   ],
+   "resumed": []
+  },
+  {
+   "name": "values of other types",
+   "emptyWebView": false,
+   "local": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":true,\"photo\":null,\"loadTime\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":\"2026-11-07T16:09:45.810Z\"},{\"name\":\"London\",\"address\":\"United Kingdom London\",\"country\":\"GB\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"currentPosition\":false,\"currentWeather\":{\"t1h\":3,\"sky\":1},\"timeTable\":[],\"timeChart\":[],\"dayTable\":[],\"dayChart\":[],\"disable\":false,\"photo\":null,\"loadTime\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"London\",\"currentPosition\":false,\"address\":\"United Kingdom London\",\"location\":{\"lat\":51.51,\"long\":-0.13},\"country\":\"GB\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-07T21:00:00.000Z\",\"dayOfWeek\":[true,true,true,true,true,true,true],\"enable\":true,\"category\":\"alarm\",\"name\":\"London\"}]}",
+    "pushData": "{\"alarmList\":[{\"cityIndex\":2}]}",
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": "true",
+    "twAnalyticsConsentV1": "true"
+   },
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "number": "2"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    },
+    "units": {
+     "data": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    },
+    "expandShortChart": {
+     "bool": true
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "true"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":9,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":10,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ],
+    [
+     "cityIndex",
+     "2"
+    ],
+    [
+     "units",
+     "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    ],
+    [
+     "expandShortChart",
+     "true"
+    ],
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":10,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "W",
+     true,
+     10,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "S",
+     false,
+     null,
+     "true"
+    ],
+    [
+     "W",
+     true,
+     11,
+     "true"
+    ]
+   ],
+   "resumed": [
+    {
+     "after": 1,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "expandShortChart",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       12,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 2,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "expandShortChart",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       12,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 3,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "expandShortChart",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       12,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 4,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":11,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "S",
+       false,
+       null,
+       "true"
+      ],
+      [
+       "W",
+       true,
+       12,
+       "true"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "name": "empty WebView storage",
+   "emptyWebView": true,
+   "local": {},
+   "suite": {
+    "cities": {
+     "string": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    },
+    "cityIndex": {
+     "string": "1"
+    },
+    "cityList": {
+     "string": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1}]}"
+    },
+    "units": {
+     "string": "{\"temperatureUnit\":\"F\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    },
+    "settingsInfo": {
+     "string": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"dark\"}"
+    },
+    "pushData2": {
+     "string": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[]}"
+    },
+    "expandShortChart": {
+     "string": "true"
+    },
+    "startVersion": {
+     "string": "\"1.1.0\""
+    },
+    "appVersion": {
+     "string": "\"1.1.1\""
+    },
+    "twAnalyticsConsentV1": {
+     "string": "false"
+    },
+    "_twHandBack": {
+     "string": "{\"schema\":1,\"generation\":3,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    }
+   },
+   "texts": {
+    "cities": "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]",
+    "cityIndex": "2",
+    "cityList": "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}",
+    "units": "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}",
+    "settingsInfo": "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}",
+    "pushData2": "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}",
+    "pushData": null,
+    "expandShortChart": "true",
+    "startVersion": "\"1.1.0\"",
+    "appVersion": "\"1.1.1\"",
+    "disableUpdateInfo": null,
+    "twAnalyticsConsentV1": "true"
+   },
+   "writes": [
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":4,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ],
+    [
+     "cities",
+     "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+    ],
+    [
+     "cityIndex",
+     "2"
+    ],
+    [
+     "cityList",
+     "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+    ],
+    [
+     "units",
+     "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+    ],
+    [
+     "settingsInfo",
+     "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+    ],
+    [
+     "pushData2",
+     "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+    ],
+    [
+     "twAnalyticsConsentV1",
+     "true"
+    ],
+    [
+     "_twHandBack",
+     "{\"schema\":1,\"generation\":4,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+    ]
+   ],
+   "outcomes": [
+    [
+     "P",
+     true,
+     4,
+     "false"
+    ],
+    [
+     "P",
+     false,
+     null,
+     null
+    ],
+    [
+     "M",
+     false,
+     null,
+     null
+    ],
+    [
+     "M",
+     false,
+     null,
+     null
+    ],
+    [
+     "M",
+     false,
+     null,
+     null
+    ],
+    [
+     "M",
+     false,
+     null,
+     null
+    ],
+    [
+     "M",
+     false,
+     null,
+     null
+    ],
+    [
+     "W",
+     false,
+     null,
+     null
+    ],
+    [
+     "W",
+     false,
+     null,
+     null
+    ],
+    [
+     "W",
+     true,
+     5,
+     "true"
+    ]
+   ],
+   "resumed": [
+    {
+     "after": 1,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cities",
+       "[{\"currentPosition\":true,\"address\":null,\"location\":null,\"disable\":true,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"명동\",\"address\":\"대한민국 서울특별시 중구 명동\",\"country\":\"KR\",\"location\":{\"lat\":37.56,\"long\":126.98},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"address\":\"대한민국 부산광역시\",\"country\":\"KR\",\"location\":{\"lat\":35.18,\"long\":129.08},\"currentPosition\":false,\"source\":\"KMA\",\"disable\":false,\"photo\":null,\"currentWeather\":null,\"timeTable\":null,\"timeChart\":null,\"dayTable\":null,\"dayChart\":null}]"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "P",
+       false,
+       null,
+       null
+      ],
+      [
+       "P",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 2,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityIndex",
+       "2"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 3,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "cityList",
+       "{\"cityList\":[{\"name\":\"명동\",\"currentPosition\":false,\"address\":\"대한민국 서울특별시 중구 명동\",\"location\":{\"lat\":37.56,\"long\":126.98},\"country\":\"KR\",\"index\":1},{\"name\":\"Q\\\"uote\\\\d 부산 ☂  \",\"currentPosition\":false,\"address\":\"대한민국 부산광역시\",\"location\":{\"lat\":35.18,\"long\":129.08},\"country\":\"KR\",\"index\":2}]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 4,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "units",
+       "{\"temperatureUnit\":\"C\",\"windSpeedUnit\":\"km/h\",\"pressureUnit\":\"hPa\",\"distanceUnit\":\"km\",\"precipitationUnit\":\"mm\",\"airUnit\":\"airnow\"}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 5,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "settingsInfo",
+       "{\"startupPage\":\"1\",\"refreshInterval\":\"30\",\"theme\":\"light\"}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 6,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "pushData2",
+       "{\"registrationId\":null,\"type\":\"ios\",\"category\":\"\",\"fcmToken\":\"token-a\",\"pushList\":[{\"cityIndex\":2,\"id\":2,\"time\":\"2026-11-08T00:10:00.000Z\",\"dayOfWeek\":[false,true,true,true,true,true,false],\"enable\":true,\"category\":\"alarm\",\"name\":\"Q\\\"uote\\\\d 부산 ☂  \"}]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "M",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 7,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":false,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ],
+      [
+       "twAnalyticsConsentV1",
+       "true"
+      ],
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    },
+    {
+     "after": 8,
+     "writes": [
+      [
+       "_twHandBack",
+       "{\"schema\":1,\"generation\":5,\"writer\":\"native\",\"complete\":true,\"keys\":[\"cities\",\"cityIndex\",\"cityList\",\"units\",\"settingsInfo\",\"pushData2\",\"pushData\",\"expandShortChart\",\"startVersion\",\"appVersion\",\"disableUpdateInfo\",\"twAnalyticsConsentV1\"]}"
+      ]
+     ],
+     "outcomes": [
+      [
+       "W",
+       false,
+       null,
+       null
+      ],
+      [
+       "W",
+       true,
+       6,
+       "true"
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -28,7 +28,7 @@ enum EntryEvent: Equatable, Sendable {
 @MainActor
 @Observable
 final class AppLaunch {
-    static let shared = AppLaunch(store: AppLaunch.standardStore(), environment: .system)
+    static let shared = AppLaunch(store: AppLaunch.standardStore(), environment: .system, handBack: AppHandBack.writer)
 
     /// The single owner of the app state for the UI; its `state` is nil until the migration has finished.
     let holder: AppStateHolder
@@ -114,11 +114,14 @@ final class AppLaunch {
         return nation?.screenName ?? settings?.top.map(SettingsScreens.screenName)
     }
 
-    init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet(),
+    /// `handBack` (IN-17) gets the state the migration produced and every state saved after it; nil writes no hand-back.
+    init(store: any AppStateSaving, environment: Environment, handBack: HandBackWriter? = nil, http: any HTTPGetting = URLSessionGet(),
          weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache(),
          location: @escaping @MainActor () -> any AppLocation = { CoreLocationAccess() },
          placeSearch: @escaping @MainActor () -> (any PlaceSearch)? = { GooglePlaceSearch(key: GooglePlaceSearch.bundleKey) }) {
-        holder = AppStateHolder(store: store)
+        var onSaved: (@Sendable (AppState) -> Void)?
+        if let handBack { onSaved = { handBack.write($0) } }
+        holder = AppStateHolder(store: store, onSaved: onSaved)
         self.environment = environment
         self.weatherHTTP = weatherHTTP
         makeLocation = location

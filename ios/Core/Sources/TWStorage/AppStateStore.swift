@@ -63,35 +63,48 @@ public struct AppStateStore: Sendable {
 }
 
 /// Runs the Cordova migration once: a stored state that records a migration is returned unchanged, whatever the
-/// sources or the clock say later. Without one, the sources are read (only read), migrated and saved. A state file
-/// that exists but is not readable now stops the run (nothing is written), so a later start tries again; a corrupt
-/// file is replaced by a new migration. IN-17 adds the rollback hand-back.
+/// sources or the clock say later, except after a rollback (IN-17): when a fallback Cordova build claimed the state
+/// (`CordovaHandBack.cordovaClaim`) with a generation this state has not adopted, the Cordova storage the user changed
+/// there migrates again, and the next hand-back gives the state back to the fallback build. Every migration adopts the
+/// claim it found, the first one too: a Cordova build with the hand-back claims the state at each of its starts.
+/// Without a stored state the sources are read (only read), migrated and saved. A state file that exists but is not
+/// readable now stops the run (nothing is written), so a later start tries again; a corrupt file is replaced by a new
+/// migration.
 public struct MigrationRunner: Sendable {
     let store: AppStateStore
     let sources: @Sendable () throws -> CordovaSources
     let now: @Sendable () -> Date
     let zone: @Sendable () -> TimeZone
     let region: @Sendable () -> String?
+    /// The suite's `CordovaHandBack.marker` text, read on every start (the sources only when migrating).
+    let marker: @Sendable () -> String?
 
     public init(store: AppStateStore, sources: @escaping @Sendable () throws -> CordovaSources,
                 now: @escaping @Sendable () -> Date = Date.init,
                 zone: @escaping @Sendable () -> TimeZone = { TimeZone.current },
-                region: @escaping @Sendable () -> String?) {
+                region: @escaping @Sendable () -> String?,
+                marker: @escaping @Sendable () -> String? = { nil }) {
         self.store = store
         self.sources = sources
         self.now = now
         self.zone = zone
         self.region = region
+        self.marker = marker
     }
 
     /// The state after the migration; a second call changes nothing.
     public func runIfNeeded() throws -> AppState {
+        let text = marker()
         do {
-            if let state = try store.load(), state.migration != nil { return state }
+            if let state = try store.load(), let migration = state.migration {
+                guard let claim = CordovaHandBack.cordovaClaim(text),
+                      claim.generation > (migration.handBackGeneration ?? 0) else { return state }
+            }
         } catch .corrupt {
             // migrate again below
         }
-        let state = CordovaMigration.migrate(try sources(), region: region(), now: now(), zone: zone())
+        var state = CordovaMigration.migrate(try sources(), region: region(), now: now(), zone: zone())
+        state.migration?.handBackGeneration = CordovaHandBack.cordovaClaim(text)?.generation
         try store.save(state)
         return state
     }

@@ -18,15 +18,23 @@ final class AnalyticsConsentFiles: AnalyticsConsentRecords {
 
     /// The app's records.
     static func standard() -> AnalyticsConsentFiles {
+        AnalyticsConsentFiles(directory: standardDirectory)
+    }
+
+    nonisolated static var standardDirectory: URL {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return AnalyticsConsentFiles(directory: support.appendingPathComponent("TodayWeather", isDirectory: true))
+        return support.appendingPathComponent("TodayWeather", isDirectory: true)
     }
 
     private var choiceURL: URL { directory.appendingPathComponent("analytics-choice") }
     private var collectionURL: URL { directory.appendingPathComponent("analytics-collection") }
 
-    func readChoice() -> String? {
-        guard let data = try? Data(contentsOf: choiceURL), let text = String(data: data, encoding: .utf8),
+    func readChoice() -> String? { Self.storedChoice(in: directory) }
+
+    /// The stored choice in `directory`, read from any thread (the rollback hand-back reads it when it writes, IN-17).
+    nonisolated static func storedChoice(in directory: URL) -> String? {
+        let url = directory.appendingPathComponent("analytics-choice")
+        guard let data = try? Data(contentsOf: url), let text = String(data: data, encoding: .utf8),
               text == "true" || text == "false" else { return nil }
         return text
     }

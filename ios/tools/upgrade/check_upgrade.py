@@ -123,6 +123,26 @@ def measurement(data):
         shutil.rmtree(tmp)
 
 
+# The keys and the marker of the rollback hand-back (IN-17), which the native app writes into the suite.
+HANDBACK_MARKER = "_twHandBack"
+HANDBACK_KEYS = ["cities", "cityIndex", "cityList", "units", "settingsInfo", "pushData2", "pushData", "expandShortChart",
+                 "startVersion", "appVersion", "disableUpdateInfo", "twAnalyticsConsentV1"]
+
+
+def handback_marker(group):
+    """The suite's hand-back marker as a dict, or None."""
+    try:
+        marker = json.loads(group.get(HANDBACK_MARKER))
+        return marker if isinstance(marker, dict) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def not_handed_back(group):
+    """The suite's values the hand-back does not own (repr, so every plist type compares)."""
+    return {k: repr(v) for k, v in sorted(group.items()) if k not in HANDBACK_KEYS and k != HANDBACK_MARKER}
+
+
 def webkit_files(data):
     files = sorted(glob.glob(os.path.join(data, "Library/WebKit/**/LocalStorage/*"), recursive=True))
     return {os.path.relpath(f, data): sha(f) for f in files if os.path.isfile(f) and not f.endswith("-shm")}
@@ -265,8 +285,10 @@ def main():
             settled = ("cities" in group and standard.get("/google/measurement/measurement_enabled_state") == 1 and
                        m is not None and "favorite_change" in m["events"])
         else:
+            marker = handback_marker(group) or {}
             settled = (standard.get("/google/measurement/measurement_enabled_state") not in (None, 1) and
-                       (apm.get("consent_settings_3p") or {}).get("analytics_storage") == "denied" and m is not None)
+                       (apm.get("consent_settings_3p") or {}).get("analytics_storage") == "denied" and m is not None and
+                       marker.get("writer") == "native" and marker.get("complete") is True)
         if settled:
             break
         time.sleep(1)
@@ -289,6 +311,7 @@ def main():
         c.check("the SDK counted an event under the opt-in", m is not None and "favorite_change" in m["events"], m)
         c.record("webkit_files", files)
         c.record("group_sha", sha(os.path.join(shared, "Library/Preferences/group.net.wizardfactory.todayweather.plist")))
+        c.record("group_not_handed_back", not_handed_back(group))
         requests(c, out)
         c.finish()
 
@@ -313,8 +336,20 @@ def main():
             [before["measurement"], m])
     c.check("no unbundled event added", m is not None and m["raw_events"] == before["measurement"]["raw_events"])
     c.check("CDVUUID unchanged", standard.get("CDVUUID") == seed.get("deviceId"))
-    c.check("suite unchanged", sha(os.path.join(shared, "Library/Preferences/group.net.wizardfactory.todayweather.plist"))
-            == before["group_sha"])
+    # IN-17: the native app writes the rollback hand-back into the suite (CordovaUpgradeTests compares its texts with the
+    # migrated state); nothing else of the suite changes, and the restarts write nothing more (the same state).
+    marker = handback_marker(group) or {}
+    c.record("handback_marker", marker)
+    c.check("suite holds the native hand-back", marker.get("schema") == 1 and marker.get("writer") == "native" and
+            marker.get("complete") is True and marker.get("keys") == HANDBACK_KEYS, marker)
+    c.check("suite values the hand-back does not own unchanged",
+            not_handed_back(group) == before.get("group_not_handed_back"), not_handed_back(group))
+    group_values = {k: repr(v) for k, v in sorted(group.items())}
+    c.record("group_values", group_values)
+    if stage != "after" or phase != "first":
+        first_group = c.summary.get("after-first", {}).get("group_values")
+        c.check("suite unchanged since the first start", group_values == first_group,
+                sorted(k for k in set(group_values) | set(first_group or {}) if group_values.get(k) != (first_group or {}).get(k)))
     files = webkit_files(data)
     if source == "suite":
         c.check("no WebKit storage (suite-only state)", not files, files)
