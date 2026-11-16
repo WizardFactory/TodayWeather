@@ -58,6 +58,7 @@ def default_scenario(**changes):
         sample_failure=0.0,          # per 10 s guard sample (metrics timeout, /proc error)
         quota_events_per_hour=0.0,   # provider/local Quota or Auth records reaching the guard counters
         quota_first_at=None,         # seconds after start of a forced first event (observed: ~180)
+        storage_auth_at=None,        # seconds after start from which every S3 call is denied (broken role)
         production_429=0.0,          # per production attempt
         production_5xx=0.0,
         production_timeout=0.0,
@@ -91,6 +92,8 @@ SCENARIOS = {
     's3-measured-high': default_scenario(name='s3-measured-high', s3_reads_per_hour=2000, s3_writes_per_hour=600),
     # A dead candidate leaves no /proc entry: the guard's sample collection fails.
     'candidate-exit-day-3': default_scenario(name='candidate-exit-day-3', candidate_exit_at=60 * HOUR),
+    # SR-3: the run's own storage authorization fails (instance role or bucket policy broken).
+    'storage-auth-broken-role': default_scenario(name='storage-auth-broken-role', storage_auth_at=3 * HOUR),
     'realistic-combined': default_scenario(name='realistic-combined', poll_failure=1e-4, sample_failure=1e-6,
                                            quota_events_per_hour=1 / 24, production_5xx=1e-3, production_timeout=1e-4,
                                            production_429=1e-5, ssh_down=[(14 * HOUR, 22 * HOUR)]),
@@ -198,6 +201,13 @@ class Host:
             s3_writes=max(0, int(90000 - sc['s3_writes_per_hour'] * elapsed_h)),
             s3_put_bytes=max(0, int(2 * GIB - sc['s3_put_bytes_per_hour'] * elapsed_h)),
             auth_failures=0, quota_failures=self.quota)
+        # Provider rejections (SR-3): one data.go.kr 429 per quota event, counted by source.
+        if self.quota:
+            s['diagnostics']['provider_http'] = {'vilage_fcst': {'429': self.quota}}
+        # A broken role fails every S3 call: far more than the threshold between two samples.
+        at = sc['storage_auth_at']
+        if at is not None and t >= EPOCH + at:
+            s['metrics']['storage_auth_failures'] = guard.STORAGE_AUTH_LIMIT + int((t - EPOCH - at) // 10)
         return s
 
     def _reader_to(self, t):

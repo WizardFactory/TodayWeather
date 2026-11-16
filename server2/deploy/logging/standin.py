@@ -12,7 +12,8 @@ CloudWatch Logs (JSON 1.1, Logs_20140328): CreateLogStream, PutLogEvents and
 the read calls DescribeLogGroups/DescribeLogStreams. Groups must be created
 with --log-group, as on AWS, where the instance role cannot create them.
 Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
-while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
+while <state>/deny-data exists, every data-bucket request answers 403 AccessDenied (a lost
+instance role, shadow check of SR-3); while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
 while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds.
 Data buckets (--data-bucket, the shadow check of LP-6): an empty, writable weather
 bucket for the server itself; GET/HEAD of a missing key answer 404 NoSuchKey, a list
@@ -157,6 +158,9 @@ class Handler(BaseHTTPRequestHandler):
         self.record('s3', action, bucket=bucket, key=key,
                     content_encoding=self.headers.get('Content-Encoding'), content_type=self.headers.get('Content-Type'))
         if bucket in self.server.data_buckets:
+            if (self.server.state / 'deny-data').exists():
+                self.record('s3', 'Denied', bucket=bucket, key=key)
+                return self.reply(403, b'<Error><Code>AccessDenied</Code></Error>', 'application/xml')
             return self.data_bucket(action, bucket, key, body, split.query)
         if action != 'PutObject':
             return self.reply(403, b'<Error><Code>AccessDenied</Code></Error>', 'application/xml')

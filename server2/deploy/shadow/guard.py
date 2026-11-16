@@ -25,6 +25,10 @@ GiB = 1024**3
 INTERVAL = 10
 # A single failed observation never ends a run: stop after this many in a row (60 s).
 MISS_LIMIT = 6
+# Authorization failures of the run's own storage or instance credentials (SR-3). A
+# broken role fails every S3 call and passes this quickly; an isolated clock-skew
+# rejection does not. Provider rejections never stop the run.
+STORAGE_AUTH_LIMIT = 20
 
 
 class GuardError(ValueError):
@@ -103,12 +107,12 @@ def evaluate(manifest, sample, previous, now):
     validate(manifest)
     require(integer(now),'now')
     fingerprint = hashlib.sha256(canonical(manifest).encode()).hexdigest()
-    result = {'schema':4,'manifest_sha256':fingerprint,'last_seen':now,
+    result = {'schema':5,'manifest_sha256':fingerprint,'last_seen':now,
               'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None,'misses':0}
     if previous is not None:
         require(type(previous) is dict and set(previous)==set(result),'state_fields')
         require(previous['manifest_sha256']==fingerprint,'state_identity')
-        require(previous['schema']==4 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu'])
+        require(previous['schema']==5 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu'])
                 and integer(previous['misses'],0,MISS_LIMIT),'state_values')
         require(previous['stop'] is None or isinstance(previous['stop'],str),'state_stop')
         if previous['diagnostics'] is not None:checked_stored_diagnostics(previous['diagnostics'])
@@ -147,19 +151,23 @@ def evaluate(manifest, sample, previous, now):
     if not integer(sample.get('free_bytes')) or sample['free_bytes'] < 6*GiB:
         return stop('disk_reserve')
     metrics=sample.get('metrics')
-    required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures'}
+    required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures','storage_auth_failures'}
     if (sample.get('accounting_valid') is not True
             or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())):
         return missed()
     try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
     except (GuardError,TypeError,ValueError,KeyError,AttributeError):return missed()
     result['misses']=0
-    # Latest validated snapshot; latched with any later stop so evidence distinguishes
-    # auth from quota, the first origin and conservative paid admissions.
+    # Latest validated snapshot; latched with any later stop so evidence keeps the auth,
+    # quota and storage-authorization counts, per-source provider rejections, the first
+    # origin and conservative paid admissions.
     result['diagnostics']=dict(diagnostics,observed_at=sample['observed_at'],
-                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'])
-    if metrics['auth_failures'] or metrics['quota_failures']:
-        return stop('provider_auth_or_quota')
+                               auth_failures=metrics['auth_failures'],quota_failures=metrics['quota_failures'],
+                               storage_auth_failures=metrics['storage_auth_failures'])
+    # Provider rejections and local budget exhaustion are handled by the runtime and are
+    # evidence, not stop reasons (SR-3). Only storage/credential authorization stops.
+    if metrics['storage_auth_failures'] >= STORAGE_AUTH_LIMIT:
+        return stop('s3_authorization')
     for metric,allocation in [('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes')]:
         if not 0 < metrics[metric] <= manifest['allowance'][allocation]:
             return stop('s3_allowance')
@@ -186,12 +194,21 @@ VOCABULARY=dict(cause={'auth','quota'},origin={'event','local_paid_allowance'},
 FIRST=re.compile(r'server2_runtime_first_rejection_info\{cause="([a-z0-9_]{1,32})",origin="([a-z0-9_]{1,32})",'
                  r'component="([a-z0-9_]{1,32})",stage="([a-z0-9_]{1,32})",provider="([a-z0-9_]{1,32})",'
                  r'status="(none|[1-5][0-9][0-9])"\} 1')
+# Provider rejection sources: the labels of allowance.rs source_label (a test reads it).
+PROVIDER_SOURCES={'vilage_fcst','vilage_fcst_msg','mid_fcst','fcst_zone','wthr_wrn','asos_hourly','asos_daily',
+    'living_wthr_idx','health_wthr_idx','rise_set','airkorea_arpltn','airkorea_msrstn','airkorea_stats',
+    'data_go_kr_other','visual_crossing','public_kma_web','public_airkorea_web','public_mfds','public_other'}
+PROVIDER_HTTP=re.compile(r'server2_runtime_provider_http_rejections_total\{source="([a-z0-9_]{1,32})",'
+                         r'status="([0-9]{3})"\} ([0-9]{1,15})')
 PAID=re.compile(r'server2_shadow_paid_units_(initial|remaining)\{provider="([a-z0-9_]{1,32})"\} ([0-9]{1,7})')
+
+
+DIAGNOSTIC_FIELDS={'local_paid_exhaustions','first_rejection','paid_units','provider_http'}
 
 
 def checked_diagnostics(value):
     """Fixed-vocabulary diagnostic snapshot; never URLs, keys or free text."""
-    require(type(value) is dict and set(value)=={'local_paid_exhaustions','first_rejection','paid_units'},'diagnostic_fields')
+    require(type(value) is dict and set(value)==DIAGNOSTIC_FIELDS,'diagnostic_fields')
     require(integer(value['local_paid_exhaustions']),'diagnostic_local')
     first=value['first_rejection']
     if first is not None:
@@ -204,20 +221,25 @@ def checked_diagnostics(value):
         for units in paid.values():
             require(type(units) is dict and set(units)=={'initial','remaining'} and integer(units['initial'],0,1000000)
                     and integer(units['remaining'],0,units['initial']),'diagnostic_units')
+    http=value['provider_http']
+    require(type(http) is dict and all(isinstance(k,str) and k in PROVIDER_SOURCES for k in http),'diagnostic_sources')
+    for counts in http.values():
+        require(type(counts) is dict and counts and all(isinstance(k,str) and k in ('401','403','429') for k in counts)
+                and all(integer(n,1) for n in counts.values()),'diagnostic_rejections')
     return value
 
 
 def checked_stored_diagnostics(value):
     """A persisted snapshot: the fixed diagnostics plus the sample time and guard counts."""
-    extra={'observed_at','auth_failures','quota_failures'}
-    require(type(value) is dict and set(value)=={'local_paid_exhaustions','first_rejection','paid_units'}|extra,'state_diagnostics')
+    extra={'observed_at','auth_failures','quota_failures','storage_auth_failures'}
+    require(type(value) is dict and set(value)==DIAGNOSTIC_FIELDS|extra,'state_diagnostics')
     require(all(integer(value[k]) for k in extra),'state_diagnostics')
     checked_diagnostics({k:v for k,v in value.items() if k not in extra})
     return value
 
 
 def diagnostic_values(text):
-    local=None;first=None;paid={}
+    local=None;first=None;paid={};http={}
     for line in text.splitlines():
         if line.startswith('server2_runtime_local_paid_exhaustions_total'):
             fields=line.split()
@@ -230,6 +252,13 @@ def diagnostic_values(text):
             cause,origin,component,stage,provider,status=match.groups()
             first=dict(cause=cause,origin=origin,component=component,stage=stage,provider=provider,
                        status=None if status=='none' else int(status))
+        elif line.startswith('server2_runtime_provider_http_rejections_total'):
+            match=PROVIDER_HTTP.fullmatch(line)
+            require(match is not None,'diagnostic_shape')
+            source,status,count=match.groups()
+            require(source in PROVIDER_SOURCES and status in ('401','403','429')
+                    and status not in http.setdefault(source,{}) and int(count)>0,'diagnostic_shape')
+            http[source][status]=int(count)
         elif line.startswith('server2_shadow_paid_units_'):
             match=PAID.fullmatch(line)
             require(match is not None,'diagnostic_shape')
@@ -237,7 +266,7 @@ def diagnostic_values(text):
             require(provider in PAID_PROVIDERS and kind not in paid.setdefault(provider,{}),'diagnostic_shape')
             paid[provider][kind]=int(units)
     require(local is not None,'missing_metrics')
-    return checked_diagnostics(dict(local_paid_exhaustions=local,first_rejection=first,paid_units=paid or None))
+    return checked_diagnostics(dict(local_paid_exhaustions=local,first_rejection=first,paid_units=paid or None,provider_http=http))
 
 
 def process_stat(raw):
@@ -277,7 +306,8 @@ METRICS={'server2_shadow_s3_reads_remaining':'s3_reads',
          'server2_shadow_s3_writes_remaining':'s3_writes',
          'server2_shadow_s3_put_bytes_remaining':'s3_put_bytes',
          'server2_runtime_auth_failures_total':'auth_failures',
-         'server2_runtime_quota_failures_total':'quota_failures'}
+         'server2_runtime_quota_failures_total':'quota_failures',
+         'server2_runtime_storage_auth_failures_total':'storage_auth_failures'}
 
 
 def metric_values(text):
