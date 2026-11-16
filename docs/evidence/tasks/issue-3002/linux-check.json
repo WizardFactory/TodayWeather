@@ -1,0 +1,687 @@
+{
+ "observations": {
+  "collector_tarball_sha256": "12d7e91db2e447003558c955c4f510b17ed1d77340757f3e591e5222e464675c",
+  "egress_rejected_packets": 0,
+  "machine": "aarch64",
+  "peer_hosts": [
+   "dapi.kakao.com",
+   "todayweather.wizardfactory.net"
+  ],
+  "seconds": 623,
+  "server_binary_sha256": "80e5bcb7322ce672295c20ed286e4a885a53b1e31952753183502fc0740b1f12",
+  "source_commit": "f785d4ad336265e5e62ea174d202963e2e4e1ce1"
+ },
+ "passed": true,
+ "scenarios": [
+  {
+   "checks": [
+    {
+     "check": "launch user data armed the expiry timer",
+     "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-provider-launch-expiry.timer \u2192 /etc/systemd/system/server2-shadow-lp6-provider-launch-expiry.timer.\n",
+     "passed": true
+    },
+    {
+     "check": "install-host answered one JSON object: started",
+     "detail": "b'{\"cleanup_until\":1795429288,\"collection_until\":1795422088,\"epoch\":1794817288,\"launch_sha256\":\"cb18b8ffcc824c9118287230ebc0c78d51cdfc04084371996ce6420c06b267f7\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "passed": true
+    },
+    {
+     "check": "candidate: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+     "detail": "('no', '10s', 'server2')",
+     "passed": true
+    },
+    {
+     "check": "candidate: no dependency on or ordering after the collector",
+     "detail": "",
+     "passed": true
+    },
+    {
+     "check": "guard: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+     "detail": "('no', '10s', 'server2')",
+     "passed": true
+    },
+    {
+     "check": "guard: no dependency on or ordering after the collector",
+     "detail": "",
+     "passed": true
+    },
+    {
+     "check": "reader: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+     "detail": "('no', '10s', 'server2')",
+     "passed": true
+    },
+    {
+     "check": "reader: no dependency on or ordering after the collector",
+     "detail": "",
+     "passed": true
+    },
+    {
+     "check": "guard watchdog 30 s with SIGKILL",
+     "detail": "('30s', '9')",
+     "passed": true
+    },
+    {
+     "check": "stop deadline at epoch + 168 h",
+     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-23 08:21:28 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-stop.service\n[Install]\nWantedBy=timers.target\n",
+     "passed": true
+    },
+    {
+     "check": "poweroff deadline at epoch + 170 h",
+     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-23 10:21:28 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-poweroff.service\n[Install]\nWantedBy=timers.target\n",
+     "passed": true
+    },
+    {
+     "check": "the 168 h stop leaves the collector running",
+     "detail": "[Unit]\nDescription=Original collection deadline lp6-provider\n[Service]\nType=oneshot\nExecStart=/usr/bin/systemctl --no-block stop server2-shadow-lp6-provider-reader.service server2-shadow-lp6-provider-candidate.service server2-shadow-lp6-provider-guard.service\n",
+     "passed": true
+    },
+    {
+     "check": "collector running",
+     "detail": "",
+     "passed": true
+    },
+    {
+     "check": "the guard counted the provider rejection",
+     "detail": "{'auth_failures': 4, 'first_rejection': {'cause': 'auth', 'component': 'geocode', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 401}, 'local_paid_exhaustions': 0, 'observed_at': 1794817341, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}",
+     "passed": true
+    },
+    {
+     "check": "the guard did not stop on the provider rejection (SR-3)",
+     "detail": "None",
+     "passed": true
+    },
+    {
+     "check": "candidate, guard and reader still active",
+     "detail": "{'candidate': 'active', 'guard': 'active', 'reader': 'active'}",
+     "passed": true
+    },
+    {
+     "check": "retention stop drained the collector within the SSH bound (150 s)",
+     "detail": "(0, 51.011854969)",
+     "passed": true
+    },
+    {
+     "check": "all four units inactive or failed",
+     "detail": "{'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'}",
+     "passed": true
+    },
+    {
+     "check": "only the four sources under logs/server2",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "the collector only puts objects into the state bucket",
+     "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-provider-state')]",
+     "passed": true
+    },
+    {
+     "check": "server records at the destination (LP6-AC1)",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "reader records at the destination (LP6-AC1)",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "collector records at the destination (LP6-AC1)",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+     "detail": "[]",
+     "passed": true
+    },
+    {
+     "check": "candidate's rejection record at the destination (LP6-AC2)",
+     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:22:21.840596967Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"provider_http\",\"trace_id\":\"7676c39bfcff4e67000000000000001c\",\"operation_id\":\"0000000000000021\",\"parent_operation_id\":\"000000000000001f\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":48,\"status\":401,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:22:21.840653559Z\",\"level\":\"warn\",\"event\":\"operation.action\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"7676c39bfcff4e67000000000000001c\",\"operation_id\":\"000000000000001f\",\"parent_operation_id\":\"000000000000001e\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"rotate_key\",\"outcome\":\"failed\",\"status\":401,\"attempt\":1}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:22:21.840659851Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"7676c39bfcff4e67000000000000001c\",\"operation_id\":\"000000000000001f\",\"parent_operation_id\":\"000000000000001e\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":49,\"source\":\"src/observability.rs\",\"line\":1371}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:22:21.840675895Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"lookup\",\"trace_id\":\"7676c39bfcff4e67000000000000001c\",\"operation_id\":\"000000000000001e\",\"parent_operation_id\":\"000000000000001d\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":50,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:22:21.840716443Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"http\",\"stage\":\"request\",\"trace_id\":\"7676c39bfcff4e67000000000000001c\",\"operation_id\":\"000000000",
+     "passed": true
+    },
+    {
+     "check": "no guard stop record at the destination",
+     "detail": "[]",
+     "passed": true
+    },
+    {
+     "check": "reader's summary at the destination",
+     "detail": "[{'attempts': {'candidate': 3, 'production': 2}, 'failed': {'candidate': 2}, 'pending': 1, 'qualification': 'not assessed', 'skipped_conditionals': 0, 'terminal': None}]",
+     "passed": true
+    }
+   ],
+   "criteria": [
+    "LP6-AC1",
+    "LP6-AC2",
+    "LP6-AC3",
+    "LP6-AC4",
+    "SR3"
+   ],
+   "id": "provider-rejection",
+   "observations": {
+    "failing_record": [
+     {
+      "action": "none",
+      "build_revision": "unknown",
+      "cause": "auth",
+      "component": "geocode",
+      "duration_ms": 57,
+      "event": "operation.finished",
+      "level": "warn",
+      "line": 1465,
+      "method": "get",
+      "operation_id": "0000000000000011",
+      "outcome": "failed",
+      "parent_operation_id": "000000000000000c",
+      "route": "weather",
+      "schema": 1,
+      "source": "src/observability.rs",
+      "stage": "provider_http",
+      "status": 401,
+      "timestamp": "2026-11-16T08:21:41.881790967Z",
+      "trace_id": "7676c39bfcff4e670000000000000009"
+     }
+    ],
+    "guard_diagnostics": {
+     "auth_failures": 4,
+     "first_rejection": {
+      "cause": "auth",
+      "component": "geocode",
+      "origin": "event",
+      "provider": "none",
+      "stage": "provider_http",
+      "status": 401
+     },
+     "local_paid_exhaustions": 0,
+     "observed_at": 1794817341,
+     "paid_units": {
+      "google": {
+       "initial": 100,
+       "remaining": 100
+      },
+      "google_air_quality": {
+       "initial": 100,
+       "remaining": 100
+      },
+      "openweather": {
+       "initial": 100,
+       "remaining": 100
+      },
+      "visual_crossing": {
+       "initial": 100,
+       "remaining": 100
+      }
+     },
+     "provider_http": {},
+     "quota_failures": 0,
+     "storage_auth_failures": 0
+    },
+    "guard_record": [],
+    "guard_stop": null,
+    "install_output_bytes": 191,
+    "install_seconds": 10.7,
+    "objects": 3,
+    "reader_record": [
+     {
+      "attempts": {
+       "candidate": 3,
+       "production": 2
+      },
+      "failed": {
+       "candidate": 2
+      },
+      "pending": 1,
+      "qualification": "not assessed",
+      "skipped_conditionals": 0,
+      "terminal": null
+     }
+    ],
+    "records_per_source": {
+     "collector": 1,
+     "reader": 1,
+     "server": 16
+    },
+    "rejection_seen_seconds": 10.6,
+    "retention_stop_seconds": 51.0
+   }
+  },
+  {
+   "checks": [
+    {
+     "check": "launch user data armed the expiry timer",
+     "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-storage-launch-expiry.timer \u2192 /etc/systemd/system/server2-shadow-lp6-storage-launch-expiry.timer.\n",
+     "passed": true
+    },
+    {
+     "check": "install-host answered one JSON object: started",
+     "detail": "b'{\"cleanup_until\":1795429397,\"collection_until\":1795422197,\"epoch\":1794817397,\"launch_sha256\":\"b88287ceb44c2fdc2dfe108d0af6dd6f947d2510e49656346180eb59ed7235e3\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "passed": true
+    },
+    {
+     "check": "no stop before storage is denied",
+     "detail": "{'cost': {'accrued_usd': '0.000696', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794817414, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 35, 'last_seen': 1794817414, 'last_tx': 41879, 'manifest_sha256': 'bbab5ba58c975b94d15f49019e2fb33fb104cfbba26a42c04b84843f214c0001', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794817397, 0, 0]}",
+     "passed": true
+    },
+    {
+     "check": "the guard stopped with s3_authorization",
+     "detail": "('s3_authorization', {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794817584, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20})",
+     "passed": true
+    },
+    {
+     "check": "the decision keeps the storage-authorization count",
+     "detail": "{'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794817584, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}",
+     "passed": true
+    },
+    {
+     "check": "candidate and reader stopped",
+     "detail": "",
+     "passed": true
+    },
+    {
+     "check": "retention stop drained the collector within 150 s",
+     "detail": "(0, 50.37408014499999)",
+     "passed": true
+    },
+    {
+     "check": "only the four sources under logs/server2",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "the collector only puts objects into the state bucket",
+     "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-storage-state')]",
+     "passed": true
+    },
+    {
+     "check": "server records at the destination (LP6-AC1)",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "guard records at the destination (LP6-AC1)",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "collector records at the destination (LP6-AC1)",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+     "detail": "[]",
+     "passed": true
+    },
+    {
+     "check": "guard's s3_authorization stop record at the destination",
+     "detail": "[{'cost': {'accrued_usd': '0.002440', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794817584, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}, 'last_cpu': 40, 'last_seen': 1794817584, 'last_tx': 42331, 'manifest_sha256': 'bbab5ba58c975b94d15f49019e2fb33fb104cfbba26a42c04b84843f214c0001', 'misses': 0, 'schema': 6, 'stop': 's3_authorization', 'storage_auth_window': [1794817397, 0, 20]}]",
+     "passed": true
+    },
+    {
+     "check": "candidate's storage-authorization record at the destination",
+     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:26:24.318891285Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"58902412f06475220000000000000053\",\"operation_id\":\"000000000000007d\",\"parent_operation_id\":\"000000000000007c\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":6,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:26:24.369586209Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"provider_http\",\"trace_id\":\"58902412f06475220000000000000053\",\"operation_id\":\"0000000000000085\",\"parent_operation_id\":\"0000000000000084\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":50,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:26:24.369606001Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"reserve\",\"trace_id\":\"58902412f06475220000000000000053\",\"operation_id\":\"0000000000000084\",\"parent_operation_id\":\"0000000000000083\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":50,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:26:24.369608168Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"58902412f06475220000000000000053\",\"operation_id\":\"0000000000000083\",\"parent_operation_id\":\"0000000000000082\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":50,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T08:26:24.369610918Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"t",
+     "passed": true
+    }
+   ],
+   "criteria": [
+    "LP6-AC2",
+    "SR3"
+   ],
+   "id": "storage-authorization",
+   "observations": {
+    "denied_record": [
+     {
+      "action": "none",
+      "build_revision": "unknown",
+      "cause": "auth",
+      "component": "quota",
+      "duration_ms": 70,
+      "event": "operation.finished",
+      "level": "warn",
+      "line": 1465,
+      "method": "other",
+      "operation_id": "0000000000000058",
+      "outcome": "failed",
+      "parent_operation_id": "0000000000000057",
+      "route": "other",
+      "schema": 1,
+      "source": "src/observability.rs",
+      "stage": "provider_http",
+      "status": 403,
+      "timestamp": "2026-11-16T08:26:24.147905179Z",
+      "trace_id": "58902412f06475220000000000000053"
+     }
+    ],
+    "guard_diagnostics": {
+     "auth_failures": 40,
+     "first_rejection": {
+      "cause": "auth",
+      "component": "quota",
+      "origin": "event",
+      "provider": "none",
+      "stage": "provider_http",
+      "status": 403
+     },
+     "local_paid_exhaustions": 0,
+     "observed_at": 1794817584,
+     "paid_units": {
+      "google": {
+       "initial": 100,
+       "remaining": 100
+      },
+      "google_air_quality": {
+       "initial": 100,
+       "remaining": 100
+      },
+      "openweather": {
+       "initial": 100,
+       "remaining": 100
+      },
+      "visual_crossing": {
+       "initial": 100,
+       "remaining": 100
+      }
+     },
+     "provider_http": {},
+     "quota_failures": 0,
+     "storage_auth_failures": 20
+    },
+    "guard_record": [
+     {
+      "cost": {
+       "accrued_usd": "0.002440",
+       "limit_usd": "295"
+      },
+      "diagnostics": {
+       "auth_failures": 40,
+       "first_rejection": {
+        "cause": "auth",
+        "component": "quota",
+        "origin": "event",
+        "provider": "none",
+        "stage": "provider_http",
+        "status": 403
+       },
+       "local_paid_exhaustions": 0,
+       "observed_at": 1794817584,
+       "paid_units": {
+        "google": {
+         "initial": 100,
+         "remaining": 100
+        },
+        "google_air_quality": {
+         "initial": 100,
+         "remaining": 100
+        },
+        "openweather": {
+         "initial": 100,
+         "remaining": 100
+        },
+        "visual_crossing": {
+         "initial": 100,
+         "remaining": 100
+        }
+       },
+       "provider_http": {},
+       "quota_failures": 0,
+       "storage_auth_failures": 20
+      },
+      "last_cpu": 40,
+      "last_seen": 1794817584,
+      "last_tx": 42331,
+      "manifest_sha256": "bbab5ba58c975b94d15f49019e2fb33fb104cfbba26a42c04b84843f214c0001",
+      "misses": 0,
+      "schema": 6,
+      "stop": "s3_authorization",
+      "storage_auth_window": [
+       1794817397,
+       0,
+       20
+      ]
+     }
+    ],
+    "guard_stop": "s3_authorization",
+    "install_output_bytes": 191,
+    "install_seconds": 5.9,
+    "objects": 7,
+    "records_per_source": {
+     "collector": 1,
+     "guard": 1,
+     "reader": 1,
+     "server": 68
+    },
+    "retention_stop_seconds": 50.4,
+    "stop_seconds": 165.4
+   }
+  },
+  {
+   "checks": [
+    {
+     "check": "launch user data armed the expiry timer",
+     "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-config-launch-expiry.timer \u2192 /etc/systemd/system/server2-shadow-lp6-config-launch-expiry.timer.\n",
+     "passed": true
+    },
+    {
+     "check": "install with the destination unreachable: started",
+     "detail": "b'{\"cleanup_until\":1795429639,\"collection_until\":1795422439,\"epoch\":1794817639,\"launch_sha256\":\"c2f1d4feb83d54b5bb380c5f875d97d347cb1e92e4a2f53f52f421579bcd229c\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "passed": true
+    },
+    {
+     "check": "no stop before the change",
+     "detail": "{'cost': {'accrued_usd': '0.000932', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794817656, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 52, 'last_seen': 1794817656, 'last_tx': 44521, 'manifest_sha256': '356640e1b739c68d704cd91940185d0b2acd4feabafbc44f311d7c17319745fa', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794817639, 0, 0]}",
+     "passed": true
+    },
+    {
+     "check": "a changed .env stops acquisition within one sample and the unit stop (25 s)",
+     "detail": "('binding_config_sha256', 5.575843103000011)",
+     "passed": true
+    },
+    {
+     "check": "retention stop after recovery drained within 150 s",
+     "detail": "(0, 50.23545046200002)",
+     "passed": true
+    },
+    {
+     "check": "only the four sources under logs/server2",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "the collector only puts objects into the state bucket",
+     "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-config-state')]",
+     "passed": true
+    },
+    {
+     "check": "server records at the destination (LP6-AC1)",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "guard records at the destination (LP6-AC1)",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "collector records at the destination (LP6-AC1)",
+     "detail": "['collector', 'guard', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+     "detail": "[]",
+     "passed": true
+    },
+    {
+     "check": "guard's stop record shipped after the outage",
+     "detail": "",
+     "passed": true
+    }
+   ],
+   "criteria": [
+    "LP6-AC3"
+   ],
+   "id": "config-change",
+   "observations": {
+    "guard_stop": "binding_config_sha256",
+    "install_output_bytes": 191,
+    "install_seconds": 5.1,
+    "objects": 4,
+    "records_per_source": {
+     "collector": 1,
+     "guard": 1,
+     "reader": 1,
+     "server": 4
+    },
+    "retention_stop_seconds": 50.2,
+    "stop_seconds": 5.6
+   }
+  },
+  {
+   "checks": [
+    {
+     "check": "launch user data armed the expiry timer",
+     "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-frozen-launch-expiry.timer \u2192 /etc/systemd/system/server2-shadow-lp6-frozen-launch-expiry.timer.\n",
+     "passed": true
+    },
+    {
+     "check": "install: started",
+     "detail": "b'{\"cleanup_until\":1795429721,\"collection_until\":1795422521,\"epoch\":1794817721,\"launch_sha256\":\"c0fcff4058f5b1f4c0da118cfcf6d4148d3b054124e287e5d2eddf38f2d45765\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "passed": true
+    },
+    {
+     "check": "collector stopped, candidate and guard still active",
+     "detail": "{'logs': 'inactive', 'candidate': 'active', 'guard': 'active', 'reader': 'active'}",
+     "passed": true
+    },
+    {
+     "check": "the watchdog killed the frozen guard and acquisition stopped (within 30 s + 10 s + one sample)",
+     "detail": "30.353234731000043",
+     "passed": true
+    },
+    {
+     "check": "guard result is the watchdog",
+     "detail": "watchdog",
+     "passed": true
+    },
+    {
+     "check": "restarted collector drained within 150 s",
+     "detail": "(0, 50.647536253)",
+     "passed": true
+    },
+    {
+     "check": "only the four sources under logs/server2",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "the collector only puts objects into the state bucket",
+     "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-frozen-state')]",
+     "passed": true
+    },
+    {
+     "check": "server records at the destination (LP6-AC1)",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "collector records at the destination (LP6-AC1)",
+     "detail": "['collector', 'reader', 'server']",
+     "passed": true
+    },
+    {
+     "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+     "detail": "[]",
+     "passed": true
+    }
+   ],
+   "criteria": [
+    "LP6-AC3"
+   ],
+   "id": "frozen-guard",
+   "observations": {
+    "install_output_bytes": 191,
+    "install_seconds": 7.7,
+    "objects": 5,
+    "records_per_source": {
+     "collector": 3,
+     "reader": 1,
+     "server": 13
+    },
+    "states_before_freeze": {
+     "candidate": "active",
+     "guard": "active",
+     "logs": "inactive",
+     "reader": "active"
+    },
+    "watchdog_stop_seconds": 30.4
+   }
+  },
+  {
+   "checks": [
+    {
+     "check": "launch user data armed the expiry timer",
+     "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-broken-launch-expiry.timer \u2192 /etc/systemd/system/server2-shadow-lp6-broken-launch-expiry.timer.\n",
+     "passed": true
+    },
+    {
+     "check": "install with a failing collector: started",
+     "detail": "b'{\"cleanup_until\":1795429865,\"collection_until\":1795422665,\"epoch\":1794817865,\"launch_sha256\":\"f5a01751772845c8cc95f0235bad3f307bd830d6c0f54df3348972bd85638a9d\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "passed": true
+    },
+    {
+     "check": "candidate, guard and reader active although the collector failed",
+     "detail": "{'candidate': 'active', 'guard': 'active', 'reader': 'active'}",
+     "passed": true
+    },
+    {
+     "check": "the collector is not running",
+     "detail": "{'ActiveState': 'inactive', 'SubState': 'dead', 'Result': 'exec-condition'}",
+     "passed": true
+    },
+    {
+     "check": "no stop decision",
+     "detail": "{'cost': {'accrued_usd': '0.001231', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794817884, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 72, 'last_seen': 1794817884, 'last_tx': 49181, 'manifest_sha256': '67325ab4a666acd61666e07689c0f23849b67d5d970bb7a699d4a2664a738cbf', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794817865, 0, 0]}",
+     "passed": true
+    },
+    {
+     "check": "retention stop completes with the collector failed",
+     "detail": "(0, 0.14665659700006017, {'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'})",
+     "passed": true
+    }
+   ],
+   "criteria": [
+    "LP6-AC3"
+   ],
+   "id": "collector-broken",
+   "observations": {
+    "collector": {
+     "ActiveState": "inactive",
+     "Result": "exec-condition",
+     "SubState": "dead"
+    },
+    "install_output_bytes": 191,
+    "install_seconds": 5.6
+   }
+  },
+  {
+   "checks": [
+    {
+     "check": "install refuses a changed collector file",
+     "detail": "(2, b'{\"error\":\"invalid or incomplete evidence\"}\\n')",
+     "passed": true
+    },
+    {
+     "check": "nothing installed or started",
+     "detail": "",
+     "passed": true
+    }
+   ],
+   "criteria": [
+    "LP6-AC5"
+   ],
+   "id": "tampered",
+   "observations": {}
+  }
+ ]
+}
