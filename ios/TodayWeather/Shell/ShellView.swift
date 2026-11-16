@@ -166,6 +166,9 @@ struct ShellFrame: View {
                               insets: insets, onMenu: model.openMenu) { tab.actions }
                 }
                 .frame(maxHeight: .infinity)
+                // The WebView's area: a page scrolled up must not draw over the status bar (IN-18, seen in the manual's
+                // captures of S03 and S05 scrolled down).
+                .clipped()
                 TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
                        onTap: model.tapTab)
                 if let banner {

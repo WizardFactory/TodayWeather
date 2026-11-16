@@ -232,6 +232,32 @@ struct IPadFitTests {
         #expect(try await app.hosted.menuInPlace(), "\(app.window) menu")
     }
 
+    /// A page drawn above its area (as a scrolled page's content can be) stays under the status bar, which keeps the
+    /// tab's color (the manual's captures of S03 and S05 scrolled down showed the page over it).
+    @Test func aPageDoesNotDrawOverTheStatusBar() async throws {
+        let shell = ShellFixture.shell(ShellFixture.state())
+        let page = TabContent(title: "회현동", page: AnyView(Color.red.frame(height: 3000).offset(y: -1000)))
+        let hosted = try HostedView(ShellView(model: shell, content: { _ in page }), size: CGSize(width: 393, height: 852))
+        defer { hosted.close() }
+        try await hosted.settle(300)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(bounds: hosted.window.bounds, format: format).image { _ in
+            hosted.window.drawHierarchy(in: hosted.window.bounds, afterScreenUpdates: true)
+        }
+        let insets = hosted.window.safeAreaInsets.top
+        #expect(insets > 2, "a status bar inset")
+        var pixel = [UInt8](repeating: 0, count: 4)
+        let context = try #require(CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                             space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(try #require(image.cgImage), in: CGRect(x: -200, y: -(hosted.window.bounds.height - insets / 2), width: hosted.window.bounds.width,
+                                                             height: hosted.window.bounds.height))
+        let expected = ShellColors.of(.light, tab: .forecast).statusBar
+        let rgb = [expected.red, expected.green, expected.blue].map { UInt8(($0 * 255).rounded()) }
+        #expect(Array(pixel[0..<3]) == rgb, "the status bar's color at its middle: \(pixel)")
+    }
+
     /// Each window size on its own, from the first launch through every screen, in Korean (with the Korea-only pages),
     /// English and German (the longest labels).
     @Test(arguments: ["ko-KR", "en-US", "de-DE"])

@@ -79,7 +79,7 @@ final class IPadUITests: XCTestCase {
     /// UMP's IDFA explainer and the system's tracking prompt, when they show over the first tab (the simulator's
     /// tracking answer is not always taken from its settings): Continue, then "Ask App Not to Track".
     func dismissConsent() {
-        let next = app.buttons["Continue"]
+        let next = app.buttons.matching(identifier: "Continue").firstMatch
         guard next.waitForExistence(timeout: 8) else { return }
         next.tap()
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -115,7 +115,7 @@ final class IPadUITests: XCTestCase {
     }
 
     func openMenu() {
-        tap("shell-menu-button", until: { element("shell-menu-back").exists && element("shell-menu-units").exists })
+        tap("shell-menu-button", until: { element("shell-menu-back").isHittable })
         Thread.sleep(forTimeInterval: 0.6)
     }
 
