@@ -306,9 +306,12 @@ def capture(origin, case, headers, directory, attempt, seconds, owner_fd):
             if worker.is_alive():
                 worker.kill()
                 worker.join()
-            result = {'error': 'deadline'}
+            # The parent stopped the child: nothing was captured, so the result has no
+            # body fields and the evidence audit needs no files for it (SR-5a, #3003).
+            # A child's own timeout writes its files and body fields instead.
+            result = {'error': 'deadline', 'captured': False}
         elif worker.exitcode != 0:
-            result = {'error': 'worker-exit'}
+            result = {'error': 'worker-exit', 'captured': False}
         else:
             result = json.loads((Path(directory) / f'{attempt}.json').read_text())
         result['elapsed_ms'] = round((time.monotonic() - start) * 1000)
