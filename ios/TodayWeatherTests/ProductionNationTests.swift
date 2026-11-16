@@ -19,9 +19,39 @@ struct ProductionNationTests {
     nonisolated static let enabled = ProcessInfo.processInfo.environment["TW_PRODUCTION_NATION"] != nil
         && !((Bundle.main.infoDictionary?["TWServerURL"] as? String) ?? "").isEmpty
 
+    /// The app's client recording each request's path and outcome: the answer's JSON kind, or the failure
+    /// (CODEX-IN13-2: an empty warnings list is a valid answer, a failed request is not).
+    final class Outcomes: WeatherHTTP, @unchecked Sendable {
+        private let lock = NSLock()
+        private var log: [(path: String, outcome: String)] = []
+        private let recording = ProductionAirTests.Recording()
+        var paths: [String] { recording.paths }
+
+        /// The outcomes of the requests whose path is `path`: `list`, `object`, `other json`, `not json` or `failed`.
+        func outcomes(_ path: String) -> [String] { lock.withLock { log.filter { $0.path == path }.map(\.outcome) } }
+
+        func get(_ url: URL, headers: [String: String]) async throws -> Data {
+            do {
+                let data = try await recording.get(url, headers: headers)
+                let outcome: String
+                switch try? JSONValue.parse(data) {
+                case .array?: outcome = "list"
+                case .object?: outcome = "object"
+                case .some: outcome = "other json"
+                case nil: outcome = "not json"
+                }
+                lock.withLock { log.append((url.path, outcome)) }
+                return data
+            } catch {
+                lock.withLock { log.append((url.path, "failed")) }
+                throw error
+            }
+        }
+    }
+
     @Test(.enabled(if: enabled)) func theNationwidePagesAndTheWarningsRender() async throws {
         let server = try #require(Bundle.main.infoDictionary?["TWServerURL"] as? String)
-        let http = ProductionAirTests.Recording()
+        let http = Outcomes()
         let shell = ShellFixture.shell(languages: ["ko-KR"])
         let nation = NationScreens(shell: shell, source: NationSource(baseURL: server, http: http))
         let hosted = try HostedView(ShellView(model: shell, page: nation.pageView), size: CGSize(width: 393, height: 852))
@@ -85,8 +115,12 @@ struct ProductionNationTests {
         try await open(.specialWeather)
         for _ in 0..<50 where nation.cards.isEmpty { try await hosted.settle(100) }
         try snapshot(hosted, out.appendingPathComponent("warnings.png"))
+        for _ in 0..<50 where http.outcomes("/v000903/kma/special").isEmpty { try await hosted.settle(100) }
         let cards = nation.cards
-        summary.append("warnings: \(cards.count) cards")
+        summary.append("warnings: \(cards.count) cards, answer \(http.outcomes("/v000903/kma/special"))")
+        // The request answered with a list (empty when no warning is in force); a failure or a timeout leaves no card
+        // either, so the cards alone do not tell (CODEX-IN13-2).
+        #expect(http.outcomes("/v000903/kma/special") == ["list"], "the warnings request answered with a list")
         summary += cards.map { "  \($0.heading) | \($0.situations.map(\.title).joined(separator: ", ")) | note \($0.note)" }
         #expect(cards.allSatisfy { !$0.heading.contains("Invalid Date") }, "each section's time")
         if let first = cards.first { #expect(hosted.element("nation-card-0") != nil, "\(first.heading) drawn") }

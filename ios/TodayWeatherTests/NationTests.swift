@@ -191,6 +191,57 @@ struct NationTests {
         #expect(f.nation.response != nil)
     }
 
+    /// A clock whose sleeps end only when their task is cancelled: no timeout or later attempt fires by itself.
+    struct StoppedClock: AppClock {
+        var now: Date { Date(timeIntervalSince1970: 0) }
+        func sleep(for duration: Duration) async throws {
+            try await Task.sleep(for: .seconds(86_400))
+        }
+    }
+
+    /// A server that holds every request until its task is cancelled, and counts the cancelled ones.
+    final class HoldingServer: WeatherHTTP, @unchecked Sendable {
+        private let lock = NSLock()
+        private var started = 0
+        private var cancelledCount = 0
+        var requests: Int { lock.withLock { started } }
+        var cancelled: Int { lock.withLock { cancelledCount } }
+
+        func get(_ url: URL, headers: [String: String]) async throws -> Data {
+            lock.withLock { started += 1 }
+            do {
+                try await Task.sleep(for: .seconds(86_400))
+            } catch {
+                lock.withLock { cancelledCount += 1 }
+                throw error
+            }
+            return Data()
+        }
+    }
+
+    /// Closing a page or opening another cancels the request it sent (CODEX-IN13-1, as the Android `NationLoads.close`
+    /// cancels its job); the cancelled request's end changes nothing.
+    @Test func leavingAPageCancelsItsRequest() async throws {
+        let shell = ShellFixture.shell(languages: ["ko-KR"])
+        let server = HoldingServer()
+        let nation = NationScreens(shell: shell, source: NationSource(baseURL: "https://server.test.invalid", http: server,
+                                                                      clock: StoppedClock()))
+        nation.menuRow(.specialWeather)
+        for _ in 0..<100 where server.requests < 1 { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(server.requests == 1)
+        nation.back()
+        for _ in 0..<100 where server.cancelled < 1 { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(server.cancelled == 1, "back cancels the warnings request")
+        #expect(nation.page == nil && nation.cards.isEmpty)
+
+        nation.menuRow(.specialWeather)
+        for _ in 0..<100 where server.requests < 2 { try await Task.sleep(for: .milliseconds(50)) }
+        nation.menuRow(.nationalAir)
+        for _ in 0..<100 where server.cancelled < 2 { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(server.cancelled == 2, "opening another page cancels the earlier page's request")
+        #expect(nation.page == .nationAir && nation.loading)
+    }
+
     /// The rows show for region KR only (`getRegion() === 'KR'`; 전국날씨 also needs the TodayWeather product, which this
     /// app is); other rows go on to the hook before this one.
     @Test func theRowsAreKoreanAndOtherRowsGoOn() async throws {

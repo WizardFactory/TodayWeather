@@ -48,6 +48,9 @@ final class NationScreens {
     @ObservationIgnored private let otherRows: (MenuRow) -> Void
     /// Counts the openings: an answer counts only for the opening that sent it.
     @ObservationIgnored private var visit = 0
+    /// The open page's request; cancelled when the page closes or another opens (the Android `NationLoads` cancels its
+    /// job, CODEX-IN13-1).
+    @ObservationIgnored private var request: Task<Void, Never>?
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "nation")
 
     init(shell: ShellModel, source: NationSource) {
@@ -81,6 +84,7 @@ final class NationScreens {
 
     /// Opens `page` (`$location.path('/' + menu)`): a new controller, which requests its answer.
     func open(_ page: NationPage) {
+        request?.cancel()
         visit += 1
         let visit = self.visit
         self.page = page
@@ -94,14 +98,14 @@ final class NationScreens {
         switch page {
         case .nation, .nationAir:
             let units = shell.holder.state?.units ?? .defaults(region: locale.region)
-            Task { [weak self] in
+            request = Task { [weak self] in
                 let load = await source.nation(region: locale.region, units: units, acceptLanguage: locale.acceptLanguage)
                 guard let self, self.visit == visit else { return }
                 if case .loaded(let response) = load { self.response = response }
                 loading = false
             }
         case .warnings:
-            Task { [weak self] in
+            request = Task { [weak self] in
                 let load = await source.special(acceptLanguage: locale.acceptLanguage)
                 guard let self, self.visit == visit else { return }
                 // `toLocaleDateString()` and `toLocaleTimeString()` in the WebView's language and the device's zone.
@@ -113,10 +117,12 @@ final class NationScreens {
         }
     }
 
-    /// The page's back button (`onClose`, `$ionicHistory.goBack()`): the tabs as they were. Nothing while
-    /// `$ionicLoading` covers the page.
+    /// The page's back button (`onClose`, `$ionicHistory.goBack()`): the tabs as they were, and the page's request is
+    /// cancelled. Nothing while `$ionicLoading` covers the page.
     func back() {
         guard !loading else { return }
+        request?.cancel()
+        request = nil
         visit += 1
         page = nil
     }
