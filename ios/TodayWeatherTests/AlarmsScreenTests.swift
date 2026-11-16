@@ -52,10 +52,13 @@ final class AlarmsFixture {
         let notifications = TestNotifications(available: firebase, permission: permission)
         self.notifications = notifications
         let holder = places.holder, recorded = self.recorded
+        // The records' times are UTC; the expectations are Seoul's (the CI simulator runs in UTC).
+        let seoul = { TimeZone(identifier: "Asia/Seoul")! }
         alarms = AlarmsScreens(shell: places.shell, makePage: {
             AlarmPage(holder: holder, notifications: notifications, post: { recorded.posts.append($0) },
-                      openSettings: { recorded.settings += 1 })
+                      openSettings: { recorded.settings += 1 }, zone: seoul)
         }, postList: { recorded.lists += 1 })
+        alarms.zone = seoul
         // As `AppLaunch.makeAlarms` connects them.
         let alarms = self.alarms, weather = places.weather, placesScreens = places.places
         weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
