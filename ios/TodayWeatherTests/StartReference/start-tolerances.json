@@ -1,0 +1,19 @@
+{
+ "metric": "AN-05: strong = share of pixels whose largest RGB channel differs by more than 64 after a 3x3 box blur; mean = mean largest RGB channel difference (0-255). Compared from the WebView's top to 40 pt under the page's last box (590 pt, 420 pt for search); the rest is checked as white or the backdrop. Each case passes within its value plus `margin`.",
+ "margin": {"strong": 0.0015, "mean": 0.3},
+ "reasons": {
+  "start": "Glyph rasterization of the shortcut labels, the placeholder and the location button: every box (card, items, buttons) is at the captured position within 1 px. The shortcut widths come from CoreText's bold 15 pt widths in 1/64 pt, within 0.75 pt of WebKit's (Devanagari 0.62 pt wider), checked per button by theShortcutsAreSizedAndFlowedAsCaptured.",
+  "access": "As start, under the backdrop, with IN-07's popup: the title, three lines and OK. The lines break between Hangul syllables as WebKit does (IonicPopupView.syllableBreaks; with CoreText's word breaks the Korean case measured strong 0.0116, mean 2.50).",
+  "search": "The typed word, Cancel, the three result rows and Google's logo: text rasterization only.",
+  "en-US": "The English system's WebView drew Han ideographs in PingFang SC; the render takes PingFang through the fallback language zh-Hans (StartScreenshotTests.fallback).",
+  "headroom": "Each case is its local measurement (`measured`, Xcode 27.2, iOS 26.5 simulator) times 1.5 plus 0.0005 for strong and times 1.2 plus 0.2 for mean, rounded up, plus `margin`, as settings-tolerances.json: CI renders with Xcode 26.6."
+ },
+ "cases": {
+  "ko-KR-access": {"measured": {"strong": 0.00725, "mean": 1.705}, "strong": 0.0114, "mean": 2.25},
+  "ko-KR-start": {"measured": {"strong": 0.00368, "mean": 1.614}, "strong": 0.0061, "mean": 2.14},
+  "ko-KR-search": {"measured": {"strong": 0.00018, "mean": 0.099}, "strong": 0.0008, "mean": 0.32},
+  "en-US-access": {"measured": {"strong": 0.00981, "mean": 2.044}, "strong": 0.0153, "mean": 2.66},
+  "en-US-start": {"measured": {"strong": 0.00432, "mean": 1.763}, "strong": 0.0070, "mean": 2.32},
+  "en-US-search": {"measured": {"strong": 0.00024, "mean": 0.129}, "strong": 0.0009, "mean": 0.36}
+ }
+}

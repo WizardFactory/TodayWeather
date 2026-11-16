@@ -7,8 +7,10 @@ import TWStorage
 /// The loading of the weather pages (TabCtrl in controller.tabctrl.js, #2957): `loadWeatherData` with the ten-minute
 /// gate and the refresh timer, the `reloadEvent` senders, the swipes between places and the retry confirmation (O03).
 /// A response applies to the place that requested it (the A01 fix, `WeatherRepository`); what it changes in the place
-/// (`updateCity`) and a photo for it are saved through the `AppStateHolder`. Port of the Android `WeatherSession`
-/// without the current position's own lookup and the start choice (O02), which IN-10 adds.
+/// (`updateCity`) and a photo for it are saved through the `AppStateHolder`. Each load of the current position also
+/// looks it up (`location`, IN-10): a new position updates it and loads again; failures open O03's position variants
+/// (`positionRetry`). With no enabled place the weather pages ask how to start (O02, `startPopup`). Port of the Android
+/// `WeatherSession` with the Cordova iOS branches of `updateCurrentPosition`.
 @MainActor
 @Observable
 public final class WeatherSession {
@@ -34,6 +36,8 @@ public final class WeatherSession {
         case push
         /// Location services turned on (`locationOn`, IN-10): only a selected current position loads.
         case locationOn
+        /// O02 chose the current position (`startPopup`, IN-10); loads at once.
+        case startPopup
     }
 
     @ObservationIgnored public let repository: WeatherRepository
@@ -44,7 +48,25 @@ public final class WeatherSession {
     @ObservationIgnored private let clock: any AppClock
     @ObservationIgnored private let random: () -> Double
     @ObservationIgnored private let telemetry: WeatherTelemetry?
+    @ObservationIgnored private let location: (any LocationAccess)?
     @ObservationIgnored private var timer: Task<Void, Never>?
+
+    /// TabCtrl's `gLocationAuthorizationStatus`: TabCtrl's iOS branch records none itself; S02's find-by-location
+    /// records the status it read (IN-11), and O03's position variants follow it.
+    @ObservationIgnored public var recorded: LocationPermission?
+
+    /// O03 of type `forecast`: a failed lookup of the current position, with its variant's buttons.
+    public private(set) var positionRetry: RetryConfirm?
+
+    /// O02 is open (`startPopup`).
+    public private(set) var startPopup = false
+
+    /// O02's radio value (`data.autoSearch`): whether location services were on when the weather pages opened (TabCtrl
+    /// `init`), kept for its next opening in this app open.
+    public private(set) var autoSearch: Bool
+
+    /// The current position's lookup runs (TabCtrl's loading indicator for the current position).
+    public private(set) var locating = false
 
     /// The retry confirmation is open (`LOC_ERROR`, `LOC_FAIL_TO_GET_WEATHER_INFO`, `LOC_CLOSE` and `LOC_OK`).
     public private(set) var retry = false
@@ -56,7 +78,7 @@ public final class WeatherSession {
     public init(repository: WeatherRepository, holder: AppStateHolder, acceptLanguage: @escaping () -> String,
                 photos: @escaping () -> WeatherPhotos? = { nil }, loadPhotos: @escaping () -> Void = {},
                 clock: any AppClock = SystemClock(), random: @escaping () -> Double = { Double.random(in: 0..<1) },
-                telemetry: WeatherTelemetry? = nil) {
+                telemetry: WeatherTelemetry? = nil, location: (any LocationAccess)? = nil) {
         self.repository = repository
         self.holder = holder
         self.acceptLanguage = acceptLanguage
@@ -65,6 +87,8 @@ public final class WeatherSession {
         self.clock = clock
         self.random = random
         self.telemetry = telemetry
+        self.location = location
+        autoSearch = location?.servicesEnabled ?? false
     }
 
     /// The selected place, as `WeatherInfo.getCityOfIndex(getCityIndex())`.
@@ -76,14 +100,19 @@ public final class WeatherSession {
     /// The record the pages apply for `place`: its weather (this process or the cache) with its own fields.
     public func record(_ place: Place) -> JSONObject { cityRecord(place, repository.cached(place)) }
 
-    /// Whether the selected place's request is in flight (`showLoadingIndicator`).
-    public var loadingSelected: Bool { selected.map { repository.loading.contains(WeatherRepository.key($0)) } ?? false }
+    /// TabCtrl's loading indicator (`showLoadingIndicator`): while the selected place's request is in flight; for the
+    /// current position with a location lookup, while the lookup runs (it hides the indicator when it settles).
+    public var loadingSelected: Bool {
+        guard let place = selected else { return false }
+        if place.currentPosition && location != nil { return locating }
+        return repository.loading.contains(WeatherRepository.key(place))
+    }
 
-    /// `reloadEvent`: ignored while the retry confirmation is open; a resume or a return from search waits for the gate;
+    /// `reloadEvent`: ignored while a retry confirmation is open; a resume or a return from search waits for the gate;
     /// `locationOn` reloads only the current position; the refresh-interval setting restarts the timer only. Otherwise
     /// `reloadCity` and `loadWeatherData`.
     public func reload(_ sender: Sender) {
-        if retry { return }
+        if retry || positionRetry != nil { return }
         guard let s = holder.state, let place = selected else { return }
         switch sender {
         case .resume, .search:
@@ -123,6 +152,40 @@ public final class WeatherSession {
 
     /// The retry confirmation's Close.
     public func closeRetry() { retry = false }
+
+    /// O03 `forecast`'s Close, or its Settings: the confirmation closes.
+    public func closePositionRetry() { positionRetry = nil }
+
+    /// O03 `forecast`'s OK: `reloadEvent 'retryPopup'` once it has closed.
+    public func confirmPositionRetry() {
+        positionRetry = nil
+        Task { @MainActor [weak self] in self?.reload(.retry) }
+    }
+
+    /// O03 `forecast`'s Search: `disableCity(true)`; the app opens the Locations tab.
+    public func searchInsteadOfPosition() {
+        positionRetry = nil
+        holder.change { $0 = PlaceList.disableCurrent($0, true) }
+    }
+
+    /// `startPopup()`: O02 asks how to start, opened with no enabled place by a weather page, a tap on a weather or Air
+    /// tab (`doTabForecast`) or a share without a location (`doTabShare`, IN-16).
+    public func openStartPopup() { startPopup = true }
+
+    /// O02's radio rows.
+    public func chooseAutoSearch(_ value: Bool) { autoSearch = value }
+
+    /// O02's OK: it closes, and `data.autoSearch` true (Cordova's inverted rows, A07: the row 지역 검색으로 시작) enables
+    /// the current position (`disableCity(false)`) and loads it (`reloadEvent 'startPopup'`); false leaves the places as
+    /// they are for the Locations tab. Returns the answer.
+    @discardableResult
+    public func startChoice() -> Bool {
+        startPopup = false
+        guard autoSearch else { return false }
+        holder.change { $0 = PlaceList.disableCurrent($0, false) }
+        reload(.startPopup)
+        return true
+    }
 
     /// The retry confirmation's OK: a forced reload after it closed (`setTimeout(…, 0)` in `showRetryConfirm`).
     public func confirmRetry() {
@@ -180,11 +243,70 @@ public final class WeatherSession {
             }
             switch result {
             case .loaded(let key, let entry, let updated): save(key: key, entry: entry, updated: updated)
-            // `showRetryConfirm(strError, strFailToGetWeatherInfo, 'weather')`; one at a time.
-            case .failed: retry = true
+            // `showRetryConfirm(strError, strFailToGetWeatherInfo, 'weather')`; one at a time: a new one closes the open
+            // one.
+            case .failed:
+                positionRetry = nil
+                retry = true
             case .skipped, .superseded: break
             }
         }
+        // After the saved place's request, as TabCtrl started them.
+        if place.currentPosition { lookupCurrentPosition(place) }
+    }
+
+    /// `updateCurrentPosition` with its follow-up in `loadWeatherData` (controller.tabctrl.js L870-L926, L954-L1088), iOS
+    /// branch: a lookup runs beside the load of the saved current position, one at a time (a second call was
+    /// `alreadyCalled`, which settles silently). A fix, rounded to three decimals, that differs from the saved location
+    /// replaces it; while the current position is still selected, its weather loads for the new location. Failures open
+    /// O03 `forecast`.
+    private func lookupCurrentPosition(_ place: Place) {
+        guard let location, !locating else { return }
+        locating = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let step = TabLocation.decide(record: location.recorded, hasSaved: place.address != nil || place.location != nil)
+            // `trackEvent('position', 'status', 'authorized', isLocationAuthorized ? 1 : 0)`.
+            telemetry?("location_permission", ["outcome": .text(step == .locate ? "granted" : "denied")])
+            var message: LocationMessage?
+            switch step {
+            case .locate:
+                if let fix = await location.position() {
+                    let normalized = GeoLocation.normalize(lat: fix.lat, long: fix.long)
+                    // The indicator hides when the position settles, before the new location's weather loads.
+                    locating = false
+                    await moved(Location(lat: normalized.lat, long: normalized.long))
+                } else {
+                    message = .notFound
+                }
+            case .ask:
+                message = TabLocation.afterPrompt(await location.request())
+            case .useSaved:
+                break
+            case .requestServices:
+                location.requestServices()
+            }
+            locating = false
+            if let message {
+                retry = false
+                positionRetry = TabLocation.retry(message, recorded: recorded, enabled: location.recorded?.granted ?? false)
+            }
+        }
+    }
+
+    /// A fix for the current position: the same location ends it; a new one is saved and, while the current position is
+    /// selected, its weather loads (`updateWeatherData({location})`; failures are silent).
+    private func moved(_ fix: Location) async {
+        guard let s = holder.state, let current = s.places.first, current.currentPosition else { return }
+        if let saved = current.location {
+            if saved == fix { return }
+            holder.change { $0.places[0].location = fix }
+        }
+        guard let now = holder.state, now.placeIndex == 0, let place = now.places.first else { return }
+        var request = place
+        request.location = fix
+        let result = await repository.load(request, units: now.units, acceptLanguage: acceptLanguage(), force: true)
+        if case .loaded(let key, let entry, let updated) = result { save(key: key, entry: entry, updated: updated) }
     }
 
     /// `setRefreshTimer`: a reload after the interval in minutes, none for "0" (manual).

@@ -36,6 +36,13 @@
 	     Empty without it: the mail then opens without a recipient. -->
 	<key>TWMailTo</key>
 	<string>$(TW_MAIL_TO)</string>
+	<!-- IN-10: the Places SDK key of S01's search, TW_PLACES_API_KEY_IOS, a private build input restricted to this
+	     bundle ID. Empty without it: S01 searches the bundled towns. -->
+	<key>TWPlacesAPIKey</key>
+	<string>$(TW_PLACES_API_KEY_IOS)</string>
+	<!-- IN-10: when-in-use authorization only, with the purpose text of #2856 (client/config.xml). -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TodayWeather uses your location only while you use the app, to show the current weather and forecast where you are. For example, it shows the hourly forecast and air quality for your current neighborhood.</string>
 	<!-- As the Cordova build (cordova-plugin-firebasex-messaging): FCM data messages may start the app in the
 	     background. -->
 	<key>UIBackgroundModes</key>

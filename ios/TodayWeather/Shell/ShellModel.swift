@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import TWDomain
 import TWStorage
 
@@ -16,6 +17,9 @@ struct Popup: Identifiable {
     var title: String
     var lines: [String]
     var buttons: [Button]
+    /// A popup with its own box over the backdrop instead of the title, lines and buttons (IN-10: the start choice O02,
+    /// `.ionic_popup`).
+    var custom: AnyView? = nil
 }
 
 /// What the shell shows and how it reacts (IN-07, #2956): the start screen or the selected tab, the side menu, the
@@ -122,6 +126,12 @@ final class ShellModel {
     /// Shows a popup after those already shown.
     func show(_ popup: Popup) {
         popups.append(popup)
+    }
+
+    /// Closes a popup without a tap (IN-10: `confirmPopup.close()`, a new retry confirmation closing the open one, and
+    /// the start choice's own OK).
+    func dismiss(_ id: UUID) {
+        popups.removeAll { $0.id == id }
     }
 
     /// A tap on a button of the popup shown: it closes, then the button's action runs (`onTap`, then the promise).

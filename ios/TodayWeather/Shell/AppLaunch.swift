@@ -44,6 +44,16 @@ final class AppLaunch {
     private(set) var weather: WeatherScreens?
     /// The settings pages S07 and S08 and the menu's hand-offs (IN-12), created with the shell.
     private(set) var settings: SettingsScreens?
+    /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
+    private(set) var startPage: StartPage?
+    /// The device's location (IN-10), created with the shell.
+    @ObservationIgnored private(set) var location: (any AppLocation)?
+    /// O02 and O03's position variants over the weather pages (IN-10).
+    @ObservationIgnored private var positionPopups: CurrentPositionPopups?
+    /// Creates the device's location: CoreLocation in the app, a double in tests.
+    @ObservationIgnored private let makeLocation: @MainActor () -> any AppLocation
+    /// Google's place predictions for S01 (the private `TW_PLACES_API_KEY_IOS`); nil without the key.
+    @ObservationIgnored private let makePlaceSearch: @MainActor () -> (any PlaceSearch)?
     /// The shell, created with the state; nil until the migration has finished.
     private(set) var shell: ShellModel?
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "launch")
@@ -75,11 +85,17 @@ final class AppLaunch {
     }
 
     @ObservationIgnored let environment: Environment
+    @ObservationIgnored private let weatherHTTP: any WeatherHTTP
 
     init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet(),
-         weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache()) {
+         weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache(),
+         location: @escaping @MainActor () -> any AppLocation = { CoreLocationAccess() },
+         placeSearch: @escaping @MainActor () -> (any PlaceSearch)? = { GooglePlaceSearch(key: GooglePlaceSearch.bundleKey) }) {
         holder = AppStateHolder(store: store)
         self.environment = environment
+        self.weatherHTTP = weatherHTTP
+        makeLocation = location
+        makePlaceSearch = placeSearch
         locale = ShellLocale(preferredLanguages: environment.preferredLanguages)
         photos = WeatherPhotoFeed(url: environment.photosURL, http: http)
         // `weather_fetch` and `weather_load` go to the usage analytics (IN-15; sent only while the user opted in).
@@ -107,11 +123,17 @@ final class AppLaunch {
         let shell = ShellModel(holder: holder, locale: locale, version: environment.version)
         self.shell = shell
         let locale = self.locale
+        // IN-10: the current position's lookup on the weather pages, `locationOn` reloading it.
+        let location = makeLocation()
+        self.location = location
         let session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { locale.acceptLanguage },
                                      photos: { [weak self] in self?.loadedPhotos }, loadPhotos: { [weak self] in self?.loadPhotos() },
-                                     telemetry: AppLaunch.weatherTelemetry)
+                                     telemetry: AppLaunch.weatherTelemetry, location: location)
+        location.onLocationOn = { [weak session] in session?.reload(.locationOn) }
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
+        positionPopups = CurrentPositionPopups(session: session, shell: shell)
+        if case .start = shell.screen { startPage = makeStartPage(shell, location: location) }
         // A unit change posts the push list again through IN-04's registration (`AppPushUnits`).
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
                                 deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
@@ -165,7 +187,35 @@ final class AppLaunch {
 
     private func handle(_ event: EntryEvent) {
         log.info("entry event \(String(describing: event), privacy: .public)")
+        // `checkLocationMode` on each return to the foreground (app.js `resume`), IN-10.
+        if event == .resume { location?.check() }
         shell?.handle(event)
+    }
+
+    /// S01 for a new shell (IN-10): its adds through `StartFlow`, the Places search with the private key (else the
+    /// bundled towns), and its close.
+    private func makeStartPage(_ shell: ShellModel, location: any AppLocation) -> StartPage {
+        let locale = self.locale
+        let flow = StartFlow(holder: holder, repository: repository,
+                             geocode: GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP),
+                             location: location, acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry)
+        var towns: TownSearch?
+        return StartPage(shell: shell, flow: flow, search: makePlaceSearch(), towns: {
+            if towns == nil { towns = StartPage.bundledTowns() }
+            return towns
+        }, closed: { [weak self] in self?.startClosed() })
+    }
+
+    /// StartCtrl's `close()` after an add (the flow stored `startVersion` and selected the new place): the banner may
+    /// show again, the shell opens Hourly whatever the startup page, and TabCtrl's `init` loads it (`reloadEvent
+    /// 'init'`).
+    private func startClosed() {
+        guard let shell else { return }
+        Monetization.shared.setShowAds(true)
+        shell.select(.forecast)
+        shell.closeStart()
+        startPage = nil
+        weather?.session.reload(.initial)
     }
 }
 

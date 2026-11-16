@@ -32,6 +32,10 @@ on:
       - "client/www/js/controller.settingctrl.js"
       - "client/www/js/service.push.js"
       - "client/www/data/theme.js"
+      # Sources of the S01 captures (ios/tools/start-reference, IN-10), so a change of the Cordova start page runs
+      # the comparison.
+      - "client/www/templates/start.html"
+      - "client/www/js/controller.start.js"
       # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
       - "client/resources/ios/tracking/**"
       - "client/config.xml"
@@ -66,6 +70,10 @@ on:
       - "client/www/js/controller.settingctrl.js"
       - "client/www/js/service.push.js"
       - "client/www/data/theme.js"
+      # Sources of the S01 captures (ios/tools/start-reference, IN-10), so a change of the Cordova start page runs
+      # the comparison.
+      - "client/www/templates/start.html"
+      - "client/www/js/controller.start.js"
       # Sources of ios/tools/import_ad_privacy.py and ios/tools/ads/generate.py (IN-15).
       - "client/resources/ios/tracking/**"
       - "client/config.xml"
