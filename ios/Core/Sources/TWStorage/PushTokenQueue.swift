@@ -7,7 +7,8 @@ import TWModel
 /// change. A token is stored here before its replacement is sent and removed only after the new token is stored in
 /// the app state, so a process that ends in between leaves it to the next process (`PushSync.drain`). Changes within
 /// a process are serialized by one lock shared by every instance (the app appends from the FCM callback while
-/// `PushSync` removes, through separate instances); the app runs in one process at a time.
+/// `PushSync` removes, through separate instances); the app runs in one process at a time. The file is excluded from
+/// backups (`BackupPolicy`, IN-16).
 public final class PushTokenQueue: @unchecked Sendable {
     public let url: URL
     private static let lock = NSLock()
@@ -62,5 +63,8 @@ public final class PushTokenQueue: @unchecked Sendable {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let doc = JSONValue.object(JSONObject([("tokens", .array(tokens.map(JSONValue.string)))]))
         try Data(doc.jsonText.utf8).write(to: url, options: .atomic)
+        // The tokens belong to this device's FCM installation: out of backups and transfers (IN-16). The atomic write
+        // replaced the file, so the mark is set again.
+        BackupPolicy.exclude(url)
     }
 }
