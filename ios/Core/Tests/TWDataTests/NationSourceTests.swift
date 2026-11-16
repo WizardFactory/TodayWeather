@@ -25,9 +25,18 @@ struct NationSourceTests {
             return (r, at)
         }
         await clock.quiesce()
-        while !done.value, let next = clock.nextDeadline {
-            await clock.advance(to: next)
+        // Until the body returns: the next deadline when one waits; otherwise the work has not reached its next sleep
+        // yet (a busy machine), so wait for it on the real clock (at most 30 s) rather than stop advancing.
+        let end = Date().addingTimeInterval(30)
+        while !done.value, Date() < end {
+            if let next = clock.nextDeadline {
+                await clock.advance(to: next)
+            }
             for _ in 0..<40 where !done.value { try? await Task.sleep(for: .milliseconds(5)) }
+        }
+        if !done.value {
+            Issue.record("the request did not settle")
+            task.cancel()
         }
         return await task.value
     }

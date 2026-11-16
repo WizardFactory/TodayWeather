@@ -39,6 +39,13 @@ on:
       - "client/scripts/ios-ad-request-rule.h"
       - "client/www/js/service.monetization.js"
       - "client/www/js/service.admobemi.js"
+      # Sources of ios/tools/nation/generate.py (IN-13: the nationwide pages and warnings in JavaScriptCore).
+      - "client/www/js/controller.nation.js"
+      - "client/www/js/controller.nation.air.js"
+      - "client/www/js/controller.kma.special.js"
+      - "client/www/templates/nation.html"
+      - "client/www/templates/nation-air.html"
+      - "client/www/templates/kma-special.html"
       - ".github/workflows/ios.yml"
   push:
     branches: [master]
@@ -73,6 +80,13 @@ on:
       - "client/scripts/ios-ad-request-rule.h"
       - "client/www/js/service.monetization.js"
       - "client/www/js/service.admobemi.js"
+      # Sources of ios/tools/nation/generate.py (IN-13).
+      - "client/www/js/controller.nation.js"
+      - "client/www/js/controller.nation.air.js"
+      - "client/www/js/controller.kma.special.js"
+      - "client/www/templates/nation.html"
+      - "client/www/templates/nation-air.html"
+      - "client/www/templates/kma-special.html"
       - ".github/workflows/ios.yml"
 
 # Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
@@ -101,6 +115,7 @@ jobs:
           python3 ios/tools/settings/generate.py
           python3 ios/tools/import_ad_privacy.py
           python3 ios/tools/ads/generate.py
+          python3 ios/tools/nation/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
       - name: Core package tests (macOS)

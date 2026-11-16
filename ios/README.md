@@ -282,6 +282,46 @@ python3 ios/tools/settings-reference/capture.py provenance ios/build/settings-re
 
 After a change to the settings code in `client/www/js` (the sources in `Golden/settings.json`), run `python3 ios/tools/settings/generate.py` (macOS `jsc`; needs `client/` and the Git history) and commit the golden; CI fails on a stale copy.
 
+## Nationwide pages and warnings (IN-13)
+
+The menu's 기상특보 (S12), 전국날씨 (S10) and 전국미세먼지 (S11) (#2962), from `kma-special.html`, `nation.html` and `nation-air.html` with KmaSpecialCtrl, NationCtrl and NationAirCtrl. Ported from the Android AN-13 pages and checked against the Cordova iOS build.
+
+- **Requests (`NationSource`, `TWData`):** S10 and S11 send `getNationWeather`: `GET /v000903/nation/KR` with the stored units (`_getUnitsParams`) and the WebView's `Accept-Language`; up to three attempts 2 s apart, 20 s each, the first to settle decides (`firstSettled`). S12 sends one `GET /v000903/kma/special` with `$http`'s 3 s timeout and no retry. Each page sends its request every time it opens (the Cordova states have `cache: false`); an answer counts only for the opening that sent it. A nation answer that is not a JSON object fails (the labels keep their names); a warnings body that is not JSON reads as null (`responseType: 'json'`) and shows no card. Without the private `TW_SERVER_URL` nothing is sent.
+- **Pages (`NationPages`, `WarningCards`, `BoundHtml`, `TWDomain` `Nation/`):** each map label's name, icon and value lines in the mode or pollutant chosen (IN-02's `Nationwide` rules: `getIcon`, `getText1/2` with `Units.getUnit`, `grade2Color` of the stored air standard); each card's heading (`name announcement`, the time as the WebView prints it: `Warnings.parse` in `ShellLocale.webLanguage` and the device's zone), situations (bold hazard and level, then `timeStr location`), the note heading for numeric type 1 or 2, and the comment through `ng-bind-html` (`<br>` breaks lines, other tags go, `script`/`style` with their content, entities decoded as the HTML parser does). No card for anything but a list (Android's B12).
+- **Screens (`NationScreens`, `NationPageView`, `TodayWeather/Nation/`):** `NationScreens` takes the three rows from `ShellModel.onMenuRow` (the rows it does not handle go on to the hook before it) and shows the page in the shell's page slot (`AppLaunch.pageView`, which also holds IN-12's pages; both open from the menu, so one shows at a time). The rows show for region KR only, and 전국날씨 also needs the TodayWeather product, which this app is (IN-07's `MenuRow.rows`). The Cordova iOS measures: the menu's plain header (49 pt) with the back arrow, the content from the header's last point on #F5F5F5 in every theme; S10's three outline buttons at flex's fractional widths, the 330×485 pt map with 20 pt labels on `line-height: normal` lines (25 pt), the icon's 26 pt line (21 pt above the baseline, the next line painted over it), shrink-to-fit widths at WebKit's 1/64 pt; S11's 480 pt strip of 81×54 pt tabs every 79 pt, clipped to 52 pt, scrolling sideways; S12's cards (h2 on 19 pt lines with 16 pt margins, 20 pt lines, the image's empty line, a line with a Helvetica Neue fallback such as ※ 21 pt) broken where WebKit breaks them (CoreText's `CTTypesetterSuggestLineBreak` gives the captured breaks, between Korean syllables too). `$ionicLoading` (backdrop, 68×72 pt box, bubbles spinner) covers S10 and S11 while they load, the back button included. Text follows Dynamic Type (labels grow at their fixed positions). `screen_view` reports `nation`, `nation-air` and `kma-special` (`AppLaunch.pageScreen` into IN-15's `Monetization.pageScreen`).
+- **Not drawn:** S12's `imageUrl` (only scraper-era documents had one; as AN-13, B11).
+
+### References and tests
+
+| File | Contents |
+| --- | --- |
+| `Core/Tests/TWDomainTests/NationReference/nation-golden.json` | NationCtrl, NationAirCtrl and KmaSpecialCtrl run unchanged in the macOS JavaScriptCore shell (`tools/nation/generate.py`, with the sources' commits and hashes) over the corpus answers (`inputs/nation.json`, `inputs/special.json`) and empty, malformed and failed answers: every label of each mode and pollutant (also in km/h and inch, AirNow, WHO and AQICN), the request, `specialList` and the cards in Korean and English |
+| `TodayWeatherTests/NationReference/nation-<state>.png`, `-statusbar.png`, `.json` | The Cordova iOS pages at 393x852 pt and scale 3 (manual pages 32–35): S10 while loading and in its three modes, S11 in its six tabs, S12 from its top to its end (`warnings`, `warnings-1`…`-5`), the failed and empty answers, S10 and S12 in the dark theme; each with the header, the buttons or tabs, the map and every label's parts, every card's parts with their line boxes, and the loading overlay |
+| `TodayWeatherTests/NationReference/nation-captures.json`, `nation-tolerances.json` | Manifest (states, the menu rows the WebView showed, every API request each step sent with its `Accept-Language`) and each comparison's tolerance with the reasons |
+| `provenance/nation-captures.json` | Build commit and recipe, the page sources inside the built app compared with `client/`, the run and the SHA-256 of every reference file |
+
+- `TWDomainTests`: `NationPagesTests` (every label and card of the golden, the empty, malformed and failed answers, titles, the note rule, `ng-bind-html`), `NationReferenceProvenanceTests` (the files and hashes; every captured label's icon, values, units and color and every card's heading and lines equal the native page model).
+- `TWDataTests` (`ClockedDataTests`): `NationSourceTests` (paths with the units and `Accept-Language`, three attempts 2 s apart on a late answer, the 20 s timeout, an error status at once, the 3 s warnings timeout without retry, empty and malformed answers, no server URL).
+- App-hosted: `NationTests` (the rows open their pages with the loading overlay, back does nothing while loading, modes and tabs, back to the tabs, each opening requests again, a failed answer, an answer of an earlier opening ignored, the rows absent outside Korea and other rows passed on, `screen_view`), `NationScreenshotTests` (23 comparisons by the AN-05 metric within `nation-tolerances.json`, rendered with Korean fallback fonts; S10 and S11 from the top to 20 pt under the map, S12 whole at each captured scroll position; the status bar's color) and `ProductionNationTests` (below).
+
+### Recapturing and regenerating
+
+After a change to the Cordova pages (the page sources in `provenance/nation-captures.json` no longer match `client/`), on the owned capture simulator (`capture.py` refuses others; set its UDID in `DEVICES`):
+
+```sh
+sh ios/tools/chart-reference/build-cordova.sh ios/build/nation-reference http://127.0.0.1:18463
+python3 ios/tools/nation-reference/capture.py run <udid> ios/build/nation-reference/TodayWeather.app
+python3 ios/tools/nation-reference/capture.py provenance ios/build/nation-reference/TodayWeather.app
+```
+
+`capture.py` erases the simulator, sets ko-KR, installs a copy of the build with `capture.js` injected and drives the app's controllers through their scopes: 회현동 from the local fixture server, the menu's rows (recorded), S10 while the server holds the answer 5 s, its modes, S11's tabs, S12 scrolled a screen at a time, the failed (500) and empty answers, the dark theme. The Ads SDK is not started. It fails when a request leaves the Mac or the nation or warnings request uses another path. Then run the tests and update `nation-tolerances.json` with the measured values (the test prints `NATION-COMPARE` lines) only for an explained change. Delete `ios/build/nation-reference/` and the build's DerivedData folder `App-*` afterwards.
+
+After a change to the three controllers or their templates, run `python3 ios/tools/nation/generate.py` (macOS `jsc`; needs `client/` and the Git history) and commit the golden; CI fails on a stale copy.
+
+### Against production
+
+`ProductionNationTests` (app-hosted) runs only with `TEST_RUNNER_TW_PRODUCTION_NATION=1` in a build with the private `TW_SERVER_URL` (`-xcconfig Private.xcconfig`); otherwise it is skipped, as in CI. In the live shell it opens 전국날씨 from the menu and taps its three modes, 전국미세먼지 and its six tabs, and 기상특보, through the app's client: three read-only GETs. It writes the request paths (no host), the labels and cards and a snapshot of each state to the app's `tmp/nation-production/`.
+
 ## Ads, analytics consent and crash reporting (IN-15)
 
 The bottom banner, UMP consent with the #2945 tracking behaviour, the usage analytics opt-in and Crashlytics (#2964). Ported from the Android AN-15 and corrected for the Cordova iOS build (`service.twads.js`, `service.admobemi.js`, `service.monetization.js`, the emi AdMob plugin 3.0.4's iOS sources, `client/scripts/ios-ad-privacy.js` and `ios-ad-request-rule.h`, `controller.settingctrl.js`). The rules and controllers are Foundation-only in `TWDomain` `Ads/` (tested with `swift test`); the SDK bridges and the wiring are in `TodayWeather/Ads/`.

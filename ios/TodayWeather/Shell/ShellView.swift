@@ -47,7 +47,7 @@ struct RootView: View {
                 case .start: StartPlaceholder(model: shell)
                 case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } },
                                      banner: Monetization.shared.bannerView,
-                                     page: launch.settings.map { settings in settings.pageView })
+                                     page: launch.pageView)
                 }
             } else {
                 SplashView()
