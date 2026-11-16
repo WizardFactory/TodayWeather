@@ -171,6 +171,30 @@ struct StartScreenTests {
         #expect(hosted.element("start-cancel") == nil)
     }
 
+    /// At the largest text size (`xxxLarge`, #2948) in every catalog on the 375 pt iPhone SE: the shortcuts, the search
+    /// row and the location button grow and stay inside the window's width (a long label is drawn smaller).
+    @Test(arguments: ["ko-KR", "en-US", "de-DE", "ja-JP", "zh-CN", "zh-TW"])
+    func thePageFitsTheLargestTextSize(language: String) async throws {
+        let f = try StartFixture(location: TestLocation(system: .notDetermined), languages: [language])
+        let hosted = try HostedView(StartView(page: f.page), size: CGSize(width: 375, height: 667), dynamicType: .xxxLarge)
+        defer { hosted.close() }
+        try await hosted.settle()
+        f.shell.tapPopupButton(0)
+        try await hosted.settle()
+        let location = try #require(hosted.element("start-location"), "\(language) the location button")
+        #expect(location.accessibilityFrame.minX >= 9.5 && location.accessibilityFrame.maxX <= 365.5, "\(language) \(location.accessibilityFrame)")
+        #expect(location.accessibilityFrame.height > 47.5, "\(language) the button grows with the text")
+        var index = 0
+        while let shortcut = hosted.element("start-shortcut-\(index)") {
+            let frame = shortcut.accessibilityFrame
+            #expect(frame.minX >= 18.5 && frame.maxX <= 356.5, "\(language) shortcut \(index) \(frame)")
+            index += 1
+        }
+        #expect(index >= 6, "\(language) \(index) shortcuts")
+        let input = try #require(hosted.element("start-input"), "\(language) the input")
+        #expect(input.accessibilityFrame.minX >= 9.5 && input.accessibilityFrame.maxX <= 365.5, "\(language) \(input.accessibilityFrame)")
+    }
+
     @Test func aFailedWeatherRequestIsO09() async throws {
         let f = try StartFixture(location: TestLocation(system: .notDetermined), weather: false)
         let hosted = try host(f)

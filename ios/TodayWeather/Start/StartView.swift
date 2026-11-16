@@ -45,7 +45,8 @@ enum StartMetrics {
 
     /// A shortcut's width: its label's width in bold 15 pt (with the fallback fonts of `language`, nil: the system's)
     /// with 12 pt padding and the 1 pt borders, at least Ionic's 52 pt. WebKit lays text out in 1/64 pt.
-    static func buttonWidth(_ label: String, language: String? = nil) -> CGFloat {
+    static func buttonWidth(_ label: String, language: String? = nil, scale: CGFloat = 1) -> CGFloat {
+        let buttonText = buttonText * scale
         let base = UIFont.systemFont(ofSize: buttonText, weight: .bold) as CTFont
         var font = base
         if let language {
@@ -137,6 +138,8 @@ struct StartContent: View {
     /// draw a text field).
     var live = true
     @FocusState private var focused: Bool
+    /// Text follows Dynamic Type (#2948): 1 at the default size, where the page has the captured sizes.
+    @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
     private var catalog: Catalog { Catalog(code: page.shell.locale.catalog) }
 
@@ -170,7 +173,7 @@ struct StartContent: View {
                         .onAppear { if i == townPage.towns.count - 1 { page.moreTowns() } }
                     }
                     Attribution {
-                        CssLine(runs: [CssRun(text: "powered by TodayWeather", size: StartMetrics.resultText, weight: .medium)],
+                        CssLine(runs: [CssRun(text: "powered by TodayWeather", size: StartMetrics.resultText * scale, weight: .medium)],
                                 color: CssColor(0x222222))
                     }
                 }
@@ -180,7 +183,7 @@ struct StartContent: View {
             .padding(.horizontal, StartMetrics.inset)
             if page.results == nil {
                 Color.clear.frame(height: StartMetrics.listGap)
-                OutlineButton(label: catalog("LOC_USE_YOUR_CURRENT_LOCATION"), identifier: "start-location") {
+                OutlineButton(label: catalog("LOC_USE_YOUR_CURRENT_LOCATION"), identifier: "start-location", shrinks: true) {
                     page.useCurrentLocation()
                 }
                 .padding(.vertical, 1)
@@ -189,21 +192,25 @@ struct StartContent: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .top)
+        .environment(\.startScale, scale)
     }
 
     /// `.item.item-input`: the gray `ion-search` glyph, the input and, once a word is typed, Cancel.
     private var searchRow: some View {
         let binding = Binding(get: { page.word }, set: { page.change($0) })
-        let m = CssText.metrics("", size: StartMetrics.inputText)
+        let textSize = StartMetrics.inputText * scale
+        let m = CssText.metrics("", size: textSize)
         // The input's text: a 16 pt line centred in the content box, whose baseline is the font's ascent below the
-        // line's half-leading.
-        let content = StartMetrics.inputBox - StartMetrics.inputPaddingTop - StartMetrics.inputPaddingBottom
-        let lineTop = StartMetrics.inputPaddingTop + (content - StartMetrics.inputLine) / 2
-        let baseline = lineTop + (StartMetrics.inputLine - (m.ascent + m.descent)) / 2 + m.ascent
+        // line's half-leading. The box and the row grow with the text size.
+        let box = StartMetrics.inputBox * scale, line = StartMetrics.inputLine * scale
+        let rowHeight = StartMetrics.inputRow - StartMetrics.inputBox + box
+        let content = box - StartMetrics.inputPaddingTop - StartMetrics.inputPaddingBottom
+        let lineTop = StartMetrics.inputPaddingTop + (content - line) / 2
+        let baseline = lineTop + (line - (m.ascent + m.descent)) / 2 + m.ascent
         return ZStack(alignment: .topLeading) {
             Text(Glyphs.search).font(Glyphs.ionicons(StartMetrics.glyphSize)).foregroundStyle(StartMetrics.placeholder.color)
                 .frame(width: StartMetrics.glyphWidth, alignment: .leading)
-                .frame(height: StartMetrics.inputBox)
+                .frame(height: box)
                 .offset(x: StartMetrics.inputPadding + 1, y: StartMetrics.inputTop)
                 .accessibilityHidden(true)
             // The placeholder (`::placeholder` #aaa) while nothing is typed, drawn here in both modes, so it sits where
@@ -215,14 +222,14 @@ struct StartContent: View {
                     Text(page.word).foregroundStyle(StartMetrics.inputColor.color)
                 }
             }
-            .font(.system(size: StartMetrics.inputText))
+            .font(.system(size: textSize))
             .lineLimit(1)
             .alignmentGuide(.top) { $0[.firstTextBaseline] - baseline - StartMetrics.inputTop }
             .padding(.leading, StartMetrics.inputPadding + 1 + StartMetrics.glyphWidth)
             .padding(.trailing, StartMetrics.inputPadding + 1 + StartMetrics.inputEnd)
             if live {
                 TextField("", text: binding)
-                    .font(.system(size: StartMetrics.inputText))
+                    .font(.system(size: textSize))
                     .foregroundStyle(StartMetrics.inputColor.color)
                     .focused($focused)
                     .autocorrectionDisabled()
@@ -241,11 +248,11 @@ struct StartContent: View {
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
                     Button { page.cancel() } label: {
-                        CssLine(runs: [CssRun(text: catalog("LOC_CANCEL"), size: StartMetrics.buttonText, weight: .bold)],
+                        CssLine(runs: [CssRun(text: catalog("LOC_CANCEL"), size: StartMetrics.buttonText * scale, weight: .bold)],
                                 color: StartMetrics.itemText)
                             .padding(.horizontal, 7)
-                            .padding(.top, 14.5)
-                            .frame(height: StartMetrics.inputRow, alignment: .top)
+                            .padding(.top, 14.5 * scale)
+                            .frame(height: rowHeight, alignment: .top)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -254,7 +261,7 @@ struct StartContent: View {
                 .padding(.trailing, StartMetrics.inputPadding + 1)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: StartMetrics.inputRow, maxHeight: StartMetrics.inputRow, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
         .itemBox(top: true)
     }
 
@@ -306,6 +313,7 @@ extension View {
 
 /// A result row (`.item` with 8 pt around): its text in 16 pt #444, a #ddd border.
 private struct ResultRow: View {
+    @Environment(\.startScale) private var scale
     let text: String
     let identifier: String
     let action: () -> Void
@@ -313,10 +321,11 @@ private struct ResultRow: View {
     var body: some View {
         Button(action: action) {
             // Ionic's `.item`: one line (`white-space: nowrap`, ellipsis) on `line-height: normal`.
-            let m = CssText.metrics(text, size: StartMetrics.resultText)
+            let size = StartMetrics.resultText * scale
+            let m = CssText.metrics(text, size: size)
             ZStack(alignment: .topLeading) {
                 Color.clear.frame(height: m.ascent + m.descent)
-                Text(text).font(.system(size: StartMetrics.resultText)).foregroundStyle(StartMetrics.itemText.color)
+                Text(text).font(.system(size: size)).foregroundStyle(StartMetrics.itemText.color)
                     .lineLimit(1).truncationMode(.tail)
                     .alignmentGuide(.top) { $0[.firstTextBaseline] - m.ascent }
             }
@@ -348,25 +357,47 @@ private struct Attribution<Content: View>: View {
 /// `.button.button-outline.button-positive`: the label in bold 15 pt #387ef5 on a 42 pt line from the top of a 47 pt
 /// box (`min-height`), 12 pt from a 1 px border of the same blue with 4 pt corners.
 struct OutlineButton: View {
+    @Environment(\.startScale) private var scale
     let label: String
     let identifier: String
+    /// True: a label wider than the space it gets is drawn smaller (a long translation at a large text size), so the
+    /// button stays inside the page.
+    var shrinks = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            FixedCssLine(text: label, size: StartMetrics.buttonText, weight: .bold, color: StartMetrics.positive,
-                         height: StartMetrics.buttonLine)
-                // Measured in the captures: the label's line box starts 2 pt below the box's top (the 1 px border and
-                // 1 pt of the 47 pt `min-height` over its 44 pt content).
-                .padding(.top, 2)
-                .padding(.horizontal, StartMetrics.buttonPadding + 1)
-                .frame(minWidth: StartMetrics.buttonMinWidth, minHeight: StartMetrics.buttonHeight, alignment: .top)
-                .overlay(RoundedRectangle(cornerRadius: StartMetrics.buttonCorner).strokeBorder(StartMetrics.positive.color, lineWidth: 1))
-                .contentShape(Rectangle())
+            if shrinks {
+                ViewThatFits(in: .horizontal) {
+                    box(scale)
+                    box(scale * 0.85)
+                    box(scale * 0.7)
+                    box(scale * 0.55)
+                }
+            } else {
+                box(scale)
+            }
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(identifier)
     }
+
+    private func box(_ k: CGFloat) -> some View {
+        FixedCssLine(text: label, size: StartMetrics.buttonText * k, weight: .bold, color: StartMetrics.positive,
+                     height: StartMetrics.buttonLine * scale)
+            // Measured in the captures: the label's line box starts 2 pt below the box's top (the 1 px border and
+            // 1 pt of the 47 pt `min-height` over its 44 pt content).
+            .padding(.top, 2)
+            .padding(.horizontal, StartMetrics.buttonPadding + 1)
+            .frame(minWidth: StartMetrics.buttonMinWidth, minHeight: StartMetrics.buttonHeight * scale, alignment: .top)
+            .overlay(RoundedRectangle(cornerRadius: StartMetrics.buttonCorner).strokeBorder(StartMetrics.positive.color, lineWidth: 1))
+            .contentShape(Rectangle())
+    }
+}
+
+extension EnvironmentValues {
+    /// The Dynamic Type scale of S01's text (`StartContent`): 1 at the default size.
+    @Entry var startScale: CGFloat = 1
 }
 
 /// One line of text in a CSS line box of a fixed height (`line-height: <height>px`): the baseline where WebKit puts it,
@@ -396,11 +427,13 @@ struct FixedCssLine: View {
 /// starting where a button does not fit, rows 55 pt apart.
 private struct ShortcutFlow: View {
     @Environment(\.cssFallbackLanguage) private var fallbackLanguage
+    @Environment(\.startScale) private var scale
     let names: [String]
     let onTap: (Int) -> Void
 
     var body: some View {
-        FlowLayout(widths: names.map { StartMetrics.buttonWidth($0, language: fallbackLanguage) }) {
+        FlowLayout(widths: names.map { StartMetrics.buttonWidth($0, language: fallbackLanguage, scale: scale) },
+                   height: StartMetrics.buttonHeight * scale) {
             ForEach(Array(names.enumerated()), id: \.offset) { i, name in
                 OutlineButton(label: name, identifier: "start-shortcut-\(i)") { onTap(i) }
             }
@@ -413,10 +446,11 @@ private struct ShortcutFlow: View {
 /// Places its subviews at the given widths and the button height, in lines.
 private struct FlowLayout: Layout {
     let widths: [CGFloat]
+    let height: CGFloat
 
     private func frames(_ available: CGFloat) -> ([CGRect], CGFloat) {
         let margin = StartMetrics.buttonMargin
-        let row = StartMetrics.buttonHeight + 2 * margin
+        let row = height + 2 * margin
         var x: CGFloat = 0, y: CGFloat = 0
         var out: [CGRect] = []
         for width in widths {
@@ -424,7 +458,7 @@ private struct FlowLayout: Layout {
                 x = 0
                 y += row
             }
-            out.append(CGRect(x: x + margin, y: y + margin, width: width, height: StartMetrics.buttonHeight))
+            out.append(CGRect(x: x + margin, y: y + margin, width: width, height: height))
             x += width + 2 * margin
         }
         return (out, widths.isEmpty ? 0 : y + row)

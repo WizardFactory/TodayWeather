@@ -37,6 +37,13 @@ struct CurrentPositionTests {
 
         var paths: [String] { http.attempts.map { $0.url.path(percentEncoded: true) } }
         var state: AppState { holder.state! }
+
+        /// Lets the server answer once `count` requests were sent: a request starts after work that touches no clock, so
+        /// the clock moves only when it is waiting.
+        func answer(_ count: Int) async {
+            _ = await eventually { http.attempts.count >= count }
+            await clock.advance(by: 1000)
+        }
     }
 
     @Test func aNewPositionReplacesTheSavedOneAndLoadsAgain() async throws {
@@ -45,13 +52,13 @@ struct CurrentPositionTests {
         f.session.reload(.initial)
         #expect(f.session.locating)
         #expect(f.session.loadingSelected, "the title's spinner turns while the lookup runs")
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { f.session.applies == 2 }, "the saved position's weather applied")
         #expect(f.session.loadingSelected, "the spinner turns until the position settles")
         f.location.releasePositions()
         #expect(await eventually { f.state.places[0].location == Location(lat: 37.501, long: 127.04) }, "the new location is saved")
         #expect(!f.session.locating)
-        await f.clock.advance(by: 1000)
+        await f.answer(2)
         #expect(await eventually { f.paths.count == 2 })
         #expect(f.paths == ["/weather/v000903/coord/37.56,126.98", "/weather/v000903/coord/37.501,127.04"])
         #expect(await eventually { f.session.applies == 3 }, "applyEvent 'updateCurrentPosition'")
@@ -62,7 +69,7 @@ struct CurrentPositionTests {
     @Test func theSamePositionLoadsNothingMore() async throws {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [Location(lat: 37.5604, long: 126.9801)]))
         f.session.reload(.initial)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { !f.session.locating })
         await f.clock.advance(by: 1000)
         #expect(f.paths == ["/weather/v000903/coord/37.56,126.98"])
@@ -72,7 +79,7 @@ struct CurrentPositionTests {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [Location(lat: 35.1796, long: 129.0756)]))
         f.location.holdPositions = true
         f.session.reload(.initial)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { f.session.applies == 2 })
         // The user swipes to the next place before the position arrives.
         f.holder.change { $0.placeIndex = 1 }
@@ -87,14 +94,14 @@ struct CurrentPositionTests {
         let f = try Fixture(LocationDouble(system: .notDetermined, answer: .authorizedWhenInUse,
                                            fixes: [Location(lat: 37.5013, long: 127.0396)]))
         f.session.reload(.initial)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { !f.session.locating })
         #expect(f.location.prompts == 1)
         #expect(f.session.positionRetry == nil, "a grant shows nothing")
         #expect(f.location.locationOn == 1)
         // The app's state change handler sends `reloadEvent 'locationOn'`, which reloads the selected current position.
         f.session.reload(.locationOn)
-        await f.clock.advance(by: 1000)
+        await f.answer(2)
         #expect(await eventually { f.paths.count == 3 })
         #expect(f.paths.last == "/weather/v000903/coord/37.501,127.04")
         #expect(f.events.outcomes("location_permission", "outcome") == ["denied", "granted"])
@@ -103,7 +110,7 @@ struct CurrentPositionTests {
     @Test func deniedAtThePromptAsksToSearchOrRetry() async throws {
         let f = try Fixture(LocationDouble(system: .notDetermined, answer: .denied))
         f.session.reload(.initial)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { f.session.positionRetry != nil })
         #expect(f.session.positionRetry == RetryConfirm(lines: ["LOC_PERMISSION_REQUEST_DENIED_PLEASE_SEARCH_BY_LOCATION_NAME_OR_RETRY"],
                                                         buttons: [.search, .retry]))
@@ -123,7 +130,7 @@ struct CurrentPositionTests {
         for system in [SystemAuthorization.denied, .restricted] {
             let f = try Fixture(LocationDouble(system: system))
             f.session.reload(.initial)
-            await f.clock.advance(by: 1000)
+            await f.answer(1)
             #expect(await eventually { !f.session.locating })
             #expect(f.paths == ["/weather/v000903/coord/37.56,126.98"])
             #expect(f.session.positionRetry == nil)
@@ -146,7 +153,7 @@ struct CurrentPositionTests {
         // With a saved position the place loads as saved.
         let saved = try Fixture(LocationDouble(services: false, system: .denied))
         saved.session.reload(.initial)
-        await saved.clock.advance(by: 1000)
+        await saved.answer(1)
         #expect(await eventually { !saved.session.locating })
         #expect(saved.location.serviceRequests == 0)
         #expect(saved.paths == ["/weather/v000903/coord/37.56,126.98"])
@@ -156,11 +163,11 @@ struct CurrentPositionTests {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [nil, Location(lat: 37.5604, long: 126.9801)]))
         f.session.recorded = .authorizedWhenInUse // S02 recorded the grant (IN-11).
         f.session.reload(.initial)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { f.session.positionRetry != nil })
         #expect(f.session.positionRetry == RetryConfirm(lines: ["LOC_FAIL_TO_FIND_YOUR_CURRENT_LOCATION"], buttons: [.close, .retry]))
         f.session.confirmPositionRetry()
-        await f.clock.advance(by: 1000)
+        await f.answer(2)
         #expect(await eventually { f.location.positions == 2 })
         #expect(await eventually { !f.session.locating })
         #expect(f.session.positionRetry == nil)
@@ -171,7 +178,7 @@ struct CurrentPositionTests {
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [Location(lat: 37.56, long: 126.98)]))
         f.session.reload(.initial)
         f.session.reload(.tab)
-        await f.clock.advance(by: 1000)
+        await f.answer(2)
         #expect(await eventually { !f.session.locating })
         #expect(f.location.positions == 1, "a second lookup while one runs is `alreadyCalled`")
     }
@@ -183,7 +190,7 @@ struct CurrentPositionTests {
         #expect(f.paths.isEmpty)
         f.holder.change { $0.placeIndex = 0 }
         f.session.reload(.locationOn)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { f.paths.count == 1 })
     }
 
@@ -207,7 +214,7 @@ struct CurrentPositionTests {
         #expect(f.session.startChoice())
         #expect(!f.state.places[0].disable)
         #expect(f.state.placeIndex == 0)
-        await f.clock.advance(by: 1000)
+        await f.answer(1)
         #expect(await eventually { !f.session.locating })
         #expect(f.location.positions == 1)
         #expect(f.state.places[0].location == Location(lat: 37.56, long: 126.98))
