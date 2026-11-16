@@ -40,8 +40,9 @@ struct WeatherTelemetryTests {
         let recorder = EventRecorder()
         let repository = WeatherRepository(baseURL: Self.server, cacheDirectory: nil, http: http, clock: clock,
                                            telemetry: recorder.telemetry)
-        for _ in 0..<3 {
+        for sent in 1...3 {
             let load = Task { await repository.load(seoul, units: koreanUnits, acceptLanguage: "ko", force: true) }
+            #expect(await due(clock, within: 1500) { http.attempts.count == sent })
             await clock.advance(by: 2000)
             _ = await load.value
         }
