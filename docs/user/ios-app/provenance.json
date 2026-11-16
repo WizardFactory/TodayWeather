@@ -1,0 +1,325 @@
+{
+ "schema": 1,
+ "product": "TodayWeather iOS native 2.0.0 preview",
+ "runtime": "Swift / SwiftUI; no Ionic or Cordova runtime",
+ "product_base_commit": "f60b63c0e4e6cc20795381120532b020edc9df02",
+ "capture_date": "2026-11-17",
+ "environment": {
+  "device": "owned iPhone 16 simulator twios_cap_16 (iOS 26.5), 393x852 pt at scale 3",
+  "app_language": "ko-KR (launch arguments)",
+  "position": "Seoul City Hall (simctl location)",
+  "status_bar": "simctl status_bar override 9:41",
+  "raw_pixels": [
+   1179,
+   2556
+  ],
+  "published_pixels": [
+   720,
+   1561
+  ],
+  "text_size": "default (large)"
+ },
+ "build_inputs": [
+  "TW_SERVER_URL",
+  "TW_PLACES_API_KEY_IOS"
+ ],
+ "build_type": "Debug, ad hoc signed; Google's test AdMob identifiers; no GoogleService-Info.plist (no Firebase, no push token, no push request); no TW_WEATHER_PHOTOS_URL",
+ "data": "read-only GETs to the legacy weather server (weather, geocode, nationwide, warnings) and Google Places predictions; values are those of the capture time",
+ "capture": "ios/tools/manual/run-manual-capture.sh <out> <udid> (ManualUITests.testCaptureTheManual); screenshots reduced to 720 px wide and a 256-color palette",
+ "screenshots": {
+  "screenshots/01-access-notice.png": {
+   "sha256": "f3bdd90931496128231d397453840e2644a311ce2ab191719fc987168c5c3324",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/02-start.png": {
+   "sha256": "ef107e556c3f4e494714a15b4f8326d430b35754ad560d2ac4414e53b97bc545",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/03-current-location.png": {
+   "sha256": "bdb522f74348953547d37e9418915db458f51023f30e63e04a36215ded0b5f6a",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/04-hourly.png": {
+   "sha256": "f818fd8690f3e55d66cc2aa94c2adadfe026abf449b024defa2bf229965610db",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/05-hourly-expanded.png": {
+   "sha256": "cf18e2ada7809d39323b5bc64c0aaad37326a62e959091289afc30120ce5e54e",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/06-hourly-past.png": {
+   "sha256": "b4c79577da30efa6c878dd3b9c1db12437635c9e1055a4fb15afb3ca9b6aee86",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/07-hourly-future.png": {
+   "sha256": "bcf500ff20e621378ade86775caecf14a51d25bc7dca288b04b9ce36df2614d7",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/08-daily.png": {
+   "sha256": "aa061483c8b80e771171c44bc257a260cf232ae43ab4573ebb3050aa11e45c74",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/09-daily-past.png": {
+   "sha256": "f26f7c0f461617b5d8eef29c1fba896df8abb7a029111ede8419a857de4ec88a",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/10-daily-future.png": {
+   "sha256": "fffe63d152036acdb7bba04e8033f555846f410ac4c30845ebb9e6783c02e27e",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/11-air.png": {
+   "sha256": "086ed579cdf827b47b052b055b8be6087fdb63d2e6dd8f27e9db66d56585144c",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/12-air-pm25.png": {
+   "sha256": "6bc713f6733ce4ebab3ad0b257068dc30b26b03844adf594b04dc408382dfec9",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/13-stations.png": {
+   "sha256": "5dfb8c31376090671b3422a7274d4bc5545b2001854971247b938b3dccf8b868",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/14-station-selected.png": {
+   "sha256": "0a583891ba3391e4cbd5dd918ae1b6fb3366e8f80cf19a3849f945ea67dd398e",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/15-places.png": {
+   "sha256": "40d3f10cbc79d13b15f3deb739261142ac6c6cab941298ea8f2b1823b78f2833",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/16-place-search.png": {
+   "sha256": "12982f163b0c51e7c28eaa85da797ef71c308dafa998b2b562c448c5b039a9e0",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/17-busan.png": {
+   "sha256": "63736ba67ebc664728657f746c0a14154052876ce0e0df516fd1fcfc61a61374",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/18-switch.png": {
+   "sha256": "fc8eb74d21ee0e76deaac7093ecba37e7d230491d5dc36e2027ed1b65183a37b",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/19-london.png": {
+   "sha256": "51da995f6b672b59f3928a1f94167e616208a8a3b60b0ad63219bfc54a02baf7",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/20-edit-places.png": {
+   "sha256": "74b6eeffca461f66107bf3fdc5a880c23465214b7e362b599828c0fee146c4bf",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/21-place-deleted.png": {
+   "sha256": "df208f6dbb0b022abd4ffac07335d3cf8d940dabd53c0fc00e2b7a86166b1774",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/22-alarms.png": {
+   "sha256": "a02b090f27688fac71edb400f93335d04b7c3e2839f09166ae7c43d8cba62424",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/23-time-picker.png": {
+   "sha256": "2dd5fcfbd6f89b07b806edc8ff2baee3328a5a510118e6fa375f373dcfe36e87",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/24-alarm-confirmation.png": {
+   "sha256": "96de36efcfaf69d6b3ea233b61bd755de28186f085ea08f0e1f0c80f496682b8",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/25-menu.png": {
+   "sha256": "95c5fdb6dfdf76b7dbba944439d50bdbc14be10b092a7ab09bcb3dfafaf993bb",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/26-units.png": {
+   "sha256": "66f374a45e984b81c50f29125a2a449c3f9d5a873dd02184fae7fc0e0b4c652f",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/27-temperature.png": {
+   "sha256": "b0ec90289bf6c6fcef4b26f812b8701c2d0189fc378301e3ae17d6d2a0785b84",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/28-fahrenheit.png": {
+   "sha256": "e02a6d6ea59c98cd92c023600d45c9182496bb94504b02748948cfa466786942",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/29-startup-page.png": {
+   "sha256": "19854e57f7131fbd1928a94ce9f1acc369cf497b27c587d35f1481abfbdbdb35",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/30-refresh.png": {
+   "sha256": "6f99074b351b677785a008376e26c2beca8db4680505b9b3db0b600a220627fe",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/31-theme.png": {
+   "sha256": "5d69b47b4f67367ad72541975faf6dcd4f12a33ab36784322dce48c9408a0580",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/32-dark-weather.png": {
+   "sha256": "c425262f5dd997c3f1a44e84b178985a1cbd3c1a528d6c546d68976d6b18e6d0",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/33-photo-theme.png": {
+   "sha256": "8ed8cb445510a1e36098649411f19c1e1404267cd528acbcb04f036eeda5f938",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/34-warnings.png": {
+   "sha256": "71eaf1149310973687eb168c377fd2f14d610ae184faa658deea32acad249814",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/35-national-weather.png": {
+   "sha256": "5984b8daebd049d74f6bf1c1099274a8a8d7a61ce96407f2e71e70c5a19290c7",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/36-national-wind.png": {
+   "sha256": "523829edc9a7faa5cab402bd8fe94b26a5faa3816b79c9ef0ac5a9dd50aaccbe",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/37-national-air.png": {
+   "sha256": "d938882cbd4eacf145e04394ab5932006cddac3b1c22d9fae7c3d03874aa862d",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/38-about.png": {
+   "sha256": "db122c20e2f30d7611a9d3d48a6e88014775c499dc59dcce4bab04031ffc5d83",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/39-analytics.png": {
+   "sha256": "75374c3ba2f142dd2f65a50a59e5a508c4bda584432e73779622a47c140f65a0",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/40-ad-privacy.png": {
+   "sha256": "4a0804dae6c285fbd3857cbf2206cc7ac3638629c1fcf91fb862638ccf8af0ee",
+   "size": [
+    720,
+    1562
+   ]
+  },
+  "screenshots/41-share-sheet.png": {
+   "sha256": "69e526b296235f8ddb59ebf85c5e49e4656b9ccd4757bfbdc8d6b8d3b4488fad",
+   "size": [
+    720,
+    1562
+   ]
+  }
+ },
+ "manual_sha256": "d527b95855e84db97973c651ad495f8facb46d48acf964efd0ae2ccc64c7c61a",
+ "pdf_sha256": "dfc1fb3ff37d18bfc2e7b70ae56ee27248ba893255f2106e699068ac82d37ff2",
+ "sources": {
+  "ios/TodayWeatherUITests/ManualUITests.swift": "5d2ed56914838cda11d5bcc1542764743b1376203b124cda932758e6b438a4ee",
+  "ios/tools/manual/run-manual-capture.sh": "33c9f5723ae99e1e6aacf85b40b871bade1ceaf5de59eb983a12dda10e80535c",
+  "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
+ }
+}

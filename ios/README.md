@@ -564,6 +564,16 @@ The script builds the app and the UI tests ad hoc signed with `TW_SERVER_URL` at
 
 Fixed by these checks (IN-18): S02's header kept the width of its search field's placeholder, so at `xxxLarge` in a Split View third the page and the tab bar were wider than the window (the field now takes the room left and clips its placeholder, as the input did); S12's paragraphs kept the width they were broken for, so a page opened in a wider window, or at the 393 pt default before its first layout, stayed wider than a narrower window; S10's and S11's 330 pt map scales down to a window narrower than it (a Split View third; no iPhone of iOS 17 is that narrow), where the Cordova page would have cut it. Found by the manual's captures: a page scrolled down drew over the status bar (the WebView's area is now clipped under it; `IPadFitTests.aPageDoesNotDrawOverTheStatusBar`).
 
+## User manual (IN-18)
+
+The [native user manual](../docs/user/ios-app/README.md) (`docs/user/ios-app/`: `manual.pdf`, the editable `manual.json`, the screenshots and `provenance.json`) has 41 steps with the sections of the Cordova manual, captured from the running app. `ManualUITests.testCaptureTheManual` (UI) walks the journeys with real taps, typing and swipes and attaches a named screenshot at each step; it skips without its handshake, so CI only builds it.
+
+```sh
+ios/tools/manual/run-manual-capture.sh <out-dir> <tw* iPhone simulator udid>
+```
+
+The script builds the app and the UI tests ad hoc signed with `ios/Private.xcconfig` (the server URL and the Places key: read-only weather, geocode, nationwide and warning GETs and Places predictions) and refuses a build holding a Firebase configuration, so no push token, push request or Firebase call can exist; the journey leaves S09 without saving. It sets the simulator to Seoul City Hall, installs the app and grants location while in use, answers the tracking question in TCC, fixes the status bar at 9:41 and exports the named screenshots. The server host and the Places key are parsed with Python, replaced by placeholders in every saved log, and the logs are scanned for them. Selected screenshots are reduced to 720 px and checked by eye before publication; `tools/manual/verify.py` and its regression tests (`test_verify.py`) check the published edition (see the manual's README).
+
 ## Private inputs
 
 The build and the tests run without private inputs. They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the feedback address `TW_MAIL_TO` (IN-12; Info.plist `TWMailTo`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).
