@@ -184,28 +184,38 @@ struct CurrentPositionTests {
     }
 
     /// CODEX-IN10-2: a lookup whose new location's weather is still loading must not end a later lookup's turn: while
-    /// that later lookup waits for its position, the indicator stays and no further lookup starts.
+    /// that later lookup waits for its position, the indicator stays and no further lookup starts. The test waits for
+    /// each lookup's own end (`WeatherSession.lookup`), not for time to pass (CODEX-IN10-3).
     @Test func anEarlierLookupsEndLeavesALaterLookupRunning() async throws {
         let moved = Location(lat: 37.5013, long: 127.0396)
         let f = try Fixture(LocationDouble(system: .authorizedWhenInUse, fixes: [moved, moved]))
         f.session.reload(.initial)
+        let first = try #require(f.session.lookup)
         // The first lookup found its position at once; the saved and the new location's requests wait for the server.
         #expect(await eventually { f.http.attempts.count >= 2 && !f.session.locating })
         f.location.holdPositions = true
         f.session.reload(.tab)
-        #expect(await eventually { f.location.positions == 2 }, "a second lookup waits for its position")
-        #expect(f.session.locating)
-        // The first lookup's weather arrives and its task ends.
-        await f.clock.advance(by: 1000)
-        let cleared = await eventually(2) { !f.session.locating }
-        #expect(!cleared, "the second lookup still runs")
+        let second = try #require(f.session.lookup)
+        #expect(second != first, "a second lookup started")
+        #expect(await eventually { f.location.positions == 2 }, "and waits for its position")
+        // The server answers; the first lookup's weather arrives and its task ends.
+        await f.answer(3)
+        await first.value
+        #expect(f.session.locating, "the second lookup still runs")
         f.session.reload(.tab)
-        _ = await eventually(0.5) { f.location.positions > 2 }
-        #expect(f.location.positions == 2, "one lookup at a time")
+        #expect(f.session.lookup == second, "one lookup at a time: no further lookup started")
         f.location.releasePositions()
-        await f.clock.advance(by: 1000)
-        #expect(await eventually { !f.session.locating })
+        // The second lookup may load its position's weather: the clock moves until that lookup has ended.
+        let ended = Ended()
+        let waiter = Task { await second.value; ended.value = true }
+        for _ in 0..<50 where !ended.value { await f.clock.advance(by: 1000) }
+        #expect(ended.value, "the second lookup ends")
+        await waiter.value
+        #expect(!f.session.locating)
+        #expect(f.location.positions == 2)
     }
+
+    @MainActor final class Ended { var value = false }
 
     @Test func locationOnReloadsOnlyASelectedCurrentPosition() async throws {
         let f = try Fixture(LocationDouble(system: .denied), selected: 1)
@@ -241,7 +251,8 @@ struct CurrentPositionTests {
         await f.answer(1)
         #expect(await eventually { !f.session.locating })
         #expect(f.location.positions == 1)
-        #expect(f.state.places[0].location == Location(lat: 37.56, long: 126.98))
+        // The location is saved with the response, after work that touches no clock: wait for it.
+        #expect(await eventually { f.state.places[0].location == Location(lat: 37.56, long: 126.98) })
         #expect(await eventually { f.paths == ["/weather/v000903/coord/37.56,126.98"] })
 
         let off = try Fixture(LocationDouble(services: false, system: .denied), current: disabled)

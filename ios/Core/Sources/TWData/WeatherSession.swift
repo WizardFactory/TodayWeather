@@ -69,6 +69,8 @@ public final class WeatherSession {
     public private(set) var locating = false
     /// Lookups started so far; a lookup ends the turn only while it is the latest (CODEX-IN10-2).
     @ObservationIgnored private var lookups = 0
+    /// The lookup started last (running or finished); awaiting it waits for that lookup's end.
+    @ObservationIgnored public private(set) var lookup: Task<Void, Never>?
 
     /// The retry confirmation is open (`LOC_ERROR`, `LOC_FAIL_TO_GET_WEATHER_INFO`, `LOC_CLOSE` and `LOC_OK`).
     public private(set) var retry = false
@@ -267,7 +269,7 @@ public final class WeatherSession {
         locating = true
         lookups += 1
         let lookup = lookups
-        Task { @MainActor [weak self] in
+        self.lookup = Task { @MainActor [weak self] in
             guard let self else { return }
             let step = TabLocation.decide(record: location.recorded, hasSaved: place.address != nil || place.location != nil)
             // `trackEvent('position', 'status', 'authorized', isLocationAuthorized ? 1 : 0)`.
