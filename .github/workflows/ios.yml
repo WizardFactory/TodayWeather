@@ -59,6 +59,12 @@ on:
       - "client/www/templates/nation.html"
       - "client/www/templates/nation-air.html"
       - "client/www/templates/kma-special.html"
+      # Sources of ios/tools/server-routes/generate.py (IN-18: the legacy server's route table for the request-path
+      # test), which runs the Android route generator over server/.
+      - "server/app.js"
+      - "server/routes/**"
+      - "server/package-lock.json"
+      - "android/tools/server-routes/generate.mjs"
       - ".github/workflows/ios.yml"
   push:
     branches: [master]
@@ -112,6 +118,11 @@ on:
       - "client/www/templates/nation.html"
       - "client/www/templates/nation-air.html"
       - "client/www/templates/kma-special.html"
+      # Sources of ios/tools/server-routes/generate.py (IN-18).
+      - "server/app.js"
+      - "server/routes/**"
+      - "server/package-lock.json"
+      - "android/tools/server-routes/generate.mjs"
       - ".github/workflows/ios.yml"
 
 # Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
@@ -129,7 +140,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps and ad privacy entries are current
+      # Node runs the Android route generator for ios/tools/server-routes/generate.py (IN-18).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps, ad privacy entries and the server route table are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
@@ -142,6 +157,7 @@ jobs:
           python3 ios/tools/ads/generate.py
           python3 ios/tools/share/generate.py
           python3 ios/tools/nation/generate.py
+          python3 ios/tools/server-routes/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
       - name: Core package tests (macOS)
