@@ -67,6 +67,8 @@ public final class WeatherSession {
 
     /// The current position's lookup runs (TabCtrl's loading indicator for the current position).
     public private(set) var locating = false
+    /// Lookups started so far; a lookup ends the turn only while it is the latest (CODEX-IN10-2).
+    @ObservationIgnored private var lookups = 0
 
     /// The retry confirmation is open (`LOC_ERROR`, `LOC_FAIL_TO_GET_WEATHER_INFO`, `LOC_CLOSE` and `LOC_OK`).
     public private(set) var retry = false
@@ -263,6 +265,8 @@ public final class WeatherSession {
     private func lookupCurrentPosition(_ place: Place) {
         guard let location, !locating else { return }
         locating = true
+        lookups += 1
+        let lookup = lookups
         Task { @MainActor [weak self] in
             guard let self else { return }
             let step = TabLocation.decide(record: location.recorded, hasSaved: place.address != nil || place.location != nil)
@@ -276,6 +280,8 @@ public final class WeatherSession {
                     // The indicator hides when the position settles, before the new location's weather loads.
                     locating = false
                     await moved(Location(lat: normalized.lat, long: normalized.long))
+                    // A later lookup may have started while the new location's weather loaded: its turn is its own.
+                    if lookup != lookups { return }
                 } else {
                     message = .notFound
                 }

@@ -29,11 +29,20 @@ final class CoreLocationAccess: NSObject, LocationAccess {
     private var positionStreams: [UUID: AsyncStream<PositionEvent>.Continuation] = [:]
     private var observers: [NSObjectProtocol] = []
     private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "location")
+    /// The system's authorization and the location services switch; tests pass doubles (the app has no test mode).
+    private let systemStatus: (@MainActor () -> CLAuthorizationStatus)?
+    private let servicesProbe: @Sendable () async -> Bool
 
     /// Location became enabled (`reloadEvent 'locationOn'`).
     var onLocationOn: () -> Void = {}
 
-    override init() {
+    init(systemStatus: (@MainActor () -> CLAuthorizationStatus)? = nil,
+         servicesProbe: @escaping @Sendable () async -> Bool = {
+             // `locationServicesEnabled()` may block: read off the main thread.
+             await Task.detached { CLLocationManager.locationServicesEnabled() }.value
+         }) {
+        self.systemStatus = systemStatus
+        self.servicesProbe = servicesProbe
         super.init()
         manager.delegate = self
         servicesManager.delegate = servicesDelegate
@@ -49,22 +58,28 @@ final class CoreLocationAccess: NSObject, LocationAccess {
     var recorded: LocationPermission? { record.status }
     var servicesEnabled: Bool { servicesOn }
 
-    func status() -> LocationPermission { LocationPermission(Self.system(manager.authorizationStatus)) }
+    private var authorization: CLAuthorizationStatus { systemStatus?() ?? manager.authorizationStatus }
+
+    func status() -> LocationPermission { LocationPermission(Self.system(authorization)) }
 
     /// `checkLocationMode`: the start and each return to the foreground.
     func check() {
+        Task { [weak self] in await self?.checkNow() }
+    }
+
+    /// One `checkLocationMode`, finished when it returns. The status is read once the services answer is there, as the
+    /// Cordova code reads it in that callback: the user may have answered the prompt meanwhile, and an older status
+    /// would undo that report (the start page would then ask again and again; CODEX-IN10-1).
+    func checkNow() async {
+        let enabled = await servicesProbe()
         let status = status()
-        Task { [weak self] in
-            let enabled = await Task.detached { CLLocationManager.locationServicesEnabled() }.value
-            guard let self else { return }
-            servicesOn = enabled
-            record.check(servicesEnabled: enabled, status: status)
-            log.info("location check services=\(enabled, privacy: .public) status=\(status.rawValue, privacy: .public)")
-        }
+        servicesOn = enabled
+        record.check(servicesEnabled: enabled, status: status)
+        log.info("location check services=\(enabled, privacy: .public) status=\(status.rawValue, privacy: .public)")
     }
 
     func request() async -> LocationPermission {
-        guard manager.authorizationStatus == .notDetermined, servicesOn, pendingRequest == nil else {
+        guard authorization == .notDetermined, servicesOn, pendingRequest == nil else {
             let now = status()
             reported(now)
             return now
