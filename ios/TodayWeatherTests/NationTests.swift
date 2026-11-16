@@ -140,8 +140,11 @@ struct NationTests {
         #expect(f.nation.page == nil)
 
         // Each opening sent its request, with the units and the WebView's language.
+        // A busy machine can hold the 0.5 s answer past 2 s, when `_getHttp` sends its next attempt (one to three per
+        // opening; NationSourceTests checks their timing on a virtual clock).
         let paths = f.server.requests.map { $0.0.path }
-        #expect(paths == ["/v000903/nation/KR", "/v000903/nation/KR", "/v000903/kma/special"])
+        #expect((2...6).contains(paths.filter { $0 == "/v000903/nation/KR" }.count), "\(paths)")
+        #expect(paths.last == "/v000903/kma/special" && paths.filter { $0 == "/v000903/kma/special" }.count == 1, "\(paths)")
         #expect(f.server.requests.allSatisfy { $0.1 == ["Accept-Language": "ko-KR,ko;q=0.9"] })
         // The stored units (the fixture's state), in `Units.getAllUnits()` order.
         let units = try #require(f.shell.holder.state?.units)
