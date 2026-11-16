@@ -162,16 +162,20 @@ class PairedReadTests(unittest.TestCase):
         self.assertEqual((self.path / '1.body').read_bytes(), b'')
         self.assertEqual(peer.requests[0][0], 'HEAD')
 
-    def test_redirect_and_auth_quota_stop_without_contacting_second_origin(self):
+    def test_redirect_and_auth_quota_are_recorded_and_the_pair_continues(self):
+        # CONTINUE: a rejected or redirected attempt is evidence, not the end of the run.
         for status in (302, 401, 403, 429):
             with self.subTest(status=status):
                 a, b = self.peer(status=status), self.peer()
-                state = self.path / f'stop-{status}'
-                result = capture.execute(manifest(), a.origin, b.origin, state, self.binary, loopback_test=True)
-                self.assertEqual(result['attempts'], {'candidate': 1})
+                state = self.path / f'continue-{status}'
+                # One slot per origin (interval 100 s); 5 s leaves room for the 1 s spacing
+                # between the two requests on a loaded machine.
+                result = capture.execute(manifest(duration=5), a.origin, b.origin, state, self.binary, loopback_test=True)
+                self.assertEqual(result['attempts'], {'candidate': 1, 'production': 1})
                 self.assertEqual(len(a.requests), 1)
-                self.assertEqual(b.requests, [])
-                self.assertEqual(result['terminal'], 'redirect' if status == 302 else f'http-{status}')
+                self.assertEqual(len(b.requests), 1)
+                self.assertEqual(result['terminal'], 'duration-complete')
+                self.assertEqual(result['failed'], {'candidate': 1})
 
     def test_deadline_and_body_limit(self):
         slow = self.peer(delay=2)
@@ -219,7 +223,7 @@ class PairedReadTests(unittest.TestCase):
         self.assertEqual(ledger.get('terminal'), 'duration-complete')
 
     def test_transport_failure_count_survives_resume_and_other_origin_success(self):
-        m = manifest(duration=100)
+        m = manifest(duration=10 * capture.OUTAGE_SECONDS)
         ledger = self.ledger(m)
         case = m['cases'][0]
         start = ledger.get('started')
@@ -232,8 +236,19 @@ class PairedReadTests(unittest.TestCase):
         with patch.object(capture.time, 'time', return_value=start+4):
             ident = resumed.reserve(case, 3, 'candidate')
         resumed.finish(ident, {'error': 'ConnectionRefusedError'})
-        self.assertEqual(resumed.get('terminal'), 'consecutive-failures')
+        # Three failures within seconds are counted but do not end the run.
+        self.assertIsNone(resumed.get('terminal'))
         self.assertEqual(resumed.get('failures'), {'candidate': 3, 'production': 0})
+        # Still failing after the outage window: the origin is gone, stop.
+        with patch.object(capture.time, 'time', return_value=start+1+capture.OUTAGE_SECONDS-1):
+            ident = resumed.reserve(case, 4, 'candidate')
+            resumed.finish(ident, {'status': 503})
+        self.assertIsNone(resumed.get('terminal'))
+        with patch.object(capture.time, 'time', return_value=start+1+capture.OUTAGE_SECONDS):
+            ident = resumed.reserve(case, 5, 'candidate')
+            resumed.finish(ident, {'error': 'deadline'})
+        self.assertEqual(resumed.get('terminal'), 'origin-outage')
+        self.assertEqual(resumed.get('failures'), {'candidate': 5, 'production': 0})
         with self.assertRaisesRegex(ValueError, 'admitted'):
             resumed.finish(99, {'status': 200})
 
@@ -311,10 +326,27 @@ class PairedReadTests(unittest.TestCase):
                 m['cases'][0]['interval_seconds'] = 1
                 result = capture.execute(m, a.origin, b.origin, self.path/('run-'+failing),
                                          self.binary, loopback_test=True)
-                self.assertEqual(result['terminal'], 'consecutive-failures')
-                self.assertEqual(result['attempts'][failing], 3)
-                self.assertEqual(len(a.requests), 3)
-                self.assertEqual(len(b.requests), 2 if failing == 'candidate' else 3)
+                # A short outage of one origin is recorded per attempt; both keep being read.
+                self.assertEqual(result['terminal'], 'duration-complete')
+                self.assertGreaterEqual(result['attempts'][failing], 3)
+                self.assertEqual(result['failed'], {failing: result['attempts'][failing]})
+                # The last pair may be incomplete when the duration ends between its two requests (CX-SR2-005).
+                self.assertLessEqual(abs(len(a.requests) - len(b.requests)), 1)
+
+    def test_a_success_ends_the_outage_window(self):
+        m = manifest(duration=10 * capture.OUTAGE_SECONDS)
+        ledger = self.ledger(m)
+        case = m['cases'][0]
+        start = ledger.get('started')
+        script = [(1, {'status': 500}), (2, {'status': 429}), (3, {'error': 'deadline'}),
+                  (capture.OUTAGE_SECONDS - 5, {'status': 200}),
+                  (capture.OUTAGE_SECONDS + 10, {'status': 500}), (capture.OUTAGE_SECONDS + 11, {'status': 500}),
+                  (capture.OUTAGE_SECONDS + 12, {'error': 'oversize'})]
+        for slot, (offset, outcome) in enumerate(script):
+            with patch.object(capture.time, 'time', return_value=start + offset):
+                ledger.finish(ledger.reserve(case, slot, 'production'), outcome)
+        self.assertIsNone(ledger.get('terminal'))
+        self.assertEqual(ledger.get('failures'), {'production': 3})
 
     def test_execute_preserves_clock_rollback_reason(self):
         # GEM-BS-002: exercise execute's exception wrapper, not just Ledger.clock.

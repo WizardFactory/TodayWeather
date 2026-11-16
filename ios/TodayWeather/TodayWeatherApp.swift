@@ -12,6 +12,8 @@ struct TodayWeatherApp: App {
     init() {
         // IN-15: ads, usage analytics and crash reporting follow the shell, which the migration creates.
         Monetization.shared.connect(AppLaunch.shared)
+        // IN-16: the weather pages' share button.
+        WeatherShare.shared.connect(AppLaunch.shared)
     }
 
     var body: some Scene {

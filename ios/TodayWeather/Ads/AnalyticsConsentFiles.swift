@@ -1,11 +1,13 @@
 import Foundation
 import TWDomain
+import TWStorage
 
 /// The usage analytics choice and the SDK's collection state (IN-15, #2964) as two small files in
 /// `Library/Application Support/TodayWeather/`, each written atomically: `analytics-choice` holds `true` or `false`
 /// (the Cordova key `twAnalyticsConsentV1`), `analytics-collection` holds `true` or `false` after the SDK calls (the
 /// plugin's persisted flag). A write reports failure, so a grant that could not be stored never survives. A file that
-/// is missing or cannot be read counts as no choice and collection off.
+/// is missing or cannot be read counts as no choice and collection off. Both files are excluded from backups
+/// (`BackupPolicy`, IN-16).
 @MainActor
 final class AnalyticsConsentFiles: AnalyticsConsentRecords {
     let directory: URL
@@ -50,6 +52,9 @@ final class AnalyticsConsentFiles: AnalyticsConsentRecords {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try Data((value ? "true" : "false").utf8).write(to: url, options: [.atomic])
+            // Out of backups and transfers (IN-16): analytics is off on a restored device until the user opts in. The
+            // atomic write replaced the file, so the mark is set again.
+            BackupPolicy.exclude(url)
             return true
         } catch {
             return false

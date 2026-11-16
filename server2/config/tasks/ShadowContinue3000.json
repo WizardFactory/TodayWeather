@@ -1,0 +1,37 @@
+{
+  "task": "ShadowContinue3000",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3000",
+  "scope": "SR-2 of #2998: a single failed guard observation, operator status poll or reader request no longer ends the shadow qualification run; operator interrupt detaches; resume reuses the journaled SSH target. PR to master; no deployment, AWS change or qualification run.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowContinue3000.json",
+    "server2/deploy/shadow/guard.py",
+    "server2/deploy/shadow/provision.py",
+    "server2/deploy/shadow/remote.py",
+    "server2/tools/shadow/paired_read.py",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tests/integration/test_paired_read.py",
+    "server2/tests/integration/test_shadow_simulation.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Guard misses, operator poll tolerance, detach and resume, reader failure recording"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3000/verification.md",
+      "category": "documentation",
+      "reason": "Selected verification evidence for SR-2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3000/simulation.json",
+      "category": "documentation",
+      "reason": "Simulation summary for SR-2 against the SR-1 baseline"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3000/linux-check.json",
+      "category": "documentation",
+      "reason": "Disposable-VM check report"
+    }
+  ]
+}

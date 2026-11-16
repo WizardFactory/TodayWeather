@@ -1,0 +1,1316 @@
+{
+ "generator": "ios/tools/share/generate.py (cases.js in the macOS JavaScriptCore shell)",
+ "sources": [
+  {
+   "path": "client/www/js/service.weatherutil.js",
+   "commit": "23837d96c524ef275331c706d3304a8cb008ea28",
+   "sha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0"
+  },
+  {
+   "path": "client/www/js/controller.tabctrl.js",
+   "commit": "2154640a3acedf3f77759e5389fe102569c4c30d",
+   "sha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd"
+  },
+  {
+   "path": "client/www/locales/ko.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3"
+  },
+  {
+   "path": "client/www/locales/en.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92"
+  },
+  {
+   "path": "client/www/locales/ja.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "704c22f73085f7bd217c5ac19fac2fb6863940f9b4d6905ef51790d52457e63b"
+  },
+  {
+   "path": "client/www/locales/de.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "d87e5f95b8ca0543e3715aea8d9588cd2b53aa504701e377941f397251670cdd"
+  },
+  {
+   "path": "client/www/locales/zh-CN.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "05f74f251cb93017af9ecf1a3a952036414c826ba89c1500219e25d6c3b575ba"
+  },
+  {
+   "path": "client/www/locales/zh-TW.json",
+   "commit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4",
+   "sha256": "fb4ad905f6afdfafca79b204415532a6429a5f4ab1d3897e2d61c749da43adae"
+  }
+ ],
+ "note": "doTabShare for the selected city record `city` (absent: no city) with Util.language `language` and the catalog `catalog` (`texts`): `message` is what window.plugins.socialsharing.share received (with `shareArguments`, its subject, file and url), `startPopup` that the start choice opened instead, `threw` the error that ended the weather lines (the message then holds the city line).",
+ "texts": {
+  "ko": {
+   "LOC_CURRENT": "현재",
+   "LOC_HIGHEST": "최고",
+   "LOC_LOWEST": "최저",
+   "LOC_WEATHER": "날씨",
+   "LOC_TODAYWEATHER": "오늘날씨"
+  },
+  "en": {
+   "LOC_CURRENT": "Current",
+   "LOC_HIGHEST": "Highest",
+   "LOC_LOWEST": "Lowest",
+   "LOC_WEATHER": "Weather",
+   "LOC_TODAYWEATHER": "TodayWeather"
+  },
+  "ja": {
+   "LOC_CURRENT": "現在",
+   "LOC_HIGHEST": "最高",
+   "LOC_LOWEST": "最低",
+   "LOC_WEATHER": "天気",
+   "LOC_TODAYWEATHER": "今日天気"
+  },
+  "de": {
+   "LOC_CURRENT": "Jetzt",
+   "LOC_HIGHEST": "höchste",
+   "LOC_LOWEST": "niedrigste",
+   "LOC_WEATHER": "Wetter",
+   "LOC_TODAYWEATHER": "HeuteWetter"
+  },
+  "zh-CN": {
+   "LOC_CURRENT": "现在",
+   "LOC_HIGHEST": "最高",
+   "LOC_LOWEST": "最低",
+   "LOC_WEATHER": "天气",
+   "LOC_TODAYWEATHER": "今日天气"
+  },
+  "zh-TW": {
+   "LOC_CURRENT": "現在",
+   "LOC_HIGHEST": "最高",
+   "LOC_LOWEST": "最低",
+   "LOC_WEATHER": "天氣",
+   "LOC_TODAYWEATHER": "今日天氣"
+  }
+ },
+ "cases": [
+  {
+   "name": "seoul ko-KR",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "seoul ko",
+   "language": "ko",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "seoul en-US",
+   "language": "en-US",
+   "catalog": "en",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\nCurrent 7.2˚ ⛅\nHighest 12˚, Lowest -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\nTodayWeather https://twa.app.link/II1JstpVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "seoul ja",
+   "language": "ja",
+   "catalog": "ja",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\n現在 7.2˚ ⛅\n最高 12˚, 最低 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n今日天気 https://twa.app.link/II1JstpVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "seoul de-DE",
+   "language": "de-DE",
+   "catalog": "de",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\nJetzt 7.2˚ ⛅\nhöchste 12˚, niedrigste -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\nHeuteWetter https://twa.app.link/II1JstpVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "seoul zh-CN",
+   "language": "zh-CN",
+   "catalog": "zh-CN",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\n现在 7.2˚ ⛅\n最高 12˚, 最低 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n今日天气 https://twa.app.link/II1JstpVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "seoul zh-TW",
+   "language": "zh-TW",
+   "catalog": "zh-TW",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\n現在 7.2˚ ⛅\n最高 12˚, 最低 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n今日天氣 https://twa.app.link/II1JstpVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "a language tag containing ko (kok-IN)",
+   "language": "kok-IN",
+   "catalog": "en",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "회현동\nCurrent 7.2˚ ⛅\nHighest 12˚, Lowest -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\nTodayWeather https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "empty name, address of 5 parts",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "",
+    "address": "대한민국 경기도 수원시 장안구 정자동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "수원시,정자동\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no name, address of 4 parts with a province",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "address": "대한민국 경기도 수원시 장안구",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "수원시,장안구\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no name, address of 4 parts",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "서울시,회현동\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no name, address of 3 parts",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "address": "대한민국 제주특별자치도 제주시",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "제주도,제주시\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no name, address of 2 parts",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "address": "대한민국 부산광역시",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "부산시\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no name, foreign address",
+   "language": "en-US",
+   "catalog": "en",
+   "city": {
+    "address": "London",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "\nCurrent 7.2˚ ⛅\nHighest 12˚, Lowest -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\nTodayWeather https://twa.app.link/II1JstpVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no name, no address",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "number name",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": 5,
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "message": "5\n현재 7.2˚ ⛅\n최고 12˚, 최저 -1˚\n어제보다 -1˚, 맑음\n대기상태가 좋아요\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "summary only",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     },
+     "summary": "맑음"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n맑음\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "summaryWeather only",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     },
+     "summaryWeather": "맑음",
+     "summary": "흐림"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n맑음\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "summaryWeather null with summaryAir",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     },
+     "summaryWeather": null,
+     "summaryAir": "좋음"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\nnull\n좋음\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "summaryWeather with summaryAir null",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     },
+     "summaryWeather": "비",
+     "summaryAir": null
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n비\nnull\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "summaryWeather empty",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     },
+     "summaryWeather": "",
+     "summary": "흐림"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "summaryWeather 0",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     },
+     "summaryWeather": 0
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no summary",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "missing values",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "skyIcon": "cloud"
+    }
+   },
+   "message": "회현동\n현재 undefined˚ ☁\n최고 undefined˚, 최저 undefined˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "null values",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": null,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": "8",
+      "tmn": null
+     }
+    }
+   },
+   "message": "회현동\n현재 null˚ 🌞\n최고 8˚, 최저 null˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "today null",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": null
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 undefined˚, 최저 undefined˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "today a string",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun",
+     "today": "x"
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 undefined˚, 최저 undefined˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "number texts",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": -0.5,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": 1e+21,
+      "tmn": 0.1
+     }
+    }
+   },
+   "message": "회현동\n현재 -0.5˚ 🌞\n최고 1e+21˚, 최저 0.1˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "boolean and array values",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": true,
+     "skyIcon": "sun",
+     "today": {
+      "tmx": [
+       1,
+       null,
+       "a"
+      ],
+      "tmn": {}
+     }
+    }
+   },
+   "message": "회현동\n현재 true˚ 🌞\n최고 1,,a˚, 최저 [object Object]˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji lightning",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun_smallcloud_lightning",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ⛈\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji rainsnow",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "cloud_rainsnow",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ☔☃\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji rain",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "sun_bigcloud_rain",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ☔\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji snow",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "snow",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ☃\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji moon cloud",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_bigcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ⛅\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji cloud",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "cloud",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ ☁\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji moon",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ 🌞\n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji none",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "fog",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ \n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "emoji case-sensitive",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "Sun",
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n현재 7.2˚ \n최고 12˚, 최저 3˚\n\n오늘날씨 https://twa.app.link/wgVmUTfVoM",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "name": "no currentWeather",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    }
+   },
+   "message": "회현동\n",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ],
+   "threw": "TypeError"
+  },
+  {
+   "name": "currentWeather null",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": null
+   },
+   "message": "회현동\n",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ],
+   "threw": "TypeError"
+  },
+  {
+   "name": "no skyIcon",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 3
+    }
+   },
+   "message": "회현동\n",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ],
+   "threw": "TypeError"
+  },
+  {
+   "name": "skyIcon a number",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": 5,
+     "today": {
+      "tmx": 12,
+      "tmn": 3
+     }
+    }
+   },
+   "message": "회현동\n",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ],
+   "threw": "TypeError"
+  },
+  {
+   "name": "currentWeather a string",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": {
+     "lat": 37.56,
+     "long": 126.98
+    },
+    "currentWeather": "x"
+   },
+   "message": "회현동\n",
+   "shareArguments": [
+    null,
+    null,
+    null
+   ],
+   "threw": "TypeError"
+  },
+  {
+   "name": "no city",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "startPopup": true
+  },
+  {
+   "name": "no location",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "startPopup": true
+  },
+  {
+   "name": "location null",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "회현동",
+    "address": "대한민국 서울특별시 중구 회현동",
+    "location": null,
+    "currentWeather": {
+     "t1h": 7.2,
+     "skyIcon": "moon_smallcloud",
+     "today": {
+      "tmx": 12,
+      "tmn": -1
+     },
+     "summaryWeather": "어제보다 -1˚, 맑음",
+     "summaryAir": "대기상태가 좋아요"
+    }
+   },
+   "startPopup": true
+  },
+  {
+   "name": "current position without a location",
+   "language": "ko-KR",
+   "catalog": "ko",
+   "city": {
+    "name": "현재 위치",
+    "currentPosition": true
+   },
+   "startPopup": true
+  }
+ ]
+}
