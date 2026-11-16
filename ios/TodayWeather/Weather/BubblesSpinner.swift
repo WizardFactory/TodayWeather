@@ -16,6 +16,9 @@ struct WeatherBarActions: View {
             BarButton(glyph: Glyphs.upload, colors: colors, width: 32, action: onShare)
                 .accessibilityLabel("share")
                 .accessibilityIdentifier("forecast-share")
+                // The share sheet's popover points at the button on iPad (IN-16, `ShareAnchor`); outside the button's
+                // accessibility modifiers, so the anchor takes neither its label nor its identifier.
+                .background(ShareAnchorView().opacity(0).accessibilityHidden(true))
                 .padding(.trailing, 4)
         }
     }
