@@ -68,6 +68,14 @@ struct AlarmsScreenshotTests {
             let bottom = state == "alert-off" ? 550 : 633
             let height = Int(CGFloat(bottom) * Self.scale)
             try compare(name, native.top(height), reference.top(height), tolerances, &report)
+            // The picker's 1 px #ddd lines (a whole-page metric barely sees them): the heading's top and bottom borders
+            // and the hours box's top border, sampled inside each line.
+            if state.hasPrefix("picker") {
+                for (x, y) in [(200, 295 * 3 + 1), (200, 338 * 3 + 1), (115, 379 * 3 + 1)] {
+                    let expected = reference.rgb(x: x * 3, y: y), drawn = native.rgb(x: x * 3, y: y)
+                    #expect(zip(drawn, expected).allSatisfy { abs($0 - $1) <= 12 }, "\(name) line at \(y): \(drawn) vs \(expected)")
+                }
+            }
             // The page's background under Cancel / Save (dimmed by the backdrop under a popup).
             for y in [reference.height - 150, reference.height - 450] {
                 let expected = reference.rgb(x: 600, y: y)
