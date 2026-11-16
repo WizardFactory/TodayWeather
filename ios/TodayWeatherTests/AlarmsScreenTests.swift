@@ -260,6 +260,10 @@ struct AlarmsScreenTests {
         let f = try AlarmsFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul, PlacesFixture.london], started: false)
         #expect(f.places.shell.screen == .start)
         f.alarms.notificationTapped("2", session: f.places.session)
+        // Later taps are kept too and delivered in order (CODEX-IN14-3): one without a number and one outside the places
+        // do not undo the earlier one's selection.
+        f.alarms.notificationTapped("abc", session: f.places.session)
+        f.alarms.notificationTapped("7", session: f.places.session)
         #expect(f.state.placeIndex == 1, "held while S01 shows")
         let before = f.places.server.requests.count
         Self.closeStart(f, adding: PlacesFixture.busan)
