@@ -31,6 +31,8 @@ final class AlarmsScreens {
     /// The time zone of the visit's times (the device's).
     @ObservationIgnored var zone: () -> TimeZone = { TimeZone.current }
     @ObservationIgnored private var introShown = false
+    /// The taps that came while S01 showed (their `cityIndex`), in order: delivered once S01 closed (CODEX-IN14-1, -3).
+    @ObservationIgnored private var heldTaps: [String?] = []
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "alarms")
 
     init(shell: ShellModel, makePage: @escaping () -> AlarmPage, postList: @escaping () -> Void) {
@@ -118,16 +120,36 @@ final class AlarmsScreens {
     // MARK: Taps, O06 and O07
 
     /// A notification's tap (`_notificationCallback` with `tap`): `setCityIndex(parseInt(cityIndex))`, which refuses an
-    /// index outside the places, then `reloadEvent 'push'`, which TabCtrl handles once it exists (not while S01 shows).
-    /// The page shown stays. Nothing without a number.
+    /// index outside the places, then `reloadEvent 'push'`. The page shown stays. Nothing without a number. While S01
+    /// shows the tap waits until S01 has closed, as the Android app holds its delivery while the start page shows
+    /// (`startClosed`, in order with any other held taps); otherwise S01's add would select its own place over the
+    /// notification's (CODEX-IN14-1).
     func notificationTapped(_ cityIndex: String?, session: WeatherSession) {
-        guard let index = NotificationTap.placeIndex(cityIndex), let state = shell.holder.state else { return }
-        let valid = index >= 0 && index < Double(state.places.count)
         if case .start = shell.screen {
-            if valid { shell.holder.change { $0.placeIndex = Int(index) } }
+            heldTaps.append(cityIndex)
             return
         }
+        guard let index = NotificationTap.placeIndex(cityIndex), let state = shell.holder.state else { return }
+        let valid = index >= 0 && index < Double(state.places.count)
         session.openPlace(valid ? Int(index) : -1, sender: .push)
+    }
+
+    /// S01 closed and the tabs show (`AppLaunch.startClosed`): the taps held meanwhile are delivered in their order (a
+    /// later one without a number or outside the places does not undo an earlier selection), and O06 is due 500 ms later,
+    /// as on a start that opens on the tabs (CODEX-IN14-2, -3).
+    func startClosed(session: WeatherSession) {
+        let held = heldTaps
+        heldTaps = []
+        for cityIndex in held { notificationTapped(cityIndex, session: session) }
+        scheduleIntro()
+    }
+
+    /// `showAlertInfoEvent` 500 ms from now; it shows only over the tabs and once per process (`showIntroIfDue`).
+    func scheduleIntro() {
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            self?.showIntroIfDue()
+        }
     }
 
 

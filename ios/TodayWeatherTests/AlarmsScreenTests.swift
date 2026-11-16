@@ -46,8 +46,8 @@ final class AlarmsFixture {
     let recorded = Recorded()
 
     init(places list: [Place], selected: Int = 1, records: [JSONObject] = [], firebase: Bool = false, permission: Bool = true,
-         needsAlertIntro: Bool = false) throws {
-        places = try PlacesFixture(places: list, selected: selected, records: records)
+         needsAlertIntro: Bool = false, started: Bool = true) throws {
+        places = try PlacesFixture(places: list, selected: selected, records: records, started: started)
         if needsAlertIntro { places.holder.change { $0.push.needsAlertIntro = true } }
         let notifications = TestNotifications(available: firebase, permission: permission)
         self.notifications = notifications
@@ -239,6 +239,53 @@ struct AlarmsScreenTests {
         try app.tap("popup-button-0")
         try await app.settle()
         #expect(f.places.shell.popups.isEmpty)
+    }
+
+    /// S01 closing as IN-10's flow does it: a place added and selected, `startVersion` stored, the shell on its tabs, then
+    /// `AppLaunch.startClosed`'s call.
+    static func closeStart(_ f: AlarmsFixture, adding place: Place) {
+        f.places.holder.change { s in
+            s.places.append(place)
+            s.placeIndex = s.places.count - 1
+            s.cordovaExtras["startVersion"] = 1
+        }
+        f.places.shell.closeStart()
+        f.alarms.startClosed(session: f.places.session)
+    }
+
+    /// A tap that comes while S01 shows waits until S01 has closed, then selects its place and loads it (CODEX-IN14-1:
+    /// the Android app holds the delivery while the start page shows; S01's add would otherwise select its own place
+    /// over the notification's).
+    @Test func aTapWhileTheStartPageShowsWaitsForItsEnd() async throws {
+        let f = try AlarmsFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul, PlacesFixture.london], started: false)
+        #expect(f.places.shell.screen == .start)
+        f.alarms.notificationTapped("2", session: f.places.session)
+        // Later taps are kept too and delivered in order (CODEX-IN14-3): one without a number and one outside the places
+        // do not undo the earlier one's selection.
+        f.alarms.notificationTapped("abc", session: f.places.session)
+        f.alarms.notificationTapped("7", session: f.places.session)
+        #expect(f.state.placeIndex == 1, "held while S01 shows")
+        let before = f.places.server.requests.count
+        Self.closeStart(f, adding: PlacesFixture.busan)
+        #expect(f.state.placeIndex == 2, "the notification's place, after S01 selected its own")
+        #expect(await HostedShellTests.AirLiveTests.wait(5) { f.places.server.requests.count > before }, "and it loads")
+        let after = f.places.server.requests.count
+        f.alarms.startClosed(session: f.places.session)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(f.state.placeIndex == 2 && f.places.server.requests.count == after, "delivered once")
+    }
+
+    /// O06 is due 500 ms after the tabs show: a first start that opens on S01 shows it 500 ms after S01 closed
+    /// (CODEX-IN14-2), once.
+    @Test func theIntroductionWaitsForTheStartPage() async throws {
+        let f = try AlarmsFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul], needsAlertIntro: true, started: false)
+        f.alarms.scheduleIntro()
+        try await Task.sleep(for: .milliseconds(800))
+        #expect(f.places.shell.popups.isEmpty, "not over S01")
+        Self.closeStart(f, adding: PlacesFixture.busan)
+        #expect(await HostedShellTests.AirLiveTests.wait(5) { !f.places.shell.popups.isEmpty }, "O06 after S01 closed")
+        #expect(f.places.shell.popups.first?.title == "악천후 경보")
+        #expect(f.places.shell.popups.count == 1)
     }
 
     /// A tap selects `parseInt(cityIndex)` within range and reloads at once (`reloadEvent 'push'`); the tab stays.
