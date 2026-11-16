@@ -1,0 +1,357 @@
+{
+  "schema": 1,
+  "revision": "76d1d17e (SR-3) on SR-2 1554bccd",
+  "seeds": 20,
+  "scenarios": {
+    "ideal": {
+      "scenario": "ideal",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "observed-quota-at-3min": {
+      "scenario": "observed-quota-at-3min",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "shared-key-daily-429": {
+      "scenario": "shared-key-daily-429",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "production-429-1e-4": {
+      "scenario": "production-429-1e-4",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "production-transient-1e-3": {
+      "scenario": "production-transient-1e-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "poll-failure-1e-4": {
+      "scenario": "poll-failure-1e-4",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "poll-failure-1e-3": {
+      "scenario": "poll-failure-1e-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "sample-failure-1e-5": {
+      "scenario": "sample-failure-1e-5",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "mac-sleeps-night-1": {
+      "scenario": "mac-sleeps-night-1",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "operator-ip-change-day-3": {
+      "scenario": "operator-ip-change-day-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "tx-observed-early-rate": {
+      "scenario": "tx-observed-early-rate",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 27.739,
+      "min_collected_hours": 27.739,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:network_ceiling": 20
+      }
+    },
+    "s3-measured-high": {
+      "scenario": "s3-measured-high",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 45.0,
+      "min_collected_hours": 45.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:s3_allowance": 20
+      }
+    },
+    "candidate-exit-day-3": {
+      "scenario": "candidate-exit-day-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.0,
+      "min_collected_hours": 60.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "candidate-exit": 20
+      }
+    },
+    "storage-auth-broken-role": {
+      "scenario": "storage-auth-broken-role",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 3.0,
+      "min_collected_hours": 3.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:s3_authorization": 20
+      }
+    },
+    "realistic-combined": {
+      "scenario": "realistic-combined",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    }
+  },
+  "sr2": {
+    "ideal": {
+      "scenario": "ideal",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "observed-quota-at-3min": {
+      "scenario": "observed-quota-at-3min",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 0.05,
+      "min_collected_hours": 0.05,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    },
+    "shared-key-daily-429": {
+      "scenario": "shared-key-daily-429",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 14.925,
+      "min_collected_hours": 2.714,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    },
+    "production-429-1e-4": {
+      "scenario": "production-429-1e-4",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "production-transient-1e-3": {
+      "scenario": "production-transient-1e-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "poll-failure-1e-4": {
+      "scenario": "poll-failure-1e-4",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "poll-failure-1e-3": {
+      "scenario": "poll-failure-1e-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "sample-failure-1e-5": {
+      "scenario": "sample-failure-1e-5",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "mac-sleeps-night-1": {
+      "scenario": "mac-sleeps-night-1",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "operator-ip-change-day-3": {
+      "scenario": "operator-ip-change-day-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "tx-observed-early-rate": {
+      "scenario": "tx-observed-early-rate",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 27.739,
+      "min_collected_hours": 27.739,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:network_ceiling": 20
+      }
+    },
+    "s3-measured-high": {
+      "scenario": "s3-measured-high",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 45.0,
+      "min_collected_hours": 45.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:s3_allowance": 20
+      }
+    },
+    "candidate-exit-day-3": {
+      "scenario": "candidate-exit-day-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.0,
+      "min_collected_hours": 60.0,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "candidate-exit": 20
+      }
+    },
+    "realistic-combined": {
+      "scenario": "realistic-combined",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 14.925,
+      "min_collected_hours": 2.714,
+      "evidence_retrievable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:provider_auth_or_quota": 20
+      }
+    }
+  }
+}
