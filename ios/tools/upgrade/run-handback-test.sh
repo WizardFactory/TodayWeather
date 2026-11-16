@@ -168,7 +168,7 @@ fallback() {
 
 # 2. This build over 1.1.1, with the native edits.
 native edit "editsInTheNativeApp()"
-python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-native-1.json"
+python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-native-1.json" native || fail "the native hand-back"
 python3 "$HERE/check_handback.py" measure "$DATA" "$OUT/measurement-native-1.json"
 
 # 3. The fallback build shows the native state; its start counts no event; then edits there.
@@ -181,11 +181,13 @@ python3 "$HERE/check_handback.py" console "$OUT" fallback-check-1 "$OUT/console-
     fail "the fallback build logged an event under the native withdrawal"
 fallback edit fallback-edit
 python3 "$HERE/check_handback.py" edit "$OUT" fallback-edit || fail "fallback edit"
-python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-fallback-1.json"
+python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-fallback-1.json" cordova || fail "the fallback claim"
+CLAIM1=$(python3 "$HERE/check_handback.py" marker "$OUT/suite-fallback-1.json")
 
 # 4. This build again: it adopts the fallback build's state.
-native adopt "adoptsWhatTheFallbackBuildChanged()" "$(python3 "$HERE/check_handback.py" marker "$OUT/suite-fallback-1.json")"
-python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-native-2.json"
+native adopt "adoptsWhatTheFallbackBuildChanged()" "$CLAIM1"
+# The adoption (claim + 1) and the grant (claim + 2).
+python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-native-2.json" native $((CLAIM1 + 2)) || fail "the native hand-back"
 
 # 5. The fallback build again: the adopted state and the native grant; a withdrawal.
 fallback check fallback-check-2
@@ -193,11 +195,12 @@ python3 "$HERE/check_handback.py" check "$OUT" fallback-check-2 "$OUT/suite-nati
     '{"names":[null,"명동","대전"],"index":2,"temperatureUnit":"F","theme":"dark","consent":true}' || fail "fallback check 2"
 fallback withdraw fallback-withdraw
 python3 "$HERE/check_handback.py" withdraw "$OUT" fallback-withdraw || fail "fallback withdrawal"
-python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-fallback-2.json"
+python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-fallback-2.json" cordova $((CLAIM1 + 3)) || fail "the fallback claim"
+CLAIM2=$(python3 "$HERE/check_handback.py" marker "$OUT/suite-fallback-2.json")
 
 # 6. This build again: the withdrawal holds.
-native withdrawn "aWithdrawalInTheFallbackBuildHolds()" "$(python3 "$HERE/check_handback.py" marker "$OUT/suite-fallback-2.json")"
-python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-native-3.json"
+native withdrawn "aWithdrawalInTheFallbackBuildHolds()" "$CLAIM2"
+python3 "$HERE/check_handback.py" suite "$SHARED" "$OUT/suite-native-3.json" native $((CLAIM2 + 1)) || fail "the native hand-back"
 
 python3 "$HERE/check_handback.py" requests "$OUT" || fail "a request left the Mac"
 log "PASS"

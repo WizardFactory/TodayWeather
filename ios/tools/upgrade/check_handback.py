@@ -2,7 +2,9 @@
 """Host-side checks of run-handback-test.sh (IN-17, #2966): the suite, the fallback Cordova build's reports, crashes,
 the Firebase SDK's event counters and the result bundles.
 
-    check_handback.py suite      <group-container> <out-json>            the suite's values (strings as stored)
+    check_handback.py suite      <group-container> <out-json> <writer> [min-generation]
+                                 the suite's values (strings as stored) once its file holds a complete marker by <writer>
+                                 of at least that generation
     check_handback.py marker     <suite-json>                             prints the marker's generation
     check_handback.py measure    <data-container> <out-json>              the Firebase SDK's event counters
     check_handback.py tests      <out> <step> <xcresult> <test-name>      HandBackUpgradeTests/<test-name> passed
@@ -30,15 +32,18 @@ KEYS = check_upgrade.HANDBACK_KEYS
 MARKER = check_upgrade.HANDBACK_MARKER
 
 
-def suite_values(group, out):
+def suite_values(group, out, writer, minimum):
     path = os.path.join(group, "Library/Preferences/group.net.wizardfactory.todayweather.plist")
-    # cfprefsd writes the file some time after the app changed the suite: wait for a complete marker, at most 60 s.
-    for _ in range(60):
+    # cfprefsd writes the file some time after the app changed the suite: wait until the file holds the marker the last
+    # step wrote, at most 90 s; a file that never does fails.
+    for _ in range(90):
         values = check_upgrade.plist(path)
         marker = check_upgrade.handback_marker(values) or {}
-        if marker.get("complete") is True:
+        if marker.get("complete") is True and marker.get("writer") == writer and marker.get("generation", 0) >= minimum:
             break
         time.sleep(1)
+    else:
+        sys.exit(f"the suite file holds no complete {writer} marker of generation {minimum} or later: {marker}")
     with open(out, "w") as f:
         json.dump({k: v if isinstance(v, (str, int, float, bool)) else repr(v) for k, v in values.items()}, f,
                   ensure_ascii=False, indent=1)
@@ -155,7 +160,7 @@ def console(c, path):
 def main():
     stage = sys.argv[1]
     if stage == "suite":
-        return suite_values(sys.argv[2], sys.argv[3])
+        return suite_values(sys.argv[2], sys.argv[3], sys.argv[4], int(sys.argv[5]) if len(sys.argv) > 5 else 1)
     if stage == "measure":
         with open(sys.argv[3], "w") as f:
             json.dump(check_upgrade.measurement(sys.argv[2]), f, indent=1)

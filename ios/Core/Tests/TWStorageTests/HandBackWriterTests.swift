@@ -31,6 +31,14 @@ final class SuiteDouble: HandBackSuite, @unchecked Sendable {
         }
     }
 
+    private(set) var synchronized: [Int] = []
+
+    /// Records how many operations the suite had when the writer waited for them.
+    func synchronize() -> Bool {
+        lock.withLock { synchronized.append(log.count) }
+        return true
+    }
+
     /// The suite's strings (other types as their description), for comparisons.
     var strings: [String: String] { values.mapValues { ($0 as? String) ?? "\(type(of: $0)):\($0)" } }
 
@@ -130,6 +138,7 @@ struct HandBackWriterTests {
         let suite = SuiteDouble(c.suiteObjects)
         HandBackWriter(suite: suite, consent: { nil }).write(texts: c.orderedTexts)
         #expect(suite.log == goldenWrites(c.writes))
+        #expect(suite.synchronized == (c.writes.isEmpty ? [] : [c.writes.count]), "the writes reach the daemon before it returns")
         if !c.writes.isEmpty {
             let marker = try #require(CordovaHandBack.parse(suite.string(CordovaHandBack.marker)))
             #expect(marker.complete && marker.writer == "native" && marker.keys == CordovaHandBack.keys)

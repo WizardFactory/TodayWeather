@@ -7,6 +7,8 @@ public protocol HandBackSuite: AnyObject {
     func object(forKey defaultName: String) -> Any?
     func set(_ value: Any?, forKey defaultName: String)
     func removeObject(forKey defaultName: String)
+    /// Waits until the writes made so far reached the preferences daemon (`UserDefaults.synchronize`).
+    @discardableResult func synchronize() -> Bool
 }
 
 extension UserDefaults: HandBackSuite {}
@@ -23,7 +25,9 @@ extension UserDefaults: HandBackSuite {}
 ///    order (a key that already holds its text is not written, so most changes write one key);
 /// 3. the same marker, complete.
 ///
-/// A process that ends during steps 1–2 leaves an incomplete marker; the next start's first load writes the whole
+/// `UserDefaults` hands writes to `cfprefsd` asynchronously, and a process that ended right after a hand-back lost its
+/// last writes on the simulator; the writer therefore waits until they reached the daemon (`synchronize`) before it
+/// returns. A process that ends during steps 1–2 leaves an incomplete marker; the next start's first load writes the whole
 /// hand-back again with the generation after it. Writes reach `cfprefsd` in the order they are made. Step 1 is left out
 /// when no key differs, and nothing is written when the suite already holds every text under a complete native marker.
 public final class HandBackWriter: @unchecked Sendable {
@@ -67,9 +71,11 @@ public final class HandBackWriter: @unchecked Sendable {
 
     /// Writes `texts` in the contract's order (`writes`).
     func write(texts: [(key: String, text: String?)]) {
-        for write in Self.writes(texts, stored: { suite.object(forKey: $0) }) {
+        let writes = Self.writes(texts, stored: { suite.object(forKey: $0) })
+        for write in writes {
             if let text = write.text { suite.set(text, forKey: write.key) } else { suite.removeObject(forKey: write.key) }
         }
+        if !writes.isEmpty { suite.synchronize() }
     }
 
     /// The suite operations, in order, that hand `texts` back over the suite's current values (`stored`).
