@@ -1,0 +1,278 @@
+{
+ "tool": "ios/tools/start-reference/capture.py",
+ "build": {
+  "recipe": "ios/tools/chart-reference/build-cordova.sh <out> http://127.0.0.1:18460",
+  "commit": "ab6acb0c90cac1874ae5c1ba092d0b50052770fb",
+  "client_version": "1.1.2",
+  "cordova_ios": "8.1.1",
+  "xcode": "Xcode 27.2",
+  "node": "v24.19.0",
+  "server": "http://127.0.0.1:18460",
+  "built_at": "2026-11-16T00:59:55Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+ },
+ "data": {
+  "state": "a first launch (no stored state): S01 with O01, then S01 after O01's OK",
+  "places": "an inert stand-in for the Maps JavaScript API (window.google), so no script is fetched"
+ },
+ "pageSources": [
+  {
+   "file": "client/www/templates/start.html",
+   "appSha256": "5abfc42cbbf95214354e2dc063622086f636911bd3184b483aa7174cd602df92",
+   "tracked": true,
+   "clientSha256": "5abfc42cbbf95214354e2dc063622086f636911bd3184b483aa7174cd602df92",
+   "matchesClient": true,
+   "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+  },
+  {
+   "file": "client/www/js/controller.start.js",
+   "appSha256": "a46f0c5f1c45375008c195fde9c35f74849c7b4173b777354cf61f13097e6f71",
+   "tracked": true,
+   "clientSha256": "a46f0c5f1c45375008c195fde9c35f74849c7b4173b777354cf61f13097e6f71",
+   "matchesClient": true,
+   "lastCommit": "92d60a532d1653899ebe4816a6673f34a37bc8c1"
+  },
+  {
+   "file": "client/www/js/service.util.js",
+   "appSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+   "tracked": true,
+   "clientSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/app.js",
+   "appSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "tracked": true,
+   "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/css/ionic.app.css",
+   "appSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ionic/css/ionic.css",
+   "appSha256": "f097999a9ac732f1f805f52cd281a5dec291526ddb0968e5e84e0e1d08d59285",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/img/app_icon.png",
+   "appSha256": "c10cdce6943ead714e5363d3a5da9574d578abd6dbed9eadf974fee84d76b976",
+   "tracked": true,
+   "clientSha256": "c10cdce6943ead714e5363d3a5da9574d578abd6dbed9eadf974fee84d76b976",
+   "matchesClient": true,
+   "lastCommit": "38ce90a9165306713e943512bc17e691a44d3dea"
+  },
+  {
+   "file": "client/www/img/powered_by_google_on_white.png",
+   "appSha256": "85e8811af8ce7aff2444abb675d1acff9189884726709c6c5d89badb6bb96828",
+   "tracked": true,
+   "clientSha256": "85e8811af8ce7aff2444abb675d1acff9189884726709c6c5d89badb6bb96828",
+   "matchesClient": true,
+   "lastCommit": "2254ededf96912990603d3f76a605eafdce07086"
+  },
+  {
+   "file": "client/www/index.html",
+   "appSha256": "0df3ec6b77d9ec26fe136427b2c54be494bf0752783dbeea8b9eb3e73fef0392",
+   "tracked": true,
+   "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
+   "matchesClient": false,
+   "lastCommit": "94a95c59a1cb73246ee79b93be3c8f92e3649d45"
+  },
+  {
+   "file": "client/www/locales/ko.json",
+   "appSha256": "21d2dac921296c7e001a43dd05844ea63d498069781468c0bfd9a8b1d33e6eee",
+   "tracked": true,
+   "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+   "matchesClient": false,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  },
+  {
+   "file": "client/www/locales/en.json",
+   "appSha256": "b6717d8881c9e7101e47033fd78d2c324652b7aa4a158552b41b9332fc9b26e0",
+   "tracked": true,
+   "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+   "matchesClient": false,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "runs": {
+  "ko-KR": {
+   "device": {
+    "name": "twios_in10_cap",
+    "udid": "20A3172F-A9DE-4089-926D-C1DE24FDC8FE",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-16T01:49:09Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "ko-KR",
+    "languages": [
+     "ko-KR"
+    ],
+    "region": "KR",
+    "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready start",
+    "state": "start"
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ]
+  },
+  "en-US": {
+   "device": {
+    "name": "twios_in10_cap",
+    "udid": "20A3172F-A9DE-4089-926D-C1DE24FDC8FE",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-16T01:53:31Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "en-US",
+    "languages": [
+     "en-US"
+    ],
+    "region": "US",
+    "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready start",
+    "state": "start"
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ]
+  }
+ },
+ "files": [
+  {
+   "path": "TodayWeatherTests/StartReference/start-captures.json",
+   "sha256": "90cc17ed19280f16ddf437898bf0322635f8c369fd78e799ae69abbddb0bddca"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-access-popup.png",
+   "sha256": "e92e0de235e17b226783f77e20a88912ccb7ade7d4fe40c63ae946f1dfcd893a"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-access-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-access.json",
+   "sha256": "1f735f09f17de46a5c8fd190b9be0f13fbbf3ed6afd1920d7c4eb8d19ff8dc2d"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-access.png",
+   "sha256": "8c14098989bc026f994651e6aba88e2aecbfcb6942cc7fc9d286d18b4ea8de39"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-search-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-search.json",
+   "sha256": "872781b99ffa25f7fcafd38db20a0ec6f5c19bf3f1814014279e603bde2f11de"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-search.png",
+   "sha256": "cc1f99b8c68c79ea666494bfbda7bb736bdf87940c5418b09fd09ed96585c678"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-start-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-start.json",
+   "sha256": "3268880f4d2c323ba9da78e3dd3adb65c3a7c3556d953225e3b9543a6ddad86b"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-en-US-start.png",
+   "sha256": "870c6652be291aa8f617fc4ae2be1931d5bf37e8be37c3d8762cc1684cf0e736"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-access-popup.png",
+   "sha256": "eda9af26757da4958ff1a3a44e4ed1c23414f8714af9ef7c1d884df0f4b5ae3d"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-access-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-access.json",
+   "sha256": "cf1ac41cc4baf6dddaeb3ab1b4b01343ba56fdda7a4572349ef0120d9e6850e6"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-access.png",
+   "sha256": "37844e969c0cdafcefaf5b4574ea8015e47438f7529984f4d99b830b4a3e3cea"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-search-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-search.json",
+   "sha256": "163f858537136e9646f04bd6716e7e65bbf6378345a2ffbf87427889131f7ff2"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-search.png",
+   "sha256": "430145f7c20ae27973371765b6c73a5b32cb88ab9101f3913a63570364bae1ba"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-start-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-start.json",
+   "sha256": "f3e13f37c3ccbe7a46dd8375b5e5cd0a18ff93ce1aaa4e50554f27bc6c5ab20f"
+  },
+  {
+   "path": "TodayWeatherTests/StartReference/start-ko-KR-start.png",
+   "sha256": "f29585f7b6b3883f19f74d79d011cb5dd57abea505803cb6634f20fefdbfcedd"
+  }
+ ]
+}

@@ -35,6 +35,7 @@ final class WeatherScreens {
     /// Page visits opened so far: each is a new chart identity (CODEX-IN08-3).
     private(set) var visits = 0
     @ObservationIgnored private var retryShown = false
+    @ObservationIgnored private var retryPopupID: UUID?
     /// The window's size in points, for the chart and header sizes (`initSize`'s `bodyWidth` and `bodyHeight`; CODEX-IN08-2):
     /// the screen until the page reports its window, then the window as it is resized.
     @ObservationIgnored private(set) var screenSize: CGSize
@@ -64,6 +65,8 @@ final class WeatherScreens {
     /// An entry event after the migration: the launch is TabCtrl's `init` (`reloadEvent 'init'`), a return from the
     /// background Cordova's `resume` (gated).
     func handle(_ event: EntryEvent) {
+        // While S01 shows TabCtrl does not exist yet: its `init` runs when S01 closes (IN-10, `AppLaunch.startClosed`).
+        if case .start = shell.screen { return }
         switch event {
         case .launch: session.reload(.initial)
         case .resume: session.reload(.resume)
@@ -120,6 +123,12 @@ final class WeatherScreens {
             visitTab = nil
         }
         if session.retry && !retryShown { showRetry() }
+        // A position confirmation replaced it (`showRetryConfirm` closes the open one; IN-10).
+        if !session.retry && retryShown, let id = retryPopupID {
+            shell.dismiss(id)
+            retryShown = false
+            retryPopupID = nil
+        }
     }
 
     /// AirCtrl's `init`: the sizes, the pollutant of the link (`?code=`, else the overall index), the enabled places, then
@@ -130,7 +139,7 @@ final class WeatherScreens {
         var visit = AirScope(metrics: ChartMetrics(bodyWidth: screenSize.width, bodyHeight: screenSize.height),
                              airUnit: state.units.airUnit)
         let enabled = PlaceIndex.enabledCount(state.places.map(\.disable))
-        // No enabled place: Cordova opens the start choice O02 instead (IN-10).
+        // No enabled place: AirCtrl only stops (the Air tab's tap opened O02 before, IN-10).
         visit.open(selectedRecord(), code: airLink, enabledCount: enabled, hasPush: hasPush(state))
         airApplies = session.applies
         airScope = visit
@@ -180,8 +189,8 @@ final class WeatherScreens {
             yesterday: YesterdayText(same: texts["LOC_SAME_AS_YESTERDAY"], than: texts["LOC_THAN_YESTERDAY"]),
             expandShortChart: state.expandShortChart)
         let enabled = PlaceIndex.enabledCount(state.places.map(\.disable))
-        // No enabled place: Cordova opens the start choice O02 instead (IN-10).
-        visit.open(selectedRecord(), enabledCount: enabled, hasPush: hasPush(state))
+        // No enabled place: the start choice O02 instead (IN-10, `CurrentPositionPopups`).
+        if !visit.open(selectedRecord(), enabledCount: enabled, hasPush: hasPush(state)) { session.openStartPopup() }
         appliedEvents = session.applies
         visits += 1
         scope = visit
@@ -265,7 +274,9 @@ final class WeatherScreens {
     /// bell and share buttons, and the page. Nil on other tabs and before the visit applied (the shell's default).
     func content(_ tab: ShellTab) -> TabContent? {
         if tab == .air { return airTabContent() }
-        guard tab == visitTab, let content = pageContent, let state = shell.holder.state else { return nil }
+        // The scope is read first, so a shell drawn before the visit opened (S01 just closed, IN-10) is drawn again
+        // when it does.
+        guard let content = pageContent, tab == visitTab, let state = shell.holder.state else { return nil }
         let theme = Theme.of(state.settings.theme)
         let colors = ShellColors.of(theme, tab: tab)
         let actions = WeatherPageActions(
@@ -286,7 +297,7 @@ final class WeatherScreens {
     /// S05 in the shell: the title, the location glyph (inert on S05: `switchToLocationSettings` is ForecastCtrl's, A10)
     /// or the spinner, the bell and share buttons, and the page with its taps.
     private func airTabContent() -> TabContent? {
-        guard visitTab == .air, let content = airContent, let state = shell.holder.state else { return nil }
+        guard let content = airContent, visitTab == .air, let state = shell.holder.state else { return nil }
         let theme = Theme.of(state.settings.theme)
         let colors = ShellColors.of(theme, tab: .air)
         let actions = AirPageActions(
@@ -383,7 +394,7 @@ final class WeatherScreens {
     /// O03 `weather`: `LOC_ERROR`, `LOC_FAIL_TO_GET_WEATHER_INFO`, Close and OK (positive); OK reloads.
     private func showRetry() {
         retryShown = true
-        shell.show(Popup(title: texts["LOC_ERROR"], lines: [texts["LOC_FAIL_TO_GET_WEATHER_INFO"]], buttons: [
+        let popup = Popup(title: texts["LOC_ERROR"], lines: [texts["LOC_FAIL_TO_GET_WEATHER_INFO"]], buttons: [
             Popup.Button(text: texts["LOC_CLOSE"]) { [weak self] in
                 self?.retryShown = false
                 self?.session.closeRetry()
@@ -392,7 +403,9 @@ final class WeatherScreens {
                 self?.retryShown = false
                 self?.session.confirmRetry()
             },
-        ]))
+        ])
+        retryPopupID = popup.id
+        shell.show(popup)
     }
 
     /// The header's location glyph (`switchToLocationSettings`): while location is not allowed it opens the app's

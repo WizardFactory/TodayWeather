@@ -44,7 +44,9 @@ struct RootView: View {
         Group {
             if let shell = launch.shell {
                 switch shell.screen {
-                case .start: StartPlaceholder(model: shell)
+                case .start:
+                    // S01 (IN-10), created with the shell while the start gate holds.
+                    if let start = launch.startPage { StartView(page: start) } else { SplashView() }
                 case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } },
                                      banner: Monetization.shared.bannerView,
                                      page: launch.pageView)
@@ -90,24 +92,6 @@ struct SplashFrame: View {
         }
         .frame(width: width, height: height)
         .background(Color.white)
-    }
-}
-
-/// S01 (the start page): IN-10 builds it. Until then the shell shows this placeholder, which closes onto the startup
-/// page's tab.
-struct StartPlaceholder: View {
-    let model: ShellModel
-
-    var body: some View {
-        VStack {
-            Spacer()
-            Button(Catalog(code: model.locale.catalog)("LOC_TODAYWEATHER")) { model.closeStart() }
-                .accessibilityIdentifier("start-placeholder")
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-        .background(Color.white)
-        .statusBarStyle(lightContent: true)
     }
 }
 
@@ -521,6 +505,15 @@ struct IonicPopupView: View {
     var body: some View {
         ZStack {
             Color.black.opacity(0.4).contentShape(Rectangle()).onTapGesture {}
+            if let custom = popup.custom {
+                custom
+            } else {
+                standard
+            }
+        }
+    }
+
+    private var standard: some View {
             VStack(spacing: 0) {
                 if !popup.title.isEmpty {
                     Text(popup.title).font(.system(size: titleSize, weight: .medium)).multilineTextAlignment(.center)
@@ -530,7 +523,7 @@ struct IonicPopupView: View {
                 Color(white: 0.933).frame(height: 1).padding(.top, 15)
                 // WebKit lays the 14 px lines 18 pt apart (measured in the About capture, IN-12), more than the
                 // system font's own line height.
-                let lines = Text(popup.lines.joined(separator: "\n")).font(.system(size: lineSize))
+                let lines = Text(Self.syllableBreaks(popup.lines.joined(separator: "\n"))).font(.system(size: lineSize))
                     .lineSpacing(max(0, lineSize * 18 / 14 - UIFont.systemFont(ofSize: lineSize).lineHeight))
                     .frame(maxWidth: .infinity, alignment: .leading).padding(10)
                 if scrolls {
@@ -561,7 +554,21 @@ struct IonicPopupView: View {
             .background(Color.white.opacity(0.9))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("popup")
+    }
+
+    /// WebKit breaks Korean text between any two syllables (the Cordova O01 capture wraps "위 / 해"), where CoreText
+    /// keeps a Korean word whole: a zero-width space between two Hangul syllables gives the same break opportunities
+    /// (IN-10). Nothing else changes.
+    static func syllableBreaks(_ text: String) -> String {
+        var out = String.UnicodeScalarView()
+        var previousHangul = false
+        for scalar in text.unicodeScalars {
+            let hangul = (0xAC00...0xD7A3).contains(scalar.value)
+            if hangul && previousHangul { out.append("\u{200B}") }
+            out.append(scalar)
+            previousHangul = hangul
         }
+        return String(out)
     }
 
     private func buttonColor(_ style: Popup.Button.Style) -> Color {
