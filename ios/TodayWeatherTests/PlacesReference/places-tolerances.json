@@ -1,0 +1,99 @@
+{
+ "metric": "AN-05: strong = share of pixels whose largest RGB channel differs by more than 64 after a 3x3 box blur; mean = mean largest RGB channel difference (0-255). Compared over the whole capture: the WebView from its top (the header bar with the search field) to the tab bar's top, 393x715 pt at scale 3. Each case passes within its value plus `margin`.",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3
+ },
+ "reasons": {
+  "favorites": "The header bar (field, placeholder, 편집), one row: text and image rasterization only; every box is at the captured position (theRowsAreWhereTheCordovaPagePutThem).",
+  "list": "As favorites with three rows and London's filled bell.",
+  "edit": "The current position's row with the location glyph and the switch (Ionic's handle shadow drawn by SwiftUI), and ⊗ in Ionicons with WebKit's synthetic bold, which CoreText thickens differently at the glyph's edges.",
+  "search": "The typed word, 취소, 현재위치로 지역찾기, ten town rows and the divider: text rasterization.",
+  "location": "The found row and Google's logo (the bundled PNG scaled to 144 pt).",
+  "measured-adjustments": "Measured in the first renders and applied in PlacesMetrics: the input's text 24.5 pt into the field, the bell and ⊗ 2/3 pt higher than their line box, 현재위치로 지역찾기's line 2 2/3 pt under the button's top, the name cell 40 % of the content without rounding.",
+  "en-US": "The English system's WebView drew the Korean place names with Apple SD Gothic Neo; the render takes the Korean fallback (cssFallbackLanguage ko).",
+  "headroom": "Each case is its local measurement (`measured`, Xcode 27.2, iOS 26.5 simulator) times 1.5 plus 0.0005 for strong and times 1.2 plus 0.2 for mean, rounded up, plus `margin`, as start-tolerances.json: CI renders with Xcode 26.6."
+ },
+ "cases": {
+  "ko-KR-favorites": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.056
+   },
+   "strong": 0.0005,
+   "mean": 0.27
+  },
+  "ko-KR-search": {
+   "measured": {
+    "strong": 0.00017,
+    "mean": 0.259
+   },
+   "strong": 0.0008,
+   "mean": 0.52
+  },
+  "ko-KR-list": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.078
+   },
+   "strong": 0.0005,
+   "mean": 0.3
+  },
+  "ko-KR-edit": {
+   "measured": {
+    "strong": 0.0006,
+    "mean": 0.179
+   },
+   "strong": 0.0015,
+   "mean": 0.42
+  },
+  "ko-KR-location": {
+   "measured": {
+    "strong": 0.00022,
+    "mean": 0.193
+   },
+   "strong": 0.0009,
+   "mean": 0.44
+  },
+  "en-US-favorites": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.042
+   },
+   "strong": 0.0005,
+   "mean": 0.26
+  },
+  "en-US-search": {
+   "measured": {
+    "strong": 0.00043,
+    "mean": 0.31
+   },
+   "strong": 0.0012,
+   "mean": 0.58
+  },
+  "en-US-list": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.064
+   },
+   "strong": 0.0005,
+   "mean": 0.28
+  },
+  "en-US-edit": {
+   "measured": {
+    "strong": 0.00076,
+    "mean": 0.21
+   },
+   "strong": 0.0017,
+   "mean": 0.46
+  },
+  "en-US-location": {
+   "measured": {
+    "strong": 0.00048,
+    "mean": 0.244
+   },
+   "strong": 0.0013,
+   "mean": 0.5
+  }
+ }
+}

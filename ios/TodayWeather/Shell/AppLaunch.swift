@@ -45,6 +45,8 @@ final class AppLaunch {
     private(set) var weather: WeatherScreens?
     /// The settings pages S07 and S08 and the menu's hand-offs (IN-12), created with the shell.
     private(set) var settings: SettingsScreens?
+    /// The saved places S02 (IN-11), created with the shell.
+    private(set) var places: PlacesScreens?
     /// The nationwide pages S10 and S11 and the warnings S12 (IN-13), created with the shell.
     private(set) var nation: NationScreens?
     /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
@@ -152,6 +154,7 @@ final class AppLaunch {
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
         positionPopups = CurrentPositionPopups(session: session, shell: shell)
+        places = makePlaces(shell, session: session, location: location)
         if case .start = shell.screen { startPage = makeStartPage(shell, location: location) }
         // A unit change posts the push list again through IN-04's registration (`AppPushUnits`).
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
@@ -225,6 +228,27 @@ final class AppLaunch {
             if towns == nil { towns = StartPage.bundledTowns() }
             return towns
         }, closed: { [weak self] in self?.startClosed() })
+    }
+
+    /// The Locations tab S02 (IN-11): a visit's page over the session, with IN-10's search (the Places SDK with the
+    /// private key, else the bundled towns) and the alarms' removal through IN-04's push service.
+    private func makePlaces(_ shell: ShellModel, session: WeatherSession, location: any AppLocation) -> PlacesScreens {
+        let locale = self.locale, holder = self.holder, repository = self.repository
+        let geocode = GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP)
+        var towns: TownSearch?
+        return PlacesScreens(shell: shell, session: session, makePage: {
+            PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
+                       acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry,
+                       removeAlarms: { AppPushRemoval().removeCity($0) })
+        }, search: makePlaceSearch(), towns: {
+            if towns == nil { towns = StartPage.bundledTowns() }
+            return towns
+        })
+    }
+
+    /// What the shell shows on a tab: S02 on the Locations tab (IN-11), the weather and air pages on the others.
+    func tabContent(_ tab: ShellTab) -> TabContent? {
+        tab == .search ? places?.content(tab) : weather?.content(tab)
     }
 
     /// StartCtrl's `close()` after an add (the flow stored `startVersion` and selected the new place): the banner may

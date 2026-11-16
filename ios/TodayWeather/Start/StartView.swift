@@ -409,17 +409,30 @@ struct FixedCssLine: View {
     var weight: Font.Weight = .regular
     let color: CssColor
     let height: CGFloat
+    /// The system font, or a glyph font whose own ascent and descent make the line (IN-11's bell and ⊗).
+    var face: CssRun.Face = .system
 
     var body: some View {
-        let m = CssText.metrics("", size: size)
+        let m = face == .system ? CssText.metrics("", size: size) : Self.glyphMetrics(face, size)
         let baseline = (height - (m.ascent + m.descent)) / 2 + m.ascent
-        let font = fallbackLanguage.map { CssLine.system(size, weight, language: $0) } ?? .system(size: size, weight: weight)
+        let font: Font = switch face {
+        case .system: fallbackLanguage.map { CssLine.system(size, weight, language: $0) } ?? .system(size: size, weight: weight)
+        case .ionicons: Glyphs.ionicons(size).weight(weight)
+        case .material: Glyphs.material(size)
+        }
         ZStack(alignment: .topLeading) {
             Color.clear.frame(width: 0, height: height)
             Text(text).font(font).foregroundStyle(color.color).lineLimit(1).fixedSize()
                 .alignmentGuide(.top) { $0[.firstTextBaseline] - baseline }
         }
         .frame(height: height, alignment: .topLeading)
+    }
+
+    /// A glyph font's ascent and descent rounded up, as WebKit's line box of that font.
+    static func glyphMetrics(_ face: CssRun.Face, _ size: CGFloat) -> (ascent: Double, descent: Double) {
+        _ = Glyphs.material(size)
+        let font = CTFontCreateWithName((face == .ionicons ? "Ionicons" : "MaterialIcons-Regular") as CFString, size, nil)
+        return (ceil(CTFontGetAscent(font)), ceil(CTFontGetDescent(font)))
     }
 }
 
