@@ -49,6 +49,16 @@
       "path": "docs/evidence/tasks/issue-3003/linux-check.json",
       "category": "documentation",
       "reason": "Disposable-VM check report (written by the coordinator)"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Archify source: evidence copy to the state bucket and the cost ceiling"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Archify HTML regenerated from the source"
     }
   ]
 }
