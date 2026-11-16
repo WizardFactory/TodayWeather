@@ -1,0 +1,13 @@
+{
+  "task": "CiFoundationTimeout90",
+  "issue": "https://github.com/WizardFactory/TodayWeather/pull/3015",
+  "scope": "Give the Server2 foundation job 90 minutes: on PR #3015 it was cancelled twice at its 60-minute limit after every test had passed, while building the release artifacts (the same branch passed in 45 minutes on a faster runner; there is no build cache). Owner decision 2026-11-16 (raise the timeout in a separate PR). No behaviour change.",
+  "server2_paths": [
+    "server2/config/tasks/CiFoundationTimeout90.json",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {"path": ".github/workflows/server2.yml", "category": "ci-wiring", "reason": "Foundation job timeout 60 -> 90 minutes (owner decision 2026-11-16)"}
+  ]
+}
