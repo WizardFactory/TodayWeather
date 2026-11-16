@@ -169,8 +169,16 @@ final class AppLaunch {
                                    opener: SystemURLOpener(), mail: mail)
         // IN-13: the nationwide pages' rows; the rows it does not handle go on to the settings' hook.
         nation = NationScreens(shell: shell, source: NationSource(baseURL: environment.serverURL, http: weatherHTTP))
-        alarms = makeAlarms(shell, weather: weather)
-        shell.onEntry = { [weak weather] event in weather?.handle(event) }
+        let alarms = makeAlarms(shell, weather: weather)
+        self.alarms = alarms
+        // A notification's tap selects its place and reloads (IN-14); the weather pages handle the others.
+        shell.onEntry = { [weak weather, weak alarms] event in
+            if case .notification(let cityIndex) = event {
+                if let weather { alarms?.notificationTapped(cityIndex, session: weather.session) }
+            } else {
+                weather?.handle(event)
+            }
+        }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
         // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`).
@@ -248,10 +256,6 @@ final class AppLaunch {
         log.info("entry event \(String(describing: event), privacy: .public)")
         // `checkLocationMode` on each return to the foreground (app.js `resume`), IN-10.
         if event == .resume { location?.check() }
-        if case .notification(let cityIndex) = event {
-            if let session = weather?.session { alarms?.notificationTapped(cityIndex, session: session) }
-            return
-        }
         shell?.handle(event)
     }
 
