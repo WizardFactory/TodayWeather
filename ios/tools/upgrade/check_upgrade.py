@@ -143,9 +143,22 @@ def not_handed_back(group):
     return {k: repr(v) for k, v in sorted(group.items()) if k not in HANDBACK_KEYS and k != HANDBACK_MARKER}
 
 
+def app_origin(local_storage_file):
+    """True when the LocalStorage directory of the file belongs to app://localhost (WebKit's `origin` file next to it
+    names the scheme and host). Other origins are not the Cordova app's: the Google Mobile Ads SDK of the native app
+    (IN-15) keeps storage for https://googleads.g.doubleclick.net, and the migration never reads it."""
+    origin = os.path.join(os.path.dirname(os.path.dirname(local_storage_file)), "origin")
+    if not os.path.exists(origin):
+        return True  # the single-directory layout names the origin in the file name
+    with open(origin, "rb") as f:
+        data = f.read()
+    return b"localhost" in data and b"app" in data
+
+
 def webkit_files(data):
     files = sorted(glob.glob(os.path.join(data, "Library/WebKit/**/LocalStorage/*"), recursive=True))
-    return {os.path.relpath(f, data): sha(f) for f in files if os.path.isfile(f) and not f.endswith("-shm")}
+    return {os.path.relpath(f, data): sha(f) for f in files
+            if os.path.isfile(f) and not f.endswith("-shm") and app_origin(f)}
 
 
 class Checks:
