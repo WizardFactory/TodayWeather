@@ -46,7 +46,7 @@ BUNDLE = "net.wizardfactory.todayweather"
 LANGS = {"ko-KR": "ko_KR", "en-US": "en_US"}
 STATES = ["access", "start", "search"]
 # The owned capture simulator (iOS 26.5, iPhone 16, 393x852 pt, scale 3).
-DEVICES = {"20A3172F-A9DE-4089-926D-C1DE24FDC8FE": ("twios_in10_cap", "393x852")}
+DEVICES = {"517DC815-4EF1-4EC7-835C-FAD594AFB4C5": ("twios_cap_16", "393x852")}
 # Sources of the captured page inside the built app, compared with client/ at the build commit.
 PAGE_SOURCES = ["templates/start.html", "js/controller.start.js", "js/service.util.js", "js/app.js", "css/ionic.app.css",
                 "lib/ionic/css/ionic.css", "img/app_icon.png", "img/powered_by_google_on_white.png", "index.html", "locales/ko.json", "locales/en.json"]

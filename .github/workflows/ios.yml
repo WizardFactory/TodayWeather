@@ -22,7 +22,8 @@ on:
       # Sources of ios/tools/weather/generate.py (the Cordova weather request timing in JavaScriptCore).
       - "client/www/js/service.weatherutil.js"
       - "client/www/js/service.weatherinfo.js"
-      # Sources of ios/tools/air/generate.py (the air standards' grade and scale mapping in JavaScriptCore).
+      # Sources of ios/tools/air/generate.py (the air standards' grade and scale mapping in JavaScriptCore) and of
+      # ios/tools/share/generate.py (IN-16: the share message, with service.weatherutil.js and the locales above).
       - "client/www/js/controller.tabctrl.js"
       - "client/www/js/controller.air.js"
       # Sources of ios/tools/settings/generate.py (the Cordova settings, hand-offs and push re-post in JavaScriptCore).
@@ -109,6 +110,7 @@ jobs:
           python3 ios/tools/settings/generate.py
           python3 ios/tools/import_ad_privacy.py
           python3 ios/tools/ads/generate.py
+          python3 ios/tools/share/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
       - name: Core package tests (macOS)

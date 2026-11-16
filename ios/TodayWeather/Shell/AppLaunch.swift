@@ -15,8 +15,8 @@ enum EntryEvent: Equatable, Sendable {
     case resume
     /// A tap on a delivered notification; `cityIndex` as its payload carries it (a string). IN-04 and IN-14 submit it.
     case notification(cityIndex: String?)
-    /// A link that opened the app (`onOpenURL`). The app registers no URL scheme yet: IN-16 decides whether the shipped
-    /// 1.1.x app registered `todayweather://`.
+    /// A link that opened the app (`onOpenURL`). The app registers no URL scheme and no associated domain, as the shipped
+    /// Cordova 1.1.x app (IN-16, ios/README.md "Entry links"), so no link reaches it and the screens ignore this event.
     case link(URL)
 }
 

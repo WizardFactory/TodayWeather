@@ -1,8 +1,8 @@
 #!/bin/sh
-# IN-10 (#2959) completion criterion 2 on the owned simulator against production (read-only GETs to the legacy server
+# IN-10 (#2959) completion criterion 2 on a tw* simulator the caller holds, against production (read-only GETs to the legacy server
 # and the Places SDK with the private key): on a fresh install the app reaches S03 for the simulated position
 # (`granted`), and with location denied, for a searched place (`denied`).
-#   run-start-check.sh <granted|denied> <out-dir>
+#   run-start-check.sh <granted|denied> <out-dir> <tw* simulator udid>
 #
 # Prerequisite: the app and its tests built with the private inputs of ios/Private.xcconfig (TW_SERVER_URL,
 # TW_PLACES_API_KEY_IOS) into ios/build/DerivedData:
@@ -19,13 +19,13 @@
 set -eu
 MODE=$1
 OUT=$2
-UDID=5A3446F8-E79B-4728-94B8-EDE3BD83AE3B   # twios_in10_dev (owned by IN-10)
+UDID=$3   # a tw* simulator of this project that the caller holds (e.g. twios_dev_in07)
 BUNDLE=net.wizardfactory.todayweather
 case "$MODE" in granted|denied) ;; *) echo "mode: granted or denied" >&2; exit 2 ;; esac
 HERE=$(cd "$(dirname "$0")" && pwd)
 IOS=$(cd "$HERE/../.." && pwd)
 NAME=$(xcrun simctl list devices | grep "$UDID" | sed 's/ (.*//; s/^ *//')
-[ "$NAME" = "twios_in10_dev" ] || { echo "simulator $UDID is not twios_in10_dev" >&2; exit 2; }
+case "$NAME" in tw*) ;; *) echo "refusing simulator '$NAME' ($UDID): only tw* simulators of this project" >&2; exit 2 ;; esac
 APP="$IOS/build/DerivedData/Build/Products/Debug-iphonesimulator/TodayWeather.app"
 [ -d "$APP" ] || { echo "build first: $APP" >&2; exit 2; }
 HOST=$(sed -n 's/^TW_SERVER_URL *= *//p' "$IOS/Private.xcconfig" | sed 's#https:/$()/##; s#http:/$()/##; s#/.*##')
