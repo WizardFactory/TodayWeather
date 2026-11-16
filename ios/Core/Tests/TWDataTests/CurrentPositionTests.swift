@@ -210,9 +210,12 @@ struct CurrentPositionTests {
         // The second lookup may load its position's weather: the clock moves until that lookup has ended.
         let ended = Ended()
         let waiter = Task { await second.value; ended.value = true }
-        for _ in 0..<50 where !ended.value { await f.clock.advance(by: 1000) }
+        for _ in 0..<50 where !ended.value {
+            await f.clock.advance(by: 1000)
+            _ = await eventually(0.2) { ended.value }
+        }
         #expect(ended.value, "the second lookup ends")
-        await waiter.value
+        if ended.value { await waiter.value }
         #expect(!f.session.locating)
         #expect(f.location.positions == 2)
     }

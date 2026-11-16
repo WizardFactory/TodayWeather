@@ -144,12 +144,14 @@ struct WeatherPhotoFeedTests {
         let script = Script(clock, [.fail(10), .answer(200)])
         let feed = WeatherPhotoFeed(url: url, http: script, clock: clock)
         let failed = Task { await feed.load() }
+        #expect(await due(clock, within: 10) { script.attempts == 1 })
         await clock.advance(to: 1000)
         #expect(await failed.value == nil, "the first load fails")
         #expect(script.attempts == 1)
         // Two loads while one runs: both wait for the same request (the clock does not move until both started).
         let first = Task { await feed.load() }
         let second = Task { await feed.load() }
+        #expect(await due(clock, within: 200) { script.attempts == 2 })
         await clock.quiesce()
         #expect(script.attempts == 2, "the second and third loads shared one request")
         await clock.advance(by: 1000)
