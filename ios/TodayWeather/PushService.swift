@@ -35,6 +35,8 @@ final class PushService: PushUnitsUpdating {
         case drain
         /// Post the list again after a unit change (IN-12).
         case units
+        /// Remove a place's alarms (IN-11).
+        case removeCity(Int)
     }
 
     let sync: PushSync
@@ -63,6 +65,7 @@ final class PushService: PushUnitsUpdating {
                 switch event {
                 case .drain: await sync.drain()
                 case .units: await sync.updateUnits()
+                case .removeCity(let index): await sync.removeCity(index)
                 }
             }
         }
@@ -110,6 +113,12 @@ final class PushService: PushUnitsUpdating {
     /// with the state as saved by then.
     nonisolated func updateUnits(_ state: AppState) {
         events.yield(.units)
+    }
+
+    /// S02 deleted a place with alarms or turned the current position off (`Push.removePushListByCityIndex`, IN-11): the
+    /// place's records are saved away and `DELETE /push` is sent, after the registrations before it.
+    func removeCity(_ index: Int) {
+        events.yield(.removeCity(index))
     }
 
     func resume() {

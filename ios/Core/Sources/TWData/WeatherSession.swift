@@ -197,6 +197,30 @@ public final class WeatherSession {
         Task { @MainActor [weak self] in self?.reload(.retry) }
     }
 
+    /// S02's row tap or add (`setCityIndex` then `goPage()`, IN-11): `index` is selected when given and valid (an add
+    /// selected its place already), then `reloadEvent 'search'` loads it unless the ten-minute gate or an open
+    /// confirmation stops it.
+    public func openFromSearch(_ index: Int?) {
+        guard let s = holder.state else { return }
+        if let index, s.places.indices.contains(index), index != s.placeIndex { holder.change { $0.placeIndex = index } }
+        reload(.search)
+    }
+
+    /// S02's `loadWeatherData(index)` and `updateWeatherData(index)` (SearchCtrl, IN-11): `place`'s weather when the
+    /// ten-minute gate allows it (`force`: after `reloadCity`), saved as any response is (`updateCity`); failures change
+    /// nothing and show nothing. A disabled place, and a current position without an address and a location, load
+    /// nothing. True when it loaded.
+    @discardableResult
+    public func refresh(_ place: Place, force: Bool = false) async -> Bool {
+        guard let s = holder.state, !place.disable else { return false }
+        if place.currentPosition && place.address == nil && place.location == nil { return false }
+        if !force && !repository.canLoad(place) { return false }
+        let result = await repository.load(place, units: s.units, acceptLanguage: acceptLanguage(), force: true)
+        guard case .loaded(let key, let entry, let updated) = result else { return false }
+        save(key: key, entry: entry, updated: updated)
+        return true
+    }
+
     /// The photo feed arrived (`loadWeatherPhotos`): each place without a photo gets one for its cached weather.
     public func photosLoaded() {
         guard let feed = photos(), let s = holder.state else { return }

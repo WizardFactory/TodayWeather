@@ -49,9 +49,10 @@ def main():
     if not os.access(args.jsc, os.X_OK):
         sys.exit(f"no JavaScriptCore shell at {args.jsc}")
     runs = [run_zone(args.jsc, zone) for zone in ZONES]
-    doc = {k: v for k, v in runs[0].items() if k != "cases"}
+    per_zone = ("cases", "cityRemoved")
+    doc = {k: v for k, v in runs[0].items() if k not in per_zone}
     for run in runs[1:]:
-        if {k: v for k, v in run.items() if k != "cases"} != doc:
+        if {k: v for k, v in run.items() if k not in per_zone} != doc:
             sys.exit("the zones disagree on the shared inputs")
     sources = []
     for s in SOURCES:
@@ -66,6 +67,8 @@ def main():
                 "sends /v000903 (#2948).",
         **doc,
         "cases": [c for run in runs for c in run["cases"]],
+        # IN-11 (#2960): Push.removePushListByCityIndex after S02 deletes a place or turns the current position off.
+        "cityRemoved": [c for run in runs for c in run["cityRemoved"]],
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(out, ensure_ascii=False, indent=1) + "\n"

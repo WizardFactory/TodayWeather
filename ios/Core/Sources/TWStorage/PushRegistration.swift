@@ -102,6 +102,37 @@ public enum PushRegistration {
         return Result(requests: [postList(state, context: context)], state: state)
     }
 
+    /// `Push.hasPushInfo(cityIndex)`: an enabled record names `index` (`value.cityIndex === cityIndex && value.enable`).
+    /// S02 reads it once per visit for each row's bell, and deletes a place's alarms only when it was on (A24).
+    public static func hasPush(_ records: [JSONObject], index: Int) -> Bool {
+        records.contains { names($0, index) && truthy($0["enable"] ?? .null) }
+    }
+
+    /// `Push.removePushListByCityIndex(index)` after S02 deletes a place or turns the current position off (IN-11, #2960;
+    /// the Android `onCityRemoved` of AN-11): `DELETE /push` with `Device-Id` and the body `{cityIndex, fcmToken}`, or
+    /// `{cityIndex, registrationId}` without a token, and the list without the records of `index`; no other record is
+    /// renumbered (A24). Nothing changes and nothing is sent without a token or a registration ID.
+    public static func onCityRemoved(_ push: PushState, index: Int, context: Context) -> Result {
+        let credential: (String, String)
+        if let token = push.fcmToken, !token.isEmpty {
+            credential = ("fcmToken", token)
+        } else if let id = push.registrationId, !id.isEmpty {
+            credential = ("registrationId", id)
+        } else {
+            return Result(requests: [], state: push)
+        }
+        let request = PushRequest(method: "DELETE", path: context.versionPath + "/push", headers: headers(context, language: false),
+                                  body: .object(JSONObject([("cityIndex", .number(index)), (credential.0, .string(credential.1))])))
+        var state = push
+        state.records = push.records.filter { !names($0, index) }
+        return Result(requests: [request], state: state)
+    }
+
+    /// A record names `index`: its `cityIndex` is that number (`===`).
+    static func names(_ record: JSONObject, _ index: Int) -> Bool {
+        record["cityIndex"]?.numberValue?.double == Double(index)
+    }
+
     /// `_updateFcmToken(token)`: `PUT /push` replacing `old` (null when none was stored).
     public static func replacement(_ token: String, over old: String?, context: Context) -> PushRequest {
         PushRequest(method: "PUT", path: context.versionPath + "/push", headers: headers(context, language: false),

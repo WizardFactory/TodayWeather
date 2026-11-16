@@ -8,10 +8,11 @@ The iOS build never reads `client/`, `android/`, `tw.ios/`, `ta.ios/` or `applew
 
 | Path | Contents |
 | --- | --- |
-| `TodayWeather.xcodeproj` | The app target `TodayWeather` and the app-hosted test target `TodayWeatherTests`. Their folders are folder-synchronized groups: adding a file there needs no project edit. |
+| `TodayWeather.xcodeproj` | The app target `TodayWeather`, the app-hosted test target `TodayWeatherTests` and the UI test target `TodayWeatherUITests` (IN-11; its own scheme, run by `tools/places-ui`). Their folders are folder-synchronized groups: adding a file there needs no project edit. |
 | `TodayWeather/` | The SwiftUI app and its asset catalog (app icon, launch image). |
 | `Support/` | The app's `Info.plist` additions (merged into the generated one), its entitlements (App Group, `aps-environment`) and `App.xcconfig` (the app target's build settings, which include the private `Private.xcconfig`). |
 | `TodayWeatherTests/` | Tests that run inside the app on a simulator. |
+| `TodayWeatherUITests/` | XCUITest tests that drive the app with real touches (IN-11). |
 | `Core/` | Local Swift package. `TWModel` and `TWDomain` use Foundation only (no UIKit or SwiftUI), so they also run with `swift test` on macOS. `TWData` (API client), `TWStorage` (state and the Cordova migration) and `TWResources` (the copies from `client/`). |
 | `provenance/` | Source path, last commit and hashes of every copied file. |
 | `tools/` | Development tools. They may read `client/` or `android/` when they regenerate copies or build test inputs; the Xcode build does not. |
@@ -323,6 +324,51 @@ python3 ios/tools/start-reference/capture.py provenance ios/build/start-referenc
 ### Against production
 
 `tools/start-production/run-start-check.sh <granted|denied> <out-dir> <tw* simulator udid>` runs `ProductionStartTests` on that simulator with an app built with the private `TW_SERVER_URL` and `TW_PLACES_API_KEY_IOS` (the default build includes `ios/Private.xcconfig`): it installs the app fresh, sets the simulator's position to Seoul City Hall, grants or revokes location in TCC (the system prompt is not driven) and drives the app as it launched. `granted`: 현재위치 날씨보기 reaches Hourly for the simulated position, slot 0 named from the geocode. `denied`: 현재위치 날씨보기 ends in O04, then "London" is searched with the Places SDK and the first prediction reaches Hourly. The server host and the key are replaced by placeholders in every saved log; the app is uninstalled at the end. Without the private inputs (CI) the test is skipped.
+
+## Saved places (IN-11)
+
+The Locations tab S02 (#2960), from tab-search.html, SearchCtrl with its iOS branches, WeatherInfo's `removeCity` and `disableCity`, and `Push.removePushListByCityIndex`. Ported from the Android AN-11 (`PlacesPage`, `PlaceRows`, `SearchQuery`, `onCityRemoved`) and checked against the Cordova iOS build.
+
+- **List (`PlaceRows` in `TWDomain` `Places/`, `PlacesScreens` and `PlacesView` in `TodayWeather/Places/`):** the places in saved order: the name, else the shortened address on two lines (현재위치 for the current position without an address; A13's `zh-TU` kept), the current position's `location_on`, the sky image, the temperature and today's minimum and maximum (`toFixed(0)`), and the bell (`ion-android-notifications` with an enabled alarm of that index, read once per visit). A disabled current position shows only in edit mode. A row tap selects the place and opens the startup page (Hourly for 0 and anything unknown, Daily, Air) with `reloadEvent 'search'` through the ten-minute gate. The bell hands its index to `PlacesScreens.onBell` (S09 is IN-14's). Each visit (a new `PlacesPage` each time the tab opens) loads the enabled places in turn through the gate (failures silent) and, with the current position on, looks it up (SearchCtrl's iOS branch) and loads it again with its stored location.
+- **Header (`PlacesHeader`, in the bar through `TabContent.titleView`):** ☰, the `#eee` field with `ion-ios-search` and the input, and 편집 / 취소 (searching) / 확인 (editing). A focus enters search mode; 취소 leaves it and closes the keyboard; 편집 and 취소 clear the search.
+- **Edit mode:** the current position's switch (`.toggle-search`) and ⊗ on every other row, without confirmation. With the row's bell on, the place's alarms go first: `PushService.removeCity` runs `PushSync.removeCity` after the registrations before it, which saves the records without that index and then sends `DELETE /v000903/push` with `Content-Type`, `Device-Id` and `{"cityIndex": n, "fcmToken": …}` (or `registrationId`), its answer ignored; nothing without either, and nothing when the records cannot be saved. Other records keep their index (A24). The selection moves to the first enabled place only when the selected number equals the new count (`setFirstCityIndex`, kept). The switch off removes the current position's alarms when its bell was on; on, while it has no temperature, it finds the position, names it from the geocode and loads it behind the loading overlay.
+- **Search (IN-10's `PlaceQuery`, shared with S01):** 현재위치로 지역찾기, the bundled towns (10, then 10 more on each scroll of the list) under "powered by TodayWeather", and with `TW_PLACES_API_KEY_IOS` Google's `(regions)` predictions (300 ms after the last change, latest answer only) or the found position under Google's logo. A prediction is named as on S01 and geocoded by its terms joined with commas (`/geocode/v000903/addr/London,UK`); the found position is added as an ordinary place. An add selects it (S01's gate untouched) and opens the startup page; O09 for a duplicate or a failed weather request, nothing for a failed geocode. A tap on a result or row while the keyboard shows only closes it. Find-by-location records the status into TabCtrl's `gLocationAuthorizationStatus` (`WeatherSession.recorded`, a grant records nothing) and fails into O03 `search` (iOS: 닫기, then 설정 and 확인 when location is not enabled, else 확인; OK finds by location again, A26). Unlike Android, an empty list does not focus the input (`setInputFocus` does nothing on iOS).
+- **Switching places:** only the header block of S03, S04 and S05 takes the swipe (IN-08); the charts are horizontal scroll views (`forecast-chart`).
+- **Analytics:** `favorite_change` `remove` for a deleted place; `add` comes from the adds (IN-10's `StartFlow`).
+
+### References and tests
+
+| File | Contents |
+| --- | --- |
+| `TodayWeatherTests/PlacesReference/places-<lang>-<state>.png`, `-statusbar.png`, `.json` | The Cordova iOS S02 at 393x852 pt and scale 3, from the WebView's top to the tab bar, in ko-KR and en-US: `favorites` (서울, manual page 13), `search` (부산 with ten towns, page 14), `list` (서울, 부산광역시, London with an alarm), `edit` (page 18), `location` (the find-by-location result, page 19); each with every row's cells, rects and styles |
+| `TodayWeatherTests/PlacesReference/places-captures.json`, `places-<fixture>.input.json`, `places-tolerances.json` | Manifest (states, modes, rows), the served responses (kma-seoul, vc-london, geocode-seoul) and each comparison's tolerance with the reasons |
+| `Core/Tests/TWStorageTests/Fixtures/push/push.json` (`cityRemoved`) | `Push.removePushListByCityIndex` and `hasPushInfo` of the Cordova service with the platform reporting iOS in JavaScriptCore (`tools/push/generate.py`): a place with alarms, the current position, a place with disabled records only, a registration ID, no token |
+| `provenance/places-captures.json` | Build commit and recipe, S02's sources inside the built app compared with `client/`, the runs and the SHA-256 of every reference file |
+
+- `TWDomainTests`: `PlacesRulesTests` (labels, rows, `goPage`, the query, SearchCtrl's lookup and O03 `search`) and `PlacesReferenceProvenanceTests`. `TWStorageTests`: `PushRegistrationTests.removalsMatchCordova` (method, path, headers, body with member order, the list saved, `hasPushInfo`). `TWDataTests`: `PushRemovalTests` (saved before sent, A24, registration ID, no token, a failed save, no context) and `PlacesPageTests` (the visit's bells and loads, deletes and the selection, the switch off and its first enable, find-by-location in every location state, a grant from the prompt, predictions, towns, O09, a failed geocode, `goPage`'s gate, and the changes in the state file after a restart with slot 0 kept for the current position).
+- App-hosted: `PlacesScreenTests` (the live shell: rows and bells, a row tap to the startup page, the bell hook, edit mode with ⊗ and the switch, a town, a prediction, find-by-location, a tap with the keyboard up, O03 with the Korean texts) and `PlacesScreenshotTests` (ten comparisons by the AN-05 metric within `places-tolerances.json`, and every row's box against the captured rects).
+- UI tests (`TodayWeatherUITests`, XCUITest, scheme `TodayWeatherUITests`; skipped without a mode, so the scheme can run in CI unprepared): `PlacesUITests.testDraggingAChartScrollsOnlyTheChart` (#2960 AC3) and `testSearchAddSwipeAndDeleteAgainstProduction` (#2960 AC2), run by the script below.
+
+```sh
+ios/tools/places-ui/run-places-ui.sh fixture <out-dir> <tw* simulator udid>      # AC3: local fixture server, no Places key
+ios/tools/places-ui/run-places-ui.sh production <out-dir> <tw* simulator udid>   # AC2: ios/Private.xcconfig's server and Places key
+```
+
+The script builds the app and the UI tests ad hoc signed into `ios/build/DerivedData` (an unsigned app has no App Group container and stays on the launch screen), refuses a build holding a Firebase configuration (so no FCM token and no push request can exist), uninstalls the app, writes "Ask App Not to Track" into the simulator's TCC database (no UMP explainer over the page), runs the one test with `TEST_RUNNER_TW_PLACES_UI=<mode>`, and keeps the redacted logs (the server host and the Places key replaced) and the test's screenshots. `fixture`: 서울 from S01, 부산광역시 from S02's towns, a slow drag across the hourly chart (the chart scrolls, the title stays), fast swipes on the chart (the title stays), a swipe on the header block (the next place); the fixture server fails the run on any request but weather and geocode. `production`: 부산 from S01's Places search, London from S02's, the header swiped back and forth, no bell on either place, London deleted in edit mode.
+
+### Recapturing
+
+After a change to the Cordova S02 (the sources in `provenance/places-captures.json` no longer match `client/`), on the capture simulator:
+
+```sh
+sh ios/tools/chart-reference/build-cordova.sh ios/build/places-reference http://127.0.0.1:18460
+for lang in ko-KR en-US; do
+  python3 ios/tools/places-reference/capture.py run 517DC815-4EF1-4EC7-835C-FAD594AFB4C5 ios/build/places-reference/TodayWeather.app $lang
+done
+python3 ios/tools/places-reference/capture.py provenance ios/build/places-reference/TodayWeather.app
+```
+
+`capture.py` shares port 18460 with `start-reference` (run them one at a time). It refuses other simulators, erases the owned one, sets the language, sets the position to Seoul City Hall and grants the app location, installs a copy of the build with `capture.js` injected, adds the places through the app's own services (the fixture server answers weather with kma-seoul or vc-london and the coordinates geocode with geocode-seoul) and drives SearchCtrl's own handlers. StartCtrl's and SearchCtrl's Maps JavaScript API is an inert stand-in. It fails when a request or a script leaves the Mac, a weather or geocode request uses another path, or a push request is sent. Then run the tests and update `places-tolerances.json` with the measured values (the test prints `PLACES-COMPARE` lines) only for an explained change.
 
 ## Ads, analytics consent and crash reporting (IN-15)
 

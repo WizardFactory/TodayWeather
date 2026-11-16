@@ -181,6 +181,9 @@ struct WeatherBlockView: View {
                 HourlyChartView(chart: hourly, expanded: content.expanded, applyCount: content.scrolls, colors: colors.chart,
                                 onToggleExpanded: actions.toggleExpanded)
                     .id(content.visit)
+                    // IN-11's UI test drags it sideways.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("forecast-chart")
             }
         } else if content.type == .mid, let daily = content.daily {
             if let offset = chartOffset {
@@ -188,6 +191,8 @@ struct WeatherBlockView: View {
             } else {
                 DailyChartView(chart: daily, applyCount: content.scrolls, colors: colors.chart)
                     .id(content.visit)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("forecast-chart")
             }
         }
     }
