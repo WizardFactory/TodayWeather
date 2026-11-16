@@ -59,10 +59,7 @@ struct RootView: View {
                     if let start = launch.startPage { StartView(page: start) } else { SplashView() }
                 case .tab: ShellView(model: shell, content: { launch.tabContent($0) },
                                      banner: Monetization.shared.bannerView,
-                                     page: { insets in
-                                         // S09 (IN-14) over the settings pages (IN-12); each is opened from the tabs.
-                                         launch.alarms?.pageView(insets) ?? launch.settings?.pageView(insets)
-                                     })
+                                     page: launch.pageView)
                 }
             } else {
                 SplashView()

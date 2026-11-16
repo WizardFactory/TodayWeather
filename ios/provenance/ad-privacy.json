@@ -2,8 +2,8 @@
  "tool": "ios/tools/import_ad_privacy.py",
  "config": {
   "source": "client/config.xml",
-  "commit": "c0f9c6aca8d89ced1f8db96897d02f6978a0095d",
-  "sha256": "f78ae5012426410800cba59ab2b05e52416684ab00f6324b70f6cacd00382aca"
+  "commit": "99d42e8425bf24bcfb7382c5841b997d06e2fd32",
+  "sha256": "943868d7b700d8fe09d0cad45812478072b380a2ca24b0d38b2eff1b923a1eea"
  },
  "tracking": [
   {
@@ -58,7 +58,7 @@
   "resolved": "https://registry.npmjs.org/emi-indo-cordova-plugin-admob/-/emi-indo-cordova-plugin-admob-3.0.4.tgz",
   "integrity": "sha512-UToUsjUj3HobOnD0kA3jbH4EyAHbtB6YNgzTJj4/nzMQnWrHEeyFn0aYV5VgzdAfd8yVZ4xjVduP/PYC2Rg8IA==",
   "lock": "client/package-lock.json",
-  "lock_commit": "449ddc6db64ea6e83e0039bd2015eb9724dc2e69",
+  "lock_commit": "99d42e8425bf24bcfb7382c5841b997d06e2fd32",
   "plugin_xml_sha256": "581bba88df87061a243ee651b4a4644d6cc1f313c88f74b9bc5e9b8dd97f6160",
   "GADDelayAppMeasurementInit": true,
   "SKAdNetworkItems": [

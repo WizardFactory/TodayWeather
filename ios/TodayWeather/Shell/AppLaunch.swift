@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import os
+import SwiftUI
 import TWData
 import TWDomain
 import TWModel
@@ -47,6 +48,8 @@ final class AppLaunch {
     private(set) var settings: SettingsScreens?
     /// The saved places S02 (IN-11), created with the shell.
     private(set) var places: PlacesScreens?
+    /// The nationwide pages S10 and S11 and the warnings S12 (IN-13), created with the shell.
+    private(set) var nation: NationScreens?
     /// S09, O06, O07 and the notification taps (IN-14), created with the shell.
     private(set) var alarms: AlarmsScreens?
     /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
@@ -91,6 +94,25 @@ final class AppLaunch {
 
     @ObservationIgnored let environment: Environment
     @ObservationIgnored private let weatherHTTP: any WeatherHTTP
+
+    /// The page over the tabs in the shell's page slot: S09 (IN-14), a nationwide page (IN-13) or a settings page (IN-12);
+    /// nil while none shows. The nationwide and settings pages open from the menu, which the page then covers, and S09
+    /// from the tabs' bells, so one shows at a time.
+    var pageView: ((ShellInsets) -> AnyView?)? {
+        guard alarms != nil || nation != nil || settings != nil else { return nil }
+        return { [weak self] insets in
+            guard let self else { return nil }
+            return alarms?.pageView(insets) ?? nation?.pageView(insets) ?? settings?.pageView(insets)
+        }
+    }
+
+    /// The Cordova state of the page over the tabs (`screen_view`): `setting-push`, `nation`, `nation-air`, `kma-special`,
+    /// `units` or `setting-radio`; nil while the tabs show.
+    var pageScreen: String? {
+        // S09 (IN-14) is the Cordova state `setting-push`.
+        if alarms?.page != nil { return "setting-push" }
+        return nation?.screenName ?? settings?.top.map(SettingsScreens.screenName)
+    }
 
     init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet(),
          weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache(),
@@ -145,6 +167,8 @@ final class AppLaunch {
                                 deviceId: { ((try? DeviceIdentity.deviceId()) ?? nil) ?? "undefined" }, userAgent: WebViewUserAgent())
         settings = SettingsScreens(shell: shell, actions: SettingsActions(holder: holder, session: session, push: AppPushUnits()),
                                    opener: SystemURLOpener(), mail: mail)
+        // IN-13: the nationwide pages' rows; the rows it does not handle go on to the settings' hook.
+        nation = NationScreens(shell: shell, source: NationSource(baseURL: environment.serverURL, http: weatherHTTP))
         alarms = makeAlarms(shell, weather: weather)
         shell.onEntry = { [weak weather] event in weather?.handle(event) }
         onShell(shell)
