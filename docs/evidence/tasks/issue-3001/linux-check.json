@@ -1,15 +1,15 @@
 {
  "observations": {
   "collector_tarball_sha256": "12d7e91db2e447003558c955c4f510b17ed1d77340757f3e591e5222e464675c",
-  "egress_rejected_packets": 10,
+  "egress_rejected_packets": 0,
   "machine": "aarch64",
   "peer_hosts": [
    "dapi.kakao.com",
    "todayweather.wizardfactory.net"
   ],
-  "seconds": 588,
+  "seconds": 609,
   "server_binary_sha256": "80e5bcb7322ce672295c20ed286e4a885a53b1e31952753183502fc0740b1f12",
-  "source_commit": "76d1d17effb08d99d162419034f7fbd346a8f2b6"
+  "source_commit": "7c3160b1062b4d41bb301a0ff9e374e5ede57719"
  },
  "passed": true,
  "scenarios": [
@@ -22,7 +22,7 @@
     },
     {
      "check": "install-host answered one JSON object: started",
-     "detail": "b'{\"cleanup_until\":1795367920,\"collection_until\":1795360720,\"epoch\":1794755920,\"launch_sha256\":\"e311bf7b101865d8b4c62c0cb46fc4d5bc4ab7abeb135d034b1f09b8fa00b652\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795426354,\"collection_until\":1795419154,\"epoch\":1794814354,\"launch_sha256\":\"89e1cbd1f749169764837328981b9296c44d9f86018065ff4f1c5b5dc1055ecf\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
@@ -62,12 +62,12 @@
     },
     {
      "check": "stop deadline at epoch + 168 h",
-     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-22 15:18:40 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-stop.service\n[Install]\nWantedBy=timers.target\n",
+     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-23 07:32:34 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-stop.service\n[Install]\nWantedBy=timers.target\n",
      "passed": true
     },
     {
      "check": "poweroff deadline at epoch + 170 h",
-     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-22 17:18:40 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-poweroff.service\n[Install]\nWantedBy=timers.target\n",
+     "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-23 09:32:34 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-poweroff.service\n[Install]\nWantedBy=timers.target\n",
      "passed": true
     },
     {
@@ -82,7 +82,7 @@
     },
     {
      "check": "the guard counted the provider rejection",
-     "detail": "{'auth_failures': 4, 'first_rejection': {'cause': 'auth', 'component': 'geocode', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 401}, 'local_paid_exhaustions': 0, 'observed_at': 1794755965, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}",
+     "detail": "{'auth_failures': 4, 'first_rejection': {'cause': 'auth', 'component': 'geocode', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 401}, 'local_paid_exhaustions': 0, 'observed_at': 1794814401, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}",
      "passed": true
     },
     {
@@ -97,7 +97,7 @@
     },
     {
      "check": "retention stop drained the collector within the SSH bound (150 s)",
-     "detail": "(0, 50.83059374000001)",
+     "detail": "(0, 50.78367928)",
      "passed": true
     },
     {
@@ -137,7 +137,7 @@
     },
     {
      "check": "candidate's rejection record at the destination (LP6-AC2)",
-     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:19:05.982676528Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"provider_http\",\"trace_id\":\"37eb98629d4e7f670000000000000014\",\"operation_id\":\"0000000000000019\",\"parent_operation_id\":\"0000000000000017\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":47,\"status\":401,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:19:05.982698529Z\",\"level\":\"warn\",\"event\":\"operation.action\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"37eb98629d4e7f670000000000000014\",\"operation_id\":\"0000000000000017\",\"parent_operation_id\":\"0000000000000016\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"rotate_key\",\"outcome\":\"failed\",\"status\":401,\"attempt\":1}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:19:05.982701529Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"37eb98629d4e7f670000000000000014\",\"operation_id\":\"0000000000000017\",\"parent_operation_id\":\"0000000000000016\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":47,\"source\":\"src/observability.rs\",\"line\":1371}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:19:05.982711446Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"lookup\",\"trace_id\":\"37eb98629d4e7f670000000000000014\",\"operation_id\":\"0000000000000016\",\"parent_operation_id\":\"0000000000000015\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":47,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:19:05.982734697Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"http\",\"stage\":\"request\",\"trace_id\":\"37eb98629d4e7f670000000000000014\",\"operation_id\":\"000000000",
+     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:33:21.427640902Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"provider_http\",\"trace_id\":\"6a784c56b0786bbb000000000000001c\",\"operation_id\":\"0000000000000021\",\"parent_operation_id\":\"000000000000001f\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":51,\"status\":401,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:33:21.427856818Z\",\"level\":\"warn\",\"event\":\"operation.action\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"6a784c56b0786bbb000000000000001c\",\"operation_id\":\"000000000000001f\",\"parent_operation_id\":\"000000000000001e\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"rotate_key\",\"outcome\":\"failed\",\"status\":401,\"attempt\":1}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:33:21.427902068Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"6a784c56b0786bbb000000000000001c\",\"operation_id\":\"000000000000001f\",\"parent_operation_id\":\"000000000000001e\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":52,\"source\":\"src/observability.rs\",\"line\":1371}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:33:21.427914027Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"lookup\",\"trace_id\":\"6a784c56b0786bbb000000000000001c\",\"operation_id\":\"000000000000001e\",\"parent_operation_id\":\"000000000000001d\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":52,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:33:21.42795436Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"http\",\"stage\":\"request\",\"trace_id\":\"6a784c56b0786bbb000000000000001c\",\"operation_id\":\"0000000000",
      "passed": true
     },
     {
@@ -147,7 +147,7 @@
     },
     {
      "check": "reader's summary at the destination",
-     "detail": "[{'attempts': {'candidate': 2, 'production': 2}, 'failed': {'candidate': 2}, 'pending': 0, 'qualification': 'not assessed', 'skipped_conditionals': 0, 'terminal': None}]",
+     "detail": "[{'attempts': {'candidate': 3, 'production': 2}, 'failed': {'candidate': 3}, 'pending': 0, 'qualification': 'not assessed', 'skipped_conditionals': 0, 'terminal': None}]",
      "passed": true
     }
    ],
@@ -166,7 +166,7 @@
       "build_revision": "unknown",
       "cause": "auth",
       "component": "geocode",
-      "duration_ms": 46,
+      "duration_ms": 45,
       "event": "operation.finished",
       "level": "warn",
       "line": 1465,
@@ -179,8 +179,8 @@
       "source": "src/observability.rs",
       "stage": "provider_http",
       "status": 401,
-      "timestamp": "2026-11-15T15:18:46.121949762Z",
-      "trace_id": "37eb98629d4e7f670000000000000009"
+      "timestamp": "2026-11-16T07:32:41.454613646Z",
+      "trace_id": "6a784c56b0786bbb0000000000000009"
      }
     ],
     "guard_diagnostics": {
@@ -194,7 +194,7 @@
       "status": 401
      },
      "local_paid_exhaustions": 0,
-     "observed_at": 1794755965,
+     "observed_at": 1794814401,
      "paid_units": {
       "google": {
        "initial": 100,
@@ -220,16 +220,16 @@
     "guard_record": [],
     "guard_stop": null,
     "install_output_bytes": 191,
-    "install_seconds": 3.2,
+    "install_seconds": 5.1,
     "objects": 3,
     "reader_record": [
      {
       "attempts": {
-       "candidate": 2,
+       "candidate": 3,
        "production": 2
       },
       "failed": {
-       "candidate": 2
+       "candidate": 3
       },
       "pending": 0,
       "qualification": "not assessed",
@@ -240,7 +240,7 @@
     "records_per_source": {
      "collector": 1,
      "reader": 1,
-     "server": 11
+     "server": 16
     },
     "rejection_seen_seconds": 10.1,
     "retention_stop_seconds": 50.8
@@ -255,22 +255,22 @@
     },
     {
      "check": "install-host answered one JSON object: started",
-     "detail": "b'{\"cleanup_until\":1795368020,\"collection_until\":1795360820,\"epoch\":1794756020,\"launch_sha256\":\"a0c011accbe7a1ee22a267d8702d30b6527cfc33a94e5eb6c4f7a21877211a1e\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795426455,\"collection_until\":1795419255,\"epoch\":1794814455,\"launch_sha256\":\"f166747ab751dd943bd82d03884a75333dff25e3745265ff561662caea2f0535\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
      "check": "no stop before storage is denied",
-     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794756035, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 21, 'last_seen': 1794756035, 'last_tx': 40290, 'manifest_sha256': '0bde954b17bb20e1adae90c42bc16c0a0b4e30d88c24328264e8b11aa992e6c4', 'misses': 0, 'schema': 5, 'stop': None}",
+     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794814473, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 27, 'last_seen': 1794814473, 'last_tx': 41739, 'manifest_sha256': 'c04cb286aebdd53c169f1def980e96a93f9e5923a850867c470d9270a7f78f29', 'misses': 0, 'schema': 5, 'stop': None, 'storage_auth_window': [1794814455, 0, 0]}",
      "passed": true
     },
     {
      "check": "the guard stopped with s3_authorization",
-     "detail": "('s3_authorization', {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794756205, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20})",
+     "detail": "('s3_authorization', {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794814643, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20})",
      "passed": true
     },
     {
      "check": "the decision keeps the storage-authorization count",
-     "detail": "{'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794756205, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}",
+     "detail": "{'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794814643, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}",
      "passed": true
     },
     {
@@ -280,7 +280,7 @@
     },
     {
      "check": "retention stop drained the collector within 150 s",
-     "detail": "(0, 50.69482355399998)",
+     "detail": "(0, 50.202740764)",
      "passed": true
     },
     {
@@ -315,12 +315,12 @@
     },
     {
      "check": "guard's s3_authorization stop record at the destination",
-     "detail": "[{'diagnostics': {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794756205, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}, 'last_cpu': 24, 'last_seen': 1794756205, 'last_tx': 40770, 'manifest_sha256': '0bde954b17bb20e1adae90c42bc16c0a0b4e30d88c24328264e8b11aa992e6c4', 'misses': 0, 'schema': 5, 'stop': 's3_authorization'}]",
+     "detail": "[{'diagnostics': {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794814643, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}, 'last_cpu': 31, 'last_seen': 1794814643, 'last_tx': 42149, 'manifest_sha256': 'c04cb286aebdd53c169f1def980e96a93f9e5923a850867c470d9270a7f78f29', 'misses': 0, 'schema': 5, 'stop': 's3_authorization', 'storage_auth_window': [1794814455, 0, 20]}]",
      "passed": true
     },
     {
      "check": "candidate's storage-authorization record at the destination",
-     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:23:25.150871568Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"830bb47a6aa7141d0000000000000053\",\"operation_id\":\"000000000000007d\",\"parent_operation_id\":\"000000000000007c\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":50,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:23:25.151776872Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"provider_http\",\"trace_id\":\"830bb47a6aa7141d0000000000000053\",\"operation_id\":\"0000000000000085\",\"parent_operation_id\":\"0000000000000084\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":0,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:23:25.151804038Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"reserve\",\"trace_id\":\"830bb47a6aa7141d0000000000000053\",\"operation_id\":\"0000000000000084\",\"parent_operation_id\":\"0000000000000083\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":0,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:23:25.151807079Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"830bb47a6aa7141d0000000000000053\",\"operation_id\":\"0000000000000083\",\"parent_operation_id\":\"0000000000000082\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":0,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-15T15:23:25.151810246Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"tra",
+     "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:37:23.180772978Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"483d1009ea93fa130000000000000053\",\"operation_id\":\"000000000000007d\",\"parent_operation_id\":\"000000000000007c\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":46,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:37:23.181878308Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"provider_http\",\"trace_id\":\"483d1009ea93fa130000000000000053\",\"operation_id\":\"0000000000000085\",\"parent_operation_id\":\"0000000000000084\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":1,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:37:23.181896642Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"reserve\",\"trace_id\":\"483d1009ea93fa130000000000000053\",\"operation_id\":\"0000000000000084\",\"parent_operation_id\":\"0000000000000083\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":1,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:37:23.181898642Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"483d1009ea93fa130000000000000053\",\"operation_id\":\"0000000000000083\",\"parent_operation_id\":\"0000000000000082\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":1,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-16T07:37:23.181900642Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"tra",
      "passed": true
     }
    ],
@@ -336,7 +336,7 @@
       "build_revision": "unknown",
       "cause": "auth",
       "component": "quota",
-      "duration_ms": 47,
+      "duration_ms": 49,
       "event": "operation.finished",
       "level": "warn",
       "line": 1465,
@@ -349,8 +349,8 @@
       "source": "src/observability.rs",
       "stage": "provider_http",
       "status": 403,
-      "timestamp": "2026-11-15T15:23:24.95988563Z",
-      "trace_id": "830bb47a6aa7141d0000000000000053"
+      "timestamp": "2026-11-16T07:37:22.99315201Z",
+      "trace_id": "483d1009ea93fa130000000000000053"
      }
     ],
     "guard_diagnostics": {
@@ -364,7 +364,7 @@
       "status": 403
      },
      "local_paid_exhaustions": 0,
-     "observed_at": 1794756205,
+     "observed_at": 1794814643,
      "paid_units": {
       "google": {
        "initial": 100,
@@ -400,7 +400,7 @@
         "status": 403
        },
        "local_paid_exhaustions": 0,
-       "observed_at": 1794756205,
+       "observed_at": 1794814643,
        "paid_units": {
         "google": {
          "initial": 100,
@@ -423,18 +423,23 @@
        "quota_failures": 0,
        "storage_auth_failures": 20
       },
-      "last_cpu": 24,
-      "last_seen": 1794756205,
-      "last_tx": 40770,
-      "manifest_sha256": "0bde954b17bb20e1adae90c42bc16c0a0b4e30d88c24328264e8b11aa992e6c4",
+      "last_cpu": 31,
+      "last_seen": 1794814643,
+      "last_tx": 42149,
+      "manifest_sha256": "c04cb286aebdd53c169f1def980e96a93f9e5923a850867c470d9270a7f78f29",
       "misses": 0,
       "schema": 5,
-      "stop": "s3_authorization"
+      "stop": "s3_authorization",
+      "storage_auth_window": [
+       1794814455,
+       0,
+       20
+      ]
      }
     ],
     "guard_stop": "s3_authorization",
     "install_output_bytes": 191,
-    "install_seconds": 4.2,
+    "install_seconds": 4.9,
     "objects": 7,
     "records_per_source": {
      "collector": 1,
@@ -442,8 +447,8 @@
      "reader": 1,
      "server": 68
     },
-    "retention_stop_seconds": 50.7,
-    "stop_seconds": 165.3
+    "retention_stop_seconds": 50.2,
+    "stop_seconds": 165.6
    }
   },
   {
@@ -455,22 +460,22 @@
     },
     {
      "check": "install with the destination unreachable: started",
-     "detail": "b'{\"cleanup_until\":1795368259,\"collection_until\":1795361059,\"epoch\":1794756259,\"launch_sha256\":\"df35a4dcd3ed83122239cd5254b8ad4a5098622e779dbb25703d0857469be7ed\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795426697,\"collection_until\":1795419497,\"epoch\":1794814697,\"launch_sha256\":\"9a5912e2a7d2471f7943cad7d79e59a0a1f0c02ad1e24ac2bc397f6a9840b75b\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
      "check": "no stop before the change",
-     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794756275, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 30, 'last_seen': 1794756275, 'last_tx': 43174, 'manifest_sha256': '4ac5eaf2ecd4caf2040760f13766b1c36c328b441dc9a9621197ed902b95ca25', 'misses': 0, 'schema': 5, 'stop': None}",
+     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794814715, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 38, 'last_seen': 1794814715, 'last_tx': 44655, 'manifest_sha256': '41582048a91daf78c58ad71f12bea4f9f6e8e76a48dd27d24be0a949d565cc1f', 'misses': 0, 'schema': 5, 'stop': None, 'storage_auth_window': [1794814697, 0, 0]}",
      "passed": true
     },
     {
      "check": "a changed .env stops acquisition within one sample and the unit stop (25 s)",
-     "detail": "('binding_config_sha256', 5.5751598940000235)",
+     "detail": "('binding_config_sha256', 5.071253691999971)",
      "passed": true
     },
     {
      "check": "retention stop after recovery drained within 150 s",
-     "detail": "(0, 50.23215350299995)",
+     "detail": "(0, 50.641898878999996)",
      "passed": true
     },
     {
@@ -516,7 +521,7 @@
    "observations": {
     "guard_stop": "binding_config_sha256",
     "install_output_bytes": 191,
-    "install_seconds": 4.3,
+    "install_seconds": 6.1,
     "objects": 4,
     "records_per_source": {
      "collector": 1,
@@ -524,8 +529,8 @@
      "reader": 1,
      "server": 4
     },
-    "retention_stop_seconds": 50.2,
-    "stop_seconds": 5.6
+    "retention_stop_seconds": 50.6,
+    "stop_seconds": 5.1
    }
   },
   {
@@ -537,7 +542,7 @@
     },
     {
      "check": "install: started",
-     "detail": "b'{\"cleanup_until\":1795368339,\"collection_until\":1795361139,\"epoch\":1794756339,\"launch_sha256\":\"b4e94f349a600de102ac4d40af4be13f179d0dd3f86d4a954aa20743092ee941\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795426779,\"collection_until\":1795419579,\"epoch\":1794814779,\"launch_sha256\":\"bca24414c6de3d0f25f7614c993b73842af8cd08fbfbcd8fa00da14f92fcae32\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
@@ -547,7 +552,7 @@
     },
     {
      "check": "the watchdog killed the frozen guard and acquisition stopped (within 30 s + 10 s + one sample)",
-     "detail": "20.923558265999986",
+     "detail": "30.101998205000086",
      "passed": true
     },
     {
@@ -557,7 +562,7 @@
     },
     {
      "check": "restarted collector drained within 150 s",
-     "detail": "(0, 50.31676174300003)",
+     "detail": "(0, 50.61296358000004)",
      "passed": true
     },
     {
@@ -592,7 +597,7 @@
    "id": "frozen-guard",
    "observations": {
     "install_output_bytes": 191,
-    "install_seconds": 5.0,
+    "install_seconds": 6.4,
     "objects": 5,
     "records_per_source": {
      "collector": 3,
@@ -605,7 +610,7 @@
      "logs": "inactive",
      "reader": "active"
     },
-    "watchdog_stop_seconds": 20.9
+    "watchdog_stop_seconds": 30.1
    }
   },
   {
@@ -617,7 +622,7 @@
     },
     {
      "check": "install with a failing collector: started",
-     "detail": "b'{\"cleanup_until\":1795368469,\"collection_until\":1795361269,\"epoch\":1794756469,\"launch_sha256\":\"3632fc8fac27a436755137063a9923afc2f84094fe4879ded9c8bf6d89ff58b5\",\"schema\":1,\"status\":\"started\"}\\n'",
+     "detail": "b'{\"cleanup_until\":1795426921,\"collection_until\":1795419721,\"epoch\":1794814921,\"launch_sha256\":\"3a352d882b3c39d7d84cd56773bd0a5f5648d4d6908b80ebc6e329b9fe614a3b\",\"schema\":1,\"status\":\"started\"}\\n'",
      "passed": true
     },
     {
@@ -632,12 +637,12 @@
     },
     {
      "check": "no stop decision",
-     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794756486, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 44, 'last_seen': 1794756486, 'last_tx': 46958, 'manifest_sha256': 'b90fe50b2c3f5511eaf95ea7d1aa106e10d02e948cdb02845f170b59fa575da3', 'misses': 0, 'schema': 5, 'stop': None}",
+     "detail": "{'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794814938, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 54, 'last_seen': 1794814938, 'last_tx': 48713, 'manifest_sha256': '6d7f5948515ea2c19d3d9de900c23a44d84e53f1364b9030cbfd56ac7916fd67', 'misses': 0, 'schema': 5, 'stop': None, 'storage_auth_window': [1794814921, 0, 0]}",
      "passed": true
     },
     {
      "check": "retention stop completes with the collector failed",
-     "detail": "(0, 0.09528979499998513, {'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'})",
+     "detail": "(0, 0.06502621000004183, {'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'})",
      "passed": true
     }
    ],
@@ -652,7 +657,7 @@
      "SubState": "dead"
     },
     "install_output_bytes": 191,
-    "install_seconds": 4.4
+    "install_seconds": 4.7
    }
   },
   {
