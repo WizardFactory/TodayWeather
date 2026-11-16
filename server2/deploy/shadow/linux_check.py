@@ -220,9 +220,10 @@ def reset_host():
 
 
 def policies(now):
-    cost = dict(schema=1, observed_at=now - 60, prices_sha256='d' * 64, rates={
+    cost = dict(schema=2, observed_at=now - 60, prices_sha256='d' * 64, rates={
         'ec2_hour': '0.026', 'ipv4_hour': '0.005', 'gp3_gb_month': '0.0912', 's3_gb_month': '0.025',
-        's3_read': '0.00000035', 's3_write': '0.0000045', 'cpu_vcpu_hour': '0.05', 'outbound_gb': '0.126'})
+        's3_read': '0.00000035', 's3_write': '0.0000045', 'cpu_vcpu_hour': '0.05', 'outbound_gb': '0.126'},
+        ceiling_usd='300', prior_spend_usd='0', finish_reserve_usd='5')
     paid = dict(schema=1, observed_at=now - 60, prices_sha256='e' * 64,
                 usd_per_unit={p: '0.001' for p in state.PAID_PROVIDERS},
                 grants={g: {p: 100 for p in state.PAID_PROVIDERS} for g in state.GENERATIONS})

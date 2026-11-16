@@ -36,6 +36,18 @@ class SimulationSubsetTests(unittest.TestCase):
             self.assertGreater(diagnostics['quota_failures'], 0)
             self.assertEqual(diagnostics['provider_http']['vilage_fcst']['429'], diagnostics['quota_failures'])
 
+    def test_sub_budgets_no_longer_stop_and_the_ceiling_does(self):
+        # SR-4 (#3002): measured transmit and S3 rates are priced against one ceiling.
+        for name in ('tx-observed-early-rate', 's3-measured-high'):
+            run = sim.run_once(sim.SCENARIOS[name], 0)
+            self.assertTrue(run['full_run'], (name, run))
+            self.assertEqual(run['collected_hours'], 168.0)
+        run = sim.run_once(sim.SCENARIOS['cost-ceiling'], 0)
+        self.assertEqual(run['host_stop'], 'guard:cost_ceiling', run)
+        self.assertLess(run['collected_hours'], 168.0)
+        self.assertEqual(run['operator_stop'], 'host_stopped')
+        self.assertTrue(run['cleanup_complete'])
+
     def test_storage_authorization_failure_stops_within_a_sample(self):
         # A broken instance role fails every S3 call and passes the threshold at once.
         run = sim.run_once(sim.SCENARIOS['storage-auth-broken-role'], 0)

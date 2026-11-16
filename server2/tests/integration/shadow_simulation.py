@@ -64,10 +64,10 @@ def default_scenario(**changes):
         production_timeout=0.0,
         candidate_5xx=0.0,
         candidate_timeout=0.0,
-        s3_reads_per_hour=200.0,     # candidate S3 reads (allowance 90,000 for the run)
+        s3_reads_per_hour=200.0,     # candidate S3 reads (allocation 90,000; exhausted is refused, not a stop)
         s3_writes_per_hour=200.0,
         s3_put_bytes_per_hour=4 * 1024 ** 2,
-        tx_bytes_per_hour=10 * 1024 ** 2,    # guard ceiling 4,160,749,568 B over 168 h = 24.8 MB/h
+        tx_bytes_per_hour=10 * 1024 ** 2,    # priced against the cost ceiling (SR-4)
         cpu_busy_fraction=0.25,      # of 2 vCPU
         ssh_down=[],                 # [(start_s, end_s)] relative to epoch; end None = forever
         candidate_exit_at=None,      # seconds after start when the candidate process exits
@@ -92,6 +92,8 @@ SCENARIOS = {
     's3-measured-high': default_scenario(name='s3-measured-high', s3_reads_per_hour=2000, s3_writes_per_hour=600),
     # A dead candidate leaves no /proc entry: the guard's sample collection fails.
     'candidate-exit-day-3': default_scenario(name='candidate-exit-day-3', candidate_exit_at=60 * HOUR),
+    # SR-4: transmit priced at about USD 2.5/h drives the estimate to the USD 300 ceiling.
+    'cost-ceiling': default_scenario(name='cost-ceiling', tx_bytes_per_hour=20 * 1000 ** 3),
     # SR-3: the run's own storage authorization fails (instance role or bucket policy broken).
     'storage-auth-broken-role': default_scenario(name='storage-auth-broken-role', storage_auth_at=3 * HOUR),
     'realistic-combined': default_scenario(name='realistic-combined', poll_failure=1e-4, sample_failure=1e-6,

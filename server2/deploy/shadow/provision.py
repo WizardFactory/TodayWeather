@@ -344,7 +344,7 @@ def prepare_run(plan,source,directory,bundle,*,now):
     host=plan['host']
     launch_plan(dict(plan=host,epoch=now,generation='initial',allowance=plan['allowance']))
     require(host['run_id']==plan['cloud']['run_id'],'run identity')
-    require(estimate_cost(host['cost_policy'],now,now,cpu_seconds=0)['stop'] is None,'projected budget')
+    require(estimate_cost(host['cost_policy'],now,now,cpu_seconds=0)['stop'] is None,'cost ceiling')
     digest=hashlib.sha256(canonical(host).encode()).hexdigest()
     with Journal(directory,create=True,run_id=host['run_id'],manifest_sha=digest,epoch=now) as journal:
         freeze_plan(journal,plan['cloud'],now)

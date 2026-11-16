@@ -76,7 +76,7 @@ def read_json(path):
 def validate(manifest):
     fields = {'schema','run_id','generation','epoch','pid','start_ticks','boot_id',
               'binary_sha256','environment_sha256','config_sha256','config_directory','port','metrics_port','tx_origin',
-              'interface','data_directory','cgroup','allowance','cost_policy'}
+              'interface','data_directory','cgroup','allowance','cost_policy','paid_usd_per_unit'}
     require(type(manifest) is dict and set(manifest) == fields, 'manifest_fields')
     require(type(manifest['schema']) is int and manifest['schema'] == 2, 'schema')
     require(isinstance(manifest['run_id'], str) and re.fullmatch('[a-z0-9-]{1,40}',manifest['run_id']), 'run_id')
@@ -99,6 +99,12 @@ def validate(manifest):
     for field,cap in [('reads',900000),('writes',900000),('put_bytes',2*GiB)]:
         require(integer(allowance[field],1,cap),'allowance_'+field)
     validate_cost_policy(manifest['cost_policy'],manifest['epoch'])
+    # Paid provider prices (USD per runtime unit) of the frozen paid policy, by the server's
+    # metric names; None disables a provider.
+    paid=manifest['paid_usd_per_unit']
+    require(type(paid) is dict and set(paid)==set(PAID_PROVIDERS),'paid_prices')
+    for price in paid.values():
+        require(price is None or (type(price) is str and len(price)<=24 and re.fullmatch('[0-9]+(?:\\.[0-9]+)?',price) is not None),'paid_prices')
     return manifest
 
 
@@ -107,15 +113,18 @@ def evaluate(manifest, sample, previous, now):
     validate(manifest)
     require(integer(now),'now')
     fingerprint = hashlib.sha256(canonical(manifest).encode()).hexdigest()
-    result = {'schema':5,'manifest_sha256':fingerprint,'last_seen':now,
-              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None,'misses':0}
+    result = {'schema':6,'manifest_sha256':fingerprint,'last_seen':now,
+              'last_tx':manifest['tx_origin'],'last_cpu':0,'stop':None,'diagnostics':None,'misses':0,'cost':None}
     if previous is not None:
         require(type(previous) is dict and set(previous)==set(result),'state_fields')
         require(previous['manifest_sha256']==fingerprint,'state_identity')
-        require(previous['schema']==5 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu'])
+        require(previous['schema']==6 and integer(previous['last_seen']) and integer(previous['last_tx']) and integer(previous['last_cpu'])
                 and integer(previous['misses'],0,MISS_LIMIT),'state_values')
         require(previous['stop'] is None or isinstance(previous['stop'],str),'state_stop')
         if previous['diagnostics'] is not None:checked_stored_diagnostics(previous['diagnostics'])
+        cost=previous['cost']
+        require(cost is None or (type(cost) is dict and set(cost)=={'accrued_usd','limit_usd'}
+                and all(type(v) is str and re.fullmatch('[0-9]+(?:\\.[0-9]+)?',v) for v in cost.values())),'state_cost')
         result.update(previous)
         result['last_seen']=max(now,previous['last_seen'])
         if previous['stop'] is not None:
@@ -145,15 +154,13 @@ def evaluate(manifest, sample, previous, now):
     if not integer(tx) or tx < result['last_tx']:
         return stop('network_counter_reset')
     result['last_tx']=tx
-    # Stop threshold; the cost model separately reserves termination/export bytes.
-    if tx-manifest['tx_origin'] >= 4*GiB-128*1024**2:
-        return stop('network_ceiling')
     if not integer(sample.get('free_bytes')) or sample['free_bytes'] < 6*GiB:
         return stop('disk_reserve')
     metrics=sample.get('metrics')
     required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures','storage_auth_failures'}
     if (sample.get('accounting_valid') is not True
-            or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())):
+            or type(metrics) is not dict or set(metrics)!=required or not all(integer(v) for v in metrics.values())
+            or any(metrics[m]>manifest['allowance'][a] for m,a in S3_ALLOCATIONS)):
         return missed()
     try:diagnostics=checked_diagnostics(sample.get('diagnostics'))
     except (GuardError,TypeError,ValueError,KeyError,AttributeError):return missed()
@@ -168,17 +175,33 @@ def evaluate(manifest, sample, previous, now):
     # evidence, not stop reasons (SR-3). Only storage/credential authorization stops.
     if metrics['storage_auth_failures'] >= STORAGE_AUTH_LIMIT:
         return stop('s3_authorization')
-    for metric,allocation in [('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes')]:
-        if not 0 < metrics[metric] <= manifest['allowance'][allocation]:
-            return stop('s3_allowance')
+    # SR-4 (#3002): an exhausted S3 allocation or paid grant is refused by the server and
+    # recorded; it is not a stop. One cumulative ceiling prices what was actually used.
     cpu=sample.get('cpu_seconds')
     if not integer(cpu) or cpu<result['last_cpu']:
         return stop('cpu_accounting_unavailable')
     result['last_cpu']=cpu
-    cost=estimate_cost(manifest['cost_policy'],manifest['epoch'],now,cpu_seconds=cpu)
+    allowance=manifest['allowance']
+    cost=estimate_cost(manifest['cost_policy'],manifest['epoch'],now,cpu_seconds=cpu,
+                       s3_reads=allowance['reads']-metrics['s3_reads'],s3_writes=allowance['writes']-metrics['s3_writes'],
+                       tx_bytes=tx-manifest['tx_origin'],paid_usd=paid_spend(manifest['paid_usd_per_unit'],diagnostics['paid_units']))
+    result['cost']={'accrued_usd':cost['accrued_usd'],'limit_usd':cost['limit_usd']}
     if cost['stop']:
         return stop(cost['stop'])
     return result
+
+
+S3_ALLOCATIONS=(('s3_reads','reads'),('s3_writes','writes'),('s3_put_bytes','put_bytes'))
+
+
+def paid_spend(prices,paid_units):
+    """USD of paid units admitted so far (initial - remaining) at the frozen prices."""
+    from decimal import Decimal
+    total=Decimal(0)
+    for provider,units in (paid_units or {}).items():
+        if prices.get(provider) is not None:
+            total+=(units['initial']-units['remaining'])*Decimal(prices[provider])
+    return str(total)
 
 
 PAID_PROVIDERS=('visual_crossing','google','google_air_quality','openweather')
