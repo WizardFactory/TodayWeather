@@ -13,7 +13,8 @@ The shipped 1.1.1 IPA is not in this repository, so the build's inputs are read 
 3. with --app, the `CFBundleURLTypes` of a Cordova iOS build's Info.plist (ios/tools/chart-reference/build-cordova.sh or
    ios/tools/upgrade/build-cordova.sh) and its `com.apple.developer.associated-domains` entitlement.
 
-It prints what it found and exits 1 when a `todayweather` scheme appears anywhere. It reads client/ and the npm
+It prints what it found and exits 1 when a `todayweather` scheme appears anywhere: in config.xml, in a plugin file that
+touches URL types, or in the built app. Without --app the verdict rests on the build inputs alone and says so. It reads client/ and the npm
 registry; the iOS build does not use it.
 """
 import argparse
@@ -31,6 +32,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 PATTERN = re.compile(rb"CFBundleURLTypes|CFBundleURLSchemes|associated-domains|todayweather://")
+# A file that names the scheme itself (a plugin.xml or hook declaring it) decides the verdict; a file that only edits
+# URL types (the Firebase app-ID scheme of the firebasex-core hook) is listed.
+SCHEME = re.compile(rb"todayweather", re.IGNORECASE)
 
 
 def config_entries() -> list[str]:
@@ -39,10 +43,12 @@ def config_entries() -> list[str]:
             if re.search(r"CFBundleURL|associated-domains|applinks:|todayweather://", line)]
 
 
-def plugin_hits(work: Path) -> dict[str, list[str]]:
+def plugin_hits(work: Path) -> tuple[dict[str, list[str]], list[str]]:
+    """Per package the files touching URL types, and the files (as package:path) that name the `todayweather` scheme."""
     deps = json.loads((ROOT / "client" / "package.json").read_text(encoding="utf-8"))["devDependencies"]
     lock = json.loads((ROOT / "client" / "package-lock.json").read_text(encoding="utf-8"))["packages"]
     hits: dict[str, list[str]] = {}
+    naming: list[str] = []
     for name in sorted(deps):
         entry = lock.get(f"node_modules/{name}", {})
         resolved = entry.get("resolved", "")
@@ -51,6 +57,7 @@ def plugin_hits(work: Path) -> dict[str, list[str]]:
             folder = ROOT / "client" / resolved if resolved else None
             files = [p for p in folder.rglob("*") if p.is_file()] if folder and folder.is_dir() else []
             hits[name] = [str(p.relative_to(folder)) for p in files if PATTERN.search(p.read_bytes())]
+            naming += [f"{name}:{f}" for f in hits[name] if SCHEME.search((folder / f).read_bytes())]
             continue
         if "cordova" not in name and "plugin" not in name:
             continue
@@ -65,8 +72,14 @@ def plugin_hits(work: Path) -> dict[str, list[str]]:
         with tarfile.open(archive) as tar:
             members = [m for m in tar.getmembers() if m.isfile() and
                        (m.name.endswith("plugin.xml") or "/scripts/" in m.name or "/hooks/" in m.name)]
-            hits[name] = [m.name for m in members if PATTERN.search(tar.extractfile(m).read())]
-    return hits
+            hits[name] = []
+            for m in members:
+                data_m = tar.extractfile(m).read()
+                if PATTERN.search(data_m):
+                    hits[name].append(m.name)
+                    if SCHEME.search(data_m):
+                        naming.append(f"{name}:{m.name}")
+    return hits, naming
 
 
 def app_entries(app: Path) -> tuple[list[str], list[str]]:
@@ -89,13 +102,18 @@ def main():
     entries = config_entries()
     print(f"client/config.xml: {entries or 'no URL type or associated-domain entry'}")
     found |= any("todayweather" in e.lower() for e in entries)
-    for name, files in plugin_hits(work).items():
+    hits, naming = plugin_hits(work)
+    for name, files in hits.items():
         print(f"{name}: {', '.join(files) if files else 'no URL type entry'}")
+    if naming:
+        print(f"plugin files naming the todayweather scheme: {naming}")
+        found = True
     if args.app:
         schemes, domains = app_entries(args.app)
         print(f"{args.app.name} Info.plist CFBundleURLSchemes: {schemes}; associated domains: {domains}")
         found |= any(s.lower() == "todayweather" for s in schemes)
-    print("todayweather scheme: " + ("REGISTERED" if found else "not registered"))
+    basis = "build inputs and the built app" if args.app else "build inputs only (no --app: the built Info.plist was not read)"
+    print("todayweather scheme: " + ("REGISTERED" if found else "not registered") + f" [{basis}]")
     sys.exit(1 if found else 0)
 
 

@@ -60,15 +60,17 @@ final class WeatherShare {
     }
 }
 
-/// The system share sheet over the top view controller of the share button's window. On iPad the sheet is a popover
-/// whose arrow points at the share button (`ShareAnchor`), and it follows the button when the window turns or is resized.
+/// The system share sheet over the top view controller of the tapped share button's window (with several windows on
+/// iPad, the one the user tapped in, as the Android chooser opens from the calling activity; CODEX-IN16-1). On iPad the
+/// sheet is a popover whose arrow points at that button (`ShareAnchor`), and it follows the button when the window turns
+/// or is resized.
 /// The Cordova plugin (cordova-plugin-x-socialsharing 6.0.4, `getIPadPopupCoordinates` returning nil since 5.5.0) anchored
 /// it at the bottom center of the WebView instead (a 400×400 rect below the WebView's bottom edge); that rect remains the
 /// fallback when no share button is in a window.
 @MainActor
 struct SystemSharePresenter: SharePresenting {
     func present(_ message: String) {
-        let anchor = ShareAnchor.view.flatMap { $0.window == nil ? nil : $0 }
+        let anchor = ShareAnchor.tapped.flatMap { $0.window == nil ? nil : $0 }
         let window = anchor?.window ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows).first { $0.isKeyWindow }
         guard var top = window?.rootViewController else { return }
@@ -93,19 +95,32 @@ struct SystemSharePresenter: SharePresenting {
     }
 }
 
-/// The share button's view in a window, for the share sheet's popover (`popoverPresentationController.sourceView`).
+/// The view behind the share button that was tapped last, for the share sheet's window and popover
+/// (`popoverPresentationController.sourceView`). The button's action sets it before it shares.
 @MainActor
 enum ShareAnchor {
-    static weak var view: UIView?
+    static weak var tapped: UIView?
 }
 
-/// Placed behind the share button: a transparent view without touches or accessibility that registers itself as the
-/// `ShareAnchor` while it is in a window. Only the selected tab's header shows a share button. Kept at zero opacity so a
-/// rendering of the header (`ImageRenderer` in the screenshot tests, which draws no UIKit view) shows nothing of it.
-struct ShareAnchorView: UIViewRepresentable {
-    func makeUIView(context: Context) -> AnchorView { AnchorView() }
+/// Holds one header's anchor view, so that header's share button can name it when tapped.
+@MainActor
+final class ShareAnchorBox {
+    weak var view: UIView?
+}
 
-    func updateUIView(_ uiView: AnchorView, context: Context) {}
+/// Placed behind the share button: a transparent view without touches or accessibility, kept in its header's
+/// `ShareAnchorBox`. Kept at zero opacity so a rendering of the header (`ImageRenderer` in the screenshot tests, which
+/// draws no UIKit view) shows nothing of it.
+struct ShareAnchorView: UIViewRepresentable {
+    let box: ShareAnchorBox
+
+    func makeUIView(context: Context) -> AnchorView {
+        let view = AnchorView()
+        box.view = view
+        return view
+    }
+
+    func updateUIView(_ uiView: AnchorView, context: Context) { box.view = uiView }
 
     final class AnchorView: UIView {
         override init(frame: CGRect) {
@@ -121,15 +136,6 @@ struct ShareAnchorView: UIViewRepresentable {
         override var accessibilityIdentifier: String? {
             get { nil }
             set {}
-        }
-
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            if window != nil {
-                ShareAnchor.view = self
-            } else if ShareAnchor.view === self {
-                ShareAnchor.view = nil
-            }
         }
     }
 }

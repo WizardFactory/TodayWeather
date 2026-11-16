@@ -142,5 +142,39 @@ struct ShareTests {
             hosted.host.dismiss(animated: false) { c.resume() }
         }
     }
+
+    /// CODEX-IN16-1: with two windows (iPad), the sheet opens over the window whose share button was tapped, anchored at
+    /// that button, not over the window created last.
+    @Test func theSheetOpensInTheWindowOfTheTappedButton() async throws {
+        let size = CGSize(width: 393, height: 852)
+        let (shellA, screensA) = Self.shell()
+        WeatherShare(presenter: SystemSharePresenter()).attach(screensA)
+        let first = try HostedView(ShellView(model: shellA, content: { screensA.content($0) }), size: size)
+        defer { first.close() }
+        screensA.handle(.launch)
+        #expect(await AirLiveTests.wait(30) { screensA.scope?.currentWeather != nil })
+        let (shellB, screensB) = Self.shell()
+        WeatherShare(presenter: SystemSharePresenter()).attach(screensB)
+        let second = try HostedView(ShellView(model: shellB, content: { screensB.content($0) }), size: size)
+        defer { second.close() }
+        screensB.handle(.launch)
+        #expect(await AirLiveTests.wait(30) { screensB.scope?.currentWeather != nil })
+        try await first.settle()
+        try await second.settle()
+        try first.tap("forecast-share")
+        #expect(await AirLiveTests.wait(10) { first.host.presentedViewController is UIActivityViewController },
+                "the sheet over the first window")
+        #expect(second.host.presentedViewController == nil, "nothing over the window created last")
+        let sheet = try #require(first.host.presentedViewController as? UIActivityViewController)
+        #expect(sheet.popoverPresentationController?.sourceView?.window === first.window)
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            first.host.dismiss(animated: false) { c.resume() }
+        }
+        if second.host.presentedViewController != nil {
+            await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+                second.host.dismiss(animated: false) { c.resume() }
+            }
+        }
+    }
 }
 }

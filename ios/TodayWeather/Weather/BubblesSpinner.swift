@@ -7,18 +7,23 @@ struct WeatherBarActions: View {
     let colors: ShellColors
     var onBell: () -> Void = {}
     var onShare: () -> Void = {}
+    /// This header's share anchor: the tap names it, so the sheet opens in this button's window (IN-16).
+    @State private var shareAnchor = ShareAnchorBox()
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             BarButton(glyph: hasPush ? Glyphs.bell : Glyphs.bellOutline, colors: colors, width: 36, action: onBell)
                 .accessibilityLabel("notifications")
                 .accessibilityIdentifier("forecast-bell")
-            BarButton(glyph: Glyphs.upload, colors: colors, width: 32, action: onShare)
+            BarButton(glyph: Glyphs.upload, colors: colors, width: 32) {
+                ShareAnchor.tapped = shareAnchor.view
+                onShare()
+            }
                 .accessibilityLabel("share")
                 .accessibilityIdentifier("forecast-share")
                 // The share sheet's popover points at the button on iPad (IN-16, `ShareAnchor`); outside the button's
                 // accessibility modifiers, so the anchor takes neither its label nor its identifier.
-                .background(ShareAnchorView().opacity(0).accessibilityHidden(true))
+                .background(ShareAnchorView(box: shareAnchor).opacity(0).accessibilityHidden(true))
                 .padding(.trailing, 4)
         }
     }
