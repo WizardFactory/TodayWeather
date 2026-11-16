@@ -46,6 +46,7 @@ struct WeatherRequestTests {
             // One deadline at a time, and no further while the request may be settling: the settle time is exact even
             // when the machine is busy.
             await clock.quiesce()
+            _ = await eventually(30) { clock.nextDeadline != nil || done.value }
             while !done.value, let next = clock.nextDeadline {
                 await clock.advance(to: next)
                 for _ in 0..<40 where !done.value { try? await Task.sleep(for: .milliseconds(5)) }
@@ -86,6 +87,7 @@ struct WeatherRequestTests {
         units.temperatureUnit = "F"
         units.windSpeedUnit = "km/h"
         let task = Task { await repository.load(seoul, units: units, acceptLanguage: "ko-KR,ko;q=0.9", force: false) }
+        #expect(await due(clock, within: 2000) { http.attempts.count == 1 }, "the first attempt and the second's start wait")
         await clock.advance(to: 30_000)
         let result = await task.value
         guard case .loaded(let key, let entry, _) = result else { Issue.record("not loaded: \(result)"); return }
@@ -113,6 +115,7 @@ struct WeatherRequestTests {
         let repository = WeatherRepository(baseURL: Self.server, cacheDirectory: nil, http: http, clock: clock)
         let korean = Place(currentPosition: false, disable: false, name: "명동", address: "대한민국 서울특별시 중구 명동")
         let task = Task { await repository.load(korean, units: koreanUnits, acceptLanguage: "ko-KR,ko;q=0.9", force: false) }
+        #expect(await due(clock, within: 80) { http.attempts.count == 1 })
         await clock.advance(by: 30_000)
         let loaded = await task.value
         guard case .loaded(_, _, let place) = loaded else { Issue.record("not loaded: \(loaded)"); return }
@@ -124,6 +127,7 @@ struct WeatherRequestTests {
         let freeForm = Place(currentPosition: false, disable: false, name: "Abbey Road", address: "United Kingdom London Abbey Road")
         let before = http.attempts.count
         let failing = Task { await repository.load(freeForm, units: koreanUnits, acceptLanguage: "en-US,en;q=0.9", force: false) }
+        #expect(await due(clock, within: 150) { http.attempts.count == before + 1 })
         await clock.advance(by: 30_000)
         let failed = await failing.value
         let sent = http.attempts.dropFirst(before)
@@ -195,8 +199,10 @@ struct WeatherRequestTests {
         }
         let repository = WeatherRepository(baseURL: Self.server, cacheDirectory: nil, http: http, clock: clock)
         let first = Task { await repository.load(seoul, units: koreanUnits, acceptLanguage: "ko", force: false) }
+        #expect(await due(clock, within: 1500) { http.attempts.count == 1 })
         await clock.advance(by: 100)
         let second = Task { await repository.load(london, units: koreanUnits, acceptLanguage: "ko", force: false) }
+        #expect(await due(clock, within: 300) { http.attempts.count == 2 })
         await clock.advance(by: 400)
         guard case .loaded(let londonKey, _, _) = await second.value else { Issue.record("London"); return }
         #expect(repository.weather[londonKey] != nil && repository.weather["coord:37.56,126.98"] == nil)
@@ -210,8 +216,10 @@ struct WeatherRequestTests {
         let slow = ScriptedWeatherHTTP(clock: clock, [.answer(1500, seoulBody), .answer(200, seoulBody)])
         let again = WeatherRepository(baseURL: Self.server, cacheDirectory: nil, http: slow, clock: clock)
         let older = Task { await again.load(seoul, units: koreanUnits, acceptLanguage: "ko", force: true) }
+        #expect(await due(clock, within: 1500) { slow.attempts.count == 1 })
         await clock.advance(by: 100)
         let newer = Task { await again.load(seoul, units: koreanUnits, acceptLanguage: "ko", force: true) }
+        #expect(await due(clock, within: 200) { slow.attempts.count == 2 })
         await clock.advance(by: 3000)
         guard case .loaded = await newer.value else { Issue.record("newer"); return }
         guard case .superseded = await older.value else { Issue.record("older must be superseded"); return }
