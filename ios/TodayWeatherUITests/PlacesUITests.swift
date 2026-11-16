@@ -44,6 +44,18 @@ final class PlacesUITests: XCTestCase {
         e.tap()
     }
 
+    /// A result tapped as a user does: with the keyboard up the first tap only closes it (`OnSelectResult`), so the
+    /// result is tapped again once the keyboard is gone.
+    func tapResult(_ identifier: String) {
+        let keyboard = app.keyboards.firstMatch
+        if keyboard.exists {
+            tap(identifier, 30)
+            let end = Date().addingTimeInterval(5)
+            while keyboard.exists && Date() < end { Thread.sleep(forTimeInterval: 0.2) }
+        }
+        tap(identifier, 30)
+    }
+
     func shot(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
@@ -76,9 +88,7 @@ final class PlacesUITests: XCTestCase {
         tap("start-shortcut-0")
         XCTAssertTrue(waitForTitle { $0 == "서울" }, "Hourly for 서울: \(title)")
         search("부산")
-        // The first tap closes the keyboard (`OnSelectResult` with the keyboard up), the second adds the town.
-        tap("places-town-0")
-        if element("places-town-0").exists { tap("places-town-0", 5) }
+        tapResult("places-town-0")
         XCTAssertTrue(waitForTitle { $0 == "부산광역시" }, "Hourly for 부산광역시: \(title)")
         let chart = element("forecast-chart")
         XCTAssertTrue(chart.waitForExistence(timeout: 30), "the hourly chart")
@@ -119,16 +129,14 @@ final class PlacesUITests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 30))
         start.tap()
         start.typeText("부산")
-        tap("start-result-0", 30)
-        if element("start-result-0").exists { tap("start-result-0", 5) } // the first tap closed the keyboard
+        tapResult("start-result-0")
         XCTAssertTrue(waitForTitle { $0.contains("부산") }, "Hourly for 부산: \(title)")
         let busan = title
         shot("busan-hourly")
 
         // London from S02's search with the Places SDK.
         search("London")
-        tap("places-prediction-0", 30)
-        if element("places-prediction-0").exists { tap("places-prediction-0", 5) }
+        tapResult("places-prediction-0")
         XCTAssertTrue(waitForTitle { $0 == "London" }, "Hourly for London: \(title)")
         shot("london-hourly")
 
