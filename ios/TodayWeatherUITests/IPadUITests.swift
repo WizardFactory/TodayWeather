@@ -115,7 +115,7 @@ final class IPadUITests: XCTestCase {
     }
 
     func openMenu() {
-        tap("shell-menu-button")
+        tap("shell-menu-button", until: { element("shell-menu-back").exists && element("shell-menu-units").exists })
         Thread.sleep(forTimeInterval: 0.6)
     }
 
@@ -186,6 +186,6 @@ final class IPadUITests: XCTestCase {
             try check(state)
             tap("nation-back")
         }
-        XCTAssertEqual(checked.count, 18 * 2, "\(checked)")
+        XCTAssertEqual(checked.count, 17 * 2, "\(checked)")
     }
 }

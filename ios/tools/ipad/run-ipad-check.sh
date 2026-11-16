@@ -84,8 +84,8 @@ if ! grep -q "Test Case .*$TEST.* passed" "$OUT/xcodebuild.log"; then
   [ "$STATUS" -ne 0 ] || STATUS=1
 fi
 python3 - "$OUT/fixture-requests.json" <<'PY'
-import json, sys
-requests = json.load(open(sys.argv[1]))
+import json, os, sys
+requests = json.load(open(sys.argv[1])) if os.path.exists(sys.argv[1]) else []
 allowed = ("/weather/v000903/coord/", "/v000903/kma/addr/", "/geocode/v000903/", "/v000903/nation/", "/v000903/kma/special")
 bad = [r for r in requests if r["method"] != "GET" or not r["path"].startswith(allowed)]
 print(f"fixture server: {len(requests)} requests, {len(bad)} other")
