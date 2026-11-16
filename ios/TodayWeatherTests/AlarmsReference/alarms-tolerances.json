@@ -1,0 +1,178 @@
+{
+ "metric": "AN-05: strong = share of pixels whose largest RGB channel differs by more than 64 after a 3x3 box blur; mean = mean largest RGB channel difference (0-255); heightDifference = |native - Cordova| px at scale 3. Each case passes within its value plus `margin`.",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "reasons": {
+  "S09 states (settings, picker*, confirm, alert-off, equal, permission)": "Glyph rasterization of the titles, descriptions, weekday labels, alarm rows, slider labels and popup texts (WebKit places glyphs on its own subpixel grid; Korean falls back to Apple SD Gothic Neo in both; English titles are a few tenths of a point wider in WebKit), the switch's shadow and the hour bar's anti-aliased handle lines. Cards, borders, rows, weekday buttons, the bar and the popups are at the captured positions within 1 px after the measured offsets (AlarmsView: the weekday buttons 2/3 pt up, Cancel / Save 1/3 pt down, the picker's heading 1/2 pt down and its arrows 1/3 pt left, the grid labels as measured). Compared from the top to 20 pt under Cancel / Save; the rest is checked as the page's background.",
+  "intro, foreground": "O06 and O07 over the Hourly tab, compared in the popup's box only: the Hourly page under the backdrop shows through the popup's 90 % white (a light page stands in), plus glyph rasterization of the title, the lines and the buttons.",
+  "headroom": "Each case is its local measurement (`measured`, Xcode 27.2, iOS 26.5 simulator) times 1.5 plus 0.0005 for strong and times 1.2 plus 0.2 for mean, rounded up, plus `margin`: CI renders with Xcode 26.6, whose text rasterization IN-08 measured up to about twice as far from WebKit on text-heavy blocks. The height must match.",
+  "sensitivity": "plans/ios-native.md, IN-14 checks: the mutations these values detect."
+ },
+ "cases": {
+  "en-US-alert-off": {
+   "measured": {
+    "strong": 0.00249,
+    "mean": 0.794
+   },
+   "strong": 0.0043,
+   "mean": 1.16,
+   "heightDifference": 0
+  },
+  "en-US-confirm": {
+   "measured": {
+    "strong": 0.0009,
+    "mean": 0.411
+   },
+   "strong": 0.0019,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "en-US-equal": {
+   "measured": {
+    "strong": 0.0025,
+    "mean": 0.556
+   },
+   "strong": 0.0043,
+   "mean": 0.87,
+   "heightDifference": 0
+  },
+  "en-US-foreground": {
+   "measured": {
+    "strong": 0.0069,
+    "mean": 2.158
+   },
+   "strong": 0.0109,
+   "mean": 2.79,
+   "heightDifference": 0
+  },
+  "en-US-intro": {
+   "measured": {
+    "strong": 0.01677,
+    "mean": 3.767
+   },
+   "strong": 0.0257,
+   "mean": 4.73,
+   "heightDifference": 0
+  },
+  "en-US-permission": {
+   "measured": {
+    "strong": 0.00307,
+    "mean": 0.714
+   },
+   "strong": 0.0052,
+   "mean": 1.06,
+   "heightDifference": 0
+  },
+  "en-US-picker": {
+   "measured": {
+    "strong": 0.00103,
+    "mean": 0.454
+   },
+   "strong": 0.0021,
+   "mean": 0.75,
+   "heightDifference": 0
+  },
+  "en-US-picker-alarm": {
+   "measured": {
+    "strong": 0.00103,
+    "mean": 0.465
+   },
+   "strong": 0.0021,
+   "mean": 0.76,
+   "heightDifference": 0
+  },
+  "en-US-settings": {
+   "measured": {
+    "strong": 0.00216,
+    "mean": 0.714
+   },
+   "strong": 0.0038,
+   "mean": 1.06,
+   "heightDifference": 0
+  },
+  "ko-KR-alert-off": {
+   "measured": {
+    "strong": 0.00037,
+    "mean": 0.443
+   },
+   "strong": 0.0011,
+   "mean": 0.74,
+   "heightDifference": 0
+  },
+  "ko-KR-confirm": {
+   "measured": {
+    "strong": 0.00083,
+    "mean": 0.292
+   },
+   "strong": 0.0018,
+   "mean": 0.56,
+   "heightDifference": 0
+  },
+  "ko-KR-equal": {
+   "measured": {
+    "strong": 0.00187,
+    "mean": 0.386
+   },
+   "strong": 0.0034,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "ko-KR-foreground": {
+   "measured": {
+    "strong": 0.00662,
+    "mean": 2.097
+   },
+   "strong": 0.0105,
+   "mean": 2.72,
+   "heightDifference": 0
+  },
+  "ko-KR-intro": {
+   "measured": {
+    "strong": 0.0104,
+    "mean": 2.731
+   },
+   "strong": 0.0161,
+   "mean": 3.48,
+   "heightDifference": 0
+  },
+  "ko-KR-permission": {
+   "measured": {
+    "strong": 0.00189,
+    "mean": 0.439
+   },
+   "strong": 0.0034,
+   "mean": 0.73,
+   "heightDifference": 0
+  },
+  "ko-KR-picker": {
+   "measured": {
+    "strong": 0.00099,
+    "mean": 0.342
+   },
+   "strong": 0.002,
+   "mean": 0.62,
+   "heightDifference": 0
+  },
+  "ko-KR-picker-alarm": {
+   "measured": {
+    "strong": 0.00099,
+    "mean": 0.353
+   },
+   "strong": 0.002,
+   "mean": 0.63,
+   "heightDifference": 0
+  },
+  "ko-KR-settings": {
+   "measured": {
+    "strong": 0.00032,
+    "mean": 0.41
+   },
+   "strong": 0.001,
+   "mean": 0.7,
+   "heightDifference": 0
+  }
+ }
+}

@@ -4,6 +4,7 @@ import os
 import SwiftUI
 import TWData
 import TWDomain
+import TWModel
 import TWStorage
 import UIKit
 
@@ -49,6 +50,8 @@ final class AppLaunch {
     private(set) var places: PlacesScreens?
     /// The nationwide pages S10 and S11 and the warnings S12 (IN-13), created with the shell.
     private(set) var nation: NationScreens?
+    /// S09, O06, O07 and the notification taps (IN-14), created with the shell.
+    private(set) var alarms: AlarmsScreens?
     /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
     private(set) var startPage: StartPage?
     /// The device's location (IN-10), created with the shell.
@@ -92,20 +95,23 @@ final class AppLaunch {
     @ObservationIgnored let environment: Environment
     @ObservationIgnored private let weatherHTTP: any WeatherHTTP
 
-    /// The page over the tabs in the shell's page slot: a nationwide page (IN-13) or a settings page (IN-12); nil
-    /// while none shows. Both open from the menu, which the page then covers, so one shows at a time.
+    /// The page over the tabs in the shell's page slot: S09 (IN-14), a nationwide page (IN-13) or a settings page (IN-12);
+    /// nil while none shows. The nationwide and settings pages open from the menu, which the page then covers, and S09
+    /// from the tabs' bells, so one shows at a time.
     var pageView: ((ShellInsets) -> AnyView?)? {
-        guard nation != nil || settings != nil else { return nil }
+        guard alarms != nil || nation != nil || settings != nil else { return nil }
         return { [weak self] insets in
             guard let self else { return nil }
-            return nation?.pageView(insets) ?? settings?.pageView(insets)
+            return alarms?.pageView(insets) ?? nation?.pageView(insets) ?? settings?.pageView(insets)
         }
     }
 
-    /// The Cordova state of the page over the tabs (`screen_view`): `nation`, `nation-air`, `kma-special`, `units` or
-    /// `setting-radio`; nil while the tabs show.
+    /// The Cordova state of the page over the tabs (`screen_view`): `setting-push`, `nation`, `nation-air`, `kma-special`,
+    /// `units` or `setting-radio`; nil while the tabs show.
     var pageScreen: String? {
-        nation?.screenName ?? settings?.top.map(SettingsScreens.screenName)
+        // S09 (IN-14) is the Cordova state `setting-push`.
+        if alarms?.page != nil { return "setting-push" }
+        return nation?.screenName ?? settings?.top.map(SettingsScreens.screenName)
     }
 
     init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet(),
@@ -163,9 +169,43 @@ final class AppLaunch {
                                    opener: SystemURLOpener(), mail: mail)
         // IN-13: the nationwide pages' rows; the rows it does not handle go on to the settings' hook.
         nation = NationScreens(shell: shell, source: NationSource(baseURL: environment.serverURL, http: weatherHTTP))
-        shell.onEntry = { [weak weather] event in weather?.handle(event) }
+        let alarms = makeAlarms(shell, weather: weather)
+        self.alarms = alarms
+        // A notification's tap selects its place and reloads (IN-14); the weather pages handle the others.
+        shell.onEntry = { [weak weather, weak alarms] event in
+            if case .notification(let cityIndex) = event {
+                if let weather { alarms?.notificationTapped(cityIndex, session: weather.session) }
+            } else {
+                weather?.handle(event)
+            }
+        }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
+        // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`); after S01 when it opened there.
+        alarms.scheduleIntro()
+    }
+
+    /// S09 for a new shell (IN-14): the bells of the weather pages (the selected place) and of S02 (the row's place) open a
+    /// visit; a save posts through IN-04's push service; the return starts the tabs' pages anew (`cache: false`).
+    private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
+        let holder = self.holder
+        let alarms = AlarmsScreens(shell: shell, makePage: {
+            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
+                      post: { index in AppStartup.shared.push?.postPlace(index) },
+                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
+        }, postList: { AppStartup.shared.push?.postList() })
+        weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
+        places?.onBell = { [weak alarms] index in alarms?.open(fav: index) }
+        alarms.onClosed = { [weak self] in
+            self?.places?.reopen()
+            self?.weather?.reopen()
+        }
+        return alarms
+    }
+
+    /// A message that arrived while the app shows (O07, IN-14); nothing before the shell exists.
+    func message(_ payload: JSONObject) {
+        alarms?.showMessage(payload)
     }
 
     /// The process's UI started: the photo feed loads when the app opens and when a network comes back
@@ -261,6 +301,8 @@ final class AppLaunch {
         shell.closeStart()
         startPage = nil
         weather?.session.reload(.initial)
+        // A notification tap held while S01 showed, then O06's 500 ms (IN-14).
+        if let weather { alarms?.startClosed(session: weather.session) }
     }
 }
 

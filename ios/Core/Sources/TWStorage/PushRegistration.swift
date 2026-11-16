@@ -128,6 +128,61 @@ public enum PushRegistration {
         return Result(requests: [request], state: state)
     }
 
+    /// `Push.updatePushListByCityIndex(list, index)`, the S09 save (IN-14, #2963; the Android `onPlaceSaved` of AN-14):
+    /// the records of `index` are replaced by `list` (appended after the others, which keep `loadPushInfo`'s repair as
+    /// the Cordova list in memory did), and only `list` is posted (`POST /push-list`; nothing without a token,
+    /// `_postPushList`). Without a `context` (no server) the records are replaced and nothing is sent.
+    public static func onPlaceSaved(_ push: PushState, places: [Place], list: [JSONObject], index: Int,
+                                    context: Context?) -> Result {
+        var state = push
+        state.records = push.records.map { repair($0, places: places) }.filter { !names($0, index) } + list
+        state.type = platformType
+        guard let context, let token = state.fcmToken, !token.isEmpty else { return Result(requests: [], state: state) }
+        return Result(requests: [post(list, state: state, context: context)], state: state)
+    }
+
+    /// The post of `index`'s list after an S09 save (`_postPushList`, IN-14; the Android `placePost`): its records as
+    /// stored, where `onPlaceSaved` appended them, so the request equals the one `onPlaceSaved` builds for the list it
+    /// stored. Nothing without records (the place was removed since), a token or a `context`.
+    public static func placePost(_ push: PushState, index: Int, context: Context?) -> [PushRequest] {
+        var state = push
+        state.type = platformType
+        let list = push.records.filter { names($0, index) }
+        guard let context, !list.isEmpty, let token = state.fcmToken, !token.isEmpty else { return [] }
+        return [post(list, state: state, context: context)]
+    }
+
+    /// The post of the whole list after O06's OK (IN-14; the Android `listPost`): the records as stored; nothing without
+    /// a token or a `context`.
+    public static func listPost(_ push: PushState, context: Context?) -> [PushRequest] {
+        var state = push
+        state.type = platformType
+        guard let context, let token = state.fcmToken, !token.isEmpty else { return [] }
+        return [postList(state, context: context)]
+    }
+
+    /// `Push.enableAlertForOldAlarm(enable)`, the answer to O06 (IN-14; the Android `onAlertIntro`): OK (`enable`) turns
+    /// every alert on and posts the whole list (with a token); Close changes nothing. Either answer saves the list, which
+    /// ends the introduction (`PushState.needsAlertIntro`).
+    public static func onAlertIntro(_ push: PushState, places: [Place], enable: Bool, context: Context?) -> Result {
+        var state = push
+        state.records = push.records.map { repair($0, places: places) }
+        state.needsAlertIntro = false
+        state.type = platformType
+        guard enable else { return Result(requests: [], state: state) }
+        state.records = state.records.map { record in
+            record["category"]?.stringValue.map { JSString.equal($0, "alert") } == true
+                ? record.setting("enable", .bool(true)) : record
+        }
+        return Result(requests: listPost(state, context: context), state: state)
+    }
+
+    /// `_postPushList(list)` with a token: the given records only.
+    static func post(_ list: [JSONObject], state: PushState, context: Context) -> PushRequest {
+        PushRequest(method: "POST", path: context.versionPath + "/push-list", headers: headers(context, language: true),
+                    body: .array(list.map { .object(postObject($0, state: state, context: context)) }))
+    }
+
     /// A record names `index`: its `cityIndex` is that number (`===`).
     static func names(_ record: JSONObject, _ index: Int) -> Bool {
         record["cityIndex"]?.numberValue?.double == Double(index)

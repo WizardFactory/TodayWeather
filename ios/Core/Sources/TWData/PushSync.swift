@@ -131,6 +131,33 @@ public actor PushSync {
         }
     }
 
+    /// The post after an S09 save (`_postPushList`, IN-14 #2963; the Android `postPlace` of AN-14). The save itself is a
+    /// change of the page (`AlarmPage`), shown and saved at once as the Cordova list changed before S09 went back, so
+    /// S02's next visit sees it. When its turn comes this posts `index`'s list as saved then: a later save or the place's
+    /// removal in between is what the server gets. When the state cannot be saved nothing is sent and nothing fails, as
+    /// for the other writes. Nil when no request can be built.
+    @discardableResult
+    public func postPlace(_ index: Int) async -> Outcome? {
+        await post { PushRegistration.placePost($0.push, index: index, context: $1) }
+    }
+
+    /// The post after O06's OK (`enableAlertForOldAlarm`, IN-14; the answer is a change, `AlertIntro.answer`): the whole
+    /// list as saved then.
+    @discardableResult
+    public func postList() async -> Outcome? {
+        await post { PushRegistration.listPost($0.push, context: $1) }
+    }
+
+    private func post(_ requests: @escaping @Sendable (AppState, PushRegistration.Context) -> [PushRequest]) async -> Outcome? {
+        await serialized { [self] in
+            guard let current = try? await self.state.savedPushState(), let ctx = self.context(current) else { return nil }
+            let built = requests(current, ctx)
+            var statuses: [Int?] = []
+            for request in built { statuses.append(await self.transport.send(request)) }
+            return Outcome(requests: built, statuses: statuses)
+        }
+    }
+
     /// Registers the queued tokens in order of arrival (each like the Cordova token callback while the app runs).
     @discardableResult
     public func drain() async -> [Outcome] {

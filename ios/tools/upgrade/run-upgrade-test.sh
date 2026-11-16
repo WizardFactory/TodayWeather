@@ -3,7 +3,8 @@
 #   run-upgrade-test.sh <simulator-udid> <cordova-app> <out-dir> [localStorage|suite] [token-a|token-b]
 #
 # <cordova-app> comes from build-cordova.sh (server URL = this recorder, dummy Firebase project). The script:
-#  1. starts recorder.py on 127.0.0.1:18452 and erases the simulator (only a simulator named tw_*);
+#  1. starts recorder.py on 127.0.0.1:18452 and erases the simulator (only a simulator of this project, named tw_* or
+#     twios_*);
 #  2. installs a copy of the Cordova app with seed-cordova.js injected, launches it, waits for the seed (places,
 #     units, settings, alarms, analytics opt-in written through the app's own services) and stops it;
 #  3. checks that the opt-in reached the Firebase SDK (persisted collection flag on) and records the SDK's event
@@ -39,7 +40,7 @@ IOS=$(cd "$HERE/../.." && pwd)
 export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
 
 NAME=$(xcrun simctl list devices | sed -n "s/^ *\(.*\) ($UDID) .*/\1/p")
-case "$NAME" in tw_*) ;; *) echo "refusing simulator '$NAME' ($UDID): only simulators named tw_* are erased" >&2; exit 2 ;; esac
+case "$NAME" in tw_*|twios_*) ;; *) echo "refusing simulator '$NAME' ($UDID): only simulators named tw_* or twios_* are erased" >&2; exit 2 ;; esac
 grep -q "$RECORDER" "$CORDOVA_APP/www/client.config.js" || { echo "the Cordova app does not point at $RECORDER" >&2; exit 2; }
 
 rm -rf "$OUT"
