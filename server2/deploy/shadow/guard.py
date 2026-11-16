@@ -25,9 +25,10 @@ GiB = 1024**3
 INTERVAL = 10
 # A single failed observation never ends a run: stop after this many in a row (60 s).
 MISS_LIMIT = 6
-# Authorization failures of the run's own storage or instance credentials (SR-3). A
-# broken role fails every S3 call and passes this quickly; an isolated clock-skew
-# rejection does not. Provider rejections never stop the run.
+# Authorization-failure records of the run's own storage or instance credentials (SR-3);
+# one failed call can produce more than one record. A broken role fails every S3 call and
+# passes this quickly; an isolated clock-skew rejection does not. Provider rejections never
+# stop the run.
 STORAGE_AUTH_LIMIT = 20
 # ... within one fixed hourly window (CX-SR3-002): isolated rejections spread over the week,
 # each perhaps recorded by more than one operation, never add up to a stop.

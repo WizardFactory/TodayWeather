@@ -246,8 +246,9 @@ pub(crate) fn observe_rejection(cause: crate::observability::Cause, origin: Orig
     if matches!(origin, Origin::LocalPaidAllowance(_)) {
         bump(&LOCAL_PAID_EXHAUSTIONS);
     }
-    // Authorization failures of the run's own storage or instance credentials. S3 object,
-    // budget-object, history and summary transports report under these components; the
+    // Authorization-failure records (not calls) of the run's own storage or instance
+    // credentials: one failed call can be recorded by its HTTP and its enclosing operation.
+    // S3 object, budget-object, history and summary transports report under these components; the
     // geocode component is shared with its providers and is not counted here.
     use crate::observability::Component as C;
     if cause == crate::observability::Cause::Auth
