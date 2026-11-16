@@ -65,6 +65,13 @@ final class HostedView {
         host.view.layoutIfNeeded()
     }
 
+    /// The app's own window (IN-10's production check drives the app as it launched).
+    init(appWindow: UIWindow) throws {
+        #expect(Self.accessibility, "accessibility automation")
+        window = appWindow
+        host = try #require(appWindow.rootViewController)
+    }
+
     func close() { window.isHidden = true }
 
     /// Lets SwiftUI apply the latest state and lay out.

@@ -13,6 +13,10 @@ TW_WEATHER_PHOTOS_URL =
 // mail opens without a recipient.
 TW_MAIL_TO =
 
+// TW_PLACES_API_KEY_IOS: the Places SDK key of S01's search (IN-10), restricted to this bundle ID, written into
+// Info.plist as TWPlacesAPIKey. Empty without it: S01 searches the bundled towns instead.
+TW_PLACES_API_KEY_IOS =
+
 // TW_ADMOB_APP_ID_IOS, TW_ADMOB_BANNER_IOS: AdMob's app ID and banner unit (IN-15), written into Info.plist as
 // GADApplicationIdentifier and TWAdMobBannerUnit. Without TW_ADMOB_APP_ID_IOS a Release build carries this
 // placeholder, which no AdMob app has: the Google Mobile Ads SDK stops an app whose GADApplicationIdentifier is empty

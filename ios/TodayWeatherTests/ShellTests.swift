@@ -167,19 +167,55 @@ struct LaunchContinuityTests {
         #expect(launch.holder.state?.placeIndex == 1, "a second migration result changes nothing")
     }
 
+    /// IN-10: 현재위치 날씨보기 on a first launch ends on the Hourly page of the current position (the production check
+    /// found the shell's empty default there).
+    @Test func theCurrentPositionReachesHourlyFromTheStartPage() async throws {
+        let launch = AppLaunch(store: MemoryStore(),
+                               environment: .init(preferredLanguages: ["ko-KR"], photosURL: nil, version: "1.1.2",
+                                                  serverURL: "https://server.test.invalid"),
+                               weatherHTTP: try StartServer.server(), weatherCache: nil,
+                               location: { TestLocation(system: .authorizedWhenInUse,
+                                                        fixes: [Location(lat: 37.5662952, long: 126.9779451), Location(lat: 37.5662952, long: 126.9779451)]) },
+                               placeSearch: { nil })
+        let hosted = try HostedView(RootView(launch: launch), size: CGSize(width: 393, height: 852))
+        defer { hosted.close() }
+        launch.migrationFinished(AppState(units: .defaults(region: "KR")))
+        try await hosted.settle()
+        try hosted.tap("popup-button-0")
+        try await hosted.settle()
+        try hosted.tap("start-location")
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { hosted.element("shell-tab-forecast") != nil })
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { hosted.element("forecast-header") != nil }, "S03 after S01")
+        #expect(launch.shell?.screen == .tab(.forecast))
+        #expect(launch.weather?.content(.forecast)?.titleAccessory != nil, "the current position's location glyph or spinner in the title")
+        #expect(launch.holder.state?.places.first?.name == "회현동")
+    }
+
     @Test func theLaunchScreenStaysUntilTheMigration() async throws {
-        let launch = AppLaunch(store: MemoryStore(), environment: .init(preferredLanguages: ["ko-KR"], photosURL: nil, version: "1.1.2"))
+        // IN-10: S01 adds a shortcut through the legacy server (a double) and closes onto Hourly.
+        let launch = AppLaunch(store: MemoryStore(),
+                               environment: .init(preferredLanguages: ["ko-KR"], photosURL: nil, version: "1.1.2",
+                                                  serverURL: "https://server.test.invalid"),
+                               weatherHTTP: try StartServer.server(), weatherCache: nil,
+                               location: { TestLocation(system: .notDetermined) }, placeSearch: { nil })
         let hosted = try HostedView(RootView(launch: launch), size: CGSize(width: 393, height: 852))
         defer { hosted.close() }
         try await hosted.settle()
         #expect(hosted.element("splash") != nil)
         #expect(hosted.element("shell-tab-forecast") == nil)
-        launch.migrationFinished(ShellFixture.state(startVersion: nil))
+        launch.migrationFinished(AppState(units: .defaults(region: "KR")))
         try await hosted.settle()
-        #expect(hosted.element("start-placeholder") != nil, "no startVersion: S01")
-        try hosted.tap("start-placeholder")
+        #expect(hosted.element("start-page") != nil, "no startVersion: S01")
+        #expect(hosted.element("shell-tab-forecast") == nil)
+        try hosted.tap("popup-button-0")
         try await hosted.settle()
-        #expect(hosted.element("shell-tab-forecast") != nil)
+        try hosted.tap("start-shortcut-0")
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { hosted.element("shell-tab-forecast") != nil })
+        #expect(launch.shell?.selected == .forecast)
+        // The Hourly page of the new place shows, not the shell's empty default (the visit opens with the tabs).
+        #expect(await HostedShellTests.AirLiveTests.wait(10) { hosted.element("forecast-header") != nil }, "S03 after S01")
+        #expect(launch.holder.state?.places.last?.name == "서울")
+        #expect(launch.startPage == nil)
     }
 }
 }
