@@ -48,6 +48,8 @@ log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$OUT/steps.log"; }
 fail() { log "FAIL: $*"; exit 1; }
 log "Cordova $CORDOVA_VERSION, native $NATIVE_VERSION, fallback $FALLBACK_VERSION"
 
+# The port must be free: a server of another run there would get this run's requests (port 18452 is this tool's).
+if lsof -nP -iTCP:$PORT -sTCP:LISTEN > /dev/null 2>&1; then fail "port $PORT is in use by another process"; fi
 python3 "$HERE/recorder.py" $PORT "$OUT/recorder" > "$OUT/recorder.log" 2>&1 &
 RECORDER_PID=$!
 trap 'kill $RECORDER_PID 2>/dev/null || true' EXIT INT TERM
