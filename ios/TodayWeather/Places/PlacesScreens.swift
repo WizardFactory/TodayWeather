@@ -42,6 +42,8 @@ final class PlacesScreens {
     /// Visits opened so far.
     private(set) var visits = 0
     @ObservationIgnored private var visitOpen = false
+    /// The page's found positions already shown in the search (`PlacesPage.finds`).
+    @ObservationIgnored private var shownFinds = 0
 
     init(shell: ShellModel, session: WeatherSession, makePage: @escaping () -> PlacesPage, search: (any PlaceSearch)?,
          towns: @escaping () -> TownSearch?, openURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }) {
@@ -54,6 +56,7 @@ final class PlacesScreens {
         catalog = Catalog(code: shell.locale.catalog)
         page = makePage()
         query = PlaceQuery(search: search, towns: towns, scansTowns: true, keepsLastTowns: false)
+        shownFinds = page.finds
         observe()
     }
 
@@ -64,6 +67,7 @@ final class PlacesScreens {
             _ = shell.selected
             _ = shell.screen
             _ = page.found
+            _ = page.finds
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.update()
@@ -78,9 +82,11 @@ final class PlacesScreens {
         if case .tab = shell.screen { shown = shell.selected == .search } else { shown = false }
         if shown && !visitOpen { openVisit() }
         visitOpen = shown
-        // `OnSearchCurrentPosition`: the results give way to the found row, named in the input (`search.word`).
-        if let found = page.found, let name = found["name"]?.stringValue, query.word != name {
-            query.show(word: name)
+        // `OnSearchCurrentPosition`: each found position replaces the results with the found row, named in the input
+        // (`search.word`), also when the word already is its name.
+        if page.finds != shownFinds {
+            shownFinds = page.finds
+            if let name = page.found?["name"]?.stringValue { query.show(word: name) }
         }
     }
 
@@ -90,6 +96,7 @@ final class PlacesScreens {
         page.onPopup = { [weak self] in self?.show($0) }
         page.onAdded = { [weak self] in self?.added() }
         query = PlaceQuery(search: search, towns: towns, scansTowns: true, keepsLastTowns: false)
+        shownFinds = page.finds
         editing = false
         searching = false
         visits += 1

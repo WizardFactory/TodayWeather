@@ -226,6 +226,7 @@ struct PlacesPageTests {
         overlay.append(f.page.loading)
         #expect(overlay == [true, false])
         #expect(f.page.found?["address"] == "서울특별시 중구 회현동")
+        #expect(f.page.finds == 1, "each found position is counted, so the search shows it even under the same name")
         f.page.addFound()
         #expect(f.page.found == nil)
         await f.settle()
@@ -267,6 +268,7 @@ struct PlacesPageTests {
         geocode.page.findByLocation()
         await geocode.settle()
         #expect(geocode.popups.shown == [.confirm(RetryConfirm(lines: ["LOC_FAIL_TO_GET_LOCATION_INFORMATION"], buttons: [.close, .retry]))])
+        #expect([denied, prompt, off, geocode].allSatisfy { $0.page.finds == 0 }, "a failed lookup finds nothing")
     }
 
     /// A grant from the prompt runs the lookup again at once (`searchCurrentPositionEvent`).

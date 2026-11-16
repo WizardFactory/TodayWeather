@@ -239,6 +239,26 @@ struct PlacesScreenTests {
         #expect(f.shell.selected == .forecast)
     }
 
+    /// A found position replaces the results also when the word already is its name (CODEX-IN11-1: Cordova's
+    /// `OnSearchCurrentPosition` and the Android `PlacesTab` clear them on every found position).
+    @Test func aFoundPositionNamedAsTheWordReplacesTheResults() async throws {
+        let location = TestLocation(system: .authorizedWhenInUse, fixes: [Location(lat: 37.5604, long: 126.9801)])
+        let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul], location: location)
+        let app = try await f.hosted()
+        defer { app.close() }
+        f.places.focusChanged(true)
+        f.places.wordChanged("회현동")
+        f.places.focusChanged(false)
+        try await app.settle()
+        #expect(f.places.query.townResults != nil, "the bundled towns named 회현동 are listed")
+        try app.tap("places-find")
+        await f.settle()
+        try await app.settle()
+        #expect(f.places.query.word == "회현동")
+        #expect(f.places.query.townResults == nil && f.places.query.predictions == nil, "the found row replaces the results")
+        #expect(app.element("places-found") != nil && app.element("places-town-0") == nil)
+    }
+
     /// O03 `search` with the captured texts; OK finds by location again (A26).
     @Test func aDeniedFindShowsTheSearchConfirmation() async throws {
         let location = TestLocation(system: .denied)

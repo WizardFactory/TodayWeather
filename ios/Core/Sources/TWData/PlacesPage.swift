@@ -40,6 +40,9 @@ public final class PlacesPage {
     public private(set) var loading = false
     /// The geocoded position find-by-location gave: its result row.
     public private(set) var found: JSONObject?
+    /// Counts the found positions of `findByLocation`: each one replaces the results, also when its name is the word
+    /// already typed (CODEX-IN11-1).
+    public private(set) var finds = 0
     /// The visit's loads and its lookup of the current position (for tests that wait for them).
     @ObservationIgnored public private(set) var visit: Task<Void, Never>?
     @ObservationIgnored public private(set) var lookup: Task<Void, Never>?
@@ -124,7 +127,9 @@ public final class PlacesPage {
         perform { [weak self] in
             guard let self else { return }
             switch await locate(loading: { [weak self] in self?.loading = $0 }) {
-            case .found(let geoInfo): found = geoInfo
+            case .found(let geoInfo):
+                found = geoInfo
+                finds += 1
             case .failed(let message): confirm(message)
             }
         }
