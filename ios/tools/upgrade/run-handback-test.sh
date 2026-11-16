@@ -124,10 +124,27 @@ native() {
     containers
 }
 
+# The scene sessions UIKit keeps for the app (Library/Saved Application State): the native app's session names SwiftUI's
+# scene delegate, which the Cordova build does not have, and UIKit restores it there, so the fallback build opens to a
+# black window (seen on the iOS 26.5 simulator; ios/README.md, "Rollback hand-back"). Each fallback start below first
+# removes them, as discarding the app from the app switcher does; the delegate classes found are kept as evidence.
+forget_scenes() {
+    containers
+    saved="$DATA/Library/Saved Application State"
+    python3 -c "
+import glob, plistlib, sys
+for path in glob.glob(sys.argv[1] + '/*/KnownSceneSessions/data.data'):
+    for key, blob in plistlib.load(open(path, 'rb')).items():
+        print(key, [o for o in plistlib.loads(blob)['\$objects'] if isinstance(o, str) and 'Delegate' in o])
+" "$saved" > "$OUT/scene-sessions-$1.txt" 2>&1 || true
+    rm -rf "$saved"
+}
+
 # One start of the fallback build in <mode>, reported as <report>; with the console of the app (Firebase debug logging).
 fallback() {
     mode=$1; report=$2
     log "fallback build: $mode ($report)"
+    forget_scenes "$report"
     inject "$FALLBACK_APP" "$OUT/Fallback-$report.app" handback-cordova.js \
         " window.TW_HANDBACK_MODE = '$mode'; window.TW_HANDBACK_REPORT = '$report';"
     xcrun simctl install "$UDID" "$OUT/Fallback-$report.app"

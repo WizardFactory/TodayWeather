@@ -305,7 +305,11 @@ def main():
                 standard.get("/google/measurement/measurement_enabled_state") == 1)
         c.check("CDVUUID equals device.uuid", standard.get("CDVUUID") == seed.get("deviceId"), standard.get("CDVUUID"))
         c.check("suite holds the seeded cities", group.get("cities") == seed["suite"].get("cities"))
-        c.check("suite holds the analytics opt-in", group.get("twAnalyticsConsentV1") == "true")
+        # A build with AN-17's Monetization mirrors the choice into the suite; the shipped 1.1.1 does not (IN-17's run).
+        mirrored = seed["suite"].get("twAnalyticsConsentV1")
+        c.check("suite holds the analytics opt-in as the build mirrors it (1.1.1: not at all)",
+                mirrored in ("true", None) and group.get("twAnalyticsConsentV1") == mirrored,
+                [mirrored, group.get("twAnalyticsConsentV1")])
         files = webkit_files(data)
         c.check("WebKit localStorage database exists", any(f.endswith("localstorage.sqlite3") for f in files), files)
         c.check("the SDK counted an event under the opt-in", m is not None and "favorite_change" in m["events"], m)
