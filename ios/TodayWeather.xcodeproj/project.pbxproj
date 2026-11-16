@@ -18,6 +18,7 @@
 		7A1000000000000000150103 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000150603 /* FirebaseCrashlytics */; };
 		7A1000000000000000150104 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000150604 /* FirebaseRemoteConfig */; };
 		7A1000000000000000040101 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000040601 /* FirebaseMessaging */; };
+		7A1000000000000000100101 /* GooglePlaces in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000100601 /* GooglePlaces */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +67,7 @@
 				7A1000000000000000150103 /* FirebaseCrashlytics in Frameworks */,
 				7A1000000000000000150104 /* FirebaseRemoteConfig in Frameworks */,
 				7A1000000000000000040101 /* FirebaseMessaging in Frameworks */,
+				7A1000000000000000100101 /* GooglePlaces in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +132,7 @@
 				7A1000000000000000150603 /* FirebaseCrashlytics */,
 				7A1000000000000000150604 /* FirebaseRemoteConfig */,
 				7A1000000000000000040601 /* FirebaseMessaging */,
+				7A1000000000000000100601 /* GooglePlaces */,
 			);
 			productName = TodayWeather;
 			productReference = 7A1000000000000000000301 /* TodayWeather.app */;
@@ -194,6 +197,7 @@
 				7A1000000000000000030501 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				7A1000000000000000150501 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				7A1000000000000000150502 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */,
+				7A1000000000000000100501 /* XCRemoteSwiftPackageReference "ios-places-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7A1000000000000000000902 /* Products */;
@@ -467,6 +471,14 @@
 				version = 3.1.0;
 			};
 		};
+		7A1000000000000000100501 /* XCRemoteSwiftPackageReference "ios-places-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googlemaps/ios-places-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 11.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -519,6 +531,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A1000000000000000030501 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		7A1000000000000000100601 /* GooglePlaces */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A1000000000000000100501 /* XCRemoteSwiftPackageReference "ios-places-sdk" */;
+			productName = GooglePlaces;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

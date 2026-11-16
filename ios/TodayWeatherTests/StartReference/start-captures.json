@@ -1,0 +1,163 @@
+{
+ "source": "ios/tools/start-reference/capture.py provenance, from the records start-<lang>-<state>.json",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "webViewOrigin": {
+  "x": 0,
+  "y": 162
+ },
+ "states": {
+  "ko-KR/access": {
+   "crops": {
+    "page": "start-ko-KR-access.png",
+    "statusBar": "start-ko-KR-access-statusbar.png",
+    "popup": "start-ko-KR-access-popup.png"
+   },
+   "shortcuts": [
+    "서울",
+    "New York",
+    "東京",
+    "Berlin",
+    "北京",
+    "臺北市",
+    "दिल्ली",
+    "Hồ Chí Minh",
+    "Москва",
+    "Roma",
+    "İstanbul",
+    "香港",
+    "São Paulo",
+    "กรุงเทพมหานคร",
+    "Madrid",
+    "Warszawa",
+    "كراچى"
+   ]
+  },
+  "ko-KR/start": {
+   "crops": {
+    "page": "start-ko-KR-start.png",
+    "statusBar": "start-ko-KR-start-statusbar.png"
+   },
+   "shortcuts": [
+    "서울",
+    "New York",
+    "東京",
+    "Berlin",
+    "北京",
+    "臺北市",
+    "दिल्ली",
+    "Hồ Chí Minh",
+    "Москва",
+    "Roma",
+    "İstanbul",
+    "香港",
+    "São Paulo",
+    "กรุงเทพมหานคร",
+    "Madrid",
+    "Warszawa",
+    "كراچى"
+   ]
+  },
+  "ko-KR/search": {
+   "crops": {
+    "page": "start-ko-KR-search.png",
+    "statusBar": "start-ko-KR-search-statusbar.png"
+   },
+   "shortcuts": [
+    "서울",
+    "New York",
+    "東京",
+    "Berlin",
+    "北京",
+    "臺北市",
+    "दिल्ली",
+    "Hồ Chí Minh",
+    "Москва",
+    "Roma",
+    "İstanbul",
+    "香港",
+    "São Paulo",
+    "กรุงเทพมหานคร",
+    "Madrid",
+    "Warszawa",
+    "كراچى"
+   ]
+  },
+  "en-US/access": {
+   "crops": {
+    "page": "start-en-US-access.png",
+    "statusBar": "start-en-US-access-statusbar.png",
+    "popup": "start-en-US-access-popup.png"
+   },
+   "shortcuts": [
+    "서울",
+    "New York",
+    "東京",
+    "Berlin",
+    "北京",
+    "臺北市",
+    "दिल्ली",
+    "Hồ Chí Minh",
+    "Москва",
+    "Roma",
+    "İstanbul",
+    "香港",
+    "São Paulo",
+    "กรุงเทพมหานคร",
+    "Madrid",
+    "Warszawa",
+    "كراچى"
+   ]
+  },
+  "en-US/start": {
+   "crops": {
+    "page": "start-en-US-start.png",
+    "statusBar": "start-en-US-start-statusbar.png"
+   },
+   "shortcuts": [
+    "서울",
+    "New York",
+    "東京",
+    "Berlin",
+    "北京",
+    "臺北市",
+    "दिल्ली",
+    "Hồ Chí Minh",
+    "Москва",
+    "Roma",
+    "İstanbul",
+    "香港",
+    "São Paulo",
+    "กรุงเทพมหานคร",
+    "Madrid",
+    "Warszawa",
+    "كراچى"
+   ]
+  },
+  "en-US/search": {
+   "crops": {
+    "page": "start-en-US-search.png",
+    "statusBar": "start-en-US-search-statusbar.png"
+   },
+   "shortcuts": [
+    "서울",
+    "New York",
+    "東京",
+    "Berlin",
+    "北京",
+    "臺北市",
+    "दिल्ली",
+    "Hồ Chí Minh",
+    "Москва",
+    "Roma",
+    "İstanbul",
+    "香港",
+    "São Paulo",
+    "กรุงเทพมหานคร",
+    "Madrid",
+    "Warszawa",
+    "كراچى"
+   ]
+  }
+ }
+}
