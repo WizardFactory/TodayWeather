@@ -29,8 +29,8 @@ MISS_LIMIT = 6
 # broken role fails every S3 call and passes this quickly; an isolated clock-skew
 # rejection does not. Provider rejections never stop the run.
 STORAGE_AUTH_LIMIT = 20
-# ... within one hour (CX-SR3-002): isolated rejections spread over the week, each perhaps
-# recorded by more than one operation, never add up to a stop.
+# ... within one fixed hourly window (CX-SR3-002): isolated rejections spread over the week,
+# each perhaps recorded by more than one operation, never add up to a stop.
 STORAGE_AUTH_WINDOW = 3600
 
 

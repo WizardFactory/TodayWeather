@@ -5,7 +5,7 @@ Revision `198e3de2` on master `d78aa5a1` (SR-2 merged; the same tree as the stac
 ## Behaviour
 
 - **Server (opt-in qualification metrics).** `server2_runtime_provider_http_rejections_total{source,status}` counts each provider HTTP 401, 403 or 429 response once, under a fixed source: each data.go.kr API (from the request URL), `data_go_kr_other`, `visual_crossing`, and the keyless public hosts `public_kma_web`, `public_airkorea_web`, `public_mfds`, `public_other`. `server2_runtime_storage_auth_failures_total` counts authorization failures recorded by the S3 (including instance credentials), budget-object (`quota`), history and summary components. Existing counters are unchanged.
-- **Guard.** Provider auth/quota counts and local paid-budget exhaustion never stop the run; the latest counts, including per-source rejections (`provider_http`), are kept in the decision diagnostics (schema 5). At 20 storage/credential authorization failures within one hour the guard stops with `s3_authorization`; below that, and for isolated rejections spread over the week, it continues (review 1, CX-SR3-002).
+- **Guard.** Provider auth/quota counts and local paid-budget exhaustion never stop the run; the latest counts, including per-source rejections (`provider_http`), are kept in the decision diagnostics (schema 5). At 20 storage/credential authorization failures within one fixed hourly window the guard stops with `s3_authorization`; below that, and for isolated rejections spread over the week, it continues (review 1, CX-SR3-002).
 - **Vocabulary.** The guard's source set equals the labels of `allowance.rs` `source_label` (a test reads the Rust source, as it already does for components, stages and providers).
 
 ## Checks
@@ -39,4 +39,4 @@ Revision `198e3de2` on master `d78aa5a1` (SR-2 merged; the same tree as the stac
 | `storage-auth-broken-role` | 0 (—) | 3.0 (—) | 20 (—) | `guard:s3_authorization` 20 |
 | `realistic-combined` | 20 (0) | 168.0 (14.925) | 20 (20) | `guard:collection_deadline` 20 |
 
-Provider quota scenarios (`observed-quota-at-3min`, `shared-key-daily-429`) and `realistic-combined` now reach 168 hours in 20 of 20 seeds; the new `storage-auth-broken-role` scenario stops at the first sample after the role breaks. Remaining stops belong to later slices: transmit and S3 rates to SR-4; the address change still loses the evidence (SR-5). A candidate exit still ends the run, by design.
+Provider quota scenarios (`observed-quota-at-3min`, `shared-key-daily-429`) and `realistic-combined` now reach 168 hours in 20 of 20 seeds; the new `storage-auth-broken-role` scenario stops at the first sample after the role breaks (the simulator models at least 20 failed storage calls by that sample; on a real host the stop follows the 20th failure, 165.6 s in the Linux check). Remaining stops belong to later slices: transmit and S3 rates to SR-4; the address change still loses the evidence (SR-5). A candidate exit still ends the run, by design.
