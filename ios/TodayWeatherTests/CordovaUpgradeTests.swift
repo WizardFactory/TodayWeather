@@ -68,7 +68,10 @@ struct CordovaUpgradeTests {
         let other = source == "suite" ? "localStorage" : "suite"
         #expect(info.source.contains("cities=\(source)"))
         #expect(!info.source.contains("=\(other)"), "every key from \(source): \(info.source)")
-        #expect(info.keys["twAnalyticsConsentV1"] == "ignored")
+        // The opt-in is ignored where the update finds it: WebView storage, or the suite of a build that mirrors it
+        // (AN-17's Monetization; the shipped 1.1.1 does not, so a suite-only update from it finds none).
+        let found = source == "localStorage" || (seed.suite["twAnalyticsConsentV1"] ?? nil) != nil
+        #expect(info.keys["twAnalyticsConsentV1"] == (found ? "ignored" : nil))
         if source == "suite" {
             #expect(info.localStorageFile == nil)
         } else {
