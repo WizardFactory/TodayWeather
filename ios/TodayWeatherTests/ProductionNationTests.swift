@@ -96,9 +96,12 @@ struct ProductionNationTests {
         summary += ["requests (\(http.paths.count)):"] + http.paths
         try (summary.joined(separator: "\n") + "\n").write(to: out.appendingPathComponent("run.txt"), atomically: true, encoding: .utf8)
         print("NATION-PRODUCTION \(out.path)\n" + summary.joined(separator: "\n"))
-        #expect(http.paths.count == 3, "one read-only GET per opening")
-        #expect(http.paths.filter { $0.hasPrefix("GET /v000903/nation/KR?") }.count == 2)
-        #expect(http.paths.last == "GET /v000903/kma/special")
+        // Read-only GETs: per nationwide opening `_getHttp`'s attempts (a second one 2 s after the first while no answer
+        // came, a third at 4 s; the first run sent two per opening), and one for the warnings.
+        let nationGets = http.paths.filter { $0.hasPrefix("GET /v000903/nation/KR?") }.count
+        #expect((2...6).contains(nationGets), "\(nationGets) nation attempts for two openings")
+        #expect(http.paths.filter { $0 == "GET /v000903/kma/special" }.count == 1)
+        #expect(http.paths.count == nationGets + 1, "nothing else")
     }
 
     private func snapshot(_ hosted: HostedView, _ url: URL) throws {
