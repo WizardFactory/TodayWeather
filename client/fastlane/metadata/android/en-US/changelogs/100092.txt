@@ -1,0 +1,1 @@
+Privacy items (optional usage analytics, ad privacy choices, privacy policy and terms) moved to the end of the menu.

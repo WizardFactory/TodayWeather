@@ -16,7 +16,9 @@ struct WeatherPhotoFeedTests {
     /// A scripted server on the virtual clock: each attempt runs the next behavior; it records when attempts start
     /// (virtual milliseconds) and which were cancelled.
     final class Script: HTTPGetting, @unchecked Sendable {
-        enum Behavior { case answer(Int64), fail(Int64), hang }
+        /// `failLate`: fails at `ms` and then takes `pause` of real time to throw, as a busy machine delays the failure's
+        /// way back to `firstSettled` while nothing touches the clock.
+        enum Behavior { case answer(Int64), fail(Int64), failLate(Int64, pause: Duration), hang }
         private let lock = NSLock()
         private let clock: VirtualClock
         private var behaviors: [Behavior]
@@ -45,6 +47,10 @@ struct WeatherPhotoFeedTests {
                 case .fail(let ms):
                     try await clock.sleep(for: .milliseconds(ms))
                     throw URLError(.notConnectedToInternet)
+                case .failLate(let ms, let pause):
+                    try await clock.sleep(for: .milliseconds(ms))
+                    try await Task.sleep(for: pause)
+                    throw URLError(.notConnectedToInternet)
                 case .hang:
                     try await clock.sleep(for: .seconds(3600))
                     throw URLError(.timedOut)
@@ -56,19 +62,40 @@ struct WeatherPhotoFeedTests {
         }
     }
 
-    /// Runs `firstSettled` with the production timing on `clock` until it settles.
-    func settle(_ clock: VirtualClock, _ script: Script, until ms: Int64 = 60_000) async -> Result<Data, any Error> {
-        let task = Task { await firstSettled(attempts: 3, gap: .seconds(2), timeout: .seconds(20), clock: clock) {
-            try await script.get(self.url)
-        } }
+    /// Runs `firstSettled` with the production timing on `clock` until it settles. With `decidesAt` (the virtual time
+    /// of the deciding answer, failure or timeout) the clock stops there until the result has arrived on the real
+    /// clock (at most 10 s), so a busy machine cannot let a later attempt start meanwhile; then it moves on to `ms`, so
+    /// a wrong implementation's later attempts still run and are counted.
+    func settle(_ clock: VirtualClock, _ script: Script, decidesAt: Int64? = nil,
+                until ms: Int64 = 60_000) async -> Result<Data, any Error> {
+        let done = Done()
+        let task = Task {
+            let result = await firstSettled(attempts: 3, gap: .seconds(2), timeout: .seconds(20), clock: clock) {
+                try await script.get(self.url)
+            }
+            done.set()
+            return result
+        }
+        if let decidesAt {
+            await clock.advance(to: decidesAt)
+            _ = await eventually(10) { done.value }
+        }
         await clock.advance(to: ms)
         return await task.value
+    }
+
+    /// Set when the load has settled.
+    final class Done: @unchecked Sendable {
+        private let lock = NSLock()
+        private var flag = false
+        var value: Bool { lock.withLock { flag } }
+        func set() { lock.withLock { flag = true } }
     }
 
     @Test func aSlowRequestGetsTwoMoreAttemptsAGapApartAndTheFirstTimeoutDecides() async {
         let clock = VirtualClock()
         let script = Script(clock, [.hang, .hang, .hang])
-        let result = await settle(clock, script)
+        let result = await settle(clock, script, decidesAt: 20_000)
         #expect(script.starts == [0, 2000, 4000])
         if case .failure(let error) = result { #expect(error is AttemptTimeout, "the first attempt's timeout (20 s) decides") }
         else { Issue.record("expected the timeout") }
@@ -78,15 +105,26 @@ struct WeatherPhotoFeedTests {
     @Test func aFastFailureEndsTheLoadWithoutRetrying() async {
         let clock = VirtualClock()
         let script = Script(clock, [.fail(500)])
-        let result = await settle(clock, script)
+        let result = await settle(clock, script, decidesAt: 500)
         #expect(script.starts == [0], "the failure at 0.5 s comes before the second attempt at 2 s")
+        #expect((try? result.get()) == nil)
+    }
+
+    /// The load is decided when the failure reaches `firstSettled`, however long that takes on the real clock: the
+    /// clock is not moved on to the second attempt's start meanwhile (CI failed `aFastFailureEndsTheLoadWithoutRetrying`
+    /// with starts [0, 2000] under load).
+    @Test func aFailureThatTakesRealTimeToArriveStillEndsTheLoad() async {
+        let clock = VirtualClock()
+        let script = Script(clock, [.failLate(500, pause: .milliseconds(200))])
+        let result = await settle(clock, script, decidesAt: 500)
+        #expect(script.starts == [0], "the failure decides before the second attempt at 2 s")
         #expect((try? result.get()) == nil)
     }
 
     @Test func theFirstAttemptToAnswerWinsAndTheOthersAreCancelled() async {
         let clock = VirtualClock()
         let script = Script(clock, [.answer(3000), .hang, .hang])
-        let result = await settle(clock, script)
+        let result = await settle(clock, script, decidesAt: 3000)
         #expect((try? result.get()) == Self.feedBody)
         #expect(script.starts == [0, 2000], "the answer at 3 s comes before the third attempt at 4 s")
         #expect(script.cancelled == [2])
@@ -95,7 +133,7 @@ struct WeatherPhotoFeedTests {
     @Test func aLaterAttemptCanWin() async {
         let clock = VirtualClock()
         let script = Script(clock, [.hang, .answer(500), .hang])
-        let result = await settle(clock, script)
+        let result = await settle(clock, script, decidesAt: 2500)
         #expect((try? result.get()) == Self.feedBody)
         #expect(script.starts == [0, 2000])
         #expect(script.cancelled == [1])
