@@ -50,12 +50,12 @@ struct PlacesFixture {
 
     init(places list: [Place], selected: Int = 1, records: [JSONObject] = [], startupPage: String = "0",
          location: TestLocation = TestLocation(system: .authorizedWhenInUse), search: (any PlaceSearch)? = nil,
-         languages: [String] = ["ko-KR"]) throws {
+         languages: [String] = ["ko-KR"], started: Bool = true) throws {
         holder = AppStateHolder(store: MemoryStore())
         holder.load(AppState(places: list, placeIndex: selected, units: .defaults(region: "KR"),
                              settings: Settings(startupPage: startupPage, refreshInterval: "0", theme: "light"),
                              push: PushState(type: "ios", fcmToken: "token-a", records: records),
-                             cordovaExtras: JSONObject([("startVersion", 1)])))
+                             cordovaExtras: started ? JSONObject([("startVersion", 1)]) : JSONObject()))
         shell = ShellModel(holder: holder, locale: ShellLocale(preferredLanguages: languages), version: "test")
         server = try Self.server()
         self.location = location

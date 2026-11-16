@@ -181,11 +181,8 @@ final class AppLaunch {
         }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
-        // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`).
-        Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(500))
-            self?.alarms?.showIntroIfDue()
-        }
+        // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`); after S01 when it opened there.
+        alarms.scheduleIntro()
     }
 
     /// S09 for a new shell (IN-14): the bells of the weather pages (the selected place) and of S02 (the row's place) open a
@@ -304,6 +301,8 @@ final class AppLaunch {
         shell.closeStart()
         startPage = nil
         weather?.session.reload(.initial)
+        // A notification tap held while S01 showed, then O06's 500 ms (IN-14).
+        if let weather { alarms?.startClosed(session: weather.session) }
     }
 }
 
