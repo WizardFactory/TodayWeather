@@ -35,14 +35,6 @@
    "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
   },
   {
-   "file": "client/www/templates/tab-forecast.html",
-   "appSha256": "fe3155bb1cbb5cc5e5a5d02c5cc465080e9f224bea3570e8b8cf53d0575e11f8",
-   "tracked": true,
-   "clientSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
-   "matchesClient": false,
-   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
-  },
-  {
    "file": "client/www/js/controller.units.js",
    "appSha256": "adb460378b128059ac5613de542a502c2ada1a8d17822f9cbd87368e36e1ad18",
    "tracked": true,
@@ -105,30 +97,6 @@
    "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
    "matchesClient": true,
    "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
-  },
-  {
-   "file": "client/www/index.html",
-   "appSha256": "0df3ec6b77d9ec26fe136427b2c54be494bf0752783dbeea8b9eb3e73fef0392",
-   "tracked": true,
-   "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
-   "matchesClient": false,
-   "lastCommit": "94a95c59a1cb73246ee79b93be3c8f92e3649d45"
-  },
-  {
-   "file": "client/www/locales/ko.json",
-   "appSha256": "21d2dac921296c7e001a43dd05844ea63d498069781468c0bfd9a8b1d33e6eee",
-   "tracked": true,
-   "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
-   "matchesClient": false,
-   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
-  },
-  {
-   "file": "client/www/locales/en.json",
-   "appSha256": "b6717d8881c9e7101e47033fd78d2c324652b7aa4a158552b41b9332fc9b26e0",
-   "tracked": true,
-   "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
-   "matchesClient": false,
-   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
   }
  ],
  "runs": {
