@@ -59,6 +59,10 @@ on:
       - "client/www/templates/nation.html"
       - "client/www/templates/nation-air.html"
       - "client/www/templates/kma-special.html"
+      # Sources of ios/tools/handback/generate.py (IN-17: the fallback build's start over the hand-back's writes).
+      - "client/www/js/service.storage.js"
+      - "client/local-plugins/cordova-plugin-app-preferences/www/apppreferences.js"
+      - "client/local-plugins/cordova-plugin-app-preferences/src/ios/AppPreferences.m"
       # Sources of ios/tools/server-routes/generate.py (IN-18: the legacy server's route table for the request-path
       # test), which runs the Android route generator over server/.
       - "server/app.js"
@@ -118,6 +122,10 @@ on:
       - "client/www/templates/nation.html"
       - "client/www/templates/nation-air.html"
       - "client/www/templates/kma-special.html"
+      # Sources of ios/tools/handback/generate.py (IN-17: the fallback build's start over the hand-back's writes).
+      - "client/www/js/service.storage.js"
+      - "client/local-plugins/cordova-plugin-app-preferences/www/apppreferences.js"
+      - "client/local-plugins/cordova-plugin-app-preferences/src/ios/AppPreferences.m"
       # Sources of ios/tools/server-routes/generate.py (IN-18).
       - "server/app.js"
       - "server/routes/**"
@@ -146,7 +154,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps, ad privacy entries and the server route table are current
+      - name: Imported client assets, golden corpus, chart scenes, push requests and S09 goldens, weather request timing, air scales, settings steps, ad privacy entries, hand-back starts and the server route table are current
         run: |
           python3 ios/tools/import_client_assets.py
           python3 ios/tools/import_corpus.py
@@ -159,6 +167,7 @@ jobs:
           python3 ios/tools/ads/generate.py
           python3 ios/tools/share/generate.py
           python3 ios/tools/nation/generate.py
+          python3 ios/tools/handback/generate.py
           python3 ios/tools/server-routes/generate.py
           git diff --exit-code -- ios
           test -z "$(git status --porcelain -- ios)"
