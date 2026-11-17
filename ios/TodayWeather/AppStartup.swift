@@ -154,13 +154,3 @@ final class AppStartup {
         }
     }
 }
-
-final class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        // IN-14: a tap that started the app reaches the delegate only when it is set before the launch finishes.
-        NotificationEvents.shared.start()
-        AppStartup.shared.start(application)
-        return true
-    }
-}
