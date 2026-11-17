@@ -99,7 +99,7 @@ struct MatrixScreenshotTests {
                 .frame(width: display.width, height: display.webViewHeight)
                 .environment(\.cssFallbackLanguage, StartScreenshotTests.fallback(language))
             let reference = try References.image(Self.file(display, language, "start-\(language)-\(state).png"))
-            try report.compare("\(size)-\(language)-start-\(state)", render(view, display), reference)
+            try report.compare("\(size)-\(language)-start-\(state)", render(view, display, language: language), reference)
             #expect(try References.image(Self.file(display, language, "start-\(language)-\(state)-statusbar.png"))
                 .rgb(x: 20, y: 4) == [255, 255, 255], "\(state) status bar")
         }
@@ -119,7 +119,7 @@ struct MatrixScreenshotTests {
             .frame(width: display.width, height: display.webViewHeight)
             .environment(\.cssFallbackLanguage, "ko")
         let reference = try References.image(Self.file(display, language, "places-\(language)-list.png"))
-        try report.compare("\(size)-\(language)-places-list", render(view, display).top(reference.height), reference)
+        try report.compare("\(size)-\(language)-places-list", render(view, display, language: language).top(reference.height), reference)
         report.print("places")
     }
 
@@ -139,7 +139,7 @@ struct MatrixScreenshotTests {
             for block in blocks {
                 let index = Int(block["index"]?.numberValue?.double ?? -1)
                 let view = WeatherScreenshotTests.blockView(content.blocks[index], content: content, page: page, headerTop: display.top)
-                let native = render(view.frame(width: display.width), display, width: display.width)
+                let native = render(view.frame(width: display.width), display, width: display.width, language: language)
                 let reference = try References.image(Self.file(display, language, try #require(block["file"]?.stringValue)))
                 let hidden = Int((block["hidden"]?.numberValue?.double ?? 0) * Double(display.scale))
                 try report.compare("\(size)-\(language)-forecast-\(page)-\(index)", native, reference, hidden: hidden)
@@ -193,7 +193,7 @@ struct MatrixScreenshotTests {
             let index = Int(block["index"]?.numberValue?.double ?? -1)
             let width = CGFloat(block["rect"]?["w"]?.numberValue?.double ?? Double(display.width))
             let view = AirScreenshotTests.blockView(content.blocks[index], content: content, theme: .light, headerTop: display.top)
-            let native = render(view.frame(width: width), display, width: width)
+            let native = render(view.frame(width: width), display, width: width, language: language)
             let reference = try References.image(Self.file(display, language, try #require(block["file"]?.stringValue)))
             let hidden = Int((block["hidden"]?.numberValue?.double ?? 0) * Double(display.scale))
             try report.compare("\(size)-\(language)-air-kma-seoul-\(index)", native, reference, hidden: hidden)
@@ -212,14 +212,14 @@ struct MatrixScreenshotTests {
         let view = SideMenu(model: shell, catalog: Catalog(code: shell.locale.catalog), insets: insets, scrolls: false)
             .frame(width: display.width, height: display.webViewHeight, alignment: .top).clipped()
         var report = Report()
-        try report.compare("\(size)-\(language)-shell-menu", render(view, display),
+        try report.compare("\(size)-\(language)-shell-menu", render(view, display, language: language),
                            try References.image(Self.file(display, language, "shell-\(language)-light-menu.png")))
         // X1: the tab bar and the header bar on Hourly (the header without the page's own buttons, as ShellScreenshotTests).
         shell.select(.forecast)
         let colors = ShellColors.of(.light, tab: .forecast)
         let catalog = Catalog(code: shell.locale.catalog)
         let tabs = render(TabBar(selected: .forecast, colors: colors, catalog: catalog, insets: insets, onTap: { _ in })
-            .frame(width: display.width), display, width: display.width)
+            .frame(width: display.width), display, width: display.width, language: language)
         let tabsReference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png"))
         // The home indicator iOS drew over the WebView's bottom inset in some captures (system UI, not the page's).
         let indicator = CGRect(x: display.width / 2 - 75, y: CGFloat(tabsReference.height) / display.scale - 14, width: 150, height: 12)
@@ -227,7 +227,7 @@ struct MatrixScreenshotTests {
                            display.bottom > 0 ? tabs.copying([indicator], from: tabsReference, scale: display.scale) : tabs, tabsReference)
         let reference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-header.png"))
         let header = render(HeaderBar(colors: colors, title: "회현동", insets: insets, onMenu: {}) { EmptyView() }
-            .background(reference.color(x: 2, y: 2)).frame(width: display.width), display, width: display.width)
+            .background(reference.color(x: 2, y: 2)).frame(width: display.width), display, width: display.width, language: language)
         let mask = CGRect(x: display.width - 88, y: 0, width: 88, height: 44 + display.top + 0.5)
         try report.compare("\(size)-\(language)-shell-header", header.copying([mask], from: reference, scale: display.scale), reference)
         report.print("shell")
@@ -264,7 +264,7 @@ struct MatrixScreenshotTests {
                 view = AnyView(SettingsPageFrame(content: content, theme: theme, insets: display.insets, scrolls: false,
                                                  onBack: {}, onRow: { _ in }))
             }
-            let native = render(view.frame(width: display.width, height: display.webViewHeight), display)
+            let native = render(view.frame(width: display.width, height: display.webViewHeight), display, language: language)
             try report.compare("\(size)-\(language)-settings-\(state)", native,
                                try References.image(Self.file(display, language, "settings-\(language)-\(state).png")))
         }
@@ -288,7 +288,7 @@ struct MatrixScreenshotTests {
                 }
             }
             .frame(width: display.width, height: display.webViewHeight)
-            try report.compare("\(size)-\(language)-push-\(state)", render(view, display),
+            try report.compare("\(size)-\(language)-push-\(state)", render(view, display, language: language),
                                try References.image(Self.file(display, language, "alarms-\(language)-\(state).png")))
         }
         report.print("push")
@@ -333,15 +333,19 @@ struct MatrixScreenshotTests {
                 let bottom = (map["y"]?.numberValue?.double ?? 0) + (map["h"]?.numberValue?.double ?? 0) + 20
                 height = min(height, Int(bottom * Double(display.scale)))
             }
-            try report.compare("\(size)-\(language)-nation-\(name)", render(view, display).top(height), reference.top(height))
+            try report.compare("\(size)-\(language)-nation-\(name)", render(view, display, language: language).top(height), reference.top(height))
         }
         report.print("nation")
     }
 
     // MARK: - Rendering and comparison
 
-    private func render<V: View>(_ view: V, _ display: Display, width: CGFloat? = nil) -> Bitmap {
-        let renderer = ImageRenderer(content: view.environment(\.sizeCategory, .large))
+    /// The render at the display's scale. `language` sets the fallback fonts of the captured system (a CJK compatibility
+    /// character such as ㎍ comes from another font in another language; CI's simulator is in English); a view that
+    /// sets its own keeps it.
+    private func render<V: View>(_ view: V, _ display: Display, width: CGFloat? = nil, language: String) -> Bitmap {
+        let renderer = ImageRenderer(content: view.environment(\.sizeCategory, .large)
+            .environment(\.cssFallbackLanguage, language == "ko-KR" ? "ko" : "en"))
         renderer.scale = display.scale
         if let width { renderer.proposedSize = ProposedViewSize(width: width, height: nil) }
         return Bitmap(renderer.cgImage!)
