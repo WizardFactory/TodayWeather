@@ -9,12 +9,13 @@ settings, themes, nationwide information, about, privacy and sharing. The app sc
 are English with the Korean control labels. The [Android native manual](../android-app/README.md) describes the
 Android app.
 
-The screenshots were captured from the running native app on 17 November 2026 (Korea time) by a UI test on an owned
+The screenshots were captured from the running native app on 17 November 2026 (Korea time; the four menu pages 25 and
+38–40 again that evening, after the privacy rows moved below About as in the Cordova app) by a UI test on an owned
 iPhone 16 simulator (iOS 26.5, 393×852 pt at scale 3), Korean app language, default text size, the simulated
 position at Seoul City Hall and the status bar fixed at 9:41. Weather, geocoding, nationwide data and warnings are
 read-only requests to the legacy weather server; place search uses Google Places. Values and warnings are those of
 the capture time. Images are reduced to 720 pixels wide and a 256-color palette without replacing screen content. The
-banners are Google's test ads of a Debug build.
+banners are Google's test ads of a Debug build; whether one loaded varies between pages.
 
 ## Reader notes
 

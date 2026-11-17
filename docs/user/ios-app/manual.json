@@ -1,6 +1,6 @@
 {
  "title": "TodayWeather for iOS: native app user manual",
- "scenario": "Version 2.0.0 preview on an iPhone 16 simulator, Korean screens; English instructions keep the Korean control labels. Live examples captured on 17 November 2026 (Korea time); weather, ads and iOS dialogs vary.",
+ "scenario": "Version 2.0.0 preview on an iPhone 16 simulator, Korean screens; English instructions keep the Korean control labels. Live examples captured on 17 November 2026 (Korea time; the menu pages again that evening after the menu reorder); weather, ads and iOS dialogs vary.",
  "steps": [
   {
    "title": "Read the first-launch notice",
@@ -174,7 +174,7 @@
    "title": "Open the menu",
    "instruction": "Tap the menu button (three lines) at the top left.",
    "screenshot": "screenshots/25-menu.png",
-   "caption": "The menu: Korea-only pages, settings, privacy, feedback, review, version and information.",
+   "caption": "The menu: Korea-only pages, settings, feedback, review, version and information, then the privacy choices at the bottom.",
    "expected": "The back arrow closes the menu."
   },
   {
@@ -270,14 +270,14 @@
   },
   {
    "title": "Choose optional usage statistics",
-   "instruction": "In the menu tap 선택적 이용 통계 (Optional usage statistics). Choose 거부 / 철회 (Decline) or 동의 (Agree).",
+   "instruction": "At the bottom of the menu tap 선택적 이용 통계 (Optional usage statistics). Choose 거부 / 철회 (Decline) or 동의 (Agree).",
    "screenshot": "screenshots/39-analytics.png",
    "caption": "Analytics is off until you agree; you can withdraw at any time.",
    "expected": "This manual declines; the row shows 꺼짐 (Off)."
   },
   {
    "title": "Review advertising privacy options",
-   "instruction": "In the menu tap 광고 개인정보 선택 (Ad privacy).",
+   "instruction": "At the bottom of the menu tap 광고 개인정보 선택 (Ad privacy).",
    "screenshot": "screenshots/40-ad-privacy.png",
    "caption": "Google's privacy options form, or this message when none is required in your region.",
    "expected": "Advertising privacy is separate from usage statistics."

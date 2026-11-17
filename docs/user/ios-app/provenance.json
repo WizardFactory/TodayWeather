@@ -2,7 +2,7 @@
  "schema": 1,
  "product": "TodayWeather iOS native 2.0.0 preview",
  "runtime": "Swift / SwiftUI; no Ionic or Cordova runtime",
- "product_base_commit": "f60b63c0e4e6cc20795381120532b020edc9df02",
+ "product_base_commit": "ecf47d5c850b891188f4186ae796a4aa84e8e2ac",
  "capture_date": "2026-11-17",
  "environment": {
   "device": "owned iPhone 16 simulator twios_cap_16 (iOS 26.5), 393x852 pt at scale 3",
@@ -196,7 +196,7 @@
    ]
   },
   "screenshots/25-menu.png": {
-   "sha256": "95c5fdb6dfdf76b7dbba944439d50bdbc14be10b092a7ab09bcb3dfafaf993bb",
+   "sha256": "c9c6214b79a58d06716bf315a560183164ce1e93e176bc7b0af70c8dd9f95bf0",
    "size": [
     720,
     1562
@@ -287,21 +287,21 @@
    ]
   },
   "screenshots/38-about.png": {
-   "sha256": "db122c20e2f30d7611a9d3d48a6e88014775c499dc59dcce4bab04031ffc5d83",
+   "sha256": "54d512b124b99d27c62bc644b9cfc4d4bbbade861acfcf1cbeaabab14732fddf",
    "size": [
     720,
     1562
    ]
   },
   "screenshots/39-analytics.png": {
-   "sha256": "75374c3ba2f142dd2f65a50a59e5a508c4bda584432e73779622a47c140f65a0",
+   "sha256": "01ebd495ed6032b7871f7bafc7b44aefbb22a2d5b77e9d1d71c7ff6dc872cfc7",
    "size": [
     720,
     1562
    ]
   },
   "screenshots/40-ad-privacy.png": {
-   "sha256": "4a0804dae6c285fbd3857cbf2206cc7ac3638629c1fcf91fb862638ccf8af0ee",
+   "sha256": "84105d8b6e7b7e0d321479d2ce66ac2226c4100a9fc5d2cb813b623561b457f5",
    "size": [
     720,
     1562
@@ -315,11 +315,23 @@
    ]
   }
  },
- "manual_sha256": "d527b95855e84db97973c651ad495f8facb46d48acf964efd0ae2ccc64c7c61a",
- "pdf_sha256": "dfc1fb3ff37d18bfc2e7b70ae56ee27248ba893255f2106e699068ac82d37ff2",
+ "manual_sha256": "3d52ac4584f20e7f71407a7bfed4851c7394819d1ff7687caa8d6bcc56c0dcac",
+ "pdf_sha256": "4d2aacf3d0793d32fb70e3557045c0ef4e258154e877f32db657d223612b9531",
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "5d2ed56914838cda11d5bcc1542764743b1376203b124cda932758e6b438a4ee",
   "ios/tools/manual/run-manual-capture.sh": "33c9f5723ae99e1e6aacf85b40b871bade1ceaf5de59eb983a12dda10e80535c",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
- }
+ },
+ "recaptures": [
+  {
+   "date": "2026-11-17",
+   "screenshots": [
+    "screenshots/25-menu.png",
+    "screenshots/38-about.png",
+    "screenshots/39-analytics.png",
+    "screenshots/40-ad-privacy.png"
+   ],
+   "reason": "the side menu's privacy rows moved after About (#2990 order, IN-18 part 2); the same capture journey on twios_cap_16 (run manual-11), the four menu states taken from it; the other 37 screenshots are the morning's capture and match the app (checked page by page against the new run)"
+  }
+ ]
 }
