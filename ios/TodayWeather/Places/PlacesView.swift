@@ -156,7 +156,10 @@ struct PlacesHeader: View {
                     .accessibilityIdentifier("places-input")
             }
         }
-        .frame(maxWidth: .infinity, minHeight: PlacesMetrics.fieldHeight * scale, maxHeight: PlacesMetrics.fieldHeight * scale)
+        // The field takes the room the mode button leaves, also when its placeholder is wider (larger text in a narrow
+        // window): the input clips its placeholder, as WebKit's does, rather than widening the header.
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: PlacesMetrics.fieldHeight * scale, maxHeight: PlacesMetrics.fieldHeight * scale,
+               alignment: .topLeading)
         .clipShape(RoundedRectangle(cornerRadius: PlacesMetrics.fieldCorner))
     }
 }
