@@ -44,11 +44,19 @@ WORK = IOS / "build/matrix-reference"
 PROVENANCE = IOS / "provenance/matrix-captures.json"
 BUILT_SERVER = "http://127.0.0.1:18460"
 # The owned simulators (iOS 26.5): name, size, and this tool's fixture port for runs on it.
-DEVICES = {
-    "3103237B-4BDF-4DC7-AE44-7E3AB0317C01": ("twios_in18_se", "375x667", 18471),
-    "517DC815-4EF1-4EC7-835C-FAD594AFB4C5": ("twios_cap_16", "393x852", 18472),
-    "4093638A-BB4D-4903-934B-4A4D7A8E6496": ("twios_in18_promax", "440x956", 18473),
-}
+# The owned simulators (iOS 26.5) by name: size, and this tool's fixture port for runs on it. twios_in18_se (iPhone SE
+# 3rd generation) and twios_in18_promax (iPhone 16 Pro Max) are created for a capture batch and deleted by UDID after
+# it, so their UDIDs are looked up by name.
+NAMES = {"twios_in18_se": ("375x667", 18471), "twios_cap_16": ("393x852", 18472), "twios_in18_promax": ("440x956", 18473)}
+
+
+def owned_devices():
+    """{udid: (name, size, port)} of the owned simulators that exist now."""
+    listing = json.loads(subprocess.run(["xcrun", "simctl", "list", "devices", "-j"], check=True, capture_output=True,
+                                        text=True).stdout)["devices"]
+    return {d["udid"]: (d["name"],) + NAMES[d["name"]] for items in listing.values() for d in items if d["name"] in NAMES}
+
+
 SIZES = ["375x667", "393x852", "440x956"]
 LANGS = ["ko-KR", "en-US"]
 # Per set: its tool, whether its `capture` takes the language, the English system locale of its runs, the sizes it
@@ -125,7 +133,7 @@ def cordova_copy(cordova_app, port):
 
 def configure(module, name, udid, size, lang, port, stage):
     """Points the set's tool at this run: the owned simulators, the port, the staging outputs and the language."""
-    devices = {u: (n, s) for u, (n, s, _) in DEVICES.items()}
+    devices = {u: (n, s) for u, (n, s, _) in owned_devices().items()}
     server = f"http://127.0.0.1:{port}"
     targets = [module] + ([module.fc] if hasattr(module, "fc") else [])
     for m in targets:
@@ -195,9 +203,10 @@ def run(name, udid, cordova_app, lang):
         sys.exit(f"set {name}: one of {sorted(SETS)}")
     if lang not in LANGS:
         sys.exit(f"language {lang}: one of {LANGS}")
-    if udid not in DEVICES:
-        sys.exit(f"refusing simulator {udid}: only {sorted(DEVICES)}")
-    _, size, port = DEVICES[udid]
+    devices = owned_devices()
+    if udid not in devices:
+        sys.exit(f"refusing simulator {udid}: only the owned {sorted(NAMES)}")
+    _, size, port = devices[udid]
     if (name, size, lang) not in matrix_runs():
         sys.exit(f"{name} {size} {lang} is not a matrix run (the 393x852 references of that set are compared already)")
     if subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"], capture_output=True).returncode == 0:
@@ -264,7 +273,7 @@ def provenance(cordova_app):
                           "tool's port in a copy; dummy Firebase project; Google test ad units"},
         "sets": {k: {"tool": f"ios/tools/{v['tool']}/capture.py", "screens": v["screens"], "keep": v["keep"]}
                  for k, v in SETS.items()},
-        "devices": {u: {"name": n, "size": s} for u, (n, s, _) in DEVICES.items()},
+        "devices": {n: {"size": s} for n, (s, _) in NAMES.items()},
         "files": [{"path": p.relative_to(IOS).as_posix(), "sha256": sha256(p)} for p in files],
     }, ensure_ascii=False, indent=1) + "\n", "utf-8")
     print(f"wrote {PROVENANCE.relative_to(ROOT)} ({len(files)} files)")
