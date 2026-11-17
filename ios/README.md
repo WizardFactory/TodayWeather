@@ -585,7 +585,7 @@ English is English with region US: the Cordova iOS build takes its region from `
 
 Recapture: `tools/matrix-reference/capture.py run <set> <udid> <cordova-app> <ko-KR|en-US>` drives the set's own capture tool (`tools/<set>-reference/`) with its outputs redirected, a copy of the Cordova build pointing at this tool's port (18471–18473, one per simulator) and the owned simulators `twios_in18_se`, `twios_cap_16` and `twios_in18_promax` (create the SE and Pro Max for a capture batch and delete them by UDID after it). It erases a simulator once and lets iOS post its first-boot notifications, which covered the first capture. `capture.py check` lists missing runs, `capture.py provenance <cordova-app>` writes `provenance/matrix-captures.json`, and `tools/matrix-reference/tolerances.py <logs>` writes the tolerances from the measurements the suite prints. Each capture is checked by eye before it is kept: a run can record a state one navigation step late without failing (the first Korean settings run at 440×956 did).
 
-Fixed by the matrix (IN-18): in English, S04's three-day details kept a third of the width per day, so "Chance of precipitation" ran into the next day; a day's column now grows to its widest line, as the Cordova table's does.
+Fixed by the matrix (IN-18): in English, S04's three-day details kept a third of the width per day, so "Chance of precipitation" ran into the next day; a day's column now grows to its widest line, as the Cordova table's does. The side menu had its privacy blocks above Send feedback; since #2990 (client 1.1.3) the Cordova build and the Android app show them after About, and `MenuRow` follows again (the 393×852 shell and settings references were recaptured from the same build).
 
 ## Private inputs
 
