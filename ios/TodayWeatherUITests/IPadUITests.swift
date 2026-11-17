@@ -56,7 +56,10 @@ final class IPadUITests: XCTestCase {
     /// Every element with an identifier that shows in the window is inside it (see the class's note).
     func inside(_ name: String) throws {
         let snapshot = try app.snapshot()
-        let window = app.windows.firstMatch.frame
+        // The app's window: the largest one (`windows.firstMatch` was once a 516×688 window while the page was 1032 pt
+        // wide, which flagged every element).
+        let window = app.windows.allElementsBoundByIndex.map(\.frame).max { $0.width * $0.height < $1.width * $1.height }
+            ?? app.windows.firstMatch.frame
         var seen = 0
         var queue = [snapshot]
         while let node = queue.popLast() {
@@ -65,6 +68,9 @@ final class IPadUITests: XCTestCase {
             guard !id.isEmpty, frame.width > 0, frame.height > 0 else { continue }
             // As `IPadFitTests.problems` (CODEX-IN18P1-1): a dialog is checked wherever it is; other content scrolled
             // above or below the window is not, but content beside the window is cut.
+            // The closed side menu waits left of the window (`offset(x: -width)`, hidden from VoiceOver but listed in
+            // the snapshot); an open menu is checked like any content.
+            if id.hasPrefix("shell-menu") && frame.maxX <= window.minX + 0.5 { continue }
             let dialog = Self.dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") })
             if !dialog && (frame.maxY <= window.minY || frame.minY >= window.maxY) { continue }
             seen += 1
@@ -182,7 +188,8 @@ final class IPadUITests: XCTestCase {
         // S10, S11 and S12 (region KR).
         for (row, state) in [("nationalWeather", "S10"), ("nationalAir", "S11"), ("specialWeather", "S12")] {
             openMenu()
-            tap("shell-menu-\(row)")
+            // A row tapped while the menu settles can be lost (S12 once stayed on the open menu): tap until the page shows.
+            tap("shell-menu-\(row)", until: { element("nation-back").exists })
             wait("nation-back")
             let loading = element("nation-loading")
             let end = Date().addingTimeInterval(30)
