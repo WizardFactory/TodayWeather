@@ -21,12 +21,17 @@ struct HandBackConsentTests {
         let writer: HandBackWriter
         let records: HandBackConsentRecords
 
+        /// The files, whose writes and removals of the choice the test can make fail.
+        let failing: FailingRecords
+        let override = ChoiceOverride()
+
         init() {
             suite = UserDefaults(suiteName: suiteName)!
             files = AnalyticsConsentFiles(directory: directory)
-            let directory = self.directory
-            writer = HandBackWriter(suite: suite, consent: { AnalyticsConsentFiles.storedChoice(in: directory) })
-            records = HandBackConsentRecords(records: files, suite: suite, handBack: writer)
+            failing = FailingRecords(files)
+            let directory = self.directory, override = self.override
+            writer = HandBackWriter(suite: suite, consent: { override.value ?? AnalyticsConsentFiles.storedChoice(in: directory) })
+            records = HandBackConsentRecords(records: failing, suite: suite, handBack: writer, override: override)
         }
 
         deinit {
@@ -36,6 +41,22 @@ struct HandBackConsentTests {
 
         var marker: CordovaHandBack.Marker? { CordovaHandBack.parse(suite.string(forKey: CordovaHandBack.marker)) }
         var handedChoice: String? { suite.object(forKey: CordovaHandBack.consentKey) as? String }
+    }
+
+    /// The choice's records with writes and removals that fail on request (a full disk, a read-only directory).
+    @MainActor
+    final class FailingRecords: AnalyticsConsentRecords {
+        let files: AnalyticsConsentFiles
+        var failWrites = false
+        var failRemovals = false
+
+        init(_ files: AnalyticsConsentFiles) { self.files = files }
+
+        func readChoice() -> String? { files.readChoice() }
+        func writeChoice(_ value: Bool) -> Bool { failWrites ? false : files.writeChoice(value) }
+        func removeChoice() -> Bool { failRemovals ? false : files.removeChoice() }
+        func readCollection() -> Bool { files.readCollection() }
+        func writeCollection(_ enabled: Bool) -> Bool { files.writeCollection(enabled) }
     }
 
     static let state = AppState(places: [.currentPositionPlaceholder,
@@ -109,5 +130,53 @@ struct HandBackConsentTests {
         startup.makePush = { _ in nil }
         startup.start(UIApplication.shared)
         #expect(order == ["consent", "migrate"])
+    }
+
+    /// A grant here, the fallback build withdrew (CODEX-IN17-1). The withdrawal cannot be written: the choice is removed,
+    /// as the Android `ConsentStore.write` removes it, and collection stays off.
+    @Test func aWithdrawalThatCannotBeWrittenRemovesTheChoice() {
+        let f = Fixture()
+        _ = f.files.writeChoice(true)
+        _ = f.files.writeCollection(true)
+        f.suite.set(#"{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"#, forKey: CordovaHandBack.marker)
+        f.suite.set("false", forKey: CordovaHandBack.consentKey)
+        f.failing.failWrites = true
+        f.records.beforeStart()
+        #expect(f.files.readChoice() == nil, "removed")
+        let sdk = Sdk()
+        let analytics = UsageAnalytics(sdk: sdk, records: f.records, trafficType: "development")
+        analytics.start()
+        #expect(!analytics.choice)
+        #expect(!sdk.collection.contains(true), "collection never on: \(sdk.collection)")
+        f.writer.write(Self.state)
+        #expect(f.handedChoice == nil, "handed back as no choice")
+    }
+
+    /// As above, and the removal fails too: the stored grant stays on disk, but this run neither applies nor hands it back,
+    /// until a choice is written again.
+    @Test func aWithdrawalThatCanBeNeitherWrittenNorRemovedKeepsCollectionOff() {
+        let f = Fixture()
+        _ = f.files.writeChoice(true)
+        _ = f.files.writeCollection(true)
+        f.suite.set(#"{"schema":1,"generation":4,"writer":"cordova","complete":true,"keys":[]}"#, forKey: CordovaHandBack.marker)
+        f.suite.set("false", forKey: CordovaHandBack.consentKey)
+        f.failing.failWrites = true
+        f.failing.failRemovals = true
+        f.records.beforeStart()
+        #expect(f.files.readChoice() == "true", "the grant stays on disk")
+        let sdk = Sdk()
+        let analytics = UsageAnalytics(sdk: sdk, records: f.records, trafficType: "development")
+        analytics.start()
+        #expect(!analytics.choice)
+        #expect(!sdk.collection.contains(true), "collection never on: \(sdk.collection)")
+        f.writer.write(Self.state)
+        #expect(f.handedChoice == "false", "the withdrawal is what this run hands back")
+        // A choice that can be written again ends it.
+        f.failing.failWrites = false
+        f.failing.failRemovals = false
+        #expect(analytics.setCollectionEnabled(true))
+        #expect(analytics.choice)
+        #expect(f.handedChoice == "true")
+        #expect(f.files.readChoice() == "true")
     }
 }

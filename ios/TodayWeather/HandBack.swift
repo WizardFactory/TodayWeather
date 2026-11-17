@@ -16,10 +16,13 @@ enum AppHandBack {
         return UserDefaults(suiteName: CordovaMigration.suiteName)
     }
 
-    /// The app's writer; nil without the suite.
+    /// A withdrawal this run holds without a stored choice (`HandBackConsentRecords.beforeStart`).
+    static let choiceOverride = ChoiceOverride()
+
+    /// The app's writer; nil without the suite. It hands back this run's choice: the override, else the stored one.
     static let writer: HandBackWriter? = suite().map { suite in
-        let directory = AnalyticsConsentFiles.standardDirectory
-        return HandBackWriter(suite: suite, consent: { AnalyticsConsentFiles.storedChoice(in: directory) })
+        let directory = AnalyticsConsentFiles.standardDirectory, override = choiceOverride
+        return HandBackWriter(suite: suite, consent: { override.value ?? AnalyticsConsentFiles.storedChoice(in: directory) })
     }
 
     /// The suite's marker text (as the plugin's `fetch` would give it), read at every start.
@@ -37,28 +40,34 @@ enum AppHandBack {
 final class HandBackConsentRecords: AnalyticsConsentRecords {
     /// The app's records (`UsageAnalytics` of `Monetization.shared`, and `AppStartup`).
     static let app = HandBackConsentRecords(records: AnalyticsConsentFiles.standard(), suite: AppHandBack.suite(),
-                                            handBack: AppHandBack.writer)
+                                            handBack: AppHandBack.writer, override: AppHandBack.choiceOverride)
 
     private let records: any AnalyticsConsentRecords
     private let suite: (any HandBackSuite)?
     private let handBack: HandBackWriter?
+    private let override: ChoiceOverride
 
-    init(records: any AnalyticsConsentRecords, suite: (any HandBackSuite)?, handBack: HandBackWriter?) {
+    /// `override` is the one `handBack` reads its choice through (`AppHandBack.choiceOverride` in the app).
+    init(records: any AnalyticsConsentRecords, suite: (any HandBackSuite)?, handBack: HandBackWriter?,
+         override: ChoiceOverride) {
         self.records = records
         self.suite = suite
         self.handBack = handBack
+        self.override = override
     }
 
-    func readChoice() -> String? { records.readChoice() }
+    func readChoice() -> String? { override.value ?? records.readChoice() }
 
     func writeChoice(_ value: Bool) -> Bool {
         let written = records.writeChoice(value)
+        if written { override.value = nil }
         handBack?.rewrite()
         return written
     }
 
     func removeChoice() -> Bool {
         let removed = records.removeChoice()
+        if removed { override.value = nil }
         handBack?.rewrite()
         return removed
     }
@@ -70,8 +79,27 @@ final class HandBackConsentRecords: AnalyticsConsentRecords {
     /// Before the first hand-back of the process and before the stored choice applies (`UsageAnalytics.start`): a grant
     /// stands only while the suite says `"true"` once anything was handed over, so a withdrawal made in a fallback build
     /// holds and a grant made there is not carried over.
+    /// A withdrawal that cannot be written removes the choice, as the Android `ConsentStore.write` does; one that can be
+    /// neither written nor removed holds for this run (`ChoiceOverride`), so collection stays off and the hand-back says
+    /// `"false"`.
     func beforeStart() {
-        guard records.readChoice() == "true", let suite, !HandBackConsent.grantStands(in: suite) else { return }
-        _ = writeChoice(false)
+        guard readChoice() == "true", let suite, !HandBackConsent.grantStands(in: suite) else { return }
+        if writeChoice(false) || removeChoice() { return }
+        override.value = "false"
+        handBack?.rewrite()
+    }
+}
+
+
+/// A withdrawal of the analytics choice that holds for this run only (CODEX-IN17-1): set when a withdrawal the suite asks
+/// for can be neither written nor removed, so the grant on disk is neither applied nor handed back; cleared by the next
+/// choice that is written or removed. Read by the hand-back writer off the main actor.
+final class ChoiceOverride: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: String?
+
+    var value: String? {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }

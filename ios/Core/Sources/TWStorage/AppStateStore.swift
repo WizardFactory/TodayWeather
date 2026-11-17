@@ -94,19 +94,45 @@ public struct MigrationRunner: Sendable {
 
     /// The state after the migration; a second call changes nothing.
     public func runIfNeeded() throws -> AppState {
-        let text = marker()
-        do {
-            if let state = try store.load(), let migration = state.migration {
-                guard let claim = CordovaHandBack.cordovaClaim(text),
-                      claim.generation > (migration.handBackGeneration ?? 0) else { return state }
-            }
-        } catch .corrupt {
-            // migrate again below
-        }
+        let claim = CordovaHandBack.cordovaClaim(marker())
+        if let state = try storedState(), Self.keeps(state, claim: claim) { return state }
         var state = CordovaMigration.migrate(try sources(), region: region(), now: now(), zone: zone())
-        state.migration?.handBackGeneration = CordovaHandBack.cordovaClaim(text)?.generation
+        state.migration?.handBackGeneration = claim?.generation
         try store.save(state)
         return state
+    }
+
+    /// The stored state; nil when none was saved, or when the file is corrupt (a new migration replaces it). A file that
+    /// cannot be read now throws. (Kept apart from `runIfNeeded`: Swift 6.3's SIL ownership verifier crashed on the typed
+    /// `catch .corrupt` with returns inside its `do` there, CODEX-IN17-2.)
+    func storedState() throws -> AppState? {
+        // The catch only records the error; the decision is made after it, outside the catch.
+        let loaded: Result<AppState?, AppStateStore.LoadError>
+        do {
+            loaded = .success(try store.load())
+        } catch {
+            loaded = .failure(error)
+        }
+        switch loaded {
+        case .success(let state): return state
+        case .failure(let error): return try Self.unlessCorrupt(error)
+        }
+    }
+
+    /// nil for a corrupt file; any other load error is thrown.
+    static func unlessCorrupt(_ error: AppStateStore.LoadError) throws -> AppState? {
+        switch error {
+        case .corrupt: return nil
+        case .unavailable: throw error
+        }
+    }
+
+    /// A stored state that records a migration stays, unless a fallback build's claim (`claim`) is newer than the one it
+    /// adopted.
+    static func keeps(_ state: AppState, claim: CordovaHandBack.Marker?) -> Bool {
+        guard let migration = state.migration else { return false }
+        guard let claim else { return true }
+        return claim.generation <= (migration.handBackGeneration ?? 0)
     }
 }
 
