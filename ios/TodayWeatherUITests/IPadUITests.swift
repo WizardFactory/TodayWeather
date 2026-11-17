@@ -37,6 +37,9 @@ final class IPadUITests: XCTestCase {
     }
 
     /// The state checked in portrait, then turned to landscape, checked, and turned back.
+    /// States that show over the open side menu (S06 and About over it); in every other state the menu is closed.
+    static let menuOpenStates: Set<String> = ["S06", "O10"]
+
     func check(_ state: String) throws {
         for orientation in [UIDeviceOrientation.portrait, .landscapeLeft, .portrait] {
             if XCUIDevice.shared.orientation != orientation {
@@ -44,7 +47,7 @@ final class IPadUITests: XCTestCase {
                 Thread.sleep(forTimeInterval: 1.5)
             }
             let name = "\(state)-\(orientation == .portrait ? "portrait" : "landscape")"
-            try inside(name)
+            try inside(name, menuOpen: Self.menuOpenStates.contains(state))
             if !checked.contains(name) { checked.append(name) }
             let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             shot.name = name
@@ -53,37 +56,71 @@ final class IPadUITests: XCTestCase {
         }
     }
 
-    /// Every element with an identifier that shows in the window is inside it (see the class's note).
-    func inside(_ name: String) throws {
+    /// The oracle for one identified element in `window` (as `IPadFitTests.problems`, CODEX-IN18P1-1 and -5): whether it
+    /// counts as content shown in the window, and what is wrong with it.
+    static func problems(id: String, frame: CGRect, window: CGRect, menuOpen: Bool) -> (checked: Bool, problems: [String]) {
+        if drawer(id) && !menuOpen {
+            return (false, frame.maxX <= window.minX + 0.5 ? [] : ["not closed left of the window"])
+        }
+        let dialog = dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") })
+        if !dialog && (frame.maxY <= window.minY || frame.minY >= window.maxY) { return (false, []) }
+        var found: [String] = []
+        if !sideways.contains(where: id.hasPrefix) && !(frame.minX >= window.minX - 0.5 && frame.maxX <= window.maxX + 0.5) {
+            found.append("across the window")
+        }
+        if frame.minY < window.minY - 0.5 { found.append("below the window's top") }
+        if dialog && frame.maxY > window.maxY + 0.5 { found.append("above the window's bottom") }
+        return (true, found)
+    }
+
+    /// The oracle without the app (runs with the UI tests): the header's menu button beside the window fails; the menu
+    /// in its closed position fails where it must be open (S06, O10) and passes where it must be closed; a drawer
+    /// element showing in a closed state fails; a popup beside the window fails; scrolled-out content does not.
+    func testTheOracleCatchesAMisplacedMenu() {
+        let window = CGRect(x: 0, y: 0, width: 1032, height: 1376)
+        let closed = CGRect(x: -1027, y: 37, width: 34, height: 34), open = CGRect(x: 5, y: 37, width: 34, height: 34)
+        XCTAssertFalse(Self.problems(id: "shell-menu-button", frame: CGRect(x: -40, y: 37, width: 34, height: 34), window: window, menuOpen: false).problems.isEmpty)
+        XCTAssertFalse(Self.problems(id: "shell-menu-back", frame: closed, window: window, menuOpen: true).problems.isEmpty,
+                       "S06 with the menu closed")
+        XCTAssertTrue(Self.problems(id: "shell-menu-back", frame: closed, window: window, menuOpen: false).problems.isEmpty)
+        XCTAssertFalse(Self.problems(id: "shell-menu-back", frame: open, window: window, menuOpen: false).problems.isEmpty,
+                       "the menu showing where it must be closed")
+        XCTAssertTrue(Self.problems(id: "shell-menu-back", frame: open, window: window, menuOpen: true).problems.isEmpty)
+        XCTAssertFalse(Self.problems(id: "popup", frame: CGRect(x: 1100, y: 500, width: 270, height: 200), window: window, menuOpen: false).problems.isEmpty)
+        XCTAssertTrue(Self.problems(id: "places-row-9", frame: CGRect(x: 0, y: 1400, width: 1032, height: 60), window: window, menuOpen: false).problems.isEmpty)
+    }
+
+    /// The side menu's own elements (the drawer); the header's `shell-menu-button` is page content.
+    static func drawer(_ id: String) -> Bool { id.hasPrefix("shell-menu") && id != "shell-menu-button" }
+
+    /// Every element with an identifier that shows in the window is inside it (see the class's note). `menuOpen` says
+    /// which state the side menu must be in: open, its elements are checked as content; closed, they must all wait in
+    /// the closed position wholly left of the window (`offset(x: -width)`; XCUITest lists them although they are hidden
+    /// from VoiceOver), and nothing else is exempt (CODEX-IN18P1-5).
+    func inside(_ name: String, menuOpen: Bool) throws {
         let snapshot = try app.snapshot()
-        // The app's window: the largest one (`windows.firstMatch` was once a 516×688 window while the page was 1032 pt
-        // wide, which flagged every element).
-        let window = app.windows.allElementsBoundByIndex.map(\.frame).max { $0.width * $0.height < $1.width * $1.height }
-            ?? app.windows.firstMatch.frame
-        var seen = 0
+        var nodes: [XCUIElementSnapshot] = []
         var queue = [snapshot]
         while let node = queue.popLast() {
             queue += node.children
-            let id = node.identifier, frame = node.frame
-            guard !id.isEmpty, frame.width > 0, frame.height > 0 else { continue }
-            // As `IPadFitTests.problems` (CODEX-IN18P1-1): a dialog is checked wherever it is; other content scrolled
-            // above or below the window is not, but content beside the window is cut.
-            // The closed side menu waits left of the window (`offset(x: -width)`, hidden from VoiceOver but listed in
-            // the snapshot); an open menu is checked like any content.
-            if id.hasPrefix("shell-menu") && frame.maxX <= window.minX + 0.5 { continue }
-            let dialog = Self.dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") })
-            if !dialog && (frame.maxY <= window.minY || frame.minY >= window.maxY) { continue }
-            seen += 1
-            if !Self.sideways.contains(where: id.hasPrefix) {
-                XCTAssertTrue(frame.minX >= window.minX - 0.5 && frame.maxX <= window.maxX + 0.5,
-                              "\(name): \(id) \(frame) across the window \(window)")
-            }
-            XCTAssertTrue(frame.minY >= window.minY - 0.5, "\(name): \(id) \(frame) below the window's top \(window)")
-            if dialog {
-                XCTAssertTrue(frame.maxY <= window.maxY + 0.5, "\(name): \(id) \(frame) above the window's bottom \(window)")
-            }
+            if !node.identifier.isEmpty, node.frame.width > 0, node.frame.height > 0 { nodes.append(node) }
+        }
+        // The window the checked content is in: the one holding the most identified elements (CODEX-IN18P1-6;
+        // `windows.firstMatch` was once a 516×688 window while the page was 1032 pt wide).
+        let windows = app.windows.allElementsBoundByIndex.map(\.frame).filter { $0.width > 0 && $0.height > 0 }
+        let window = windows.max { a, b in
+            let ca = nodes.filter { a.intersects($0.frame) }.count, cb = nodes.filter { b.intersects($0.frame) }.count
+            return ca != cb ? ca < cb : a.width * a.height < b.width * b.height
+        } ?? app.windows.firstMatch.frame
+        var seen = 0, drawerSeen = 0
+        for node in nodes {
+            let (checked, problems) = Self.problems(id: node.identifier, frame: node.frame, window: window, menuOpen: menuOpen)
+            if Self.drawer(node.identifier) { drawerSeen += 1 }
+            if checked { seen += 1 }
+            for problem in problems { XCTFail("\(name): \(node.identifier) \(node.frame) \(problem) \(window)") }
         }
         XCTAssertGreaterThan(seen, 0, "\(name): elements")
+        if menuOpen { XCTAssertGreaterThan(drawerSeen, 0, "\(name): the open menu's elements") }
     }
 
     /// UMP's IDFA explainer and the system's tracking prompt, when they show over the first tab (the simulator's
