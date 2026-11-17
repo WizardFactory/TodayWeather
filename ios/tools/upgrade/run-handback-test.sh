@@ -8,7 +8,8 @@
 # 2. this build over it: places, alarms, units, the theme and the analytics choice changed (HandBackUpgradeTests edit);
 # 3. the fallback build over this build: it shows that state, the stale WebView data notwithstanding, keeps the FCM token,
 #    and its start counts and logs no analytics event (handback-cordova.js check; the SDK's event counters; its console);
-#    then edits there with an analytics grant (edit). Its starts after this build's Firebase 13 must not crash;
+#    then edits there with an analytics grant (edit). Its starts after this build's Firebase 13 must not crash, and it
+#    opens over the scene session this build left (nothing of the saved application state is removed);
 # 4. this build again: it adopts those edits, keeps its own withdrawal, then grants (HandBackUpgradeTests adopt);
 # 5. the fallback build again: it shows the adopted state and the native grant (check), then a withdrawal there;
 # 6. this build again: the withdrawal holds (HandBackUpgradeTests withdrawn).
@@ -126,27 +127,29 @@ native() {
     containers
 }
 
-# The scene sessions UIKit keeps for the app (Library/Saved Application State): the native app's session names SwiftUI's
-# scene delegate, which the Cordova build does not have, and UIKit restores it there, so the fallback build opens to a
-# black window (seen on the iOS 26.5 simulator; ios/README.md, "Rollback hand-back"). Each fallback start below first
-# removes them, as discarding the app from the app switcher does; the delegate classes found are kept as evidence.
-forget_scenes() {
+# The scene sessions UIKit keeps for the app (Library/Saved Application State) stay as the build before left them: the
+# fallback build must open over the native app's session without the user discarding the app first. A session kept
+# with a delegate's class name (a configuration made in code, as SwiftUI's App made it before IN-17) is one a Cordova
+# build restores to a black window, so it fails the run; the texts kept are recorded.
+scene_sessions() {
     containers
-    saved="$DATA/Library/Saved Application State"
     python3 -c "
 import glob, plistlib, sys
-for path in glob.glob(sys.argv[1] + '/*/KnownSceneSessions/data.data'):
+for path in glob.glob(sys.argv[1] + '/Library/Saved Application State/*/KnownSceneSessions/data.data'):
     for key, blob in plistlib.load(open(path, 'rb')).items():
-        print(key, [o for o in plistlib.loads(blob)['\$objects'] if isinstance(o, str) and 'Delegate' in o])
-" "$saved" > "$OUT/scene-sessions-$1.txt" 2>&1 || true
-    rm -rf "$saved"
+        print(key, [o for o in plistlib.loads(blob)['\$objects'] if isinstance(o, str) and o not in ('\$null', key)])
+" "$DATA" > "$OUT/scene-sessions-$1.txt" 2>&1 || true
+    if grep -q "Delegate" "$OUT/scene-sessions-$1.txt"; then
+        cat "$OUT/scene-sessions-$1.txt" >&2
+        fail "a scene session is kept with a delegate class name ($1)"
+    fi
 }
 
 # One start of the fallback build in <mode>, reported as <report>; with the console of the app (Firebase debug logging).
 fallback() {
     mode=$1; report=$2
     log "fallback build: $mode ($report)"
-    forget_scenes "$report"
+    scene_sessions "$report"
     inject "$FALLBACK_APP" "$OUT/Fallback-$report.app" handback-cordova.js \
         " window.TW_HANDBACK_MODE = '$mode'; window.TW_HANDBACK_REPORT = '$report';"
     xcrun simctl install "$UDID" "$OUT/Fallback-$report.app"

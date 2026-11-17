@@ -16,8 +16,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     /// `Info.plist`'s scene configuration, the name the Cordova builds use too (cordova-ios 8).
     static let sceneConfiguration = "Default Configuration"
 
-    private var wasInBackground = false
-    private var observers: [NSObjectProtocol] = []
+    private var warmStarts: WarmStarts?
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
@@ -28,19 +27,32 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // IN-14: a tap that started the app reaches the delegate only when it is set before the launch finishes.
         NotificationEvents.shared.start()
         AppStartup.shared.start(application)
-        observeWarmStarts()
-        observeForeignSessions()
+        warmStarts = WarmStarts { AppLaunch.shared.entries.submit(.resume) }
         return true
     }
 
+    /// UIKit asks for every new session, and again at a start for a session kept with a configuration made in code
+    /// (seen on the iOS 26.5 simulator: a session of this app's earlier SwiftUI `App` builds got this configuration).
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        UISceneConfiguration(name: Self.sceneConfiguration, sessionRole: connectingSceneSession.role)
+        Self.configuration(for: connectingSceneSession.role)
     }
 
-    /// A warm start: the app is back from the background (Cordova's `resume`), whichever window comes forward.
-    private func observeWarmStarts() {
-        let center = NotificationCenter.default
+    /// `Info.plist`'s configuration by its name, which is all UIKit then keeps with the session.
+    static func configuration(for role: UISceneSession.Role) -> UISceneConfiguration {
+        UISceneConfiguration(name: sceneConfiguration, sessionRole: role)
+    }
+}
+
+/// The app's warm starts (Cordova's `resume`): each return from the background to the active state, whichever window
+/// comes forward, as SwiftUI's app-wide scene phase reported them. An activation without a background before it (the
+/// launch, or a return from Notification Center) is none.
+@MainActor
+final class WarmStarts {
+    private var wasInBackground = false
+    private var observers: [NSObjectProtocol] = []
+
+    init(center: NotificationCenter = .default, onResume: @escaping @MainActor () -> Void) {
         observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) {
             [weak self] _ in
             MainActor.assumeIsolated { self?.wasInBackground = true }
@@ -50,25 +62,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             MainActor.assumeIsolated {
                 guard let self, self.wasInBackground else { return }
                 self.wasInBackground = false
-                AppLaunch.shared.entries.submit(.resume)
-            }
-        })
-    }
-
-    /// A session UIKit restored with a configuration that is not this build's (kept with a class name by a build that
-    /// made it in code, such as SwiftUI's `App` of this app's builds before IN-17): the scene gets this build's delegate
-    /// and window, so the app shows whatever the session was kept with.
-    private func observeForeignSessions() {
-        observers.append(NotificationCenter.default.addObserver(forName: UIScene.willConnectNotification, object: nil,
-                                                                queue: .main) { note in
-            // Delivered on the main queue; the scene does not leave it.
-            nonisolated(unsafe) let connecting = note.object as? UIWindowScene
-            MainActor.assumeIsolated {
-                guard let scene = connecting, scene.session.role == .windowApplication,
-                      !(scene.delegate is SceneDelegate) else { return }
-                let delegate = SceneDelegate()
-                scene.delegate = delegate
-                delegate.show(in: scene)
+                onResume()
             }
         })
     }
@@ -93,9 +87,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         submit([userActivity.webpageURL].compactMap { $0 })
     }
 
-    /// The window with the root view; a second call for the same scene changes nothing.
-    func show(in scene: UIWindowScene) {
-        guard window == nil else { return }
+    private func show(in scene: UIWindowScene) {
         let window = UIWindow(windowScene: scene)
         window.rootViewController = UIHostingController(rootView: RootView(launch: AppLaunch.shared))
         window.makeKeyAndVisible()
