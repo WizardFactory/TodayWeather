@@ -65,7 +65,7 @@ SETS = {
             "air-*.input.json"], "screens": "S05", "english393": True},
     "shell": {"tool": "shell-reference", "langArg": True, "keep": ["shell-{lang}-light-menu*", "shell-{lang}-light.json",
               "shell-{lang}-light-forecast-tabs.png", "shell-{lang}-light-forecast-header.png"], "screens": "S06, X1"},
-    "settings": {"tool": "settings-reference", "langArg": True, "keep": ["settings-{lang}-units*",
+    "settings": {"tool": "settings-reference", "langArg": True, "keep": ["settings-{lang}-units.*", "settings-{lang}-units-statusbar.png",
                  "settings-{lang}-radio-temperatureUnit.*", "settings-{lang}-radio-temperatureUnit-statusbar.png",
                  "settings-{lang}-about*"], "screens": "S07, S08, O10", "english393": True},
     "push": {"tool": "push-reference", "langArg": True, "keep": ["alarms-{lang}-settings*", "alarms-{lang}-picker.*",

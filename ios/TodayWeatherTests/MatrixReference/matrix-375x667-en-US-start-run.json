@@ -26,7 +26,7 @@
    "en-US"
   ],
   "region": "US",
-  "body": "todayWeather light-theme start grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready",
+  "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready start",
   "state": "start"
  },
  "device": {
@@ -35,7 +35,7 @@
   "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
   "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation"
  },
- "capturedAt": "2026-11-16T16:44:12Z",
+ "capturedAt": "2026-11-17T03:29:36Z",
  "webViewOrigins": [
   {
    "x": 0,
