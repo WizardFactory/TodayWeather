@@ -601,6 +601,110 @@ The script builds the app and the UI tests ad hoc signed with `ios/Private.xccon
 
 The build and the tests run without private inputs. They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the feedback address `TW_MAIL_TO` (IN-12; Info.plist `TWMailTo`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).
 
+## App Store release (IN-19)
+
+Use the existing TodayWeather App Store record (Apple ID 1041700694), bundle ID
+`net.wizardfactory.todayweather`, Apple team, App Group and Firebase iOS app.
+Confirm a marketing version above the version currently available in the store
+and an unused build number in App Store Connect before distribution. The scheme
+archives with Release for iOS 17.0 and later. The Release entitlement file
+requests production APNs. Debug uses development APNs.
+
+From `ios/`, put the existing production Firebase configuration at
+`TodayWeather/GoogleService-Info.plist` and supply the production server, photo,
+feedback, Places and AdMob values in the ignored `Private.xcconfig`. Confirm that
+the Firebase configuration and real AdMob IDs match the existing release setup.
+Use the existing Apple Distribution identity and App Store profile. Set the
+following in `Private.xcconfig`, replacing the team and profile placeholders
+with the existing values:
+
+```xcconfig
+CODE_SIGN_STYLE[config=Release][sdk=iphoneos*] = Manual
+CODE_SIGN_IDENTITY[config=Release][sdk=iphoneos*] = Apple Distribution
+DEVELOPMENT_TEAM[config=Release][sdk=iphoneos*] = TEAM_ID
+PROVISIONING_PROFILE_SPECIFIER[config=Release][sdk=iphoneos*] = PROFILE_UUID
+```
+
+This scopes provisioning to the app target. Command-line provisioning settings
+would also reach Swift package resource bundles, which cannot use the profile.
+With the approved version and build number in the command environment:
+
+```sh
+xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -derivedDataPath build/Release -archivePath build/TodayWeather.xcarchive \
+  -disableAutomaticPackageResolution \
+  MARKETING_VERSION="$TW_IOS_VERSION" CURRENT_PROJECT_VERSION="$TW_IOS_BUILD" archive
+```
+
+Before distribution, inspect the signed app in `Products/Applications/` inside
+the archive. Use `codesign --verify --deep --strict` and
+`codesign -d --entitlements -` on the app. Check that the embedded profile
+matches the signing team and application identifier, and that the signature
+contains `aps-environment=production` and
+`group.net.wizardfactory.todayweather`. Verify the bundle ID, version, build
+number, and minimum OS in the packaged `Info.plist`. Check those values again
+on the distribution export.
+
+Verify the app's `PrivacyInfo.xcprivacy`, the bundled SDK manifests, and the
+location purpose string and localized tracking purpose strings on the archive. The app manifest
+covers settings in standard and App Group defaults, metadata checks of
+migration files inside those containers, and the app's use of precise location
+and device identifiers for functionality. Use Xcode Organizer's privacy report
+to inspect the SDK declarations too. Compare the report with the actual Firebase,
+Places, ads/UMP and legacy-server data flows and with the live App Privacy
+answers before submission. Refer to the [store privacy review](../docs/operations/store-privacy-review.md).
+
+Confirm the app executable and its dSYM have the same UUID with
+`xcrun dwarfdump --uuid`. Upload the archive's symbols using the
+`Crashlytics/upload-symbols` script from the Firebase package checkout resolved
+for this archive:
+
+```sh
+archive=build/TodayWeather.xcarchive
+app="$archive/Products/Applications/TodayWeather.app"
+build/Release/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/upload-symbols \
+  -gsp "$app/GoogleService-Info.plist" -p ios "$archive/dSYMs"
+```
+
+Record the archive commit, version, build number, SHA-256 of the distribution
+export, dSYM UUIDs, and upload result. Use Xcode Organizer to distribute the
+same candidate to App Store Connect. Confirm the exact build clears processing
+without purpose-string or privacy-manifest errors before enabling internal
+TestFlight. Retain private build logs and signing artifacts locally.
+
+### Physical device acceptance
+
+1. On the agreed App Store baseline, record the source version and the saved
+   places, selected place, units, settings, alarms, device identity, push
+   registration, and analytics choice. Install the release-signed TestFlight
+   update over that installation. Verify the same state on initial launch and
+   restart, with no duplicate alarms and no analytics without opt-in. Record
+   the observed source version and its installation provenance with the exact
+   TestFlight build.
+2. In the authorized production push check, save a distinguishable alarm for a
+   test city. Verify the server actually registered it, receive the scheduled
+   push and tap it to open that city. Record registration, delivery and
+   navigation separately. Remove the test alarm after the check and verify its
+   removal. Keep device identifiers, tokens and personal saved places out of
+   the shared evidence.
+3. With production ad IDs confirmed for the same build, complete the
+   applicable UMP and ATT flow and observe a real banner load. Retain the
+   consent and `banner loaded` outcome. A request or a no-fill response
+   leaves the load check pending. Use the existing IN-15 test matrix for the
+   other consent combinations.
+
+### External TestFlight and phased rollout
+
+After internal acceptance, AK completes external beta review and testing, then
+App Review and phased release. Record the signal, threshold, window and owner
+for crash-free users, API error rates and push-registration health before
+starting. Review the observations before progression and record the decision
+at each phase. If a threshold is crossed, pause and investigate before
+resuming. If a higher-version Cordova fallback is selected, follow the
+[hand-back procedure](#rollback-hand-back-to-a-cordova-build-in-17).
+Record completion at 100% in [IN-19](https://github.com/WizardFactory/TodayWeather/issues/2968).
+
 ## Data migration from the Cordova app
 
 The native app replaces the Cordova app as an update with the same bundle ID, so it inherits the Cordova data container and App Group. On every start (`AppStartup`, called from `application(_:didFinishLaunchingWithOptions:)`, so also when iOS starts the app in the background) it turns analytics off and then runs `MigrationRunner` (`TWStorage`). The first successful run builds `Library/Application Support/TodayWeather/app_state.json` (`AppState`, written atomically) from the Cordova storage; later runs return the stored state unchanged, until a fallback Cordova build claims the state ([rollback hand-back](#rollback-hand-back-to-a-cordova-build-in-17)). The migration only reads the Cordova storage: nothing there is changed or removed; the hand-back writes the suite. Until protected data is available (before the first unlock after a restart) the run waits for `protectedDataDidBecomeAvailableNotification`. Absence and unreadability are kept apart: only a path that does not exist counts as absent (no WebKit storage at all, as after an update from 1.0.10; no suite file; no state file). A WebKit directory, `origin` file, database or log, the suite's preferences file or the state file that exists but cannot be read now (permissions, data protection), and a missing App Group container, stop the run without writing anything (`CordovaSources.SourceError.unavailable`); the run is tried again when protected data becomes available and at the next start. A database copy that is no SQLite `localStorage` database is recorded and the suite is used; a corrupt state file is replaced by a new migration.
@@ -636,7 +740,7 @@ After the update the server keeps sending each user's alarms and alerts because 
 - **Requests** (`TWStorage.PushRegistration`, Foundation only): bodies as `_makePostObj` builds them, with `type: "ios"`, the `Device-Id` and `uuid` of `CDVUUID`, `cityIndex`, `id`, category, `enable`, place info, units with `airForecastSource`, `timezoneOffset`, `package` `todayWeather`, the app version, the token, times as UTC seconds of day (an alert whose start equals its end ends one local minute earlier, with JavaScriptCore's daylight-saving rule), and the headers of the Cordova `$http` calls (`Content-Type: application/json` and `Device-Id`; the list post also `Accept-Language`, `navigator.language`; the transport adds Angular's default `Accept: application/json, text/plain, */*`). Every path carries `v000903` (#2948).
 - **A token that changes while the app runs** (`MessagingDelegate`; a blank one is ignored, as the Cordova callback ignores it) is stored in `PushTokenQueue` (`Library/Application Support/TodayWeather/push_tokens.json`, in order of arrival; it stands in for the Android app's WorkManager) when it arrives, also while an earlier registration is in flight, then registered by `PushSync` (`TWData`). A token leaves the queue only after a save of the state holding it succeeded, so a token whose process ends first is registered by the next process at its start, in the foreground or the background (`PushService.resume()`): the replacement is sent again from the token stored then. `PushSync` runs one registration at a time (queued tokens before an open): it reads the state, sends the requests, then stores the token, so tokens B then C are replaced A→B, then B→C. As in the Cordova and Android apps, failed requests are not retried and the token is stored anyway; the next open posts the list with it. A token that cannot be stored stays queued for the next process.
 - **State:** the token is stored through the app's `AppStateHolder` (IN-07), the single writer of `app_state.json`, as a change of the token alone over the state as it is then, so a change the screens made meanwhile stays.
-- **Transport** (`TWData.HTTPPushTransport`): `URLSession` with the Cordova 10-second timeout to `TWServerURL` (private input, above); without it there is no push service and nothing is sent. Firebase Messaging needs the private `GoogleService-Info.plist`; the app registers for remote notifications only when the user allowed notifications (S09 asks, IN-14), so FCM can get the APNs token. `aps-environment` is `development`; IN-19 sets production for the release.
+- **Transport** (`TWData.HTTPPushTransport`): `URLSession` with the Cordova 10-second timeout to `TWServerURL` (private input, above); without it there is no push service and nothing is sent. Firebase Messaging needs the private `GoogleService-Info.plist`; the app registers for remote notifications only when the user allowed notifications (S09 asks, IN-14), so FCM can get the APNs token. Debug requests the development APNs entitlement. Release requests production and keeps the same App Group.
 
 Golden requests: `ios/tools/push/generate.py` runs the Cordova `Push` service (`client/www/js/service.push.js`, with `service.weatherutil.js` for the town of a Korean address) in the macOS JavaScriptCore shell with the platform reporting iOS (`cases.js`, one `jsc` process per time zone), and writes `Core/Tests/TWStorageTests/Fixtures/push/push.json` with the sources' commits and hashes. The cases are those of the Android corpus (first, unchanged, changed token, no token, New York daylight-saving alerts) and tokens delivered while the app runs (first, changed, unchanged). `PushRegistrationTests` compare method, path, headers and body (member order and number texts) with them. Only the generator reads `client/`; CI's build job re-runs it and fails on a diff. `PushSyncTests` follow the Android `PushSyncTest`: tokens in order of arrival, a token arriving during the open's registration, a failed request, a missing server URL or `Device-Id`, a blank or first token, a token that cannot be stored, a change of the screens kept, and a process that ends while a replacement is in flight (the next process, started in the background or opened, completes it: #2953's third criterion, as the Android `PushTokenWorkTest`). `HTTPPushTransportTests` cover the HTTP request; the app-hosted `PushServiceTests` the start path and a token registered without an open.
 
