@@ -587,6 +587,16 @@ Recapture: `tools/matrix-reference/capture.py run <set> <udid> <cordova-app> <ko
 
 Fixed by the matrix (IN-18): in English, S04's three-day details kept a third of the width per day, so "Chance of precipitation" ran into the next day; a day's column now grows to its widest line, as the Cordova table's does. The side menu had its privacy blocks above Send feedback; since #2990 (client 1.1.3) the Cordova build and the Android app show them after About, and `MenuRow` follows again (the 393×852 shell and settings references were recaptured from the same build).
 
+## User manual (IN-18)
+
+The [native user manual](../docs/user/ios-app/README.md) (`docs/user/ios-app/`: `manual.pdf`, the editable `manual.json`, the screenshots and `provenance.json`) has 41 steps with the sections of the Cordova manual, captured from the running app. `ManualUITests.testCaptureTheManual` (UI) walks the journeys with real taps, typing and swipes and attaches a named screenshot at each step; it skips without its handshake, so CI only builds it.
+
+```sh
+ios/tools/manual/run-manual-capture.sh <out-dir> <tw* iPhone simulator udid>
+```
+
+The script builds the app and the UI tests ad hoc signed with `ios/Private.xcconfig` (the server URL and the Places key: read-only weather, geocode, nationwide and warning GETs and Places predictions) and refuses a build holding a Firebase configuration, so no push token, push request or Firebase call can exist; the journey leaves S09 without saving. It sets the simulator to Seoul City Hall, installs the app and grants location while in use, answers the tracking question in TCC, fixes the status bar at 9:41 and exports the named screenshots. The server host and the Places key are parsed with Python, replaced by placeholders in every saved log, and the logs are scanned for them. Selected screenshots are reduced to 720 px and checked by eye before publication; `tools/manual/verify.py` and its regression tests (`test_verify.py`) check the published edition (see the manual's README).
+
 ## Private inputs
 
 The build and the tests run without private inputs. They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the feedback address `TW_MAIL_TO` (IN-12; Info.plist `TWMailTo`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).

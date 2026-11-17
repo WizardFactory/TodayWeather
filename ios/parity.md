@@ -16,7 +16,7 @@ This checklist records how the native app in `ios/` reproduces the Cordova 1.1.1
 
 - **Part 1 (this checklist):** the checklist (AC1), the request-path tests (X11, AC3) and the iPad checks (X9, AC4).
 - **Part 2:** the screenshot matrix at 375×667, 393×852 and 440×956 pt in Korean and English (AC2): for each screen S01–S12 and its main dialogs the state the user manual shows, as AK decided for AN-18 on 2026-11-11 ([intent](../intent/android-native.md#an-18-decisions-ak-2026-11-11)). Every state compared before stays at 393×852; the matrix adds the other sizes and the English states those sets lacked (`MatrixScreenshotTests`, [MatrixReference](TodayWeatherTests/MatrixReference/), [README](README.md#size-and-language-matrix-in-18)). Two scope decisions (accepted 2026-11-17): English is English with region US, because the Cordova iOS build takes its region from `navigator.language` and the iOS WebView reports en-US for an en-KR system too, so its English pages use °F, mph, inHg, mi, in and the AirNow standard (each capture records its units, and the native render takes them); S10–S12 are Korean only, because outside region KR the Cordova build has no menu rows for them and shows "USA" without data if one is opened.
-- **Part 3:** the native user manual `docs/user/ios-app/` (AC5).
+- **Part 3:** the [native user manual](../docs/user/ios-app/README.md) (AC5): 41 illustrated steps, editable source, actual iPhone 16 simulator captures and a rendered PDF.
 
 ## Start and places (S01, S02)
 
