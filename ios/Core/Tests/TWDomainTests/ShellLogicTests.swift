@@ -49,11 +49,12 @@ struct ShellLogicTests {
         #expect(ShellTab.allCases.map(\.refreshes) == [false, true, true, true])
     }
 
-    /// index.html L97-L171 with the iOS choices: Korea-only rows for KR, chevrons where `!isAndroid()`, blocks.
+    /// index.html L97-L171 with the iOS choices: Korea-only rows for KR, chevrons where `!isAndroid()`, blocks. Since
+    /// #2990 (client 1.1.3) the privacy blocks come last, after About (IN-18's size matrix found the old order).
     @Test func menuRowsForTheRegion() {
         let korea: [MenuRow] = [.specialWeather, .nationalWeather, .nationalAir, .nullschoolWind, .units, .startupPage,
-                                .refreshInterval, .theme, .analytics, .adPrivacy, .privacyPolicy, .terms, .sendFeedback,
-                                .rateApp, .version, .about]
+                                .refreshInterval, .theme, .sendFeedback, .rateApp, .version, .about, .analytics, .adPrivacy,
+                                .privacyPolicy, .terms]
         #expect(MenuRow.rows(region: "KR") == korea)
         #expect(MenuRow.rows(region: "US") == Array(korea.dropFirst(4)))
         #expect(MenuRow.rows(region: nil) == Array(korea.dropFirst(4)), "an undefined region shows no Korea-only row")
@@ -64,7 +65,7 @@ struct ShellLogicTests {
         #expect(korea.filter(\.closesMenu) == [.specialWeather, .nationalWeather, .nationalAir, .units, .startupPage,
                                                .refreshInterval, .theme, .sendFeedback, .rateApp])
         #expect(korea.map(\.textKey).first == "LOC_TYPE_SPECIAL_WEATHER")
-        #expect(korea.map(\.textKey).last == "LOC_ABOUT")
+        #expect(korea.map(\.textKey).last == "LOC_TERMS")
     }
 
     /// `doTabForecast`: another tab is selected; the selected weather or air tab reloads unless the previous weather or

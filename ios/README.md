@@ -564,6 +564,29 @@ The script builds the app and the UI tests ad hoc signed with `TW_SERVER_URL` at
 
 Fixed by these checks (IN-18): S02's header kept the width of its search field's placeholder, so at `xxxLarge` in a Split View third the page and the tab bar were wider than the window (the field now takes the room left and clips its placeholder, as the input did); S12's paragraphs kept the width they were broken for, so a page opened in a wider window, or at the 393 pt default before its first layout, stayed wider than a narrower window; S10's and S11's 330 pt map scales down to a window narrower than it (a Split View third; no iPhone of iOS 17 is that narrow), where the Cordova page would have cut it. Found by the manual's captures: a page scrolled down drew over the status bar (the WebView's area is now clipped under it; `IPadFitTests.aPageDoesNotDrawOverTheStatusBar`).
 
+### Size and language matrix (IN-18)
+
+`MatrixScreenshotTests` (app-hosted) compares each screen with the Cordova iOS build in the state the user manual shows, at 375×667 pt (iPhone SE 3rd generation, scale 2), 393×852 and 440×956 pt (iPhone 16 and 16 Pro Max, scale 3), in Korean and English (#2967 AC2, AK's AN-18 decision of 2026-11-11):
+
+| Test | Screens | States |
+| --- | --- | --- |
+| `startPage` | S01, O01 | the access notice over S01; S01 |
+| `placesList` | S02 | three places with an alarm's bell |
+| `weatherPages` | S03, S04 | every block of Hourly and Daily for 회현동 |
+| `airPage` | S05 | every block of Air for 회현동 |
+| `sideMenu` | S06, X1 | the menu; Hourly's tab bar and header bar |
+| `settingsPages` | S07, S08, O10 | Units; the temperature list; About over the menu |
+| `alarmsPage` | S09, O14, O12 | the defaults; the time picker; the save confirmation |
+| `nationPages` | S10, S11, S12 | the weather map; PM2.5; the warnings (Korean only) |
+
+At 393×852 the matrix adds only what the other sets lack (English S03–S05 and the English temperature list); their 393×852 states stay in their own suites. Each state is rendered with the views and fixtures of the set's own suite at the capture's WebView size (under a 20 pt status bar on the SE, 54 pt on both other phones, the Pro Max's safe area starting 8 pt lower inside it) and compared by the AN-05 metric within `MatrixReference/matrix-tolerances.json`.
+
+English is English with region US: the Cordova iOS build takes its region from `navigator.language`, and the iOS WebView reports en-US for an en-KR system too (`shell-reference` languages.json). Its English pages use °F, mph, inHg, mi, in and the AirNow standard; each capture records the units it used (`env.units` in `matrix-*-run.json`) and the native render takes them. S10–S12 are Korean only: outside region KR the Cordova build has no menu rows for them and shows "USA" without data if one is opened.
+
+Recapture: `tools/matrix-reference/capture.py run <set> <udid> <cordova-app> <ko-KR|en-US>` drives the set's own capture tool (`tools/<set>-reference/`) with its outputs redirected, a copy of the Cordova build pointing at this tool's port (18471–18473, one per simulator) and the owned simulators `twios_in18_se`, `twios_cap_16` and `twios_in18_promax` (create the SE and Pro Max for a capture batch and delete them by UDID after it). It erases a simulator once and lets iOS post its first-boot notifications, which covered the first capture. `capture.py check` lists missing runs, `capture.py provenance <cordova-app>` writes `provenance/matrix-captures.json`, and `tools/matrix-reference/tolerances.py <logs>` writes the tolerances from the measurements the suite prints. Each capture is checked by eye before it is kept: a run can record a state one navigation step late without failing (the first Korean settings run at 440×956 did).
+
+Fixed by the matrix (IN-18): in English, S04's three-day details kept a third of the width per day, so "Chance of precipitation" ran into the next day; a day's column now grows to its widest line, as the Cordova table's does. The side menu had its privacy blocks above Send feedback; since #2990 (client 1.1.3) the Cordova build and the Android app show them after About, and `MenuRow` follows again (the 393×852 shell and settings references were recaptured from the same build).
+
 ## User manual (IN-18)
 
 The [native user manual](../docs/user/ios-app/README.md) (`docs/user/ios-app/`: `manual.pdf`, the editable `manual.json`, the screenshots and `provenance.json`) has 41 steps with the sections of the Cordova manual, captured from the running app. `ManualUITests.testCaptureTheManual` (UI) walks the journeys with real taps, typing and swipes and attaches a named screenshot at each step; it skips without its handshake, so CI only builds it.

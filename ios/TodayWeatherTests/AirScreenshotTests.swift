@@ -101,9 +101,9 @@ struct AirScreenshotTests {
     }
 
     /// A block as the capture cut it: the header block with the shell's header bar over it (the place's title and the
-    /// page's buttons, 5 pt of safe area above its 44 pt), the gauge alone (the `.air-std-table`, 4 pt in from the card's
-    /// sides) on the card's color, the cards at their scroll start.
-    static func blockView(_ block: AirBlock, content: AirPageContent, theme: Theme) -> AnyView {
+    /// page's buttons, `headerTop` of safe area above its 44 pt: 5 on the 393x852 iPhone), the gauge alone (the
+    /// `.air-std-table`, 4 pt in from the card's sides) on the card's color, the cards at their scroll start.
+    static func blockView(_ block: AirBlock, content: AirPageContent, theme: Theme, headerTop: CGFloat = 5) -> AnyView {
         let colors = AirColors.of(theme)
         switch block {
         case .header:
@@ -111,7 +111,7 @@ struct AirScreenshotTests {
             return AnyView(ZStack(alignment: .top) {
                 AirBlockView(block: .header, content: content, theme: theme)
                 HeaderBar(colors: bar, title: content.page.title,
-                          insets: ShellInsets(statusBar: 0, top: 5, bottom: 0, leading: 0, trailing: 0), onMenu: {}) {
+                          insets: ShellInsets(statusBar: 0, top: headerTop, bottom: 0, leading: 0, trailing: 0), onMenu: {}) {
                     WeatherBarActions(hasPush: content.page.hasPush, colors: bar)
                 }
             })

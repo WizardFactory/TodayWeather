@@ -39,6 +39,48 @@ struct IPadFitTests {
     /// Identifiers of dialogs, which must fit the window whole.
     static let dialogs = ["popup", "picker"]
 
+    /// What is wrong with the frame of the identified element `id` in a window of `size`; empty when nothing is. Content
+    /// scrolled above or below the window is not checked (the pages scroll); content beside it is cut, unless its row
+    /// scrolls sideways; a dialog is checked wherever it is (CODEX-IN18P1-1: an element wholly outside the window was
+    /// skipped before, so a dialog pushed off the window passed).
+    static func problems(id: String, frame: CGRect, size: CGSize) -> [String] {
+        guard frame.width > 0, frame.height > 0 else { return [] }
+        let dialog = dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") })
+        if !dialog && (frame.maxY <= 0 || frame.minY >= size.height) { return [] }
+        var found: [String] = []
+        if !sideways.contains(where: id.hasPrefix) && !(frame.minX >= -0.5 && frame.maxX <= size.width + 0.5) {
+            found.append("across the window")
+        }
+        if frame.minY < -0.5 { found.append("below the window's top") }
+        if dialog && frame.maxY > size.height + 0.5 {
+            found.append("above the window's bottom")
+        }
+        return found
+    }
+
+    /// The oracle catches what it is for (CODEX-IN18P1-1): a dialog or an element pushed out of the window sideways,
+    /// wholly or in part, fails; content scrolled above or below the window does not; rows that scroll sideways may
+    /// leave it at the sides; a dialog must also end above the window's bottom.
+    @Test func theOracleCatchesWhatLeavesTheWindow() {
+        let size = CGSize(width: 320, height: 1032)
+        #expect(!Self.problems(id: "popup", frame: CGRect(x: 330, y: 400, width: 270, height: 200), size: size).isEmpty,
+                "a popup wholly beside the window")
+        #expect(!Self.problems(id: "popup-button-0", frame: CGRect(x: 340, y: 500, width: 100, height: 40), size: size).isEmpty)
+        #expect(!Self.problems(id: "places-bell-1", frame: CGRect(x: 321, y: 200, width: 44, height: 44), size: size).isEmpty,
+                "a row's bell wholly beside the window")
+        #expect(!Self.problems(id: "places-bell-1", frame: CGRect(x: 300, y: 200, width: 44, height: 44), size: size).isEmpty,
+                "a bell cut at the side")
+        #expect(!Self.problems(id: "picker", frame: CGRect(x: 20, y: 900, width: 280, height: 300), size: size).isEmpty,
+                "a dialog below the window's bottom")
+        #expect(Self.problems(id: "places-row-9", frame: CGRect(x: 0, y: 1100, width: 320, height: 60), size: size).isEmpty,
+                "a row scrolled below the window")
+        #expect(Self.problems(id: "places-row-0", frame: CGRect(x: 0, y: -80, width: 320, height: 60), size: size).isEmpty,
+                "a row scrolled above the window")
+        #expect(Self.problems(id: "air-code-pm25", frame: CGRect(x: 300, y: 300, width: 81, height: 54), size: size).isEmpty,
+                "a sideways row may leave at the side")
+        #expect(Self.problems(id: "places-row-1", frame: CGRect(x: 0, y: 100, width: 320, height: 60), size: size).isEmpty)
+    }
+
     /// The legacy server: the captured weather (kma-seoul), the geocode of 회현동, the nationwide answer and warnings.
     static func server() throws -> NationTests.Server {
         let seoul = try References.data("forecast-kma-seoul.input.json")
@@ -89,17 +131,14 @@ struct IPadFitTests {
 
         /// Whether every identified element that shows lies across the window (the first part of `check`).
         private func inside() -> Bool {
-            let bounds = CGRect(origin: .zero, size: size)
-            return hosted.elements().allSatisfy { element in
-                guard let id = HostedView.identifier(element), !id.isEmpty,
-                      !IPadFitTests.sideways.contains(where: id.hasPrefix) else { return true }
-                let frame = element.accessibilityFrame
-                guard frame.width > 0, frame.height > 0, frame.intersects(bounds) else { return true }
-                return frame.minX >= -0.5 && frame.maxX <= size.width + 0.5
+            hosted.elements().allSatisfy { element in
+                guard let id = HostedView.identifier(element), !id.isEmpty else { return true }
+                return !IPadFitTests.problems(id: id, frame: element.accessibilityFrame, size: size).contains("across the window")
             }
         }
 
-        func wait(_ identifier: String, _ seconds: Double = 10) async throws -> Bool {
+        /// Waits (up to `seconds` of real time; 30 s, as a loaded machine stretched 10 s past a screen's first layout).
+        func wait(_ identifier: String, _ seconds: Double = 30) async throws -> Bool {
             let found = await HostedShellTests.AirLiveTests.wait(seconds) { self.hosted.element(identifier) != nil }
             try await hosted.settle(300)
             return found
@@ -110,22 +149,23 @@ struct IPadFitTests {
             try await hosted.settle(300)
         }
 
-        /// Every element with an identifier that shows in the window is inside it (see the suite's note).
+        /// Every element with an identifier that shows in the window is inside it (see the suite's note and `problems`).
         func check(_ state: String) throws {
             let name = "\(language) \(window) \(state)"
-            let bounds = CGRect(origin: .zero, size: size)
             var seen = 0
             for element in hosted.elements() {
                 guard let id = HostedView.identifier(element), !id.isEmpty else { continue }
                 let frame = element.accessibilityFrame
-                guard frame.width > 0, frame.height > 0, frame.intersects(bounds) else { continue }
-                seen += 1
-                if !IPadFitTests.sideways.contains(where: id.hasPrefix) {
-                    #expect(frame.minX >= -0.5 && frame.maxX <= size.width + 0.5, "\(name): \(id) \(frame) across the window")
+                guard frame.width > 0, frame.height > 0, frame.maxY > 0, frame.minY < size.height else {
+                    // Scrolled out (or empty): only a dialog is checked there.
+                    for problem in IPadFitTests.problems(id: id, frame: frame, size: size) {
+                        Issue.record("\(name): \(id) \(frame) \(problem)")
+                    }
+                    continue
                 }
-                #expect(frame.minY >= -0.5, "\(name): \(id) \(frame) below the window's top")
-                if IPadFitTests.dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") }) {
-                    #expect(frame.maxY <= size.height + 0.5, "\(name): \(id) \(frame) above the window's bottom")
+                seen += 1
+                for problem in IPadFitTests.problems(id: id, frame: frame, size: size) {
+                    Issue.record("\(name): \(id) \(frame) \(problem)")
                 }
             }
             #expect(seen > 0, "\(name): elements")
