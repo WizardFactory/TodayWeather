@@ -1,0 +1,127 @@
+{
+ "set": "settings",
+ "size": "375x667",
+ "language": "ko-KR",
+ "files": [
+  "matrix-375x667-ko-KR-settings-ko-KR-about.json",
+  "matrix-375x667-ko-KR-settings-ko-KR-about.png",
+  "matrix-375x667-ko-KR-settings-ko-KR-radio-temperatureUnit-statusbar.png",
+  "matrix-375x667-ko-KR-settings-ko-KR-radio-temperatureUnit.json",
+  "matrix-375x667-ko-KR-settings-ko-KR-radio-temperatureUnit.png",
+  "matrix-375x667-ko-KR-settings-ko-KR-units-f-statusbar.png",
+  "matrix-375x667-ko-KR-settings-ko-KR-units-f.json",
+  "matrix-375x667-ko-KR-settings-ko-KR-units-f.png",
+  "matrix-375x667-ko-KR-settings-ko-KR-units-statusbar.png",
+  "matrix-375x667-ko-KR-settings-ko-KR-units.json",
+  "matrix-375x667-ko-KR-settings-ko-KR-units.png"
+ ],
+ "env": {
+  "screen": {
+   "width": 375,
+   "height": 667
+  },
+  "viewport": {
+   "width": 375,
+   "height": 647
+  },
+  "devicePixelRatio": 2,
+  "language": "ko-KR",
+  "languages": [
+   "ko-KR"
+  ],
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+  "region": "KR",
+  "version": "1.1.2",
+  "theme": "light",
+  "units": {
+   "temperatureUnit": "C",
+   "windSpeedUnit": "m/s",
+   "pressureUnit": "hPa",
+   "distanceUnit": "km",
+   "precipitationUnit": "mm",
+   "airUnit": "airkorea"
+  },
+  "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready light-theme forecast"
+ },
+ "device": {
+  "name": "twios_in18_se",
+  "udid": "3103237B-4BDF-4DC7-AE44-7E3AB0317C01",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation"
+ },
+ "capturedAt": "2026-11-16T18:26:56Z",
+ "webViewOrigins": [
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  }
+ ]
+}

@@ -45,6 +45,8 @@ PORT = 18455
 SERVER = f"http://127.0.0.1:{PORT}"
 BUNDLE = "net.wizardfactory.todayweather"
 FIXTURES = ["kma-seoul", "vc-london"]
+# The system language and region of a run (ios/tools/matrix-reference sets en-US for its English runs).
+LANGUAGE, LOCALE = "ko-KR", "ko_KR"
 PAGES = ["kma-seoul-hourly", "kma-seoul-hourly-expanded", "kma-seoul-daily", "vc-london-hourly", "vc-london-daily", "o03-weather"]
 # The owned capture simulator (iOS 26.5, iPhone 16, 393x852 pt, scale 3).
 DEVICES = {"517DC815-4EF1-4EC7-835C-FAD594AFB4C5": ("twios_cap_16", "393x852")}
@@ -226,8 +228,8 @@ def boot(udid):
     simctl("erase", udid)
     simctl("boot", udid)
     simctl("bootstatus", udid, "-b")
-    simctl("spawn", udid, "defaults", "write", "-g", "AppleLanguages", "-array", "ko-KR")
-    simctl("spawn", udid, "defaults", "write", "-g", "AppleLocale", "-string", "ko_KR")
+    simctl("spawn", udid, "defaults", "write", "-g", "AppleLanguages", "-array", LANGUAGE)
+    simctl("spawn", udid, "defaults", "write", "-g", "AppleLocale", "-string", LOCALE)
     subprocess.run(["xcrun", "simctl", "shutdown", udid], capture_output=True)
     simctl("boot", udid)
     simctl("bootstatus", udid, "-b")
@@ -253,7 +255,7 @@ def injected_app(cordova_app, out):
 
 def capture(udid, cordova_app):
     info, size = owned(udid)
-    out = WORK / "runs" / "ko-KR"
+    out = WORK / "runs" / LANGUAGE
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
     for d in (SHOTS, RECORDS):
@@ -284,7 +286,7 @@ def capture(udid, cordova_app):
     env = server.final
     if f"{env['screen']['width']}x{env['screen']['height']}" != size:
         raise SystemExit(f"unexpected display {env}")
-    if env["language"] != "ko-KR" or env["theme"] != "light":
+    if env["language"] != LANGUAGE or env["theme"] != "light":
         raise SystemExit(f"unexpected language or theme {env}")
     if [r["page"] for r in server.records] != PAGES:
         raise SystemExit(f"recorded {[r['page'] for r in server.records]}")
@@ -320,7 +322,7 @@ def check_requests(requests):
 def manifest():
     """What the app-hosted screenshot tests read (they cannot read the package's test resources): each page's blocks with
     their image, kind and CSS size."""
-    capture = json.loads((WORK / "runs/ko-KR/capture.json").read_text("utf-8"))
+    capture = json.loads((WORK / "runs" / LANGUAGE / "capture.json").read_text("utf-8"))
     pages = {}
     for page in PAGES:
         record = json.loads((RECORDS / f"{page}.json").read_text("utf-8"))
@@ -367,7 +369,7 @@ def provenance(cordova_app):
                         "clientSha256": hashlib.sha256(blob).hexdigest() if blob is not None else None,
                         "matchesClient": blob is not None and hashlib.sha256(blob).hexdigest() == sha256(built),
                         "lastCommit": last})
-    capture = json.loads((WORK / "runs/ko-KR/capture.json").read_text("utf-8"))
+    capture = json.loads((WORK / "runs" / LANGUAGE / "capture.json").read_text("utf-8"))
     files = sorted([p for p in SHOTS.iterdir() if p.suffix in (".png", ".json") and not p.name.endswith("tolerances.json")] +
                    [p for p in RECORDS.glob("*.json")])
     PROVENANCE.write_text(json.dumps({

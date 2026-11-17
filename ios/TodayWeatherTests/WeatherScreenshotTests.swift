@@ -72,8 +72,10 @@ struct WeatherScreenshotTests {
     }
 
     /// A block as the capture cut it: the header block with the shell's header bar over it (the bar with the place's
-    /// title and the page's buttons, 5 pt of safe area above its 44 pt), a chart at its opening position.
-    static func blockView(_ block: WeatherBlock, content: WeatherPageContent, page: String, theme: Theme = .light) -> AnyView {
+    /// title and the page's buttons, `headerTop` of safe area above its 44 pt: 5 on the 393x852 iPhone), a chart at its
+    /// opening position.
+    static func blockView(_ block: WeatherBlock, content: WeatherPageContent, page: String, theme: Theme = .light,
+                          headerTop: CGFloat = 5) -> AnyView {
         let tab: ShellTab = content.type == .short ? .forecast : .dailyforecast
         switch block {
         case .header:
@@ -81,7 +83,7 @@ struct WeatherScreenshotTests {
             return AnyView(ZStack(alignment: .top) {
                 WeatherBlockView(block: .header, content: content, theme: theme)
                 HeaderBar(colors: colors, title: content.page.title,
-                          insets: ShellInsets(statusBar: 0, top: 5, bottom: 0, leading: 0, trailing: 0), onMenu: {}) {
+                          insets: ShellInsets(statusBar: 0, top: headerTop, bottom: 0, leading: 0, trailing: 0), onMenu: {}) {
                     WeatherBarActions(hasPush: content.page.hasPush, colors: colors)
                 }
             })

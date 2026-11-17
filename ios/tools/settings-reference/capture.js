@@ -385,7 +385,14 @@
             .then(mail);
     }
     function english() {
-        return openUnits().then(function () { return capturePage('units'); }).then(back)
+        var chain = openUnits().then(function () { return capturePage('units'); });
+        if (window.TW_MATRIX) {
+            // ios/tools/matrix-reference: S08 too, the temperature list as the Korean set opens it.
+            chain = chain.then(function () { return step('open-temperatureUnit'); })
+                .then(function () { return openUnitList('temperatureUnit'); })
+                .then(function () { return capturePage('radio-temperatureUnit'); }).then(back);
+        }
+        return chain.then(back)
             .then(function () { return step('about'); }).then(function () { return about('about'); });
     }
 
