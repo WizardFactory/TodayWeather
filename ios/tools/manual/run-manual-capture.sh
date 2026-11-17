@@ -81,13 +81,14 @@ rm -f "$OUT/xcodebuild.raw.log"
 xcrun simctl status_bar "$UDID" clear || true
 rm -rf "$OUT/raw"
 mkdir -p "$OUT/raw"
-# The screenshots must all come out (CODEX-IN18P3-1): a failed export, a missing manifest or a set other than the
-# manual's 41 screenshots fails the run.
+# The screenshots must all come out (CODEX-IN18P3-1, -4): a failed export, a missing manifest or a set other than the
+# test's own shot("NN-name") names fails the run. The test's names are not the published ones (publishing renumbers
+# them: the test has no 25 and the shoot-only 27, 28, 32), so the set comes from ManualUITests.swift, not manual.json.
 xcrun xcresulttool export attachments --path "$OUT/manual.xcresult" --output-path "$OUT/raw" > "$OUT/export.log" 2>&1 || {
   echo "exporting the screenshots failed (export.log)" >&2; [ "$STATUS" -ne 0 ] || STATUS=1; }
-python3 - "$OUT/raw" "$IOS/../docs/user/ios-app/manual.json" <<'PY' || { [ "$STATUS" -ne 0 ] || STATUS=1; }
-import json, os, sys
-d, manual = sys.argv[1], sys.argv[2]
+python3 - "$OUT/raw" "$IOS/TodayWeatherUITests/ManualUITests.swift" <<'PY' || { [ "$STATUS" -ne 0 ] || STATUS=1; }
+import json, os, re, sys
+d, test_source = sys.argv[1], sys.argv[2]
 try:
     manifest = json.load(open(os.path.join(d, "manifest.json")))
 except OSError:
@@ -103,8 +104,8 @@ for test in manifest:
 for f in os.listdir(d):
     if f not in keep:
         os.remove(os.path.join(d, f))
-expected = {os.path.basename(step["screenshot"]) for step in json.load(open(manual))["steps"]}
-if keep != expected:
+expected = {name + ".png" for name in re.findall(r'shot\("(\d\d-[^"]+)"\)', open(test_source).read())}
+if not expected or keep != expected:
     sys.exit(f"screenshots missing: {sorted(expected - keep)}; unexpected: {sorted(keep - expected)}")
 PY
 rm -rf "$OUT/manual.xcresult"   # its logs are not redacted; the redacted log and the screenshots are kept
