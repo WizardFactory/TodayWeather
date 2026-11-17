@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     static let sceneConfiguration = "Default Configuration"
 
     private var warmStarts: WarmStarts?
+    private var restoredSessions: NSObjectProtocol?
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
@@ -28,7 +29,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         NotificationEvents.shared.start()
         AppStartup.shared.start(application)
         warmStarts = WarmStarts { AppLaunch.shared.entries.submit(.resume) }
+        observeRestoredSessions()
         return true
+    }
+
+    /// A session an earlier build kept with a configuration made in code (this app's SwiftUI `App` builds before IN-17,
+    /// on development and test devices) is restored by UIKit with that configuration's delegate,
+    /// `SwiftUI.AppSceneDelegate`, which shows nothing here: a blank window (seen on the iOS 26.5 simulator). Such a
+    /// scene gets this build's `SceneDelegate` and window when it connects (`SceneDelegate.adopt`).
+    private func observeRestoredSessions() {
+        restoredSessions = NotificationCenter.default.addObserver(forName: UIScene.willConnectNotification, object: nil,
+                                                                  queue: .main) { note in
+            // Delivered on the main queue; the scene does not leave it.
+            nonisolated(unsafe) let connecting = note.object as? UIWindowScene
+            MainActor.assumeIsolated {
+                if let scene = connecting { _ = SceneDelegate.adopt(scene) }
+            }
+        }
     }
 
     /// UIKit asks for every new session, and again at a start for a session kept with a configuration made in code
@@ -87,7 +104,20 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         submit([userActivity.webpageURL].compactMap { $0 })
     }
 
+    /// A connecting application scene whose delegate is not this build's (a session restored with an earlier build's
+    /// configuration made in code) gets a `SceneDelegate` with its window; nil when the scene already has one.
+    @discardableResult
+    static func adopt(_ scene: UIWindowScene) -> SceneDelegate? {
+        guard scene.session.role == .windowApplication, !(scene.delegate is SceneDelegate) else { return nil }
+        let delegate = SceneDelegate()
+        scene.delegate = delegate
+        delegate.show(in: scene)
+        return delegate
+    }
+
+    /// The window with the root view; a second call for the same scene changes nothing.
     private func show(in scene: UIWindowScene) {
+        guard window == nil else { return }
         let window = UIWindow(windowScene: scene)
         window.rootViewController = UIHostingController(rootView: RootView(launch: AppLaunch.shared))
         window.makeKeyAndVisible()
