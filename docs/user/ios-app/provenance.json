@@ -15,7 +15,7 @@
   ],
   "published_pixels": [
    720,
-   1561
+   1562
   ],
   "text_size": "default (large)"
  },
@@ -319,7 +319,7 @@
  "pdf_sha256": "4d2aacf3d0793d32fb70e3557045c0ef4e258154e877f32db657d223612b9531",
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "5d2ed56914838cda11d5bcc1542764743b1376203b124cda932758e6b438a4ee",
-  "ios/tools/manual/run-manual-capture.sh": "33c9f5723ae99e1e6aacf85b40b871bade1ceaf5de59eb983a12dda10e80535c",
+  "ios/tools/manual/run-manual-capture.sh": "5a469e10039a775acc3c7e8cecb2d17009114e931b14030fc726e35e51684dc1",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
  },
  "recaptures": [
@@ -332,6 +332,13 @@
     "screenshots/40-ad-privacy.png"
    ],
    "reason": "the side menu's privacy rows moved after About (#2990 order, IN-18 part 2); the same capture journey on twios_cap_16 (run manual-11), the four menu states taken from it; the other 37 screenshots are the morning's capture and match the app (checked page by page against the new run)"
+  }
+ ],
+ "source_changes": [
+  {
+   "date": "2026-11-18",
+   "source": "ios/tools/manual/run-manual-capture.sh",
+   "change": "after manual-11 the export step fails the run on a failed export, a missing attachment manifest or a screenshot set other than manual.json's 41 (review finding CODEX-IN18P3-1); the test, the simulator set-up and the image reduction are unchanged, so the published screenshots stand"
   }
  ]
 }
