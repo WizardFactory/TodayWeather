@@ -35,6 +35,8 @@ final class AppStartup {
     private(set) var openRequested = false
     private let messaging = MessagingBridge()
     private var activeObserver: NSObjectProtocol?
+    /// `HandBackConsentRecords.beforeStart` of the app's records; replaced only by app-hosted tests on their own instances.
+    var checkHandBackConsent: () -> Void = { HandBackConsentRecords.app.beforeStart() }
     /// The app's dependencies, replaced only by app-hosted tests on their own instances (the app has no test mode):
     /// the migrated state (`migratedState()`), and the push service for a `Device-Id` (the build's server, the
     /// Firebase token and the app's state holder, `PushService.production`).
@@ -75,8 +77,9 @@ final class AppStartup {
         }
     }
 
-    /// The state after the Cordova migration (`MigrationRunner` over the data container and the App Group); throws
-    /// while a source or the state file cannot be read, and without the App Group container.
+    /// The state after the Cordova migration (`MigrationRunner` over the data container and the App Group; again after a
+    /// fallback Cordova build claimed the state, IN-17); throws while a source or the state file cannot be read, and
+    /// without the App Group container.
     static func migratedState() throws -> AppState {
         let home = URL(fileURLWithPath: NSHomeDirectory())
         let runner = MigrationRunner(
@@ -90,11 +93,15 @@ final class AppStartup {
                 let suite = try CordovaSources.suiteValues(defaults, groupContainer: group)
                 return try CordovaSources.read(dataContainer: home, suite: suite)
             },
-            region: { CordovaRegion.from(preferredLanguages: Locale.preferredLanguages) })
+            region: { CordovaRegion.from(preferredLanguages: Locale.preferredLanguages) },
+            // IN-17: a fallback Cordova build's claim makes the start migrate its storage again.
+            marker: { AppHandBack.marker() })
         return try runner.runIfNeeded()
     }
 
     private func loadState() {
+        // IN-17: a grant the suite no longer confirms is withdrawn before this process hands its choice back.
+        checkHandBackConsent()
         do {
             let state = try migrate()
             self.state = state
@@ -145,15 +152,5 @@ final class AppStartup {
         } else {
             tokensBeforePush.append(token)
         }
-    }
-}
-
-final class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        // IN-14: a tap that started the app reaches the delegate only when it is set before the launch finishes.
-        NotificationEvents.shared.start()
-        AppStartup.shared.start(application)
-        return true
     }
 }

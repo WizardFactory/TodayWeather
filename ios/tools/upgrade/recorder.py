@@ -9,6 +9,7 @@ Push requests are recorded with their headers and JSON body (IN-04): the Cordova
 app's (/v000903). The seed script posts:
 - /__tw/observed: a request the page started (XHR or fetch) with its URL, so requests to other hosts are seen too;
 - /__tw/seeded: the state it wrote, saved as <out-dir>/seeded.json.
+The hand-back test's script (handback-cordova.js, IN-17) posts /__tw/report/<name>, saved as <out-dir>/<name>.json.
 CORS headers allow the app://localhost origin. Stop it with SIGTERM.
 """
 import json
@@ -66,6 +67,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._reply(204)
         if self.path == "/__tw/seeded":
             with open(os.path.join(OUT, "seeded.json"), "wb") as f:
+                f.write(body)
+            return self._reply(200, b"{}")
+        report = re.match(r"^/__tw/report/([a-z0-9-]+)$", self.path)
+        if report:
+            with open(os.path.join(OUT, report.group(1) + ".json"), "wb") as f:
                 f.write(body)
             return self._reply(200, b"{}")
         if self.path.startswith("/__tw/") or (PUSH.match(self.path) and self.command in ("PUT", "POST")):
