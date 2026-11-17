@@ -62,14 +62,18 @@ final class IPadUITests: XCTestCase {
         while let node = queue.popLast() {
             queue += node.children
             let id = node.identifier, frame = node.frame
-            guard !id.isEmpty, frame.width > 0, frame.height > 0, frame.intersects(window) else { continue }
+            guard !id.isEmpty, frame.width > 0, frame.height > 0 else { continue }
+            // As `IPadFitTests.problems` (CODEX-IN18P1-1): a dialog is checked wherever it is; other content scrolled
+            // above or below the window is not, but content beside the window is cut.
+            let dialog = Self.dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") })
+            if !dialog && (frame.maxY <= window.minY || frame.minY >= window.maxY) { continue }
             seen += 1
             if !Self.sideways.contains(where: id.hasPrefix) {
                 XCTAssertTrue(frame.minX >= window.minX - 0.5 && frame.maxX <= window.maxX + 0.5,
                               "\(name): \(id) \(frame) across the window \(window)")
             }
             XCTAssertTrue(frame.minY >= window.minY - 0.5, "\(name): \(id) \(frame) below the window's top \(window)")
-            if Self.dialogs.contains(where: { id == $0 || id.hasPrefix($0 + "-") }) {
+            if dialog {
                 XCTAssertTrue(frame.maxY <= window.maxY + 0.5, "\(name): \(id) \(frame) above the window's bottom \(window)")
             }
         }
