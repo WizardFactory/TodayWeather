@@ -1,0 +1,1234 @@
+{
+ "metric": "AN-05: strong = share of pixels whose largest RGB channel differs by more than 64 after a 3x3 box blur; mean = mean largest RGB channel difference (0-255); heightDifference = |native - Cordova| px after the points a block ends under the tab bar. Each case passes within its value plus `margin`.",
+ "margin": {
+  "strong": 0.0015,
+  "mean": 0.3,
+  "heightDifference": 0
+ },
+ "reasons": {
+  "measurement": "Each case's `measured` is the local run (Xcode 27.2, iOS 26.5 simulator twios_cap_16) of MatrixScreenshotTests after the fixes below; the tolerance is it times 1.5 plus 0.0005 (strong) and times 1.2 plus 0.2 (mean), rounded up, as start-tolerances.json records its headroom for CI's Xcode 26.6.",
+  "glyph rasterization": "Most cases: text and glyph edges a pixel apart from WebKit's (its subpixel glyph positions and 1/64 pt layout), every box at the captured position; the same residuals as the 393x852 sets' tolerances.",
+  "detail tables and info rows (forecast -3/-4, air -1/-5)": "Up to strong 0.026 and mean 4.0 (air info rows at 375x667, scale 2): left-aligned table text a pixel from the capture, as forecast-tolerances.json's reason for its tables, and at scale 2 each such pixel is a larger share of the block. Inspected side by side: no missing or moved row.",
+  "header bar at 375x667 (shell-header)": "Strong 0.0136: the title's glyphs one device pixel apart at scale 2; the bar's height (44 pt, no safe-area inset on the SE) and buttons match.",
+  "heightDifference 1": "WebKit rounds each block's pixel edges from 1/64 pt layout; the native block ends on the next pixel.",
+  "masked": "The tab bar's home indicator (system UI over the WebView's bottom inset in some captures) and the header bar's page buttons (as ShellScreenshotTests).",
+  "fixed before measuring": "The English three-day details (S04) ran their labels into the next day (DayCells now widens a day to its widest line, as WebKit's table); the header block's safe area was 5 pt at every size (now the display's: 0 on the SE, 8 on the Pro Max); the menu's privacy rows were above Send feedback, not after About as the Cordova 1.1.3 build (#2990)."
+ },
+ "cases": {
+  "375x667-en-US-air-kma-seoul-0": {
+   "measured": {
+    "strong": 0.00376,
+    "mean": 0.693
+   },
+   "strong": 0.0062,
+   "mean": 1.04,
+   "heightDifference": 1
+  },
+  "375x667-en-US-air-kma-seoul-1": {
+   "measured": {
+    "strong": 0.00234,
+    "mean": 1.877
+   },
+   "strong": 0.0041,
+   "mean": 2.46,
+   "heightDifference": 0
+  },
+  "375x667-en-US-air-kma-seoul-2": {
+   "measured": {
+    "strong": 2e-05,
+    "mean": 0.672
+   },
+   "strong": 0.0006,
+   "mean": 1.01,
+   "heightDifference": 0
+  },
+  "375x667-en-US-air-kma-seoul-3": {
+   "measured": {
+    "strong": 0.00389,
+    "mean": 0.865
+   },
+   "strong": 0.0064,
+   "mean": 1.24,
+   "heightDifference": 0
+  },
+  "375x667-en-US-air-kma-seoul-4": {
+   "measured": {
+    "strong": 0.00077,
+    "mean": 0.483
+   },
+   "strong": 0.0017,
+   "mean": 0.79,
+   "heightDifference": 0
+  },
+  "375x667-en-US-air-kma-seoul-5": {
+   "measured": {
+    "strong": 0.02631,
+    "mean": 3.991
+   },
+   "strong": 0.04,
+   "mean": 4.99,
+   "heightDifference": 1
+  },
+  "375x667-en-US-air-kma-seoul-6": {
+   "measured": {
+    "strong": 0.00187,
+    "mean": 0.776
+   },
+   "strong": 0.0034,
+   "mean": 1.14,
+   "heightDifference": 0
+  },
+  "375x667-en-US-forecast-kma-seoul-daily-0": {
+   "measured": {
+    "strong": 0.00283,
+    "mean": 1.212
+   },
+   "strong": 0.0048,
+   "mean": 1.66,
+   "heightDifference": 1
+  },
+  "375x667-en-US-forecast-kma-seoul-daily-1": {
+   "measured": {
+    "strong": 0.00149,
+    "mean": 1.338
+   },
+   "strong": 0.0028,
+   "mean": 1.81,
+   "heightDifference": 0
+  },
+  "375x667-en-US-forecast-kma-seoul-daily-2": {
+   "measured": {
+    "strong": 0.00389,
+    "mean": 0.865
+   },
+   "strong": 0.0064,
+   "mean": 1.24,
+   "heightDifference": 0
+  },
+  "375x667-en-US-forecast-kma-seoul-daily-3": {
+   "measured": {
+    "strong": 0.00183,
+    "mean": 1.567
+   },
+   "strong": 0.0033,
+   "mean": 2.09,
+   "heightDifference": 1
+  },
+  "375x667-en-US-forecast-kma-seoul-hourly-0": {
+   "measured": {
+    "strong": 0.00283,
+    "mean": 1.212
+   },
+   "strong": 0.0048,
+   "mean": 1.66,
+   "heightDifference": 1
+  },
+  "375x667-en-US-forecast-kma-seoul-hourly-1": {
+   "measured": {
+    "strong": 0.00452,
+    "mean": 1.288
+   },
+   "strong": 0.0073,
+   "mean": 1.75,
+   "heightDifference": 0
+  },
+  "375x667-en-US-forecast-kma-seoul-hourly-2": {
+   "measured": {
+    "strong": 0.00657,
+    "mean": 1.401
+   },
+   "strong": 0.0104,
+   "mean": 1.89,
+   "heightDifference": 0
+  },
+  "375x667-en-US-forecast-kma-seoul-hourly-3": {
+   "measured": {
+    "strong": 0.00651,
+    "mean": 1.335
+   },
+   "strong": 0.0103,
+   "mean": 1.81,
+   "heightDifference": 1
+  },
+  "375x667-en-US-forecast-kma-seoul-hourly-4": {
+   "measured": {
+    "strong": 0.01264,
+    "mean": 2.792
+   },
+   "strong": 0.0195,
+   "mean": 3.56,
+   "heightDifference": 1
+  },
+  "375x667-en-US-places-list": {
+   "measured": {
+    "strong": 0.00025,
+    "mean": 0.287
+   },
+   "strong": 0.0009,
+   "mean": 0.55,
+   "heightDifference": 0
+  },
+  "375x667-en-US-push-confirm": {
+   "measured": {
+    "strong": 0.00121,
+    "mean": 0.681
+   },
+   "strong": 0.0024,
+   "mean": 1.02,
+   "heightDifference": 0
+  },
+  "375x667-en-US-push-picker": {
+   "measured": {
+    "strong": 0.00042,
+    "mean": 0.636
+   },
+   "strong": 0.0012,
+   "mean": 0.97,
+   "heightDifference": 0
+  },
+  "375x667-en-US-push-settings": {
+   "measured": {
+    "strong": 0.00366,
+    "mean": 1.069
+   },
+   "strong": 0.006,
+   "mean": 1.49,
+   "heightDifference": 0
+  },
+  "375x667-en-US-settings-about": {
+   "measured": {
+    "strong": 0.00098,
+    "mean": 1.028
+   },
+   "strong": 0.002,
+   "mean": 1.44,
+   "heightDifference": 0
+  },
+  "375x667-en-US-settings-radio-temperatureUnit": {
+   "measured": {
+    "strong": 0.00156,
+    "mean": 0.42
+   },
+   "strong": 0.0029,
+   "mean": 0.71,
+   "heightDifference": 0
+  },
+  "375x667-en-US-settings-units": {
+   "measured": {
+    "strong": 0.00031,
+    "mean": 0.856
+   },
+   "strong": 0.001,
+   "mean": 1.23,
+   "heightDifference": 0
+  },
+  "375x667-en-US-shell-header": {
+   "measured": {
+    "strong": 0.01359,
+    "mean": 2.167
+   },
+   "strong": 0.0209,
+   "mean": 2.81,
+   "heightDifference": 0
+  },
+  "375x667-en-US-shell-menu": {
+   "measured": {
+    "strong": 0.00203,
+    "mean": 1.57
+   },
+   "strong": 0.0036,
+   "mean": 2.09,
+   "heightDifference": 0
+  },
+  "375x667-en-US-shell-tabs": {
+   "measured": {
+    "strong": 0,
+    "mean": 1.548
+   },
+   "strong": 0.0005,
+   "mean": 2.06,
+   "heightDifference": 0
+  },
+  "375x667-en-US-start-access": {
+   "measured": {
+    "strong": 0.00373,
+    "mean": 0.865
+   },
+   "strong": 0.0061,
+   "mean": 1.24,
+   "heightDifference": 0
+  },
+  "375x667-en-US-start-start": {
+   "measured": {
+    "strong": 0.00226,
+    "mean": 1.201
+   },
+   "strong": 0.0039,
+   "mean": 1.65,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-air-kma-seoul-0": {
+   "measured": {
+    "strong": 0.00267,
+    "mean": 0.534
+   },
+   "strong": 0.0046,
+   "mean": 0.85,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-air-kma-seoul-1": {
+   "measured": {
+    "strong": 0.00124,
+    "mean": 1.394
+   },
+   "strong": 0.0024,
+   "mean": 1.88,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-air-kma-seoul-2": {
+   "measured": {
+    "strong": 0.0,
+    "mean": 0.604
+   },
+   "strong": 0.0006,
+   "mean": 0.93,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-air-kma-seoul-3": {
+   "measured": {
+    "strong": 0.0022,
+    "mean": 0.521
+   },
+   "strong": 0.0039,
+   "mean": 0.83,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-air-kma-seoul-4": {
+   "measured": {
+    "strong": 0.00053,
+    "mean": 0.541
+   },
+   "strong": 0.0013,
+   "mean": 0.85,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-air-kma-seoul-5": {
+   "measured": {
+    "strong": 0.02283,
+    "mean": 3.656
+   },
+   "strong": 0.0348,
+   "mean": 4.59,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-air-kma-seoul-6": {
+   "measured": {
+    "strong": 0.00044,
+    "mean": 0.687
+   },
+   "strong": 0.0012,
+   "mean": 1.03,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-forecast-kma-seoul-daily-0": {
+   "measured": {
+    "strong": 0.00313,
+    "mean": 1.118
+   },
+   "strong": 0.0052,
+   "mean": 1.55,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-forecast-kma-seoul-daily-1": {
+   "measured": {
+    "strong": 0.00171,
+    "mean": 1.335
+   },
+   "strong": 0.0031,
+   "mean": 1.81,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-forecast-kma-seoul-daily-2": {
+   "measured": {
+    "strong": 0.0022,
+    "mean": 0.521
+   },
+   "strong": 0.0039,
+   "mean": 0.83,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-forecast-kma-seoul-daily-3": {
+   "measured": {
+    "strong": 0,
+    "mean": 0.217
+   },
+   "strong": 0.0005,
+   "mean": 0.46,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-forecast-kma-seoul-hourly-0": {
+   "measured": {
+    "strong": 0.00313,
+    "mean": 1.118
+   },
+   "strong": 0.0052,
+   "mean": 1.55,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-forecast-kma-seoul-hourly-1": {
+   "measured": {
+    "strong": 0.00514,
+    "mean": 1.375
+   },
+   "strong": 0.0083,
+   "mean": 1.85,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-forecast-kma-seoul-hourly-2": {
+   "measured": {
+    "strong": 0.0026,
+    "mean": 1.11
+   },
+   "strong": 0.0045,
+   "mean": 1.54,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-forecast-kma-seoul-hourly-3": {
+   "measured": {
+    "strong": 0.00899,
+    "mean": 1.831
+   },
+   "strong": 0.014,
+   "mean": 2.4,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-forecast-kma-seoul-hourly-4": {
+   "measured": {
+    "strong": 0.01212,
+    "mean": 2.771
+   },
+   "strong": 0.0187,
+   "mean": 3.53,
+   "heightDifference": 1
+  },
+  "375x667-ko-KR-nation-nation-air-pm2.5": {
+   "measured": {
+    "strong": 0.00061,
+    "mean": 0.222
+   },
+   "strong": 0.0015,
+   "mean": 0.47,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-nation-nation-weather": {
+   "measured": {
+    "strong": 0.00076,
+    "mean": 0.708
+   },
+   "strong": 0.0017,
+   "mean": 1.05,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-nation-warnings": {
+   "measured": {
+    "strong": 0.00078,
+    "mean": 0.211
+   },
+   "strong": 0.0017,
+   "mean": 0.46,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-places-list": {
+   "measured": {
+    "strong": 0.00017,
+    "mean": 0.278
+   },
+   "strong": 0.0008,
+   "mean": 0.54,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-push-confirm": {
+   "measured": {
+    "strong": 0.00042,
+    "mean": 0.415
+   },
+   "strong": 0.0012,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-push-picker": {
+   "measured": {
+    "strong": 0.00036,
+    "mean": 0.48
+   },
+   "strong": 0.0011,
+   "mean": 0.78,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-push-settings": {
+   "measured": {
+    "strong": 0.0011,
+    "mean": 0.59
+   },
+   "strong": 0.0022,
+   "mean": 0.91,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-settings-about": {
+   "measured": {
+    "strong": 0.00051,
+    "mean": 0.955
+   },
+   "strong": 0.0013,
+   "mean": 1.35,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-settings-radio-temperatureUnit": {
+   "measured": {
+    "strong": 0.00099,
+    "mean": 0.451
+   },
+   "strong": 0.002,
+   "mean": 0.75,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-settings-units": {
+   "measured": {
+    "strong": 0.00089,
+    "mean": 0.964
+   },
+   "strong": 0.0019,
+   "mean": 1.36,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-shell-header": {
+   "measured": {
+    "strong": 0.01359,
+    "mean": 2.167
+   },
+   "strong": 0.0209,
+   "mean": 2.81,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-shell-menu": {
+   "measured": {
+    "strong": 0.00094,
+    "mean": 1.423
+   },
+   "strong": 0.002,
+   "mean": 1.91,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-shell-tabs": {
+   "measured": {
+    "strong": 0,
+    "mean": 1.578
+   },
+   "strong": 0.0005,
+   "mean": 2.1,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-start-access": {
+   "measured": {
+    "strong": 0.0008,
+    "mean": 0.412
+   },
+   "strong": 0.0018,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "375x667-ko-KR-start-start": {
+   "measured": {
+    "strong": 0.00224,
+    "mean": 1.169
+   },
+   "strong": 0.0039,
+   "mean": 1.61,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-0": {
+   "measured": {
+    "strong": 0.00049,
+    "mean": 0.095
+   },
+   "strong": 0.0013,
+   "mean": 0.32,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-1": {
+   "measured": {
+    "strong": 0.01503,
+    "mean": 2.098
+   },
+   "strong": 0.0231,
+   "mean": 2.72,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-2": {
+   "measured": {
+    "strong": 0.00224,
+    "mean": 1.04
+   },
+   "strong": 0.0039,
+   "mean": 1.45,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-3": {
+   "measured": {
+    "strong": 0.00235,
+    "mean": 0.409
+   },
+   "strong": 0.0041,
+   "mean": 0.7,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-4": {
+   "measured": {
+    "strong": 0.00156,
+    "mean": 0.207
+   },
+   "strong": 0.0029,
+   "mean": 0.45,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-5": {
+   "measured": {
+    "strong": 0.01145,
+    "mean": 1.636
+   },
+   "strong": 0.0177,
+   "mean": 2.17,
+   "heightDifference": 0
+  },
+  "393x852-en-US-air-kma-seoul-6": {
+   "measured": {
+    "strong": 0.00438,
+    "mean": 0.831
+   },
+   "strong": 0.0071,
+   "mean": 1.2,
+   "heightDifference": 1
+  },
+  "393x852-en-US-forecast-kma-seoul-daily-0": {
+   "measured": {
+    "strong": 5e-05,
+    "mean": 0.206
+   },
+   "strong": 0.0006,
+   "mean": 0.45,
+   "heightDifference": 0
+  },
+  "393x852-en-US-forecast-kma-seoul-daily-1": {
+   "measured": {
+    "strong": 0.00455,
+    "mean": 1.301
+   },
+   "strong": 0.0074,
+   "mean": 1.77,
+   "heightDifference": 0
+  },
+  "393x852-en-US-forecast-kma-seoul-daily-2": {
+   "measured": {
+    "strong": 0.00236,
+    "mean": 0.392
+   },
+   "strong": 0.0041,
+   "mean": 0.68,
+   "heightDifference": 0
+  },
+  "393x852-en-US-forecast-kma-seoul-daily-3": {
+   "measured": {
+    "strong": 0.00198,
+    "mean": 0.807
+   },
+   "strong": 0.0035,
+   "mean": 1.17,
+   "heightDifference": 1
+  },
+  "393x852-en-US-forecast-kma-seoul-hourly-0": {
+   "measured": {
+    "strong": 4e-05,
+    "mean": 0.204
+   },
+   "strong": 0.0006,
+   "mean": 0.45,
+   "heightDifference": 0
+  },
+  "393x852-en-US-forecast-kma-seoul-hourly-1": {
+   "measured": {
+    "strong": 0.00221,
+    "mean": 0.902
+   },
+   "strong": 0.0039,
+   "mean": 1.29,
+   "heightDifference": 0
+  },
+  "393x852-en-US-forecast-kma-seoul-hourly-2": {
+   "measured": {
+    "strong": 0.0046,
+    "mean": 0.67
+   },
+   "strong": 0.0075,
+   "mean": 1.01,
+   "heightDifference": 0
+  },
+  "393x852-en-US-forecast-kma-seoul-hourly-3": {
+   "measured": {
+    "strong": 0.0162,
+    "mean": 2.405
+   },
+   "strong": 0.0249,
+   "mean": 3.09,
+   "heightDifference": 1
+  },
+  "393x852-en-US-forecast-kma-seoul-hourly-4": {
+   "measured": {
+    "strong": 0.00999,
+    "mean": 1.726
+   },
+   "strong": 0.0155,
+   "mean": 2.28,
+   "heightDifference": 1
+  },
+  "393x852-en-US-settings-radio-temperatureUnit": {
+   "measured": {
+    "strong": 0.00062,
+    "mean": 0.229
+   },
+   "strong": 0.0015,
+   "mean": 0.48,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-0": {
+   "measured": {
+    "strong": 0.00134,
+    "mean": 0.386
+   },
+   "strong": 0.0026,
+   "mean": 0.67,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-1": {
+   "measured": {
+    "strong": 0.00361,
+    "mean": 0.511
+   },
+   "strong": 0.006,
+   "mean": 0.82,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-2": {
+   "measured": {
+    "strong": 0.00244,
+    "mean": 1.203
+   },
+   "strong": 0.0042,
+   "mean": 1.65,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-3": {
+   "measured": {
+    "strong": 0.00156,
+    "mean": 0.248
+   },
+   "strong": 0.0029,
+   "mean": 0.5,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-4": {
+   "measured": {
+    "strong": 0.00143,
+    "mean": 0.21
+   },
+   "strong": 0.0027,
+   "mean": 0.46,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-5": {
+   "measured": {
+    "strong": 0.00519,
+    "mean": 0.732
+   },
+   "strong": 0.0083,
+   "mean": 1.08,
+   "heightDifference": 0
+  },
+  "440x956-en-US-air-kma-seoul-6": {
+   "measured": {
+    "strong": 0.00334,
+    "mean": 0.501
+   },
+   "strong": 0.0056,
+   "mean": 0.81,
+   "heightDifference": 1
+  },
+  "440x956-en-US-forecast-kma-seoul-daily-0": {
+   "measured": {
+    "strong": 0.00051,
+    "mean": 0.228
+   },
+   "strong": 0.0013,
+   "mean": 0.48,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-daily-1": {
+   "measured": {
+    "strong": 0.00496,
+    "mean": 1.67
+   },
+   "strong": 0.008,
+   "mean": 2.21,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-daily-2": {
+   "measured": {
+    "strong": 0.00155,
+    "mean": 0.265
+   },
+   "strong": 0.0029,
+   "mean": 0.52,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-daily-3": {
+   "measured": {
+    "strong": 0.0044,
+    "mean": 1.233
+   },
+   "strong": 0.0071,
+   "mean": 1.68,
+   "heightDifference": 1
+  },
+  "440x956-en-US-forecast-kma-seoul-hourly-0": {
+   "measured": {
+    "strong": 0.00051,
+    "mean": 0.227
+   },
+   "strong": 0.0013,
+   "mean": 0.48,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-hourly-1": {
+   "measured": {
+    "strong": 0.00489,
+    "mean": 1.811
+   },
+   "strong": 0.0079,
+   "mean": 2.38,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-hourly-2": {
+   "measured": {
+    "strong": 0.00278,
+    "mean": 0.428
+   },
+   "strong": 0.0047,
+   "mean": 0.72,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-hourly-3": {
+   "measured": {
+    "strong": 0.00286,
+    "mean": 0.456
+   },
+   "strong": 0.0048,
+   "mean": 0.75,
+   "heightDifference": 0
+  },
+  "440x956-en-US-forecast-kma-seoul-hourly-4": {
+   "measured": {
+    "strong": 0.01836,
+    "mean": 2.793
+   },
+   "strong": 0.0281,
+   "mean": 3.56,
+   "heightDifference": 1
+  },
+  "440x956-en-US-places-list": {
+   "measured": {
+    "strong": 5e-05,
+    "mean": 0.07
+   },
+   "strong": 0.0006,
+   "mean": 0.29,
+   "heightDifference": 0
+  },
+  "440x956-en-US-push-confirm": {
+   "measured": {
+    "strong": 0.00064,
+    "mean": 0.336
+   },
+   "strong": 0.0015,
+   "mean": 0.61,
+   "heightDifference": 0
+  },
+  "440x956-en-US-push-picker": {
+   "measured": {
+    "strong": 0.00103,
+    "mean": 0.428
+   },
+   "strong": 0.0021,
+   "mean": 0.72,
+   "heightDifference": 0
+  },
+  "440x956-en-US-push-settings": {
+   "measured": {
+    "strong": 0.00171,
+    "mean": 0.572
+   },
+   "strong": 0.0031,
+   "mean": 0.89,
+   "heightDifference": 0
+  },
+  "440x956-en-US-settings-about": {
+   "measured": {
+    "strong": 0.0005,
+    "mean": 0.398
+   },
+   "strong": 0.0013,
+   "mean": 0.68,
+   "heightDifference": 0
+  },
+  "440x956-en-US-settings-radio-temperatureUnit": {
+   "measured": {
+    "strong": 0.00016,
+    "mean": 0.158
+   },
+   "strong": 0.0008,
+   "mean": 0.39,
+   "heightDifference": 0
+  },
+  "440x956-en-US-settings-units": {
+   "measured": {
+    "strong": 2e-05,
+    "mean": 0.361
+   },
+   "strong": 0.0006,
+   "mean": 0.64,
+   "heightDifference": 0
+  },
+  "440x956-en-US-shell-header": {
+   "measured": {
+    "strong": 0.00279,
+    "mean": 0.401
+   },
+   "strong": 0.0047,
+   "mean": 0.69,
+   "heightDifference": 0
+  },
+  "440x956-en-US-shell-menu": {
+   "measured": {
+    "strong": 0.0023,
+    "mean": 0.901
+   },
+   "strong": 0.004,
+   "mean": 1.29,
+   "heightDifference": 0
+  },
+  "440x956-en-US-shell-tabs": {
+   "measured": {
+    "strong": 0.00081,
+    "mean": 0.26
+   },
+   "strong": 0.0018,
+   "mean": 0.52,
+   "heightDifference": 0
+  },
+  "440x956-en-US-start-access": {
+   "measured": {
+    "strong": 0.00286,
+    "mean": 0.828
+   },
+   "strong": 0.0048,
+   "mean": 1.2,
+   "heightDifference": 0
+  },
+  "440x956-en-US-start-start": {
+   "measured": {
+    "strong": 0.00287,
+    "mean": 1.129
+   },
+   "strong": 0.0049,
+   "mean": 1.56,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-0": {
+   "measured": {
+    "strong": 0.00157,
+    "mean": 0.406
+   },
+   "strong": 0.0029,
+   "mean": 0.69,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-1": {
+   "measured": {
+    "strong": 0.00156,
+    "mean": 0.136
+   },
+   "strong": 0.0029,
+   "mean": 0.37,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-2": {
+   "measured": {
+    "strong": 0.00238,
+    "mean": 1.261
+   },
+   "strong": 0.0041,
+   "mean": 1.72,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-3": {
+   "measured": {
+    "strong": 0.00061,
+    "mean": 0.139
+   },
+   "strong": 0.0015,
+   "mean": 0.37,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-4": {
+   "measured": {
+    "strong": 0.00328,
+    "mean": 0.49
+   },
+   "strong": 0.0055,
+   "mean": 0.79,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-5": {
+   "measured": {
+    "strong": 0,
+    "mean": 0.001
+   },
+   "strong": 0.0005,
+   "mean": 0.21,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-air-kma-seoul-6": {
+   "measured": {
+    "strong": 0.00298,
+    "mean": 0.474
+   },
+   "strong": 0.005,
+   "mean": 0.77,
+   "heightDifference": 1
+  },
+  "440x956-ko-KR-forecast-kma-seoul-daily-0": {
+   "measured": {
+    "strong": 0.00083,
+    "mean": 0.419
+   },
+   "strong": 0.0018,
+   "mean": 0.71,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-daily-1": {
+   "measured": {
+    "strong": 0.00533,
+    "mean": 1.731
+   },
+   "strong": 0.0085,
+   "mean": 2.28,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-daily-2": {
+   "measured": {
+    "strong": 0.00061,
+    "mean": 0.155
+   },
+   "strong": 0.0015,
+   "mean": 0.39,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-daily-3": {
+   "measured": {
+    "strong": 0.0001,
+    "mean": 0.102
+   },
+   "strong": 0.0007,
+   "mean": 0.33,
+   "heightDifference": 1
+  },
+  "440x956-ko-KR-forecast-kma-seoul-hourly-0": {
+   "measured": {
+    "strong": 0.00082,
+    "mean": 0.418
+   },
+   "strong": 0.0018,
+   "mean": 0.71,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-hourly-1": {
+   "measured": {
+    "strong": 0.00445,
+    "mean": 1.754
+   },
+   "strong": 0.0072,
+   "mean": 2.31,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-hourly-2": {
+   "measured": {
+    "strong": 0.00206,
+    "mean": 0.374
+   },
+   "strong": 0.0036,
+   "mean": 0.65,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-hourly-3": {
+   "measured": {
+    "strong": 0.00287,
+    "mean": 0.471
+   },
+   "strong": 0.0049,
+   "mean": 0.77,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-forecast-kma-seoul-hourly-4": {
+   "measured": {
+    "strong": 0.01941,
+    "mean": 2.806
+   },
+   "strong": 0.0297,
+   "mean": 3.57,
+   "heightDifference": 1
+  },
+  "440x956-ko-KR-nation-nation-air-pm2.5": {
+   "measured": {
+    "strong": 0.00012,
+    "mean": 0.101
+   },
+   "strong": 0.0007,
+   "mean": 0.33,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-nation-nation-weather": {
+   "measured": {
+    "strong": 0.0003,
+    "mean": 0.546
+   },
+   "strong": 0.001,
+   "mean": 0.86,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-nation-warnings": {
+   "measured": {
+    "strong": 0.00017,
+    "mean": 0.074
+   },
+   "strong": 0.0008,
+   "mean": 0.29,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-places-list": {
+   "measured": {
+    "strong": 5e-05,
+    "mean": 0.081
+   },
+   "strong": 0.0006,
+   "mean": 0.3,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-push-confirm": {
+   "measured": {
+    "strong": 0.0002,
+    "mean": 0.227
+   },
+   "strong": 0.0008,
+   "mean": 0.48,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-push-picker": {
+   "measured": {
+    "strong": 0.00043,
+    "mean": 0.273
+   },
+   "strong": 0.0012,
+   "mean": 0.53,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-push-settings": {
+   "measured": {
+    "strong": 0.00029,
+    "mean": 0.33
+   },
+   "strong": 0.001,
+   "mean": 0.6,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-settings-about": {
+   "measured": {
+    "strong": 0.00044,
+    "mean": 0.544
+   },
+   "strong": 0.0012,
+   "mean": 0.86,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-settings-radio-temperatureUnit": {
+   "measured": {
+    "strong": 0.00014,
+    "mean": 0.224
+   },
+   "strong": 0.0008,
+   "mean": 0.47,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-settings-units": {
+   "measured": {
+    "strong": 0.00019,
+    "mean": 0.38
+   },
+   "strong": 0.0008,
+   "mean": 0.66,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-shell-header": {
+   "measured": {
+    "strong": 0.00279,
+    "mean": 0.401
+   },
+   "strong": 0.0047,
+   "mean": 0.69,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-shell-menu": {
+   "measured": {
+    "strong": 0.0002,
+    "mean": 0.749
+   },
+   "strong": 0.0009,
+   "mean": 1.1,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-shell-tabs": {
+   "measured": {
+    "strong": 0,
+    "mean": 0.005
+   },
+   "strong": 0.0005,
+   "mean": 0.21,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-start-access": {
+   "measured": {
+    "strong": 0.00143,
+    "mean": 0.555
+   },
+   "strong": 0.0027,
+   "mean": 0.87,
+   "heightDifference": 0
+  },
+  "440x956-ko-KR-start-start": {
+   "measured": {
+    "strong": 0.00274,
+    "mean": 1.07
+   },
+   "strong": 0.0047,
+   "mean": 1.49,
+   "heightDifference": 0
+  }
+ }
+}

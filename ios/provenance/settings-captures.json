@@ -2,14 +2,15 @@
  "tool": "ios/tools/settings-reference/capture.py",
  "build": {
   "recipe": "ios/tools/chart-reference/build-cordova.sh <out> http://127.0.0.1:18456",
-  "commit": "7577d9800fdc83024d600f96bb7081743e4b40e0",
+  "commit": "ab6acb0c90cac1874ae5c1ba092d0b50052770fb",
   "client_version": "1.1.2",
   "cordova_ios": "8.1.1",
   "xcode": "Xcode 27.2",
   "node": "v24.19.0",
-  "server": "http://127.0.0.1:18456",
-  "built_at": "2026-11-14T20:35:50Z",
-  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+  "server": "http://127.0.0.1:18460",
+  "built_at": "2026-11-16T00:59:55Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units",
+  "serverCopy": "recaptured for IN-18 (#2967) from a copy of this build whose www/client.config.js serverUrl is http://127.0.0.1:18456 (the only change); client/www unchanged since the build commit"
  },
  "data": {
   "served": "the corpus responses kma-seoul and, for a request in °F, kma-seoul-f (Core/Tests/TWDomainTests/Corpus/inputs) for GET /weather/v000903/coord/...",
@@ -32,14 +33,6 @@
    "clientSha256": "697f51903d69ccaef394a2bcfabed8544b07070854b49905be1a23af7b74997a",
    "matchesClient": true,
    "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
-  },
-  {
-   "file": "client/www/templates/tab-forecast.html",
-   "appSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
-   "tracked": true,
-   "clientSha256": "d3ee01fee285c59344f51ce968732cd2a1d702de39492daa191c3a9e363afeac",
-   "matchesClient": true,
-   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
   },
   {
    "file": "client/www/js/controller.units.js",
@@ -104,30 +97,6 @@
    "clientSha256": "11d2f5c72aa4bb85591707f1a91187716b8be74487967150e317250dc01aca14",
    "matchesClient": true,
    "lastCommit": "88a5e8b2a5e8f19c71b56e17f1858312e4d8826c"
-  },
-  {
-   "file": "client/www/index.html",
-   "appSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
-   "tracked": true,
-   "clientSha256": "a78368aba395b15a6ed7db2a5ebbb1f88f544ec217b869ffe596a14c6a43f8f4",
-   "matchesClient": true,
-   "lastCommit": "29a0a786e0737a122e1287abb2b02f802cd9dbc5"
-  },
-  {
-   "file": "client/www/locales/ko.json",
-   "appSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
-   "tracked": true,
-   "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
-   "matchesClient": true,
-   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
-  },
-  {
-   "file": "client/www/locales/en.json",
-   "appSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
-   "tracked": true,
-   "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
-   "matchesClient": true,
-   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
   }
  ],
  "runs": {
@@ -138,7 +107,7 @@
     "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
     "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
    },
-   "capturedAt": "2026-11-14T21:58:12Z",
+   "capturedAt": "2026-11-17T09:07:43Z",
    "env": {
     "screen": {
      "width": 393,
@@ -249,7 +218,7 @@
     "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
     "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
    },
-   "capturedAt": "2026-11-14T21:59:47Z",
+   "capturedAt": "2026-11-17T09:12:25Z",
    "env": {
     "screen": {
      "width": 393,
@@ -305,11 +274,11 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-en-US-about.png",
-   "sha256": "6384669e119718370b24ee196636b048502f161103d02f10f133d300ac12d680"
+   "sha256": "74bf62cec7bf9dd2c7bd1014c2e4412e144e08fdcb65eb12ce8d29aee15cd25c"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-en-US-units-statusbar.png",
-   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+   "sha256": "80c3477ae8aba7c2519f396d2b6ef773cafee258c35921956a5fedab56a0b0d3"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-en-US-units.json",
@@ -329,7 +298,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-about.png",
-   "sha256": "39fda4c9ead14541406a67070129bf294640b237738194e53578c8d94621193a"
+   "sha256": "167e870532b04eda210b568d35fcfc4c8e41f4cc25a6753b463a47e884c0251c"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-hourly-dark-0.png",
@@ -377,7 +346,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-airUnit.png",
-   "sha256": "cddfaad1300389f8c726dd91b6ff5e015e6c3eb859d2514c3c96317b272e27bf"
+   "sha256": "d4f8374c39e12629feca101541757f2ac59b38127fe0e7a18657e2973973fc0a"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-distanceUnit-statusbar.png",
@@ -389,7 +358,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-distanceUnit.png",
-   "sha256": "21ccbc6d12394a216c9b207e31e877e67f1e2b5d8ab5acb6a755c25c269e0cd5"
+   "sha256": "9be764a2cf9f00c944b819d8189d5de68144c902d58cc784647ee6ec218b9a61"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-precipitationUnit-statusbar.png",
@@ -401,7 +370,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-precipitationUnit.png",
-   "sha256": "ac9f03a692784cacde2cd0f58e14e93a3b006411e7355ac2baa7d2f075bf1f87"
+   "sha256": "66d386a09bbc2f18712c01d0ec455d497a4268624b3de8b8c69aa615f8e06c8e"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-pressureUnit-statusbar.png",
@@ -413,7 +382,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-pressureUnit.png",
-   "sha256": "7c6d350416d1d2252c929136dc50e736fa2c51a48a67455bfae0cc7b975cbe16"
+   "sha256": "4545be5be6f5d636287b7311075702888a192bdaa8f9881d5d9384dedeb208df"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-refreshInterval-statusbar.png",
@@ -425,7 +394,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-refreshInterval.png",
-   "sha256": "3b94baa84a62a0a7fc5c5f4f85dae7ebcf09dfea7818153ec60836bae39bb344"
+   "sha256": "0be51083e2f8bb5dda6ecce3352f33be801f07656bf55c354f7cd5ec4347f903"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-startupPage-statusbar.png",
@@ -437,11 +406,11 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-startupPage.png",
-   "sha256": "e8544eb17ec3016daa7c757a0b3bdb0ba5fc652f15e3033e9021657ce65a5062"
+   "sha256": "378c69830d14487815822024c685871ffe817c381a38aa61393ab5fb260f48e4"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-temperatureUnit-f-statusbar.png",
-   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+   "sha256": "4688fd544e97eacb3b24607d9dabc0ee2c9b10294369d54ba692d57045ff846a"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-temperatureUnit-f.json",
@@ -449,7 +418,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-temperatureUnit-f.png",
-   "sha256": "050b7acbd4e395db4c302c2250eb2f38a48832f47130e822d8ad7fdec0e0113b"
+   "sha256": "98e165adcb443dc88e2e44471efc56dcbdb8814905930e7229edfa6e5a9c8626"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-temperatureUnit-statusbar.png",
@@ -461,7 +430,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-temperatureUnit.png",
-   "sha256": "19570fd061afc49aeea6f5bad36e585ab1ccec672fac77b1e61fdeaee2962cbf"
+   "sha256": "8630d1e6f07ab76deb6e93ca1673c6ef859b3585ee34e78082b5586892e1c1df"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-theme-dark-statusbar.png",
@@ -473,7 +442,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-theme-dark.png",
-   "sha256": "67c76dd6420f63c73075fd0200bc9fcb510691582a2effac0e4b276c8580d320"
+   "sha256": "5c8ed0844d80683306709f382fa1c67cf41ddf6a05b26845b46b1b00a16d85f8"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-theme-photo-statusbar.png",
@@ -485,7 +454,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-theme-photo.png",
-   "sha256": "1f468b45c0b26d7aeab8f06006995ec93185a3a2d381750f636c666c337bdf36"
+   "sha256": "5007a9da78c6078c49abef0b536f6e82d7c394a48d66c8f4d7c542fb82d4ab5f"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-theme-statusbar.png",
@@ -497,11 +466,11 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-theme.png",
-   "sha256": "f4c12d5560b1db260de8041ab74a1fe822c4ee18b233de3df122d16685d5ad65"
+   "sha256": "7cd36f164f3d3cefc3f913513538e4ff36d3d1bb95ff41cbb3cc613d98f47a62"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-windSpeedUnit-statusbar.png",
-   "sha256": "4688fd544e97eacb3b24607d9dabc0ee2c9b10294369d54ba692d57045ff846a"
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-windSpeedUnit.json",
@@ -509,7 +478,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-radio-windSpeedUnit.png",
-   "sha256": "9f781af38ae5745837a2bc6624fab027fde3798cc150626810234636fc0bdb7f"
+   "sha256": "a43f785fe2f19a02855849e5d7c80762a08b1c4f6bfe6c8abb62902cb6606cee"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-units-f-statusbar.png",
@@ -517,11 +486,11 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-units-f.json",
-   "sha256": "87d4a11a05121fc00a88ead9c5859cddee7714a737f47c7f79f0947e469dcc97"
+   "sha256": "8f94b83232c06b0a8588d10850a96fb3aa09bbbb75ede5119a2d4613de8235e8"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-units-f.png",
-   "sha256": "ee289043175fc521b54aa889a1422215295a40d548d4b30f2803893176b48165"
+   "sha256": "f10c31ab12ac75e3963e473bbe5fe03dbdf48c9b89f2efaca617eb7d7faea1e0"
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-units-statusbar.png",
@@ -533,7 +502,7 @@
   },
   {
    "path": "TodayWeatherTests/SettingsReference/settings-ko-KR-units.png",
-   "sha256": "3f6157d93daf953eac1f7db6d529daf2ec98e7a911e6e540077fd14d53a1d686"
+   "sha256": "47a3775d172282a015f6cc7a84e8c16c6f4612615dbd20c0d5b3fa995396d8aa"
   }
  ]
 }
