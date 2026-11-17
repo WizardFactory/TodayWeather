@@ -88,6 +88,24 @@ final class IPadUITests: XCTestCase {
         XCTAssertTrue(Self.problems(id: "shell-menu-back", frame: open, window: window, menuOpen: true).problems.isEmpty)
         XCTAssertFalse(Self.problems(id: "popup", frame: CGRect(x: 1100, y: 500, width: 270, height: 200), window: window, menuOpen: false).problems.isEmpty)
         XCTAssertTrue(Self.problems(id: "places-row-9", frame: CGRect(x: 0, y: 1400, width: 1032, height: 60), window: window, menuOpen: false).problems.isEmpty)
+        // The open menu must show: moved above the window it does not, though its elements exist.
+        XCTAssertFalse(Self.menuShows([("shell-menu", CGRect(x: 0, y: -1400, width: 1032, height: 1376)),
+                                       ("shell-menu-back", CGRect(x: 5, y: -1360, width: 34, height: 34))],
+                                      window: window, menuOpen: true).isEmpty, "a menu wholly above the window")
+        XCTAssertFalse(Self.menuShows([("shell-menu-back", closed)], window: window, menuOpen: true).isEmpty)
+        XCTAssertTrue(Self.menuShows([("shell-menu-back", open)], window: window, menuOpen: true).isEmpty)
+        XCTAssertTrue(Self.menuShows([], window: window, menuOpen: false).isEmpty)
+    }
+
+    /// Where the menu must be open, its header's back button shows inside the window (CODEX-IN18P1-5: drawer elements
+    /// scrolled or moved out of the window do not count).
+    static func menuShows(_ nodes: [(String, CGRect)], window: CGRect, menuOpen: Bool) -> [String] {
+        guard menuOpen else { return [] }
+        let shows = nodes.contains { id, frame in
+            id == "shell-menu-back" && frame.minX >= window.minX - 0.5 && frame.maxX <= window.maxX + 0.5
+                && frame.minY >= window.minY - 0.5 && frame.maxY <= window.maxY + 0.5
+        }
+        return shows ? [] : ["the open menu's back button is not inside the window"]
     }
 
     /// The side menu's own elements (the drawer); the header's `shell-menu-button` is page content.
@@ -99,28 +117,29 @@ final class IPadUITests: XCTestCase {
     /// from VoiceOver), and nothing else is exempt (CODEX-IN18P1-5).
     func inside(_ name: String, menuOpen: Bool) throws {
         let snapshot = try app.snapshot()
-        var nodes: [XCUIElementSnapshot] = []
-        var queue = [snapshot]
-        while let node = queue.popLast() {
-            queue += node.children
-            if !node.identifier.isEmpty, node.frame.width > 0, node.frame.height > 0 { nodes.append(node) }
+        func identified(_ root: XCUIElementSnapshot) -> [XCUIElementSnapshot] {
+            var out: [XCUIElementSnapshot] = [], queue = [root]
+            while let node = queue.popLast() {
+                queue += node.children
+                if !node.identifier.isEmpty, node.frame.width > 0, node.frame.height > 0 { out.append(node) }
+            }
+            return out
         }
-        // The window the checked content is in: the one holding the most identified elements (CODEX-IN18P1-6;
-        // `windows.firstMatch` was once a 516×688 window while the page was 1032 pt wide).
-        let windows = app.windows.allElementsBoundByIndex.map(\.frame).filter { $0.width > 0 && $0.height > 0 }
-        let window = windows.max { a, b in
-            let ca = nodes.filter { a.intersects($0.frame) }.count, cb = nodes.filter { b.intersects($0.frame) }.count
-            return ca != cb ? ca < cb : a.width * a.height < b.width * b.height
-        } ?? app.windows.firstMatch.frame
-        var seen = 0, drawerSeen = 0
+        // The content's window: of the application's window subtrees, the one holding the most identified elements; its
+        // elements are the ones checked, against its frame (CODEX-IN18P1-6: content is tied to its window by the
+        // snapshot's tree, not by frames, so a larger window that only overlaps it is not chosen).
+        let windows = snapshot.children.filter { $0.elementType == .window }.map { ($0.frame, identified($0)) }
+        let (window, nodes) = windows.max { $0.1.count < $1.1.count } ?? (app.windows.firstMatch.frame, identified(snapshot))
+        var seen = 0
         for node in nodes {
             let (checked, problems) = Self.problems(id: node.identifier, frame: node.frame, window: window, menuOpen: menuOpen)
-            if Self.drawer(node.identifier) { drawerSeen += 1 }
             if checked { seen += 1 }
             for problem in problems { XCTFail("\(name): \(node.identifier) \(node.frame) \(problem) \(window)") }
         }
         XCTAssertGreaterThan(seen, 0, "\(name): elements")
-        if menuOpen { XCTAssertGreaterThan(drawerSeen, 0, "\(name): the open menu's elements") }
+        for problem in Self.menuShows(nodes.map { ($0.identifier, $0.frame) }, window: window, menuOpen: menuOpen) {
+            XCTFail("\(name): \(problem) \(window)")
+        }
     }
 
     /// UMP's IDFA explainer and the system's tracking prompt, when they show over the first tab (the simulator's
