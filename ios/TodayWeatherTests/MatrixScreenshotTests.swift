@@ -220,8 +220,11 @@ struct MatrixScreenshotTests {
         let catalog = Catalog(code: shell.locale.catalog)
         let tabs = render(TabBar(selected: .forecast, colors: colors, catalog: catalog, insets: insets, onTap: { _ in })
             .frame(width: display.width), display, width: display.width)
-        try report.compare("\(size)-\(language)-shell-tabs", tabs,
-                           try References.image(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png")))
+        let tabsReference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png"))
+        // The home indicator iOS drew over the WebView's bottom inset in some captures (system UI, not the page's).
+        let indicator = CGRect(x: display.width / 2 - 75, y: CGFloat(tabsReference.height) / display.scale - 14, width: 150, height: 12)
+        try report.compare("\(size)-\(language)-shell-tabs",
+                           display.bottom > 0 ? tabs.copying([indicator], from: tabsReference, scale: display.scale) : tabs, tabsReference)
         let reference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-header.png"))
         let header = render(HeaderBar(colors: colors, title: "회현동", insets: insets, onMenu: {}) { EmptyView() }
             .background(reference.color(x: 2, y: 2)).frame(width: display.width), display, width: display.width)

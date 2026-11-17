@@ -437,7 +437,8 @@ struct MenuRows: View {
                 if row.isButton {
                     Spacer().frame(height: index > 0 && rows[index - 1].isButton ? ShellMetrics.blockGap : ShellMetrics.blockMargin)
                     block(row)
-                    if index + 1 < rows.count, !rows[index + 1].isButton {
+                    // The block's bottom margin before an item, and after the last block, which ends the list (#2990).
+                    if index + 1 == rows.count || !rows[index + 1].isButton {
                         Spacer().frame(height: ShellMetrics.blockMargin)
                     }
                 } else {
