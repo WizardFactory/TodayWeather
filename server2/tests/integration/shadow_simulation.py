@@ -25,6 +25,7 @@ import random
 import sys
 import tarfile
 import tempfile
+import time
 import types
 import unittest
 from pathlib import Path
@@ -587,7 +588,8 @@ class Transport:
         with tempfile.TemporaryDirectory(dir=evidence.root) as work:
             if action == 'finish-ledger':
                 snapshot = Path(work) / 'ledger.sqlite3'
-                evidence_copy.snapshot(evidence.tree, snapshot, True)
+                deadline = time.monotonic() + timeout
+                evidence_copy.snapshot(evidence.tree, snapshot, True, lambda: deadline - time.monotonic())
                 files = {'launch.json': evidence.root / 'launch.json', 'reader.json': evidence.root / 'reader.json',
                          'data/paired/ledger.sqlite3': snapshot}
             else:
