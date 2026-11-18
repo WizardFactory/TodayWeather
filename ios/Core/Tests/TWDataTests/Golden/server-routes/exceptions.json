@@ -1,0 +1,53 @@
+{
+ "about": "Requests of the native iOS client that are not a v000903 route the legacy server serves, each with the decision that keeps it (IN-18, #2967; spec R8). The Android register (AN-18) has the same entries; E3's site and E4's SDKs are the iOS ones. A not-served entry lists its request (method, and the path on the wire as an anchored regular expression) and the route that answers it. RequestPathsTests and RequestSitesTests (TWDataTests) fail when an entry is no longer observed or a request outside this register appears.",
+ "exceptions": [
+  {
+   "id": "E1",
+   "request": "GET /weather/v000903/addr/{address}{units}",
+   "kind": "not-served",
+   "match": {"method": "GET", "path": "^/weather/v000903/addr/.+$"},
+   "route": {"file": "server/routes/gateway.js", "method": "ALL", "path": "OWN_PATH"},
+   "reason": "The Cordova free-form weather fallback (_makeQueryUrlWithAddr in service.weatherutil.js), sent for a place with an address but no coordinates whose address has no KMA town (foreign free text, or 대한민국 alone). The legacy server's gateway answers every other /weather path with 404 (the AWS Lambda answered 501); the app shows the failure as the Cordova app does (O03).",
+   "decision": "AN-06 (#2885), inherited by #2948: the free-form weather-address fallback is kept",
+   "evidence": ["server/routes/gateway.js router.all(OWN_PATH)", "specs/issue-2606.md shape X1", "docs/architecture/aws-code-correlation.md"],
+   "observedBy": "RequestPathsTests"
+  },
+  {
+   "id": "E2",
+   "request": "GET {TW_WEATHER_PHOTOS_URL}",
+   "kind": "other-host",
+   "reason": "The photo theme's feed, at the private build input TW_WEATHER_PHOTOS_URL (Info.plist TWWeatherPhotosURL), as the Cordova app's clientConfig.weatherPhotosUrl (loadWeatherPhotos). Without the input nothing is requested.",
+   "decision": "IN-07 (#2956), as AN-08 (#2886): the photo theme loads the Cordova feed",
+   "evidence": ["ios/Core/Sources/TWData/WeatherPhotoFeed.swift"],
+   "observedBy": "RequestPathsTests"
+  },
+  {
+   "id": "E3",
+   "request": "GET {a photo URL of the feed}",
+   "kind": "other-host",
+   "reason": "The photo the feed names for a place's weather (twUrls.regular), loaded under the photo theme's header by SwiftUI's AsyncImage as the WebView loaded it.",
+   "decision": "IN-08 (#2957), as AN-08 (#2886): the photo theme loads the Cordova feed",
+   "evidence": ["ios/TodayWeather/Weather/WeatherPageView.swift"],
+   "observedBy": "RequestSitesTests",
+   "sites": ["TodayWeather/Weather/WeatherPageView.swift"]
+  },
+  {
+   "id": "E4",
+   "request": "SDK traffic: Places, Firebase (Messaging, Analytics, Remote Config, Crashlytics), Google Mobile Ads with UMP",
+   "kind": "sdk",
+   "reason": "The SDKs reach Google's endpoints themselves; the app builds no URL for them. Places runs only with a Places key, Firebase only with its configuration, Analytics only after the user's consent. Location comes from Core Location, a system framework.",
+   "decision": "#2948 and IN-04, IN-10, IN-14, IN-15: the Cordova app's providers through their native SDKs",
+   "evidence": ["ios/TodayWeather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved", "ios/README.md"],
+   "observedBy": "RequestSitesTests",
+   "sdks": [
+    "FirebaseAnalyticsCore",
+    "FirebaseCrashlytics",
+    "FirebaseMessaging",
+    "FirebaseRemoteConfig",
+    "GoogleMobileAds",
+    "GooglePlaces",
+    "GoogleUserMessagingPlatform"
+   ]
+  }
+ ]
+}

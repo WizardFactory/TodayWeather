@@ -244,16 +244,18 @@ struct AirStrip: View {
     }
 }
 
-/// `.nation`: the 330×485 pt map (img/kr.png at its size, top centered) with 2 pt margins, centered in the window and
-/// from its left edge when the window is narrower. Each label sits at its fixed position in the map; a label that
-/// larger text makes reach past the window's right edge moves left to stay whole.
+/// `.nation`: the 330×485 pt map (img/kr.png at its size, top centered) with 2 pt margins, centered in the window. Each
+/// label sits at its fixed position in the map; a label that larger text makes reach past the window's right edge moves
+/// left to stay whole. In a window narrower than the map (an iPad Split View third, 320 pt) the map and its labels scale
+/// down to the window's width, so nothing is cut (IN-18); no iPhone of iOS 17 is that narrow.
 struct NationMap: View {
     let labels: [NationLabel]
     let theme: Theme
 
     var body: some View {
         GeometryReader { geometry in
-            let width = geometry.size.width
+            let scale = min(1, geometry.size.width / NationMetrics.mapWidth)
+            let width = geometry.size.width / scale
             let x = max(0, (width - NationMetrics.mapWidth) / 2)
             ZStack(alignment: .topLeading) {
                 if let ui = TWResources.url("img/kr.png").flatMap({ UIImage(contentsOfFile: $0.path) }) {
@@ -270,6 +272,8 @@ struct NationMap: View {
                         .alignmentGuide(.top) { _ in -CGFloat(label.top) }
                 }
             }
+            .frame(width: width, alignment: .topLeading)
+            .scaleEffect(scale, anchor: .topLeading)
         }
         .frame(height: NationMetrics.mapHeight + 2)
         .accessibilityElement(children: .contain)
@@ -512,7 +516,8 @@ struct CssParagraph: View {
                 line(text)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // The width given, not the lines' own: lines broken for a wider window must not hold the block at that width.
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(text)

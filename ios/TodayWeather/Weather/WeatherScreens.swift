@@ -98,6 +98,12 @@ final class WeatherScreens {
         update()
     }
 
+    /// Back from S09 (IN-14): the shown page starts anew (`cache: false`), so the bell is read again.
+    func reopen() {
+        visitTab = nil
+        update()
+    }
+
     private func update() {
         let tab = shell.selected
         if tab == .search { airLink = nil }
@@ -246,7 +252,7 @@ final class WeatherScreens {
 
     // MARK: - The page
 
-    /// The bell (`goPushPage`, IN-14) and share (`doTabShare`, IN-16) buttons; those tasks connect them.
+    /// The bell (`goPushPage`, IN-14) and share (`doTabShare`, IN-16) buttons.
     @ObservationIgnored var onBell: () -> Void = {}
     @ObservationIgnored var onShare: () -> Void = {}
 

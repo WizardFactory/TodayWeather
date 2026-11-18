@@ -1,0 +1,1347 @@
+{
+  "source_revision": "6d078b1c2d5be2217a85ce5541b5c5419debfd00",
+  "runs": [
+    {
+      "kind": "full",
+      "observations": {
+        "collector_tarball_sha256": "12d7e91db2e447003558c955c4f510b17ed1d77340757f3e591e5222e464675c",
+        "egress_rejected_packets": 11,
+        "machine": "aarch64",
+        "peer_hosts": [
+          "dapi.kakao.com",
+          "todayweather.wizardfactory.net"
+        ],
+        "seconds": 1196,
+        "server_binary_sha256": "80e5bcb7322ce672295c20ed286e4a885a53b1e31952753183502fc0740b1f12",
+        "source_commit": "6d078b1c2d5be2217a85ce5541b5c5419debfd00"
+      },
+      "passed": false,
+      "scenarios": [
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-provider-launch-expiry.timer → /etc/systemd/system/server2-shadow-lp6-provider-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install-host answered one JSON object: started",
+              "detail": "b'{\"cleanup_until\":1795514043,\"collection_until\":1795506843,\"epoch\":1794902043,\"launch_sha256\":\"545ff79e8bb3261859b1609983e4a1a423cc1de17481324bb6cba3cecf376fe7\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "candidate: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+              "detail": "('no', '10s', 'server2')",
+              "passed": true
+            },
+            {
+              "check": "candidate: no dependency on or ordering after the collector",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "guard: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+              "detail": "('no', '10s', 'server2')",
+              "passed": true
+            },
+            {
+              "check": "guard: no dependency on or ordering after the collector",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "reader: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+              "detail": "('no', '10s', 'server2')",
+              "passed": true
+            },
+            {
+              "check": "reader: no dependency on or ordering after the collector",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "guard watchdog 30 s with SIGKILL",
+              "detail": "('30s', '9')",
+              "passed": true
+            },
+            {
+              "check": "stop deadline at epoch + 168 h",
+              "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-24 07:54:03 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-stop.service\n[Install]\nWantedBy=timers.target\n",
+              "passed": true
+            },
+            {
+              "check": "poweroff deadline at epoch + 170 h",
+              "detail": "[Unit]\nDescription=Immutable shadow deadline\n[Timer]\nOnCalendar=2026-11-24 09:54:03 UTC\nAccuracySec=1s\nPersistent=true\nUnit=server2-shadow-lp6-provider-poweroff.service\n[Install]\nWantedBy=timers.target\n",
+              "passed": true
+            },
+            {
+              "check": "the 168 h stop leaves the collector running",
+              "detail": "[Unit]\nDescription=Original collection deadline lp6-provider\n[Service]\nType=oneshot\nExecStart=/usr/bin/systemctl --no-block stop server2-shadow-lp6-provider-reader.service server2-shadow-lp6-provider-candidate.service server2-shadow-lp6-provider-guard.service\nExecStart=-/usr/bin/systemctl start --no-block server2-shadow-lp6-provider-finalize.service\n",
+              "passed": true
+            },
+            {
+              "check": "collector running",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "the guard counted the provider rejection",
+              "detail": "{'auth_failures': 4, 'first_rejection': {'cause': 'auth', 'component': 'geocode', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 401}, 'local_paid_exhaustions': 0, 'observed_at': 1794902092, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}",
+              "passed": true
+            },
+            {
+              "check": "the guard did not stop on the provider rejection (SR-3)",
+              "detail": "None",
+              "passed": true
+            },
+            {
+              "check": "candidate, guard and reader still active",
+              "detail": "{'candidate': 'active', 'guard': 'active', 'reader': 'active'}",
+              "passed": true
+            },
+            {
+              "check": "retention stop drained the collector within the SSH bound (150 s)",
+              "detail": "(0, 53.17714631199999)",
+              "passed": true
+            },
+            {
+              "check": "all four units inactive or failed",
+              "detail": "{'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'}",
+              "passed": true
+            },
+            {
+              "check": "only the five sources under logs/server2",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "the collector only puts objects into the state bucket",
+              "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-provider-state')]",
+              "passed": true
+            },
+            {
+              "check": "server records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "reader records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "collector records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+              "detail": "[]",
+              "passed": true
+            },
+            {
+              "check": "candidate's rejection record at the destination (LP6-AC2)",
+              "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T07:54:33.581789379Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"http\",\"stage\":\"request\",\"trace_id\":\"57bc9e87347f3c740000000000000014\",\"operation_id\":\"0000000000000014\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_response\",\"outcome\":\"failed\",\"duration_ms\":70,\"status\":501,\"source\":\"src/observability.rs\",\"line\":1119}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T07:54:54.242772603Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"provider_http\",\"trace_id\":\"57bc9e87347f3c74000000000000001c\",\"operation_id\":\"0000000000000021\",\"parent_operation_id\":\"000000000000001f\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":167,\"status\":401,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T07:54:54.312516596Z\",\"level\":\"warn\",\"event\":\"operation.action\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"57bc9e87347f3c74000000000000001c\",\"operation_id\":\"000000000000001f\",\"parent_operation_id\":\"000000000000001e\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"auth\",\"action\":\"rotate_key\",\"outcome\":\"failed\",\"status\":401,\"attempt\":1}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T07:54:54.332053889Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"acquire\",\"trace_id\":\"57bc9e87347f3c74000000000000001c\",\"operation_id\":\"000000000000001f\",\"parent_operation_id\":\"000000000000001e\",\"route\":\"weather\",\"method\":\"get\",\"cause\":\"dependency\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":271,\"source\":\"src/observability.rs\",\"line\":1371}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T07:54:54.361903154Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"geocode\",\"stage\":\"lookup\",\"trace_id\":\"57bc9e87347f3c74000000000000001c\",\"operation_id\":\"000000000000001e\",\"parent_operat",
+              "passed": true
+            },
+            {
+              "check": "no guard stop record at the destination",
+              "detail": "[]",
+              "passed": true
+            },
+            {
+              "check": "reader's summary at the destination",
+              "detail": "[{'attempts': {'candidate': 3, 'production': 2}, 'failed': {'candidate': 2}, 'pending': 1, 'qualification': 'not assessed', 'skipped_conditionals': 0, 'terminal': None}]",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC1",
+            "LP6-AC2",
+            "LP6-AC3",
+            "LP6-AC4",
+            "SR3"
+          ],
+          "id": "provider-rejection",
+          "observations": {
+            "failing_record": [
+              {
+                "action": "none",
+                "build_revision": "unknown",
+                "cause": "auth",
+                "component": "geocode",
+                "duration_ms": 50,
+                "event": "operation.finished",
+                "level": "warn",
+                "line": 1465,
+                "method": "get",
+                "operation_id": "0000000000000011",
+                "outcome": "failed",
+                "parent_operation_id": "000000000000000c",
+                "route": "weather",
+                "schema": 1,
+                "source": "src/observability.rs",
+                "stage": "provider_http",
+                "status": 401,
+                "timestamp": "2026-11-17T07:54:13.09430658Z",
+                "trace_id": "57bc9e87347f3c740000000000000009"
+              }
+            ],
+            "guard_diagnostics": {
+              "auth_failures": 4,
+              "first_rejection": {
+                "cause": "auth",
+                "component": "geocode",
+                "origin": "event",
+                "provider": "none",
+                "stage": "provider_http",
+                "status": 401
+              },
+              "local_paid_exhaustions": 0,
+              "observed_at": 1794902092,
+              "paid_units": {
+                "google": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "google_air_quality": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "openweather": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "visual_crossing": {
+                  "initial": 100,
+                  "remaining": 100
+                }
+              },
+              "provider_http": {},
+              "quota_failures": 0,
+              "storage_auth_failures": 0
+            },
+            "guard_record": [],
+            "guard_stop": null,
+            "install_output_bytes": 191,
+            "install_seconds": 8.0,
+            "objects": 5,
+            "reader_record": [
+              {
+                "attempts": {
+                  "candidate": 3,
+                  "production": 2
+                },
+                "failed": {
+                  "candidate": 2
+                },
+                "pending": 1,
+                "qualification": "not assessed",
+                "skipped_conditionals": 0,
+                "terminal": null
+              }
+            ],
+            "records_per_source": {
+              "collector": 2,
+              "copy": 2,
+              "reader": 1,
+              "server": 15
+            },
+            "rejection_seen_seconds": 10.1,
+            "retention_stop_seconds": 53.2
+          }
+        },
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-storage-launch-expiry.timer → /etc/systemd/system/server2-shadow-lp6-storage-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install-host answered one JSON object: started",
+              "detail": "b'{\"cleanup_until\":1795514164,\"collection_until\":1795506964,\"epoch\":1794902164,\"launch_sha256\":\"c24336924f3d4513ff4c9c345f110edd1a831d12a27594ebdfabaaaf401e3489\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "no stop before storage is denied",
+              "detail": "{'cost': {'accrued_usd': '0.001850', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794902233, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 73, 'last_seen': 1794902233, 'last_tx': 43266, 'manifest_sha256': '404856c57bdf99bbf55ba5925c53ba05c891c9eca5795e5253a0d930f9b449ef', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794902164, 0, 0]}",
+              "passed": true
+            },
+            {
+              "check": "the guard stopped with s3_authorization",
+              "detail": "('s3_authorization', {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794902403, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20})",
+              "passed": true
+            },
+            {
+              "check": "the decision keeps the storage-authorization count",
+              "detail": "{'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794902403, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}",
+              "passed": true
+            },
+            {
+              "check": "candidate and reader stopped",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "a final evidence generation after the guard stop, reader inactive (SR-5a)",
+              "detail": "{'state': 'failed', 'stopped': True}",
+              "passed": false
+            },
+            {
+              "check": "retention stop drained the collector within 150 s",
+              "detail": "(0, 50.136893042999986)",
+              "passed": true
+            },
+            {
+              "check": "only the five sources under logs/server2",
+              "detail": "['collector', 'copy', 'guard', 'server']",
+              "passed": true
+            },
+            {
+              "check": "the collector only puts objects into the state bucket",
+              "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-storage-state')]",
+              "passed": true
+            },
+            {
+              "check": "server records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'server']",
+              "passed": true
+            },
+            {
+              "check": "guard records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'server']",
+              "passed": true
+            },
+            {
+              "check": "collector records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'server']",
+              "passed": true
+            },
+            {
+              "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+              "detail": "[]",
+              "passed": true
+            },
+            {
+              "check": "guard's s3_authorization stop record at the destination",
+              "detail": "[{'cost': {'accrued_usd': '0.003732', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794902403, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}, 'last_cpu': 87, 'last_seen': 1794902403, 'last_tx': 44030, 'manifest_sha256': '404856c57bdf99bbf55ba5925c53ba05c891c9eca5795e5253a0d930f9b449ef', 'misses': 0, 'schema': 6, 'stop': 's3_authorization', 'storage_auth_window': [1794902164, 0, 20]}]",
+              "passed": true
+            },
+            {
+              "check": "candidate's storage-authorization record at the destination",
+              "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:00:01.687398335Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"b419408721a7b7e00000000000000029\",\"operation_id\":\"0000000000000053\",\"parent_operation_id\":\"0000000000000052\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":23,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:00:01.805137933Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"provider_http\",\"trace_id\":\"b419408721a7b7e00000000000000029\",\"operation_id\":\"000000000000005b\",\"parent_operation_id\":\"000000000000005a\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":117,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:00:01.805188576Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"reserve\",\"trace_id\":\"b419408721a7b7e00000000000000029\",\"operation_id\":\"000000000000005a\",\"parent_operation_id\":\"0000000000000059\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":117,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:00:01.805193495Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"b419408721a7b7e00000000000000029\",\"operation_id\":\"0000000000000059\",\"parent_operation_id\":\"0000000000000058\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":117,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:00:01.805198163Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC2",
+            "SR3"
+          ],
+          "id": "storage-authorization",
+          "observations": {
+            "denied_record": [
+              {
+                "action": "none",
+                "build_revision": "unknown",
+                "cause": "auth",
+                "component": "quota",
+                "duration_ms": 500,
+                "event": "operation.finished",
+                "level": "warn",
+                "line": 1465,
+                "method": "other",
+                "operation_id": "000000000000002e",
+                "outcome": "failed",
+                "parent_operation_id": "000000000000002d",
+                "route": "other",
+                "schema": 1,
+                "source": "src/observability.rs",
+                "stage": "provider_http",
+                "status": 403,
+                "timestamp": "2026-11-17T08:00:01.13680194Z",
+                "trace_id": "b419408721a7b7e00000000000000029"
+              }
+            ],
+            "final_generations": [
+              {
+                "attempts": {
+                  "capture_failures": 0,
+                  "completed": 4,
+                  "pending": 0,
+                  "total": 4
+                },
+                "generation": 1,
+                "reader": {
+                  "state": "failed",
+                  "stopped": true
+                },
+                "shipped_total": 4,
+                "terminal": "clock-rollback"
+              }
+            ],
+            "guard_diagnostics": {
+              "auth_failures": 40,
+              "first_rejection": {
+                "cause": "auth",
+                "component": "quota",
+                "origin": "event",
+                "provider": "none",
+                "stage": "provider_http",
+                "status": 403
+              },
+              "local_paid_exhaustions": 0,
+              "observed_at": 1794902403,
+              "paid_units": {
+                "google": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "google_air_quality": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "openweather": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "visual_crossing": {
+                  "initial": 100,
+                  "remaining": 100
+                }
+              },
+              "provider_http": {},
+              "quota_failures": 0,
+              "storage_auth_failures": 20
+            },
+            "guard_record": [
+              {
+                "cost": {
+                  "accrued_usd": "0.003732",
+                  "limit_usd": "295"
+                },
+                "diagnostics": {
+                  "auth_failures": 40,
+                  "first_rejection": {
+                    "cause": "auth",
+                    "component": "quota",
+                    "origin": "event",
+                    "provider": "none",
+                    "stage": "provider_http",
+                    "status": 403
+                  },
+                  "local_paid_exhaustions": 0,
+                  "observed_at": 1794902403,
+                  "paid_units": {
+                    "google": {
+                      "initial": 100,
+                      "remaining": 100
+                    },
+                    "google_air_quality": {
+                      "initial": 100,
+                      "remaining": 100
+                    },
+                    "openweather": {
+                      "initial": 100,
+                      "remaining": 100
+                    },
+                    "visual_crossing": {
+                      "initial": 100,
+                      "remaining": 100
+                    }
+                  },
+                  "provider_http": {},
+                  "quota_failures": 0,
+                  "storage_auth_failures": 20
+                },
+                "last_cpu": 87,
+                "last_seen": 1794902403,
+                "last_tx": 44030,
+                "manifest_sha256": "404856c57bdf99bbf55ba5925c53ba05c891c9eca5795e5253a0d930f9b449ef",
+                "misses": 0,
+                "schema": 6,
+                "stop": "s3_authorization",
+                "storage_auth_window": [
+                  1794902164,
+                  0,
+                  20
+                ]
+              }
+            ],
+            "guard_stop": "s3_authorization",
+            "install_output_bytes": 191,
+            "install_seconds": 28.5,
+            "objects": 7,
+            "records_per_source": {
+              "collector": 2,
+              "copy": 3,
+              "guard": 1,
+              "server": 47
+            },
+            "retention_stop_seconds": 50.1,
+            "stop_seconds": 164.8
+          }
+        },
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-config-launch-expiry.timer → /etc/systemd/system/server2-shadow-lp6-config-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install with the destination unreachable: started",
+              "detail": "b'{\"cleanup_until\":1795514477,\"collection_until\":1795507277,\"epoch\":1794902477,\"launch_sha256\":\"11023b1c9538f093bc2008d23d625cbd26b0a0b984ccc94f25bf93d16af20837\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "no stop before the change",
+              "detail": "{'cost': {'accrued_usd': '0.002564', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794902541, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 128, 'last_seen': 1794902541, 'last_tx': 55578, 'manifest_sha256': 'ed1796b7b124c3b9bef3d4e4d0731f24da3ce8ad52995512e430a3c4edb9582d', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794902477, 0, 0]}",
+              "passed": true
+            },
+            {
+              "check": "a changed .env stops acquisition within one sample and the unit stop (25 s)",
+              "detail": "('binding_config_sha256', 7.006375532999982)",
+              "passed": true
+            },
+            {
+              "check": "retention stop after recovery drained within 150 s",
+              "detail": "(0, 54.464861445)",
+              "passed": true
+            },
+            {
+              "check": "only the five sources under logs/server2",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "the collector only puts objects into the state bucket",
+              "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-config-state')]",
+              "passed": true
+            },
+            {
+              "check": "server records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "guard records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "collector records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+              "detail": "[]",
+              "passed": true
+            },
+            {
+              "check": "guard's stop record shipped after the outage",
+              "detail": "",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC3"
+          ],
+          "id": "config-change",
+          "observations": {
+            "guard_stop": "binding_config_sha256",
+            "install_output_bytes": 191,
+            "install_seconds": 35.0,
+            "objects": 6,
+            "records_per_source": {
+              "collector": 2,
+              "copy": 3,
+              "guard": 1,
+              "reader": 1,
+              "server": 4
+            },
+            "retention_stop_seconds": 54.5,
+            "stop_seconds": 7.0
+          }
+        },
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-frozen-launch-expiry.timer → /etc/systemd/system/server2-shadow-lp6-frozen-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install: started",
+              "detail": "b'{\"cleanup_until\":1795514634,\"collection_until\":1795507434,\"epoch\":1794902634,\"launch_sha256\":\"dd7cf6056f17856d360240aa60cbf0aa50f36001e511dcbfcec4f5665ce3f811\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "collector stopped, candidate and guard still active",
+              "detail": "{'logs': 'inactive', 'candidate': 'active', 'guard': 'active', 'reader': 'active'}",
+              "passed": true
+            },
+            {
+              "check": "the watchdog killed the frozen guard and acquisition stopped (within 30 s + 10 s + one sample)",
+              "detail": "29.405760213999997",
+              "passed": true
+            },
+            {
+              "check": "guard result is the watchdog",
+              "detail": "watchdog",
+              "passed": true
+            },
+            {
+              "check": "a final evidence generation after the watchdog kill, reader inactive (SR-5a)",
+              "detail": "{'state': 'inactive', 'stopped': True}",
+              "passed": true
+            },
+            {
+              "check": "restarted collector drained within 150 s",
+              "detail": "(0, 66.71305332000009)",
+              "passed": true
+            },
+            {
+              "check": "only the five sources under logs/server2",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "the collector only puts objects into the state bucket",
+              "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-frozen-state')]",
+              "passed": true
+            },
+            {
+              "check": "server records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "collector records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+              "detail": "[]",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC3"
+          ],
+          "id": "frozen-guard",
+          "observations": {
+            "final_generations": [
+              {
+                "attempts": {
+                  "capture_failures": 0,
+                  "completed": 8,
+                  "pending": 0,
+                  "total": 8
+                },
+                "generation": 2,
+                "reader": {
+                  "state": "inactive",
+                  "stopped": true
+                },
+                "shipped_total": 8,
+                "terminal": null
+              }
+            ],
+            "install_output_bytes": 191,
+            "install_seconds": 30.0,
+            "objects": 9,
+            "records_per_source": {
+              "collector": 4,
+              "copy": 2,
+              "reader": 1,
+              "server": 13
+            },
+            "states_before_freeze": {
+              "candidate": "active",
+              "guard": "active",
+              "logs": "inactive",
+              "reader": "active"
+            },
+            "watchdog_stop_seconds": 29.4
+          }
+        },
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-broken-launch-expiry.timer → /etc/systemd/system/server2-shadow-lp6-broken-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install with a failing collector: started",
+              "detail": "b'{\"cleanup_until\":1795514858,\"collection_until\":1795507658,\"epoch\":1794902858,\"launch_sha256\":\"a20da8eef7b6557d1f399c4029f3710a6d2454dc045ea5ee62fdcf223cb00dac\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "candidate, guard and reader active although the collector failed",
+              "detail": "{'candidate': 'active', 'guard': 'active', 'reader': 'active'}",
+              "passed": true
+            },
+            {
+              "check": "the collector is not running",
+              "detail": "{'ActiveState': 'inactive', 'SubState': 'dead', 'Result': 'exec-condition'}",
+              "passed": true
+            },
+            {
+              "check": "no stop decision",
+              "detail": "{'cost': {'accrued_usd': '0.003399', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794902890, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 213, 'last_seen': 1794902890, 'last_tx': 61338, 'manifest_sha256': 'd1823d48c739dc2ab8f3e460ee68155d4cee60fec861068ea562313b2ca7cd62', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794902858, 0, 0]}",
+              "passed": true
+            },
+            {
+              "check": "retention stop completes with the collector failed",
+              "detail": "(0, 0.8653025830000161, {'candidate': 'inactive', 'reader': 'inactive', 'guard': 'inactive', 'logs': 'inactive'})",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC3"
+          ],
+          "id": "collector-broken",
+          "observations": {
+            "collector": {
+              "ActiveState": "inactive",
+              "Result": "exec-condition",
+              "SubState": "dead"
+            },
+            "install_output_bytes": 191,
+            "install_seconds": 13.1
+          }
+        },
+        {
+          "checks": [
+            {
+              "check": "install refuses a changed collector file",
+              "detail": "(2, b'{\"error\":\"invalid or incomplete evidence\"}\\n')",
+              "passed": true
+            },
+            {
+              "check": "nothing installed or started",
+              "detail": "",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC5"
+          ],
+          "id": "tampered",
+          "observations": {}
+        },
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-sr5-evidence-launch-expiry.timer → /etc/systemd/system/server2-shadow-sr5-evidence-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install-host answered one JSON object: started",
+              "detail": "b'{\"cleanup_until\":1795514924,\"collection_until\":1795507724,\"epoch\":1794902924,\"launch_sha256\":\"616a34099416204002084b0d35c1073239aa9b0f0780ccdbed242e181773dd31\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "copy: oneshot, Restart=no, start 10 min, stop 10 s, LogNamespace=server2",
+              "detail": "{'Type': 'oneshot', 'Restart': 'no', 'TimeoutStartUSec': '10min', 'TimeoutStopUSec': '10s', 'LogNamespace': 'server2'}",
+              "passed": true
+            },
+            {
+              "check": "copy: no relation to acquisition or the collector",
+              "detail": "sysinit.target systemd-journald-varlink@server2.socket systemd-journald@server2.socket system.slice     system.slice sysinit.target systemd-journald-varlink@server2.socket systemd-journald@server2.service systemd-journald@server2.socket basic.target server2-shadow-sr5-evidence-copy.timer",
+              "passed": true
+            },
+            {
+              "check": "finalize: oneshot, Restart=no, start 10 min, stop 10 s, LogNamespace=server2",
+              "detail": "{'Type': 'oneshot', 'Restart': 'no', 'TimeoutStartUSec': '10min', 'TimeoutStopUSec': '10s', 'LogNamespace': 'server2'}",
+              "passed": true
+            },
+            {
+              "check": "finalize: no relation to acquisition or the collector",
+              "detail": "systemd-journald@server2.socket systemd-journald-varlink@server2.socket system.slice sysinit.target     systemd-journald@server2.socket systemd-journald-varlink@server2.socket systemd-journald@server2.service sysinit.target basic.target system.slice",
+              "passed": true
+            },
+            {
+              "check": "poweroff.service neither waits for nor depends on the copy units",
+              "detail": "sysinit.target system.slice    systemd-journald.socket server2-shadow-sr5-evidence-poweroff.timer sysinit.target system.slice basic.target",
+              "passed": true
+            },
+            {
+              "check": "poweroff.timer neither waits for nor depends on the copy units",
+              "detail": "sysinit.target -.mount    time-set.target time-sync.target sysinit.target -.mount",
+              "passed": true
+            },
+            {
+              "check": "launch-expiry.service neither waits for nor depends on the copy units",
+              "detail": "sysinit.target system.slice    sysinit.target server2-shadow-sr5-evidence-launch-expiry.timer systemd-journald.socket basic.target system.slice",
+              "passed": true
+            },
+            {
+              "check": "launch-expiry.timer neither waits for nor depends on the copy units",
+              "detail": "sysinit.target -.mount    sysinit.target time-sync.target time-set.target -.mount",
+              "passed": true
+            },
+            {
+              "check": "the reader's stop starts the finalizer without waiting",
+              "detail": "{ path=/usr/bin/systemctl ; argv[]=/usr/bin/systemctl start --no-block server2-shadow-sr5-evidence-finalize.service ; ignore_errors=yes ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+              "passed": true
+            },
+            {
+              "check": "the 168-hour stop starts the finalizer after its stop requests",
+              "detail": "[Unit]\nDescription=Original collection deadline sr5-evidence\n[Service]\nType=oneshot\nExecStart=/usr/bin/systemctl --no-block stop server2-shadow-sr5-evidence-reader.service server2-shadow-sr5-evidence-candidate.service server2-shadow-sr5-evidence-guard.service\nExecStart=-/usr/bin/systemctl start --no-block server2-shadow-sr5-evidence-finalize.service\n",
+              "passed": true
+            },
+            {
+              "check": "copy timer: hourly, persistent, enabled and active",
+              "detail": "[Unit]\nDescription=Hourly shadow evidence copy sr5-evidence\n[Timer]\nOnCalendar=hourly\nPersistent=true\nUnit=server2-shadow-sr5-evidence-copy.service\n[Install]\nWantedBy=timers.target\n",
+              "passed": true
+            },
+            {
+              "check": "the contract is published at install",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "the copy timer ships batches, ledger snapshots and indexes",
+              "detail": "['batch-1.tar', 'batch-2.tar', 'contract.json', 'index-1.json', 'index-2.json', 'ledger-1.sqlite3', 'ledger-2.sqlite3']",
+              "passed": true
+            },
+            {
+              "check": "a refused evidence PUT fails the copy run",
+              "detail": "exit-code",
+              "passed": true
+            },
+            {
+              "check": "acquisition unaffected by the copy failure",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "the reader exited 2 and its unit failed",
+              "detail": "('2', 'exit-code')",
+              "passed": true
+            },
+            {
+              "check": "candidate and guard keep running after the reader exit",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "a final evidence generation after the reader failure, reader failed (SR-5a)",
+              "detail": "{'state': 'failed', 'stopped': True}",
+              "passed": true
+            },
+            {
+              "check": "the 168-hour stop stopped candidate and guard",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "a final evidence generation after the 168-hour stop, reader failed (SR-5a)",
+              "detail": "{'state': 'failed', 'stopped': True}",
+              "passed": true
+            },
+            {
+              "check": "retention stop drained the collector within 150 s",
+              "detail": "(0, 51.36398773600013)",
+              "passed": true
+            },
+            {
+              "check": "only the five sources under logs/server2",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "the collector only puts objects into the state bucket",
+              "detail": "[('s3', 'PutObject', 'server2-shadow-sr5-evidence-state')]",
+              "passed": true
+            },
+            {
+              "check": "server records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "collector records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "copy records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+              "detail": "[]",
+              "passed": true
+            },
+            {
+              "check": "the copy's failure record reached the destination",
+              "detail": "[{'copy_schema': 1, 'event': 'copy.failed', 'level': 'warn', 'reason': 'put', 'stage': 'batch', 'status': 503}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 2, 'generation': 4, 'kind': 'final', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 0, 'generation': 5, 'kind': 'final', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 0, 'generation': 6, 'kind': 'ordinary', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 0, 'generation': 7, 'kind': 'ordinary', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}]",
+              "passed": true
+            },
+            {
+              "check": "the copy's committed records reached the destination",
+              "detail": "[{'copy_schema': 1, 'event': 'copy.failed', 'level': 'warn', 'reason': 'put', 'stage': 'batch', 'status': 503}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 2, 'generation': 4, 'kind': 'final', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 0, 'generation': 5, 'kind': 'final', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 0, 'generation': 6, 'kind': 'ordinary', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}, {'copy_schema': 1, 'event': 'copy.committed', 'files': 0, 'generation': 7, 'kind': 'ordinary', 'level': 'info', 'pending': 0, 'reader': 'failed', 'shipped': 6}]",
+              "passed": true
+            },
+            {
+              "check": "bucket-only audit complete with the host data unreachable (SR-5a)",
+              "detail": "{'status': 'complete', 'generation': 5, 'kind': 'final', 'reader': {'state': 'failed', 'stopped': True}, 'generations': {'valid': 6, 'ignored': 0, 'incomplete': 0}, 'attempts': 6, 'pending': 0, 'capture_failures': 0, 'missing_or_mismatched': 0, 'conflicts': 0}",
+              "passed": true
+            },
+            {
+              "check": "assembled files equal the host files",
+              "detail": "(12, [])",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "SR5a"
+          ],
+          "id": "evidence-copy",
+          "observations": {
+            "bucket_audit": {
+              "attempts": 6,
+              "capture_failures": 0,
+              "conflicts": 0,
+              "generation": 5,
+              "generations": {
+                "ignored": 0,
+                "incomplete": 0,
+                "valid": 6
+              },
+              "kind": "final",
+              "missing_or_mismatched": 0,
+              "pending": 0,
+              "reader": {
+                "state": "failed",
+                "stopped": true
+              },
+              "status": "complete"
+            },
+            "copy_records": [
+              {
+                "copy_schema": 1,
+                "event": "copy.committed",
+                "files": 0,
+                "generation": 5,
+                "kind": "final",
+                "level": "info",
+                "pending": 0,
+                "reader": "failed",
+                "shipped": 6
+              },
+              {
+                "copy_schema": 1,
+                "event": "copy.committed",
+                "files": 0,
+                "generation": 6,
+                "kind": "ordinary",
+                "level": "info",
+                "pending": 0,
+                "reader": "failed",
+                "shipped": 6
+              },
+              {
+                "copy_schema": 1,
+                "event": "copy.committed",
+                "files": 0,
+                "generation": 7,
+                "kind": "ordinary",
+                "level": "info",
+                "pending": 0,
+                "reader": "failed",
+                "shipped": 6
+              }
+            ],
+            "final_generations": [
+              {
+                "attempts": {
+                  "capture_failures": 0,
+                  "completed": 6,
+                  "pending": 0,
+                  "total": 6
+                },
+                "generation": 4,
+                "reader": {
+                  "state": "failed",
+                  "stopped": true
+                },
+                "shipped_total": 6,
+                "terminal": "origin-outage"
+              },
+              {
+                "attempts": {
+                  "capture_failures": 0,
+                  "completed": 6,
+                  "pending": 0,
+                  "total": 6
+                },
+                "generation": 5,
+                "reader": {
+                  "state": "failed",
+                  "stopped": true
+                },
+                "shipped_total": 6,
+                "terminal": "origin-outage"
+              }
+            ],
+            "install_output_bytes": 191,
+            "install_seconds": 26.4,
+            "objects": 6,
+            "ordinary_generations": [
+              1,
+              2
+            ],
+            "records_per_source": {
+              "collector": 2,
+              "copy": 8,
+              "reader": 1,
+              "server": 10
+            }
+          }
+        },
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-sr5-candidate-launch-expiry.timer → /etc/systemd/system/server2-shadow-sr5-candidate-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install: started",
+              "detail": "b'{\"cleanup_until\":1795515094,\"collection_until\":1795507894,\"epoch\":1794903094,\"launch_sha256\":\"209d2b8d3df90d507a91110e1e33f2b44835633824bd959694fa9b22113865f0\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "the candidate exit stopped guard and reader",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "a final evidence generation after the candidate exit, reader inactive (SR-5a)",
+              "detail": "{'state': 'inactive', 'stopped': True}",
+              "passed": true
+            },
+            {
+              "check": "bucket-only audit complete with the host data unreachable (SR-5a)",
+              "detail": "{'status': 'complete', 'generation': 2, 'kind': 'final', 'reader': {'state': 'inactive', 'stopped': True}, 'generations': {'valid': 2, 'ignored': 0, 'incomplete': 0}, 'attempts': 6, 'pending': 0, 'capture_failures': 0, 'missing_or_mismatched': 0, 'conflicts': 0}",
+              "passed": true
+            },
+            {
+              "check": "assembled files equal the host files",
+              "detail": "(12, [])",
+              "passed": true
+            },
+            {
+              "check": "retention stop completes",
+              "detail": "(0, 52.637278012000024)",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "SR5a"
+          ],
+          "id": "evidence-candidate-exit",
+          "observations": {
+            "bucket_audit": {
+              "attempts": 6,
+              "capture_failures": 0,
+              "conflicts": 0,
+              "generation": 2,
+              "generations": {
+                "ignored": 0,
+                "incomplete": 0,
+                "valid": 2
+              },
+              "kind": "final",
+              "missing_or_mismatched": 0,
+              "pending": 0,
+              "reader": {
+                "state": "inactive",
+                "stopped": true
+              },
+              "status": "complete"
+            },
+            "final_generations": [
+              {
+                "attempts": {
+                  "capture_failures": 0,
+                  "completed": 6,
+                  "pending": 0,
+                  "total": 6
+                },
+                "generation": 2,
+                "reader": {
+                  "state": "inactive",
+                  "stopped": true
+                },
+                "shipped_total": 6,
+                "terminal": null
+              }
+            ],
+            "install_output_bytes": 191,
+            "install_seconds": 17.1
+          }
+        }
+      ]
+    },
+    {
+      "kind": "isolated-storage-authorization-retry",
+      "observations": {
+        "collector_tarball_sha256": "12d7e91db2e447003558c955c4f510b17ed1d77340757f3e591e5222e464675c",
+        "egress_rejected_packets": 0,
+        "machine": "aarch64",
+        "peer_hosts": [
+          "dapi.kakao.com",
+          "todayweather.wizardfactory.net"
+        ],
+        "seconds": 269,
+        "server_binary_sha256": "80e5bcb7322ce672295c20ed286e4a885a53b1e31952753183502fc0740b1f12",
+        "source_commit": "6d078b1c2d5be2217a85ce5541b5c5419debfd00"
+      },
+      "passed": true,
+      "scenarios": [
+        {
+          "checks": [
+            {
+              "check": "launch user data armed the expiry timer",
+              "detail": "Created symlink /etc/systemd/system/timers.target.wants/server2-shadow-lp6-storage-launch-expiry.timer → /etc/systemd/system/server2-shadow-lp6-storage-launch-expiry.timer.\n",
+              "passed": true
+            },
+            {
+              "check": "install-host answered one JSON object: started",
+              "detail": "b'{\"cleanup_until\":1795515365,\"collection_until\":1795508165,\"epoch\":1794903365,\"launch_sha256\":\"bcf7a0d9d06534b94d00979a80a1d226bbfae49b31438fa7d8099397b7a20786\",\"schema\":1,\"status\":\"started\"}\\n'",
+              "passed": true
+            },
+            {
+              "check": "no stop before storage is denied",
+              "detail": "{'cost': {'accrued_usd': '0.001001', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 0, 'first_rejection': None, 'local_paid_exhaustions': 0, 'observed_at': 1794903395, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 0}, 'last_cpu': 42, 'last_seen': 1794903395, 'last_tx': 39072, 'manifest_sha256': '76f7aec17ba51ff2cb5f2e94e4be8ac3e16d84b6c26473b391ab187a6034114d', 'misses': 0, 'schema': 6, 'stop': None, 'storage_auth_window': [1794903365, 0, 0]}",
+              "passed": true
+            },
+            {
+              "check": "the guard stopped with s3_authorization",
+              "detail": "('s3_authorization', {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794903565, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20})",
+              "passed": true
+            },
+            {
+              "check": "the decision keeps the storage-authorization count",
+              "detail": "{'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794903565, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}",
+              "passed": true
+            },
+            {
+              "check": "candidate and reader stopped",
+              "detail": "",
+              "passed": true
+            },
+            {
+              "check": "a final evidence generation after the guard stop, reader inactive (SR-5a)",
+              "detail": "{'state': 'inactive', 'stopped': True}",
+              "passed": true
+            },
+            {
+              "check": "retention stop drained the collector within 150 s",
+              "detail": "(0, 51.444169269999975)",
+              "passed": true
+            },
+            {
+              "check": "only the five sources under logs/server2",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "the collector only puts objects into the state bucket",
+              "detail": "[('s3', 'PutObject', 'server2-shadow-lp6-storage-state')]",
+              "passed": true
+            },
+            {
+              "check": "server records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "guard records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "collector records at the destination (LP6-AC1)",
+              "detail": "['collector', 'copy', 'guard', 'reader', 'server']",
+              "passed": true
+            },
+            {
+              "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+              "detail": "[]",
+              "passed": true
+            },
+            {
+              "check": "guard's s3_authorization stop record at the destination",
+              "detail": "[{'cost': {'accrued_usd': '0.002842', 'limit_usd': '295'}, 'diagnostics': {'auth_failures': 40, 'first_rejection': {'cause': 'auth', 'component': 'quota', 'origin': 'event', 'provider': 'none', 'stage': 'provider_http', 'status': 403}, 'local_paid_exhaustions': 0, 'observed_at': 1794903565, 'paid_units': {'google': {'initial': 100, 'remaining': 100}, 'google_air_quality': {'initial': 100, 'remaining': 100}, 'openweather': {'initial': 100, 'remaining': 100}, 'visual_crossing': {'initial': 100, 'remaining': 100}}, 'provider_http': {}, 'quota_failures': 0, 'storage_auth_failures': 20}, 'last_cpu': 53, 'last_seen': 1794903565, 'last_tx': 39684, 'manifest_sha256': '76f7aec17ba51ff2cb5f2e94e4be8ac3e16d84b6c26473b391ab187a6034114d', 'misses': 0, 'schema': 6, 'stop': 's3_authorization', 'storage_auth_window': [1794903365, 0, 20]}]",
+              "passed": true
+            },
+            {
+              "check": "candidate's storage-authorization record at the destination",
+              "detail": "['{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:19:25.483744775Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"b124b874732f14860000000000000053\",\"operation_id\":\"000000000000007d\",\"parent_operation_id\":\"000000000000007c\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":1,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:19:25.530667157Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"provider_http\",\"trace_id\":\"b124b874732f14860000000000000053\",\"operation_id\":\"0000000000000085\",\"parent_operation_id\":\"0000000000000084\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"none\",\"outcome\":\"failed\",\"duration_ms\":46,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1465}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:19:25.530687173Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"quota\",\"stage\":\"reserve\",\"trace_id\":\"b124b874732f14860000000000000053\",\"operation_id\":\"0000000000000084\",\"parent_operation_id\":\"0000000000000083\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":46,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:19:25.530689801Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"trace_id\":\"b124b874732f14860000000000000053\",\"operation_id\":\"0000000000000083\",\"parent_operation_id\":\"0000000000000082\",\"route\":\"other\",\"method\":\"other\",\"cause\":\"auth\",\"action\":\"return_error\",\"outcome\":\"failed\",\"duration_ms\":46,\"status\":403,\"source\":\"src/observability.rs\",\"line\":1021}', '{\"schema\":1,\"build_revision\":\"unknown\",\"timestamp\":\"2026-11-17T08:19:25.530692845Z\",\"level\":\"warn\",\"event\":\"operation.finished\",\"component\":\"provider\",\"stage\":\"acquire\",\"t",
+              "passed": true
+            }
+          ],
+          "criteria": [
+            "LP6-AC2",
+            "SR3"
+          ],
+          "id": "storage-authorization",
+          "observations": {
+            "denied_record": [
+              {
+                "action": "none",
+                "build_revision": "unknown",
+                "cause": "auth",
+                "component": "quota",
+                "duration_ms": 101,
+                "event": "operation.finished",
+                "level": "warn",
+                "line": 1465,
+                "method": "other",
+                "operation_id": "0000000000000058",
+                "outcome": "failed",
+                "parent_operation_id": "0000000000000057",
+                "route": "other",
+                "schema": 1,
+                "source": "src/observability.rs",
+                "stage": "provider_http",
+                "status": 403,
+                "timestamp": "2026-11-17T08:19:25.249466515Z",
+                "trace_id": "b124b874732f14860000000000000053"
+              }
+            ],
+            "final_generations": [
+              {
+                "attempts": {
+                  "capture_failures": 0,
+                  "completed": 18,
+                  "pending": 0,
+                  "total": 18
+                },
+                "generation": 1,
+                "reader": {
+                  "state": "inactive",
+                  "stopped": true
+                },
+                "shipped_total": 18,
+                "terminal": null
+              }
+            ],
+            "guard_diagnostics": {
+              "auth_failures": 40,
+              "first_rejection": {
+                "cause": "auth",
+                "component": "quota",
+                "origin": "event",
+                "provider": "none",
+                "stage": "provider_http",
+                "status": 403
+              },
+              "local_paid_exhaustions": 0,
+              "observed_at": 1794903565,
+              "paid_units": {
+                "google": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "google_air_quality": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "openweather": {
+                  "initial": 100,
+                  "remaining": 100
+                },
+                "visual_crossing": {
+                  "initial": 100,
+                  "remaining": 100
+                }
+              },
+              "provider_http": {},
+              "quota_failures": 0,
+              "storage_auth_failures": 20
+            },
+            "guard_record": [
+              {
+                "cost": {
+                  "accrued_usd": "0.002842",
+                  "limit_usd": "295"
+                },
+                "diagnostics": {
+                  "auth_failures": 40,
+                  "first_rejection": {
+                    "cause": "auth",
+                    "component": "quota",
+                    "origin": "event",
+                    "provider": "none",
+                    "stage": "provider_http",
+                    "status": 403
+                  },
+                  "local_paid_exhaustions": 0,
+                  "observed_at": 1794903565,
+                  "paid_units": {
+                    "google": {
+                      "initial": 100,
+                      "remaining": 100
+                    },
+                    "google_air_quality": {
+                      "initial": 100,
+                      "remaining": 100
+                    },
+                    "openweather": {
+                      "initial": 100,
+                      "remaining": 100
+                    },
+                    "visual_crossing": {
+                      "initial": 100,
+                      "remaining": 100
+                    }
+                  },
+                  "provider_http": {},
+                  "quota_failures": 0,
+                  "storage_auth_failures": 20
+                },
+                "last_cpu": 53,
+                "last_seen": 1794903565,
+                "last_tx": 39684,
+                "manifest_sha256": "76f7aec17ba51ff2cb5f2e94e4be8ac3e16d84b6c26473b391ab187a6034114d",
+                "misses": 0,
+                "schema": 6,
+                "stop": "s3_authorization",
+                "storage_auth_window": [
+                  1794903365,
+                  0,
+                  20
+                ]
+              }
+            ],
+            "guard_stop": "s3_authorization",
+            "install_output_bytes": 191,
+            "install_seconds": 18.1,
+            "objects": 10,
+            "records_per_source": {
+              "collector": 2,
+              "copy": 2,
+              "guard": 1,
+              "reader": 1,
+              "server": 68
+            },
+            "retention_stop_seconds": 51.4,
+            "stop_seconds": 164.9
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,968 @@
+{
+ "source": "ios/tools/forecast-reference/capture.py manifest, from Core/Tests/TWDomainTests/ForecastReference",
+ "size": "393x852",
+ "devicePixelRatio": 2,
+ "language": "ko-KR",
+ "theme": "light",
+ "units": {
+  "temperatureUnit": "F",
+  "windSpeedUnit": "mph",
+  "pressureUnit": "inHg",
+  "distanceUnit": "mi",
+  "precipitationUnit": "in",
+  "airUnit": "airnow"
+ },
+ "places": {
+  "kma-seoul": {
+   "name": "회현동",
+   "address": "대한민국 서울특별시 중구 회현동",
+   "country": "KR",
+   "location": {
+    "lat": 37.56,
+    "long": 126.98
+   },
+   "cityCount": 1
+  },
+  "vc-london": {
+   "name": "런던",
+   "address": "영국 런던",
+   "country": "GB",
+   "location": {
+    "lat": 51.51,
+    "long": -0.13
+   },
+   "cityCount": 2
+  }
+ },
+ "webViewOrigin": {
+  "x": 0,
+  "y": 40
+ },
+ "pages": {
+  "kma-seoul-hourly": {
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 375,
+     "h": 44
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": []
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-hourly-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 250.125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 500
+     }
+    },
+    {
+     "index": 1,
+     "cls": "",
+     "file": "kma-seoul-hourly-1.png",
+     "rect": {
+      "x": 0,
+      "y": 44.125,
+      "w": 375,
+      "h": 266.140625
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 533
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-hourly-2.png",
+     "rect": {
+      "x": 0,
+      "y": 44.265625,
+      "w": 375,
+      "h": 132
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 264
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-hourly-3.png",
+     "rect": {
+      "x": 0,
+      "y": 44.265625,
+      "w": 375,
+      "h": 343.1875
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 686
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "kma-seoul-hourly-4.png",
+     "rect": {
+      "x": 0,
+      "y": 254.453125,
+      "w": 375,
+      "h": 343.1875
+     },
+     "hidden": 0.640625,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 685
+     }
+    }
+   ]
+  },
+  "kma-seoul-hourly-expanded": {
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 375,
+     "h": 44
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": []
+   },
+   "blocks": [
+    {
+     "index": 1,
+     "cls": "",
+     "file": "kma-seoul-hourly-expanded-1.png",
+     "rect": {
+      "x": 0,
+      "y": 44.125,
+      "w": 375,
+      "h": 384.421875
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 769
+     }
+    }
+   ]
+  },
+  "kma-seoul-daily": {
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 375,
+     "h": 44
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": {
+     "text": "회현동",
+     "rect": {
+      "x": 10,
+      "y": 0,
+      "w": 355,
+      "h": 43
+     },
+     "style": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+      "font-size": "17px",
+      "font-weight": "500",
+      "line-height": "44px",
+      "opacity": "1",
+      "text-shadow": "none",
+      "padding-top": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "padding-right": "0px",
+      "margin-top": "0px",
+      "margin-bottom": "0px",
+      "border-top-width": "0px",
+      "border-bottom-width": "0px",
+      "vertical-align": "baseline",
+      "text-align": "center"
+     },
+     "parts": [
+      {
+       "tag": "span",
+       "cls": "",
+       "text": "회현동",
+       "rect": {
+        "x": 165.4425048828125,
+        "y": 12.49267578125,
+        "w": 44.114990234375,
+        "h": 22
+       },
+       "style": {
+        "color": "rgb(0, 0, 0)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+        "font-size": "17px",
+        "font-weight": "500",
+        "line-height": "44px",
+        "opacity": "1",
+        "text-shadow": "none",
+        "padding-top": "0px",
+        "padding-bottom": "0px",
+        "padding-left": "0px",
+        "padding-right": "0px",
+        "margin-top": "0px",
+        "margin-bottom": "0px",
+        "border-top-width": "0px",
+        "border-bottom-width": "0px",
+        "vertical-align": "middle",
+        "text-align": "center"
+       }
+      }
+     ]
+    },
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 5,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-bell-outline",
+      "rect": {
+       "x": 294,
+       "y": 5,
+       "w": 38,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-upload-outline",
+      "rect": {
+       "x": 332,
+       "y": 5,
+       "w": 34,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "kma-seoul-daily-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 250.125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 500
+     }
+    },
+    {
+     "index": 1,
+     "cls": "chart-scroll",
+     "file": "kma-seoul-daily-1.png",
+     "rect": {
+      "x": 0,
+      "y": 44.125,
+      "w": 375,
+      "h": 265.78125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 532
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "kma-seoul-daily-2.png",
+     "rect": {
+      "x": 0,
+      "y": 104.90625,
+      "w": 375,
+      "h": 132
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 264
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "kma-seoul-daily-3.png",
+     "rect": {
+      "x": 0,
+      "y": 241.90625,
+      "w": 375,
+      "h": 356
+     },
+     "hidden": 0.90625,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 710
+     }
+    }
+   ]
+  },
+  "vc-london-hourly": {
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 375,
+     "h": 44
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": null,
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 5,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-bell-outline",
+      "rect": {
+       "x": 294,
+       "y": 5,
+       "w": 38,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-upload-outline",
+      "rect": {
+       "x": 332,
+       "y": 5,
+       "w": 34,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "vc-london-hourly-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 250.125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 500
+     }
+    },
+    {
+     "index": 1,
+     "cls": "",
+     "file": "vc-london-hourly-1.png",
+     "rect": {
+      "x": 0,
+      "y": 44.125,
+      "w": 375,
+      "h": 253.140625
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 507
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "vc-london-hourly-2.png",
+     "rect": {
+      "x": 0,
+      "y": 44.265625,
+      "w": 375,
+      "h": 125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 250
+     }
+    },
+    {
+     "index": 3,
+     "cls": "card",
+     "file": "vc-london-hourly-3.png",
+     "rect": {
+      "x": 0,
+      "y": 44.265625,
+      "w": 375,
+      "h": 318.671875
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 637
+     }
+    },
+    {
+     "index": 4,
+     "cls": "card",
+     "file": "vc-london-hourly-4.png",
+     "rect": {
+      "x": 0,
+      "y": 304.9375,
+      "w": 375,
+      "h": 269.640625
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 539
+     }
+    },
+    {
+     "index": 5,
+     "cls": "",
+     "file": "vc-london-hourly-5.png",
+     "rect": {
+      "x": 0,
+      "y": 579.578125,
+      "w": 375,
+      "h": 18
+     },
+     "hidden": 0.578125,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 35
+     }
+    }
+   ]
+  },
+  "vc-london-daily": {
+   "header": {
+    "rect": {
+     "x": 0,
+     "y": 0,
+     "w": 375,
+     "h": 44
+    },
+    "style": {
+     "color": "rgb(0, 0, 0)",
+     "background-color": "rgb(255, 255, 255)",
+     "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+     "font-size": "14px",
+     "font-weight": "400",
+     "line-height": "normal",
+     "opacity": "1",
+     "text-shadow": "none",
+     "padding-top": "5px",
+     "padding-bottom": "5px",
+     "padding-left": "5px",
+     "padding-right": "5px",
+     "margin-top": "0px",
+     "margin-bottom": "0px",
+     "border-top-width": "0px",
+     "border-bottom-width": "0px",
+     "vertical-align": "baseline",
+     "text-align": "start"
+    },
+    "title": {
+     "text": "런던",
+     "rect": {
+      "x": 10,
+      "y": 0,
+      "w": 355,
+      "h": 43
+     },
+     "style": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+      "font-size": "17px",
+      "font-weight": "500",
+      "line-height": "44px",
+      "opacity": "1",
+      "text-shadow": "none",
+      "padding-top": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "padding-right": "0px",
+      "margin-top": "0px",
+      "margin-bottom": "0px",
+      "border-top-width": "0px",
+      "border-bottom-width": "0px",
+      "vertical-align": "baseline",
+      "text-align": "center"
+     },
+     "parts": [
+      {
+       "tag": "span",
+       "cls": "",
+       "text": "런던",
+       "rect": {
+        "x": 172.7949981689453,
+        "y": 12.49267578125,
+        "w": 29.410003662109375,
+        "h": 22
+       },
+       "style": {
+        "color": "rgb(0, 0, 0)",
+        "background-color": "rgba(0, 0, 0, 0)",
+        "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+        "font-size": "17px",
+        "font-weight": "500",
+        "line-height": "44px",
+        "opacity": "1",
+        "text-shadow": "none",
+        "padding-top": "0px",
+        "padding-bottom": "0px",
+        "padding-left": "0px",
+        "padding-right": "0px",
+        "margin-top": "0px",
+        "margin-bottom": "0px",
+        "border-top-width": "0px",
+        "border-bottom-width": "0px",
+        "vertical-align": "middle",
+        "text-align": "center"
+       }
+      }
+     ]
+    },
+    "buttons": [
+     {
+      "className": "button button-icon icon ion-navicon",
+      "rect": {
+       "x": 5,
+       "y": 5,
+       "w": 42,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "8px",
+       "padding-right": "8px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-bell-outline",
+      "rect": {
+       "x": 294,
+       "y": 5,
+       "w": 38,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     },
+     {
+      "className": "button button-icon icon ion-ios-upload-outline",
+      "rect": {
+       "x": 332,
+       "y": 5,
+       "w": 34,
+       "h": 34
+      },
+      "style": {
+       "color": "rgb(0, 0, 0)",
+       "background-color": "rgba(0, 0, 0, 0)",
+       "font-family": "-apple-system, Roboto, Noto, \"Helvetica Neue\", sans-serif",
+       "font-size": "17px",
+       "font-weight": "400",
+       "line-height": "32px",
+       "opacity": "0.87",
+       "text-shadow": "none",
+       "padding-top": "0px",
+       "padding-bottom": "0px",
+       "padding-left": "4px",
+       "padding-right": "4px",
+       "margin-top": "0px",
+       "margin-bottom": "0px",
+       "border-top-width": "1px",
+       "border-bottom-width": "1px",
+       "vertical-align": "top",
+       "text-align": "center"
+      }
+     }
+    ]
+   },
+   "blocks": [
+    {
+     "index": 0,
+     "cls": "row row-no-padding disable-user-behavior",
+     "file": "vc-london-daily-0.png",
+     "rect": {
+      "x": 0,
+      "y": 0,
+      "w": 375,
+      "h": 250.125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 500
+     }
+    },
+    {
+     "index": 1,
+     "cls": "chart-scroll",
+     "file": "vc-london-daily-1.png",
+     "rect": {
+      "x": 0,
+      "y": 98.125,
+      "w": 375,
+      "h": 249.703125
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 500
+     }
+    },
+    {
+     "index": 2,
+     "cls": "card",
+     "file": "vc-london-daily-2.png",
+     "rect": {
+      "x": 0,
+      "y": 362.828125,
+      "w": 375,
+      "h": 212
+     },
+     "hidden": 0,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 424
+     }
+    },
+    {
+     "index": 3,
+     "cls": "",
+     "file": "vc-london-daily-3.png",
+     "rect": {
+      "x": 0,
+      "y": 579.828125,
+      "w": 375,
+      "h": 18
+     },
+     "hidden": 0.828125,
+     "pieces": 1,
+     "pixels": {
+      "width": 750,
+      "height": 34
+     }
+    }
+   ]
+  },
+  "o03-weather": {
+   "popup": {
+    "file": "o03-weather.png",
+    "rect": {
+     "x": 62.5,
+     "y": 238.5,
+     "w": 250,
+     "h": 170
+    },
+    "pixels": {
+     "width": 500,
+     "height": 340
+    },
+    "title": "Error",
+    "body": [
+     "We are unable to retrieve the weather information."
+    ],
+    "buttons": [
+     {
+      "text": "Close",
+      "className": "button button-default"
+     },
+     {
+      "text": "OK",
+      "className": "button button-positive"
+     }
+    ]
+   }
+  }
+ }
+}

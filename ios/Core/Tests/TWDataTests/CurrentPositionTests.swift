@@ -100,10 +100,12 @@ struct CurrentPositionTests {
         #expect(f.session.positionRetry == nil, "a grant shows nothing")
         #expect(f.location.locationOn == 1)
         // The app's state change handler sends `reloadEvent 'locationOn'`, which reloads the selected current position.
+        // It loads the saved position, and the lookup it starts finds the new one, which loads too: both requests run
+        // at once (as TabCtrl's did), so either can be sent last.
         f.session.reload(.locationOn)
         await f.answer(2)
-        #expect(await eventually { f.paths.count == 3 })
-        #expect(f.paths.last == "/weather/v000903/coord/37.501,127.04")
+        #expect(await eventually(30) { f.paths.count == 3 })
+        #expect(f.paths.dropFirst().contains("/weather/v000903/coord/37.501,127.04"), "\(f.paths)")
         #expect(f.events.outcomes("location_permission", "outcome") == ["denied", "granted"])
     }
 
@@ -208,9 +210,12 @@ struct CurrentPositionTests {
         // The second lookup may load its position's weather: the clock moves until that lookup has ended.
         let ended = Ended()
         let waiter = Task { await second.value; ended.value = true }
-        for _ in 0..<50 where !ended.value { await f.clock.advance(by: 1000) }
+        for _ in 0..<50 where !ended.value {
+            await f.clock.advance(by: 1000)
+            _ = await eventually(0.2) { ended.value }
+        }
         #expect(ended.value, "the second lookup ends")
-        await waiter.value
+        if ended.value { await waiter.value }
         #expect(!f.session.locating)
         #expect(f.location.positions == 2)
     }

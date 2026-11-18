@@ -68,7 +68,10 @@ struct CordovaUpgradeTests {
         let other = source == "suite" ? "localStorage" : "suite"
         #expect(info.source.contains("cities=\(source)"))
         #expect(!info.source.contains("=\(other)"), "every key from \(source): \(info.source)")
-        #expect(info.keys["twAnalyticsConsentV1"] == "ignored")
+        // The opt-in is ignored where the update finds it: WebView storage, or the suite of a build that mirrors it
+        // (AN-17's Monetization; the shipped 1.1.1 does not, so a suite-only update from it finds none).
+        let found = source == "localStorage" || (seed.suite["twAnalyticsConsentV1"] ?? nil) != nil
+        #expect(info.keys["twAnalyticsConsentV1"] == (found ? "ignored" : nil))
         if source == "suite" {
             #expect(info.localStorageFile == nil)
         } else {
@@ -82,13 +85,21 @@ struct CordovaUpgradeTests {
         #expect(UserDefaults.standard.string(forKey: "CDVUUID") == seed.deviceId)
     }
 
-    /// The Cordova storage is only read: the suite and (in the localStorage run) the WebKit database still hold the
-    /// seeded values.
-    @Test(.enabled(if: enabled)) func sourcesAreKept() throws {
+    /// The migration only reads the Cordova storage: (in the localStorage run) the WebKit database still holds the seeded
+    /// values. The suite holds the rollback hand-back of the migrated state (IN-17): the texts the Cordova app reads,
+    /// without the analytics opt-in, which does not carry over.
+    @Test(.enabled(if: enabled)) func sourcesAreKept() async throws {
         let seed = try #require(UpgradeSeed.fromEnvironment())
         let suite = try #require(UserDefaults(suiteName: CordovaMigration.suiteName))
-        #expect(suite.string(forKey: "cities") == (seed.suite["cities"] ?? nil))
-        #expect(suite.string(forKey: "twAnalyticsConsentV1") == "true")
+        #expect(seed.suite["cities"] != nil)
+        await AppLaunch.shared.holder.saved()
+        let state = try #require(AppLaunch.shared.holder.state)
+        let marker = try #require(CordovaHandBack.parse(suite.string(forKey: CordovaHandBack.marker)))
+        #expect(marker.writer == "native" && marker.complete && marker.schema == 1)
+        for (key, text) in CordovaHandBack.texts(state, consent: nil) {
+            #expect(suite.object(forKey: key) as? String == text, "\(key)")
+        }
+        #expect(suite.object(forKey: "twAnalyticsConsentV1") == nil)
         let database = try WebKitLocalStorage.locate(dataContainer: home)
         if source == "suite" {
             #expect(database == nil)

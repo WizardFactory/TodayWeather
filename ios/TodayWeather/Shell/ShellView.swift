@@ -11,6 +11,16 @@ struct TabContent {
     var titleAccessory: AnyView? = nil
     var actions: AnyView = AnyView(EmptyView())
     var page: AnyView = AnyView(Color.clear)
+    /// What fills the header bar after the menu button instead of the title (IN-11: S02's search field and mode button,
+    /// `ion-nav-title` with `p.title.search-header`).
+    var titleView: AnyView? = nil
+    /// Drawn over the whole shell under the popups (IN-11: `$ionicLoading` of S02).
+    var overlay: AnyView? = nil
+}
+
+extension EnvironmentValues {
+    /// The shell's insets for a tab's page, which lies under the header bar (IN-11: S02 starts its list under it).
+    @Entry var shellInsets: ShellInsets = .zero
 }
 
 /// The insets of the Cordova iOS layout. The WebView starts under the status bar (`StatusBarOverlaysWebView` false),
@@ -47,7 +57,7 @@ struct RootView: View {
                 case .start:
                     // S01 (IN-10), created with the shell while the start gate holds.
                     if let start = launch.startPage { StartView(page: start) } else { SplashView() }
-                case .tab: ShellView(model: shell, content: launch.weather.map { weather in { weather.content($0) } },
+                case .tab: ShellView(model: shell, content: { launch.tabContent($0) },
                                      banner: Monetization.shared.bannerView,
                                      page: launch.pageView)
                 }
@@ -150,11 +160,15 @@ struct ShellFrame: View {
                 colors.statusBar.color.frame(height: insets.statusBar)
                 ZStack(alignment: .top) {
                     tab.page.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .environment(\.shellInsets, insets)
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
-                    HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, insets: insets,
-                              onMenu: model.openMenu) { tab.actions }
+                    HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, titleView: tab.titleView,
+                              insets: insets, onMenu: model.openMenu) { tab.actions }
                 }
                 .frame(maxHeight: .infinity)
+                // The WebView's area: a page scrolled up must not draw over the status bar (IN-18, seen in the manual's
+                // captures of S03 and S05 scrolled down).
+                .clipped()
                 TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
                        onTap: model.tapTab)
                 if let banner {
@@ -176,6 +190,9 @@ struct ShellFrame: View {
             }
             .padding(.top, insets.statusBar)
             .padding(.bottom, banner == nil ? 0 : bannerHeight)
+            if let overlay = tab.overlay {
+                overlay.padding(.top, insets.statusBar).padding(.bottom, banner == nil ? 0 : bannerHeight)
+            }
             if let popup = model.popups.first {
                 IonicPopupView(popup: popup, onTap: model.tapPopupButton).padding(.top, insets.statusBar)
                     .padding(.bottom, banner == nil ? 0 : bannerHeight)
@@ -201,6 +218,8 @@ struct BarFrame<Leading: View, Trailing: View>: View {
     let colors: ShellColors
     let title: String
     var titleAccessory: AnyView? = nil
+    /// Instead of the title: a view from 50 pt to 10 pt before the bar's end (S02's search header, IN-11).
+    var titleView: AnyView? = nil
     let insets: ShellInsets
     let titleIdentifier: String
     /// How far WebKit puts the title below where SwiftUI centers it on the 44 pt line (measured: 1 pt in a tab's
@@ -212,19 +231,25 @@ struct BarFrame<Leading: View, Trailing: View>: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            HStack(spacing: 0) {
-                Text(title)
-                    .font(.system(size: titleSize, weight: .medium))
-                    .foregroundStyle(colors.headerText.color)
-                    .outlined(colors.headerOutline)
-                    .lineLimit(1)
-                if let titleAccessory { titleAccessory }
+            if let titleView {
+                titleView
+                    .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight, alignment: .topLeading)
+                    .padding(.leading, 50).padding(.trailing, 10)
+            } else {
+                HStack(spacing: 0) {
+                    Text(title)
+                        .font(.system(size: titleSize, weight: .medium))
+                        .foregroundStyle(colors.headerText.color)
+                        .outlined(colors.headerOutline)
+                        .lineLimit(1)
+                    if let titleAccessory { titleAccessory }
+                }
+                    // WebKit puts the baseline of a 44 pt line 1 pt lower than SwiftUI centers the text (measured).
+                    .offset(y: titleOffset)
+                    .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight)
+                    .padding(.horizontal, ShellMetrics.titleMargin)
+                    .accessibilityIdentifier(titleIdentifier)
             }
-                // WebKit puts the baseline of a 44 pt line 1 pt lower than SwiftUI centers the text (measured).
-                .offset(y: titleOffset)
-                .frame(maxWidth: .infinity, minHeight: ShellMetrics.headerHeight)
-                .padding(.horizontal, ShellMetrics.titleMargin)
-                .accessibilityIdentifier(titleIdentifier)
             HStack(alignment: .top, spacing: 0) {
                 leading()
                 Spacer(minLength: 0)
@@ -250,12 +275,14 @@ struct HeaderBar<Actions: View>: View {
     let colors: ShellColors
     let title: String
     var titleAccessory: AnyView? = nil
+    var titleView: AnyView? = nil
     let insets: ShellInsets
     let onMenu: () -> Void
     @ViewBuilder let actions: () -> Actions
 
     var body: some View {
-        BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, insets: insets, titleIdentifier: "shell-title") {
+        BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, titleView: titleView, insets: insets,
+                 titleIdentifier: "shell-title") {
             BarButton(glyph: Glyphs.navicon, colors: colors, width: 40, action: onMenu)
                 .accessibilityLabel("menu")
                 .accessibilityIdentifier("shell-menu-button")
@@ -410,7 +437,8 @@ struct MenuRows: View {
                 if row.isButton {
                     Spacer().frame(height: index > 0 && rows[index - 1].isButton ? ShellMetrics.blockGap : ShellMetrics.blockMargin)
                     block(row)
-                    if index + 1 < rows.count, !rows[index + 1].isButton {
+                    // The block's bottom margin before an item, and after the last block, which ends the list (#2990).
+                    if index + 1 == rows.count || !rows[index + 1].isButton {
                         Spacer().frame(height: ShellMetrics.blockMargin)
                     }
                 } else {
@@ -520,12 +548,20 @@ struct IonicPopupView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 10).padding(.top, 15)
                 }
-                Color(white: 0.933).frame(height: 1).padding(.top, 15)
+                // `.popup-head` keeps its 15 pt padding above and below an empty title (`$ionicPopup.alert` without one,
+                // O13 of IN-14: 31 pt in the capture).
+                Color(white: 0.933).frame(height: 1).padding(.top, popup.title.isEmpty ? 30 : 15)
                 // WebKit lays the 14 px lines 18 pt apart (measured in the About capture, IN-12), more than the
                 // system font's own line height.
+                // Each line takes its whole 18 pt line box, the text centered in it, as in WebKit (IN-14: a three-line
+                // popup was 4 px shorter than the Cordova one with the spacing between the lines only).
+                let gap = max(0, lineSize * 18 / 14 - UIFont.systemFont(ofSize: lineSize).lineHeight)
                 let lines = Text(Self.syllableBreaks(popup.lines.joined(separator: "\n"))).font(.system(size: lineSize))
-                    .lineSpacing(max(0, lineSize * 18 / 14 - UIFont.systemFont(ofSize: lineSize).lineHeight))
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                    .lineSpacing(gap)
+                    .padding(.vertical, gap / 2)
+                    // WebKit lays text out in 1/64 px units, so a line 0.01 pt wider than the box still fits (IN-14's
+                    // English O06 fills its first line to 230.009 pt).
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10).padding(.horizontal, 9.99)
                 if scrolls {
                     ScrollView { lines }.fixedSize(horizontal: false, vertical: true)
                 } else {

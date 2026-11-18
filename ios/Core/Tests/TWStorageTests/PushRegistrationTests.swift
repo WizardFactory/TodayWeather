@@ -108,4 +108,38 @@ struct PushRegistrationTests {
         let posted = try #require(result.requests.last?.body.arrayValue)
         #expect(posted.count == records.count && posted.allSatisfy { $0["type"] == "ios" })
     }
+
+    /// `Push.removePushListByCityIndex` after S02 deletes a place or turns the current position off (IN-11, #2960), and
+    /// `Push.hasPushInfo` (the bell that decides it), against the Cordova iOS service in JavaScriptCore: the
+    /// `DELETE /push` request (method, path, headers, body with member order) and the list saved after it.
+    @Test func removalsMatchCordova() {
+        let removed = Self.corpus["cityRemoved"]!.arrayValue!
+        #expect(Set(removed.map { $0["name"]!.stringValue! }) ==
+                ["place-with-alarms", "current-position", "disabled-records-only", "registration-id", "no-token"])
+        for c in removed {
+            let name = c["name"]!.stringValue!
+            let before = c["before"]!.arrayValue!.map { $0.objectValue! }
+            let index = Int(c["index"]!.numberValue!.double)
+            let ctx = Self.context(.object(JSONObject([("airUnit", "airkorea"), ("zone", "Asia/Seoul")])))
+            let state = PushState(registrationId: Self.string(c["registrationId"]), type: "ios",
+                                  fcmToken: Self.string(c["storedToken"]), records: before)
+            let hasPush = c["hasPush"]!.arrayValue!.map { $0.boolValue! }
+            #expect((0..<hasPush.count).map { PushRegistration.hasPush(before, index: $0) } == hasPush, "\(name): hasPushInfo")
+            let result = PushRegistration.onCityRemoved(state, index: index, context: ctx)
+            Self.compare(c["requests"]!.arrayValue!, result.requests, name)
+            let saved = c["saved"]!.arrayValue?.map { $0.objectValue! } ?? before
+            #expect(result.state.records == saved, "\(name): the saved list")
+            #expect(result.state.fcmToken == state.fcmToken && result.state.registrationId == state.registrationId, "\(name)")
+        }
+    }
+
+    /// `hasPushInfo` compares the index with `===` and the flag by truthiness.
+    @Test func aBellNeedsAnEnabledRecordOfThatNumber() {
+        let records = [JSONObject([("cityIndex", "1"), ("enable", true)]), JSONObject([("cityIndex", 2), ("enable", 1)]),
+                       JSONObject([("cityIndex", 3), ("enable", false)])]
+        #expect(!PushRegistration.hasPush(records, index: 1), "a string index is no match")
+        #expect(PushRegistration.hasPush(records, index: 2), "a truthy flag")
+        #expect(!PushRegistration.hasPush(records, index: 3))
+        #expect(!PushRegistration.hasPush([], index: 0))
+    }
 }

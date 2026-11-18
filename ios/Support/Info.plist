@@ -2,6 +2,26 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- The scene configuration (IN-17): UIKit keeps a scene session with this name across updates and resolves it in
+	     the build that starts. The Cordova builds (cordova-ios 8) declare the same name with their own delegate, so a
+	     fallback Cordova build after this app, and this app after a Cordova build, each get their own scene delegate. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<!-- The weather photo feed of the photo theme (IN-07): TW_WEATHER_PHOTOS_URL, a private build input (the Cordova
 	     clientConfig.weatherPhotosUrl). Empty without it: the photo theme then shows no photo and nothing is requested. -->
 	<key>TWWeatherPhotosURL</key>

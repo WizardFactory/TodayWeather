@@ -267,6 +267,15 @@ struct SettingsActionsTests {
             session = WeatherSession(repository: repository, holder: holder, acceptLanguage: { "ko-KR,ko;q=0.9" }, clock: clock)
             actions = SettingsActions(holder: holder, session: session, push: hook ? push : nil)
         }
+
+        /// Answers request `count` and waits until it is applied: the request is sent, and its answer waits on the
+        /// clock, after work that touches no clock, and the answer is parsed and saved after more such work. Moving the
+        /// clock before the answer waits, or going on before it is saved, let a busy machine (CI) see no second request,
+        /// a stored state older than the saved one, or the first request's units.
+        @MainActor
+        func answered(_ count: Int) async -> Bool {
+            await answer(count, http: http, clock: clock, repository: session.repository)
+        }
     }
 
     /// Every choice of every list from the Korean defaults: the stored units and settings equal the Cordova storage, a
@@ -280,13 +289,11 @@ struct SettingsActionsTests {
                 let value = SettingsGolden.string(choice["value"])
                 let f = try Fixture()
                 f.session.reload(.initial)
-                await f.clock.advance(by: 1000)
-                // The request goes out after work that touches no clock, so `advance` can return before it: wait for it.
-                #expect(await eventually { f.http.attempts.count == 1 })
+                #expect(await f.answered(1), "\(name)=\(value): the first load")
                 f.actions.opened(name)
                 #expect(f.actions.value(name) == list["page"]?["value"]?.stringValue, "\(name): the checked value")
                 f.actions.choose(name, value: value)
-                await f.clock.advance(by: 1000)
+                #expect(await f.answered(2), "\(name)=\(value): the weather is requested again")
                 let state = try #require(f.holder.state)
                 let stored = choice["stored"]
                 for key in UnitSettings.keys {
@@ -304,7 +311,6 @@ struct SettingsActionsTests {
                 // `_resetUpdateTimeCities`: every place reloads, then `reloadEvent 'resume'` loads the selected one.
                 let reloads = trace.filter { $0[0]?.stringValue == "WeatherInfo.reloadCity" }.count
                 #expect(reloads == 3 && trace.last?[1]?.stringValue == "reloadEvent" && trace.last?[2]?.stringValue == "resume")
-                #expect(await eventually { f.http.attempts.count == 2 }, "\(name)=\(value): the weather is requested again")
                 let query = f.http.attempts.last?.url.query ?? ""
                 for key in UnitSettings.keys {
                     #expect(query.contains("\(key)=\(state.units.value(key))"), "\(name)=\(value): \(key) in \(query)")
@@ -366,8 +372,9 @@ struct SettingsActionsTests {
         let session = WeatherSession(repository: repository, holder: f.holder, acceptLanguage: { "ko-KR" }, clock: f.clock)
         let actions = SettingsActions(holder: f.holder, session: session, push: f.push)
         session.reload(.initial)
+        _ = await eventually(30) { failing.attempts.count == 1 && (f.clock.nextDeadline ?? .max) <= f.clock.elapsed + 100 }
         await f.clock.advance(by: 1000)
-        #expect(session.retry)
+        #expect(await eventually(30) { session.retry })
         let before = failing.attempts.count
         actions.choose("theme", value: "dark")
         await f.clock.advance(by: 1000)
@@ -436,4 +443,18 @@ struct SettingsCaptureTests {
         }
     }
 }
+}
+
+/// Answers request `count` of `http` (each answers 100 ms after it starts) and waits until `repository` has applied it.
+/// The request is sent, and its answer waits on the clock, after work that touches no clock, and the answer is parsed
+/// and saved after more such work: moving the clock before the answer waits, or going on before it is applied, let a
+/// busy machine (CI) see no second request, a stored state older than the saved one, or the first request's units.
+@MainActor
+func answer(_ count: Int, http: ScriptedWeatherHTTP, clock: VirtualClock, repository: WeatherRepository) async -> Bool {
+    let waiting = await eventually(30) {
+        http.attempts.count == count && (clock.nextDeadline ?? .max) <= clock.elapsed + 100
+    }
+    await clock.advance(by: 1000)
+    let applied = await eventually(30) { repository.loading.isEmpty }
+    return waiting && applied
 }
