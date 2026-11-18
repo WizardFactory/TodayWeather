@@ -54,6 +54,7 @@ import net.wizardfactory.todayweather.notify.PushMessage
 import net.wizardfactory.todayweather.ui.chart.ImageDiff
 import net.wizardfactory.todayweather.ui.chart.Pixels
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
+import net.wizardfactory.todayweather.ui.forecast.applyNativeTemperatureRow
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
@@ -426,7 +427,13 @@ class AlarmsScreenshotTest {
 
     private fun compare(name: String) {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
-        val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
+        val reference = ImageIO.read(File(references, "$name.png"))
+        if (matrixSize != null && name in setOf("ko-KR/intro", "ko-KR/foreground")) {
+            val hourly = File(references.parentFile, "forecast/ko-KR/kma-seoul/hourly.json")
+            val header = Json.parseToJsonElement(hourly.readText()).jsonObject.getValue("blocks").jsonArray.first().jsonObject
+            applyNativeTemperatureRow(reference, header, project, dimmed = true)
+        }
+        val cordova = reference.toPixels()
         val diff = ImageDiff.of(native, cordova)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
