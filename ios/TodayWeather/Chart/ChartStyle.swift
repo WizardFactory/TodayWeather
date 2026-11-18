@@ -5,7 +5,7 @@ import TWResources
 import UIKit
 
 /// An sRGB color of the Cordova SCSS (`#rrggbb` and an alpha).
-struct CssColor: Sendable, Equatable {
+struct CssColor: Sendable, Hashable {
     let red: Double, green: Double, blue: Double, alpha: Double
 
     init(_ hex: UInt32, alpha: Double = 1) {
@@ -150,6 +150,61 @@ enum CssText {
         cg.textPosition = .zero
         CTLineDraw(line, cg)
         cg.restoreGState()
+    }
+}
+
+/// Core Text objects reused while a single Hourly chart scrolls. The FIFO limit also bounds
+/// retention when the same view receives new places, units or themes.
+@MainActor
+final class HourlyChartTextCache {
+    private struct Run: Hashable {
+        let text: String
+        let size: Double
+    }
+
+    private struct Key: Hashable {
+        let runs: [Run]
+        let color: CssColor
+    }
+
+    private final class Entry {
+        let line: CTLine
+        var ascent: Double?
+
+        init(_ line: CTLine) { self.line = line }
+    }
+
+    private let capacity = 256
+    private var entries: [Key: Entry] = [:]
+    private var insertionOrder: [Key] = []
+    private var oldest = 0
+
+    private func entry(_ runs: [(String, Double)], color: CssColor) -> Entry {
+        let key = Key(runs: runs.map { Run(text: $0.0, size: $0.1) }, color: color)
+        if let hit = entries[key] { return hit }
+
+        let result = Entry(CssText.line(runs, color: color))
+        if insertionOrder.count < capacity {
+            insertionOrder.append(key)
+        } else {
+            entries.removeValue(forKey: insertionOrder[oldest])
+            insertionOrder[oldest] = key
+            oldest = (oldest + 1) % capacity
+        }
+        entries[key] = result
+        return result
+    }
+
+    func line(_ runs: [(String, Double)], color: CssColor) -> CTLine {
+        entry(runs, color: color).line
+    }
+
+    func header(_ text: String, size: Double, color: CssColor) -> (line: CTLine, ascent: Double) {
+        let label = entry([(text, size)], color: color)
+        if let ascent = label.ascent { return (label.line, ascent) }
+        let ascent = CssText.metrics(text, size: size).ascent
+        label.ascent = ascent
+        return (label.line, ascent)
     }
 }
 
