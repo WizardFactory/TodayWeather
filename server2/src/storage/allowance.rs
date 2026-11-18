@@ -99,6 +99,117 @@ pub(crate) fn process() -> Option<&'static Arc<Allowance>> {
 static AUTH_FAILURES: AtomicU64 = AtomicU64::new(0);
 static QUOTA_FAILURES: AtomicU64 = AtomicU64::new(0);
 static LOCAL_PAID_EXHAUSTIONS: AtomicU64 = AtomicU64::new(0);
+static STORAGE_AUTH_FAILURES: AtomicU64 = AtomicU64::new(0);
+/// Who answered a provider HTTP request with 401, 403 or 429. Fixed vocabulary only.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ProviderSource {
+    /// A data.go.kr API; None when the URL is not one of the known APIs.
+    DataGoKr(Option<crate::domestic::quota::DataGoKrApi>),
+    VisualCrossing,
+    PublicKmaWeb,
+    PublicAirKoreaWeb,
+    PublicMfds,
+    PublicOther,
+}
+impl ProviderSource {
+    const COUNT: usize = 19;
+    fn index(self) -> usize {
+        use crate::domestic::quota::DataGoKrApi as A;
+        match self {
+            Self::DataGoKr(Some(api)) => match api {
+                A::VilageFcst => 0,
+                A::VilageFcstMsg => 1,
+                A::MidFcst => 2,
+                A::FcstZone => 3,
+                A::WthrWrn => 4,
+                A::AsosHourly => 5,
+                A::AsosDaily => 6,
+                A::LivingWthrIdx => 7,
+                A::HealthWthrIdx => 8,
+                A::RiseSet => 9,
+                A::AirKoreaArpltn => 10,
+                A::AirKoreaMsrstn => 11,
+                A::AirKoreaStats => 12,
+            },
+            Self::DataGoKr(None) => 13,
+            Self::VisualCrossing => 14,
+            Self::PublicKmaWeb => 15,
+            Self::PublicAirKoreaWeb => 16,
+            Self::PublicMfds => 17,
+            Self::PublicOther => 18,
+        }
+    }
+    /// A keyless public endpoint, classified by host suffix.
+    pub(crate) fn public(url: &reqwest::Url) -> Self {
+        let host = url.host_str().unwrap_or("");
+        let under = |domain: &str| host == domain || host.ends_with(&format!(".{domain}"));
+        if under("kma.go.kr") || under("weather.go.kr") {
+            Self::PublicKmaWeb
+        } else if under("airkorea.or.kr") {
+            Self::PublicAirKoreaWeb
+        } else if under("mfds.go.kr") || under("foodsafetykorea.go.kr") {
+            Self::PublicMfds
+        } else {
+            Self::PublicOther
+        }
+    }
+}
+fn source_label(index: usize) -> &'static str {
+    match index {
+        0 => "vilage_fcst",
+        1 => "vilage_fcst_msg",
+        2 => "mid_fcst",
+        3 => "fcst_zone",
+        4 => "wthr_wrn",
+        5 => "asos_hourly",
+        6 => "asos_daily",
+        7 => "living_wthr_idx",
+        8 => "health_wthr_idx",
+        9 => "rise_set",
+        10 => "airkorea_arpltn",
+        11 => "airkorea_msrstn",
+        12 => "airkorea_stats",
+        13 => "data_go_kr_other",
+        14 => "visual_crossing",
+        15 => "public_kma_web",
+        16 => "public_airkorea_web",
+        17 => "public_mfds",
+        _ => "public_other",
+    }
+}
+const REJECTION_STATUSES: [u16; 3] = [401, 403, 429];
+static PROVIDER_HTTP: [[AtomicU64; 3]; ProviderSource::COUNT] =
+    [const { [const { AtomicU64::new(0) }; 3] }; ProviderSource::COUNT];
+/// Count a provider HTTP 401/403/429 by source. Other statuses are ignored. These are
+/// responses received, counted once per response; they never stop the host guard.
+pub(crate) fn observe_provider_status(source: ProviderSource, status: u16) {
+    if process().is_none() {
+        return;
+    }
+    if let Some(column) = REJECTION_STATUSES.iter().position(|s| *s == status) {
+        let _ = PROVIDER_HTTP[source.index()][column].try_update(
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+            |n| Some(n.saturating_add(1)),
+        );
+    }
+}
+fn provider_http_metrics() -> String {
+    let mut out = String::new();
+    for (index, row) in PROVIDER_HTTP.iter().enumerate() {
+        for (column, counter) in row.iter().enumerate() {
+            let count = counter.load(Ordering::Relaxed);
+            if count > 0 {
+                out += &format!(
+                    "server2_runtime_provider_http_rejections_total{{source=\"{}\",status=\"{}\"}} {count}\n",
+                    source_label(index),
+                    REJECTION_STATUSES[column]
+                );
+            }
+        }
+    }
+    out
+}
 /// Where a counted auth/quota signal came from. Fixed vocabulary only: no URL,
 /// key, message or free text is retained.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -134,6 +245,22 @@ pub(crate) fn observe_rejection(cause: crate::observability::Cause, origin: Orig
     bump(counter);
     if matches!(origin, Origin::LocalPaidAllowance(_)) {
         bump(&LOCAL_PAID_EXHAUSTIONS);
+    }
+    // Authorization-failure records (not calls) of the run's own storage or instance
+    // credentials: one failed call can be recorded by its HTTP and its enclosing operation.
+    // S3 object, budget-object, history and summary transports report under these components; the
+    // geocode component is shared with its providers and is not counted here.
+    use crate::observability::Component as C;
+    if cause == crate::observability::Cause::Auth
+        && matches!(
+            origin,
+            Origin::Event {
+                component: C::S3 | C::Quota | C::History | C::Summary,
+                ..
+            }
+        )
+    {
+        bump(&STORAGE_AUTH_FAILURES);
     }
 }
 fn label<T: serde::Serialize>(value: T) -> String {
@@ -191,9 +318,11 @@ pub(crate) fn render_metrics() -> String {
         AUTH_FAILURES.load(Ordering::Relaxed),
         QUOTA_FAILURES.load(Ordering::Relaxed)
     ) + &format!(
-        "server2_runtime_local_paid_exhaustions_total {}\n",
+        "server2_runtime_storage_auth_failures_total {}\nserver2_runtime_local_paid_exhaustions_total {}\n",
+        STORAGE_AUTH_FAILURES.load(Ordering::Relaxed),
         LOCAL_PAID_EXHAUSTIONS.load(Ordering::Relaxed)
     ) + &first_rejection_metric()
+        + &provider_http_metrics()
         + &crate::budget::qualification::render_metrics()
 }
 
@@ -379,6 +508,7 @@ mod wire_tests {
             "server2_shadow_s3_put_bytes_remaining 3",
             "server2_runtime_auth_failures_total 1",
             "server2_runtime_quota_failures_total 1",
+            "server2_runtime_storage_auth_failures_total 0",
         ] {
             assert!(
                 metrics.lines().any(|got| got == line),
@@ -455,6 +585,32 @@ mod wire_tests {
             Details::default(),
         );
         qualification::admit(Provider::VisualCrossing, 1).unwrap();
+        // Storage authorization is counted separately from provider rejections.
+        for component in [Component::S3, Component::History] {
+            obs::event(
+                component,
+                Stage::Restore,
+                Cause::Auth,
+                Action::DoNotRetry,
+                Outcome::Failed,
+                Details {
+                    status: Some(403),
+                    ..Details::default()
+                },
+            );
+        }
+        use crate::domestic::quota::DataGoKrApi;
+        super::observe_provider_status(
+            super::ProviderSource::DataGoKr(Some(DataGoKrApi::AirKoreaArpltn)),
+            429,
+        );
+        super::observe_provider_status(
+            super::ProviderSource::DataGoKr(Some(DataGoKrApi::AirKoreaArpltn)),
+            429,
+        );
+        super::observe_provider_status(super::ProviderSource::DataGoKr(None), 403);
+        super::observe_provider_status(super::ProviderSource::PublicKmaWeb, 401);
+        super::observe_provider_status(super::ProviderSource::VisualCrossing, 200);
         let first = if mode == "event" {
             r#"server2_runtime_first_rejection_info{cause="quota",origin="event",component="provider",stage="acquire",provider="data_go_kr",status="429"} 1"#
         } else {
@@ -463,9 +619,13 @@ mod wire_tests {
         let metrics = obs::render_metrics();
         for line in [
             first,
-            "server2_runtime_auth_failures_total 1",
+            "server2_runtime_auth_failures_total 3",
             "server2_runtime_quota_failures_total 2",
+            "server2_runtime_storage_auth_failures_total 2",
             "server2_runtime_local_paid_exhaustions_total 1",
+            r#"server2_runtime_provider_http_rejections_total{source="airkorea_arpltn",status="429"} 2"#,
+            r#"server2_runtime_provider_http_rejections_total{source="data_go_kr_other",status="403"} 1"#,
+            r#"server2_runtime_provider_http_rejections_total{source="public_kma_web",status="401"} 1"#,
             r#"server2_shadow_paid_units_initial{provider="visual_crossing"} 1"#,
             r#"server2_shadow_paid_units_remaining{provider="visual_crossing"} 0"#,
             r#"server2_shadow_paid_units_initial{provider="google"} 2"#,
@@ -487,6 +647,106 @@ mod wire_tests {
                 .count(),
             1
         );
+        assert_eq!(
+            metrics
+                .lines()
+                .filter(|l| l.starts_with("server2_runtime_provider_http_rejections_total"))
+                .count(),
+            3
+        );
+    }
+    /// CX-SR3-001: real provider transports against a loopback server count each 401/403/429
+    /// response exactly once under its source; other statuses are not counted.
+    #[tokio::test]
+    async fn provider_transport_counts_case() {
+        use crate::budget::Provider;
+        use crate::providers::{
+            HttpProviderTransport, HttpPublicTransport, ProviderKey, ProviderTransport,
+            PublicRequest, PublicTransport, Request, ResponseFormat,
+        };
+        if std::env::var("SHADOW_TRANSPORT_CHILD").is_err() {
+            return;
+        }
+        super::install_process(&|_| Some("2,3,8".into())).unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let root = format!("http://{}", listener.local_addr().unwrap());
+        let app = axum::Router::new().fallback(|uri: axum::http::Uri| async move {
+            match uri.path() {
+                p if p.ends_with("/getVilageFcst") => axum::http::StatusCode::TOO_MANY_REQUESTS,
+                p if p.ends_with("/getMsrstnList") => axum::http::StatusCode::OK,
+                "/vc" => axum::http::StatusCode::UNAUTHORIZED,
+                _ => axum::http::StatusCode::FORBIDDEN,
+            }
+        });
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let funded = HttpProviderTransport::new(1024).unwrap();
+        let send = |path: &str, provider: Provider, format: ResponseFormat| Request {
+            endpoint: reqwest::Url::parse(&format!("{root}{path}")).unwrap(),
+            key: ProviderKey("fixture".into()),
+            provider,
+            format,
+        };
+        for _ in 0..2 {
+            let _ = funded
+                .send(&send(
+                    "/1360000/VilageFcstInfoService_2.0/getVilageFcst",
+                    Provider::DataGoKr,
+                    ResponseFormat::DataType,
+                ))
+                .await;
+        }
+        let _ = funded
+            .send(&send(
+                "/B552584/MsrstnInfoInqireSvc/getMsrstnList",
+                Provider::DataGoKr,
+                ResponseFormat::ReturnType,
+            ))
+            .await;
+        let _ = funded
+            .send(&send(
+                "/vc",
+                Provider::VisualCrossing,
+                ResponseFormat::DataType,
+            ))
+            .await;
+        let public = HttpPublicTransport::new(1024).unwrap();
+        let page =
+            PublicRequest::new(reqwest::Url::parse(&format!("{root}/page")).unwrap()).unwrap();
+        let _ = public.fetch(&page).await;
+        server.abort();
+        let metrics = crate::observability::render_metrics();
+        let lines: Vec<_> = metrics
+            .lines()
+            .filter(|l| l.starts_with("server2_runtime_provider_http_rejections_total"))
+            .collect();
+        assert_eq!(
+            lines,
+            [
+                r#"server2_runtime_provider_http_rejections_total{source="vilage_fcst",status="429"} 2"#,
+                r#"server2_runtime_provider_http_rejections_total{source="visual_crossing",status="401"} 1"#,
+                r#"server2_runtime_provider_http_rejections_total{source="public_other",status="403"} 1"#,
+            ],
+            "{metrics}"
+        );
+    }
+    #[test]
+    fn provider_transports_count_each_rejection_once_by_source() {
+        let result = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "storage::allowance::wire_tests::provider_transport_counts_case",
+                "--nocapture",
+            ])
+            .env("SHADOW_TRANSPORT_CHILD", "1")
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{} {}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(String::from_utf8_lossy(&result.stdout).contains("1 passed"));
     }
     #[test]
     fn diagnostic_metrics_retain_first_origin_and_paid_units() {

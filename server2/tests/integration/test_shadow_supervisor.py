@@ -306,8 +306,8 @@ def host_sample(m=None):
     s={k:m[k] for k in ('pid','start_ticks','boot_id','binary_sha256','environment_sha256','config_sha256','config_directory','cgroup')}
     s.update(observed_at=1001,listeners=[['127.0.0.1',3000],['127.0.0.1',3001]],
              tx_bytes=1000,free_bytes=10*guard.GiB,accounting_valid=True,cpu_seconds=0,
-             metrics=dict(s3_reads=90,s3_writes=90,s3_put_bytes=900,auth_failures=0,quota_failures=0),
-             diagnostics=dict(local_paid_exhaustions=0,first_rejection=None,paid_units=None))
+             metrics=dict(s3_reads=90,s3_writes=90,s3_put_bytes=900,auth_failures=0,quota_failures=0,storage_auth_failures=0),
+             diagnostics=dict(local_paid_exhaustions=0,first_rejection=None,paid_units=None,provider_http={}))
     return s
 
 
@@ -319,10 +319,10 @@ class GuardTests(unittest.TestCase):
         from unittest import mock
         out=io.StringIO()
         def killed(manifest):
-            self.assertEqual(json.loads(out.getvalue()),{'stop':'provider_auth_or_quota'})
+            self.assertEqual(json.loads(out.getvalue()),{'stop':'s3_authorization'})
             raise KeyboardInterrupt
         with contextlib.redirect_stdout(out),mock.patch.object(guard,'stop_units',side_effect=killed) as stop:
-            with self.assertRaises(KeyboardInterrupt):guard.report_stop({'stop':'provider_auth_or_quota'},host_manifest(),True)
+            with self.assertRaises(KeyboardInterrupt):guard.report_stop({'stop':'s3_authorization'},host_manifest(),True)
         stop.assert_called_once()
         out=io.StringIO()
         with contextlib.redirect_stdout(out),mock.patch.object(guard,'stop_units') as stop:
@@ -405,16 +405,52 @@ class GuardTests(unittest.TestCase):
         s=host_sample();s['free_bytes']=6*guard.GiB
         self.assertIsNone(guard.evaluate(m,s,None,1001)['stop'])
 
-    def test_runtime_rejection_and_exhaustion_stop_acquisition(self):
+    def test_provider_rejections_never_stop_and_storage_authorization_does(self):
+        # SR-3 (#3001): provider auth/quota and local budget exhaustion are evidence only;
+        # the run's own storage/credential authorization stops at a fixed threshold.
         m=host_manifest()
         for key in ('auth_failures','quota_failures'):
-            s=host_sample();s['metrics'][key]=1
-            self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'provider_auth_or_quota')
+            s=host_sample();s['metrics'][key]=100000;s['diagnostics']['local_paid_exhaustions']=5000
+            d=guard.evaluate(m,s,None,1001)
+            self.assertIsNone(d['stop']);self.assertEqual(d['diagnostics'][key],100000)
+        s=host_sample();s['metrics']['storage_auth_failures']=guard.STORAGE_AUTH_LIMIT-1
+        prior=guard.evaluate(m,s,None,1001)
+        self.assertIsNone(prior['stop']);self.assertEqual(prior['diagnostics']['storage_auth_failures'],guard.STORAGE_AUTH_LIMIT-1)
+        s['metrics']['storage_auth_failures']=guard.STORAGE_AUTH_LIMIT;s['observed_at']=1002
+        d=guard.evaluate(m,s,prior,1002)
+        self.assertEqual(d['stop'],'s3_authorization')
+        self.assertEqual(d['diagnostics']['storage_auth_failures'],guard.STORAGE_AUTH_LIMIT)
+        self.assertEqual(guard.STORAGE_AUTH_LIMIT,20)
         for key in ('s3_reads','s3_writes','s3_put_bytes'):
             s=host_sample();s['metrics'][key]=0
             self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'s3_allowance')
         s=host_sample();del s['metrics']['s3_reads']
         self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
+
+    def test_storage_authorization_counts_within_one_hour(self):
+        # CX-SR3-002: isolated rejections spread over the week never add up to a stop; 20
+        # within one fixed hourly window stop (a broken role fails every storage call).
+        m=host_manifest();self.assertEqual(guard.STORAGE_AUTH_WINDOW,3600)
+        def walk(points):
+            prior=None
+            for t,count in points:
+                s=host_sample();s['observed_at']=t;s['metrics']['storage_auth_failures']=count
+                prior=guard.evaluate(m,s,prior,t)
+                if prior['stop']:return prior,t
+            return prior,None
+        d,at=walk([(1001+30000*i,i) for i in range(1,21)])   # 20 rejections over 167 h
+        self.assertIsNone(at,d)
+        d,at=walk([(1001,0),(1001+600,15),(1001+3700,15),(1001+3800,30)])
+        self.assertIsNone(at,d)   # 15 in the first hour, 15 in the second
+        d,at=walk([(1001,0),(1001+600,15),(1001+3700,15),(1001+3800,34),(1001+3900,35)])
+        self.assertEqual((d['stop'],at),('s3_authorization',1001+3900))
+        # A role broken from the start stops at the first sample, and one that breaks just as
+        # an hour ends stops at the first sample after it (the failures since the last sample
+        # belong to the new hour).
+        d,at=walk([(1001,25)])
+        self.assertEqual((d['stop'],at),('s3_authorization',1001))
+        d,at=walk([(1001,0),(1000+3590,0),(1000+3600,20)])
+        self.assertEqual((d['stop'],at),('s3_authorization',1000+3600))
 
     def test_confirmed_stops_are_not_masked_by_a_partial_observation(self):
         # CX-SR2-009: binding, listener, network and disk are decided from the sample's own
@@ -478,7 +514,8 @@ class GuardTests(unittest.TestCase):
 
     def test_metrics_require_all_fields_exactly_once(self):
         text=''.join(k+' 5\n' for k in guard.METRICS)
-        self.assertEqual(len(guard.metric_values(text)),5)
+        self.assertEqual(len(guard.metric_values(text)),6)
+        self.assertEqual(guard.metric_values(text)['storage_auth_failures'],5)
         with self.assertRaises(guard.GuardError):guard.metric_values(text.splitlines()[0])
         with self.assertRaises(guard.GuardError):guard.metric_values(text+text.splitlines()[0])
 
@@ -487,7 +524,9 @@ class GuardTests(unittest.TestCase):
         'server2_runtime_first_rejection_info{cause="quota",origin="local_paid_allowance",component="quota",stage="admission",provider="google_air_quality",status="none"} 1\n'
         + ''.join('server2_shadow_paid_units_%s{provider="%s"} %d\n'%(kind,p,n)
                   for p,i,r in [('visual_crossing',25000,24990),('google',100,100),('google_air_quality',400,0),('openweather',0,0)]
-                  for kind,n in (('initial',i),('remaining',r))))
+                  for kind,n in (('initial',i),('remaining',r)))
+        + 'server2_runtime_provider_http_rejections_total{source="airkorea_arpltn",status="429"} 7\n'
+        + 'server2_runtime_provider_http_rejections_total{source="public_kma_web",status="401"} 1\n')
 
     def test_diagnostics_parse_fixed_vocabulary_only(self):
         d=guard.diagnostic_values('server2_logging_filtered_total 3\n'+self.DIAGNOSTIC_TEXT)
@@ -495,15 +534,20 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(d['first_rejection'],dict(cause='quota',origin='local_paid_allowance',component='quota',
                          stage='admission',provider='google_air_quality',status=None))
         self.assertEqual(d['paid_units']['google_air_quality'],dict(initial=400,remaining=0))
+        self.assertEqual(d['provider_http'],{'airkorea_arpltn':{'429':7},'public_kma_web':{'401':1}})
         self.assertEqual(guard.diagnostic_values('server2_runtime_local_paid_exhaustions_total 0\n'),
-                         dict(local_paid_exhaustions=0,first_rejection=None,paid_units=None))
+                         dict(local_paid_exhaustions=0,first_rejection=None,paid_units=None,provider_http={}))
         bad=[self.DIAGNOSTIC_TEXT.replace('google_air_quality"} 400','google_air_quality"} x'),
              self.DIAGNOSTIC_TEXT.replace('provider="google_air_quality",status','provider="https://x",status'),
              self.DIAGNOSTIC_TEXT.replace('status="none"','status="99"'),
              self.DIAGNOSTIC_TEXT+self.DIAGNOSTIC_TEXT.splitlines()[1]+'\n',
              self.DIAGNOSTIC_TEXT.replace('server2_shadow_paid_units_remaining{provider="openweather"} 0\n',''),
              self.DIAGNOSTIC_TEXT.replace('server2_runtime_local_paid_exhaustions_total 1\n',''),
-             self.DIAGNOSTIC_TEXT.replace('} 1\n','} 2\n',1)]
+             self.DIAGNOSTIC_TEXT.replace('} 1\n','} 2\n',1),
+             self.DIAGNOSTIC_TEXT.replace('source="airkorea_arpltn"','source="https://apis.data.go.kr"'),
+             self.DIAGNOSTIC_TEXT.replace('status="429"} 7','status="500"} 7'),
+             self.DIAGNOSTIC_TEXT.replace('status="429"} 7','status="429"} 0'),
+             self.DIAGNOSTIC_TEXT+'server2_runtime_provider_http_rejections_total{source="public_kma_web",status="401"} 2\n']
         for text in bad:
             with self.assertRaises(guard.GuardError):guard.diagnostic_values(text)
 
@@ -511,9 +555,10 @@ class GuardTests(unittest.TestCase):
         m=host_manifest();decisions=[]
         first=guard.diagnostic_values(self.DIAGNOSTIC_TEXT)
         for key in ('auth_failures','quota_failures'):
-            s=host_sample();s['metrics'][key]=1;s['diagnostics']=first
+            s=host_sample();s['metrics'][key]=1;s['metrics']['storage_auth_failures']=guard.STORAGE_AUTH_LIMIT;s['diagnostics']=first
             d=guard.evaluate(m,s,None,1001)
-            self.assertEqual(d['stop'],'provider_auth_or_quota')
+            self.assertEqual(d['stop'],'s3_authorization')
+            self.assertEqual(d['diagnostics']['provider_http']['airkorea_arpltn'],{'429':7})
             self.assertEqual(d['diagnostics']['observed_at'],1001)
             self.assertEqual(d['diagnostics'][key],1)
             self.assertEqual(d['diagnostics']['first_rejection']['origin'],'local_paid_allowance')
@@ -542,6 +587,13 @@ class GuardTests(unittest.TestCase):
         self.assertLessEqual(guard.VOCABULARY['cause'],variants('Cause'))
         paths=set(re.findall(r'Self::[A-Za-z]+ => "([a-z0-9_]+)"',model))
         self.assertEqual(guard.VOCABULARY['provider'],paths|{'none'})
+        # Provider rejection sources: the labels of allowance.rs source_label, all reachable.
+        allowance=(src/'storage/allowance.rs').read_text()
+        body=re.search(r'fn source_label\(index: usize\) -> &\'static str \{(.*?)\n\}',allowance,re.S).group(1)
+        labels=re.findall(r'(?:\d+|_) => "([a-z0-9_]+)"',body)
+        count=int(re.search(r'const COUNT: usize = (\d+);',allowance).group(1))
+        self.assertEqual(len(labels),count);self.assertEqual(len(set(labels)),count)
+        self.assertEqual(guard.PROVIDER_SOURCES,set(labels))
 
     def test_provider_http_and_s3_origins_parse(self):
         for component,stage in (('provider','provider_http'),('s3','restore'),('quota','reserve'),('gateway','publish')):
@@ -776,7 +828,7 @@ else:
     def test_log_objects_export_first_without_raw_metadata(self):
         # LP-6: log objects in the state bucket carry no raw-v2 metadata and are exported
         # before the candidate's objects, so an exhausted allowance still keeps them.
-        log=b'{"stop":"provider_auth_or_quota"}\n';r=owned_resources()
+        log=b'{"stop":"s3_authorization"}\n';r=owned_resources()
         key='logs/server2/guard/dt=2026-11-15/hour=01/i-0c0ffee0000002983/'+'b'*32+'-20261115T010000Z-u.ndjson.gz'
         item={'Key':key,'VersionId':'log-v1','Size':len(log)}
         def body(params,kwargs):

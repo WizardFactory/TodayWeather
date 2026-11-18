@@ -11,9 +11,12 @@ stand-ins through /etc/hosts and a test CA; instance metadata is the LP-3 stand-
 rejected for the duration, so no live provider or production read can happen.
 
 Scenarios (one run ID each, the host reset in between):
-  provider-stop  providers answer 401: the guard stops, the retention stop drains the
-                 collector, and the stand-in holds server, guard, reader and collector
+  provider-rejection  providers answer 401: the rejection is counted and shipped, the guard
+                 does not stop and acquisition keeps running (SR-3); the retention stop drains
+                 the collector, and the stand-in holds server, guard, reader and collector
                  records, none with a synthetic key, URL or response body (LP6-AC1, AC2, AC4)
+  storage-authorization  the run's data buckets answer 403 once acquisition runs: the guard
+                 stops with s3_authorization and its stop record is shipped (SR-3)
   config-change  the destination is unreachable; a changed .env stops acquisition as
                  before; after recovery the records still arrive (LP6-AC3)
   frozen-guard   the collector is stopped; a frozen guard is killed by its watchdog and
@@ -67,7 +70,7 @@ PROVIDERS = ('apis.data.go.kr', 'apihub.kma.go.kr', 'www.weather.go.kr', 'www.km
              'airquality.googleapis.com', 'fcm.googleapis.com', 'dapi.kakao.com', 'api.waqi.info',
              'weather.visualcrossing.com', 'api.openweathermap.org', 'api.openai.com')
 MARKER = 'PEER-BODY-MARKER-2983'
-RUNS = ('lp6-provider', 'lp6-config', 'lp6-frozen', 'lp6-broken', 'lp6-tampered')
+RUNS = ('lp6-provider', 'lp6-storage', 'lp6-config', 'lp6-frozen', 'lp6-broken', 'lp6-tampered')
 SOURCES = {'server', 'guard', 'reader', 'collector'}
 
 
@@ -389,9 +392,9 @@ def delivery_checks(report, entry, run_id, expect):
     return by_source
 
 
-def provider_stop(report, args, interface):
+def provider_rejection(report, args, interface):
     run_id = 'lp6-provider'; name = 'server2-shadow-' + run_id; root = Path('/opt/server2-shadow') / run_id
-    entry = report.scenario('provider-stop', ['LP6-AC1', 'LP6-AC2', 'LP6-AC3', 'LP6-AC4'])
+    entry = report.scenario('provider-rejection', ['LP6-AC1', 'LP6-AC2', 'LP6-AC3', 'LP6-AC4', 'SR3'])
     reset_host(); start_standins(run_id)
     launch, result, receipt = install(report, entry, args, run_id, interface)
     report.check(entry, 'install-host answered one JSON object: started', receipt is not None and receipt.get('status') == 'started',
@@ -400,27 +403,75 @@ def provider_stop(report, args, interface):
         return
     supervision_checks(report, entry, name, launch)
     report.check(entry, 'collector running', wait_until(lambda: prop(f'{name}-logs.service', 'ActiveState') == 'active', 20))
-    stop = wait_stop(root)
-    entry['observations']['guard_stop'] = stop
-    entry['observations']['guard_diagnostics'] = (decision(root) or {}).get('diagnostics')
-    report.check(entry, 'the guard stopped on the provider rejection', stop == 'provider_auth_or_quota', stop)
-    report.check(entry, 'candidate and reader stopped', wait_until(lambda: all(
-        prop(f'{name}-{s}.service', 'ActiveState') in ('inactive', 'failed') for s in ('candidate', 'reader')), 30))
+    # SR-3: a provider rejection is evidence, never a stop. Wait for the guard to see it.
+    def counted():
+        d = (decision(root) or {}).get('diagnostics') or {}
+        return d.get('auth_failures', 0) + d.get('quota_failures', 0) > 0
+    started = time.monotonic()
+    seen = wait_until(counted, 180)
+    entry['observations']['rejection_seen_seconds'] = round(time.monotonic() - started, 1)
+    time.sleep(30)  # three more guard samples with the rejection counted
+    latest = decision(root) or {}
+    entry['observations']['guard_stop'] = latest.get('stop')
+    entry['observations']['guard_diagnostics'] = latest.get('diagnostics')
+    report.check(entry, 'the guard counted the provider rejection', seen, latest.get('diagnostics'))
+    report.check(entry, 'the guard did not stop on the provider rejection (SR-3)', latest.get('stop') is None, latest.get('stop'))
+    report.check(entry, 'candidate, guard and reader still active', all(
+        prop(f'{name}-{s}.service', 'ActiveState') == 'active' for s in ('candidate', 'guard', 'reader')),
+        {s: prop(f'{name}-{s}.service', 'ActiveState') for s in ('candidate', 'guard', 'reader')})
     code, seconds, states = retention_stop(name)
     entry['observations']['retention_stop_seconds'] = round(seconds, 1)
     report.check(entry, 'retention stop drained the collector within the SSH bound (150 s)', code == 0 and seconds < 150, (code, seconds))
     report.check(entry, 'all four units inactive or failed', all(v in ('inactive', 'failed') for v in states.values()), states)
-    by_source = delivery_checks(report, entry, run_id, ('server', 'guard', 'reader', 'collector'))
+    # The guard ships a record only when it stops; a run that did not stop has none.
+    by_source = delivery_checks(report, entry, run_id, ('server', 'reader', 'collector'))
     failing = [r for r in map(parsed, by_source.get('server', [])) if r and (r.get('cause') == 'auth' or r.get('status') in (401, 403, 429))]
-    report.check(entry, "candidate's failing record at the destination (LP6-AC2)", failing, by_source.get('server', [])[-5:])
+    report.check(entry, "candidate's rejection record at the destination (LP6-AC2)", failing, by_source.get('server', [])[-5:])
     guard_records = [r for r in map(parsed, by_source.get('guard', [])) if r]
-    report.check(entry, "guard's stop record at the destination (LP6-AC2)",
-                 any(r.get('stop') == 'provider_auth_or_quota' for r in guard_records), guard_records)
+    report.check(entry, 'no guard stop record at the destination', not any(r.get('stop') for r in guard_records), guard_records)
     reader = [r for r in map(parsed, by_source.get('reader', [])) if r]
     report.check(entry, "reader's summary at the destination", any('terminal' in r and 'attempts' in r for r in reader), reader)
     entry['observations']['failing_record'] = failing[:1]
     entry['observations']['guard_record'] = guard_records[:1]
     entry['observations']['reader_record'] = reader[:1]
+
+
+def storage_authorization(report, args, interface):
+    run_id = 'lp6-storage'; name = 'server2-shadow-' + run_id; root = Path('/opt/server2-shadow') / run_id
+    entry = report.scenario('storage-authorization', ['LP6-AC2', 'SR3'])
+    reset_host(); start_standins(run_id)
+    # Providers answer an unusable 200: no provider rejection; only storage is denied.
+    (PEER_STATE / 'provider-status').write_text('200\n')
+    launch, result, receipt = install(report, entry, args, run_id, interface)
+    report.check(entry, 'install-host answered one JSON object: started', receipt is not None and receipt.get('status') == 'started',
+                 result.stdout[-500:] + result.stderr[-1500:])
+    if receipt is None or receipt.get('status') != 'started':
+        return
+    time.sleep(15)
+    report.check(entry, 'no stop before storage is denied', wait_stop(root, 0) is None, decision(root))
+    # The instance role loses access to the run's data buckets (the stand-in answers 403).
+    (STANDIN_STATE / 'deny-data').write_text('')
+    denied = time.monotonic()
+    stop = wait_stop(root, 600)
+    seconds = time.monotonic() - denied
+    latest = decision(root) or {}
+    entry['observations'].update(guard_stop=stop, stop_seconds=round(seconds, 1), guard_diagnostics=latest.get('diagnostics'))
+    report.check(entry, 'the guard stopped with s3_authorization', stop == 's3_authorization', (stop, latest.get('diagnostics')))
+    report.check(entry, 'the decision keeps the storage-authorization count',
+                 ((latest.get('diagnostics') or {}).get('storage_auth_failures') or 0) >= 20, latest.get('diagnostics'))
+    report.check(entry, 'candidate and reader stopped', wait_until(lambda: all(
+        prop(f'{name}-{s}.service', 'ActiveState') in ('inactive', 'failed') for s in ('candidate', 'reader')), 30))
+    code, seconds, states = retention_stop(name)
+    entry['observations']['retention_stop_seconds'] = round(seconds, 1)
+    report.check(entry, 'retention stop drained the collector within 150 s', code == 0 and seconds < 150, (code, seconds))
+    by_source = delivery_checks(report, entry, run_id, ('server', 'guard', 'collector'))
+    guard_records = [r for r in map(parsed, by_source.get('guard', [])) if r]
+    report.check(entry, "guard's s3_authorization stop record at the destination",
+                 any(r.get('stop') == 's3_authorization' for r in guard_records), guard_records)
+    denied_records = [r for r in map(parsed, by_source.get('server', [])) if r and r.get('cause') == 'auth' and r.get('component') in ('s3', 'quota', 'history', 'summary')]
+    report.check(entry, "candidate's storage-authorization record at the destination", denied_records, by_source.get('server', [])[-5:])
+    entry['observations']['guard_record'] = [r for r in guard_records if r.get('stop')][:1]
+    entry['observations']['denied_record'] = denied_records[:1]
 
 
 def config_change(report, args, interface):
@@ -534,7 +585,7 @@ def main():
     parser.add_argument('--collector-tarball', required=True, type=Path)
     parser.add_argument('--source-commit', required=True)
     parser.add_argument('--report', required=True, type=Path)
-    parser.add_argument('--scenario', action='append', choices=['provider-stop', 'config-change', 'frozen-guard', 'collector-broken', 'tampered'])
+    parser.add_argument('--scenario', action='append', choices=['provider-rejection', 'storage-authorization', 'config-change', 'frozen-guard', 'collector-broken', 'tampered'])
     args = parser.parse_args()
     if os.geteuid() != 0 or sys.platform != 'linux':
         raise SystemExit('run as root on a disposable Linux VM')
@@ -545,7 +596,8 @@ def main():
     setup_network()
     started = time.time()
     try:
-        for scenario, function in (('provider-stop', provider_stop), ('config-change', config_change),
+        for scenario, function in (('provider-rejection', provider_rejection), ('storage-authorization', storage_authorization),
+                                   ('config-change', config_change),
                                    ('frozen-guard', frozen_guard), ('collector-broken', collector_broken), ('tampered', tampered)):
             if args.scenario and scenario not in args.scenario:
                 continue

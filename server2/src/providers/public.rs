@@ -107,6 +107,10 @@ impl PublicTransport for HttpPublicTransport {
             .observed(crate::observability::Component::Provider)
             .await
             .map_err(|_| ProviderTransportError::Transport)?;
+        crate::storage::allowance::observe_provider_status(
+            crate::storage::allowance::ProviderSource::public(&request.endpoint),
+            response.status().as_u16(),
+        );
         read_bounded(response, self.maximum).await
     }
 }

@@ -1,0 +1,44 @@
+{
+  "task": "ShadowSignals3001",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3001",
+  "scope": "SR-3 of #2998: provider HTTP 401/403/429 are counted once per response by fixed source and never stop the shadow qualification run; local budget exhaustion never stops it; authorization failures of the run's own storage and instance credentials stop it at a fixed threshold (s3_authorization). PR to master; no deployment, AWS change or qualification run.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowSignals3001.json",
+    "server2/src/storage/allowance.rs",
+    "server2/src/providers/public.rs",
+    "server2/src/providers/transport.rs",
+    "server2/deploy/shadow/guard.py",
+    "server2/deploy/shadow/linux_check.py",
+    "server2/deploy/logging/standin.py",
+    "server2/tests/integration/shadow_simulation.py",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tests/integration/test_shadow_simulation.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Guard stop rules (storage authorization, provider rejections as evidence), diagnostics schema 5, Linux check scenarios"
+    },
+    {
+      "path": "docs/operations/server2-logging.md",
+      "category": "documentation",
+      "reason": "Stand-in deny-data fault used by the qualification host's check"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3001/verification.md",
+      "category": "documentation",
+      "reason": "Selected verification evidence for SR-3"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3001/simulation.json",
+      "category": "documentation",
+      "reason": "Simulation summary for SR-3 against SR-2"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3001/linux-check.json",
+      "category": "documentation",
+      "reason": "Disposable-VM check report"
+    }
+  ]
+}

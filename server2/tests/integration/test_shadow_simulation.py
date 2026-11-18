@@ -26,12 +26,23 @@ class SimulationSubsetTests(unittest.TestCase):
         self.assertEqual(run['polls'], 10082)
         self.assertEqual(run['completed_pairs'], 5852)
 
-    def test_observed_quota_signal_stops_within_minutes(self):
-        for seed in (0, 1):
-            run = sim.run_once(sim.SCENARIOS['observed-quota-at-3min'], seed)
-            self.assertEqual(run['host_stop'], 'guard:provider_auth_or_quota', run)
-            self.assertLess(run['collected_hours'], 0.1)
-            self.assertTrue(run['cleanup_complete'])
+    def test_provider_rejections_are_recorded_and_never_stop(self):
+        # SR-3 (#3001): provider 401/403/429 and local budget exhaustion are evidence only.
+        for name in ('observed-quota-at-3min', 'shared-key-daily-429'):
+            run = sim.run_once(sim.SCENARIOS[name], 0)
+            self.assertTrue(run['full_run'], (name, run))
+            self.assertEqual(run['collected_hours'], 168.0)
+            diagnostics = run['guard_diagnostics']
+            self.assertGreater(diagnostics['quota_failures'], 0)
+            self.assertEqual(diagnostics['provider_http']['vilage_fcst']['429'], diagnostics['quota_failures'])
+
+    def test_storage_authorization_failure_stops_within_a_sample(self):
+        # A broken instance role fails every S3 call and passes the threshold at once.
+        run = sim.run_once(sim.SCENARIOS['storage-auth-broken-role'], 0)
+        self.assertEqual(run['host_stop'], 'guard:s3_authorization', run)
+        self.assertEqual(run['group_end_s'], 3 * 3600)
+        self.assertEqual(run['operator_stop'], 'host_stopped')
+        self.assertTrue(run['cleanup_complete'])
 
     def test_candidate_exit_ends_collection_and_keeps_cleanup(self):
         run = sim.run_once(sim.SCENARIOS['candidate-exit-day-3'], 0)
@@ -51,10 +62,10 @@ class SimulationSubsetTests(unittest.TestCase):
     def test_reader_never_runs_past_the_time_bound(self):
         # CX-SR1-001: a production 429 on the 56th production request (about 169 s) must not
         # pre-empt a quota signal at 20 s, and no request may start after the bound.
-        scenario = sim.default_scenario(name='bound', quota_first_at=20,
+        scenario = sim.default_scenario(name='bound', storage_auth_at=20,
                                         reader_outcomes={('production', 56): {'status': 429, 'body_bytes': 0}})
         run = sim.run_once(scenario, 0)
-        self.assertEqual(run['host_stop'], 'guard:provider_auth_or_quota', run)
+        self.assertEqual(run['host_stop'], 'guard:s3_authorization', run)
         self.assertLess(run['collected_hours'], 30 / 3600)
         model = sim.ReaderModel(sim.default_scenario(), sim.random.Random(0), self.workdir())
         model.advance(sim.EPOCH + 10)
@@ -96,8 +107,8 @@ class SimulationSubsetTests(unittest.TestCase):
         self.assertLessEqual(run['operator_stop_after_reader_exit_s'], 70)
 
     def test_a_guard_stop_ends_the_group_at_the_guard_step(self):
-        run = sim.run_once(sim.default_scenario(quota_first_at=20), 0)
-        self.assertEqual((run['host_stop'], run['guard_stop']), ('guard:provider_auth_or_quota', 'provider_auth_or_quota'))
+        run = sim.run_once(sim.default_scenario(storage_auth_at=20), 0)
+        self.assertEqual((run['host_stop'], run['guard_stop']), ('guard:s3_authorization', 's3_authorization'))
         self.assertEqual(run['group_end_s'], 20)
         self.assertEqual(run['reader_last_start_s'] <= 20, True)
 

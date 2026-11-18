@@ -228,6 +228,16 @@ impl ProviderTransport for HttpProviderTransport {
                     .observed(crate::observability::Component::Provider)
                     .await
                     .map_err(|_| ProviderTransportError::Transport)?;
+                use crate::storage::allowance::ProviderSource;
+                crate::storage::allowance::observe_provider_status(
+                    match request.provider {
+                        Provider::VisualCrossing => ProviderSource::VisualCrossing,
+                        _ => ProviderSource::DataGoKr(crate::domestic::quota::DataGoKrApi::of_url(
+                            &request.endpoint,
+                        )),
+                    },
+                    response.status().as_u16(),
+                );
                 read_bounded(response, self.maximum).await
             },
         )
