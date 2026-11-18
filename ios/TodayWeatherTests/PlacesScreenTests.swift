@@ -98,6 +98,23 @@ struct PlacesFixture {
 extension HostedShellTests {
 @MainActor
 struct PlacesScreenTests {
+    @Test func cancelStaysOnScreenWithALongQuery() async throws {
+        let query = String(repeating: "서울특별시", count: 12)
+        let search = TestPlaceSearch([query: [Prediction(fullText: query + " 중구", firstMatch: 0)]])
+        let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul], search: search)
+        let app = try await f.hosted()
+        defer { app.close() }
+        f.places.focusChanged(true)
+        f.places.wordChanged(query)
+        try #require(await HostedShellTests.AirLiveTests.wait(5) { app.element("places-prediction-0") != nil })
+        try await app.settle()
+        let cancel = try #require(app.element("places-mode")).accessibilityFrame
+        #expect(!cancel.isEmpty && app.window.frame.contains(cancel))
+        try app.tap("places-mode")
+        #expect(!f.places.searching && f.places.query.word.isEmpty)
+        #expect(f.state.places.count == 2)
+    }
+
     /// #2960: each place with its temperature, range and bell; a row tap selects it and opens the startup page.
     @Test func theListShowsThePlacesAndARowOpensTheStartupPage() async throws {
         let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul, PlacesFixture.london], records: [PlacesFixture.alarm(2)],

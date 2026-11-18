@@ -99,7 +99,7 @@ struct NationWeatherBody: View {
             ModeBar(labels: content.modes, onMode: onMode)
                 .padding(.top, NationMetrics.modeBarTop)
             // `<p></p>` under the bar: its 10 px bottom margin takes in the map's 2 px.
-            NationMap(labels: content.labels, theme: theme)
+            NationMap(labels: content.labels, theme: theme, wind: content.mode == .wind)
                 .padding(.top, NationMetrics.mapTop)
         }
     }
@@ -251,12 +251,14 @@ struct AirStrip: View {
 struct NationMap: View {
     let labels: [NationLabel]
     let theme: Theme
+    var wind = false
 
     var body: some View {
         GeometryReader { geometry in
             let scale = min(1, geometry.size.width / NationMetrics.mapWidth)
             let width = geometry.size.width / scale
             let x = max(0, (width - NationMetrics.mapWidth) / 2)
+            let busanTop = wind ? labels.first { $0.name == "부산" }?.top : nil
             ZStack(alignment: .topLeading) {
                 if let ui = TWResources.url("img/kr.png").flatMap({ UIImage(contentsOfFile: $0.path) }) {
                     Image(uiImage: ui).resizable().interpolation(.high)
@@ -269,7 +271,14 @@ struct NationMap: View {
                         .alignmentGuide(.leading) { d in
                             -min(x + CGFloat(label.left), max(0, width - d.width))
                         }
-                        .alignmentGuide(.top) { _ in -CGFloat(label.top) }
+                        .alignmentGuide(.top) { d in
+                            let top = CGFloat(label.top)
+                            if label.name == "울산", let busanTop {
+                                // At larger text sizes even three intact lines can reach Busan.
+                                return -min(top, CGFloat(busanTop) - d.height - 1)
+                            }
+                            return -top
+                        }
                 }
             }
             .frame(width: width, alignment: .topLeading)
@@ -348,7 +357,10 @@ struct NationLabelLayout {
             [CssRun(text: line.text, size: text)] + (line.unit.isEmpty ? [] : [CssRun(text: line.unit, size: unit)])
         }
         let longest = lines.map(CssLine.width).max() ?? 0
-        let piece = lines.map(Self.minWidth).max() ?? 0
+        // Keep each reported value intact (e.g. 북북서). The map can shift a wide marker
+        // left at the viewport edge; wrapping a direction would add height over the next city.
+        let valueWidth = lines.dropFirst().map(CssLine.width).max() ?? 0
+        let piece = max(Self.minWidth(lines[0]), valueWidth)
         // WebKit's layout units are 1/64 pt.
         let width = ceil(min(max(max(piece, iconWidth), available), max(longest, iconWidth)) * 64) / 64
         var rows: [Row] = []
