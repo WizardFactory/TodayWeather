@@ -99,10 +99,8 @@ class ParityDeviceTest {
             closeRetry()
         }
         // Use the production refresh route with the offline host to exercise retry -> close.
-        app.weather.invalidate(place)
-        // The production double-tap guard uses elapsed wall time, not Compose's animation clock.
-        Thread.sleep(800)
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.onNodeWithTag(ForecastTags.HEADER).performScrollTo()
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).performTouchInput { swipeDown(startY = height * 0.22f) }
         rule.waitUntil(30_000) { rule.onAllNodesWithTag(RETRY_DIALOG).fetchSemanticsNodes().isNotEmpty() }
         closeRetry()
         rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }

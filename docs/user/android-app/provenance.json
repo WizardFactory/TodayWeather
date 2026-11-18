@@ -485,11 +485,21 @@
       "raw_sha256": "c09fed989d0ca1ba48177d4969086e64319532b8f60975c2dd1f847a1b9eb384",
       "captured_at": "2026-11-15T06:52:25.001Z",
       "app_language": "ko"
+    },
+    "screenshots/pull-to-refresh.png": {
+      "sha256": "25f9941c0f27a48f568b8092c98e0a91b84504343b16641eed30ed363aef2460",
+      "size": [
+        720,
+        1600
+      ],
+      "raw_sha256": "f749492b59838ea65165b22fb7af109476a7f84dc1231da3a56817f8a809d292",
+      "app_language": "ko",
+      "capture_update": 3046
     }
   },
   "sources": {
     "android/app/build.gradle.kts": "a7148f09f88c84fee786aafe1ec76d80b8ebc4504c6cd6b69b71ff8d1b8837fa",
-    "android/app/src/androidTest/java/net/wizardfactory/todayweather/ManualCaptureTest.kt": "425a8b1f338f53a74d304cf37a93d5919ab5073f45216c8216e2ff474affd672",
+    "android/app/src/androidTest/java/net/wizardfactory/todayweather/ManualCaptureTest.kt": "395fef1decf234f0235c589a0a48fc06a66da64e9fe16476a65d3241d6ba5997",
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/TestRunner.kt": "69588ee2101fb2e2d878868bc9139881e7740837d99f5b5053b921338de49d14",
     "android/app/src/main/AndroidManifest.xml": "0b96ddd49b93a503a296c36f5cfd53a1741cd6238363312e05daf3149620d159",
     "android/app/src/main/assets/data/towns.json": "d7465149c463fdbacbb0a52bad9a19cb37a7c7566d0d9134f37eef36fa51ac16",
@@ -841,7 +851,7 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/EntryIntents.kt": "ed08b7de8e6c859c6fbcc6c4cc27dc389dc735c40ac6e4c6fdec050d77ae1bd0",
     "android/app/src/main/java/net/wizardfactory/todayweather/HandBack.kt": "391be181e10e4286ca4dd808f31d80124a37d8b6bcc339fea76e98a6ed637eb4",
     "android/app/src/main/java/net/wizardfactory/todayweather/Handoff.kt": "394e35a01fab46ce7d43a6f11baf249dcd6755fdec625722e50cafc7bd39b2a6",
-    "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "4a13f72b8ab8fb8ad57abf2c26fd285eb785309922b1d6bf7757413b2ff263fa",
+    "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "794777cb0fde43e8b36427c21630ddc484d04220617e665e98035e388cede651",
     "android/app/src/main/java/net/wizardfactory/todayweather/MessagingService.kt": "1d04d3d25e13d43da725bf43a7cd3d19f754d28c65a2de176b80fb71f555f800",
     "android/app/src/main/java/net/wizardfactory/todayweather/Push.kt": "a91e5a76a6c1303e4a7f63aa6d1cb6435f51ed1044a55015cbc9d22ddbb4ae13",
     "android/app/src/main/java/net/wizardfactory/todayweather/PushTokenWorker.kt": "c20de52940cf8619d1de7e9874d4c2234a206ea95592c94157d75c62222634e3",
@@ -860,27 +870,27 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirChartView.kt": "c15736a3ec6d64925bb529d7bf718357b344651a02edf6024dbe7420ca976d73",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirColors.kt": "35b715ac7b055398ac410c07e6c56443d9086266423be4bde1768a892da36a26",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirScreen.kt": "293a175492900358c5e16862e0666348a440b043dbfe21a3b5a559edf0d6c62b",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirTab.kt": "f989bdf1584eb49c8c5507f3654753bb432d00f355320aa141d83e80c081e7de",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirTab.kt": "110cf1ef454e98517567bea96ecd91702c64545a61b85942f22d2c4ce1ac82dd",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/alarms/AlarmsScreen.kt": "cbf5865d42bee39b67341a92539b8b960e097df603296f7bf167b010df73bd28",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartIcons.kt": "f6f0e85791d761ca7f710cc0fffa5116e3f9072fb739c57fcadb5b4d94ba375d",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartImages.kt": "6a9187808c5535443045a0e6a8f61e283a5ee43d79cffc3feffef1096c7ae958",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartImages.kt": "958c116ed09996f63580971971d9a4709e81834e4d25a967897fdaa83a5c95a3",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartStrings.kt": "0a4a20ae18e1c3feed4648a3c842c07b0ef4ab62794ebffb6e7d5c24a72a173c",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartStyle.kt": "5dab7247262e2a0e7550de1622f04a8248bdadd66710c2fb31fb5b12027ccf9a",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/DailyChartView.kt": "97242cfa64a664bef634bfe4a3495d24809fa56358d662900cf4507114d633d6",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/HourlyChartView.kt": "864a4269b46495f668e6a19fab038721e9f99d0c006efec79b43685bf7401304",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/SvgDrawing.kt": "0dcba7fcb2d8b3e298394d2407471e53b2f9eba5a4b2cdf37845b1f1d4678842",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/DailyChartView.kt": "868d48caa4bf689b2b818c3217e5174220fb276565585f160432c61e928d84b0",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/HourlyChartView.kt": "03ab4d3868e2d480695ed33819d884b5f1d46946496a293258e1128291a1fdd9",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/SvgDrawing.kt": "83dcbb14b496a3acd6fd582f794ffa6bac8d689d7adeaf7f19330914aa12ad8d",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/ForecastColors.kt": "ce1aae20d378c853c07bd1ff16a3f3d6fdc42795028924bf3a871dbd2e1ad49a",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/ForecastStrings.kt": "e5e26849a09b3fc288aaecb853312de808a72e0e9ef4e092b8530d969543a574",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/PhotoLoader.kt": "b304a8d2c37ef2aaf4f2b982ec33bc8a9b98ec62af4be79c41edfab12c3d13fe",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherPage.kt": "f077e46ae7dc623cf76aac4692a4f784b29d38109ee4d0b87a4c5cd449f07629",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "f2142317c557bd41e715dc870b80f1ecbde8d99bb3ccebae4b7c6b05f44a5324",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherPage.kt": "ca63fe42a87f8273d9f9a3df890a46ff8993b69dc0506366db3798e56a46dee0",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "27fbc27ad7497af4dbc2ea80e1a88f87ea9035ebdb1886a0d0817b8da846584f",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/nation/NationLoads.kt": "957e5fec4bce187cd668728a407b6c2b83dca21b1825234f3ef54a4991d5f0d7",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/nation/NationScreens.kt": "697c07c3dbd7e0a7c0f31750dc3ec1ccebe749ca962469ad098cfde00d6d537e",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "100e4564aa6a16fa4e3a89406a0a5b9656cf69257c60cff6135fc629d5e81657",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/settings/SettingsPages.kt": "ad54ccbc98bcc03b6e270834d500f98deba30967ebc42eca201d197675e61aa1",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "cef43aa621afc0b89aadbaa51c958000409dc9122d2d87c4519d111fc1fb5266",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "ab48eb6027b4629b8f3b8666de11d5f938dc72fbc4d4c82efdeb7bc9a9d49147",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Popup.kt": "b9902e4bae319182e85063f5f1859a69677e4a359aa73f16664b9d38ec17b034",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "145dd3e7fd0aa3cf899da8adaa0bbf4fd92a73a495422647c78fd26de4041d2f",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "bbcb1a19ec924710550e79bcff58ecb045abd6a3c2d4fc4bc051d89f883582bf",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/ShellColors.kt": "8fd2cdb579e2af28c0c987f59476e39f640ae08be0592eed3a6574e5627cf984",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/SystemBars.kt": "09520a8ccf1aff7b0818ff2daf29d382aedccab7552c91a4f23da4a9cba498d2",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/LocationPopups.kt": "da51561865338e046444e7e441e75de9fa6eb3e7fda8d7f0c18c76ebc1473be5",
@@ -924,7 +934,7 @@
     "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherPhotoFeed.kt": "fb68e734a32c80abb038d9127b1619eca2ec79b8240157eed87f00adddec162e",
     "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRepository.kt": "fc3ccf7c87fdef0959596eee7d36f3b9369570043c1d14044c6911c07db50885",
     "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRequests.kt": "81638be6c619f55633fcd65dae6da5856a731eeb46463a7b3193f4b5b2c42eba",
-    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherSession.kt": "4c109a8836410848fd8ef5b4d912dd97ad63f0819e569bcd48edffafb69f38f0",
+    "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherSession.kt": "8531902b024572a1eb31989f1302ed12e2dda3a953a74d59a1797a3ea4cb03fb",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/AirQuality.kt": "a4d6a4b4b57203e1b080855f7ce1ec2b38dbb3c260c36a37dde531c9a94e614e",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/ChartPosition.kt": "51833dd576c1e5357be9de6181c07410ede4d30e33e7b9a109ca44577034b785",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/Js.kt": "b534e23ee8ac747be05a11616fb85c8a0bb77351f32e57d2bd172f90851f2570",
@@ -941,7 +951,7 @@
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/ChartMetrics.kt": "35839b1e675ae55b52762ce1f04f606bfbd319291ffb2809279278b6652e87aa",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/D3.kt": "ea0f1bc0ebffd5b9be56d2fdc8f2328c989d488c736873df801f669889adf3b9",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/DailyChart.kt": "dd2956675c06b4441eae9ec1d92ff4bf5eb75e13ee4ef15d8d49f87901026371",
-    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/HourlyChart.kt": "79669b95d2afc4bf4fef0a34a34dcbb7807d9b9b11940c022cb7b599ad9369c1",
+    "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/HourlyChart.kt": "8224caf4f5f909c3aa808837389ca1cc34e0b88e3a8e89f2932a3822713cb5f2",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/Svg.kt": "3b53959092f56a91d3f9faf17efb79b0fa5b4921ddd72c4447cfb001f5f87171",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/forecast/ForecastPage.kt": "3c062a94aa3031c3657c612c010e96adbec592f7327ce9c0df3d2879d3c07738",
     "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/forecast/ForecastScope.kt": "a44b41f98c979b18b41f1b90fad05fc72dcb5815c8f05aef9376b16a77a6a075",
@@ -971,14 +981,52 @@
     "android/core-storage/src/main/kotlin/net/wizardfactory/todayweather/core/storage/WebViewLocalStorage.kt": "82ca04eeabbb9f598c66787dc89f4fbc85025d79f2030d64380a940c929e47db",
     "android/gradle/libs.versions.toml": "a7c1a69effc1b7a8fc936f14e64360446f538427ca7430aa0c7e1e5b5ad96bea",
     "android/settings.gradle.kts": "bebd82b1565efeb97319d8d900368f779736fde0c3ddb7a646183f2ff9a86bcf",
-    "android/tools/manual/capture.sh": "28ea606533415a98c56881fdd5ac7e1b94fba7d6477f7d22b67ca1b9bafe7ce4"
+    "android/tools/manual/capture.sh": "28ea606533415a98c56881fdd5ac7e1b94fba7d6477f7d22b67ca1b9bafe7ce4",
+    "android/app/src/androidTest/java/net/wizardfactory/todayweather/PullRefreshDeviceTest.kt": "c4a7a1319f0ebb521cd17b5ad2b461d966e91029acab2a55e51bf230c5b03050"
   },
-  "manual_sha256": "49285522fb593740655f5d019ca1b90a7452560122599061bdccb08bb52c9503",
-  "pdf_sha256": "9bd522b220cb5d117d69a7162253efd0b8706cecf9ff5f505b0ad20babe0de5a",
+  "manual_sha256": "3cb319adbb6a55a8f191a477e6139a39339c0d72ef24c9b21f42c8722fb0c60b",
+  "pdf_sha256": "3f4d6821d19031b4eed4dd3e05c3309cbbf23db73cea8260fbe7ade05c50d78e",
   "limitations": [
     "API36 emulator captures; not a release APK or physical-device certification",
     "Live values, test advertisements, forecasts, available warning bulletins and Android dialogs vary",
     "No actual notification delivery, analytics opt-in, or share recipient exercised",
     "The selected photo and SDK artwork retain their original third-party rights"
+  ],
+  "capture_updates": [
+    {
+      "date": "2026-11-19 (Asia/Seoul)",
+      "issue": 3046,
+      "screenshot": "screenshots/pull-to-refresh.png",
+      "product_base_commit": "b3b31011bb4e9a3aa5f839727dcf41cd35ee0831",
+      "environment": "Offline API 36 emulator, 1080×2400, 420dpi, ko-KR, Asia/Seoul. Captured the Compose root of the running fixture activity, including the app header and tab bar. System overlays and status bar icons are outside that root.",
+      "raw_pixels": [
+        1080,
+        2400
+      ],
+      "capture": "PullRefreshDeviceTest.eachWeatherPagePullsTheSelectedPlaceOnceWithFreshData renders the app with a saved Seoul place and a KMA weather fixture. The test captures the Hourly page after releasing a downward swipe while the manual response is suspended.",
+      "apk_sha256": {
+        "app-debug.apk": "7eee7c1ce7174d1f2da46c2315df0781198415cae027d20dc3c83b0a380c4449",
+        "app-debug-androidTest.apk": "ed85e6b7d84734103b9664cf2dd842b1c7845dd2ad94a990b2c6fc0899547796"
+      },
+      "scope": "The updated sources map describes the refresh capture. For the original 44 screenshots, use the original APK/environment above and substitute the original source hashes below. The earlier weather screenshots retain the selected tab reload icon.",
+      "original_source_hashes": {
+        "android/app/src/androidTest/java/net/wizardfactory/todayweather/ManualCaptureTest.kt": "425a8b1f338f53a74d304cf37a93d5919ab5073f45216c8216e2ff474affd672",
+        "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "4a13f72b8ab8fb8ad57abf2c26fd285eb785309922b1d6bf7757413b2ff263fa",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirTab.kt": "f989bdf1584eb49c8c5507f3654753bb432d00f355320aa141d83e80c081e7de",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/ChartImages.kt": "6a9187808c5535443045a0e6a8f61e283a5ee43d79cffc3feffef1096c7ae958",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/DailyChartView.kt": "97242cfa64a664bef634bfe4a3495d24809fa56358d662900cf4507114d633d6",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/HourlyChartView.kt": "864a4269b46495f668e6a19fab038721e9f99d0c006efec79b43685bf7401304",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/chart/SvgDrawing.kt": "0dcba7fcb2d8b3e298394d2407471e53b2f9eba5a4b2cdf37845b1f1d4678842",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherPage.kt": "f077e46ae7dc623cf76aac4692a4f784b29d38109ee4d0b87a4c5cd449f07629",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "f2142317c557bd41e715dc870b80f1ecbde8d99bb3ccebae4b7c6b05f44a5324",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "cef43aa621afc0b89aadbaa51c958000409dc9122d2d87c4519d111fc1fb5266",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "145dd3e7fd0aa3cf899da8adaa0bbf4fd92a73a495422647c78fd26de4041d2f",
+        "android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherSession.kt": "4c109a8836410848fd8ef5b4d912dd97ad63f0819e569bcd48edffafb69f38f0",
+        "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/chart/HourlyChart.kt": "79669b95d2afc4bf4fef0a34a34dcbb7807d9b9b11940c022cb7b599ad9369c1"
+      },
+      "new_capture_only_sources": [
+        "android/app/src/androidTest/java/net/wizardfactory/todayweather/PullRefreshDeviceTest.kt"
+      ]
+    }
   ]
 }

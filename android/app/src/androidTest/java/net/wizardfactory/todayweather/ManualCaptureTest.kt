@@ -213,7 +213,7 @@ class ManualCaptureTest {
         walk.back(); walk.capture("33-dark-weather")
         walk.menu(MenuRow.THEME); walk.tap(SettingsTags.row(0)); walk.back()
         // Refresh applies the feed's photo to the selected place.
-        Thread.sleep(800); walk.tap(ShellTags.tab(Tab.HOURLY))
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).performTouchInput { swipeDown(startY = height * 0.22f) }
         rule.waitUntil(60_000) { rule.onAllNodes(hasTestTag(ForecastTags.PHOTO)).fetchSemanticsNodes().isNotEmpty() }
         walk.capture("34-photo-theme")
     }

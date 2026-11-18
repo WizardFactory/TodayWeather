@@ -57,7 +57,7 @@ class ShellTest {
     }
 
     @Test
-    fun tabsSwitchAndTheSelectedWeatherTabRefreshes() {
+    fun tabsKeepTheirNavigationIconsWhenSelected() {
         show()
         rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
         for (tab in listOf(Tab.DAILY, Tab.AIR, Tab.LOCATIONS, Tab.HOURLY)) {
@@ -65,12 +65,13 @@ class ShellTest {
             rule.waitForIdle()
             rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
         }
-        assertEquals(emptyList<Tab>(), refreshed)
-        Thread.sleep(750)
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick() // within 700 ms: ignored
-        rule.waitForIdle()
-        assertEquals(listOf(Tab.HOURLY), refreshed)
+        for ((tab, glyph) in mapOf(Tab.HOURLY to Glyphs.TIME, Tab.DAILY to Glyphs.CALENDAR, Tab.AIR to Glyphs.CLOUD_OUTLINE)) {
+            rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            rule.onNode(hasText(glyph) and hasAnyAncestor(hasTestTag(ShellTags.tab(tab))), useUnmergedTree = true).assertExists()
+            rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
+        }
+        assertTrue(refreshed.isEmpty())
     }
 
     @Test

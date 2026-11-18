@@ -13,7 +13,6 @@ object Glyphs {
     const val STAR_OUTLINE = ""
     const val STAR = ""
     const val TIME = ""
-    const val REFRESH = ""
     const val CALENDAR = ""
     const val CLOUD_OUTLINE = ""
     const val NAVICON = ""

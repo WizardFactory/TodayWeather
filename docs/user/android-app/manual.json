@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for Android: native app user manual",
-  "scenario": "Version 2.0.0 preview, Korean screens. English instructions retain Korean control labels. Live examples captured on 15 November 2026; weather, ads and Android dialogs may vary.",
+  "scenario": "Version 2.0.0 preview, Korean screens. Weather and ads vary. The refresh example uses test data. Other examples show the 15 November build, including its earlier tab icons.",
   "steps": [
     {
       "title": "Read the first-launch notice",
@@ -36,6 +36,13 @@
       "screenshot": "screenshots/05-hourly.png",
       "caption": "Hourly weather for a saved Seoul location.",
       "expected": "The blue chart shows forecast temperatures; the gray comparison shows yesterday where available."
+    },
+    {
+      "title": "Pull down to refresh",
+      "instruction": "Open 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air). Scroll to the top, then pull the page down and lift your finger.",
+      "screenshot": "screenshots/pull-to-refresh.png",
+      "caption": "The circular progress indicator below the header shows that the selected place is refreshing.",
+      "expected": "The indicator disappears when the request finishes. Your tab and place stay selected. If the request fails, use the retry option to try again."
     },
     {
       "title": "Expand chart details",
@@ -221,7 +228,7 @@
     },
     {
       "title": "Choose the refresh interval",
-      "instruction": "Open 업데이트 주기 (Refresh interval). Select 수동 (Manual) or an interval. You can also tap the selected weather tab to request a refresh.",
+      "instruction": "Open 업데이트 주기 (Refresh interval). Select 수동 (Manual) or an interval. To refresh immediately, pull down from the top of a forecast or air page.",
       "screenshot": "screenshots/31-refresh.png",
       "caption": "Refresh-interval choices.",
       "expected": "The app saves the choice. A refresh needs network access and current data from the provider."
