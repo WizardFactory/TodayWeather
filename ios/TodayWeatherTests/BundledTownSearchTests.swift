@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Testing
 import TWDomain
@@ -16,15 +17,15 @@ struct BundledTownSearchTests {
             (stream, release) = AsyncStream.makeStream()
         }
 
-        private static func isMainThread() -> Bool { Thread.isMainThread }
-
-        func read() async -> TownSearch? {
+        func read(onMainThread: Bool = false) async -> TownSearch? {
             reads += 1
-            readOnMain = Self.isMainThread()
+            readOnMain = onMainThread
             var iterator = stream.makeAsyncIterator()
             return await iterator.next() ?? nil
         }
     }
+
+    private nonisolated static func isMainThread() -> Bool { Thread.isMainThread }
 
     private let match = BundledTown(first: "서울", second: "중구", third: "회현동", lat: 37.56, long: 126.98)
     private let busan = BundledTown(first: "부산", second: "", third: "", lat: 35.17, long: 129.07)
@@ -40,7 +41,10 @@ struct BundledTownSearchTests {
     @Test func editsAndResetDoNotPublishStaleTownsWhileBothConsumersShareTheRead() async throws {
         let gate = ReadGate()
         defer { gate.release.finish() }
-        let loader = BundledTownLoader(read: { await gate.read() })
+        let loader = BundledTownLoader(read: {
+            let onMainThread = Self.isMainThread()
+            return await gate.read(onMainThread: onMainThread)
+        })
         let start = PlaceQuery(search: nil, towns: loader, scansTowns: true, keepsLastTowns: true)
         let google = TestPlaceSearch(["서울": [Prediction(fullText: "서울, 대한민국", firstMatch: 0)]])
         let saved = PlaceQuery(search: google, towns: loader, scansTowns: true, keepsLastTowns: false)
@@ -102,9 +106,12 @@ struct BundledTownSearchTests {
     @Test func typedBundledTownsAndAllRepresentativePagesMatch() throws {
         let url = try #require(TWResources.url("data/towns.json"))
         let data = try Data(contentsOf: url)
+        try #require(SHA256.hash(data: data).elementsEqual(BundledTownLoader.verifiedDigest))
+        let typed = try JSONDecoder().decode([BundledTown].self, from: data)
         let old = try #require(BundledTown.list(data))
         let new = try #require(BundledTownLoader.decode(data))
         #expect(old.count == 4_206)
+        #expect(typed == old)
         #expect(new == old)
         for word in ["서울", "부산", "제주", "회현동", "no match"] {
             let before = TownSearch(towns: old)
