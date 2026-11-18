@@ -547,14 +547,16 @@ class Journal:
 # Log object PUTs of the host's collector (LP-6, #2983): five sources (server, guard,
 # reader, collector and, since SR-5a, the evidence copy), one object per 50 s each,
 # through 170 hours: 61,200. Their storage and export fall inside the 20 GB storage
-# and the operator's 2 GiB export allowance.
+# and the applicable operator export allowance.
 LOG_SOURCES=5
 LOG_WRITES=65_000
 # Evidence copy PUTs (SR-5a, #3003): contract, batch, ledger and index per generation,
-# hourly from the epoch. Accrual books three finalizer starts after the epoch.
-# The finish reserve also budgets possible operator retry starts.
+# for the install copy and each started hour. Accrual books up to four generations
+# per finalizer start (reader stop, 168-hour stop and finish). The reserve also
+# budgets possible operator retry starts.
 COPY_OBJECTS=4
 COPY_FINALIZE_STARTS=3
+COPY_FINALIZE_GENERATIONS=4
 PRICE_KEYS={'ec2_hour','ipv4_hour','gp3_gb_month','s3_gb_month','s3_read',
             's3_write','cpu_vcpu_hour','outbound_gb'}
 
@@ -628,7 +630,8 @@ def _background_puts(elapsed):
     log_puts = LOG_SOURCES * ((elapsed + 49) // 50)
     if not elapsed:
         return log_puts
-    return log_puts + COPY_OBJECTS * (((elapsed + 3599) // 3600) + COPY_FINALIZE_STARTS)
+    return log_puts + COPY_OBJECTS * (1 + (elapsed + 3599) // 3600
+                                     + COPY_FINALIZE_STARTS * COPY_FINALIZE_GENERATIONS)
 
 
 def _required_finish_reserve(rates, elapsed, background_puts):
@@ -646,7 +649,7 @@ def _required_finish_reserve(rates, elapsed, background_puts):
     # above, including the first operator start.
     starts = 2 + OPERATOR_CLEANUP_ENVELOPE_BYTES // FINISH_CONTROL_ENVELOPE_BYTES
     puts_at_deadline = (_background_puts(HOST_LIFETIME_SECONDS)
-                        + COPY_OBJECTS * (starts - COPY_FINALIZE_STARTS))
+                        + COPY_OBJECTS * (starts - COPY_FINALIZE_STARTS) * COPY_FINALIZE_GENERATIONS)
     remaining_puts = puts_at_deadline - background_puts
     return (operator + Decimal(remaining) / 3600 * _hourly(rates)
             + remaining_puts * rates['s3_write'])
@@ -684,8 +687,9 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds,s3_reads=0,s3_writes=0,tx_bytes
             + host nonidle CPU seconds x vCPU-hour price + S3 reads/writes actually
             used + bytes transmitted since the origin x outbound price + an upper bound
             of log object PUTs (five sources, one object per 50 s each) and of evidence
-            copy PUTs (four objects per started hour and four for each of three
-            booked finalizer starts) at the write price + paid provider units actually admitted x
+            copy PUTs (four objects per generation from install and each started hour,
+            up to four generations for each of three finalizer starts) at the write
+            price + paid provider units actually admitted x
             their price.
     The finish reserve is the greater of the configured reserve and the modeled
     remaining host, operator and background costs. The estimate stops when

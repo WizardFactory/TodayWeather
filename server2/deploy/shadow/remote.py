@@ -22,6 +22,7 @@ import tempfile
 import time
 from coordinator import (require, frozen_resources, resource_digest, verify_bundle,
                          artifact_hash, HOST_ARTIFACTS)
+from evidence_copy import attempt_matches as copy_attempt_matches
 from state import CloudResult, StateError, canonical, sync_directory
 
 
@@ -297,9 +298,7 @@ def attempt_matches(result,metadata,body_size,body_sha256):
     """
     elapsed=result.get('elapsed_ms')
     require(type(elapsed) is int and elapsed>=0,'invalid elapsed time')
-    response={key:value for key,value in result.items() if key!='elapsed_ms'}
-    return (metadata==response and body_size==result.get('body_bytes')
-            and body_sha256==result.get('body_sha256'))
+    return copy_attempt_matches(result,metadata,body_size,body_sha256)
 
 
 def paired_evidence(directory,files):

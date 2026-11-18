@@ -397,7 +397,7 @@ class CostTests(unittest.TestCase):
         # SR-5a: five log sources (copy added), and the evidence copy's PUT bound: four
         # objects per hour from the epoch plus four for each of at most three finalizer starts.
         log_puts=5*((24*3600+49)//50)
-        copy_puts=4*24+4*3
+        copy_puts=4*(1+24+3*4)
         return (D(policy['prior_spend_usd'])+24*hourly+D(3600)/3600*r['cpu_vcpu_hour']
                 +10_000*r['s3_read']+5_000*r['s3_write']+D(2*10**9)/D(10**9)*r['outbound_gb']
                 +(log_puts+copy_puts)*r['s3_write']+D('1.5'))
@@ -414,7 +414,7 @@ class CostTests(unittest.TestCase):
         operator = 80_000 * rates['s3_read'] + 10_000 * rates['s3_write'] + 16 * gib * rates['outbound_gb']
         # These PUTs begin after the 24-hour sample. Three finalizer starts
         # were already booked by accrual. Operator retries remain possible.
-        remaining_puts = (170 - 24) * (5 * 3600 // 50 + 4) + 4 * (4 * 1024**3 // 65536 - 1)
+        remaining_puts = (170 - 24) * (5 * 3600 // 50 + 4) + 16 * (4 * 1024**3 // 65536 - 1)
         required = (170 - 24) * hourly + operator + remaining_puts * rates['s3_write']
         result = state.estimate_cost(policy, 1000, 1000+24*3600, cpu_seconds=3600,
                                      s3_reads=10_000, s3_writes=5_000, tx_bytes=2*10**9, paid_usd='1.5')
@@ -448,11 +448,11 @@ class CostTests(unittest.TestCase):
 
     def test_accrued_estimate_uses_measured_counters(self):
         from decimal import Decimal as D
-        policy=dict(cost_policy(), prior_spend_usd='10', finish_reserve_usd='10')
+        policy=dict(cost_policy(), prior_spend_usd='10', finish_reserve_usd='20')
         result=state.estimate_cost(policy,1000,1000+24*3600,cpu_seconds=3600,s3_reads=10_000,s3_writes=5_000,
                                    tx_bytes=2*10**9,paid_usd='1.5')
         self.assertAlmostEqual(D(result['accrued_usd']),self.worked_example(policy),places=5)
-        self.assertEqual(D(result['limit_usd']),D('290'))
+        self.assertEqual(D(result['limit_usd']),D('280'))
         self.assertIsNone(result['stop'])
         # Nothing is booked up front: an idle start costs only the prior spend.
         idle=state.estimate_cost(cost_policy(),1000,1000,cpu_seconds=0)
@@ -460,9 +460,9 @@ class CostTests(unittest.TestCase):
 
     def test_ceiling_stop_at_the_boundary(self):
         from decimal import Decimal as D
-        policy=dict(cost_policy(), finish_reserve_usd='10')
+        policy=dict(cost_policy(), finish_reserve_usd='20')
         base=D(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0)['accrued_usd'])
-        policy['prior_spend_usd']=str((D(290)-base-D('0.000001')).quantize(D('.000001')))
+        policy['prior_spend_usd']=str((D(280)-base-D('0.000001')).quantize(D('.000001')))
         self.assertIsNone(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0)['stop'])
         self.assertEqual(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0,tx_bytes=10**6)['stop'],'cost_ceiling')
 
@@ -3235,6 +3235,99 @@ class EvidenceCopyTests(EvidenceCase):
         self.assertEqual([f['id'] for f in self.index(4)['files']],[3])
         self.assertEqual(self.copy_state()['shipped'],[1,2,3])
 
+    def test_mismatched_body_can_be_recovered_in_a_later_final_generation(self):
+        self.host.attempt(1)
+        body=self.host.paired/'1.body'; original=body.read_bytes()
+        body.write_bytes(b'other!')
+        self.assertEqual(self.run_copy()['status'],'committed')
+        self.assertEqual(self.copy_state()['shipped'],[])
+        self.host.unit=('inactive',STOPPED_AT)
+        result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['reason']),('incomplete','unshipped'))
+        self.assertTrue(self.tree.latch.exists())
+        self.assertEqual(self.audited(name='incomplete')['missing_or_mismatched'],[1])
+        body.write_bytes(original)
+        self.assertEqual(self.run_copy()['status'],'committed')
+        self.assertFalse(self.tree.latch.exists())
+        self.assertTrue(self.audited()['complete'])
+
+    def test_one_finalizer_drains_multiple_capped_batches_and_holds_its_latch(self):
+        for attempt in (1,2,3):
+            self.host.attempt(attempt,body=b'x'*6000)
+        self.now=self.host.launch['epoch']+168*3600
+        self.host.unit=('inactive',STOPPED_AT)
+        pending=[]
+        def observe(stage):
+            if stage=='index':
+                pending.append(self.tree.latch.exists())
+        self.s3.during=observe
+        import tarfile
+        with unittest.mock.patch.object(self.copy,'MAX_BATCH_BYTES',tarfile.RECORDSIZE):
+            result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['kind'],result['shipped']),('committed','final',3))
+        self.assertEqual(pending,[True,True,True])
+        self.assertFalse(self.tree.latch.exists())
+        self.assertEqual([self.index(i)['kind'] for i in range(1,4)],['ordinary','ordinary','final'])
+        self.assertTrue(all(self.index(i)['batch']['size']<=tarfile.RECORDSIZE for i in range(1,4)))
+        self.assertTrue(self.audited()['complete'])
+
+    def test_a_finalizer_with_more_than_four_batches_leaves_a_retryable_tail(self):
+        for attempt in range(1, 6):
+            self.host.attempt(attempt, body=b'x' * 6000)
+        self.host.unit = ('inactive', STOPPED_AT)
+        import tarfile
+        with unittest.mock.patch.object(self.copy, 'MAX_BATCH_BYTES', tarfile.RECORDSIZE):
+            result = self.run_copy(final=True)
+            self.assertEqual((result['status'], result['reason'], result['shipped']), ('incomplete', 'unshipped', 4))
+            self.assertTrue(self.tree.latch.exists())
+            self.assertEqual(self.audited(name='partial')['missing_or_mismatched'], [5])
+            result = self.run_copy()
+        self.assertEqual((result['status'], result['kind'], result['shipped']), ('committed', 'final', 1))
+        self.assertFalse(self.tree.latch.exists())
+        self.assertTrue(self.audited()['complete'])
+
+    def test_monotonic_deadline_prevents_extension_on_wall_clock_rollback(self):
+        wall, elapsed = [self.tree.limit - 0.5], [0.0]
+        deadline = self.copy.Deadline(self.tree.limit, lambda:wall[0], lambda:elapsed[0])
+        self.assertEqual(deadline(), 0.5)
+        wall[0] -= 90
+        elapsed[0] += 0.5
+        self.assertEqual(deadline(), 0)
+
+    def test_expired_put_cannot_report_success(self):
+        elapsed=[0.0]
+        class Connection:
+            def __init__(self, host, timeout):
+                self.timeout=timeout
+                self.status=200
+            def putrequest(self,*args,**kwargs): pass
+            def putheader(self,*args): pass
+            def endheaders(self): pass
+            def send(self,data): elapsed[0]+=0.3
+            def getresponse(self):
+                elapsed[0]+=0.3
+                return self
+            def read(self,size): return b''
+            def close(self): pass
+        client=self.copy.S3Client(self.tree.bucket,self.copy.REGION,
+                                  lambda:dict(AccessKeyId='fixture',SecretAccessKey='fixture',Token='fixture'),
+                                  connect=Connection,clock=lambda:self.now)
+        with self.assertRaises(self.copy.CopyError) as deadline:
+            client.put(self.tree.prefix+'contract.json',b'x','0'*64,1,time_left=lambda:0.5-elapsed[0])
+        self.assertEqual(deadline.exception.reason,'deadline')
+
+    def test_reader_probe_timeout_preserves_latch_and_emits_structured_failure(self):
+        self.host.attempt(1)
+        with unittest.mock.patch.object(self.copy.subprocess,'run',side_effect=subprocess.TimeoutExpired('probe',5)):
+            result=self.copy.run(self.tree,final=True,put=self.s3.put,clock=lambda:self.now,
+                                 unit_state=lambda:self.copy.systemd_unit_state('reader',self.tree.paired/'owner.lock'),
+                                 log=self.lines.append)
+        self.assertEqual((result['status'],result['reason']),('failed','reader'))
+        self.assertTrue(self.tree.latch.exists())
+        self.assertEqual(self.s3.keys,[])
+        self.assertEqual([(line['event'],line['reason']) for line in map(json.loads,self.lines)],
+                         [('copy.failed','reader')])
+
     def test_a_failed_put_never_commits_and_the_next_run_uses_a_new_generation(self):
         for stage in ('batch','ledger','index'):
             with self.subTest(stage=stage):
@@ -3492,6 +3585,20 @@ class EvidenceAuditTests(EvidenceCase):
         self.assertFalse(report['complete'])
         self.assertEqual((report['status'],report['newest_snapshot_at']),('tail_unverified',self.now))
 
+    def test_malformed_newer_object_descriptor_preserves_previous_valid_final(self):
+        final=self.final_run()['generation']
+        original=self.index(final); generation=final+1
+        malformed=dict(original,generation=generation,
+                       ledger=dict(original['ledger'],key=f'evidence/test1/ledger-{generation}.sqlite3'),
+                       batch=dict(original['batch'],key=f'evidence/test1/batch-{generation}.tar'),
+                       files=[dict(original['files'][0],json_size=None)])
+        for name,suffix in (('ledger','sqlite3'),('batch','tar')):
+            self.s3.objects[f'evidence/test1/{name}-{generation}.{suffix}']=self.s3.objects[f'evidence/test1/{name}-{final}.{suffix}']
+        self.s3.objects[f'evidence/test1/index-{generation}.json']=[json.dumps(malformed).encode()]
+        report=self.audited()
+        self.assertTrue(report['complete'],report)
+        self.assertEqual((report['generation'],report['generations']['ignored']),(final,1))
+
     def test_a_missing_or_unbound_contract_is_incomplete(self):
         self.final_run()
         for defect in ('missing','launch','reader','journal'):
@@ -3656,13 +3763,17 @@ class EvidenceUnitTests(unittest.TestCase):
 
 
 class EvidenceCostTests(unittest.TestCase):
+    def test_charged_finalizer_limit_matches_the_host_limit(self):
+        copy, _ = load_evidence_modules()
+        self.assertEqual(state.COPY_FINALIZE_GENERATIONS, copy.MAX_FINAL_GENERATIONS)
+
     def test_copy_puts_and_five_log_sources_are_bounded_from_the_epoch(self):
         from decimal import Decimal as D
         policy=cost_policy();w=D(policy['rates']['s3_write'])
         base=lambda now:D(state.estimate_cost(dict(policy,rates=dict(policy['rates'],s3_write='0.000000001')),1000,now,cpu_seconds=0)['accrued_usd'])
         for hours in (1,24,168):
             now=1000+hours*3600
-            puts=5*((hours*3600+49)//50)+4*hours+4*3
+            puts=5*((hours*3600+49)//50)+4*(1+hours+3*4)
             accrued=D(state.estimate_cost(policy,1000,now,cpu_seconds=0)['accrued_usd'])
             self.assertAlmostEqual(accrued-base(now),puts*(w-D('0.000000001')),places=5)
         self.assertEqual(D(state.estimate_cost(policy,1000,1000,cpu_seconds=0)['accrued_usd']),D(0))

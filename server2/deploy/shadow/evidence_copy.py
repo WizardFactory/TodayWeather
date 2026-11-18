@@ -15,14 +15,15 @@ Every run takes an exclusive lock on `state/copy.lock` and is the only writer of
   3. PUTs `batch-<g>.tar` (complete file pairs of completed attempts not yet shipped,
      if any), then `ledger-<g>.sqlite3`, then `index-<g>.json` last: the index is the
      commit point. State changes only after the index PUT succeeded.
-A generation is `final` when `state/final.requested` exists (or this is the finalizer)
-and the reader has stopped (unit inactive or failed and its owner.lock free);
-the request stays until a final generation commits, so any later run retries it.
+A finalizer may commit several bounded batches from the stopped reader's snapshot.
+Its final index is committed last. The request stays until all required pairs and
+the contract have been shipped, so any later run can resume.
 Nothing starts at or after epoch + 170 h - 10 min, and every wait and PUT ends there.
 Output is one JSON line per event with a fixed vocabulary: never a key, URL,
 credential or body.
 """
 import argparse
+from contextlib import ExitStack
 import datetime
 import fcntl
 import hashlib
@@ -33,6 +34,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import sqlite3
 import ssl
 import stat
@@ -52,12 +54,13 @@ POLL_SECONDS = 2
 LIMIT_MARGIN = 600
 # Bounds one batch's temporary file and upload; the rest follows in the next generation.
 MAX_BATCH_BYTES = 256 * 1024 ** 2
+MAX_FINAL_GENERATIONS = 4
 MAX_METADATA = 65536
 MAX_BODY = 2 * 1024 ** 2
 MAX_RESULT = 65536
 READER_STATES = {'active', 'reloading', 'inactive', 'failed', 'activating', 'deactivating', 'maintenance', 'refreshing'}
 STAGES = {'contract', 'batch', 'ledger', 'index', 'snapshot', 'state', 'lock', 'credentials', 'host'}
-REASONS = {'deadline', 'lock', 'no_ledger', 'snapshot', 'integrity', 'credentials', 'put', 'state', 'host', 'reader'}
+REASONS = {'deadline', 'lock', 'no_ledger', 'snapshot', 'integrity', 'credentials', 'put', 'state', 'host', 'reader', 'unshipped', 'contract'}
 LOG_FIELDS = {'copy_schema', 'level', 'event', 'reason', 'stage', 'status', 'generation', 'kind', 'reader',
               'shipped', 'pending', 'files'}
 
@@ -97,14 +100,33 @@ def sync_directory(path):
         os.close(fd)
 
 
-def digest_file(path):
+def digest_file(path, time_left=None, stage=None):
     h = hashlib.sha256()
     size = 0
     with open(path, 'rb') as stream:
         while block := stream.read(1024 ** 2):
+            if time_left is not None:
+                remaining(time_left, stage)
             h.update(block)
             size += len(block)
     return h.hexdigest(), size
+
+
+class Deadline:
+    def __init__(self, cutoff, clock, monotonic):
+        self.clock, self.monotonic = clock, monotonic
+        self.started = clock()
+        self.cutoff = min(cutoff, self.started + RUN_SECONDS)
+        self.ends = monotonic() + self.cutoff - self.started
+
+    def __call__(self):
+        return min(self.ends - self.monotonic(), self.cutoff - self.clock())
+
+
+def remaining(time_left, stage=None):
+    seconds = time_left()
+    require(seconds > 0, 'deadline', stage)
+    return seconds
 
 
 class HostTree:
@@ -188,7 +210,7 @@ def reader_stopped(unit):
     return active in ('inactive', 'failed') and bool(exited) and exited != 'n/a'
 
 
-def snapshot(tree, destination, stopped):
+def snapshot(tree, destination, stopped, time_left):
     """SQLite online backup of the live ledger into a private file, then integrity_check.
 
     A read-only connection never modifies the live ledger. A stopped reader can leave a
@@ -197,14 +219,20 @@ def snapshot(tree, destination, stopped):
     """
     from urllib.parse import quote
     live = tree.paired / 'ledger.sqlite3'
-    target = sqlite3.connect(destination)
+    def check_deadline(*_):
+        remaining(time_left, 'snapshot')
+
+    def backup(source):
+        connection = sqlite3.connect(source, uri=True, timeout=min(0.2, remaining(time_left, 'snapshot')))
+        try:
+            connection.backup(target, pages=128, progress=check_deadline, sleep=0.05)
+        finally:
+            connection.close()
+
+    target = sqlite3.connect(destination, timeout=min(0.2, remaining(time_left, 'snapshot')))
     try:
         try:
-            source = sqlite3.connect('file:' + quote(str(live.resolve())) + '?mode=ro', uri=True, timeout=30)
-            try:
-                source.backup(target)
-            finally:
-                source.close()
+            backup('file:' + quote(str(live.resolve())) + '?mode=ro')
         except sqlite3.Error:
             journal = tree.paired / 'ledger.sqlite3-journal'
             require(stopped and journal.exists(), 'snapshot', 'snapshot')
@@ -214,19 +242,20 @@ def snapshot(tree, destination, stopped):
                 for name in ('ledger.sqlite3', 'ledger.sqlite3-journal'):
                     with open(tree.paired / name, 'rb') as incoming, open(private / name, 'xb') as outgoing:
                         while block := incoming.read(1024 ** 2):
+                            check_deadline()
                             outgoing.write(block)
-                source = sqlite3.connect(private / 'ledger.sqlite3', timeout=30)
-                try:
-                    source.backup(target)
-                finally:
-                    source.close()
+                backup('file:' + quote(str(private / 'ledger.sqlite3')))
             finally:
                 for child in private.iterdir():
                     child.unlink()
                 private.rmdir()
+        target.set_progress_handler(lambda: int(time_left() <= 0), 1000)
         require(target.execute('PRAGMA integrity_check').fetchall() == [('ok',)], 'integrity', 'snapshot')
-        rows = target.execute('SELECT id, result FROM attempts ORDER BY id').fetchall()
+        rows = target.execute('SELECT id,substr(result,1,?) FROM attempts ORDER BY id',
+                              (MAX_RESULT + 1,)).fetchmany(12001)
+        require(len(rows) <= 12000, 'integrity', 'snapshot')
         terminal = target.execute("SELECT value FROM meta WHERE key='terminal'").fetchone()
+        check_deadline()
     finally:
         target.close()
     return rows, None if terminal is None else json.loads(terminal[0])
@@ -237,6 +266,22 @@ def capture_failure(result):
     return result.get('captured') is False and 'body_bytes' not in result and 'body_sha256' not in result
 
 
+def attempt_matches(result, metadata, body_size, body_sha256):
+    """Match the exact retained files to the completed result, excluding ledger timing."""
+    elapsed = result.get('elapsed_ms')
+    return (type(elapsed) is int and elapsed >= 0
+            and metadata == {key: value for key, value in result.items() if key != 'elapsed_ms'}
+            and body_size == result.get('body_bytes') and body_sha256 == result.get('body_sha256'))
+
+
+def completed_result(raw):
+    try:
+        value = json.loads(raw) if len(raw) <= MAX_RESULT else None
+    except (ValueError, TypeError):
+        return None
+    return value if type(value) is dict else None
+
+
 def regular(path):
     try:
         info = os.lstat(path)
@@ -245,58 +290,72 @@ def regular(path):
     return info if stat.S_ISREG(info.st_mode) else None
 
 
-def select_files(tree, rows, shipped):
-    """Complete pairs of completed attempts not yet shipped, bounded per batch."""
-    chosen, total = [], 0
-    for ident, raw in rows:
-        if raw is None or ident in shipped or type(ident) is not int or ident <= 0:
+def paired_files(tree, results, shipped, time_left):
+    """Yield the exact bytes whose digests and metadata agree with the ledger."""
+    for ident, result in results.items():
+        remaining(time_left, 'batch')
+        if result is None or ident in shipped or type(ident) is not int or ident <= 0:
             continue
-        try:
-            result = json.loads(raw) if len(raw) <= MAX_RESULT else None
-        except ValueError:
-            result = None
-        if type(result) is not dict or capture_failure(result):
+        body_size = result.get('body_bytes')
+        if type(body_size) is not int or not 0 <= body_size <= MAX_BODY:
             continue
         meta_path, body_path = tree.paired / f'{ident}.json', tree.paired / f'{ident}.body'
         meta_info, body_info = regular(meta_path), regular(body_path)
-        if meta_info is None or body_info is None or meta_info.st_size > MAX_METADATA or body_info.st_size > MAX_BODY:
+        if (meta_info is None or body_info is None or meta_info.st_size > MAX_METADATA
+                or body_info.st_size != body_size):
             continue
-        meta = meta_path.read_bytes()
         try:
-            if type(json.loads(meta)) is not dict:
+            with meta_path.open('rb') as stream:
+                meta = stream.read(MAX_METADATA + 1)
+            if len(meta) > MAX_METADATA:
                 continue
-        except ValueError:
+            metadata = json.loads(meta)
+            with body_path.open('rb') as stream:
+                body = stream.read(body_size + 1)
+        except (ValueError, FileNotFoundError):
             continue
-        if total + len(meta) + body_info.st_size > MAX_BATCH_BYTES and chosen:
-            break
-        total += len(meta) + body_info.st_size
-        chosen.append((ident, meta, body_path))
-    return chosen
+        body_sha = hashlib.sha256(body).hexdigest()
+        if attempt_matches(result, metadata, len(body), body_sha):
+            yield ident, meta, body, body_sha
 
 
-def write_batch(path, chosen):
-    entries = []
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, 'wb') as stream:
-        with tarfile.open(fileobj=stream, mode='w', format=tarfile.USTAR_FORMAT) as archive:
-            for ident, meta, body_path in chosen:
-                # One body in memory at a time (at most 2 MiB); written files never change.
-                body = body_path.read_bytes()
-                for name, data in ((f'{ident}.body', body), (f'{ident}.json', meta)):
-                    item = tarfile.TarInfo(name)
-                    item.size, item.mode, item.mtime = len(data), 0o600, 0
-                    archive.addfile(item, io.BytesIO(data))
-                entries.append(dict(id=ident, json_size=len(meta), json_sha256=hashlib.sha256(meta).hexdigest(),
-                                    body_size=len(body), body_sha256=hashlib.sha256(body).hexdigest()))
-        stream.flush()
-        os.fsync(stream.fileno())
-    return entries
+def write_batch(path, pairs):
+    """Write validated pairs and report whether more of them fit a later batch."""
+    block = tarfile.BLOCKSIZE
+    # USTAR writes a header per entry, two end blocks and record padding.
+    capacity = MAX_BATCH_BYTES // tarfile.RECORDSIZE * tarfile.RECORDSIZE - 2 * block
+    entries, total = [], 0
+    capped = False
+    with ExitStack() as stack:
+        for ident, meta, body, body_sha in pairs:
+            size = sum(block * (1 + (length + block - 1) // block) for length in (len(meta), len(body)))
+            if size > capacity:
+                continue
+            if total + size > capacity:
+                capped = True
+                break
+            if not entries:
+                fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                stream = stack.enter_context(os.fdopen(fd, 'wb'))
+                archive = stack.enter_context(tarfile.open(fileobj=stream, mode='w', format=tarfile.USTAR_FORMAT))
+            for name, data in ((f'{ident}.body', body), (f'{ident}.json', meta)):
+                item = tarfile.TarInfo(name)
+                item.size, item.mode, item.mtime = len(data), 0o600, 0
+                archive.addfile(item, io.BytesIO(data))
+            entries.append(dict(id=ident, json_size=len(meta), json_sha256=hashlib.sha256(meta).hexdigest(),
+                                body_size=len(body), body_sha256=body_sha))
+            total += size
+        if entries:
+            archive.close()
+            stream.flush()
+            os.fsync(stream.fileno())
+    return entries, capped
 
 
 class Lock:
-    """Exclusive flock on state/copy.lock, waiting at most until `until`."""
-    def __init__(self, tree, clock, sleep, until):
-        self.tree, self.clock, self.sleep, self.until = tree, clock, sleep, until
+    """Exclusive flock on state/copy.lock, waiting within the run deadline."""
+    def __init__(self, tree, sleep, time_left):
+        self.tree, self.sleep, self.time_left = tree, sleep, time_left
         self.fd = None
 
     def __enter__(self):
@@ -306,110 +365,134 @@ class Lock:
                 fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 return self
             except BlockingIOError:
-                if self.clock() >= self.until:
+                wait = self.time_left()
+                if wait <= 0:
                     os.close(self.fd)
                     self.fd = None
                     raise CopyError('lock', stage='lock') from None
-                self.sleep(min(1, max(0, self.until - self.clock())))
+                self.sleep(min(1, wait))
 
     def __exit__(self, *_):
         if self.fd is not None:
             os.close(self.fd)
 
 
-def run(tree, *, final, put, clock, unit_state, sleep=time.sleep, log=emit):
-    """One copy run. put(key, body, sha256, size, time_left) raises CopyError on failure."""
-    start = clock()
-    if start >= tree.limit:
-        record(log, 'copy.failed', 'warn', reason='deadline', stage='host')
-        return dict(status='failed', reason='deadline', stage='host')
-    until = min(tree.limit, start + RUN_SECONDS)
-    time_left = lambda: until - clock()
+def commit_generation(tree, index, ledger_path, batch_path, put, time_left):
+    """Transfer the generation, with its index as the commit point."""
+    batch, ledger = index['batch'], index['ledger']
+    payload = canonical(index).encode()
+    for stage, ref, body in (
+            ('batch', batch, batch_path), ('ledger', ledger, ledger_path),
+            ('index', dict(key=f'{tree.prefix}index-{index["generation"]}.json',
+                           sha256=hashlib.sha256(payload).hexdigest(), size=len(payload)), payload)):
+        if ref is None:
+            continue
+        remaining(time_left, stage)
+        try:
+            put(ref['key'], body, ref['sha256'], ref['size'], time_left)
+        except CopyError as error:
+            raise CopyError(error.reason, stage=stage, status=error.status) from None
+        remaining(time_left, stage)
+
+
+def run(tree, *, final, put, clock, unit_state, sleep=time.sleep, log=emit,
+        monotonic=time.monotonic, deadline=None):
+    """Copy within the earliest wall and monotonic bounds, leaving a retryable final request."""
+    time_left = deadline if deadline is not None else Deadline(tree.limit, clock, monotonic)
+    start = time_left.started
     temporary = []
     try:
+        remaining(time_left, 'host')
         if final:
             request_final(tree, start)
             # The finalizer is started by the reader's stop: wait (bounded) for it to end.
-            wait_until = min(until, start + FINAL_WAIT_SECONDS)
-            while not reader_stopped(unit_state()) and clock() < wait_until:
-                sleep(POLL_SECONDS)
-        with Lock(tree, clock, sleep, until):
+            wait_left = Deadline(start + FINAL_WAIT_SECONDS, clock, monotonic)
+            while min(time_left(), wait_left()) > 0 and not reader_stopped(unit_state()):
+                seconds = min(time_left(), wait_left(), POLL_SECONDS)
+                if seconds > 0:
+                    sleep(seconds)
+        with Lock(tree, sleep, time_left):
+            remaining(time_left, 'state')
             state = load_state(tree)
             if not state['contract']:
                 body = tree.contract()
                 try:
-                    require(time_left() > 0, 'deadline', 'contract')
+                    remaining(time_left, 'contract')
                     put(tree.prefix + 'contract.json', body, hashlib.sha256(body).hexdigest(), len(body), time_left)
+                    remaining(time_left, 'contract')
                     state['contract'] = True
                     save_state(tree, state)
                 except CopyError as error:
+                    if error.reason == 'deadline':
+                        raise CopyError('deadline', stage='contract') from None
                     record(log, 'copy.failed', 'warn', reason=error.reason, stage='contract', status=error.status)
             if not regular(tree.paired / 'ledger.sqlite3'):
                 record(log, 'copy.skipped', reason='no_ledger')
                 return dict(status='skipped', reason='no_ledger')
+            remaining(time_left, 'host')
             unit = unit_state()
             stopped = reader_stopped(unit)
-            kind = 'final' if stopped and (final or tree.latch.exists()) else 'ordinary'
-            generation = state['reserved'] + 1
-            state['reserved'] = generation
-            save_state(tree, state)       # a reserved key is never used again
-            ledger_path = tree.state_dir / f'.ledger-{generation}.sqlite3'
-            batch_path = tree.state_dir / f'.batch-{generation}.tar'
-            temporary += [ledger_path, batch_path]
+            final_requested = stopped and tree.latch.exists()
+            active = unit[0] if unit[0] in READER_STATES else 'unknown'
+            first = state['reserved'] + 1
+            ledger_path = tree.state_dir / f'.ledger-{first}.sqlite3'
+            batch_path = tree.state_dir / f'.batch-{first}.tar'
+            temporary = [ledger_path, batch_path]
             ledger_path.unlink(missing_ok=True)
             try:
-                rows, terminal = snapshot(tree, ledger_path, stopped)
+                rows, terminal = snapshot(tree, ledger_path, stopped, time_left)
             except sqlite3.Error:
+                remaining(time_left, 'snapshot')
                 raise CopyError('snapshot', stage='snapshot') from None
-            shipped = set(state['shipped'])
-            chosen = select_files(tree, rows, shipped)
-            batch = None
-            if chosen:
-                batch_path.unlink(missing_ok=True)
-                entries = write_batch(batch_path, chosen)
-                sha, size = digest_file(batch_path)
-                batch = dict(key=f'{tree.prefix}batch-{generation}.tar', sha256=sha, size=size)
-            else:
-                entries = []
-            ledger_sha, ledger_size = digest_file(ledger_path)
-            results = [json.loads(raw) if raw is not None else None for _, raw in rows]
+            snapshot_at = int(clock())
+            ledger_sha, ledger_size = digest_file(ledger_path, time_left, 'ledger')
+            results = {ident: completed_result(raw) for ident, raw in rows if raw is not None}
             pending = [ident for ident, raw in rows if raw is None]
-            failures = sum(1 for r in results if type(r) is dict and capture_failure(r))
-            active = unit[0] if unit[0] in READER_STATES else 'unknown'
-            index = dict(
-                schema=SCHEMA, run_id=tree.run_id, generation=generation, kind=kind, at=int(clock()),
-                reader=dict(state=active, stopped=stopped), terminal=terminal,
-                ledger=dict(key=f'{tree.prefix}ledger-{generation}.sqlite3', sha256=ledger_sha, size=ledger_size),
-                batch=batch,
-                attempts=dict(total=len(rows), completed=len(rows) - len(pending), pending=len(pending),
-                              capture_failures=failures),
-                pending_ids=pending, files=entries, shipped_total=len(shipped | {e['id'] for e in entries}))
-            index_bytes = canonical(index).encode()
-            # Batch, then ledger, then the index last: the index is the commit point.
-            for stage, key, body, sha, size in (
-                    ('batch', batch and batch['key'], batch_path, batch and batch['sha256'], batch and batch['size']),
-                    ('ledger', index['ledger']['key'], ledger_path, ledger_sha, ledger_size),
-                    ('index', f'{tree.prefix}index-{generation}.json', index_bytes,
-                     hashlib.sha256(index_bytes).hexdigest(), len(index_bytes))):
-                if key is None:
-                    continue
-                require(time_left() > 0, 'deadline', stage)
-                try:
-                    put(key, body, sha, size, time_left)
-                except CopyError as error:
-                    raise CopyError(error.reason, stage=stage, status=error.status) from None
-            state['committed'] = generation
-            state['shipped'] = sorted(shipped | {e['id'] for e in entries})
-            try:
+            capture_failures = {ident for ident, result in results.items()
+                                if result is not None and capture_failure(result)}
+            required = results.keys() - capture_failures
+            shipped = set(state['shipped'])
+            new_files = 0
+            generations = MAX_FINAL_GENERATIONS if final_requested and final else 1
+            for generation in range(first, first + generations):
+                remaining(time_left, 'state')
+                state['reserved'] = generation
+                save_state(tree, state)   # no upload key may be reused after a failure
+                batch_path.unlink(missing_ok=True)
+                entries, capped = write_batch(batch_path, paired_files(tree, results, shipped, time_left))
+                committed = shipped | {entry['id'] for entry in entries}
+                continues = capped and generation < first + generations - 1
+                kind = 'final' if final_requested and not continues else 'ordinary'
+                batch = None
+                if entries:
+                    sha, size = digest_file(batch_path, time_left, 'batch')
+                    batch = dict(key=f'{tree.prefix}batch-{generation}.tar', sha256=sha, size=size)
+                index = dict(
+                    schema=SCHEMA, run_id=tree.run_id, generation=generation, kind=kind, at=snapshot_at,
+                    reader=dict(state=active, stopped=stopped), terminal=terminal,
+                    ledger=dict(key=f'{tree.prefix}ledger-{generation}.sqlite3', sha256=ledger_sha, size=ledger_size),
+                    batch=batch,
+                    attempts=dict(total=len(rows), completed=len(results), pending=len(pending),
+                                  capture_failures=len(capture_failures)),
+                    pending_ids=pending, files=entries, shipped_total=len(committed))
+                commit_generation(tree, index, ledger_path, batch_path, put, time_left)
+                state['committed'], state['shipped'] = generation, sorted(committed)
                 save_state(tree, state)
-            except OSError:
-                raise CopyError('state', stage='state') from None
+                shipped = committed
+                new_files += len(entries)
+                record(log, 'copy.committed', generation=generation, kind=kind, reader=active,
+                       files=len(entries), shipped=len(shipped), pending=len(pending))
+                if not continues:
+                    break
+            outcome = dict(status='committed', generation=generation, kind=kind, shipped=new_files)
             if kind == 'final':
+                if required - shipped or not state['contract']:
+                    reason = 'unshipped' if required - shipped else 'contract'
+                    record(log, 'copy.incomplete', 'warn', reason=reason, generation=generation, kind=kind)
+                    return dict(outcome, status='incomplete', reason=reason)
                 tree.latch.unlink(missing_ok=True)
                 sync_directory(tree.state_dir)
-            record(log, 'copy.committed', generation=generation, kind=kind, reader=active, files=len(entries),
-                   shipped=len(state['shipped']), pending=len(pending))
-            return dict(status='committed', generation=generation, kind=kind, shipped=len(entries))
+            return outcome
     except CopyError as error:
         record(log, 'copy.failed', 'warn', reason=error.reason, stage=error.stage, status=error.status)
         return dict(status='failed', reason=error.reason, stage=error.stage)
@@ -446,14 +529,24 @@ def metadata_connection(host, timeout):
     return http.client.HTTPConnection(host, 80, timeout=timeout)
 
 
-def imds_credentials(*, connect=metadata_connection, timeout=2):
+def http_timeout(connection, time_left, limit, stage=None):
+    timeout = min(limit, remaining(time_left, stage))
+    connection.timeout = timeout
+    if (sock := getattr(connection, 'sock', None)) is not None:
+        sock.settimeout(timeout)
+
+
+def imds_credentials(*, connect=metadata_connection, timeout=2, time_left=lambda: float('inf')):
     """Instance-role credentials through IMDSv2; never printed or stored."""
     def request(method, path, headers):
-        conn = connect('169.254.169.254', timeout)
+        conn = connect('169.254.169.254', min(timeout, remaining(time_left, 'credentials')))
         try:
             conn.request(method, path, headers=headers)
+            http_timeout(conn, time_left, timeout, 'credentials')
             response = conn.getresponse()
-            body = response.read(65536)
+            body = response.read(65537)
+            remaining(time_left, 'credentials')
+            require(len(body) <= 65536, 'credentials', 'credentials')
             require(response.status == 200, 'credentials', 'credentials')
             return body.decode()
         finally:
@@ -468,6 +561,7 @@ def imds_credentials(*, connect=metadata_connection, timeout=2):
                 'credentials', 'credentials')
         return value
     except (OSError, ValueError, IndexError, http.client.HTTPException):
+        remaining(time_left, 'credentials')
         raise CopyError('credentials', stage='credentials') from None
 
 
@@ -478,6 +572,7 @@ class S3Client:
 
     def put(self, key, body, sha256, size, time_left):
         require(re.fullmatch(r'[A-Za-z0-9._/-]{1,1024}', key) is not None, 'put')
+        remaining(time_left)
         credentials = self.credentials()
         host = f'{self.bucket}.s3.{self.region}.amazonaws.com'
         path = '/' + key
@@ -485,9 +580,11 @@ class S3Client:
         headers = {'host': host, 'x-amz-content-sha256': sha256, 'x-amz-date': amz_date,
                    'x-amz-security-token': credentials['Token']}
         signature, signed, scope = sign(credentials['SecretAccessKey'], self.region, 'PUT', path, headers, sha256)
-        remaining = time_left()
-        require(remaining > 0, 'deadline')
-        conn = self.connect(host, max(1, min(60, remaining)))
+        try:
+            conn = self.connect(host, min(60, remaining(time_left)))
+        except (OSError, http.client.HTTPException):
+            remaining(time_left)
+            raise CopyError('put') from None
         try:
             conn.putrequest('PUT', path, skip_host=True, skip_accept_encoding=True)
             conn.putheader('Host', host)
@@ -496,19 +593,26 @@ class S3Client:
             conn.putheader('Authorization', f'AWS4-HMAC-SHA256 Credential={credentials["AccessKeyId"]}/{scope}, '
                                             f'SignedHeaders={signed}, Signature={signature}')
             conn.putheader('Content-Length', str(size))
+            conn.putheader('Connection', 'close')
             conn.endheaders()
             if isinstance(body, bytes):
+                http_timeout(conn, time_left, 60)
                 conn.send(body)
             else:
                 with open(body, 'rb') as stream:
                     while block := stream.read(1024 ** 2):
-                        require(time_left() > 0, 'deadline')
+                        http_timeout(conn, time_left, 60)
                         conn.send(block)
+            http_timeout(conn, time_left, 60)
             response = conn.getresponse()
-            response.read(65536)
-            if response.status != 200:
-                raise CopyError('put', status=response.status)
+            try:
+                remaining(time_left)
+                if response.status != 200:
+                    raise CopyError('put', status=response.status)
+            finally:
+                response.close()
         except (OSError, http.client.HTTPException):
+            remaining(time_left)
             raise CopyError('put') from None
         finally:
             conn.close()
@@ -537,14 +641,21 @@ def reader_gone(lock):
         os.close(fd)
 
 
-def systemd_unit_state(unit, lock):
+def systemd_unit_state(unit, lock, time_left=lambda: float('inf')):
     """(ActiveState, ended): ended is non-empty only when the reader's lock is free.
 
     Not ExecMainExitTimestamp: systemd unloads a cleanly stopped unit that nothing references,
     after which `systemctl show` reports it like a unit never started (empty timestamps).
     """
-    answer = subprocess.run(['/usr/bin/systemctl', 'show', '--property=ActiveState', unit],
-                            capture_output=True, text=True, timeout=5, check=False, stdin=subprocess.DEVNULL)
+    try:
+        answer = subprocess.run(['/usr/bin/systemctl', 'show', '--property=ActiveState', unit],
+                                capture_output=True, text=True, timeout=min(5, remaining(time_left, 'host')),
+                                check=False, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.TimeoutExpired):
+        remaining(time_left, 'host')
+        raise CopyError('reader', stage='host') from None
+    remaining(time_left, 'host')
+    require(answer.returncode == 0, 'reader', 'host')
     values = dict(line.partition('=')[::2] for line in answer.stdout.splitlines())
     active = values.get('ActiveState', 'unknown')
     ended = 'lock-free' if active in ('inactive', 'failed') and reader_gone(lock) else ''
@@ -566,13 +677,29 @@ def main(argv=None):
         record(emit, 'copy.failed', 'warn', reason='host', stage='host')
         return 2
     cached = {}
+    deadline = Deadline(tree.limit, time.time, time.monotonic)
+
     def credentials():
         if 'value' not in cached:
-            cached['value'] = imds_credentials()
+            cached['value'] = imds_credentials(time_left=deadline)
         return cached['value']
+
+    def interrupt_deadline(*_):
+        raise CopyError('deadline', stage='host')
+
     client = S3Client(tree.bucket, REGION, credentials)
-    result = run(tree, final=args.final, put=client.put, clock=time.time,
-                 unit_state=lambda: systemd_unit_state(tree.reader_unit, tree.paired / 'owner.lock'))
+    # Enforce total elapsed time even when blocking I/O makes incremental progress
+    # just within its socket timeout. The original systemd poweroff remains independent.
+    signal.signal(signal.SIGALRM, interrupt_deadline)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, max(0, deadline()))
+        result = run(tree, final=args.final, put=client.put, clock=time.time, deadline=deadline,
+                     unit_state=lambda: systemd_unit_state(tree.reader_unit, tree.paired / 'owner.lock', deadline))
+    except CopyError as error:
+        record(emit, 'copy.failed', 'warn', reason=error.reason, stage=error.stage)
+        return 1
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
     return 0 if result['status'] in ('committed', 'skipped') else 1
 
 
