@@ -150,31 +150,46 @@ with tarfile.open(fileobj=sys.stdout.buffer,mode='w|',format=tarfile.USTAR_FORMA
 # The selected export accepts typed attempt numbers on stdin. The command and
 # installed paths are fixed. The installed copier supplies the stopped-reader
 # check and reconciles a hot rollback journal into the private SQLite snapshot.
-FINISH_EXPORTER=r'''import json,os,re,stat,sys,tarfile,tempfile
+# The host has its own deadline even when the operator disconnects mid-transfer.
+FINISH_EXPORTER=r'''import json,os,re,signal,stat,sys,tarfile,tempfile,time
 from pathlib import Path
 run_id,mode=sys.argv[1:]
 assert re.fullmatch('[a-z0-9-]{1,30}',run_id)
 root=Path('/opt/server2-shadow')/run_id
 assert root.resolve()==root
 sys.path.insert(0,str(root/'bin'))
-from evidence_copy import HostTree,reader_stopped,snapshot,systemd_unit_state
+from evidence_copy import Deadline,HostTree,reader_stopped,remaining,snapshot,systemd_unit_state
+from state import HOST_LIFETIME_SECONDS
 raw=sys.stdin.buffer.read(512*1024+1)
 assert len(raw)<=512*1024
 request=json.loads(raw)
-assert type(request) is dict and set(request)=={'attempts','limit'}
-attempts,limit=request['attempts'],request['limit']
+assert type(request) is dict and set(request)=={'attempts','limit','timeout'}
+attempts,limit,timeout=request['attempts'],request['limit'],request['timeout']
 assert type(attempts) is list and len(attempts)<=12000
 assert all(type(i) is int and 1<=i<=2**63-1 for i in attempts)
 assert attempts==sorted(set(attempts))
 assert (mode=='ledger' and not attempts) or (mode=='pairs' and attempts)
 assert type(limit) is int and 0<limit<=2*1024**3
+assert type(timeout) in (int,float) and 0<timeout<=600
 tree=HostTree(root/'launch.json')
 assert tree.run_id==run_id and tree.paired.resolve()==tree.paired
-assert reader_stopped(systemd_unit_state(tree.reader_unit,tree.paired/'owner.lock'))
+deadline=Deadline(tree.epoch+HOST_LIFETIME_SECONDS,time.time,time.monotonic)
+transfer_end=time.monotonic()+timeout
+def time_left():
+ return min(deadline(),transfer_end-time.monotonic())
+def stop_export(*args):
+ raise TimeoutError('SSH recovery deadline')
+signal.signal(signal.SIGALRM,stop_export)
+signal.setitimer(signal.ITIMER_REAL,remaining(time_left,'host'))
+assert reader_stopped(systemd_unit_state(tree.reader_unit,tree.paired/'owner.lock',time_left))
 with tempfile.TemporaryDirectory(dir=tree.state_dir) as work:
  if mode=='ledger':
+  for name in ('ledger.sqlite3','ledger.sqlite3-journal'):
+   source=tree.paired/name
+   if name=='ledger.sqlite3' or os.path.lexists(source):
+    assert stat.S_ISREG(source.lstat().st_mode)
   ledger=Path(work)/'ledger.sqlite3'
-  snapshot(tree,ledger,True)
+  snapshot(tree,ledger,True,time_left)
   files={'launch.json':root/'launch.json','reader.json':root/'reader.json',
          'data/paired/ledger.sqlite3':ledger}
  else:
@@ -504,7 +519,8 @@ class Remote:
               '-o','ConnectionAttempts=1','-o','ServerAliveInterval=10','-o','ServerAliveCountMax=2',
               'ec2-user@'+b['ipv4'],command]
         if recovery:
-            return _receive_recovery(argv, destination, {'attempts': selected, 'limit': limit}, limit, timeout)
+            request = {'attempts': selected, 'limit': limit, 'timeout': timeout}
+            return _receive_recovery(argv, destination, request, limit, timeout)
         if action=='export':
             fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
             try:

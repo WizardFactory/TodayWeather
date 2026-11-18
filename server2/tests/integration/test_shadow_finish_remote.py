@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import unittest
 
 import test_shadow_supervisor as fixture
@@ -71,10 +72,10 @@ class TargetedRecoveryTests(unittest.TestCase):
 
     def test_selected_files_use_bounded_numeric_request_on_stdin(self):
         path = self.root / 'selected.tar'
-        result = self.transport.invoke('finish-pairs', destination=path, attempts=(9, 11), limit=32768)
+        result = self.transport.invoke('finish-pairs', destination=path, attempts=(9, 11), limit=32768, timeout=1.25)
         self.assertEqual((result.kind, result.operation), ('json', 'HostEvidence'))
         command, body = json.loads(self.record.read_text())
-        self.assertEqual(json.loads(body), {'attempts': [9, 11], 'limit': 32768})
+        self.assertEqual(json.loads(body), {'attempts': [9, 11], 'limit': 32768, 'timeout': 1.25})
         self.assertEqual(shlex.split(command)[-1], 'pairs')
         self.assertEqual(result.payload['archive_bytes'], path.stat().st_size)
         self.assertEqual(path.stat().st_mode & 0o077, 0)
@@ -160,18 +161,38 @@ class RecoveryAssessmentTests(unittest.TestCase):
         systemctl.chmod(0o700)
         original = fixture.SOURCE.with_name('evidence_copy.py').read_text()
         (bins / 'evidence_copy.py').write_text(original.replace('/usr/bin/systemctl', str(systemctl)))
+        shutil.copyfile(fixture.SOURCE.with_name('state.py'), bins / 'state.py')
         lock = installed / 'data/paired/owner.lock'
         lock.touch()
         script = remote.FINISH_EXPORTER.replace("Path('/opt/server2-shadow')", f'Path({str(base)!r})')
 
         def export(mode, attempts):
-            request = json.dumps({'attempts': attempts, 'limit': 131072}).encode()
+            request = json.dumps({'attempts': attempts, 'limit': 131072, 'timeout': 5}).encode()
             return subprocess.run([sys.executable, '-I', '-c', script, 'test1', mode],
                                   input=request, capture_output=True, timeout=6, check=False)
+
+        launch = installed / 'launch.json'
+        plan = json.loads(launch.read_text())
+        plan['epoch'] = int(time.time()) - fixture.state.HOST_LIFETIME_SECONDS
+        launch.write_text(json.dumps(plan))
+        expired = export('pairs', [2])
+        self.assertNotEqual(expired.returncode, 0)
+        self.assertFalse(expired.stdout)
+        self.assertIn(b'deadline', expired.stderr)
+        plan['epoch'] += 60
+        launch.write_text(json.dumps(plan))
 
         with lock.open('rb') as stream:
             fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
             self.assertNotEqual(export('ledger', []).returncode, 0)
+        ledger = lock.with_name('ledger.sqlite3')
+        moved = ledger.rename(ledger.with_suffix('.bak'))
+        ledger.symlink_to(moved.name)
+        redirected = export('ledger', [])
+        self.assertNotEqual(redirected.returncode, 0)
+        self.assertFalse(redirected.stdout)
+        ledger.unlink()
+        moved.rename(ledger)
         result = export('ledger', [])
         self.assertEqual(result.returncode, 0, result.stderr)
         with tarfile.open(fileobj=io.BytesIO(result.stdout)) as archive:
