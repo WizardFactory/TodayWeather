@@ -3,9 +3,9 @@ import Testing
 @testable import TodayWeather
 
 @MainActor
-struct HourlyChartTextCacheTests {
+struct ChartTextCacheTests {
     @Test func reusesOnlyMatchingTextAndStyle() {
-        let cache = HourlyChartTextCache()
+        let cache = ChartTextCache()
         let ink = CssColor(0x444444)
         let runs = [("12", 15.0), ("°", 10.0)]
         let line = cache.line(runs, color: ink)
@@ -21,7 +21,7 @@ struct HourlyChartTextCacheTests {
     }
 
     @Test func evictsOldLabelsAndKeepsNewOnesLocalToTheChart() {
-        let cache = HourlyChartTextCache()
+        let cache = ChartTextCache()
         let ink = CssColor(0)
         let first = cache.line([("first", 15)], color: ink)
         for hour in 1...255 {
@@ -31,6 +31,6 @@ struct HourlyChartTextCacheTests {
         let newest = cache.line([("new", 15)], color: ink)
         #expect(first !== cache.line([("first", 15)], color: ink))
         #expect(newest === cache.line([("new", 15)], color: ink))
-        #expect(newest !== HourlyChartTextCache().line([("new", 15)], color: ink))
+        #expect(newest !== ChartTextCache().line([("new", 15)], color: ink))
     }
 }

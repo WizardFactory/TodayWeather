@@ -7,13 +7,13 @@ import TWDomain
 /// invalid attributes. Port of the Android `SvgDrawing`.
 @MainActor
 enum SvgDrawing {
-    static func draw(_ svg: Svg, top: Double, colors: ChartColors, textCache: HourlyChartTextCache? = nil, in context: inout GraphicsContext) {
+    static func draw(_ svg: Svg, top: Double, colors: ChartColors, textCache: ChartTextCache, in context: inout GraphicsContext) {
         for node in svg.children { draw(node, top: top, colors: colors, textCache: textCache, in: &context) }
     }
 
     private static func finite(_ values: Double...) -> Bool { values.allSatisfy { !$0.isNaN && !$0.isInfinite } }
 
-    private static func draw(_ node: SvgNode, top: Double, colors: ChartColors, textCache: HourlyChartTextCache?, in context: inout GraphicsContext) {
+    private static func draw(_ node: SvgNode, top: Double, colors: ChartColors, textCache: ChartTextCache, in context: inout GraphicsContext) {
         switch node {
         case .group(let g):
             for child in g.children { draw(child, top: top, colors: colors, textCache: textCache, in: &context) }
@@ -99,7 +99,7 @@ enum SvgDrawing {
         }
     }
 
-    private static func drawText(_ t: SvgText, top: Double, colors: ChartColors, textCache: HourlyChartTextCache?, in context: inout GraphicsContext) {
+    private static func drawText(_ t: SvgText, top: Double, colors: ChartColors, textCache: ChartTextCache, in context: inout GraphicsContext) {
         guard let (color, size) = textStyle(t.cls, colors) else { return }
         // A tspan class sets 10 px units; the daily chart's font-size attribute is invalid and inherits.
         var runs = [(t.text, size)]
@@ -107,7 +107,7 @@ enum SvgDrawing {
         guard runs.contains(where: { !$0.0.isEmpty }) else { return }
         let baseline = (t.y ?? 0) + (t.dy ?? 0)
         guard finite(baseline, t.x) else { return }
-        let line = textCache?.line(runs, color: color) ?? CssText.line(runs, color: color)
+        let line = textCache.line(runs, color: color)
         // text-anchor: middle centers the whole text, tspan included, on x; y + dy is the baseline.
         let x = t.x - CssText.width(line) / 2
         context.withCGContext { cg in CssText.draw(line, x: x, baseline: baseline + top, in: cg) }

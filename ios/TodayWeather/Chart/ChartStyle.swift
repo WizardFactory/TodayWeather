@@ -153,10 +153,10 @@ enum CssText {
     }
 }
 
-/// Core Text objects reused while a single Hourly chart scrolls. The FIFO limit also bounds
+/// Core Text objects reused while a single forecast chart scrolls. The FIFO limit also bounds
 /// retention when the same view receives new places, units or themes.
 @MainActor
-final class HourlyChartTextCache {
+final class ChartTextCache {
     private struct Run: Hashable {
         let text: String
         let size: Double

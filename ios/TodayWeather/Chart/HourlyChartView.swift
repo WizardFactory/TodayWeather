@@ -34,7 +34,7 @@ struct HourlyChartContent: View {
     let expanded: Bool
     let colors: ChartColors
 
-    @State private var textCache = HourlyChartTextCache()
+    @State private var textCache = ChartTextCache()
 
     var body: some View {
         let layout = HourlyChartLayout(chart, expanded: expanded)
