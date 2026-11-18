@@ -35,6 +35,7 @@ import net.wizardfactory.todayweather.ui.text.CssMetrics
 import net.wizardfactory.todayweather.ui.text.chromeLines
 import net.wizardfactory.todayweather.ui.text.chromeRuns
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,8 +67,6 @@ import net.wizardfactory.todayweather.core.data.cityRecord
 import net.wizardfactory.todayweather.core.domain.YesterdayText
 import net.wizardfactory.todayweather.core.domain.chart.ChartMetrics
 import net.wizardfactory.todayweather.core.domain.chart.ChartTexts
-import net.wizardfactory.todayweather.core.domain.chart.DailyChart
-import net.wizardfactory.todayweather.core.domain.chart.HourlyChart
 import net.wizardfactory.todayweather.core.domain.forecast.ForecastPage
 import net.wizardfactory.todayweather.core.domain.forecast.ForecastScope
 import net.wizardfactory.todayweather.core.domain.forecast.ForecastType
@@ -79,6 +78,8 @@ import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Place
+import net.wizardfactory.todayweather.ui.chart.ForecastChartImages
+import net.wizardfactory.todayweather.ui.chart.LocalForecastChartImages
 import net.wizardfactory.todayweather.ui.shell.BarButton
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.Icon
@@ -125,8 +126,8 @@ object WeatherTabTags {
  * ([locating]).
  */
 @Composable
-fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
-                       host: WeatherTabHost, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
+internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
+                       host: WeatherTabHost, charts: ForecastCharts, images: ForecastChartImages, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
                        locating: Boolean = false, onNoPlace: () -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
@@ -167,10 +168,10 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
     }
     val chartPlace = visit.chartPlace
     val content = remember(page, chartPlace, metrics) {
-        val hourly = chartPlace?.takeIf { type == ForecastType.SHORT && ((it["timeChart"] as? kotlinx.serialization.json.JsonArray)?.size ?: 0) >= 2 }
-            ?.let { HourlyChart.build(it, metrics, texts, units.precipitationUnit, units.windSpeedUnit) }
-        val daily = chartPlace?.takeIf { type == ForecastType.MID && (it["dayChart"] as? kotlinx.serialization.json.JsonArray)?.isNotEmpty() == true }
-            ?.let { DailyChart.build(it, metrics, texts, units.precipitationUnit) }
+        val hourly = if (type == ForecastType.SHORT) {
+            charts.hourly(chartPlace, metrics, texts, units.precipitationUnit, units.windSpeedUnit)
+        } else null
+        val daily = if (type == ForecastType.MID) charts.daily(chartPlace, metrics, texts, units.precipitationUnit) else null
         WeatherPageContent(type, page, metrics, hourly, daily, visit.scrolls)
     }
     var expanded by remember(visit) { mutableStateOf(visit.expand) }
@@ -213,13 +214,15 @@ fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEn
         },
         scrolled = { scroll.value / density },
         page = {
-            WeatherPage(content, theme, photo?.first, photo?.second == true, expanded,
-                onToggleExpanded = {
-                    visit.expand = !visit.expand
-                    expanded = visit.expand
-                    host.onExpand(visit.expand)
-                },
-                onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll)
+            CompositionLocalProvider(LocalForecastChartImages provides images) {
+                WeatherPage(content, theme, photo?.first, photo?.second == true, expanded,
+                    onToggleExpanded = {
+                        visit.expand = !visit.expand
+                        expanded = visit.expand
+                        host.onExpand(visit.expand)
+                    },
+                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll)
+            }
         },
         popups = {
             pollen?.let { rows -> PollenDialog(rows, texts) { pollen = null } }

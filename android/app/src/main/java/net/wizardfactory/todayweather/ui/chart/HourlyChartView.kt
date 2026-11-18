@@ -81,7 +81,10 @@ fun HourlyChartView(
     colors: ChartColors = ChartColors.LIGHT,
 ) {
     val measurer = rememberTextMeasurer()
-    val images = rememberChartImages()
+    val imageCache = rememberForecastChartImages()
+    val images = remember(imageCache, chart, expanded, colors.weatherImages, colors.iconImages) {
+        if (expanded) imageCache.prepare(colors, chart.chart, chart.detail) else imageCache.prepare(colors, chart.chart)
+    }
     val density = LocalDensity.current
     val layout = remember(chart, expanded, measurer, density) { HourlyLayout(chart, expanded, measurer, density) }
     Box(modifier.fillMaxWidth().height(layout.wrapperHeight.dp).clipToBounds().background(colors.background)) {

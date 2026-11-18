@@ -9,7 +9,7 @@ import net.wizardfactory.todayweather.core.domain.ChartPosition
 import net.wizardfactory.todayweather.core.domain.Js
 
 /** Translated catalog strings of the charts (`LOC_*` keys); a missing key shows itself, as `$translate` does. */
-class ChartTexts(private val strings: Map<String, String>) {
+data class ChartTexts(private val strings: Map<String, String>) {
     operator fun get(key: String): String = strings[key] ?: key
 }
 
