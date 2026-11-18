@@ -68,7 +68,7 @@ struct PlacesFixture {
         places = PlacesScreens(shell: shell, session: session, makePage: {
             PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
                        acceptLanguage: { "ko-KR,ko;q=0.9" }, removeAlarms: { removed.indices.append($0) })
-        }, search: search, towns: { StartPage.bundledTowns() }, openURL: { _ in })
+        }, search: search, towns: BundledTownLoader(), openURL: { _ in })
         places.query.predictionDelay = .milliseconds(10)
     }
 
@@ -167,7 +167,7 @@ struct PlacesScreenTests {
         f.places.focusChanged(true)
         f.places.wordChanged("부산")
         f.places.focusChanged(false)
-        try await app.settle()
+        try #require(await HostedShellTests.AirLiveTests.wait(5) { app.element("places-town-0") != nil })
         #expect(f.places.searching)
         #expect(app.element("places-find") != nil && app.element("places-town-9") != nil && app.element("places-town-divider") != nil)
         #expect(app.element("places-google-divider") == nil, "no Places key: no predictions")
@@ -193,7 +193,7 @@ struct PlacesScreenTests {
         defer { app.close() }
         f.places.focusChanged(true)
         f.places.wordChanged("부산")
-        try await app.settle()
+        try #require(await HostedShellTests.AirLiveTests.wait(5) { app.element("places-town-0") != nil })
         let requests = f.focusRequests
         try app.tap("places-town-0")
         await f.settle()
@@ -227,7 +227,7 @@ struct PlacesScreenTests {
         f.places.focusChanged(true)
         f.places.wordChanged("부산")
         f.places.focusChanged(false)
-        try await app.settle()
+        try #require(await HostedShellTests.AirLiveTests.wait(5) { app.element("places-town-0") != nil })
         try app.tap("places-find")
         await f.settle()
         try await app.settle()
@@ -249,8 +249,8 @@ struct PlacesScreenTests {
         f.places.focusChanged(true)
         f.places.wordChanged("회현동")
         f.places.focusChanged(false)
-        try await app.settle()
-        #expect(f.places.query.townResults != nil, "the bundled towns named 회현동 are listed")
+        try #require(await HostedShellTests.AirLiveTests.wait(5) { app.element("places-town-0") != nil },
+                     "the bundled towns named 회현동 are listed")
         try app.tap("places-find")
         await f.settle()
         try await app.settle()

@@ -102,9 +102,10 @@ final class PlaceQuery {
     }
 
     @ObservationIgnored let search: (any PlaceSearch)?
-    @ObservationIgnored private let towns: () -> TownSearch?
+    @ObservationIgnored private let towns: BundledTownLoader
     @ObservationIgnored private let scansTowns: Bool
     @ObservationIgnored private let keepsLastTowns: Bool
+    @ObservationIgnored private var townTask: Task<Void, Never>?
     @ObservationIgnored private var searchTask: Task<Void, Never>?
     /// Google's predictions arrive this long after the last change.
     @ObservationIgnored var predictionDelay = Duration.milliseconds(300)
@@ -116,7 +117,7 @@ final class PlaceQuery {
     /// The bundled towns found (`searchResults`).
     private(set) var townResults: Towns?
 
-    init(search: (any PlaceSearch)?, towns: @escaping () -> TownSearch?, scansTowns: Bool, keepsLastTowns: Bool) {
+    init(search: (any PlaceSearch)?, towns: BundledTownLoader, scansTowns: Bool, keepsLastTowns: Bool) {
         self.search = search
         self.towns = towns
         self.scansTowns = scansTowns
@@ -126,6 +127,7 @@ final class PlaceQuery {
     /// `OnChangeSearchWord`: an empty word clears the results; otherwise the towns and the predictions for it.
     func change(_ text: String) {
         word = text
+        townTask?.cancel()
         searchTask?.cancel()
         let typed = text.trimmingCharacters(in: .whitespaces)
         if typed.isEmpty {
@@ -133,9 +135,16 @@ final class PlaceQuery {
             townResults = nil
             return
         }
-        if scansTowns, let towns = towns() {
-            let page = towns.search(typed)
-            if !page.towns.isEmpty || !keepsLastTowns { townResults = page.towns.isEmpty ? nil : Towns(word: typed, page: page) }
+        if scansTowns {
+            if let loaded = towns.cached {
+                publishTowns(loaded, for: typed)
+            } else {
+                townTask = Task { [weak self, towns] in
+                    guard !Task.isCancelled else { return }
+                    guard let loaded = await towns.load(), !Task.isCancelled else { return }
+                    self?.publishTowns(loaded, for: typed)
+                }
+            }
         }
         if let search {
             let delay = predictionDelay
@@ -148,9 +157,16 @@ final class PlaceQuery {
         }
     }
 
+    private func publishTowns(_ towns: TownSearch, for typed: String) {
+        let page = towns.search(typed)
+        if !page.towns.isEmpty || !keepsLastTowns {
+            townResults = page.towns.isEmpty ? nil : Towns(word: typed, page: page)
+        }
+    }
+
     /// `OnScrollResults`: the next ten towns when the last shown one comes into view.
     func moreTowns() {
-        guard let shown = townResults, shown.page.next >= 0, let towns = towns() else { return }
+        guard let shown = townResults, shown.page.next >= 0, let towns = towns.cached else { return }
         let more = towns.search(shown.word, from: shown.page.next)
         townResults = Towns(word: shown.word, page: TownPage(towns: shown.page.towns + more.towns, next: more.next))
     }
@@ -162,6 +178,7 @@ final class PlaceQuery {
 
     /// The word set without a search (`search.word = geoInfo.name` after find-by-location): the results go.
     func show(word text: String) {
+        townTask?.cancel()
         searchTask?.cancel()
         word = text
         predictions = nil

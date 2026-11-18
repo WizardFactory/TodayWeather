@@ -85,6 +85,7 @@ import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.ui.chart.DailyChartView
 import net.wizardfactory.todayweather.ui.chart.HourlyChartView
 import net.wizardfactory.todayweather.ui.chart.rememberOpeningScroll
+import net.wizardfactory.todayweather.ui.chart.rememberForecastChartImages
 import net.wizardfactory.todayweather.ui.chart.rememberChartImages
 import net.wizardfactory.todayweather.ui.shell.Glyphs
 import net.wizardfactory.todayweather.ui.shell.FixedLine
@@ -482,7 +483,7 @@ private fun DustRows(rows: List<DustRow>, colors: ForecastColors, onAction: (Pag
  * calendar title and rows of a 24 dp image, a value and its label.
  */
 @Composable
-private fun DayCells(days: List<DayCell>, theme: Theme, colors: ForecastColors) {
+internal fun DayCells(days: List<DayCell>, theme: Theme, colors: ForecastColors) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // `min-width: 100%`: a wide page stretches the cells.
         val cellWidth = if (days.isEmpty()) 132.dp else maxOf(132.dp, maxWidth / days.size)
@@ -492,6 +493,7 @@ private fun DayCells(days: List<DayCell>, theme: Theme, colors: ForecastColors) 
 
 @Composable
 private fun DayRow(days: List<DayCell>, cellWidth: Dp, theme: Theme, colors: ForecastColors) {
+    val images = rememberForecastChartImages()
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
         for (day in days) {
             Column(Modifier.widthIn(min = cellWidth).padding(horizontal = 5.dp)) {
@@ -504,7 +506,7 @@ private fun DayRow(days: List<DayCell>, cellWidth: Dp, theme: Theme, colors: For
                 for (row in day.rows) {
                     Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ThemeImage(row.image, theme, 24.dp, Modifier.padding(end = 8.dp))
+                        ForecastBitmap(images[row.image.assetPath(theme)], 24.dp, Modifier.padding(end = 8.dp))
                         Column {
                             CssText(runs(row.value, 15.sp, colors, prefix = ""), plain(15.sp, colors.text), maxLines = 1)
                             CssText(AnnotatedString(row.label), plain(13.sp, colors.subText), strut = plain(15.sp, colors.text), maxLines = 1)
@@ -538,7 +540,13 @@ private fun Attribution(attribution: Attribution, colors: ForecastColors, onActi
 @Composable
 internal fun ThemeImage(image: PageImage, theme: Theme, height: Dp, modifier: Modifier = Modifier) {
     val images = rememberChartImages()
-    val bitmap = images[(if (image.weather) theme.weather else theme.icons) + "/" + image.name]
+    ForecastBitmap(images[image.assetPath(theme)], height, modifier)
+}
+
+private fun PageImage.assetPath(theme: Theme) = (if (weather) theme.weather else theme.icons) + "/" + name
+
+@Composable
+private fun ForecastBitmap(bitmap: ImageBitmap?, height: Dp, modifier: Modifier) {
     if (bitmap == null) {
         // A missing image draws nothing in the WebView either.
         Spacer(modifier.height(height))

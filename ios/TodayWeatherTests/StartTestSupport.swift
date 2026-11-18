@@ -94,7 +94,8 @@ struct StartFixture {
     let location: TestLocation
     var closed: () -> Int
 
-    init(location: TestLocation, search: (any PlaceSearch)? = nil, weather: Bool = true, languages: [String] = ["ko-KR"]) throws {
+    init(location: TestLocation, search: (any PlaceSearch)? = nil, weather: Bool = true, languages: [String] = ["ko-KR"],
+         towns: BundledTownLoader = BundledTownLoader()) throws {
         holder = AppStateHolder(store: MemoryStore())
         holder.load(AppState(units: .defaults(region: "KR")))
         shell = ShellModel(holder: holder, locale: ShellLocale(preferredLanguages: languages), version: "test")
@@ -105,7 +106,7 @@ struct StartFixture {
                              geocode: GeocodeClient(baseURL: "https://server.test.invalid", http: server),
                              location: location, acceptLanguage: { "ko-KR,ko;q=0.9" })
         let counter = Counter()
-        page = StartPage(shell: shell, flow: flow, search: search, towns: { StartPage.bundledTowns() },
+        page = StartPage(shell: shell, flow: flow, search: search, towns: towns,
                          openURL: { _ in }, closed: { counter.value += 1 })
         page.predictionDelay = .milliseconds(10)
         closed = { counter.value }

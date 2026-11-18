@@ -77,6 +77,8 @@ import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.RetryDialog
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
+import net.wizardfactory.todayweather.ui.chart.ForecastChartImages
+import net.wizardfactory.todayweather.ui.forecast.ForecastCharts
 import net.wizardfactory.todayweather.ui.forecast.rememberWeatherTab
 import net.wizardfactory.todayweather.ui.nation.IonicLoading
 import net.wizardfactory.todayweather.ui.nation.NationLoads
@@ -269,6 +271,9 @@ fun AppContent(
     alertIntro: AlertIntro? = null,
 ) {
     val theme = Theme.of(state.settings.theme)
+    val forecastCharts = remember { ForecastCharts() }
+    val context = LocalContext.current.applicationContext
+    val forecastImages = remember(context) { ForecastChartImages(context) }
     val navigation = rememberShellNavigation(startTab ?: StartupPage.tab(state.settings.startupPage))
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
@@ -498,7 +503,7 @@ fun AppContent(
         },
     ) { tab ->
         when (tab) {
-            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, bellHost, onAirInfo = { code ->
+            Tab.HOURLY, Tab.DAILY -> rememberWeatherTab(tab, state, entries, loading, theme, bellHost, forecastCharts, forecastImages, onAirInfo = { code ->
                 // `goAirInfoPage(code)`: /tab/air?code=.
                 airCode = code
                 navigation.selected = Tab.AIR

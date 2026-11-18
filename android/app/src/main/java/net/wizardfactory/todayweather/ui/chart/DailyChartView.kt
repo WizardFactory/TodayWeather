@@ -49,7 +49,10 @@ fun DailyChartView(
     colors: ChartColors = ChartColors.LIGHT,
 ) {
     val measurer = rememberTextMeasurer()
-    val images = rememberChartImages()
+    val imageCache = rememberForecastChartImages()
+    val images = remember(imageCache, chart, colors.weatherImages, colors.iconImages) {
+        imageCache.prepare(colors, chart.chart)
+    }
     val density = LocalDensity.current
     val layout = remember(chart, measurer, density) { DailyLayout(chart, measurer, density) }
     Box(modifier.fillMaxWidth().height(layout.contentHeight.dp).background(colors.background).horizontalScroll(scrollState)) {

@@ -2,6 +2,7 @@ package net.wizardfactory.todayweather.ui.chart
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -35,11 +36,11 @@ internal fun chartTextStyle(color: Color, size: TextUnit) =
  * Draws a chart [svg] at [top] (dp) as the WebView draws the Cordova SVG with the theme's [colors]: elements in
  * document order, coordinates in dp; elements at NaN positions are skipped.
  */
-internal fun DrawScope.drawSvg(svg: Svg, top: Double, images: ChartImages, measurer: TextMeasurer, colors: ChartColors = ChartColors.LIGHT) {
+internal fun DrawScope.drawSvg(svg: Svg, top: Double, images: Map<String, ImageBitmap>, measurer: TextMeasurer, colors: ChartColors = ChartColors.LIGHT) {
     for (node in svg.children) drawNode(node, top, images, measurer, colors)
 }
 
-private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, measurer: TextMeasurer, colors: ChartColors) {
+private fun DrawScope.drawNode(node: SvgNode, top: Double, images: Map<String, ImageBitmap>, measurer: TextMeasurer, colors: ChartColors) {
     fun x(v: Double) = (v * density).toFloat()
     fun y(v: Double) = ((v + top) * density).toFloat()
     when (node) {
@@ -64,13 +65,7 @@ private fun DrawScope.drawNode(node: SvgNode, top: Double, images: ChartImages, 
             drawLine(color, Offset(x(node.x1), y(node.y1)), Offset(x(node.x2), y(node.y2)), strokeWidth = 1 * density, alpha = alpha)
         }
         is SvgImage -> {
-            // Scene geometry is theme-independent; artwork follows the page's theme.
-            val href = when {
-                node.href.startsWith("img/weather_default/") -> colors.weatherImages + node.href.removePrefix("img/weather_default")
-                node.href.startsWith("img/icons_default/") -> colors.iconImages + node.href.removePrefix("img/icons_default")
-                else -> node.href
-            }
-            val image = images[href] ?: return
+            val image = images[node.href] ?: return
             if (listOf(node.x, node.y, node.width, node.height).any { it.isNaN() }) return
             // Fractional position and size, as SVG images have; mipmapped bitmaps scale down smoothly.
             val draw: DrawScope.() -> Unit = {

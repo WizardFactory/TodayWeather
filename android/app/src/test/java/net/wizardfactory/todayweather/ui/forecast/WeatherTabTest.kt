@@ -157,6 +157,37 @@ class WeatherTabTest {
     }
 
     @Test
+    fun revisitingForecastsRestoresOpeningScroll() {
+        show()
+        fun offset() = rule.onNode(hasAnyAncestor(hasTestTag(ForecastTags.block(1))) and
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange))
+            .fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange].value()
+        fun tab(tab: Tab) {
+            rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            rule.waitForIdle()
+        }
+        val hourlyStart = offset()
+        rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft(durationMillis = 100) }
+        assertTrue(offset() > hourlyStart)
+        tab(Tab.DAILY)
+        val dailyStart = offset()
+        rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft(durationMillis = 100) }
+        assertTrue(offset() > dailyStart)
+        tab(Tab.AIR)
+        tab(Tab.HOURLY)
+        assertEquals(hourlyStart, offset(), 0f)
+        rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft(durationMillis = 100) }
+        assertTrue(offset() > hourlyStart)
+        val before = session.applies.value
+        session.reload(WeatherSession.Sender.TAB)
+        rule.waitForIdle()
+        assertTrue(session.applies.value > before)
+        assertEquals(hourlyStart, offset(), 0f)
+        tab(Tab.DAILY)
+        assertEquals(dailyStart, offset(), 0f)
+    }
+
+    @Test
     fun theSelectedPlaceShowsAndSwipesAndArrowsSwitchPlaces() {
         show()
         rule.onNodeWithText("회현동", useUnmergedTree = true).assertExists()
