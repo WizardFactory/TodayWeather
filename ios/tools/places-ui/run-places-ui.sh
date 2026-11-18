@@ -85,7 +85,7 @@ xcrun simctl spawn "$UDID" log stream --level info --predicate 'subsystem == "ne
 LOGPID=$!
 STATUS=0
 rm -rf "$OUT/$MODE.xcresult"
-TEST_RUNNER_TW_PLACES_UI=$MODE xcodebuild -project "$IOS/TodayWeather.xcodeproj" -scheme TodayWeatherUITests \
+TEST_RUNNER_TW_FIXTURE_COUNTER="http://127.0.0.1:$PORT/fixture/weather-request-count" TEST_RUNNER_TW_PLACES_UI=$MODE xcodebuild -project "$IOS/TodayWeather.xcodeproj" -scheme TodayWeatherUITests \
   -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$IOS/build/DerivedData" -resultBundlePath "$OUT/$MODE.xcresult" \
   test-without-building -only-testing:"TodayWeatherUITests/PlacesUITests/$TEST" > "$OUT/$MODE-xcodebuild.raw.log" 2>&1 || STATUS=$?
 redact < "$OUT/$MODE-xcodebuild.raw.log" > "$OUT/$MODE-xcodebuild.log"
@@ -109,7 +109,7 @@ keep = set()
 for test in manifest:
     for a in test.get("attachments", []):
         name, file = a.get("suggestedHumanReadableName", ""), a.get("exportedFileName", "")
-        if file.endswith(".png") or name.split("_")[0] in ("before-drag", "after-drag", "after-header-swipe", "busan-hourly",
+        if file.endswith(".png") or name.split("_")[0] in ("before-drag", "after-drag", "pull-refresh-hourly", "after-header-swipe", "busan-hourly",
                                                             "london-hourly", "swiped-to-busan", "places-list", "after-delete"):
             target = name.split("_")[0] + ".png"
             os.replace(os.path.join(d, file), os.path.join(d, target))

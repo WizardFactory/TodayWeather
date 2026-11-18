@@ -10,7 +10,7 @@ import UIKit
 /// The weather pages S03 (Hourly) and S04 (Daily) in the shell (IN-08, #2957) and the air page S05 (IN-09, #2958):
 /// TabCtrl's loading (`WeatherSession`), ForecastCtrl's scope for the shown weather page (`ForecastScope`) and AirCtrl's
 /// for the air page (`AirScope`), connected to the shell's hooks: the opening and a return to the foreground reload
-/// (`reloadEvent` `init` and `resume`), a tap on the selected weather or air tab reloads (`tab`), and a failure shows the
+/// (`reloadEvent` `init` and `resume`), pulling down on a forecast or air page refreshes its place, and a failure shows the
 /// retry confirmation O03. State writes go through the `AppStateHolder`.
 @MainActor
 @Observable
@@ -46,10 +46,6 @@ final class WeatherScreens {
         self.screenSize = screenSize
         catalog = Catalog(code: shell.locale.catalog)
         texts = Self.texts(catalog)
-        shell.onRefresh = { [weak self] tab in
-            // The Air tab's reload is the same `reloadEvent 'tab'` (IN-09 shows its page).
-            if tab != .search { self?.session.reload(.tab) }
-        }
         observe()
     }
 
@@ -287,6 +283,7 @@ final class WeatherScreens {
         let colors = ShellColors.of(theme, tab: tab)
         let actions = WeatherPageActions(
             toggleExpanded: { [weak self] in self?.toggleExpanded() },
+            refresh: session.refresh,
             previous: { [weak self] in self?.session.previous() },
             next: { [weak self] in self?.session.next() },
             perform: { [weak self] in self?.perform($0) })
@@ -307,6 +304,7 @@ final class WeatherScreens {
         let theme = Theme.of(state.settings.theme)
         let colors = ShellColors.of(theme, tab: .air)
         let actions = AirPageActions(
+            refresh: session.refresh,
             previous: { [weak self] in self?.session.previous() },
             next: { [weak self] in self?.session.next() },
             code: { [weak self] in self?.selectAirCode($0) },

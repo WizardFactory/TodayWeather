@@ -83,6 +83,7 @@ final class PlacesUITests: XCTestCase {
         try XCTSkipUnless(mode == "fixture", "run by ios/tools/places-ui/run-places-ui.sh fixture")
         continueAfterFailure = false
         app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(ko-KR)", "-AppleLocale", "ko_KR"]
         app.launch()
         closeNotice()
         tap("start-shortcut-0")
@@ -93,6 +94,23 @@ final class PlacesUITests: XCTestCase {
         let chart = element("forecast-chart")
         XCTAssertTrue(chart.waitForExistence(timeout: 30), "the hourly chart")
         Thread.sleep(forTimeInterval: 1.5)
+        // Pull from the top of the active page. One new weather request and the same place in the
+        // header distinguish refresh from both ordinary scrolling and a swipe to the next place.
+        let counter = try XCTUnwrap(ProcessInfo.processInfo.environment["TW_FIXTURE_COUNTER"].flatMap(URL.init(string:)))
+        func weatherRequests() throws -> Int {
+            let data = try Data(contentsOf: counter)
+            return try JSONDecoder().decode(Int.self, from: data)
+        }
+        let beforePull = try weatherRequests()
+        let header = element("forecast-header")
+        let start = header.coordinate(withNormalizedOffset: CGVector(dx: 0.26, dy: 0.45))
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 420)),
+                    withVelocity: .slow, thenHoldForDuration: 1)
+        shot("pull-refresh-hourly")
+        let afterPull = try weatherRequests()
+        XCTAssertEqual(afterPull, beforePull + 1, "pulling started one weather request")
+        XCTAssertEqual(title, "부산광역시", "a vertical pull keeps the selected place")
+
         shot("before-drag")
         let before = chart.screenshot().pngRepresentation
 

@@ -57,9 +57,11 @@ struct WeatherSessionTests {
         #expect(f.requests == 1, "a resume within ten minutes loads nothing")
         #expect(f.session.applies == 2, "and fires no applyEvent")
 
-        f.session.reload(.tab)
+        let pull = Task { await f.session.refresh() }
+        #expect(await eventually { f.requests == 2 }, "pulling bypasses the ten-minute gate")
         await f.clock.advance(by: 1000)
-        #expect(f.requests == 2, "a tab tap reloads at once (reloadCity)")
+        await pull.value
+        #expect(f.session.applies == 4, "refresh completes after applying the new weather")
 
         await f.clock.advance(to: f.minutes(17))
         f.session.reload(.resume)

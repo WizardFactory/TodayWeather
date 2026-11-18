@@ -28,6 +28,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def answer(self):
         path = self.path.split("?")[0]
+        if self.command == "GET" and path == "/fixture/weather-request-count":
+            with lock:
+                count = sum(r["path"].startswith("/weather/") for r in requests)
+            self.reply(200, str(count).encode("ascii"))
+            return
         status, payload = 404, b"{}"
         if self.command == "GET" and path.startswith("/weather/v000903/coord/"):
             status, payload = 200, body("vc-london" if path.split("/")[-1].startswith("51.") else "kma-seoul")
@@ -37,8 +42,12 @@ class Handler(BaseHTTPRequestHandler):
             requests.append({"method": self.command, "path": self.path, "status": status,
                              "acceptLanguage": self.headers.get("Accept-Language"), "deviceId": self.headers.get("Device-Id")})
             LOG.write_text(json.dumps(requests, ensure_ascii=False, indent=1) + "\n", "utf-8")
+        self.reply(status, payload)
+
+    def reply(self, status, payload):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)

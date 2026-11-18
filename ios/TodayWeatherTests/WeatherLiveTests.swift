@@ -82,9 +82,8 @@ struct WeatherLiveTests {
         let x = try #require(w.chartScroll).contentOffset.x
         #expect(abs(x - end) < 1.0 / 6, "the chart keeps the user's position: \(x), was \(end)")
 
-        // A real applyEvent (a tab tap reloads) still brings the chart back to today's position.
-        f.shell.now = { 10_000 }
-        f.shell.tapTab(.forecast)
+        // A manual refresh still brings the chart back to today's position.
+        await f.screens.session.refresh()
         #expect(await eventually { (f.screens.scope?.scrolls ?? 0) > applies + 1 })
     }
 
