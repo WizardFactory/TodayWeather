@@ -67,7 +67,10 @@ class ShellTest {
         }
         for ((tab, glyph) in mapOf(Tab.HOURLY to Glyphs.TIME, Tab.DAILY to Glyphs.CALENDAR, Tab.AIR to Glyphs.CLOUD_OUTLINE)) {
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            // The previous tab handler read wall time and ignored repeats within 700 ms.
+            Thread.sleep(750)
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            assertTrue("reselecting $tab did not dispatch a manual refresh", refreshed.isEmpty())
             rule.onNode(hasText(glyph) and hasAnyAncestor(hasTestTag(ShellTags.tab(tab))), useUnmergedTree = true).assertExists()
             rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
         }
