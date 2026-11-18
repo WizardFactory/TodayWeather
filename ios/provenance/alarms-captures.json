@@ -1,0 +1,546 @@
+{
+ "tool": "ios/tools/push-reference/capture.py",
+ "build": {
+  "recipe": "ios/tools/chart-reference/build-cordova.sh <out> http://127.0.0.1:18460",
+  "commit": "ab6acb0c90cac1874ae5c1ba092d0b50052770fb",
+  "client_version": "1.1.2",
+  "cordova_ios": "8.1.1",
+  "xcode": "Xcode 27.2",
+  "node": "v24.19.0",
+  "server": "http://127.0.0.1:18460",
+  "built_at": "2026-11-16T00:59:55Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+ },
+ "data": {
+  "places": "서울 (kma-seoul) added through WeatherInfo as index 1 (the disabled current position is index 0)",
+  "records": "none for settings, picker, picker-alarm, confirm, alert-off and permission (S09's defaults); for equal an alert from 09 to 09 and an alarm at 07:40 Mon-Fri (Push.newPushAlert/newPushAlarm); no FCM token, so nothing is posted",
+  "permission": "the firebasex messaging plugin's grantPermission and hasPermission answered by capture.js: granted, except notifications off for the permission state (O11 at the page's opening)",
+  "foreground": "TabCtrl's notificationEvent with {title, message} as service.push.js builds it from aps.alert"
+ },
+ "pageSources": [
+  {
+   "file": "client/www/templates/setting-push.html",
+   "appSha256": "7423a7806fa3d7c54888759066c683913c8e179e9eb50fb09f07aad202b7bb82",
+   "tracked": true,
+   "clientSha256": "7423a7806fa3d7c54888759066c683913c8e179e9eb50fb09f07aad202b7bb82",
+   "matchesClient": true,
+   "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+  },
+  {
+   "file": "client/www/js/controller.push.js",
+   "appSha256": "0b89a4e6e05f34d681bfb543e1ba26055e09c4e0e3d80d78586f0396be1d7662",
+   "tracked": true,
+   "clientSha256": "0b89a4e6e05f34d681bfb543e1ba26055e09c4e0e3d80d78586f0396be1d7662",
+   "matchesClient": true,
+   "lastCommit": "e6421044f53c19e851a6a4af4dd5c5ac79890bfa"
+  },
+  {
+   "file": "client/www/js/service.push.js",
+   "appSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+   "tracked": true,
+   "clientSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+   "matchesClient": true,
+   "lastCommit": "def509aa5737962eb5f408dc127f6674c7869b4a"
+  },
+  {
+   "file": "client/www/js/service.firebase.js",
+   "appSha256": "209370475558f790f34adc0b9ace4b0a574287baedf821bee468c27ac3a7f0f7",
+   "tracked": true,
+   "clientSha256": "209370475558f790f34adc0b9ace4b0a574287baedf821bee468c27ac3a7f0f7",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/controller.tabctrl.js",
+   "appSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "tracked": true,
+   "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/service.weatherinfo.js",
+   "appSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "tracked": true,
+   "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/service.weatherutil.js",
+   "appSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "tracked": true,
+   "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/app.js",
+   "appSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "tracked": true,
+   "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/css/ionic.app.css",
+   "appSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ionic/css/ionic.css",
+   "appSha256": "f097999a9ac732f1f805f52cd281a5dec291526ddb0968e5e84e0e1d08d59285",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ionic/fonts/ionicons.ttf",
+   "appSha256": "2ba7f20b1d8990e17a47fe3d88e4c766628aaa2baf1dd30fca0a0db59836f5f9",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ionic-timepicker/dist/ionic-timepicker.bundle.min.js",
+   "appSha256": "d8161a05219a19760a75a9b0bc660848e9950b974a946682e1d67a0a49666b1a",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ion.rangeSlider/js/ion.rangeSlider.min.js",
+   "appSha256": "1866877a7f6662f277f2ac8fb6d317a2a9cc7c41a97394208cf716a79bb8a013",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ion.rangeSlider/css/normalize.css",
+   "appSha256": "b8a33b43a27c4ecefa09c6d3dace203fe9c2ac2a0653c788231bac88e389892a",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ion.rangeSlider/css/ion.rangeSlider.css",
+   "appSha256": "0f326d6a4aa49534e54ad15ca793e30eeb29ba3ce6d35c9f15e9b447b5db1923",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ion.rangeSlider/css/ion.rangeSlider.skinFlat.css",
+   "appSha256": "ab3085180d4e3d4d75dc9aab23284432a192632957670dbdc116423b0c94a875",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ion.rangeSlider/img/sprite-skin-flat.png",
+   "appSha256": "f2f42c58a4ff4bdc0429d4e59fa2d3a9cb65f6651c5f18260d30d6e71ef56553",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/index.html",
+   "appSha256": "0df3ec6b77d9ec26fe136427b2c54be494bf0752783dbeea8b9eb3e73fef0392",
+   "tracked": true,
+   "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
+   "matchesClient": false,
+   "lastCommit": "94a95c59a1cb73246ee79b93be3c8f92e3649d45"
+  },
+  {
+   "file": "client/www/locales/ko.json",
+   "appSha256": "21d2dac921296c7e001a43dd05844ea63d498069781468c0bfd9a8b1d33e6eee",
+   "tracked": true,
+   "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+   "matchesClient": false,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  },
+  {
+   "file": "client/www/locales/en.json",
+   "appSha256": "b6717d8881c9e7101e47033fd78d2c324652b7aa4a158552b41b9332fc9b26e0",
+   "tracked": true,
+   "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+   "matchesClient": false,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "runs": {
+  "ko-KR": {
+   "device": {
+    "name": "twios_cap_16",
+    "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-16T07:53:35Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "ko-KR",
+    "languages": [
+     "ko-KR"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "KR",
+    "theme": "light",
+    "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready forecast",
+    "state": "forecast",
+    "messaging": true
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ]
+  },
+  "en-US": {
+   "device": {
+    "name": "twios_cap_16",
+    "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-16T07:57:59Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "en-US",
+    "languages": [
+     "en-US"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "US",
+    "theme": "light",
+    "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready forecast",
+    "state": "forecast",
+    "messaging": true
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ]
+  }
+ },
+ "files": [
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-captures.json",
+   "sha256": "f30fc45f8f10b38394c902975975410b2c9dd3a5e469f16438e6543b392a7455"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-alert-off-statusbar.png",
+   "sha256": "4688fd544e97eacb3b24607d9dabc0ee2c9b10294369d54ba692d57045ff846a"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-alert-off.json",
+   "sha256": "89ac6c25bb5d40afad0155a81484aaa1a59adad6d4e24911b9cadc64b569a67a"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-alert-off.png",
+   "sha256": "e396c35db5096150d16b9e4689ef68ecb1c5e40bacdb98cbe5e0110a2d83eb77"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-confirm-statusbar.png",
+   "sha256": "4688fd544e97eacb3b24607d9dabc0ee2c9b10294369d54ba692d57045ff846a"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-confirm.json",
+   "sha256": "bfa11173f2e811ed8fe4f29e6fe0cec5e0adcfddd97f13ca2cc6f92287bb636e"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-confirm.png",
+   "sha256": "ae94003c3e4a5f93626f9ae19b10ca31d1a0554ccdf9bf48ba53e368ca03a7f9"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-equal-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-equal.json",
+   "sha256": "ffe64c36e937f0f9059f9af8c30231a0cae204639fcbe09543104718651f6331"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-equal.png",
+   "sha256": "f02c6fc2073ec99199af867c3235f1848e41dacf4c4482a8f1bbc57722a36467"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-foreground-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-foreground.json",
+   "sha256": "5025bfe813e03d12cf9fddc1c3b330a08bd68e9d7622f413273558c3d5ea844b"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-foreground.png",
+   "sha256": "343a24de1e5295a7270a3a616dcca5a7316b43f255618392d550a3a2092db69b"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-intro-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-intro.json",
+   "sha256": "cc6c251aa8a0d8d5f95306d8f166bb1dbfe3c74ab8e8b0020e20dac52467e232"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-intro.png",
+   "sha256": "ee145f9456350b3986eab016d86ec2f8a67726f0e3caead31338b9ae4c0248a7"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-permission-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-permission.json",
+   "sha256": "9a3ebe54ead67deda0d2b6add53fb2e0a5c2913fcaf82bf9a95c0d2b4402baca"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-permission.png",
+   "sha256": "fc946cc2112d8ea20fa0a9505bd275b95bf7e8819abf3a95c8424d62231e0eaa"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-picker-alarm-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-picker-alarm.json",
+   "sha256": "dba8252402950f8950bd34ae449e7a67e43c219551a630e522dc7fddf84d5292"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-picker-alarm.png",
+   "sha256": "bbdcdfe98567bcea2478c0b1da3581838406c062f96812c386af244283bd32d5"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-picker-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-picker.json",
+   "sha256": "10b4350b860910039d9fe6ed47c81501939c2bb18d76ab8170caff1fd571d2df"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-picker.png",
+   "sha256": "6d9cbb3a0aa6bb36a468e1f8c6ec7930eb9da485aca86f39c12ce43053276010"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-settings-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-settings.json",
+   "sha256": "02ec21a1e20713b12d5e64a0d2f7e9b810ce475cbbe3ebe1ad7a5ad3a1500398"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-en-US-settings.png",
+   "sha256": "e3b13e1b80d0a8b29a0f4951a92265fc799cbbad999ce536eed540ec3108b29a"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-kma-seoul.input.json",
+   "sha256": "ec2a645f69200df2609792d64d9c9ea90dafaa2d1daadbf2566df1d75a7b6b31"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-alert-off-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-alert-off.json",
+   "sha256": "10b4922be93cbff6a94866fbcd45474805cffd8875311d672872c9ea05fa474c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-alert-off.png",
+   "sha256": "33c199e135ac0613443405ae8ec237f425b4f532e3dac737272b2b85e6cdaa90"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-confirm-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-confirm.json",
+   "sha256": "aec61c6304c1577c1175c4641b8b8a7c687baed8f54cf94945eb02cdb06be890"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-confirm.png",
+   "sha256": "8ddb39f212c8f6402fa32502eb272fc358cbb08cc933ad7b509213eed4593047"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-equal-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-equal.json",
+   "sha256": "f9ef4c2a30fea7ce22742b08e8493c62b3fe63c24f4a346a6d68e78163d148a6"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-equal.png",
+   "sha256": "e290ac7d3d9d4a93a9a2b30936528573a3cf6b6aabeddd5e45067a893eee82d8"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-foreground-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-foreground.json",
+   "sha256": "334d92d5a160f5d3286eacccab2e8f0ec2c6f79443115faaf027d5c570276123"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-foreground.png",
+   "sha256": "56daa159dca0b6dcb8e412b48a3fb2e60b6be17c3c7d6cbbd882d52e0b518955"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-intro-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-intro.json",
+   "sha256": "bd3a98cdefe4e65b1620bd9abab0038c1f40e2254010a428643c53d2397e9bdc"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-intro.png",
+   "sha256": "55755c6a1c159588d9f998166b507e3db2e2d3a106c4c0a366bf39617bcc7b46"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-permission-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-permission.json",
+   "sha256": "0dc9fd7d61041b2697f6dbc23b8fdba9eff8cf33276e431717bc8d1c0972c06b"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-permission.png",
+   "sha256": "49a4d3a36d829fe9f3afa129485d6d07a9852aec13ec3ad8a97aa650f05fd7bb"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-picker-alarm-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-picker-alarm.json",
+   "sha256": "07d2642d330fddcf9d2eff5730d5ba32f67145bf533381444efc8385f8b72769"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-picker-alarm.png",
+   "sha256": "fe45268cf17521186db4958470b7ebb1732b44e26c873d934f8ebe51891de37d"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-picker-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-picker.json",
+   "sha256": "7623a0ee5b342de0a3f19a873a1f4c6ef3383dfdf78bf820d5e48371abbd1858"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-picker.png",
+   "sha256": "55a86d17986bb103bd9ede57866de2e6a471c57a5662d990abfdc2e4b56516b2"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-settings-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-settings.json",
+   "sha256": "b360af042fd3236ca03e9d6249c9a076d0e6ff65a8049618390437d88bbb6654"
+  },
+  {
+   "path": "TodayWeatherTests/AlarmsReference/alarms-ko-KR-settings.png",
+   "sha256": "7468085927ddd5ea85774210128a9649fd7e4094b41fe47012a9345ff9bded52"
+  }
+ ]
+}

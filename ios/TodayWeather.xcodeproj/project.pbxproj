@@ -29,11 +29,19 @@
 			remoteGlobalIDString = 7A1000000000000000000401;
 			remoteInfo = TodayWeather;
 		};
+		7A1000000000000000110201 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7A1000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7A1000000000000000000401;
+			remoteInfo = TodayWeather;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		7A1000000000000000000301 /* TodayWeather.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodayWeather.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A1000000000000000000302 /* TodayWeatherTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TodayWeatherTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A1000000000000000110301 /* TodayWeatherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TodayWeatherUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A1000000000000000000303 /* Core */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Core; sourceTree = "<group>"; };
 		7A1000000000000000040301 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Support/App.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -47,6 +55,11 @@
 		7A1000000000000000000702 /* TodayWeatherTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TodayWeatherTests;
+			sourceTree = "<group>";
+		};
+		7A1000000000000000110701 /* TodayWeatherUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TodayWeatherUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -78,6 +91,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A1000000000000000110801 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -86,6 +106,7 @@
 			children = (
 				7A1000000000000000000701 /* TodayWeather */,
 				7A1000000000000000000702 /* TodayWeatherTests */,
+				7A1000000000000000110701 /* TodayWeatherUITests */,
 				7A1000000000000000000303 /* Core */,
 				7A1000000000000000040301 /* App.xcconfig */,
 				7A1000000000000000000902 /* Products */,
@@ -97,6 +118,7 @@
 			children = (
 				7A1000000000000000000301 /* TodayWeather.app */,
 				7A1000000000000000000302 /* TodayWeatherTests.xctest */,
+				7A1000000000000000110301 /* TodayWeatherUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -159,6 +181,27 @@
 			productReference = 7A1000000000000000000302 /* TodayWeatherTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		7A1000000000000000110401 /* TodayWeatherUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A1000000000000000111101 /* Build configuration list for PBXNativeTarget "TodayWeatherUITests" */;
+			buildPhases = (
+				7A1000000000000000110A01 /* Sources */,
+				7A1000000000000000110801 /* Frameworks */,
+				7A1000000000000000110B01 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7A1000000000000000110C01 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7A1000000000000000110701 /* TodayWeatherUITests */,
+			);
+			name = TodayWeatherUITests;
+			productName = TodayWeatherUITests;
+			productReference = 7A1000000000000000110301 /* TodayWeatherUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -173,6 +216,10 @@
 						CreatedOnToolsVersion = 27.2;
 					};
 					7A1000000000000000000402 = {
+						CreatedOnToolsVersion = 27.2;
+						TestTargetID = 7A1000000000000000000401;
+					};
+					7A1000000000000000110401 = {
 						CreatedOnToolsVersion = 27.2;
 						TestTargetID = 7A1000000000000000000401;
 					};
@@ -206,6 +253,7 @@
 			targets = (
 				7A1000000000000000000401 /* TodayWeather */,
 				7A1000000000000000000402 /* TodayWeatherTests */,
+				7A1000000000000000110401 /* TodayWeatherUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -219,6 +267,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		7A1000000000000000000B02 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A1000000000000000110B01 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -242,6 +297,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A1000000000000000110A01 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -249,6 +311,11 @@
 			isa = PBXTargetDependency;
 			target = 7A1000000000000000000401 /* TodayWeather */;
 			targetProxy = 7A1000000000000000000201 /* PBXContainerItemProxy */;
+		};
+		7A1000000000000000110C01 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7A1000000000000000000401 /* TodayWeather */;
+			targetProxy = 7A1000000000000000110201 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -316,7 +383,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TodayWeather;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -343,14 +409,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Support/TodayWeather.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = Support/TodayWeatherRelease.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TodayWeather;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -407,6 +471,40 @@
 			};
 			name = Release;
 		};
+		7A1000000000000000111001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TodayWeather;
+			};
+			name = Debug;
+		};
+		7A1000000000000000111002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TodayWeather;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -433,6 +531,15 @@
 			buildConfigurations = (
 				7A1000000000000000001005 /* Debug */,
 				7A1000000000000000001006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A1000000000000000111101 /* Build configuration list for PBXNativeTarget "TodayWeatherUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A1000000000000000111001 /* Debug */,
+				7A1000000000000000111002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

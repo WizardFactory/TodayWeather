@@ -6,7 +6,7 @@
 
 ## System shape
 
-This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS/Cordova application shared by TodayWeather and TodayAir, and checked-in native iOS/widget/watch projects. The backend contains API serving, scheduled data gathering, scraping, and push workers in one codebase. `SERVER_MODE` selects background work; it does not select which HTTP routes exist.
+The repository contains the Node.js/Express weather backend, the Ionic 1/AngularJS/Cordova app source shared by TodayWeather and TodayAir, and native client projects including the SwiftUI TodayWeather app under `ios/`. The backend contains API serving, scheduled data gathering, scraping, and push workers in one codebase. `SERVER_MODE` selects background work; it does not select which HTTP routes exist.
 
 [Interactive overview](diagrams/service-overview.html) · [Collection detail](weather-collection.md) · [Request detail](mobile-api.md)
 
@@ -24,6 +24,7 @@ This repository contains a Node.js/Express weather backend, an Ionic 1/AngularJS
 | `client/www/js/` | App startup and screens; `WeatherUtil` HTTP/conversion, `WeatherInfo` city state, `TwStorage` persistence |
 | `client/package.json`, `client/config.xml`, `client/scripts/` | TodayWeather build since #2605: Cordova 13 from npm scripts (`www`, `build:*`, `build:*:release`), release files fetched from S3, prepare hooks for AdMob IDs and iOS tracking settings ([client README](../../client/README.md#mobile-application)) |
 | `client/gulpfile.js`, `tw.*`, `ta.*` | Legacy product/platform build variants (TodayAir, widgets); copy configuration, resources and native projects. App billing installers and native purchase declarations removed in #2641 |
+| `ios/TodayWeather/`, `ios/Core/` | Native TodayWeather for iPhone and iPad (iOS 17.0+). The app uses SwiftUI; the Swift package owns weather and push requests, domain logic and storage. See the [iOS README](../../ios/README.md). |
 | `tw.ios/`, `ta.ios/` | TodayWeather/TodayAir native shells, Objective-C widgets, platform web assets |
 | `applewatch/` | Older WatchKit application/extension and its own bundled web assets |
 
@@ -56,7 +57,7 @@ The [configuration](../../server/config/config.js) defaults to `SERVER_MODE=loca
 
 `app.js` mounts `/` and `/v000001`, plus `/v000705`, `/v000803`, `/v000901`, `/v000902`, `/v000903`, `/ww`, `/req`, and `/health`. `v000903` combines current KMA handlers with reused DSF, push, purchase and summary handlers. Per-route inventory (mount map, handlers, gating, consumers and traffic): [API endpoint catalog](../rewrite/api-endpoint-catalog.md#mount-map).
 
-The current mobile source requests `/weather/v000903/coord/...` and `/geocode/v000903/coord/...`. Since #2606 the server also implements the shapes with traffic in [`server/routes/gateway.js`](../../server/routes/gateway.js), but CloudFront keeps routing them to API Gateway until the cutover ([spec](../../specs/issue-2606.md)). Authorized AWS inspection establishes CloudFront -> API Gateway production -> Lambda. Deployed weather Lambda geocodes coordinates using DynamoDB/provider adapters, then forwards KR to `/{version}/kma/addr/...` and other countries to `/{version}/dsf/coord/...` at `http://tw-svc-spot.wizardfactory.net`. That hostname resolves to the current service EC2 instance. Lambda source is outside this repository; service-host SSH now identifies nginx, ten PM2 cluster workers and checkout `5bca407` with config/logger edits; see [EC2 internals](ec2-internals.md). See [AWS/code correlation](aws-code-correlation.md) for evidence, address-route 501, cache policies and exact version handling.
+The Cordova mobile source requests `/weather/v000903/coord/...` and `/geocode/v000903/coord/...`. Since #2606 the server also implements the shapes with traffic in [`server/routes/gateway.js`](../../server/routes/gateway.js), but CloudFront keeps routing them to API Gateway until the cutover ([spec](../../specs/issue-2606.md)). Authorized AWS inspection establishes CloudFront -> API Gateway production -> Lambda. Deployed weather Lambda geocodes coordinates using DynamoDB/provider adapters, then forwards KR to `/{version}/kma/addr/...` and other countries to `/{version}/dsf/coord/...` at `http://tw-svc-spot.wizardfactory.net`. That hostname resolves to the current service EC2 instance. Lambda source is outside this repository; service-host SSH now identifies nginx, ten PM2 cluster workers and checkout `5bca407` with config/logger edits; see [EC2 internals](ec2-internals.md). See [AWS/code correlation](aws-code-correlation.md) for evidence, address-route 501, cache policies and exact version handling.
 
 The backend also calls `API_SERVER/geocode/v000903/coord/...` (unversioned before #2606) in its direct coordinate-to-KMA-address route. Its deployed configuration resolves `API_SERVER` to `http://todayweather.wizardfactory.net`; this separate call must not be confused with weather Lambda's internal geocoder.
 Sources: [URL builder](../../client/www/js/service.weatherutil.js), [placeholder client config](../../client/www/client.config.example.js), [latest router](../../server/routes/v000903/index.js), [backend geocode dependency](../../server/controllers/controllerTown24h.js).
@@ -84,6 +85,34 @@ App coordinates use `{lat,long}`; server geography often uses `{lat,lon}`; Mongo
 - Localization uses server `i18n` and client Angular Translate; analytics and advertising are app concerns, separate from the weather HTTP wrapper. [Client utility](../../client/www/js/service.util.js), [app](../../client/www/js/app.js).
 
 ## Platform and deployment evidence
+
+### Native TodayWeather for iOS
+
+The native app in repository revision `9bc9ec8f` uses the existing TodayWeather
+bundle ID and reads Cordova state from WebKit local storage and the App Group
+preferences suite. It writes native state atomically and exports compatible state
+to the App Group for a separately built Cordova fallback. It reuses the existing
+device ID for registration. See [app startup](../../ios/TodayWeather/AppScenes.swift),
+[native storage](../../ios/Core/Sources/TWStorage/AppStateStore.swift),
+[device identity](../../ios/Core/Sources/TWStorage/DeviceIdentity.swift) and
+[hand-back](../../ios/Core/Sources/TWStorage/HandBackWriter.swift).
+
+The client uses the configured legacy server for versioned weather, geocode,
+nation, warning and push requests. Weather coordinates and geocoding use the same
+public path families as Cordova. The request test also checks the documented
+exceptions, including the unsupported free-form weather address path and the
+separate photo feed. The native client posts alarm settings through the existing
+push API and receives notifications through Firebase Cloud Messaging. See
+[weather request builder](../../ios/Core/Sources/TWDomain/Forecast/WeatherRequests.swift),
+[request-path tests](../../ios/Core/Tests/TWDataTests/RequestPathsTests.swift) and
+[push service](../../ios/TodayWeather/PushService.swift).
+
+The interactive overview shows the native app's source-level weather and geocode
+connection alongside the AWS routing observed on 2026-09-20. Native distribution
+and the physical-iPhone release checks are tracked in the
+[release issue](https://github.com/WizardFactory/TodayWeather/issues/2968).
+
+### Legacy platform projects
 
 The iOS widgets are independent HTTP consumers: their constants include `weather/coord`, `v000901/kma/addr`, and `ww/010000/current/2?gcode=`. They share preferences with the app but do not simply reuse the current Angular request builder. Bundled `www` trees can differ from `client/www`; treat them as platform snapshots until a build proves synchronization. [Weather widget](../../tw.ios/widget/TodayViewController.m), [air widget](../../ta.ios/widget/TodayViewController.m).
 

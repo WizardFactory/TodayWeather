@@ -1,0 +1,649 @@
+{
+ "source": "ios/tools/push-reference/capture.py provenance, from the records alarms-<lang>-<state>.json",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "webViewOrigin": {
+  "x": 0,
+  "y": 162
+ },
+ "position": "37.5665,126.9780",
+ "served": {
+  "weather": "alarms-kma-seoul.input.json"
+ },
+ "states": {
+  "ko-KR/settings": {
+   "crops": {
+    "page": "alarms-ko-KR-settings.png",
+    "statusBar": "alarms-ko-KR-settings-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 0,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": null
+  },
+  "ko-KR/picker": {
+   "crops": {
+    "page": "alarms-ko-KR-picker.png",
+    "statusBar": "alarms-ko-KR-picker-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "",
+    "heading": "08 : 00 AM",
+    "buttons": [
+     "설정",
+     "삭제",
+     "닫기"
+    ]
+   }
+  },
+  "ko-KR/picker-alarm": {
+   "crops": {
+    "page": "alarms-ko-KR-picker-alarm.png",
+    "statusBar": "alarms-ko-KR-picker-alarm-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "",
+    "heading": "07 : 40 AM",
+    "buttons": [
+     "설정",
+     "삭제",
+     "닫기"
+    ]
+   }
+  },
+  "ko-KR/confirm": {
+   "crops": {
+    "page": "alarms-ko-KR-confirm.png",
+    "statusBar": "alarms-ko-KR-confirm-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "Save",
+    "heading": null,
+    "buttons": [
+     "닫기",
+     "저장"
+    ]
+   }
+  },
+  "ko-KR/alert-off": {
+   "crops": {
+    "page": "alarms-ko-KR-alert-off.png",
+    "statusBar": "alarms-ko-KR-alert-off-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 0,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": false
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": null
+  },
+  "ko-KR/equal": {
+   "crops": {
+    "page": "alarms-ko-KR-equal.png",
+    "statusBar": "alarms-ko-KR-equal-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 2,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 1,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "",
+    "heading": null,
+    "buttons": [
+     "닫기"
+    ]
+   }
+  },
+  "ko-KR/permission": {
+   "crops": {
+    "page": "alarms-ko-KR-permission.png",
+    "statusBar": "alarms-ko-KR-permission-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": true,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "Permission",
+    "heading": null,
+    "buttons": [
+     "닫기",
+     "설정"
+    ]
+   }
+  },
+  "ko-KR/intro": {
+   "crops": {
+    "page": "alarms-ko-KR-intro.png",
+    "statusBar": "alarms-ko-KR-intro-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/forecast",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": null,
+    "alarms": null,
+    "days": null
+   },
+   "title": "서울",
+   "popup": {
+    "title": "악천후 경보",
+    "heading": null,
+    "buttons": [
+     "닫기",
+     "확인"
+    ]
+   }
+  },
+  "ko-KR/foreground": {
+   "crops": {
+    "page": "alarms-ko-KR-foreground.png",
+    "statusBar": "alarms-ko-KR-foreground-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/forecast",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": null,
+    "alarms": null,
+    "days": null
+   },
+   "title": "서울",
+   "popup": {
+    "title": "날씨",
+    "heading": null,
+    "buttons": [
+     "확인"
+    ]
+   }
+  },
+  "en-US/settings": {
+   "crops": {
+    "page": "alarms-en-US-settings.png",
+    "statusBar": "alarms-en-US-settings-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 0,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": null
+  },
+  "en-US/picker": {
+   "crops": {
+    "page": "alarms-en-US-picker.png",
+    "statusBar": "alarms-en-US-picker-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "",
+    "heading": "08 : 00 AM",
+    "buttons": [
+     "Settings",
+     "Delete",
+     "Close"
+    ]
+   }
+  },
+  "en-US/picker-alarm": {
+   "crops": {
+    "page": "alarms-en-US-picker-alarm.png",
+    "statusBar": "alarms-en-US-picker-alarm-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "",
+    "heading": "07 : 40 AM",
+    "buttons": [
+     "Settings",
+     "Delete",
+     "Close"
+    ]
+   }
+  },
+  "en-US/confirm": {
+   "crops": {
+    "page": "alarms-en-US-confirm.png",
+    "statusBar": "alarms-en-US-confirm-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "Save",
+    "heading": null,
+    "buttons": [
+     "Close",
+     "Save"
+    ]
+   }
+  },
+  "en-US/alert-off": {
+   "crops": {
+    "page": "alarms-en-US-alert-off.png",
+    "statusBar": "alarms-en-US-alert-off-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 0,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": false
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": null
+  },
+  "en-US/equal": {
+   "crops": {
+    "page": "alarms-en-US-equal.png",
+    "statusBar": "alarms-en-US-equal-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 2,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 1,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "",
+    "heading": null,
+    "buttons": [
+     "Close"
+    ]
+   }
+  },
+  "en-US/permission": {
+   "crops": {
+    "page": "alarms-en-US-permission.png",
+    "statusBar": "alarms-en-US-permission-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/setting-push?fav=1",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": true,
+    "records": 0,
+    "token": false,
+    "alert": {
+     "enable": true
+    },
+    "alarms": 2,
+    "days": [
+     false,
+     true,
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   },
+   "title": "서울",
+   "popup": {
+    "title": "Permission",
+    "heading": null,
+    "buttons": [
+     "Close",
+     "Settings"
+    ]
+   }
+  },
+  "en-US/intro": {
+   "crops": {
+    "page": "alarms-en-US-intro.png",
+    "statusBar": "alarms-en-US-intro-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/forecast",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": null,
+    "alarms": null,
+    "days": null
+   },
+   "title": "서울",
+   "popup": {
+    "title": "Severe weather alert",
+    "heading": null,
+    "buttons": [
+     "Close",
+     "OK"
+    ]
+   }
+  },
+  "en-US/foreground": {
+   "crops": {
+    "page": "alarms-en-US-foreground.png",
+    "statusBar": "alarms-en-US-foreground-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/forecast",
+    "popups": 1,
+    "cities": 2,
+    "cityIndex": 1,
+    "stubbed": true,
+    "inited": true,
+    "permissionOff": false,
+    "records": 0,
+    "token": false,
+    "alert": null,
+    "alarms": null,
+    "days": null
+   },
+   "title": "서울",
+   "popup": {
+    "title": "Weather",
+    "heading": null,
+    "buttons": [
+     "OK"
+    ]
+   }
+  }
+ }
+}

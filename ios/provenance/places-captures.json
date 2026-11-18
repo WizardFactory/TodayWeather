@@ -1,0 +1,385 @@
+{
+ "tool": "ios/tools/places-reference/capture.py",
+ "build": {
+  "recipe": "ios/tools/chart-reference/build-cordova.sh <out> http://127.0.0.1:18460",
+  "commit": "ab6acb0c90cac1874ae5c1ba092d0b50052770fb",
+  "client_version": "1.1.2",
+  "cordova_ios": "8.1.1",
+  "xcode": "Xcode 27.2",
+  "node": "v24.19.0",
+  "server": "http://127.0.0.1:18460",
+  "built_at": "2026-11-16T00:59:55Z",
+  "note": "client/ from Git at the commit; serverUrl = the local fixture server; dummy Firebase project; Google test ad units"
+ },
+ "data": {
+  "places": "서울 (kma-seoul), then 부산광역시 (kma-seoul) and London (vc-london) added through WeatherInfo; London with an enabled alarm in Push's list (the list state)",
+  "position": "simctl location 37.5665,126.9780, location granted before the first start; the coordinates geocode answered with geocode-seoul",
+  "search": "an inert stand-in for the Maps JavaScript API (window.google): no script is fetched and no prediction shows; the towns are the bundled list's"
+ },
+ "pageSources": [
+  {
+   "file": "client/www/templates/tab-search.html",
+   "appSha256": "2c37e78a4e3ec2d1378266d0fccb069145e3995606c73c8e1cf8d8d32366651e",
+   "tracked": true,
+   "clientSha256": "2c37e78a4e3ec2d1378266d0fccb069145e3995606c73c8e1cf8d8d32366651e",
+   "matchesClient": true,
+   "lastCommit": "5c4044fcd7f4677169c336b9ab065b1a2d95dd10"
+  },
+  {
+   "file": "client/www/js/controller.searchctrl.js",
+   "appSha256": "3c9f8969954fa7e895c412c4f1439b08f2d0fcf99fc72abc087b2a9af858b02c",
+   "tracked": true,
+   "clientSha256": "3c9f8969954fa7e895c412c4f1439b08f2d0fcf99fc72abc087b2a9af858b02c",
+   "matchesClient": true,
+   "lastCommit": "92d60a532d1653899ebe4816a6673f34a37bc8c1"
+  },
+  {
+   "file": "client/www/js/controller.tabctrl.js",
+   "appSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "tracked": true,
+   "clientSha256": "b468a1092d98da4da567d7fab20e0e5c3e8203f62d27fb689e65f0837a83a6bd",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/service.weatherinfo.js",
+   "appSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "tracked": true,
+   "clientSha256": "377729cb9f6348878d81389bd2396c1057fc0a761b890636814963eb2e072fca",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/service.weatherutil.js",
+   "appSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "tracked": true,
+   "clientSha256": "8dbf16613ad3a9fb38128501afd3d8edc48f7953b74333b937b35bcc25d2cff0",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/js/service.push.js",
+   "appSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+   "tracked": true,
+   "clientSha256": "d4255f73355cc1bcf16a68f2ae7bfcfa48a956b93bdbe675227d4fcc43b6a140",
+   "matchesClient": true,
+   "lastCommit": "def509aa5737962eb5f408dc127f6674c7869b4a"
+  },
+  {
+   "file": "client/www/js/service.util.js",
+   "appSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+   "tracked": true,
+   "clientSha256": "1e3eee9ee5baea756eac421fe325d37ef504f74c8b42a42090b7d8ff5524db7c",
+   "matchesClient": true,
+   "lastCommit": "2154640a3acedf3f77759e5389fe102569c4c30d"
+  },
+  {
+   "file": "client/www/js/app.js",
+   "appSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "tracked": true,
+   "clientSha256": "fc09d07205c55699889a5d283912b8e4c0e4e873ea7c45902b89f5b495851e68",
+   "matchesClient": true,
+   "lastCommit": "23837d96c524ef275331c706d3304a8cb008ea28"
+  },
+  {
+   "file": "client/www/css/ionic.app.css",
+   "appSha256": "fce51678ad896c0e4820d8c73a7cc9d96e7646f70f7e2e7f542cbbec6fe4cd48",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/lib/ionic/css/ionic.css",
+   "appSha256": "f097999a9ac732f1f805f52cd281a5dec291526ddb0968e5e84e0e1d08d59285",
+   "tracked": false,
+   "clientSha256": null,
+   "matchesClient": false,
+   "lastCommit": null
+  },
+  {
+   "file": "client/www/img/powered_by_google_on_white.png",
+   "appSha256": "85e8811af8ce7aff2444abb675d1acff9189884726709c6c5d89badb6bb96828",
+   "tracked": true,
+   "clientSha256": "85e8811af8ce7aff2444abb675d1acff9189884726709c6c5d89badb6bb96828",
+   "matchesClient": true,
+   "lastCommit": "2254ededf96912990603d3f76a605eafdce07086"
+  },
+  {
+   "file": "client/www/data/town.js",
+   "appSha256": "e1536e6dbb6d18558e6e93bb6e47923a9d90417e6c6a2cf10f7b6cf6a6080f78",
+   "tracked": true,
+   "clientSha256": "e1536e6dbb6d18558e6e93bb6e47923a9d90417e6c6a2cf10f7b6cf6a6080f78",
+   "matchesClient": true,
+   "lastCommit": "52bf022672ddf2414d0cde045b4fffa5e7e96960"
+  },
+  {
+   "file": "client/www/index.html",
+   "appSha256": "0df3ec6b77d9ec26fe136427b2c54be494bf0752783dbeea8b9eb3e73fef0392",
+   "tracked": true,
+   "clientSha256": "91da0a199b006f1350b51969f93b14500142f1b398c5fd2da4b97d8e6c7cc425",
+   "matchesClient": false,
+   "lastCommit": "94a95c59a1cb73246ee79b93be3c8f92e3649d45"
+  },
+  {
+   "file": "client/www/locales/ko.json",
+   "appSha256": "21d2dac921296c7e001a43dd05844ea63d498069781468c0bfd9a8b1d33e6eee",
+   "tracked": true,
+   "clientSha256": "79a866c0fcceac0e277f1e61b6e37cb3dc99a94cf18de6502c4637dce24093e3",
+   "matchesClient": false,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  },
+  {
+   "file": "client/www/locales/en.json",
+   "appSha256": "b6717d8881c9e7101e47033fd78d2c324652b7aa4a158552b41b9332fc9b26e0",
+   "tracked": true,
+   "clientSha256": "26cd57443aa7046c875e639d7147efe2af0c80de72075c61f58fce61d9390d92",
+   "matchesClient": false,
+   "lastCommit": "4a165ecd3877f44ce5592d22f75f850bd47d87e4"
+  }
+ ],
+ "runs": {
+  "ko-KR": {
+   "device": {
+    "name": "twios_cap_16",
+    "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-16T05:37:45Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "ko-KR",
+    "languages": [
+     "ko-KR"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "KR",
+    "locationStatus": "authorized_when_in_use",
+    "theme": "light",
+    "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready search",
+    "state": "search"
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ]
+  },
+  "en-US": {
+   "device": {
+    "name": "twios_cap_16",
+    "udid": "517DC815-4EF1-4EC7-835C-FAD594AFB4C5",
+    "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+    "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16"
+   },
+   "capturedAt": "2026-11-16T05:43:18Z",
+   "env": {
+    "screen": {
+     "width": 393,
+     "height": 852
+    },
+    "viewport": {
+     "width": 393,
+     "height": 798
+    },
+    "devicePixelRatio": 3,
+    "language": "en-US",
+    "languages": [
+     "en-US"
+    ],
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+    "region": "US",
+    "locationStatus": "authorized_when_in_use",
+    "theme": "light",
+    "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready search",
+    "state": "search"
+   },
+   "webViewOrigins": [
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    },
+    {
+     "x": 0,
+     "y": 162
+    }
+   ]
+  }
+ },
+ "files": [
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-captures.json",
+   "sha256": "26d2814f6bd93503f57897d36d72d61c3816e70f9fa6591e93e107797d359c7d"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-edit-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-edit.json",
+   "sha256": "3fb84fab4cc57e9d8461bf6b685375f110970cd09f73f9e73ea2cc1578bba2ca"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-edit.png",
+   "sha256": "5e4d97c368e89411fc8352c703b0ad58e375a4493f41a815ed4d8aaaa9522092"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-favorites-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-favorites.json",
+   "sha256": "ba090072a04b1e16d277912383ba30e3e30546c5d87a86ab4b25400819b9de10"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-favorites.png",
+   "sha256": "0bb19a9fc9690a44e8f98596d9dd061ce12760470061a4004162537b9cb634b4"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-list-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-list.json",
+   "sha256": "26d4887ff65b2886dad90ee04b1c70ec964a75e69965a86f4b076570c3b1c546"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-list.png",
+   "sha256": "56676128eb669d9422368976a723e9a310729384d1e5f2e4530d5315ba0fdbfb"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-location-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-location.json",
+   "sha256": "3abacad306b4aeb7e74c75b4e6d923ad0842213877df54b4d51f5b3cf1cbaf93"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-location.png",
+   "sha256": "c930bf4c40be31839f5e148d28b6514e607e69dd233effecfa2b87c6f8e07cf0"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-search-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-search.json",
+   "sha256": "4a7737bfe85efbc095877fa69e78fc3519c68f3643484fe091b4554fe0bbb8e7"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-en-US-search.png",
+   "sha256": "11b4626aa8feed0d8b6d54b5d191cc01a9effb01fbd5d14812737322830ab8a9"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-geocode-seoul.input.json",
+   "sha256": "17cef2196d66c0b93f5a3d819d05e5f9ebd767c5e602bb5886102e807c85473f"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-kma-seoul.input.json",
+   "sha256": "ec2a645f69200df2609792d64d9c9ea90dafaa2d1daadbf2566df1d75a7b6b31"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-edit-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-edit.json",
+   "sha256": "09a80c11f9089a6e97fac194f4e7203688f9f37c6bfe2ff248380047e941c8a8"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-edit.png",
+   "sha256": "ca4861c28bbe608ef745c59c2759b806d89a5bf16a4b79cdd0bc4690608ce4e1"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-favorites-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-favorites.json",
+   "sha256": "7c85321c844b2f08a6ecd2c483e842a8a66cfb04ef5d6afe5acae7124f824d78"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-favorites.png",
+   "sha256": "da79c3fcb9e9735fb148111452cc2dfd3fc34fc9ae8cd9dcd583476b3808eb09"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-list-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-list.json",
+   "sha256": "2e6201b8845b0a6d1df89b70009ecb832a7b9fb9780b2716ef5c1ef4a3ec6d6e"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-list.png",
+   "sha256": "0bfaf4978c494ee4e8e2e3e03aeb910a5daa482f3e626a98c30747307fd6829e"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-location-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-location.json",
+   "sha256": "f071d4391aee07c5002e6fcb598509385bd8c7188abeea0b947dbe69f49ec6f1"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-location.png",
+   "sha256": "a9276cd720dc6d651df0c4458317cf1e19f0ccae90970fb88056ee89d0ba012a"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-search-statusbar.png",
+   "sha256": "56a9b94a863756683abaf964e696fab1920c8e078ac15fe58212fecc0ac7821c"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-search.json",
+   "sha256": "4f70c1f25389b53f1359f698f18766a98a73e45ebe29d5534dd26f207ee0c72a"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-ko-KR-search.png",
+   "sha256": "fb1dfccac1d133a4e9e4330aa8792600871289acffa85f1e648c459286ae8dba"
+  },
+  {
+   "path": "TodayWeatherTests/PlacesReference/places-vc-london.input.json",
+   "sha256": "0e9d2f0d03ac538064a61c6c10d6712b7b3407e8ff405a2de089f91120d38884"
+  }
+ ]
+}

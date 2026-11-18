@@ -5,23 +5,24 @@
     "locale": "en",
     "quality_profile": "showcase",
     "viewBox": [
-      1250,
+      1240,
       650
     ],
     "title": "TodayWeather: AWS and service code",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "b9795125a1b7dc8a4f7602d4612a6be7d79413ad",
+      "revision": "9bc9ec8f2961c75c90d2fa1d2a59abeba87a0001",
       "provider": "github",
       "link_mode": "local-only"
-    }
+    },
+    "output": "docs/architecture/diagrams/service-overview.html"
   },
   "components": [
     {
       "id": "mobile",
       "type": "frontend",
-      "label": "Mobile apps",
-      "sublabel": "Ionic / Cordova",
+      "label": "Cordova app",
+      "sublabel": "Ionic / AngularJS",
       "pos": [
         35,
         280
@@ -33,6 +34,37 @@
       "sources": [
         {
           "path": "client/www/js/service.weatherutil.js"
+        }
+      ]
+    },
+    {
+      "id": "native-ios",
+      "type": "frontend",
+      "label": "Native iOS app",
+      "sublabel": "TodayWeather / SwiftUI",
+      "pos": [
+        35,
+        115
+      ],
+      "size": [
+        185,
+        70
+      ],
+      "sources": [
+        {
+          "path": "ios/TodayWeather/AppScenes.swift",
+          "line": 14,
+          "end_line": 27
+        },
+        {
+          "path": "ios/Core/Sources/TWDomain/Forecast/WeatherRequests.swift",
+          "line": 16,
+          "end_line": 42
+        },
+        {
+          "path": "ios/Core/Sources/TWData/GeocodeClient.swift",
+          "line": 27,
+          "end_line": 39
         }
       ]
     },
@@ -158,6 +190,13 @@
       "label": "Public GET"
     },
     {
+      "id": "native-ios-edge",
+      "from": "native-ios",
+      "to": "edge",
+      "label": "GET v000903",
+      "variant": "dashed"
+    },
+    {
       "id": "edge-lambda",
       "from": "edge",
       "to": "lambda",
@@ -209,6 +248,7 @@
       "dot": "amber",
       "title": "Repository boundary",
       "items": [
+        "Dashed iOS edge shows source-level weather and geocode requests. The native release is tracked in #2968.",
         "Service-to-Mongo target sockets observed; database engine/query success untested.",
         "Dashed ingestion edge remains source-only; separate gather host not inspected.",
         "Checkout startup: dotenv loads server/.env before app dependencies/config; process env wins."

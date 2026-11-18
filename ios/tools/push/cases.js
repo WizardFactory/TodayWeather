@@ -98,8 +98,60 @@
         return calls;
     }
 
+    // Push.removePushListByCityIndex after S02 deletes a place or turns the current position off (IN-11, #2960): the
+    // list as Push.init left it, the requests, the list saved and `hasPushInfo` of each index before the removal (S02's
+    // bell, which decides whether SearchCtrl calls it). `registrationId`: the pushData2 value (null: none).
+    function runRemove(storedToken, registrationId, list, index) {
+        var calls = [];
+        var saved = null;
+        var $http = function (cfg) {
+            calls.push(clone({method: cfg.method, url: cfg.url, headers: cfg.headers, data: cfg.data}));
+            return {success: function () { return this; }, error: function () { return this; }};
+        };
+        var units = {temperatureUnit: 'C', windSpeedUnit: 'm/s', pressureUnit: 'hPa', distanceUnit: 'km', precipitationUnit: 'mm',
+            airUnit: 'airkorea'};
+        var Util = {ga: {trackEvent: function () {}, trackException: function () {}}, uuid: DEVICE.deviceId,
+            language: DEVICE.language, version: DEVICE.appVersion};
+        var utilFactory = load(utilSource, {console: quiet, clientConfig: {debug: false}, window: {}, alert: function () {},
+            setTimeout: function () {}, Date: FixedDate});
+        var weatherUtil = utilFactory({}, function () { throw new Error('no network'); }, Util,
+            {getUnit: function (n) { return units[n]; }}, {track: function () {}});
+        var timers = [];
+        var pushFactory = load(pushSource, {console: quiet, window: {},
+            clientConfig: {package: 'todayWeather', serverUrl: 'https://server'},
+            ionic: {Platform: {isIOS: function () { return true; }, isAndroid: function () { return false; }}},
+            setTimeout: function (fn) { timers.push(fn); }, Date: FixedDate});
+        var stored = {pushData2: {registrationId: registrationId, type: 'ios', category: '', fcmToken: storedToken, pushList: list}};
+        var TwStorage = {get: function (k) { return clone(stored[k] === undefined ? null : stored[k]); },
+            set: function (k, v) { if (k === 'pushData2') { saved = clone(v); } }};
+        var Units = {getAllUnits: function () { return clone(units); }};
+        var WeatherInfo = {getCityOfIndex: function (i) { return clone(CITIES[i]); }};
+        var Firebase = {init: function () {}, inited: true};
+        var push = pushFactory($http, TwStorage, Util, weatherUtil, WeatherInfo, Units, {$broadcast: function () {}}, Firebase);
+        push.init();
+        if (push.pushData.type !== 'ios') { throw new Error('platform is not iOS: ' + push.pushData.type); }
+        timers.splice(0).forEach(function (fn) { fn(); });
+        calls.length = 0;
+        saved = null;
+        var before = clone(push.pushData.pushList);
+        var hasPush = [0, 1, 2, 3].map(function (i) { return push.hasPushInfo(i); });
+        push.removePushListByCityIndex(index);
+        return {before: before, hasPush: hasPush, requests: calls, saved: saved && saved.pushList};
+    }
+
     var cases = [];
+    var removed = [];
     if (zone === 'Asia/Seoul') {
+        // [name, stored token, registration ID, index]: a place with alarms (명동), the current position (turned off),
+        // a place whose records are all disabled (S02 shows no bell and sends nothing), a registration ID without a
+        // token, neither.
+        [['place-with-alarms', 'token-a', null, 1], ['current-position', 'token-a', null, 0],
+            ['disabled-records-only', 'token-a', null, 2], ['registration-id', null, 'reg-1', 1], ['no-token', null, null, 1],
+        ].forEach(function (c) {
+            var r = runRemove(c[1], c[2], LIST, c[3]);
+            removed.push({name: c[0], storedToken: c[1], registrationId: c[2], index: c[3], before: r.before, hasPush: r.hasPush,
+                requests: r.requests, saved: r.saved});
+        });
         // [name, stored token, token at the start, token while running, air unit]
         [['first-token', null, 'token-b', null, 'airkorea'],
             ['unchanged-token', 'token-a', 'token-a', null, 'airkorea'],
@@ -121,5 +173,5 @@
         throw new Error('no cases for ' + zone);
     }
     print(JSON.stringify({cities: CITIES, pushList: LIST, deviceId: DEVICE.deviceId, language: DEVICE.language,
-        appVersion: DEVICE.appVersion, now: NOW, cases: cases}));
+        appVersion: DEVICE.appVersion, now: NOW, cases: cases, cityRemoved: removed}));
 })(typeof scriptArgs !== 'undefined' ? scriptArgs : arguments);

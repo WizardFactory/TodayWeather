@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Golden push requests of the Cordova iOS app (IN-04, #2953).
+"""Golden push requests of the Cordova iOS app (IN-04, #2953) and the S09 goldens (IN-14, #2963).
 
     python3 ios/tools/push/generate.py [--jsc PATH]
 
@@ -9,6 +9,10 @@ iOS (cases.js). One jsc process runs per time zone, because jsc takes its zone f
 are written to ios/Core/Tests/TWStorageTests/Fixtures/push/push.json with the source files' last commit and
 SHA-256. Only this tool reads client/; the iOS build and tests read the written file. The output is deterministic:
 running it again without source changes changes nothing (CI checks that).
+
+IN-14: alarms.js runs PushCtrl (client/www/js/controller.push.js) over the same service, ionic-timepicker (the bundled
+fork, tracked under tw.ios/www/lib), the notification callback with the iOS plugin's payloads, and the S09 save and O06
+answer of the service, in Asia/Seoul, and writes ios/Core/Tests/TWDataTests/Golden/alarms.json the same way.
 """
 import argparse
 import hashlib
@@ -22,6 +26,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 SOURCES = ["client/www/js/service.push.js", "client/www/js/service.weatherutil.js"]
 OUT = ROOT / "ios" / "Core" / "Tests" / "TWStorageTests" / "Fixtures" / "push" / "push.json"
+ALARM_SOURCES = ["client/www/js/service.push.js", "client/www/js/service.weatherutil.js",
+                 "client/www/js/controller.push.js", "tw.ios/www/lib/ionic-timepicker/src/ionic-timepicker.provider.js"]
+ALARMS_OUT = ROOT / "ios" / "Core" / "Tests" / "TWDataTests" / "Golden" / "alarms.json"
 DEFAULT_JSC = "/System/Library/Frameworks/JavaScriptCore.framework/Versions/A/Helpers/jsc"
 ZONES = ["Asia/Seoul", "America/New_York"]
 
@@ -39,26 +46,51 @@ def run_zone(jsc: str, zone: str) -> dict:
     return json.loads(proc.stdout)
 
 
+def run_alarms(jsc: str) -> dict:
+    env = {"PATH": "/usr/bin:/bin", "TZ": "Asia/Seoul", "LANG": "en_US.UTF-8", "LC_ALL": "en_US.UTF-8"}
+    args = [jsc, str(HERE / "alarms.js"), "--", *(str(ROOT / s) for s in ALARM_SOURCES)]
+    proc = subprocess.run(args, env=env, capture_output=True, text=True, cwd=str(ROOT))
+    if proc.returncode != 0 or not proc.stdout.strip():
+        sys.exit(f"jsc alarms run failed (exit {proc.returncode}):\n{proc.stdout[-2000:]}{proc.stderr[-2000:]}")
+    return json.loads(proc.stdout)
+
+
+def source_records(paths) -> list:
+    sources = []
+    for s in paths:
+        commit = git("log", "-1", "--format=%H", "--", s)
+        if not commit:
+            sys.exit(f"no commit for {s}: the generator needs the Git history")
+        sources.append({"path": s, "commit": commit, "sha256": hashlib.sha256((ROOT / s).read_bytes()).hexdigest()})
+    return sources
+
+
+def write(path: Path, out: dict, count: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(out, ensure_ascii=False, indent=1) + "\n"
+    if path.exists() and path.read_text(encoding="utf-8") == text:
+        print(f"unchanged: {path.relative_to(ROOT)} ({count})")
+    else:
+        path.write_text(text, encoding="utf-8")
+        print(f"wrote {path.relative_to(ROOT)} ({count})")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--jsc", default=DEFAULT_JSC)
     args = parser.parse_args()
-    for s in SOURCES:
+    for s in SOURCES + ALARM_SOURCES:
         if not (ROOT / s).is_file():
             sys.exit(f"missing {s}: the generator needs client/ (the iOS build reads only the written copy)")
     if not os.access(args.jsc, os.X_OK):
         sys.exit(f"no JavaScriptCore shell at {args.jsc}")
     runs = [run_zone(args.jsc, zone) for zone in ZONES]
-    doc = {k: v for k, v in runs[0].items() if k != "cases"}
+    per_zone = ("cases", "cityRemoved")
+    doc = {k: v for k, v in runs[0].items() if k not in per_zone}
     for run in runs[1:]:
-        if {k: v for k, v in run.items() if k != "cases"} != doc:
+        if {k: v for k, v in run.items() if k not in per_zone} != doc:
             sys.exit("the zones disagree on the shared inputs")
-    sources = []
-    for s in SOURCES:
-        commit = git("log", "-1", "--format=%H", "--", s)
-        if not commit:
-            sys.exit(f"no commit for {s}: the generator needs the Git history")
-        sources.append({"path": s, "commit": commit, "sha256": hashlib.sha256((ROOT / s).read_bytes()).hexdigest()})
+    sources = source_records(SOURCES)
     out = {
         "generator": "ios/tools/push/generate.py (cases.js in the macOS JavaScriptCore shell)",
         "sources": sources,
@@ -66,14 +98,19 @@ def main():
                 "sends /v000903 (#2948).",
         **doc,
         "cases": [c for run in runs for c in run["cases"]],
+        # IN-11 (#2960): Push.removePushListByCityIndex after S02 deletes a place or turns the current position off.
+        "cityRemoved": [c for run in runs for c in run["cityRemoved"]],
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(out, ensure_ascii=False, indent=1) + "\n"
-    if OUT.exists() and OUT.read_text(encoding="utf-8") == text:
-        print(f"unchanged: {OUT.relative_to(ROOT)} ({len(out['cases'])} cases)")
-    else:
-        OUT.write_text(text, encoding="utf-8")
-        print(f"wrote {OUT.relative_to(ROOT)} ({len(out['cases'])} cases)")
+    write(OUT, out, f"{len(out['cases'])} cases")
+    alarms = run_alarms(args.jsc)
+    write(ALARMS_OUT, {
+        "generator": "ios/tools/push/generate.py (alarms.js in the macOS JavaScriptCore shell)",
+        "sources": source_records(ALARM_SOURCES),
+        "note": "S09 sessions of PushCtrl, the time picker, notification payloads of the iOS plugin, the S09 save and the "
+                "O06 answer of the Cordova Push service on iOS, in Asia/Seoul. Paths carry the client's /v000902; the "
+                "native app sends /v000903 (#2948).",
+        **alarms,
+    }, f"{len(alarms['pages'])} pages, {len(alarms['picker'])} picker cases, {len(alarms['taps'])} payloads")
 
 
 if __name__ == "__main__":

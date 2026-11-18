@@ -1,0 +1,232 @@
+{
+ "source": "ios/tools/places-reference/capture.py provenance, from the records places-<lang>-<state>.json",
+ "size": "393x852",
+ "devicePixelRatio": 3,
+ "webViewOrigin": {
+  "x": 0,
+  "y": 162
+ },
+ "position": "37.5665,126.9780",
+ "served": {
+  "weather": "places-kma-seoul.input.json (places-vc-london.input.json for latitude 51.x)",
+  "geocode": "places-geocode-seoul.input.json"
+ },
+ "states": {
+  "ko-KR/favorites": {
+   "crops": {
+    "page": "places-ko-KR-favorites.png",
+    "statusBar": "places-ko-KR-favorites-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": false,
+    "towns": 0,
+    "results": 0,
+    "cities": 2,
+    "popups": 0
+   },
+   "rows": [
+    "서울"
+   ]
+  },
+  "ko-KR/search": {
+   "crops": {
+    "page": "places-ko-KR-search.png",
+    "statusBar": "places-ko-KR-search-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": true,
+    "word": "부산",
+    "towns": 10,
+    "results": 0,
+    "cities": 2,
+    "popups": 0
+   },
+   "rows": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ]
+  },
+  "ko-KR/list": {
+   "crops": {
+    "page": "places-ko-KR-list.png",
+    "statusBar": "places-ko-KR-list-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": false,
+    "towns": 0,
+    "results": 0,
+    "cities": 4,
+    "popups": 0
+   },
+   "rows": [
+    "서울",
+    "부산광역시",
+    "London"
+   ]
+  },
+  "ko-KR/edit": {
+   "crops": {
+    "page": "places-ko-KR-edit.png",
+    "statusBar": "places-ko-KR-edit-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": true,
+    "searching": false,
+    "towns": 0,
+    "results": 0,
+    "cities": 4,
+    "popups": 0
+   },
+   "rows": [
+    "현재위치",
+    "서울",
+    "부산광역시",
+    "London"
+   ]
+  },
+  "ko-KR/location": {
+   "crops": {
+    "page": "places-ko-KR-location.png",
+    "statusBar": "places-ko-KR-location-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": true,
+    "word": "회현동",
+    "towns": 0,
+    "results": 1,
+    "cities": 4,
+    "popups": 0
+   },
+   "rows": [
+    "",
+    ""
+   ]
+  },
+  "en-US/favorites": {
+   "crops": {
+    "page": "places-en-US-favorites.png",
+    "statusBar": "places-en-US-favorites-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": false,
+    "towns": 0,
+    "results": 0,
+    "cities": 2,
+    "popups": 0
+   },
+   "rows": [
+    "서울"
+   ]
+  },
+  "en-US/search": {
+   "crops": {
+    "page": "places-en-US-search.png",
+    "statusBar": "places-en-US-search-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": true,
+    "word": "부산",
+    "towns": 10,
+    "results": 0,
+    "cities": 2,
+    "popups": 0
+   },
+   "rows": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ]
+  },
+  "en-US/list": {
+   "crops": {
+    "page": "places-en-US-list.png",
+    "statusBar": "places-en-US-list-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": false,
+    "towns": 0,
+    "results": 0,
+    "cities": 4,
+    "popups": 0
+   },
+   "rows": [
+    "서울",
+    "부산광역시",
+    "London"
+   ]
+  },
+  "en-US/edit": {
+   "crops": {
+    "page": "places-en-US-edit.png",
+    "statusBar": "places-en-US-edit-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": true,
+    "searching": false,
+    "towns": 0,
+    "results": 0,
+    "cities": 4,
+    "popups": 0
+   },
+   "rows": [
+    "Current Location",
+    "서울",
+    "부산광역시",
+    "London"
+   ]
+  },
+  "en-US/location": {
+   "crops": {
+    "page": "places-en-US-location.png",
+    "statusBar": "places-en-US-location-statusbar.png"
+   },
+   "mode": {
+    "hash": "#/tab/search",
+    "editing": false,
+    "searching": true,
+    "word": "회현동",
+    "towns": 0,
+    "results": 1,
+    "cities": 4,
+    "popups": 0
+   },
+   "rows": [
+    "",
+    ""
+   ]
+  }
+ }
+}

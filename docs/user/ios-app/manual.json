@@ -1,0 +1,293 @@
+{
+ "title": "TodayWeather for iOS: native app user manual",
+ "scenario": "Version 2.0.0 preview on an iPhone 16 simulator, Korean screens; English instructions keep the Korean control labels. Live examples captured on 17 November 2026 (Korea time; the menu pages again that evening after the menu reorder); weather, ads and iOS dialogs vary.",
+ "steps": [
+  {
+   "title": "Read the first-launch notice",
+   "instruction": "Open TodayWeather and read 선택 접근 권한 (Optional permissions). Tap 확인 (OK). The notice keeps the Cordova app's wording; this app asks iOS for location only when you choose the current location.",
+   "screenshot": "screenshots/01-access-notice.png",
+   "caption": "The access notice appears over the start page on every visit to the start page.",
+   "expected": "The notice closes; the start page remains."
+  },
+  {
+   "title": "Choose how to start",
+   "instruction": "Search for a place in the field, tap a city shortcut, or tap 현재위치 날씨보기 (Weather at my location).",
+   "screenshot": "screenshots/02-start.png",
+   "caption": "The start page shows the search field, city shortcuts and the current-location button.",
+   "expected": "Your choice adds the first place and opens hourly weather."
+  },
+  {
+   "title": "See weather at your location",
+   "instruction": "Tap 현재위치 날씨보기. If iOS asks, allow location while using the app. The title shows the place found and the location glyph.",
+   "screenshot": "screenshots/03-current-location.png",
+   "caption": "Hourly weather for the current position (명동 here, from the simulated position at Seoul City Hall).",
+   "expected": "The current place opens on the Hourly tab (시간별날씨)."
+  },
+  {
+   "title": "Scroll the hourly page",
+   "instruction": "Scroll down on 시간별날씨 to read the hourly air forecast (시간별대기예보) and the detail rows (상세날씨) under the chart.",
+   "screenshot": "screenshots/04-hourly.png",
+   "caption": "Under the chart: hourly air quality and the detailed weather of the hour.",
+   "expected": "The header and tab bar stay in place while the page scrolls."
+  },
+  {
+   "title": "Expand the chart details",
+   "instruction": "Tap the small arrow row under the hourly chart. Tap it again to fold the rows.",
+   "screenshot": "screenshots/05-hourly-expanded.png",
+   "caption": "The chart grows: wind and humidity rows appear under it (scroll down to read them all).",
+   "expected": "The detail rows stay open until you fold them."
+  },
+  {
+   "title": "Look at earlier hours",
+   "instruction": "Swipe right on the hourly chart.",
+   "screenshot": "screenshots/06-hourly-past.png",
+   "caption": "The chart scrolls to earlier hours.",
+   "expected": "Only the chart scrolls; the place stays the same."
+  },
+  {
+   "title": "Look at later hours",
+   "instruction": "Swipe left on the hourly chart.",
+   "screenshot": "screenshots/07-hourly-future.png",
+   "caption": "The chart scrolls to later hours.",
+   "expected": "Only the chart scrolls; the place stays the same."
+  },
+  {
+   "title": "Read daily weather",
+   "instruction": "Tap 일별날씨 (Daily) in the tab bar.",
+   "screenshot": "screenshots/08-daily.png",
+   "caption": "Daily weather: sky, rain and the day's highest and lowest temperatures.",
+   "expected": "The daily chart opens around today."
+  },
+  {
+   "title": "Look at earlier days",
+   "instruction": "Swipe right on the daily chart.",
+   "screenshot": "screenshots/09-daily-past.png",
+   "caption": "The chart shows past days.",
+   "expected": "Only the chart scrolls."
+  },
+  {
+   "title": "Look at later days",
+   "instruction": "Swipe left on the daily chart.",
+   "screenshot": "screenshots/10-daily-future.png",
+   "caption": "The chart shows the coming days.",
+   "expected": "Only the chart scrolls."
+  },
+  {
+   "title": "Read the air-quality summary",
+   "instruction": "Tap 대기정보 (Air) in the tab bar.",
+   "screenshot": "screenshots/11-air.png",
+   "caption": "The overall air index with its grade, advice and scale, then the hourly air chart.",
+   "expected": "The air page shows the selected place."
+  },
+  {
+   "title": "Choose a pollutant",
+   "instruction": "Scroll to 상세대기정보 (Air details) and tap a pollutant, here 초미세먼지 (PM2.5).",
+   "screenshot": "screenshots/12-air-pm25.png",
+   "caption": "The top of the page shows the chosen pollutant. A dash means the station sent no value.",
+   "expected": "The page returns to its top with that pollutant."
+  },
+  {
+   "title": "Find the monitoring stations",
+   "instruction": "Scroll down to 측정소 (Stations): the publication time, the standard and the stations near the place.",
+   "screenshot": "screenshots/13-stations.png",
+   "caption": "The nearby stations of the chosen pollutant.",
+   "expected": "The first station is selected."
+  },
+  {
+   "title": "Change the monitoring station",
+   "instruction": "Tap another station, here 청계천.",
+   "screenshot": "screenshots/14-station-selected.png",
+   "caption": "The top of the page shows that station's value.",
+   "expected": "The page returns to its top with the station's value."
+  },
+  {
+   "title": "Open your saved places",
+   "instruction": "Tap 즐겨찾기 (Locations) in the tab bar.",
+   "screenshot": "screenshots/15-places.png",
+   "caption": "Saved places with their sky, temperature and today's range; the bell shows whether alarms are set.",
+   "expected": "Tapping a row opens its weather."
+  },
+  {
+   "title": "Search for a place",
+   "instruction": "Tap the search field, type a name (부산) and close the keyboard with Done.",
+   "screenshot": "screenshots/16-place-search.png",
+   "caption": "Matching places appear under 현재위치로 지역찾기 (Find by location): the app's list of Korean towns first, Google's suggestions further down.",
+   "expected": "Tapping a result adds it."
+  },
+  {
+   "title": "See the new place",
+   "instruction": "Tap a result, here Google's suggestion 대한민국 부산.",
+   "screenshot": "screenshots/17-busan.png",
+   "caption": "The new place opens on the Hourly tab; the arrows show there are other places.",
+   "expected": "부산 is added to your saved places."
+  },
+  {
+   "title": "Switch between saved places",
+   "instruction": "Swipe left or right on the weather at the top of the page, or tap the arrows.",
+   "screenshot": "screenshots/18-switch.png",
+   "caption": "The previous place (명동) shows.",
+   "expected": "The tabs keep the place you switched to."
+  },
+  {
+   "title": "Add a place abroad",
+   "instruction": "Search for London on 즐겨찾기 and tap the result.",
+   "screenshot": "screenshots/19-london.png",
+   "caption": "London's weather from the international provider.",
+   "expected": "London is added after your other places."
+  },
+  {
+   "title": "Edit the places list",
+   "instruction": "On 즐겨찾기 tap 편집 (Edit).",
+   "screenshot": "screenshots/20-edit-places.png",
+   "caption": "The current-location switch and a delete button (⊗) on every other place.",
+   "expected": "Changes apply at once."
+  },
+  {
+   "title": "Delete a place",
+   "instruction": "Tap ⊗ next to London, then tap 확인 (Done).",
+   "screenshot": "screenshots/21-place-deleted.png",
+   "caption": "London is gone from the list.",
+   "expected": "A deleted place's alarms are removed too."
+  },
+  {
+   "title": "Set notifications for a place",
+   "instruction": "Open the place's weather and tap the bell at the top.",
+   "screenshot": "screenshots/22-alarms.png",
+   "caption": "The weather alert (악천후 경보) with its hours, weekdays, and alarm times (날씨알람).",
+   "expected": "A new place starts with suggested settings."
+  },
+  {
+   "title": "Set an alarm time",
+   "instruction": "Tap an alarm's gear (7:40). Use the arrows to choose a time, then 설정 (Set), 삭제 (Delete) or 닫기 (Close).",
+   "screenshot": "screenshots/23-time-picker.png",
+   "caption": "The 12-hour time picker in 5-minute steps.",
+   "expected": "Here 닫기 leaves the time unchanged. As in the Cordova app, setting 12:00 AM deletes the alarm."
+  },
+  {
+   "title": "Leave without saving",
+   "instruction": "Tap the back arrow. Choose 닫기 (Close) to leave without saving, or 저장 (Save).",
+   "screenshot": "screenshots/24-alarm-confirmation.png",
+   "caption": "저장하시겠습니까? appears because the suggested settings count as changes.",
+   "expected": "This manual leaves without saving, so no alarm is registered."
+  },
+  {
+   "title": "Open the menu",
+   "instruction": "Tap the menu button (three lines) at the top left.",
+   "screenshot": "screenshots/25-menu.png",
+   "caption": "The menu: Korea-only pages, settings, feedback, review, version and information, then the privacy choices at the bottom.",
+   "expected": "The back arrow closes the menu."
+  },
+  {
+   "title": "Choose measurement units",
+   "instruction": "Tap 단위설정 (Units).",
+   "screenshot": "screenshots/26-units.png",
+   "caption": "Temperature, wind, pressure, distance, precipitation and the air-quality standard.",
+   "expected": "Each row opens its choices."
+  },
+  {
+   "title": "Choose a temperature unit",
+   "instruction": "Tap 온도단위 (Temperature), then F.",
+   "screenshot": "screenshots/27-temperature.png",
+   "caption": "C and F; the check mark shows the choice.",
+   "expected": "The choice is saved at once."
+  },
+  {
+   "title": "Check the saved unit",
+   "instruction": "Go back to the weather.",
+   "screenshot": "screenshots/28-fahrenheit.png",
+   "caption": "Temperatures in °F. This manual then sets °C again.",
+   "expected": "Every page and the alarms use the new unit."
+  },
+  {
+   "title": "Choose the startup tab",
+   "instruction": "In the menu tap 시작 페이지 (Startup page).",
+   "screenshot": "screenshots/29-startup-page.png",
+   "caption": "시간별날씨, 일별날씨, 즐겨찾기 or 대기정보.",
+   "expected": "The app opens on that tab next time."
+  },
+  {
+   "title": "Choose the refresh interval",
+   "instruction": "In the menu tap 업데이트 주기 (Refresh interval).",
+   "screenshot": "screenshots/30-refresh.png",
+   "caption": "수동 (manual) or every 30 minutes to 12 hours.",
+   "expected": "The weather reloads at the chosen interval."
+  },
+  {
+   "title": "Choose a theme",
+   "instruction": "In the menu tap 테마 설정 (Theme), then 어두운 테마 (Dark).",
+   "screenshot": "screenshots/31-theme.png",
+   "caption": "날씨 사진 테마 (photo), 밝은 테마 (light), 어두운 테마 (dark) and 이전 테마 (old).",
+   "expected": "The theme applies at once."
+  },
+  {
+   "title": "Read weather in the dark theme",
+   "instruction": "Go back to the weather.",
+   "screenshot": "screenshots/32-dark-weather.png",
+   "caption": "The pages in dark colors.",
+   "expected": "This manual then tries the photo theme and returns to the light theme."
+  },
+  {
+   "title": "Use the photo theme",
+   "instruction": "Choose 날씨 사진 테마.",
+   "screenshot": "screenshots/33-photo-theme.png",
+   "caption": "The photo theme's outlined text over the photo's area. This build has no photo feed, so the area stays plain.",
+   "expected": "With the feed, a photo matching the weather shows."
+  },
+  {
+   "title": "Read weather warnings",
+   "instruction": "In the menu tap 기상특보 (Weather warnings).",
+   "screenshot": "screenshots/34-warnings.png",
+   "caption": "The current bulletins with their times. Read each announcement time.",
+   "expected": "The back arrow returns to the tabs."
+  },
+  {
+   "title": "View nationwide weather",
+   "instruction": "In the menu tap 전국날씨 (Nationwide weather).",
+   "screenshot": "screenshots/35-national-weather.png",
+   "caption": "Cities on the map with sky and temperature.",
+   "expected": "The page loads with a spinner first."
+  },
+  {
+   "title": "Change the nationwide map mode",
+   "instruction": "Tap 풍향/풍속 (Wind).",
+   "screenshot": "screenshots/36-national-wind.png",
+   "caption": "Wind direction and speed per city. 강수량 shows precipitation.",
+   "expected": "The map switches modes at once."
+  },
+  {
+   "title": "View nationwide air quality",
+   "instruction": "In the menu tap 전국미세먼지 (Nationwide air).",
+   "screenshot": "screenshots/37-national-air.png",
+   "caption": "Province values in their grade colors; tabs for PM2.5, PM10, O3, NO2, SO2 and CO.",
+   "expected": "Swipe the tabs sideways for the rest."
+  },
+  {
+   "title": "Read app information",
+   "instruction": "In the menu tap 정보 (About).",
+   "screenshot": "screenshots/38-about.png",
+   "caption": "The data sources and the notice that real-time data is unverified.",
+   "expected": "확인 closes it."
+  },
+  {
+   "title": "Choose optional usage statistics",
+   "instruction": "At the bottom of the menu tap 선택적 이용 통계 (Optional usage statistics). Choose 거부 / 철회 (Decline) or 동의 (Agree).",
+   "screenshot": "screenshots/39-analytics.png",
+   "caption": "Analytics is off until you agree; you can withdraw at any time.",
+   "expected": "This manual declines; the row shows 꺼짐 (Off)."
+  },
+  {
+   "title": "Review advertising privacy options",
+   "instruction": "At the bottom of the menu tap 광고 개인정보 선택 (Ad privacy).",
+   "screenshot": "screenshots/40-ad-privacy.png",
+   "caption": "Google's privacy options form, or this message when none is required in your region.",
+   "expected": "Advertising privacy is separate from usage statistics."
+  },
+  {
+   "title": "Share the weather",
+   "instruction": "On a weather page tap the share button at the top right.",
+   "screenshot": "screenshots/41-share-sheet.png",
+   "caption": "iOS's share sheet with the place's weather text and the app link.",
+   "expected": "Choose an app, or close the sheet. No message was sent for this manual."
+  }
+ ]
+}

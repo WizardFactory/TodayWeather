@@ -4,6 +4,7 @@ import os
 import SwiftUI
 import TWData
 import TWDomain
+import TWModel
 import TWStorage
 import UIKit
 
@@ -27,7 +28,7 @@ enum EntryEvent: Equatable, Sendable {
 @MainActor
 @Observable
 final class AppLaunch {
-    static let shared = AppLaunch(store: AppLaunch.standardStore(), environment: .system)
+    static let shared = AppLaunch(store: AppLaunch.standardStore(), environment: .system, handBack: AppHandBack.writer)
 
     /// The single owner of the app state for the UI; its `state` is nil until the migration has finished.
     let holder: AppStateHolder
@@ -45,8 +46,12 @@ final class AppLaunch {
     private(set) var weather: WeatherScreens?
     /// The settings pages S07 and S08 and the menu's hand-offs (IN-12), created with the shell.
     private(set) var settings: SettingsScreens?
+    /// The saved places S02 (IN-11), created with the shell.
+    private(set) var places: PlacesScreens?
     /// The nationwide pages S10 and S11 and the warnings S12 (IN-13), created with the shell.
     private(set) var nation: NationScreens?
+    /// S09, O06, O07 and the notification taps (IN-14), created with the shell.
+    private(set) var alarms: AlarmsScreens?
     /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
     private(set) var startPage: StartPage?
     /// The device's location (IN-10), created with the shell.
@@ -90,27 +95,33 @@ final class AppLaunch {
     @ObservationIgnored let environment: Environment
     @ObservationIgnored private let weatherHTTP: any WeatherHTTP
 
-    /// The page over the tabs in the shell's page slot: a nationwide page (IN-13) or a settings page (IN-12); nil
-    /// while none shows. Both open from the menu, which the page then covers, so one shows at a time.
+    /// The page over the tabs in the shell's page slot: S09 (IN-14), a nationwide page (IN-13) or a settings page (IN-12);
+    /// nil while none shows. The nationwide and settings pages open from the menu, which the page then covers, and S09
+    /// from the tabs' bells, so one shows at a time.
     var pageView: ((ShellInsets) -> AnyView?)? {
-        guard nation != nil || settings != nil else { return nil }
+        guard alarms != nil || nation != nil || settings != nil else { return nil }
         return { [weak self] insets in
             guard let self else { return nil }
-            return nation?.pageView(insets) ?? settings?.pageView(insets)
+            return alarms?.pageView(insets) ?? nation?.pageView(insets) ?? settings?.pageView(insets)
         }
     }
 
-    /// The Cordova state of the page over the tabs (`screen_view`): `nation`, `nation-air`, `kma-special`, `units` or
-    /// `setting-radio`; nil while the tabs show.
+    /// The Cordova state of the page over the tabs (`screen_view`): `setting-push`, `nation`, `nation-air`, `kma-special`,
+    /// `units` or `setting-radio`; nil while the tabs show.
     var pageScreen: String? {
-        nation?.screenName ?? settings?.top.map(SettingsScreens.screenName)
+        // S09 (IN-14) is the Cordova state `setting-push`.
+        if alarms?.page != nil { return "setting-push" }
+        return nation?.screenName ?? settings?.top.map(SettingsScreens.screenName)
     }
 
-    init(store: any AppStateSaving, environment: Environment, http: any HTTPGetting = URLSessionGet(),
+    /// `handBack` (IN-17) gets the state the migration produced and every state saved after it; nil writes no hand-back.
+    init(store: any AppStateSaving, environment: Environment, handBack: HandBackWriter? = nil, http: any HTTPGetting = URLSessionGet(),
          weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache(),
          location: @escaping @MainActor () -> any AppLocation = { CoreLocationAccess() },
          placeSearch: @escaping @MainActor () -> (any PlaceSearch)? = { GooglePlaceSearch(key: GooglePlaceSearch.bundleKey) }) {
-        holder = AppStateHolder(store: store)
+        var onSaved: (@Sendable (AppState) -> Void)?
+        if let handBack { onSaved = { handBack.write($0) } }
+        holder = AppStateHolder(store: store, onSaved: onSaved)
         self.environment = environment
         self.weatherHTTP = weatherHTTP
         makeLocation = location
@@ -152,6 +163,7 @@ final class AppLaunch {
         let weather = WeatherScreens(session: session, shell: shell, screenSize: Self.screenSize())
         self.weather = weather
         positionPopups = CurrentPositionPopups(session: session, shell: shell)
+        places = makePlaces(shell, session: session, location: location)
         if case .start = shell.screen { startPage = makeStartPage(shell, location: location) }
         // A unit change posts the push list again through IN-04's registration (`AppPushUnits`).
         let mail = FeedbackMail(to: environment.mailTo, version: environment.version,
@@ -160,9 +172,43 @@ final class AppLaunch {
                                    opener: SystemURLOpener(), mail: mail)
         // IN-13: the nationwide pages' rows; the rows it does not handle go on to the settings' hook.
         nation = NationScreens(shell: shell, source: NationSource(baseURL: environment.serverURL, http: weatherHTTP))
-        shell.onEntry = { [weak weather] event in weather?.handle(event) }
+        let alarms = makeAlarms(shell, weather: weather)
+        self.alarms = alarms
+        // A notification's tap selects its place and reloads (IN-14); the weather pages handle the others.
+        shell.onEntry = { [weak weather, weak alarms] event in
+            if case .notification(let cityIndex) = event {
+                if let weather { alarms?.notificationTapped(cityIndex, session: weather.session) }
+            } else {
+                weather?.handle(event)
+            }
+        }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
+        // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`); after S01 when it opened there.
+        alarms.scheduleIntro()
+    }
+
+    /// S09 for a new shell (IN-14): the bells of the weather pages (the selected place) and of S02 (the row's place) open a
+    /// visit; a save posts through IN-04's push service; the return starts the tabs' pages anew (`cache: false`).
+    private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
+        let holder = self.holder
+        let alarms = AlarmsScreens(shell: shell, makePage: {
+            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
+                      post: { index in AppStartup.shared.push?.postPlace(index) },
+                      openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
+        }, postList: { AppStartup.shared.push?.postList() })
+        weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
+        places?.onBell = { [weak alarms] index in alarms?.open(fav: index) }
+        alarms.onClosed = { [weak self] in
+            self?.places?.reopen()
+            self?.weather?.reopen()
+        }
+        return alarms
+    }
+
+    /// A message that arrived while the app shows (O07, IN-14); nothing before the shell exists.
+    func message(_ payload: JSONObject) {
+        alarms?.showMessage(payload)
     }
 
     /// The process's UI started: the photo feed loads when the app opens and when a network comes back
@@ -227,6 +273,27 @@ final class AppLaunch {
         }, closed: { [weak self] in self?.startClosed() })
     }
 
+    /// The Locations tab S02 (IN-11): a visit's page over the session, with IN-10's search (the Places SDK with the
+    /// private key, else the bundled towns) and the alarms' removal through IN-04's push service.
+    private func makePlaces(_ shell: ShellModel, session: WeatherSession, location: any AppLocation) -> PlacesScreens {
+        let locale = self.locale, holder = self.holder, repository = self.repository
+        let geocode = GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP)
+        var towns: TownSearch?
+        return PlacesScreens(shell: shell, session: session, makePage: {
+            PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
+                       acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry,
+                       removeAlarms: { AppPushRemoval().removeCity($0) })
+        }, search: makePlaceSearch(), towns: {
+            if towns == nil { towns = StartPage.bundledTowns() }
+            return towns
+        })
+    }
+
+    /// What the shell shows on a tab: S02 on the Locations tab (IN-11), the weather and air pages on the others.
+    func tabContent(_ tab: ShellTab) -> TabContent? {
+        tab == .search ? places?.content(tab) : weather?.content(tab)
+    }
+
     /// StartCtrl's `close()` after an add (the flow stored `startVersion` and selected the new place): the banner may
     /// show again, the shell opens Hourly whatever the startup page, and TabCtrl's `init` loads it (`reloadEvent
     /// 'init'`).
@@ -237,6 +304,8 @@ final class AppLaunch {
         shell.closeStart()
         startPage = nil
         weather?.session.reload(.initial)
+        // A notification tap held while S01 showed, then O06's 500 ms (IN-14).
+        if let weather { alarms?.startClosed(session: weather.session) }
     }
 }
 
