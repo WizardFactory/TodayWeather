@@ -114,7 +114,16 @@ The guard's schema 2 includes frozen cost policy and monotonic host CPU accounti
 
 ### Cost ceiling
 
-The host plan's `cost_policy` (schema 2) carries the frozen tariffs, `ceiling_usd` (the cumulative ceiling of the whole qualification, USD 300 by the owner's decision of 2026-11-14), `prior_spend_usd` (recorded spend of earlier attempts) and `finish_reserve_usd` (money kept for what follows a stop; at least the floor computed from the tariffs: the 2 GiB evidence export, the operator's 9,000 export reads and two more host hours). Preparation refuses a policy whose prior spend plus reserve already reaches the ceiling.
+The host plan's `cost_policy` (schema 2) carries frozen tariffs, prior
+spend and the approved USD 300 cumulative ceiling. It also records the
+configured `finish_reserve_usd`. The guard uses the larger of that setting
+and its calculated reserve for the remaining fixed host, IPv4 and storage
+cost through hour 170, unaccrued bounded background PUTs, and the operator's
+request and transfer envelopes. The configured schema minimum still applies
+to existing plans. Preparation checks the effective reserve before launch.
+The estimate uses frozen prices. Unobserved CPU and wire traffic after
+acquisition are excluded. Indefinite state-bucket storage after the deadline
+is a separately disclosed cost.
 
 Every ten-second sample the guard computes, from measured counters:
 
@@ -122,7 +131,7 @@ accrued = prior spend + elapsed hours × hourly (instance, IPv4, 32 GB gp3 and 2
 
 S3 used is the allocation minus the server's remaining count; log object PUTs are bounded by five sources (server, guard, reader, collector and copy) writing one object per 50 s; evidence copy PUTs are bounded by four objects (contract, batch, ledger, index) per started hour since the epoch plus four for each of at most three finalizer starts (the reader's stop, the 168-hour stop and the operator's finish), booked from the first second after the epoch; paid units come from the server's admitted-unit snapshot. It stops with `cost_ceiling` when accrued + finish reserve ≥ ceiling, and records `cost` (`accrued_usd`, `limit_usd` = ceiling − reserve) in the decision (schema 6) at every valid sample.
 
-Worked example (the tariffs of the test fixture: EC2 0.026, IPv4 0.005, gp3 0.0912 per GB-month, S3 storage 0.025 per GB-month, S3 read 0.00000035, write 0.0000045, vCPU-hour 0.05, outbound 0.126 per GB; ceiling 300, prior spend 10, reserve 5): after 24 hours with 3,600 CPU seconds, 10,000 reads, 5,000 writes, 2 GB transmitted and USD 1.50 of paid units, accrued = 10 + 24 × 0.036462 (0.875089) + 0.05 + 0.0035 + 0.0225 + 8,640 log PUTs (0.03888) + 108 copy PUTs (0.000486) + 0.252 + 1.50 = USD 12.742455 against a limit of USD 295. The simulator's ideal week at its default rates accrues about USD 10.99.
+Worked example (the tariffs of the test fixture: EC2 0.026, IPv4 0.005, gp3 0.0912 per GB-month, S3 storage 0.025 per GB-month, S3 read 0.00000035, write 0.0000045, vCPU-hour 0.05, outbound 0.126 per GB; ceiling 300, prior spend 10, reserve 5): after 24 hours with 3,600 CPU seconds, 10,000 reads, 5,000 writes, 2 GB transmitted and USD 1.50 of paid units, accrued = 10 + 24 × 0.036462 (0.875089) + 0.05 + 0.0035 + 0.0225 + 8,640 log PUTs (0.03888) + 108 copy PUTs (0.000486) + 0.252 + 1.50 = USD 12.742455 against a limit of USD 291.856352. The effective finish reserve is USD 8.143648 at this sample.
 
 ## Pinned remote installation component
 
@@ -130,17 +139,39 @@ Worked example (the tariffs of the test fixture: EC2 0.026, IPv4 0.005, gp3 0.09
 
 The initial installation consumes its durable intent before sending the fixed-name, hash-checked private bundle. The root receiver rejects links, unexpected members and duplicate staging trees before invoking the qualified host installer. An uncertain SSH acknowledgement never permits another upload/install; resume reads the original installation receipt and checks the three current acquisition unit states (the collector's state is reported too, but does not change the result). A retained `started` receipt with inactive services reports `stopped`. Remote transport checks currently use isolated fixtures; they do not establish an actual AWS host installation.
 
-## Retaining host evidence before cloud cleanup
+## Resumable finish and resource disposition
 
-`retain_host_evidence` stops the owned acquisition units and then, in a second command, the log collector (its drain ships their final records; the SSH bound for both is 150 s) and confirms all four are inactive or failed before downloading a fixed evidence inventory. A private archive retains the original paired bodies, result metadata, SQLite ledger and nonsecret launch/guard/install records. Configuration secrets, SSH identities and the local journal are excluded; the processes' records reach the run's state bucket through the [log collector](#host-logs) instead. Extraction refuses links, unexpected names and duplicate entries. Body retention is limited to two GiB and 25,016 files; exhausting this limit is incomplete evidence, not permission to extend the transfer budget.
+The first finish binds one new, private output directory to the existing journal,
+launch and original deadlines. To resume, use the same journal and output.
+A replaced or unmarked directory is refused. A crash before the output
+marker becomes durable may leave an unmarked directory. Preserve its contents
+in a separate safe location and rerun with the journal's original output path
+available.
 
-The export intent is durable and one-use, including after collection expiry. A lost transfer acknowledgement cannot trigger another automatic download. The downloaded launch hash must match the installation request. The ledger must bind the exact reader manifest, candidate origin, production origin and sampler hash; every admitted result must match its retained body size and hash. Pending/missing/mismatched entries stay incomplete. These checks establish retained capture integrity, never weather parity or original provider dependency closure.
+An installed run uses the state-bucket contract and committed generation indexes
+first. It stages referenced original versions and verifies their hashes against
+the launch and final ledger. Pending attempts and worker capture failures are
+reported separately from missing or mismatched files. If bucket evidence is
+incomplete and SSH remains reachable, finish stops acquisition, requests final
+copy, drains the collector, and checks the bucket again. It verifies the stopped
+reader's ledger and fetches only the missing paired files if needed. The exact
+target, requested attempt IDs and transfer charges are durable. Verified
+archives can be reused across an interrupted finish.
 
-`finish_run` attempts host evidence retention first and then independent cloud cleanup even if SSH/evidence fails. Proven resource identities are journaled before deletion; cleanup resume uses that record when terminated-instance responses no longer include a volume mapping. Source export still uses ordinary work allowance, while deletion and readback retain the protected cleanup reserve. The public lifecycle connects these components. Complete candidate-bound Linux evidence, review and CI before launch.
+The coordinator fences the exact owned instance after verified paired evidence
+or at the original 170-hour cleanup deadline. It confirms termination or
+absence independently before sealing the final inventories. The state bucket
+is eligible for deletion only after its sealed originals are fully exported
+and verified. Finish deletes only exact versions in the sealed inventory and
+checks absence again. Unexpected versions keep the bucket available for
+investigation. When finish reaches the deadline before verified export,
+the state bucket remains with no expiry. The report identifies retention
+separately from confirmed deletion and tracks raw, IAM, security group and
+volume disposition independently.
 
 ## Paired evidence in the state bucket
 
-SR-5a (#3003) keeps the paired evidence when the operator cannot reach the host: the host copies it to the run's `-state` bucket itself, and the operator can audit and assemble it from the bucket's objects alone. The finish order (stop, finalize, export, then terminate) and the resumable export that use it are SR-5b; until then `finish_run` behaves as described above, and the bucket objects are exported with the state bucket's other versions.
+The host copies paired evidence to the run's state bucket. Finish verifies and assembles the committed generations from that bucket at its first stage, then uses the [resumable finish](#resumable-finish-and-resource-disposition) checkpoints to preserve originals and reconcile cleanup.
 
 `evidence_copy.py` is a pinned host artifact (Python standard library only). It reads the bucket and region the log collector uses, gets the instance role's credentials through IMDSv2 and sends SigV4-signed `PutObject` requests. Every run takes an exclusive lock on `state/copy.lock` and is the only writer of `state/copy.json` (`reserved`, `committed`, `contract`, `shipped`), which it replaces atomically. A run:
 
@@ -198,7 +229,7 @@ existing prepared journal and bundle. Both commands require explicit `--execute`
 
 ```sh
 python3 server2/deploy/shadow/provision.py run --execute --state private-run --bundle private-bundle --identity /absolute/path/to/existing-key.pem --aws-executable /absolute/path/to/aws --profile ACCOUNT --output private-result
-python3 server2/deploy/shadow/provision.py finish --execute --state private-run --identity /absolute/path/to/existing-key.pem --aws-executable /absolute/path/to/aws --profile ACCOUNT --output private-recovery-result
+python3 server2/deploy/shadow/provision.py finish --execute --state private-run --identity /absolute/path/to/existing-key.pem --aws-executable /absolute/path/to/aws --profile ACCOUNT --output private-result
 ```
 
 `run` provisions only the frozen one-host plan, authenticates SSH against the EC2
@@ -216,36 +247,25 @@ ends the run. The collecting phase is recorded in the journal (`collection-start
 the first time the install is confirmed started. A resumed `run` in that phase makes
 no provisioning or install call: it reconnects through the SSH target authenticated
 earlier in the run (not the console fingerprints) inside the collecting loop, so a
-failed reconnect, including the first after a resume, is an unreachable poll; every
-finish without a connection (the deadline reached while unreachable, a resume at or
-after the deadline, also one whose install never stored the collecting marker)
-makes one reconnect attempt through the journaled SSH target for evidence retention
-and then cleans up, also when that attempt fails or is interrupted. The phase is read
-from the journal and the clock when an event happens: while collecting (marker
-stored, before the deadline), any connector or status-poll error is an unreachable
-poll, an interrupt detaches with exit 0, and a local failure (the journal, the
-progress output) detaches with exit 1 (`operator_failed` and its failure class), all
-without touching the host; outside collecting, an interrupt or failure before the
-finish leads to the finish. An interrupt during retention or cleanup themselves stops
-the process as before; the journal keeps the exact resources and `finish` resumes
-them (a resumable, evidence-first finish is SR-5). Only a validated host stop ends collection: the
-receipt reports `failed`, or all three acquisition units with known systemd states
-and at least one `inactive` or `failed`; missing or unknown unit states are
-unreachable. An interrupt during collection prints the detach record and exits 0. A
-startup failure, a host stop, the deadline or an interrupt before collection enters
-evidence retention and exact cleanup.
-Termination propagation gets at most three additional cleanup-only checks; the
-first source export is preserved if termination delayed it. Existing partial
-exports are not repeated. An incomplete cleanup returns exit 1 and retained
-pending evidence; inspect that evidence and use `finish` to reconcile, never
-create a second run. A clean teardown is not a product qualification PASS.
+failed reconnect, including the first after a resume, is an unreachable poll.
+Only a validated host stop ends collection. The receipt reports `failed`,
+or it reports all three acquisition units with known systemd states and at
+least one `inactive` or `failed`. Missing or unknown unit states remain
+unreachable. While collecting, an interrupt detaches with exit 0. A local
+journal or progress failure detaches with exit 1 and retains its failure
+class. Startup, host stop or deadline enters the finish phase, and a partially
+observed install is protected by the installed-run retention path.
 
-`finish` requires the original journal but permits a missing bundle or SSH key so
-cleanup remains possible. Missing host evidence stays incomplete. It verifies the
-AWS account using cleanup's protected reserve even if ordinary work is exhausted.
-The local journal lock excludes a second coordinator. If the coordinator dies,
-the installed host timers still stop collection at 168h and terminate at 170h;
-resume `finish` to independently remove and verify the remaining resources.
+For an installed run, `finish` binds its private output in the original
+journal and audits the bucket. Resume into that same output. At the deadline,
+the host timers still stop collection at 168h and terminate at 170h when the
+operator is disconnected. `finish` requires the original journal and a
+verified AWS account. A bundle and SSH key are optional, and the protected
+cleanup reserve remains separate from original-body reads. Exit 1 reports
+incomplete evidence, pending cleanup, or an intentionally retained state
+bucket. Inspect `result.json`, `sources/manifest.json` when available, and
+the retained run journal to distinguish these cases. A completed finish
+preserves capture integrity. Weather parity is assessed separately.
 
 The paired reader records 401, 403, 429, redirects, 5xx, timeouts and oversize bodies
 with the attempt and continues its schedule; its summary reports failed attempts per

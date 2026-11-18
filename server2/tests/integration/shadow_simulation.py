@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 """Offline 168-hour shadow-run simulation over the real decision code.
 
-Real code: provision.lifecycle and its SQLite journal, guard.evaluate and
-estimate_cost, paired_read.Ledger (admission, failure counting and terminal
-rules), and the evidence copy and bucket audit of SR-5a (evidence_copy.run over a
-host tree with the reader's actual files, evidence_audit.audit over the stored
-objects). Simulated: the clock, AWS (the ProvisionCloud fixture), SSH, the host's
-metrics/proc samples, HTTP outcomes and the state bucket (a directory of objects).
-No network, AWS or server process.
+Real code: provision lifecycle and finish, SQLite journal, guard evaluation
+and cost estimate, paired reader ledger, evidence copy, bucket audit and writer
+fencing. The model supplies a clock, host units, AWS replies with exact object
+versions, SSH archive transfers, host counters and HTTP outcomes. No network,
+AWS or server process is required.
 
-Limitations: the reader's scheduling loop is re-implemented here around the real
-Ledger, with small synthetic bodies; a copy run is instantaneous at its start time
-(the operator's finish does not wait for the finalizer until SR-5b, so a copy still
-running when the operator terminates the instance is not modelled); the SSH export
-is recorded only as reachability (`ssh_export_reachable`); the log collector (#2977)
-is modelled only as a reported unit state; operator process death and host reboot
-are not modelled. Fault rates are scenario inputs, not measurements.
+Limitations: the reader's schedule is modelled around the real Ledger with small
+synthetic bodies. Copy and archive transfer complete instantaneously. The log
+collector is represented by a unit state, and raw and log object contents are
+not generated. Process death and host reboot are not modelled. Fault rates are
+scenario inputs.
 
 Usage: python3 tests/integration/shadow_simulation.py [--seeds N] [--scenario NAME] [--output FILE]
 """
@@ -27,6 +23,7 @@ import importlib.util
 import json
 import random
 import sys
+import tarfile
 import tempfile
 import types
 import unittest
@@ -43,7 +40,12 @@ provision = fx.provision
 spec_reader = importlib.util.spec_from_file_location('paired_read_sim', SERVER2 / 'tools/shadow/paired_read.py')
 reader = importlib.util.module_from_spec(spec_reader)
 spec_reader.loader.exec_module(reader)
-evidence_copy, evidence_audit = fx.load_evidence_modules()
+evidence_copy, _ = fx.load_evidence_modules()
+spec_aws = importlib.util.spec_from_file_location('shadow_sim_fake_aws', HERE / 'shadow_finish_fake_aws.py')
+fake_aws = importlib.util.module_from_spec(spec_aws)
+spec_aws.loader.exec_module(fake_aws)
+# The CLI fixture's external pause injection belongs to interrupted CLI replay.
+fake_aws.pause_get = lambda root: False
 
 HOUR = 3600
 EPOCH = 1000
@@ -79,6 +81,8 @@ def default_scenario(**changes):
         candidate_exit_at=None,      # seconds after start when the candidate process exits
         reader_outcomes={},          # {(origin, n): result} forces the n-th attempt's result (1-based)
         copy_failures=[],            # [(start_s, end_s)]: every evidence PUT fails (end None = forever)
+        ssh_recovery_failure=False,  # observable control/transfer failure on the finish path
+        finish_retry_at=None,        # one explicit finish retry, seconds from epoch
     )
     sc.update(changes)
     return sc
@@ -164,6 +168,7 @@ class Host:
         self.group_end = None         # candidate and guard (and reader) stopped
         self.reader_end = None        # reader process exit on its own terminal state
         self.operator_end = None
+        self.terminated_at = None
         self.candidate_exit = None if sc['candidate_exit_at'] is None else EPOCH + sc['candidate_exit_at']
         self.guard_samples_after_reader_exit = 0
         self.quota = 0
@@ -188,12 +193,12 @@ class Host:
     def _record(self, at, cause):
         self.events.append((at, len(self.events), cause))
 
-    def _end_group(self, at, cause):
+    def _end_group(self, at, cause, *, finalize=True):
         if self.group_end is None:
             reader_running = self.reader_end is None
             self.group_end = at
             self._record(at, cause)
-            if reader_running:
+            if reader_running and finalize:
                 self._finalize(at)    # the reader's ExecStopPost starts the finalizer
 
     def _finalize(self, at):
@@ -235,6 +240,12 @@ class Host:
         self.operator_end = at
         self._end_group(at, 'operator-stop')
 
+    def terminate(self, at):
+        self.advance(at)
+        self.terminated_at = at
+        self.operator_end = at
+        self._end_group(at, 'operator-stop', finalize=False)
+
     def sample(self, t):
         sc = self.sc
         if self.rng.random() < sc['sample_failure']:
@@ -271,6 +282,8 @@ class Host:
 
     def advance(self, until):
         """Apply every event up to `until` in time order."""
+        if self.terminated_at is not None:
+            return
         while self.group_active():
             step = self.stepped + 10
             target = min(step, until)
@@ -292,11 +305,12 @@ class Host:
             elif step >= DEADLINE:
                 # The 168-hour stop.service stops the units whatever the guard decided.
                 self._end_group(DEADLINE, 'stop-timer')
-        self._copies_to(until)
         if until >= DEADLINE and not self.deadline_finalized:
+            self._copies_to(DEADLINE)
             # The stop.service also starts the finalizer after its stop requests.
             self.deadline_finalized = True
             self._finalize(DEADLINE)
+        self._copies_to(until)
 
 
 class ReaderModel:
@@ -439,6 +453,7 @@ class EvidenceModel:
         self.bucket = Path(root) / 'bucket'
         self.bucket.mkdir()
         self.objects = []
+        self.next_version = 1
         self.lines = []
         self.runs = []
         self.host = None
@@ -453,26 +468,65 @@ class EvidenceModel:
         def put(key, body, sha256, size, time_left):
             if self.failing(at):
                 raise evidence_copy.CopyError('put', status=503)
-            path = self.bucket / f'{len(self.objects)}.object'
+            version = f'v{self.next_version:06d}'
+            self.next_version += 1
+            path = self.bucket / f'{version}.object'
             path.write_bytes(body if isinstance(body, bytes) else Path(body).read_bytes())
-            self.objects.append((key, path))
+            self.objects.append(dict(bucket=self.tree.bucket, key=key, version=version, kind='object',
+                                     size=size, path=path.relative_to(self.root.parent).as_posix()))
 
         result = evidence_copy.run(self.tree, final=final, put=put, clock=lambda: clock[0],
                                    unit_state=self.host.reader_unit,
                                    sleep=lambda s: clock.__setitem__(0, clock[0] + s), log=self.lines.append)
         self.runs.append(dict(result, at=at, final=final))
 
-    def audit(self, run_id, launch_sha256):
-        report = evidence_audit.audit(self.objects, run_id=run_id, launch_sha256=launch_sha256,
-                                      workdir=self.root.parent / 'audit')
-        final_at = report.get('at')
-        newest = report.get('newest_snapshot_at')
-        return dict(status=report['status'], complete=report['complete'], kind=report.get('kind'),
-                    generation=report.get('generation'), reader=report.get('reader'),
-                    pending=len(report.get('pending', [])), capture_failures=len(report.get('capture_failures', [])),
-                    missing=len(report.get('missing_or_mismatched', [])), conflicts=len(report.get('conflicts', [])),
-                    final_at_s=None if final_at is None else round(final_at - EPOCH, 1),
-                    newest_snapshot_at_s=None if newest is None else round(newest - EPOCH, 1))
+def evidence_summary(report):
+    final_at = report.get('at')
+    newest = report.get('newest_snapshot_at')
+    return dict(status=report.get('status', report.get('reason', 'unverified')),
+                complete=report['complete'], kind=report.get('kind'),
+                generation=report.get('generation'), reader=report.get('reader'),
+                pending=len(report.get('pending', [])), capture_failures=len(report.get('capture_failures', [])),
+                missing=len(report.get('missing_or_mismatched', [])), conflicts=len(report.get('conflicts', [])),
+                final_at_s=None if final_at is None else round(final_at - EPOCH, 1),
+                newest_snapshot_at_s=None if newest is None else round(newest - EPOCH, 1),
+                source='ssh' if report.get('directory') == 'ssh-paired' else 'bucket')
+
+
+class SimulationCloud(fx.ProvisionCloud):
+    """Expose the copier's actual stored versions to the real finish path."""
+    S3 = {'ListObjectVersions': 'list-object-versions', 'GetObject': 'get-object',
+          'HeadObject': 'head-object', 'DeleteObjects': 'delete-objects', 'DeleteBucket': 'delete-bucket',
+          'GetBucketVersioning': 'get-bucket-versioning', 'GetBucketTagging': 'get-bucket-tagging'}
+
+    def __init__(self, journal, host, evidence, clock):
+        super().__init__(journal)
+        self.host, self.evidence, self.clock = host, evidence, clock
+
+    def call(self, operation, params, **kwargs):
+        observe_host = operation in self.S3 or operation in ('DescribeInstances', 'TerminateInstances')
+        if self.instance is not None and observe_host:
+            self.host.advance(self.clock.time())
+        if operation == 'TerminateInstances':
+            self.host.terminate(self.clock.time())
+        if operation not in self.S3:
+            return super().call(operation, params, **kwargs)
+
+        self.calls.append((operation, params))
+        inventory = dict(buckets=list(self.buckets), versions=self.evidence.objects,
+                         instance_state=self.instance['State']['Name'] if self.instance else None,
+                         resources={'run_id': self.evidence.tree.run_id})
+        try:
+            reply = fake_aws.s3_reply(self.S3[operation], params, kwargs.get('output'), inventory,
+                                     self.evidence.root.parent.resolve())
+        except fake_aws.ReplyError as error:
+            return state.CloudResult('service_error', operation, code=error.code)
+        self.evidence.objects = inventory['versions']
+        if operation == 'DeleteBucket':
+            self.buckets.pop(params['Bucket'])
+        if reply is None:
+            return state.CloudResult('empty_success', operation)
+        return fx.cloud_json(operation, reply)
 
 
 class Transport:
@@ -483,6 +537,8 @@ class Transport:
         self.polls = 0
         self.poll_failures = 0
         self.export_reachable = None
+        self.drained = False
+        self.requested_pairs = []
 
     def ssh_down(self):
         t = self.clock.now - EPOCH
@@ -491,16 +547,28 @@ class Transport:
     def invoke(self, action, **kwargs):
         if action == 'install':
             return state.CloudResult('empty_success', 'HostInstall')
-        now = min(self.clock.now, DEADLINE)
+        now = self.clock.time()
         self.host.advance(now)
-        if action == 'stop':
-            if self.ssh_down():
+        if action in ('finish-finalize', 'finish-drain', 'stop'):
+            if self.ssh_down() or self.sc['ssh_recovery_failure']:
                 return state.CloudResult('timeout', 'HostObserve')
-            self.host.operator_stop(now)
+            if action in ('finish-finalize', 'stop'):
+                copies = self.host.evidence.runs
+                started = len(copies)
+                self.host.operator_stop(now)
+                if action == 'finish-finalize':
+                    if len(copies) == started:
+                        self.host._finalize(now)
+                    if copies[-1]['status'] not in ('committed', 'skipped'):
+                        return state.CloudResult('command_error', 'HostObserve')
+            if action in ('finish-drain', 'stop'):
+                self.drained = True
             return state.CloudResult('empty_success', 'HostObserve')
-        if action == 'export':
-            self.export_reachable = not self.ssh_down()
-            return state.CloudResult('timeout', 'HostEvidence')
+        if action in ('finish-ledger', 'finish-pairs', 'export'):
+            self.export_reachable = not (self.ssh_down() or self.sc['ssh_recovery_failure'])
+            if not self.export_reachable or self.host.reader_active() or action == 'export':
+                return state.CloudResult('timeout', 'HostEvidence')
+            return self.export(action, **kwargs)
         self.polls += 1
         if self.ssh_down() or self.rng.random() < self.sc['poll_failure']:
             self.poll_failures += 1
@@ -509,10 +577,31 @@ class Transport:
         states = dict(candidate=state_of(self.host.group_active()), reader=state_of(self.host.reader_active()),
                       guard=state_of(self.host.group_active()),
                       # The log collector keeps running until the operator's stop.
-                      logs=state_of(self.host.operator_end is None))
+                      logs=state_of(not self.drained and self.host.terminated_at is None))
         return fx.cloud_json('HostObserve', dict(
             status='started', launch_sha256=self.launch_sha, epoch=EPOCH, collection_until=DEADLINE,
             cleanup_until=EPOCH + 170 * HOUR, unit_states=states))
+
+    def export(self, action, *, destination, limit, timeout, attempts=None):
+        evidence = self.host.evidence
+        with tempfile.TemporaryDirectory(dir=evidence.root) as work:
+            if action == 'finish-ledger':
+                snapshot = Path(work) / 'ledger.sqlite3'
+                evidence_copy.snapshot(evidence.tree, snapshot, True)
+                files = {'launch.json': evidence.root / 'launch.json', 'reader.json': evidence.root / 'reader.json',
+                         'data/paired/ledger.sqlite3': snapshot}
+            else:
+                self.requested_pairs.extend(attempts)
+                files = {f'data/paired/{i}.{suffix}': evidence.paired / f'{i}.{suffix}'
+                         for i in attempts for suffix in ('body', 'json')}
+            with destination.open('xb') as stream:
+                destination.chmod(0o600)
+                with tarfile.open(fileobj=stream, mode='w', format=tarfile.USTAR_FORMAT) as archive:
+                    for name, path in sorted(files.items()):
+                        archive.add(path, arcname=name, recursive=False)
+        size = destination.stat().st_size
+        assert 0 < size <= limit, 'simulated SSH tar exceeded its reserved limit'
+        return fx.cloud_json('HostEvidence', {'archive_bytes': size})
 
 
 def run_once(sc, seed):
@@ -528,6 +617,7 @@ def run_once(sc, seed):
         plan = dict(host=host_plan, cloud=fx.provisioning_plan(), allowance=dict(reads=10, writes=20, put_bytes=30))
         provision.prepare_run(plan, source, root / 'run', root / 'bundle', now=EPOCH)
         clock = SimTime()
+        stack.enter_context(patch.object(provision, 'time', clock))
         launch = operator.verify_bundle(root / 'bundle')
         launch_sha = operator.hashlib.sha256((state.canonical(launch) + '\n').encode()).hexdigest()
         evidence = EvidenceModel(root, launch, (root / 'bundle/reader.json').read_bytes(), sc)
@@ -536,20 +626,29 @@ def run_once(sc, seed):
                         sampler_sha256=launch['plan']['artifacts']['paired_read.py'])
         host = Host(sc, rng, clock, evidence.paired, evidence=evidence, manifest=manifest, identity=identity)
         with fx.J(root / 'run') as journal:
-            cloud = fx.ProvisionCloud(journal)
+            cloud = SimulationCloud(journal, host, evidence, clock)
             transport = Transport(host, sc, rng, clock, launch_sha)
 
             def connect(c, j, resources, *, now):
-                j.prepare_request('ssh-target', 'BindSshTarget', transport.binding, transport.binding['instance'], now=now)
-                j.record_receipt('ssh-target', fx.cloud_json('BindSshTarget', {'bound': True}))
+                if j.request('ssh-target') is None:
+                    j.prepare_request('ssh-target', 'BindSshTarget', transport.binding, transport.binding['instance'], now=now)
+                    j.record_receipt('ssh-target', fx.cloud_json('BindSshTarget', {'bound': True}))
                 return provision.BudgetedRemote(transport, j)
 
             result = provision.lifecycle(cloud, journal, plan['cloud'], root / 'bundle', root / 'result', connect,
                                          clock=clock.time, sleep=clock.sleep)
-        host.advance(min(clock.now, DEADLINE))
+            before_retry = result['cleanup'].get('fence', {}).get('status')
+            if sc['finish_retry_at'] is not None and not result['cleanup']['complete']:
+                retry_at = EPOCH + sc['finish_retry_at']
+                if retry_at < clock.now:
+                    raise ValueError('explicit finish retry precedes the initial finish')
+                clock.now = retry_at
+                renewed = provision.finish_run(cloud, transport, journal, root / 'result', now=int(clock.now))
+                result = dict(result, host_evidence=renewed['host_evidence'], cleanup=renewed['cleanup'])
         end = min(host.collection_end(), clock.now)
         cause = host.stop_cause()
-        bucket = evidence.audit(launch['plan']['run_id'], launch_sha)
+        retained = evidence_summary(result['host_evidence'])
+        operations = [operation for operation, _ in cloud.calls]
         return dict(
             seed=seed,
             operator_stop=result['stop_reason'],
@@ -558,11 +657,17 @@ def run_once(sc, seed):
             collected_hours=round(max(0.0, (end - EPOCH) / HOUR), 3),
             full_run=(result['stop_reason'] == 'collection_deadline'
                       and cause in (None, 'operator-stop', 'stop-timer', 'guard:collection_deadline')),
-            # SR-5a: complete evidence in the state bucket (real copy and audit), with or
-            # without SSH; the SSH export's reachability is kept for comparison.
-            evidence_retrievable=bucket['complete'],
-            evidence=bucket,
+            evidence_retrievable=retained['complete'],
+            qualification=result.get('qualification'),
+            evidence=retained,
             ssh_export_reachable=bool(transport.export_reachable),
+            ssh_requested_pairs=transport.requested_pairs,
+            finish_fence_before_retry=before_retry,
+            finish_fence=result['cleanup'].get('fence', {}).get('status'),
+            state_disposition=result['cleanup'].get('state', {}).get('status'),
+            terminated_at_s=None if host.terminated_at is None else round(host.terminated_at - EPOCH, 1),
+            bucket_get_before_terminate=('GetObject' in operations and 'TerminateInstances' in operations
+                                         and operations.index('GetObject') < operations.index('TerminateInstances')),
             copy_runs=len(evidence.runs),
             copy_failures=sum(r['status'] == 'failed' for r in evidence.runs),
             cleanup_complete=bool(result['cleanup'].get('complete')),

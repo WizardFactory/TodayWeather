@@ -18,9 +18,20 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import sqlite3
+import stat
 import time
 from typing import Any
+
+
+HOST_LIFETIME_SECONDS = 170 * 3600
+OPERATOR_ATTEMPTS = 10_000
+OPERATOR_WORK_ATTEMPTS = 9_000
+OPERATOR_EXPORT_BYTES = 2 * 1024**3
+OPERATOR_ENVELOPE_BYTES = 4 * 1024**3
+# The operator reserves this envelope before each finish-finalize SSH call.
+FINISH_CONTROL_ENVELOPE_BYTES = 65_536
 
 
 class StateError(ValueError):
@@ -55,6 +66,40 @@ def sync_directory(path: Path) -> None:
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def _finish_output_identity(destination: Path, token: str, *, created: bool) -> dict:
+    """Attest the private directory so a pending request can reconcile its own mkdir."""
+    directory = os.open(destination, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(directory)
+        if info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o700:
+            raise StateError('finish output is not the private owned directory')
+        identity = dict(device=info.st_dev, inode=info.st_ino)
+        expected = canonical(dict(identity, token=token)).encode()
+        marker = '.finish-binding'
+        if created:
+            fd = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                         0o600, dir_fd=directory)
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(expected)
+                stream.flush()
+                os.fsync(stream.fileno())
+        fd = os.open(marker, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+        with os.fdopen(fd, 'rb') as stream:
+            saved = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(saved.st_mode) or saved.st_uid != os.geteuid()
+                    or stat.S_IMODE(saved.st_mode) != 0o600
+                    or stream.read(len(expected) + 1) != expected):
+                raise StateError('finish output binding marker mismatch')
+        current = destination.lstat()
+        if (current.st_dev, current.st_ino) != (info.st_dev, info.st_ino):
+            raise StateError('finish output directory changed')
+        os.fsync(directory)
+        sync_directory(destination.parent)
+        return identity
+    finally:
+        os.close(directory)
 
 
 @dataclass(frozen=True)
@@ -132,7 +177,7 @@ def launch_expiry_units(run_id, epoch):
     if type(run_id) is not str or not re.fullmatch('[a-z0-9-]{1,30}',run_id):
         raise StateError('expiry run identity')
     integer(epoch,253400000000)
-    deadline=datetime.datetime.fromtimestamp(epoch+170*3600,datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    deadline=datetime.datetime.fromtimestamp(epoch+HOST_LIFETIME_SECONDS,datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     name='server2-shadow-'+run_id+'-launch-expiry'
     return {
         name+'.service':('[Unit]\nDescription=Original shadow host expiry\n'
@@ -148,7 +193,7 @@ def launch_user_data(run_id, epoch):
     A failed bootstrap powers off; no SSH operator is needed to arm the timer.
     Enabled persistent units keep the original deadline across OS reboots.
     """
-    deadline=epoch+170*3600
+    deadline=epoch+HOST_LIFETIME_SECONDS
     lines=['#!/bin/bash','set -euo pipefail',
            "trap '/usr/bin/systemctl --no-block poweroff' ERR",
            f'deadline={deadline}',
@@ -245,7 +290,7 @@ class Journal:
         label(run_id); sha256(manifest); integer(epoch, 2**53); integer(seen, 2**53)
         spent = dict(zip(self.CAPS, self.db.execute('SELECT COALESCE(SUM(reads),0), COALESCE(SUM(writes),0), COALESCE(SUM(put_bytes),0) FROM generations').fetchone()))
         return {'run_id': run_id, 'manifest_sha': manifest, 'epoch': epoch,
-                'collection_until': epoch + 168 * 3600, 'cleanup_until': epoch + 170 * 3600,
+                'collection_until': epoch + 168 * 3600, 'cleanup_until': epoch + HOST_LIFETIME_SECONDS,
                 'last_seen': seen, 'stop': stop, 'allocated': spent,
                 'generations': self.db.execute('SELECT COUNT(*) FROM generations').fetchone()[0]}
 
@@ -297,8 +342,8 @@ class Journal:
         incomplete-cleanup condition, not permission to reset the ledger.
         """
         amounts = (reads, writes, export_bytes)
-        caps = (10_000, 10_000, 2 * 1024**3)
-        integer(response_bytes,4*1024**3)
+        caps = (OPERATOR_ATTEMPTS, OPERATOR_ATTEMPTS, OPERATOR_EXPORT_BYTES)
+        integer(response_bytes, OPERATOR_ENVELOPE_BYTES)
         if type(cleanup) is not bool or (cleanup and export_bytes):
             raise StateError('cleanup reserve cannot export bodies')
         for amount, cap in zip(amounts, caps):
@@ -308,7 +353,7 @@ class Journal:
             if row is None:
                 raise StateError('missing operator allowance')
             values = tuple(a+b for a,b in zip(row, amounts))
-            limits = caps if cleanup else (9_000,9_000,caps[2])
+            limits = caps if cleanup else (OPERATOR_WORK_ATTEMPTS, OPERATOR_WORK_ATTEMPTS, OPERATOR_EXPORT_BYTES)
             if any(v > cap for v,cap in zip(values,caps)) or any(
                     amount and value > limit for amount,value,limit in zip(amounts,values,limits)):
                 raise StateError('operator allowance exhausted')
@@ -316,10 +361,19 @@ class Journal:
             if transfer is None:raise StateError('missing transfer allowance')
             dimension=1 if cleanup else 0
             total=transfer[dimension]+response_bytes
-            if total>4*1024**3:raise StateError('control response allowance exhausted')
+            if total>OPERATOR_ENVELOPE_BYTES:raise StateError('control response allowance exhausted')
             self.db.execute('UPDATE transfer SET '+('cleanup' if cleanup else 'work')+'=? WHERE id=1',(total,))
             self.db.execute('UPDATE control SET reads=?,writes=?,export_bytes=? WHERE id=1',values)
         return dict(zip(('reads','writes','export_bytes'),values))
+
+    def operator_usage(self) -> dict:
+        """Return journaled attempted work and precharged transfer bounds."""
+        controls = self.db.execute('SELECT reads,writes,export_bytes FROM control WHERE id=1').fetchone()
+        envelopes = self.db.execute('SELECT work,cleanup FROM transfer WHERE id=1').fetchone()
+        if controls is None or envelopes is None:
+            raise StateError('operator accounting unavailable')
+        names = ('reads', 'writes', 'export_bytes', 'work_envelope_bytes', 'cleanup_envelope_bytes')
+        return dict(zip(names, controls + envelopes))
 
     def prepare_mutation(self, intent: str, operation: str, params_sha: str,
                          token: str, *, now: int) -> None:
@@ -351,7 +405,9 @@ class Journal:
                 raise StateError('only nonsecret immutable expiry UserData permitted')
         digest=hashlib.sha256(encoded.encode()).hexdigest()
         if cleanup:
-            if operation!='HostEvidence' or intent!='host-evidence':
+            recovery = operation == 'HostEvidence' and re.fullmatch(r'finish-ssh-[0-9a-f]{40}-[0-9]{1,2}', intent)
+            if not recovery and (intent, operation) not in {('host-evidence', 'HostEvidence'),
+                                                            ('finish-output', 'BindFinishOutput')}:
                 raise StateError('unsupported cleanup request')
             self.observe(now)
         else:self.active(now)
@@ -391,6 +447,54 @@ class Journal:
         with self.transaction():
             changed=self.db.execute('UPDATE requests SET receipt=? WHERE id=? AND receipt IS NULL',(encoded,intent)).rowcount
             if changed!=1:raise StateError('receipt already retained')
+
+    def bind_finish_destination(self, destination: Path, *, now: int) -> Path:
+        """Reserve one private output for the original journal and host install.
+
+        The request survives a missing directory and the marker recovers an
+        interruption before the receipt. An unmarked directory is ambiguous
+        after mkdir, so it is preserved and refused.
+        """
+        destination = Path(destination)
+        if not destination.name or destination.name == '..':
+            raise StateError('finish output must name a directory')
+        try:
+            destination = destination.parent.resolve(strict=True) / destination.name
+        except (OSError, RuntimeError):
+            raise StateError('finish output parent unavailable') from None
+        run = self.snapshot()
+        install = self.request('host-install')
+        if install is not None and (install['operation'] != 'HostInstall'
+                                    or not isinstance(install['params'], dict)):
+            raise StateError('finish output host install binding')
+        launch = None if install is None else sha256(install['params'].get('launch_sha256'))
+        params = dict(destination=str(destination), run_id=run['run_id'],
+                      manifest_sha=run['manifest_sha'], epoch=run['epoch'], launch_sha256=launch)
+        key, operation = 'finish-output', 'BindFinishOutput'
+        request = self.request(key)
+        if request is None:
+            if os.path.lexists(destination):
+                raise StateError('finish output already exists')
+            token = secrets.token_hex(16)
+            self.prepare_request(key, operation, params, token, now=now, cleanup=True)
+            receipt = None
+        else:
+            if request['operation'] != operation or request['params'] != params:
+                raise StateError('finish output request changed')
+            token, receipt = request['token'], request['receipt']
+        try:
+            created = receipt is None and not os.path.lexists(destination)
+            if created:
+                destination.mkdir(mode=0o700)
+            identity = _finish_output_identity(destination, token, created=created)
+        except OSError:
+            raise StateError('finish output unavailable or unbound') from None
+        if receipt is None:
+            self.record_receipt(key, CloudResult('json', operation, identity))
+        elif (receipt['kind'] != 'json' or receipt['operation'] != operation
+              or receipt['payload'] != identity):
+            raise StateError('finish output receipt mismatch')
+        return destination
 
     def record_cleanup_ownership(self, params_sha: str, instance_id: str, *, resources: dict | None = None) -> None:
         """Bind proven existing ownership even after collection expiry.
@@ -439,8 +543,8 @@ class Journal:
 LOG_SOURCES=5
 LOG_WRITES=65_000
 # Evidence copy PUTs (SR-5a, #3003): contract, batch, ledger and index per generation,
-# hourly from the epoch, plus one generation for each finalizer start (the reader's
-# stop, the 168-hour stop and the operator's finish: at most three).
+# hourly from the epoch. Accrual books three finalizer starts after the epoch.
+# The finish reserve also budgets possible operator retry starts.
 COPY_OBJECTS=4
 COPY_FINALIZE_STARTS=3
 PRICE_KEYS={'ec2_hour','ipv4_hour','gp3_gb_month','s3_gb_month','s3_read',
@@ -504,12 +608,40 @@ def _hourly(rates):
 
 
 def finish_reserve_floor(rates):
-    """Least money a stop must leave for what follows it: the 2 GiB evidence export, the
-    operator's 9,000 export reads and two more hours of the host until cleanup."""
+    """Schema-2 minimum for a configured reserve. The estimate prices the remaining tail."""
     from decimal import Decimal
-    rates={k:Decimal(v) for k,v in rates.items()}
-    gib=Decimal(1024**3)/Decimal(10**9)
-    return 2*gib*rates['outbound_gb']+9000*rates['s3_read']+2*_hourly(rates)
+
+    rates = {key: Decimal(value) for key, value in rates.items()}
+    export = Decimal(OPERATOR_EXPORT_BYTES) / 10**9 * rates['outbound_gb']
+    return export + OPERATOR_WORK_ATTEMPTS * rates['s3_read'] + 2 * _hourly(rates)
+
+
+def _background_puts(elapsed):
+    log_puts = LOG_SOURCES * ((elapsed + 49) // 50)
+    if not elapsed:
+        return log_puts
+    return log_puts + COPY_OBJECTS * (((elapsed + 3599) // 3600) + COPY_FINALIZE_STARTS)
+
+
+def _required_finish_reserve(rates, elapsed, background_puts):
+    """Price known host holding, bounded operator work and unaccrued background PUTs."""
+    from decimal import Decimal
+
+    operator_bytes = OPERATOR_EXPORT_BYTES + 2 * OPERATOR_ENVELOPE_BYTES
+    operator = (OPERATOR_ATTEMPTS * (rates['s3_read'] + rates['s3_write'])
+                + Decimal(operator_bytes) / 10**9 * rates['outbound_gb'])
+    remaining = max(0, HOST_LIFETIME_SECONDS - elapsed)
+    if not remaining:
+        return operator
+    # Two starts come from the host timer and reader stop. The remaining starts
+    # are operator calls backed by the cleanup envelope. Credit starts accrued
+    # above, including the first operator start.
+    starts = 2 + OPERATOR_ENVELOPE_BYTES // FINISH_CONTROL_ENVELOPE_BYTES
+    puts_at_deadline = (_background_puts(HOST_LIFETIME_SECONDS)
+                        + COPY_OBJECTS * (starts - COPY_FINALIZE_STARTS))
+    remaining_puts = puts_at_deadline - background_puts
+    return (operator + Decimal(remaining) / 3600 * _hourly(rates)
+            + remaining_puts * rates['s3_write'])
 
 
 def validate_cost_policy(policy,epoch):
@@ -544,11 +676,14 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds,s3_reads=0,s3_writes=0,tx_bytes
             + host nonidle CPU seconds x vCPU-hour price + S3 reads/writes actually
             used + bytes transmitted since the origin x outbound price + an upper bound
             of log object PUTs (five sources, one object per 50 s each) and of evidence
-            copy PUTs (four objects per started hour plus four per finalizer start, at
-            most three) at the write price + paid provider units actually admitted x
+            copy PUTs (four objects per started hour and four for each of three
+            booked finalizer starts) at the write price + paid provider units actually admitted x
             their price.
-    The run stops with `cost_ceiling` when accrued + finish reserve reaches the
-    ceiling. This is a conservative stop input, not AWS billing.
+    The finish reserve is the greater of the configured reserve and the modeled
+    remaining host, operator and background costs. The estimate stops when
+    accrual reaches the unreserved ceiling. It is distinct from AWS billing.
+    Unobserved CPU, host egress and indefinitely retained storage are outside
+    the modeled tail.
     """
     from decimal import Decimal, ROUND_CEILING
     p=validate_cost_policy(policy,epoch)
@@ -557,15 +692,14 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds,s3_reads=0,s3_writes=0,tx_bytes
     paid=_usd(paid_usd,Decimal(0),Decimal(1000),'invalid paid spend')
     if now<epoch:raise StateError('cost clock rollback')
     elapsed=now-epoch
-    log_puts=LOG_SOURCES*((elapsed+49)//50)
-    # Nothing has run at the epoch itself; any later moment books the finalizer bound.
-    copy_puts=COPY_OBJECTS*((elapsed+3599)//3600)+(COPY_OBJECTS*COPY_FINALIZE_STARTS if elapsed else 0)
+    background_puts = _background_puts(elapsed)
     accrued=(p['prior']+Decimal(elapsed)/3600*_hourly(p)+Decimal(cpu_seconds)/3600*p['cpu_vcpu_hour']
-             +s3_reads*p['s3_read']+(s3_writes+log_puts+copy_puts)*p['s3_write']
+             +s3_reads*p['s3_read']+(s3_writes+background_puts)*p['s3_write']
              +Decimal(tx_bytes)/Decimal(10**9)*p['outbound_gb']+paid)
-    limit=p['ceiling']-p['reserve']
+    reserve = max(p['reserve'], _required_finish_reserve(p, elapsed, background_puts))
+    limit = max(Decimal(0), p['ceiling'] - reserve)
     return dict(accrued_usd=str(accrued.quantize(Decimal('.000001'),rounding=ROUND_CEILING)),
-                limit_usd=str(limit),stop='cost_ceiling' if accrued>=limit else None)
+                limit_usd=format(limit, 'f'),stop='cost_ceiling' if accrued>=limit else None)
 
 
 def main() -> int:

@@ -29,7 +29,9 @@ Scenarios (one run ID each, the host reset in between):
                  reader exits 2 on its own terminal state and a final generation follows with
                  the reader `failed`; the 168-hour stop.service starts the finalizer again; the
                  copy/finalize unit properties; the bucket-only audit of the stand-in's objects
-                 is complete while the host's data directory is unreachable
+                 is complete while the host's data directory is unreachable. SR-5b then
+                 runs the operator finish CLI without SSH against those exact stored bytes
+                 and prebound synthetic resources, and verifies ordered stub cleanup.
   evidence-candidate-exit  SR-5a: a killed candidate stops the reader and a final generation
                  follows; the bucket-only audit is complete
 The storage-authorization (guard stop) and frozen-guard (watchdog kill) scenarios also
@@ -473,6 +475,107 @@ def bucket_audit(report, entry, run_id):
     return result
 
 
+def finish_cli_check(report, entry, run_id):
+    """Run the actual operator CLI against the uploaded bytes, with synthetic AWS only."""
+    import provision
+
+    work = WORK / 'runs' / run_id
+    fixture = work / 'finish-aws-fixture'
+    fixture.mkdir(mode=0o700)
+    prefix = f'server2-shadow-{run_id}'
+    resources = dict(schema=1, account='123456789012', region=REGION, run_id=run_id,
+                     instance='i-1234567890abcdef0', security_group='sg-1234567890abcdef0',
+                     volumes=['vol-1234567890abcdef0'], buckets=[prefix + '-raw', prefix + '-state'],
+                     role=prefix, profile=prefix, policy=prefix)
+    state_bucket = resources['buckets'][1]
+    # The loopback receiver stores confirmed uploads as files, without AWS
+    # version IDs. Give the exact evidence bytes deterministic fixture IDs.
+    versions = []
+    for number, path in enumerate(evidence_objects(run_id), 1):
+        mirror = fixture / f'{number}.object'
+        shutil.copyfile(path, mirror)
+        versions.append(dict(bucket=state_bucket, key=f'evidence/{run_id}/{path.name}',
+                             version=f'v{number:05}', kind='object', path=mirror.name,
+                             size=mirror.stat().st_size, sha256=coordinator.artifact_hash(mirror)))
+    manifest = fixture / 'fixture.json'
+    fd = os.open(manifest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        json.dump(dict(resources=resources, versions=versions, instance_state='running',
+                       buckets=resources['buckets']), stream)
+
+    launch_sha256 = coordinator.artifact_hash(work / 'bundle/launch.json')
+    journal_path = work / 'journal'
+    with state.Journal(journal_path) as journal:
+        # Keep the real generation journal. Its host install receipt and the
+        # ownership proof below model the operator's records for this fixture.
+        now = journal.snapshot()['last_seen']
+        provision.freeze_plan(journal, dict(schema=1, run_id=run_id, account=resources['account'],
+                                            region=REGION, image='ami-12345678', vpc='vpc-12345678',
+                                            subnet='subnet-12345678', key_name='fixture-key',
+                                            operator_cidr='8.8.8.8/32', root_device='/dev/xvda'), now)
+        journal.prepare_request('host-install', 'HostInstall', {'launch_sha256': launch_sha256},
+                                'fixture', now=now)
+        journal.record_receipt('host-install', state.CloudResult('empty_success', 'HostInstall'))
+        journal.record_cleanup_ownership(coordinator.resource_digest(resources), resources['instance'],
+                                         resources=resources)
+
+    cli = SERVER2 / 'tests/integration/shadow_finish_fake_aws.py'
+    output = work / 'finish'
+    env = dict(PATH=str(Path(sys.executable).parent) + os.pathsep + os.defpath,
+               SHADOW_FINISH_AWS_FIXTURE=str(manifest), PYTHONDONTWRITEBYTECODE='1')
+    data = INSTALL_ROOT / run_id / 'data'
+    hidden = data.with_name('data.unreachable')
+    data.rename(hidden)
+    try:
+        result = run(sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
+                     '--state', str(journal_path), '--output', str(output),
+                     '--aws-executable', str(cli), env=env, check=False, timeout=180)
+    finally:
+        hidden.rename(data)
+
+    receipt = parsed(result.stdout.strip()) or {}
+    paired = receipt.get('host_evidence', {})
+    cleanup = receipt.get('cleanup', {})
+    summary = dict(aws='local-version-store', exit_code=result.returncode,
+                   evidence_status=paired.get('status'), source_versions=len(versions),
+                   cleanup_complete=cleanup.get('complete'))
+    entry['observations']['finish_cli'] = summary
+    report.check(entry, 'finish CLI completed without SSH or host data (SR-5b F1)',
+                 result.returncode == 0 and receipt.get('schema') == 2 and paired.get('complete') is True
+                 and cleanup.get('complete') is True, summary)
+    if result.returncode != 0:
+        return
+    expected_files = WORK / 'audit' / run_id / 'files'
+    actual_files = output / paired['directory'] / 'files'
+    hashes = lambda directory: {p.name: coordinator.artifact_hash(p) for p in directory.iterdir()}
+    expected = hashes(expected_files)
+    report.check(entry, 'finish CLI paired files match the independent bucket audit',
+                 bool(expected) and hashes(actual_files) == expected, {'paired_files': len(expected)})
+
+    sources = output / 'sources'
+    exported = json.loads((sources / 'manifest.json').read_bytes())
+    identity = lambda row: (row['bucket'], row['key'], row['version'])
+    expected_sources = {identity(row): row['sha256'] for row in versions}
+    actual_sources = {identity(row): coordinator.artifact_hash(sources / row['file'])
+                      for row in exported['objects'] if row['status'] == 'exported'}
+    report.check(entry, 'finish CLI original versions match the loopback uploads',
+                 exported['complete'] and actual_sources == expected_sources)
+    calls = [json.loads(line) for line in (fixture / 'aws-calls.jsonl').read_text().splitlines()]
+    commands = [call['command'] for call in calls]
+    # These operations refer only to the lifecycle of the synthetic resources.
+    terminate = commands.index('terminate-instances') if 'terminate-instances' in commands else len(calls)
+    delete = next((i for i, command in enumerate(commands)
+                   if command.startswith(('delete-', 'remove-'))), len(calls))
+    between = calls[terminate + 1:delete]
+    listed_after_fence = [call['parameters']['Bucket'] for call in between
+                          if call['command'] == 'list-object-versions' and 'Prefix' not in call['parameters']]
+    report.check(entry, 'finish reads evidence before the synthetic writer fence and seals both buckets before deletion',
+                 'get-object' in commands[:terminate] and terminate < delete < len(calls)
+                 and bool(between) and between[0]['command'] == 'describe-instances'
+                 and set(listed_after_fence) == set(resources['buckets']))
+    summary['paired_files'] = len(expected)
+
+
 def evidence_unit_checks(report, entry, name, run_id):
     """SR-5a unit properties: independent oneshots with short bounds; no shutdown dependency."""
     acquisition = [f'{name}-{s}.service' for s in ('candidate', 'guard', 'reader', 'logs')]
@@ -693,7 +796,7 @@ def tampered(report, args, interface):
 
 def evidence_copy(report, args, interface):
     run_id = 'sr5-evidence'; name = 'server2-shadow-' + run_id; root = Path('/opt/server2-shadow') / run_id
-    entry = report.scenario('evidence-copy', ['SR5a'])
+    entry = report.scenario('evidence-copy', ['SR5a', 'SR5b-F1'])
     reset_host(); start_standins(run_id)
     (PEER_STATE / 'provider-status').write_text('200\n')
     launch, result, receipt = install(report, entry, args, run_id, interface)
@@ -751,6 +854,8 @@ def evidence_copy(report, args, interface):
     report.check(entry, "the copy's committed records reached the destination",
                  any(r.get('event') == 'copy.committed' and r.get('kind') == 'final' for r in copies), copies[-5:])
     bucket_audit(report, entry, run_id)
+    systemctl('stop', f'{name}-copy.timer', f'{name}-copy.service', f'{name}-finalize.service', check=True)
+    finish_cli_check(report, entry, run_id)
 
 
 def evidence_candidate_exit(report, args, interface):

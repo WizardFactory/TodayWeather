@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from coordinator import (require, dispatch_recorded, bind_resources, frozen_resources,
                          has_run_tag, delete_versions, inventory, cleanup, CleanupCloud)
-from state import CloudResult, StateError, canonical, absence, Journal, launch_user_data
+from state import CloudResult, StateError, canonical, absence, Journal, launch_user_data, FINISH_CONTROL_ENVELOPE_BYTES
 
 
 IAM_PROPAGATION_SECONDS = 300
@@ -304,6 +304,281 @@ def cleanup_partial(cloud,journal,*,now,source_destination=None):
     return {'complete':not unknown and all(checks.values()),'pending':unknown,'checks':checks,'actions':actions}
 
 
+def audit_finish_bucket(source, staged, destination, run_id, launch_sha256):
+    """Verify the staged bucket versions and publish a private paired snapshot."""
+    import hashlib
+    import os
+    import tempfile
+    from evidence_audit import audit, file_sha256
+    from state import sync_directory
+
+    if not staged['inventory_complete']:
+        return {'complete': False, 'status': 'bucket_inventory_incomplete'}
+    entries = [
+        entry for entry in staged['objects']
+        if entry['kind'] == 'object'
+        and not (entry['status'] == 'omitted' and entry.get('reason') == 'uncommitted')
+    ]
+    unavailable = bool(staged.get('missing_evidence_keys')) or any(
+        entry['status'] != 'exported' for entry in entries
+    )
+    entries = [entry for entry in entries if entry['status'] == 'exported']
+    objects = [(entry['key'], Path(source) / entry['file']) for entry in entries]
+    identities = [(entry['key'], entry['version'], entry['sha256']) for entry in entries]
+    digest = hashlib.sha256(canonical(sorted(identities)).encode()).hexdigest()
+    destination = Path(destination)
+    final = destination / ('paired-' + digest)
+
+    def content(path):
+        result = {}
+        for item in path.iterdir():
+            require(not item.is_symlink(), 'paired output must not contain links')
+            if item.name == 'files' and item.is_dir():
+                for body in item.iterdir():
+                    require(not body.is_symlink() and body.is_file(), 'paired file required')
+                    result[f'files/{body.name}'] = file_sha256(body)
+            else:
+                require(item.is_file(), 'paired file required')
+                result[item.name] = file_sha256(item)
+        return result
+
+    with tempfile.TemporaryDirectory(prefix='.paired-', dir=destination) as work:
+        candidate = Path(work) / 'verified'
+        report = audit(objects, run_id=run_id, launch_sha256=launch_sha256, workdir=candidate)
+        if unavailable:
+            report.update(complete=False, status='bucket_objects_incomplete')
+        if os.path.lexists(final):
+            if final.is_symlink() or not final.is_dir() or content(final) != content(candidate):
+                return {'complete': False, 'status': 'paired_output_mismatch'}
+        else:
+            for path in candidate.rglob('*'):
+                if path.is_file():
+                    with path.open('rb') as stream:
+                        os.fsync(stream.fileno())
+            sync_directory(candidate / 'files')
+            sync_directory(candidate)
+            candidate.rename(final)
+            sync_directory(destination)
+        return dict(report, directory=final.name)
+
+
+def transfer_finish_evidence(remote, journal, destination, action, *, now, timeout, limit, attempts=None):
+    """Reserve one exact bounded SSH attempt, retaining verified prior replies."""
+    import hashlib
+    import os
+    import stat
+    from remote import artifact_hash_large
+    from state import sync_directory
+
+    require(action in ('finish-ledger', 'finish-pairs'), 'finish transfer action')
+    params = {'target': remote.binding, 'action': action, 'limit': limit, 'attempts': attempts}
+    digest = hashlib.sha256(canonical(params).encode()).hexdigest()[:40]
+    staging = destination / 'ssh-originals'
+    staging.mkdir(mode=0o700, exist_ok=True)
+    require(not staging.is_symlink() and staging.is_dir()
+            and stat.S_IMODE(staging.stat().st_mode) == 0o700
+            and staging.stat().st_uid == os.geteuid(), 'SSH staging directory unsafe')
+    for ordinal in range(16):
+        intent = f'finish-ssh-{digest}-{ordinal}'
+        archive = staging / f'{intent}.tar'
+        existing = journal.request(intent)
+        if existing is not None:
+            require(existing['params'] == params, 'SSH transfer intent changed')
+            reply = existing['receipt']
+            if reply is None or reply['kind'] != 'json':
+                continue
+            saved = reply['payload']
+            require(archive.is_file() and not archive.is_symlink()
+                    and 0 < archive.stat().st_size == saved['archive_bytes'] <= limit
+                    and artifact_hash_large(archive) == saved['sha256'], 'SSH archive receipt mismatch')
+            return archive
+        require(timeout > 0, 'SSH transfer deadline')
+        journal.reserve_control(export_bytes=limit)
+        journal.prepare_request(intent, 'HostEvidence', params, intent, now=now, cleanup=True)
+        fields = {'destination': archive, 'limit': limit, 'timeout': timeout}
+        if attempts is not None:
+            fields['attempts'] = attempts
+        result = remote.invoke(action, **fields)
+        if result.kind == 'json':
+            size = result.payload.get('archive_bytes')
+            require(archive.is_file() and not archive.is_symlink()
+                    and type(size) is int and 0 < size <= limit and archive.stat().st_size == size,
+                    'SSH archive length')
+            with archive.open('rb') as stream:
+                os.fsync(stream.fileno())
+            sync_directory(staging)
+            result = CloudResult('json', 'HostEvidence',
+                                 {'archive_bytes': size, 'sha256': artifact_hash_large(archive)})
+        journal.record_receipt(intent, result)
+        require(result.kind == 'json', 'SSH transfer unavailable')
+        return archive
+    raise StateError('SSH transfer retries exhausted')
+
+
+def retained_finish_pairs(destination, launch_sha256):
+    """Revalidate a previously complete SSH result without contacting the host."""
+    import os
+    from remote import assess_recovery
+
+    final = destination / 'ssh-paired'
+    if not os.path.lexists(final):
+        return None
+    require(final.is_dir() and not final.is_symlink(), 'SSH paired directory unsafe')
+    report = assess_recovery(final, launch_sha256, recovered=final / 'files')
+    return dict(report, directory=final.name)
+
+
+def recover_finish_pairs(remote, journal, destination, launch_sha256, evidence, *, now, until):
+    """Revalidate the stopped ledger and request only its missing paired files."""
+    import os
+    import shutil
+    import tempfile
+    from remote import assess_recovery, recovery_archive_limit, unpack_recovery
+    from state import sync_directory
+
+    existing = retained_finish_pairs(destination, launch_sha256)
+    if existing is not None:
+        return existing
+    final = destination / 'ssh-paired'
+
+    def transfer(action, limit, *, attempts=None):
+        return transfer_finish_evidence(
+            remote, journal, destination, action, now=now,
+            timeout=min(600, until - time.monotonic()), limit=limit, attempts=attempts,
+        )
+
+    partial = evidence.get('directory')
+    cached = destination / partial / 'files' if partial else None
+    with tempfile.TemporaryDirectory(prefix='.ssh-pairs-', dir=destination) as scratch:
+        work = Path(scratch)
+        ledger = work / 'validated'
+        unpack_recovery(transfer('finish-ledger', 64 * 1024**2), ledger)
+        plan = assess_recovery(ledger, launch_sha256, cached=cached)
+        if plan['status'] == 'ledger_invalid':
+            return plan
+        recovered = work / 'transferred'
+        recovered.mkdir(mode=0o700)
+        missing = plan['missing_or_mismatched']
+        for start in range(0, len(missing), 128):
+            attempts = missing[start:start+128]
+            allowance = recovery_archive_limit(plan['archive_members_bytes'][str(i)] for i in attempts)
+            piece = work / f'piece-{start}'
+            unpack_recovery(transfer('finish-pairs', allowance, attempts=attempts), piece, attempts=attempts)
+            for path in (piece / 'data' / 'paired').iterdir():
+                path.rename(recovered / path.name)
+        report = assess_recovery(ledger, launch_sha256, cached=cached, recovered=recovered)
+        if not report['complete']:
+            return report
+
+        verified = ledger / 'files'
+        verified.mkdir(mode=0o700)
+        for attempt, location in report['files'].items():
+            source = cached if location == 'cached' else recovered
+            for suffix in ('json', 'body'):
+                filename = f'{attempt}.{suffix}'
+                shutil.copyfile(source / filename, verified / filename)
+        for path in ledger.rglob('*'):
+            if path.is_file():
+                with path.open('rb') as stream:
+                    os.fsync(stream.fileno())
+        for path in sorted((p for p in ledger.rglob('*') if p.is_dir()), key=lambda p: -len(p.parts)):
+            sync_directory(path)
+        sync_directory(ledger)
+        ledger.rename(final)
+        sync_directory(destination)
+        return dict(report, directory=final.name)
+
+
+def finish_bound_run(cloud, remote, journal, resources, destination, launch_sha256, *, now):
+    """Verify copies before fencing an installed host and resume owned cleanup."""
+    from coordinator import (
+        cleanup_finish_nonstate, dispose_finish_state, fence_finish_instance,
+        seal_finish_sources, stage_source_versions,
+    )
+
+    observed = journal.observe(now)
+    now = observed['last_seen']
+    destination = journal.bind_finish_destination(destination, now=now)
+    source = destination / 'sources'
+    run_id = resources['run_id']
+    started = time.monotonic()
+    cleanup_until = journal.snapshot()['cleanup_until']
+
+    def current():
+        return int(now + time.monotonic() - started)
+
+    evidence = retained_finish_pairs(destination, launch_sha256)
+    if evidence is None:
+        evidence = {'complete': False, 'status': 'bucket_not_checked'}
+    if not evidence['complete'] and not (destination / 'writer-fence.json').exists():
+        staged = stage_source_versions(cloud, journal, resources, source, evidence_only=True)
+        evidence = audit_finish_bucket(source, staged, destination, run_id, launch_sha256)
+        if not evidence['complete'] and remote is not None and current() < cleanup_until:
+            until = started + cleanup_until - now
+            try:
+                finalized = remote.invoke('finish-finalize', timeout=min(620, until - time.monotonic()))
+                if finalized.kind == 'empty_success':
+                    remote.invoke('finish-drain', timeout=min(120, until - time.monotonic()))
+                refreshed = stage_source_versions(cloud, journal, resources, source, evidence_only=True)
+                evidence = audit_finish_bucket(source, refreshed, destination, run_id, launch_sha256)
+                if not evidence['complete']:
+                    evidence = recover_finish_pairs(
+                        remote, journal, destination, launch_sha256, evidence, now=now, until=until
+                    )
+            except (StateError, OSError, ValueError):
+                evidence['ssh_status'] = 'incomplete'
+
+    fence = fence_finish_instance(
+        cloud, journal, resources, now=current(), paired_verified=evidence['complete']
+    )
+    cleanup_report = {'complete': False, 'fence': fence}
+    if fence['status'] == 'fenced':
+        # Freeze the deadline disposition before any additional export. A late
+        # read can enrich the report, but cannot authorize deleting retained state.
+        state_report = None
+        if current() >= cleanup_until:
+            state_report = dispose_finish_state(
+                cloud, journal, resources, source, now=current(), paired_verified=False
+            )
+        sealed = seal_finish_sources(cloud, journal, resources, source)
+        if not evidence['complete']:
+            state_bucket = resources['buckets'][1]
+            prefix = f'evidence/{run_id}/'
+            evidence_inputs = dict(sealed, objects=[
+                item for item in sealed['objects']
+                if item['bucket'] == state_bucket and item['key'].startswith(prefix)
+            ])
+            evidence = audit_finish_bucket(source, evidence_inputs, destination, run_id, launch_sha256)
+        observed_at = current()
+        if state_report is None:
+            state_report = dispose_finish_state(
+                cloud, journal, resources, source, now=observed_at,
+                paired_verified=evidence['complete'] and observed_at < cleanup_until,
+            )
+        other = cleanup_finish_nonstate(
+            cloud, journal, resources, now=observed_at,
+            raw_disposable=sealed.get('listings', {}).get(resources['buckets'][0]) == 'complete'
+                           and (sealed['complete'] or observed_at >= cleanup_until),
+        )
+        cleanup_report.update(
+            state=state_report, nonstate=other, source_inventory_sha256=sealed.get('inventory_sha256'),
+            sources_complete=sealed['complete'],
+            complete=evidence['complete'] and sealed['complete'] and
+                     state_report['status'] == 'deleted' and other['complete'],
+        )
+    fenced_at = fence.get('observed_at')
+    accounting = {
+        'operator': journal.operator_usage(),
+        'host_elapsed_seconds_upper': max(0, fenced_at - observed['epoch'])
+                                      if type(fenced_at) is int else None,
+        'state_retained_without_expiry': cleanup_report.get('state', {}).get('status') == 'retained',
+    }
+    report = {'schema': 2, 'host_evidence': evidence, 'cleanup': cleanup_report,
+              'finish_accounting': accounting, 'qualification': 'not_assessed'}
+    retain_result(destination / 'result.json', report, replace=True)
+    return report
+
+
 def finish_run(cloud,remote,journal,destination,*,now=None):
     """Retain stopped-host evidence first; always attempt independent cloud cleanup.
 
@@ -311,6 +586,13 @@ def finish_run(cloud,remote,journal,destination,*,now=None):
     dependency closure cannot become a qualification PASS here.
     """
     from remote import retain_host_evidence
+    now = int(time.time()) if now is None else now
+    installed = journal.request('host-install')
+    if installed is not None:
+        owned = journal.request('owned-resources')
+        require(owned is not None, 'finish requires bound installed host')
+        return finish_bound_run(cloud, remote, journal, owned['params'], destination,
+                                installed['params']['launch_sha256'], now=now)
     destination=Path(destination);destination.mkdir(mode=0o700)
     evidence={'complete':False,'reason':'host_evidence_unavailable'}
     cleanup_result={'complete':False,'reason':'cleanup_unavailable'}
@@ -380,7 +662,7 @@ class BudgetedRemote:
     def __init__(self,remote,journal):
         self.remote=remote;self.journal=journal;self.binding=remote.binding;self.finalizing=False
     def invoke(self,action,**kwargs):
-        self.journal.reserve_control(response_bytes=65536,cleanup=self.finalizing and action in ('stop','inspect'))
+        self.journal.reserve_control(response_bytes=FINISH_CONTROL_ENVELOPE_BYTES,cleanup=self.finalizing and action in ('stop','inspect','finish-finalize','finish-drain'))
         return self.remote.invoke(action,**kwargs)
 
 
@@ -448,7 +730,11 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     from remote import install_remote,inspect_install
     launch=verify_bundle(bundle)
     require(launch['generation']=='initial','only initial host generation is supported')
-    require(not Path(destination).exists(),'finish destination already exists')
+    finishing = journal.request('finish-output') is not None
+    if finishing:
+        journal.bind_finish_destination(destination, now=int(clock()))
+    else:
+        require(not Path(destination).exists(),'finish destination already exists')
     remote=None;reason='collection_deadline';failure=None;detached=None
     resumed=collection_started(journal)
     collection_until=journal.snapshot()['collection_until']
@@ -456,7 +742,7 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
     # collecting until the loop ends or the deadline passes, finishing otherwise (also a
     # resume after the deadline without the marker). An interrupt or a local failure
     # detaches only while collecting, decided from the journal when it happens.
-    phase='finishing' if clock()>=collection_until else ('collecting' if resumed else 'startup')
+    phase='finishing' if finishing or clock()>=collection_until else ('collecting' if resumed else 'startup')
     def collecting():
         if phase=='finishing' or clock()>=collection_until:return False
         try:return collection_started(journal)
@@ -549,22 +835,38 @@ def lifecycle(cloud,journal,plan,bundle,destination,connector,*,clock=time.time,
             # A pending termination has not started source export. Preserve that
             # first opportunity; an existing export (even partial) is not retried.
             sources=Path(destination)/'sources'
-            try:observed=cleanup_partial(cloud,journal,now=int(clock()),
-                                        source_destination=None if sources.exists() else sources)
+            try:
+                if report['schema'] == 2:
+                    report=finish_run(cloud,remote,journal,destination,now=int(clock()))
+                    observed=report['cleanup']
+                else:
+                    observed=cleanup_partial(cloud,journal,now=int(clock()),
+                                             source_destination=None if sources.exists() else sources)
             except (StateError,OSError,ValueError):break
             attempts.append(observed);report['cleanup']=observed
         report.update(stop_reason=reason,failure_class=failure,cleanup_rechecks=attempts)
-        retain_result(Path(destination)/'lifecycle.json',report)
+        retain_result(Path(destination)/'lifecycle.json',report,replace=report['schema']==2)
     return report
 
 
-def retain_result(path,value):
+def retain_result(path,value,*,replace=False):
     import os
+    import tempfile
     from state import sync_directory
-    fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-    with os.fdopen(fd,'w') as stream:
-        stream.write(canonical(value)+'\n');stream.flush();os.fsync(stream.fileno())
-    sync_directory(path.parent)
+    temporary = None
+    if replace:
+        fd,temporary=tempfile.mkstemp(prefix='.result-',dir=path.parent)
+    else:
+        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    try:
+        with os.fdopen(fd,'w') as stream:
+            stream.write(canonical(value)+'\n');stream.flush();os.fsync(stream.fileno())
+        if temporary is not None:
+            os.replace(temporary,path)
+        sync_directory(path.parent)
+    finally:
+        if temporary is not None:
+            Path(temporary).unlink(missing_ok=True)
 
 
 def live_command(args):
@@ -574,7 +876,7 @@ def live_command(args):
     from state import Journal
     from remote import Remote
     require(args.execute,'live dispatch requires --execute')
-    require(args.output is not None and not args.output.exists(),'new evidence output required')
+    require(args.output is not None,'evidence output required')
     with Journal(args.state) as journal:
         frozen=journal.request('cloud-plan')
         require(frozen is not None and receipt_result(frozen).payload=={'frozen':True},'frozen cloud plan')
