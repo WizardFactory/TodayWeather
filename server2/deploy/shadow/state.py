@@ -439,10 +439,11 @@ class Journal:
 LOG_SOURCES=5
 LOG_WRITES=65_000
 # Evidence copy PUTs (SR-5a, #3003): contract, batch, ledger and index per generation,
-# hourly from the epoch, plus one generation for each finalizer start (the reader's
-# stop, the 168-hour stop and the operator's finish: at most three).
+# for the install copy and each started hour. A finalizer can commit up to four
+# generations at each of its three starts (reader stop, 168-hour stop and finish).
 COPY_OBJECTS=4
 COPY_FINALIZE_STARTS=3
+COPY_FINALIZE_GENERATIONS=4
 PRICE_KEYS={'ec2_hour','ipv4_hour','gp3_gb_month','s3_gb_month','s3_read',
             's3_write','cpu_vcpu_hour','outbound_gb'}
 
@@ -544,8 +545,8 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds,s3_reads=0,s3_writes=0,tx_bytes
             + host nonidle CPU seconds x vCPU-hour price + S3 reads/writes actually
             used + bytes transmitted since the origin x outbound price + an upper bound
             of log object PUTs (five sources, one object per 50 s each) and of evidence
-            copy PUTs (four objects per started hour plus four per finalizer start, at
-            most three) at the write price + paid provider units actually admitted x
+            copy PUTs (four objects per generation from install, each started hour and
+            up to four generations per finalizer start, at most three starts) at the write price + paid provider units actually admitted x
             their price.
     The run stops with `cost_ceiling` when accrued + finish reserve reaches the
     ceiling. This is a conservative stop input, not AWS billing.
@@ -559,7 +560,8 @@ def estimate_cost(policy,epoch,now,*,cpu_seconds,s3_reads=0,s3_writes=0,tx_bytes
     elapsed=now-epoch
     log_puts=LOG_SOURCES*((elapsed+49)//50)
     # Nothing has run at the epoch itself; any later moment books the finalizer bound.
-    copy_puts=COPY_OBJECTS*((elapsed+3599)//3600)+(COPY_OBJECTS*COPY_FINALIZE_STARTS if elapsed else 0)
+    copy_puts=(COPY_OBJECTS*(1+(elapsed+3599)//3600+COPY_FINALIZE_STARTS*COPY_FINALIZE_GENERATIONS)
+               if elapsed else 0)
     accrued=(p['prior']+Decimal(elapsed)/3600*_hourly(p)+Decimal(cpu_seconds)/3600*p['cpu_vcpu_hour']
              +s3_reads*p['s3_read']+(s3_writes+log_puts+copy_puts)*p['s3_write']
              +Decimal(tx_bytes)/Decimal(10**9)*p['outbound_gb']+paid)

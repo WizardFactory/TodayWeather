@@ -279,7 +279,7 @@ class CostTests(unittest.TestCase):
         # SR-5a: five log sources (copy added), and the evidence copy's PUT bound: four
         # objects per hour from the epoch plus four for each of at most three finalizer starts.
         log_puts=5*((24*3600+49)//50)
-        copy_puts=4*24+4*3
+        copy_puts=4*(1+24+3*4)
         return (D(policy['prior_spend_usd'])+24*hourly+D(3600)/3600*r['cpu_vcpu_hour']
                 +10_000*r['s3_read']+5_000*r['s3_write']+D(2*10**9)/D(10**9)*r['outbound_gb']
                 +(log_puts+copy_puts)*r['s3_write']+D('1.5'))
@@ -3122,13 +3122,17 @@ class EvidenceUnitTests(unittest.TestCase):
 
 
 class EvidenceCostTests(unittest.TestCase):
+    def test_charged_finalizer_limit_matches_the_host_limit(self):
+        copy, _ = load_evidence_modules()
+        self.assertEqual(state.COPY_FINALIZE_GENERATIONS, copy.MAX_FINAL_GENERATIONS)
+
     def test_copy_puts_and_five_log_sources_are_bounded_from_the_epoch(self):
         from decimal import Decimal as D
         policy=cost_policy();w=D(policy['rates']['s3_write'])
         base=lambda now:D(state.estimate_cost(dict(policy,rates=dict(policy['rates'],s3_write='0.000000001')),1000,now,cpu_seconds=0)['accrued_usd'])
         for hours in (1,24,168):
             now=1000+hours*3600
-            puts=5*((hours*3600+49)//50)+4*hours+4*3
+            puts=5*((hours*3600+49)//50)+4*(1+hours+3*4)
             accrued=D(state.estimate_cost(policy,1000,now,cpu_seconds=0)['accrued_usd'])
             self.assertAlmostEqual(accrued-base(now),puts*(w-D('0.000000001')),places=5)
         self.assertEqual(D(state.estimate_cost(policy,1000,1000,cpu_seconds=0)['accrued_usd']),D(0))
