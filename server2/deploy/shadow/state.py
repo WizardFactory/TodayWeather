@@ -434,7 +434,6 @@ class Journal:
 
 # Log object PUTs of the host's collector (LP-6, #2983). Their storage and export
 # fall inside the 20 GB storage and the operator's 2 GiB export allowance.
-LOG_WRITES=50_000
 PRICE_KEYS={'ec2_hour','ipv4_hour','gp3_gb_month','s3_gb_month','s3_read',
             's3_write','cpu_vcpu_hour','outbound_gb'}
 

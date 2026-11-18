@@ -536,9 +536,6 @@ class GuardTests(unittest.TestCase):
         m=host_manifest();sample=host_sample(m);sample['cpu_seconds']=20
         prior=guard.evaluate(m,sample,None,1001);sample['cpu_seconds']=19
         self.assertEqual(guard.evaluate(m,sample,prior,1001)['stop'],'cpu_accounting_unavailable')
-        m=host_manifest();sample=host_sample(m);sample['cpu_seconds']=20
-        prior=guard.evaluate(m,sample,None,1001);sample['cpu_seconds']=19
-        self.assertEqual(guard.evaluate(m,sample,prior,1001)['stop'],'cpu_accounting_unavailable')
 
     def test_environment_digest_is_order_independent_and_rejects_duplicates(self):
         self.assertEqual(guard.environment_hash(b'A=x\0B=y\0'),guard.environment_hash(b'B=y\0A=x\0'))
