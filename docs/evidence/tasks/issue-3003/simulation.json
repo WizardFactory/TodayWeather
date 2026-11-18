@@ -1,0 +1,311 @@
+{
+  "source_revision": "41c09c49239d564d40d2794ed70f978145368fea",
+  "epoch": 1000,
+  "deadline_hours": 168,
+  "scenarios": {
+    "operator-ip-change-day-3": {
+      "scenario": "operator-ip-change-day-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "operator-unreachable-at-deadline": {
+      "scenario": "operator-unreachable-at-deadline",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 0,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "realistic-combined": {
+      "scenario": "realistic-combined",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "final-copy-fails-hourly-recovers": {
+      "scenario": "final-copy-fails-hourly-recovers",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.0,
+      "min_collected_hours": 60.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "candidate-exit": 20
+      }
+    },
+    "ideal": {
+      "scenario": "ideal",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "observed-quota-at-3min": {
+      "scenario": "observed-quota-at-3min",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "shared-key-daily-429": {
+      "scenario": "shared-key-daily-429",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "production-429-1e-4": {
+      "scenario": "production-429-1e-4",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "production-transient-1e-3": {
+      "scenario": "production-transient-1e-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "poll-failure-1e-4": {
+      "scenario": "poll-failure-1e-4",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "poll-failure-1e-3": {
+      "scenario": "poll-failure-1e-3",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "sample-failure-1e-5": {
+      "scenario": "sample-failure-1e-5",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "mac-sleeps-night-1": {
+      "scenario": "mac-sleeps-night-1",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "tx-observed-early-rate": {
+      "scenario": "tx-observed-early-rate",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "s3-measured-high": {
+      "scenario": "s3-measured-high",
+      "seeds": 20,
+      "full_runs": 20,
+      "median_collected_hours": 168.0,
+      "min_collected_hours": 168.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:collection_deadline": 20
+      }
+    },
+    "candidate-exit-day-3": {
+      "scenario": "candidate-exit-day-3",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 60.0,
+      "min_collected_hours": 60.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "candidate-exit": 20
+      }
+    },
+    "cost-ceiling": {
+      "scenario": "cost-ceiling",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 114.161,
+      "min_collected_hours": 114.161,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:cost_ceiling": 20
+      }
+    },
+    "storage-auth-broken-role": {
+      "scenario": "storage-auth-broken-role",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 3.0,
+      "min_collected_hours": 3.0,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "guard:s3_authorization": 20
+      }
+    },
+    "reader-failed": {
+      "scenario": "reader-failed",
+      "seeds": 20,
+      "full_runs": 0,
+      "median_collected_hours": 0.501,
+      "min_collected_hours": 0.501,
+      "evidence_retrievable": 20,
+      "evidence_status": {
+        "complete": 20
+      },
+      "ssh_export_reachable": 20,
+      "cleanup_complete": 20,
+      "stop_reasons": {
+        "reader:origin-outage": 20
+      }
+    }
+  }
+}
