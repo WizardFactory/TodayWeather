@@ -26,6 +26,10 @@ Open 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air). Scrol
 your finger. The app requests the latest data for the selected place and keeps the current tab open. If the request fails, the retry dialog lets you try again or close it. The bottom tabs
 switch between pages. To set an automatic refresh interval, open 업데이트 주기 in the menu.
 
+## Home Screen widgets
+
+The [Home Screen widget guide](widgets/manual.pdf) covers small and medium widgets, place and forecast settings, and reopening the app after five days. Its [editable source](widgets/manual.json) includes the Korean instructions.
+
 ## Reader notes
 
 - Location is optional if you search for a place. iOS asks once for location while using the app; this capture
