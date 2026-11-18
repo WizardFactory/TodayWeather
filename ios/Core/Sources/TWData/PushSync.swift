@@ -11,6 +11,8 @@ public protocol PushStateAccess: Sendable {
     func storePushToken(_ token: String?) async throws
     /// The state once every change asked for before has been saved; throws when that save failed.
     func savedPushState() async throws -> AppState
+    /// Changes the push state over the state as it is now and returns once saved; throws when it could not be saved.
+    func changePush(_ change: @escaping @Sendable (inout PushState) -> Void) async throws
 }
 
 extension AppStateHolder: PushStateAccess {
@@ -22,6 +24,10 @@ extension AppStateHolder: PushStateAccess {
 
     public func savedPushState() async throws -> AppState {
         try await update { _ in }
+    }
+
+    public func changePush(_ change: @escaping @Sendable (inout PushState) -> Void) async throws {
+        try await update { change(&$0.push) }
     }
 }
 
@@ -101,6 +107,54 @@ public actor PushSync {
             guard let current = try? await self.state.savedPushState(), let ctx = self.context(current) else { return nil }
             let result = PushRegistration.onUnitsChanged(current.push, places: current.places, context: ctx)
             return await self.send(result, over: current)
+        }
+    }
+
+    /// `Push.removePushListByCityIndex(index)` (S02, IN-11; the Android `removeCity` of AN-11), after the registrations
+    /// before it: the place's records are dropped and saved, then `DELETE /push` is sent once and its answer ignored;
+    /// no other record is renumbered (A24). Nothing without a token or a registration ID, as Cordova; nothing is sent
+    /// when the records cannot be saved, and nothing fails then. Nil when no request can be built.
+    @discardableResult
+    public func removeCity(_ index: Int) async -> Outcome? {
+        await serialized { [self] in
+            guard let current = try? await self.state.savedPushState(), let ctx = self.context(current) else { return nil }
+            let result = PushRegistration.onCityRemoved(current.push, index: index, context: ctx)
+            if result.requests.isEmpty { return Outcome(requests: [], statuses: []) }
+            do {
+                try await self.state.changePush { $0 = PushRegistration.onCityRemoved($0, index: index, context: ctx).state }
+            } catch {
+                return nil
+            }
+            var statuses: [Int?] = []
+            for request in result.requests { statuses.append(await self.transport.send(request)) }
+            return Outcome(requests: result.requests, statuses: statuses)
+        }
+    }
+
+    /// The post after an S09 save (`_postPushList`, IN-14 #2963; the Android `postPlace` of AN-14). The save itself is a
+    /// change of the page (`AlarmPage`), shown and saved at once as the Cordova list changed before S09 went back, so
+    /// S02's next visit sees it. When its turn comes this posts `index`'s list as saved then: a later save or the place's
+    /// removal in between is what the server gets. When the state cannot be saved nothing is sent and nothing fails, as
+    /// for the other writes. Nil when no request can be built.
+    @discardableResult
+    public func postPlace(_ index: Int) async -> Outcome? {
+        await post { PushRegistration.placePost($0.push, index: index, context: $1) }
+    }
+
+    /// The post after O06's OK (`enableAlertForOldAlarm`, IN-14; the answer is a change, `AlertIntro.answer`): the whole
+    /// list as saved then.
+    @discardableResult
+    public func postList() async -> Outcome? {
+        await post { PushRegistration.listPost($0.push, context: $1) }
+    }
+
+    private func post(_ requests: @escaping @Sendable (AppState, PushRegistration.Context) -> [PushRequest]) async -> Outcome? {
+        await serialized { [self] in
+            guard let current = try? await self.state.savedPushState(), let ctx = self.context(current) else { return nil }
+            let built = requests(current, ctx)
+            var statuses: [Int?] = []
+            for request in built { statuses.append(await self.transport.send(request)) }
+            return Outcome(requests: built, statuses: statuses)
         }
     }
 

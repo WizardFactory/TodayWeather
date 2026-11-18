@@ -59,18 +59,22 @@ public final class StartFlow {
     private let location: any LocationAccess
     private let acceptLanguage: () -> String
     private let telemetry: WeatherTelemetry?
+    /// True for S01 (an add closes it: `startVersion` stored); false for S02's adds (IN-11), which only select the new
+    /// place (`setCityIndex(getCityCount() - 1)`).
+    private let closesStart: Bool
 
     /// `gLocationAuthorizationStatus`: the status the page recorded last.
     public private(set) var recorded: LocationPermission?
 
     public init(holder: AppStateHolder, repository: WeatherRepository, geocode: GeocodeClient, location: any LocationAccess,
-                acceptLanguage: @escaping () -> String, telemetry: WeatherTelemetry? = nil) {
+                acceptLanguage: @escaping () -> String, telemetry: WeatherTelemetry? = nil, closesStart: Bool = true) {
         self.holder = holder
         self.repository = repository
         self.geocode = geocode
         self.location = location
         self.acceptLanguage = acceptLanguage
         self.telemetry = telemetry
+        self.closesStart = closesStart
     }
 
     /// `OnGetWeather(index)`: the shortcut's own name, address, country and coordinates.
@@ -109,7 +113,8 @@ public final class StartFlow {
             var saved = city
             if let source = Self.source(entry.weather) { saved.source = source }
             guard let current = holder.state, PlaceList.add(current, saved) != nil else { return .alert(Self.alreadyAdded) }
-            holder.change { st in st = PlaceList.add(st, saved).map(PlaceList.closeStart) ?? st }
+            let select = closesStart ? PlaceList.closeStart : PlaceList.selectLast
+            holder.change { st in st = PlaceList.add(st, saved).map(select) ?? st }
             telemetry?("favorite_change", ["action": .text("add")])
             return .added
         case .failed(_, let unconvertible):
@@ -136,10 +141,18 @@ public final class StartFlow {
     /// (`/coord`). A grant from the prompt runs it again at once. `loading` shows the overlay at each attempt and hides it
     /// before the prompt when StartCtrl did; the caller hides it at the end.
     public func locate(loading: (Bool) -> Void = { _ in }) async -> Located {
+        await locate(loading: loading, decide: StartLocation.decide) { [weak self] in self?.recorded = $0 }
+    }
+
+    /// `updateCurrentPosition` of StartCtrl or SearchCtrl (IN-11): `decide` gives the step and what the attempt records,
+    /// which `record` stores (S02 records into TabCtrl's `gLocationAuthorizationStatus`, `WeatherSession.recorded`).
+    public func locate(loading: (Bool) -> Void = { _ in },
+                       decide: (LocationPermission?, LocationPermission) -> (step: StartLocation.Step, records: LocationPermission?),
+                       record: (LocationPermission) -> Void) async -> Located {
         while true {
             loading(true)
-            let decision = StartLocation.decide(record: location.recorded, current: location.status())
-            if let records = decision.records { recorded = records }
+            let decision = decide(location.recorded, location.status())
+            if let records = decision.records { record(records) }
             // `trackEvent('position', 'status', 'authorized', isLocationAuthorized ? 1 : 0)`.
             telemetry?("location_permission", ["outcome": .text(decision.step == .locate ? "granted" : "denied")])
             switch decision.step {

@@ -22,29 +22,36 @@ final class StartPage {
 
     @ObservationIgnored let shell: ShellModel
     @ObservationIgnored let flow: StartFlow
-    @ObservationIgnored private let search: (any PlaceSearch)?
-    @ObservationIgnored private let towns: () -> TownSearch?
+    /// The search (`PlaceQuery`, shared with S02).
+    let query: PlaceQuery
     @ObservationIgnored private let openURL: (URL) -> Void
     @ObservationIgnored private let closed: () -> Void
     @ObservationIgnored private let catalog: Catalog
-    @ObservationIgnored private var searchTask: Task<Void, Never>?
     @ObservationIgnored private var addTask: Task<Void, Never>?
     @ObservationIgnored private var noticeShown = false
     /// Google's predictions arrive 300 ms after the last change (AN-10; the Cordova page asked at every change).
-    @ObservationIgnored var predictionDelay = Duration.milliseconds(300)
+    var predictionDelay: Duration {
+        get { query.predictionDelay }
+        set { query.predictionDelay = newValue }
+    }
 
     /// The loading overlay.
     private(set) var loading = false
     /// The typed word (`search.word`).
-    private(set) var word = ""
-    private(set) var results: Results?
+    var word: String { query.word }
+    /// Google's predictions with the Places key, else the bundled towns.
+    var results: Results? {
+        if let p = query.predictions { return .predictions(word: p.word, list: p.list) }
+        if let t = query.townResults { return .towns(word: t.word, page: t.page) }
+        return nil
+    }
 
     init(shell: ShellModel, flow: StartFlow, search: (any PlaceSearch)?, towns: @escaping () -> TownSearch?,
          openURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }, closed: @escaping () -> Void) {
         self.shell = shell
         self.flow = flow
-        self.search = search
-        self.towns = towns
+        // S01 searches the bundled towns only without the Places key (as on Android), keeping the last ones.
+        query = PlaceQuery(search: search, towns: towns, scansTowns: search == nil, keepsLastTowns: true)
         self.openURL = openURL
         self.closed = closed
         catalog = Catalog(code: shell.locale.catalog)
@@ -58,7 +65,7 @@ final class StartPage {
     }
 
     /// Whether this build searches with Google's predictions.
-    var placesSearch: Bool { search != nil }
+    var placesSearch: Bool { query.search != nil }
 
     /// StartCtrl's `init`: O01 on every entry; it asks for nothing (`LOC_NEEDS_ACCESS_TO`, three lines, OK).
     func opened() {
@@ -73,41 +80,13 @@ final class StartPage {
 
     /// `OnChangeSearchWord`: an empty word clears the results; otherwise the predictions (or the first towns) for it. A
     /// word without results keeps the last ones, and only the latest word's answer shows.
-    func change(_ text: String) {
-        word = text
-        searchTask?.cancel()
-        let typed = text.trimmingCharacters(in: .whitespaces)
-        if typed.isEmpty {
-            results = nil
-            return
-        }
-        if let search {
-            let delay = predictionDelay
-            searchTask = Task { [weak self] in
-                do { try await Task.sleep(for: delay) } catch { return }
-                let found = await search.predictions(typed)
-                guard let self, !Task.isCancelled, let found, !found.isEmpty else { return }
-                results = .predictions(word: typed, list: found)
-            }
-        } else if let towns = towns() {
-            let page = towns.search(typed)
-            if !page.towns.isEmpty { results = .towns(word: typed, page: page) }
-        }
-    }
+    func change(_ text: String) { query.change(text) }
 
     /// `OnScrollResults`: the next ten towns when the last shown one comes into view.
-    func moreTowns() {
-        guard case .towns(let typed, let page)? = results, page.next >= 0, let towns = towns() else { return }
-        let more = towns.search(typed, from: page.next)
-        results = .towns(word: typed, page: TownPage(towns: page.towns + more.towns, next: more.next))
-    }
+    func moreTowns() { query.moreTowns() }
 
     /// `OnCancel`.
-    func cancel() {
-        searchTask?.cancel()
-        word = ""
-        results = nil
-    }
+    func cancel() { query.clear() }
 
     // MARK: Adds
 
@@ -137,11 +116,7 @@ final class StartPage {
         }
     }
 
-    private func clearSearch() {
-        searchTask?.cancel()
-        word = ""
-        results = nil
-    }
+    private func clearSearch() { query.clear() }
 
     private func run(_ add: @escaping (StartFlow) async -> StartFlow.Outcome) {
         guard addTask == nil else { return }

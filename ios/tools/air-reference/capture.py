@@ -79,7 +79,7 @@ def injected_app(cordova_app, out):
 
 def capture(udid, cordova_app):
     info, size = fc.owned(udid)
-    out = WORK / "runs" / "ko-KR"
+    out = WORK / "runs" / fc.LANGUAGE
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
     for d in (SHOTS, RECORDS):
@@ -110,7 +110,7 @@ def capture(udid, cordova_app):
     env = server.final
     if f"{env['screen']['width']}x{env['screen']['height']}" != size:
         raise SystemExit(f"unexpected display {env}")
-    if env["language"] != "ko-KR" or env["theme"] != "light":
+    if env["language"] != fc.LANGUAGE or env["theme"] != "light":
         raise SystemExit(f"unexpected language or theme {env}")
     if [r["page"] for r in server.records] != PAGES:
         raise SystemExit(f"recorded {[r['page'] for r in server.records]}")
@@ -130,7 +130,7 @@ def capture(udid, cordova_app):
 def manifest():
     """What the app-hosted tests read (they cannot read the package's test resources): each state's places, link code,
     taps and blocks with their image, class and CSS size, and O08's texts."""
-    capture = json.loads((WORK / "runs/ko-KR/capture.json").read_text("utf-8"))
+    capture = json.loads((WORK / "runs" / fc.LANGUAGE / "capture.json").read_text("utf-8"))
     states = {}
     for state in STATES:
         record = json.loads((RECORDS / f"{state}.json").read_text("utf-8"))
@@ -172,7 +172,7 @@ def provenance(cordova_app):
                         "clientSha256": hashlib.sha256(blob).hexdigest() if blob is not None else None,
                         "matchesClient": blob is not None and hashlib.sha256(blob).hexdigest() == fc.sha256(built),
                         "lastCommit": last})
-    capture = json.loads((WORK / "runs/ko-KR/capture.json").read_text("utf-8"))
+    capture = json.loads((WORK / "runs" / fc.LANGUAGE / "capture.json").read_text("utf-8"))
     files = sorted([p for p in SHOTS.iterdir() if p.suffix in (".png", ".json") and not p.name.endswith("tolerances.json")] +
                    [p for p in RECORDS.glob("*.json") if p.name != "air-scale.json"])
     PROVENANCE.write_text(json.dumps({

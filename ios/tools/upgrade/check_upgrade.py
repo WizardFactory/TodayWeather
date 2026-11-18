@@ -123,9 +123,42 @@ def measurement(data):
         shutil.rmtree(tmp)
 
 
+# The keys and the marker of the rollback hand-back (IN-17), which the native app writes into the suite.
+HANDBACK_MARKER = "_twHandBack"
+HANDBACK_KEYS = ["cities", "cityIndex", "cityList", "units", "settingsInfo", "pushData2", "pushData", "expandShortChart",
+                 "startVersion", "appVersion", "disableUpdateInfo", "twAnalyticsConsentV1"]
+
+
+def handback_marker(group):
+    """The suite's hand-back marker as a dict, or None."""
+    try:
+        marker = json.loads(group.get(HANDBACK_MARKER))
+        return marker if isinstance(marker, dict) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def not_handed_back(group):
+    """The suite's values the hand-back does not own (repr, so every plist type compares)."""
+    return {k: repr(v) for k, v in sorted(group.items()) if k not in HANDBACK_KEYS and k != HANDBACK_MARKER}
+
+
+def app_origin(local_storage_file):
+    """True when the LocalStorage directory of the file belongs to app://localhost (WebKit's `origin` file next to it
+    names the scheme and host). Other origins are not the Cordova app's: the Google Mobile Ads SDK of the native app
+    (IN-15) keeps storage for https://googleads.g.doubleclick.net, and the migration never reads it."""
+    origin = os.path.join(os.path.dirname(os.path.dirname(local_storage_file)), "origin")
+    if not os.path.exists(origin):
+        return True  # the single-directory layout names the origin in the file name
+    with open(origin, "rb") as f:
+        data = f.read()
+    return b"localhost" in data and b"app" in data
+
+
 def webkit_files(data):
     files = sorted(glob.glob(os.path.join(data, "Library/WebKit/**/LocalStorage/*"), recursive=True))
-    return {os.path.relpath(f, data): sha(f) for f in files if os.path.isfile(f) and not f.endswith("-shm")}
+    return {os.path.relpath(f, data): sha(f) for f in files
+            if os.path.isfile(f) and not f.endswith("-shm") and app_origin(f)}
 
 
 class Checks:
@@ -265,8 +298,10 @@ def main():
             settled = ("cities" in group and standard.get("/google/measurement/measurement_enabled_state") == 1 and
                        m is not None and "favorite_change" in m["events"])
         else:
+            marker = handback_marker(group) or {}
             settled = (standard.get("/google/measurement/measurement_enabled_state") not in (None, 1) and
-                       (apm.get("consent_settings_3p") or {}).get("analytics_storage") == "denied" and m is not None)
+                       (apm.get("consent_settings_3p") or {}).get("analytics_storage") == "denied" and m is not None and
+                       marker.get("writer") == "native" and marker.get("complete") is True)
         if settled:
             break
         time.sleep(1)
@@ -283,12 +318,17 @@ def main():
                 standard.get("/google/measurement/measurement_enabled_state") == 1)
         c.check("CDVUUID equals device.uuid", standard.get("CDVUUID") == seed.get("deviceId"), standard.get("CDVUUID"))
         c.check("suite holds the seeded cities", group.get("cities") == seed["suite"].get("cities"))
-        c.check("suite holds the analytics opt-in", group.get("twAnalyticsConsentV1") == "true")
+        # A build with AN-17's Monetization mirrors the choice into the suite; the shipped 1.1.1 does not (IN-17's run).
+        mirrored = seed["suite"].get("twAnalyticsConsentV1")
+        c.check("suite holds the analytics opt-in as the build mirrors it (1.1.1: not at all)",
+                mirrored in ("true", None) and group.get("twAnalyticsConsentV1") == mirrored,
+                [mirrored, group.get("twAnalyticsConsentV1")])
         files = webkit_files(data)
         c.check("WebKit localStorage database exists", any(f.endswith("localstorage.sqlite3") for f in files), files)
         c.check("the SDK counted an event under the opt-in", m is not None and "favorite_change" in m["events"], m)
         c.record("webkit_files", files)
         c.record("group_sha", sha(os.path.join(shared, "Library/Preferences/group.net.wizardfactory.todayweather.plist")))
+        c.record("group_not_handed_back", not_handed_back(group))
         requests(c, out)
         c.finish()
 
@@ -313,8 +353,20 @@ def main():
             [before["measurement"], m])
     c.check("no unbundled event added", m is not None and m["raw_events"] == before["measurement"]["raw_events"])
     c.check("CDVUUID unchanged", standard.get("CDVUUID") == seed.get("deviceId"))
-    c.check("suite unchanged", sha(os.path.join(shared, "Library/Preferences/group.net.wizardfactory.todayweather.plist"))
-            == before["group_sha"])
+    # IN-17: the native app writes the rollback hand-back into the suite (CordovaUpgradeTests compares its texts with the
+    # migrated state); nothing else of the suite changes, and the restarts write nothing more (the same state).
+    marker = handback_marker(group) or {}
+    c.record("handback_marker", marker)
+    c.check("suite holds the native hand-back", marker.get("schema") == 1 and marker.get("writer") == "native" and
+            marker.get("complete") is True and marker.get("keys") == HANDBACK_KEYS, marker)
+    c.check("suite values the hand-back does not own unchanged",
+            not_handed_back(group) == before.get("group_not_handed_back"), not_handed_back(group))
+    group_values = {k: repr(v) for k, v in sorted(group.items())}
+    c.record("group_values", group_values)
+    if stage != "after" or phase != "first":
+        first_group = c.summary.get("after-first", {}).get("group_values")
+        c.check("suite unchanged since the first start", group_values == first_group,
+                sorted(k for k in set(group_values) | set(first_group or {}) if group_values.get(k) != (first_group or {}).get(k)))
     files = webkit_files(data)
     if source == "suite":
         c.check("no WebKit storage (suite-only state)", not files, files)

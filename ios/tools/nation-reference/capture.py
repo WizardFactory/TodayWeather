@@ -48,6 +48,8 @@ PORT = 18463
 SERVER = f"http://127.0.0.1:{PORT}"
 BUNDLE = "net.wizardfactory.todayweather"
 LANG = "ko-KR"
+# The system region of a run (ios/tools/matrix-reference sets en-US for its English runs).
+LOCALE = "ko_KR"
 # The states in capture order; warnings-<i> follow `warnings` (S12 scrolled a screen at a time) and are checked apart.
 STATES = (["nation-loading", "nation-weather", "nation-rain", "nation-wind"]
           + [f"nation-air-{t}" for t in ("pm2.5", "pm10", "o3", "no2", "so2", "co")]
@@ -273,7 +275,7 @@ def boot(udid):
     simctl("boot", udid)
     simctl("bootstatus", udid, "-b")
     simctl("spawn", udid, "defaults", "write", "-g", "AppleLanguages", "-array", LANG)
-    simctl("spawn", udid, "defaults", "write", "-g", "AppleLocale", "-string", "ko_KR")
+    simctl("spawn", udid, "defaults", "write", "-g", "AppleLocale", "-string", LOCALE)
     subprocess.run(["xcrun", "simctl", "shutdown", udid], capture_output=True)
     simctl("boot", udid)
     simctl("bootstatus", udid, "-b")
