@@ -33,6 +33,16 @@
       "path": "docs/evidence/tasks/issue-3002/linux-check.json",
       "category": "documentation",
       "reason": "Disposable-VM check report"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Update the workflow diagram to describe SR-4 cost accounting and stop conditions"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Update the workflow diagram to describe SR-4 cost accounting and stop conditions"
     }
   ]
 }

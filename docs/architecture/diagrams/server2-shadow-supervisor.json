@@ -154,15 +154,15 @@
       "items": [
         "Original epoch: 168h collection, 170h host expiry",
         "One initial process; resume never uploads twice",
-        "Priced provider grants total at most USD 5"
+        "Exhausted grants and S3 allocations are recorded and reported"
       ]
     },
     {
       "dot": "rose",
       "title": "Accounting and evidence",
       "items": [
-        "48 GiB cost model includes termination contingency",
-        "Control envelopes and cleanup budgets are separate",
+        "One cumulative USD 300 ceiling uses measured usage and prior spend",
+        "Guard stops when accrued cost plus the finish reserve reaches the ceiling",
         "Missing original linkage stays incomplete; no live PASS"
       ]
     },
