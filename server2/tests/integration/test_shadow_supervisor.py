@@ -1447,6 +1447,65 @@ class FinishStateDispositionTests(unittest.TestCase):
         self.assertEqual(outcome['status'], 'deleted')
         self.assertEqual(outcome['inventory_sha256'], report['inventory_sha256'])
 
+    def test_late_state_deletion_requires_verified_predeadline_state_inventory(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+            cloud = FixtureCloud([self.listing(self.original), self.download()])
+            self.assertTrue(operator.prepare_finish_state_export(
+                cloud, journal, self.resources, self.destination, current=lambda: self.deadline - 1))
+            self.assertEqual(cloud.replies, [])
+        self.assertEqual(self.fence(self.instance('terminated', 48), now=self.deadline)['status'], 'fenced')
+        report = self.seal(self.listing(self.original), self.listing())
+        self.assertTrue(report['complete'])
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        outcome = self.dispose(absent, now=self.deadline)
+        self.assertEqual(outcome['status'], 'deleted')
+
+    def test_predeadline_state_export_survives_raw_work_crossing_deadline(self):
+        self.own_and_fence()
+        raw_original = dict(Key='raw/an-attempt', VersionId='raw-v1', Size=4)
+        clock = [self.deadline - 1]
+        def late_raw_download(params, kwargs):
+            self.assertEqual(params, dict(Bucket=self.raw, Key=raw_original['Key'],
+                                          VersionId=raw_original['VersionId'], Range='bytes=0-3'))
+            clock[0] = self.deadline
+            kwargs['output'].write_bytes(b'body')
+            return cloud_json('GetObject', self.headers(raw_original['VersionId'], 4, 'bytes 0-3/4'))
+
+        cloud = FixtureCloud([self.listing(self.original), self.listing(raw_original),
+                              self.download(), ('GetObject', late_raw_download)])
+        with J(self.journal) as journal:
+            report = operator.seal_finish_sources(cloud, journal, self.resources, self.destination,
+                                                  state_export_current=lambda: clock[0])
+        self.assertTrue(report['complete'])
+        self.assertEqual(cloud.replies, [])
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        self.assertEqual(self.dispose(absent, now=self.deadline)['status'], 'deleted')
+
+    def test_late_export_cannot_create_retroactive_state_deletion_proof(self):
+        self.own_and_fence()
+        report = self.seal(self.listing(self.original), self.listing(), self.download())
+        self.assertTrue(report['complete'])
+        retained = self.dispose(now=self.deadline)
+        self.assertEqual(retained['status'], 'retained')
+        self.assertIsNone(retained['expiry'])
+        self.assertEqual(self.dispose(now=self.deadline + 1), retained)
+
+    def test_late_state_deletion_rejects_changed_fenced_inventory(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+            cloud = FixtureCloud([self.listing(self.original), self.download()])
+            self.assertTrue(operator.prepare_finish_state_export(
+                cloud, journal, self.resources, self.destination, current=lambda: self.deadline - 1))
+            self.assertEqual(cloud.replies, [])
+        self.assertEqual(self.fence(self.instance('terminated', 48), now=self.deadline)['status'], 'fenced')
+        self.assertTrue(self.seal(self.listing(self.original, markers=[self.marker]), self.listing())['complete'])
+        retained = self.dispose(now=self.deadline)
+        self.assertEqual(retained['status'], 'retained')
+        self.assertEqual(retained['reason'], 'predeadline_state_export_unproven')
+
     def test_disposal_refuses_unexpected_versions_then_only_removes_sealed_versions(self):
         self.own_and_fence()
         report = self.seal(self.listing(self.original, markers=[self.marker]), self.listing(), self.download())

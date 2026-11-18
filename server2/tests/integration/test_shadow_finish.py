@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Offline tests of the bucket audit seam used by the operator finish command."""
 
+import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
 import time
 import tempfile
 import unittest
@@ -163,6 +166,94 @@ class FinishTransferTests(unittest.TestCase):
                 self.assertEqual(first.read_bytes(), b'archive bytes')
                 self.assertEqual(journal.snapshot(), spent)
                 self.assertEqual(ssh.invoke.call_count, 1)
+
+
+    def test_fenced_late_reentry_rebuilds_from_verified_transfers_without_remote(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            source = root / 'capture'
+            epoch = int(time.time()) - 170 * 3600 - 1
+            fixture = build_fixture(source, attempts=3, body_bytes=40, epoch=epoch)
+            resources = owned_resources()
+            launch = fixture['launch_sha256']
+            binding = dict(schema=1, run_id=fixture['run_id'], instance=resources['instance'],
+                           ipv4='8.8.8.8', host_key='ssh-ed25519 ' + base64.b64encode(
+                               b'\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20' + bytes(32)
+                           ).decode())
+            ssh = Mock(binding=binding)
+
+            def archive(action, **options):
+                required = {'launch.json', 'reader.json', 'data/paired/ledger.sqlite3'}
+                if action == 'finish-pairs':
+                    required = {f'data/paired/{i}.{suffix}'
+                                for i in options['attempts'] for suffix in ('body', 'json')}
+                destination = options['destination']
+                with tarfile.open(destination, 'w', format=tarfile.USTAR_FORMAT) as output:
+                    for name in sorted(required):
+                        output.add(source / 'host' / name, arcname=name, recursive=False)
+                return state.CloudResult('json', 'HostEvidence', {'archive_bytes': destination.stat().st_size})
+
+            ssh.invoke.side_effect = archive
+            with J(root / 'journal', create=True, run_id=resources['run_id'],
+                   manifest_sha='a' * 64, epoch=epoch) as journal:
+                provision.freeze_plan(journal, provisioning_plan(), epoch + 1)
+                journal.record_cleanup_ownership(coordinator.resource_digest(resources),
+                                                 resources['instance'], resources=resources)
+                journal.prepare_request('ssh-target', 'BindSshTarget', binding, resources['instance'], now=epoch + 2)
+                journal.record_receipt('ssh-target', state.CloudResult('json', 'BindSshTarget', {'bound': True}))
+                journal.prepare_request('host-install', 'HostInstall',
+                                        {'launch_sha256': launch, 'target': binding}, 'fixture', now=epoch + 2)
+                journal.record_receipt('host-install', state.CloudResult('empty_success', 'HostInstall'))
+                output = journal.bind_finish_destination(root / 'finish', now=epoch + 3)
+                provision.transfer_finish_evidence(ssh, journal, output, 'finish-ledger',
+                                                   now=epoch + 3, timeout=1, limit=64 * 1024**2)
+                for attempts in ([1], [2, 3]):
+                    provision.transfer_finish_evidence(ssh, journal, output, 'finish-pairs',
+                                                       now=epoch + 3, timeout=1, limit=10240, attempts=attempts)
+                spent = journal.operator_usage()['export_bytes']
+                cloud = Mock()
+                cloud.call.return_value = state.CloudResult('json', 'DescribeInstances', {'Reservations': [
+                    {'Instances': [{'InstanceId': resources['instance'], 'State': {'Name': 'terminated', 'Code': 48}}]}
+                ]})
+                fence = coordinator.fence_finish_instance(
+                    cloud, journal, resources, now=journal.snapshot()['cleanup_until'])
+                self.assertEqual(fence['status'], 'fenced')
+            manifest = source / 'fixture.json'
+            manifest.touch(mode=0o600)
+            manifest.write_text(json.dumps({'resources': resources, 'versions': [], 'instance_state': 'terminated',
+                                            'buckets': resources['buckets']}))
+            command = [sys.executable, str(Path(provision.__file__).resolve()), 'finish', '--execute',
+                       '--state', str(root / 'journal'), '--output', str(output), '--aws-executable',
+                       str(Path(__file__).with_name('shadow_finish_fake_aws.py').resolve())]
+            env = {k: v for k, v in os.environ.items() if not k.startswith('AWS_')}
+            env.update(SHADOW_FINISH_AWS_FIXTURE=str(manifest), PYTHONDONTWRITEBYTECODE='1')
+            self.assertFalse((output / 'ssh-paired').exists())
+            result = subprocess.run(command, text=True, capture_output=True, env=env, timeout=30)
+            # Incomplete state export leaves the CLI in its retry/retention status.
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report['finish_accounting']['operator']['export_bytes'], spent)
+            self.assertEqual(report['cleanup']['state']['status'], 'retained')
+            self.assertEqual(ssh.invoke.call_count, 3)
+            self.assertTrue(report['host_evidence']['complete'], report)
+            files = output / 'ssh-paired' / 'files'
+            self.assertEqual({p.name: {'sha256': coordinator.artifact_hash(p), 'size': p.stat().st_size}
+                              for p in files.iterdir()}, fixture['expected_pairs'])
+
+            # The finish must also reject a same-length archive edited after its receipt.
+            shutil.rmtree(output / 'ssh-paired')
+            with next((output / 'ssh-originals').glob('*.tar')).open('r+b') as stream:
+                first_byte = stream.read(1)
+                stream.seek(0)
+                stream.write(bytes([first_byte[0] ^ 0xFF]))
+            result = subprocess.run(command, text=True, capture_output=True, env=env, timeout=30)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(result.stdout)
+            self.assertFalse(report['host_evidence']['complete'], report)
+            self.assertEqual(report['finish_accounting']['operator']['export_bytes'], spent)
+            self.assertFalse((output / 'ssh-paired').exists())
+            calls = [json.loads(line) for line in (source / 'aws-calls.jsonl').read_text().splitlines()]
+            self.assertNotIn('get-object', [call['command'] for call in calls])
 
 
 class FinishCliTests(unittest.TestCase):

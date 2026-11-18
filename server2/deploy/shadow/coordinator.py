@@ -556,7 +556,7 @@ def _stage_committed_evidence(cloud, journal, destination, binding, inventory, p
 
 
 def _source_export_report(cloud, journal, destination, binding, inventory, listings, *,
-                          evidence_prefix=None, disposed_bucket=None):
+                          evidence_prefix=None, disposed_bucket=None, state_export=None):
     inventory_sha = hashlib.sha256(canonical(inventory).encode()).hexdigest()
     evidence_only = evidence_prefix is not None
     missing = []
@@ -572,19 +572,34 @@ def _source_export_report(cloud, journal, destination, binding, inventory, listi
                 if archived == [row for row in inventory if row['bucket'] == disposed_bucket]:
                     prior_by_id = {row['id']: row for row in prior['objects'] if row['bucket'] == disposed_bucket}
         objects = []
+        state_rows = None
+        if state_export is not None:
+            # Full seals inventory state first. Timestamp its archive before any
+            # raw-object work so raw delays cannot affect state disposition.
+            state_bucket, state_export_current = state_export
+            require(listings[state_bucket] == 'complete', 'state listing unavailable')
+            state_rows = [row for row in inventory if row['bucket'] == state_bucket]
+            require(inventory[:len(state_rows)] == state_rows, 'state inventory order')
+            if not state_rows:
+                _record_finish_state_export(journal, destination.parent, binding, state_bucket,
+                                            state_rows, state_export_current)
         for item in inventory:
             if item['kind'] == 'delete_marker':
-                objects.append(dict(item, status='delete_marker'))
-                continue
-            disposed = item['bucket'] == disposed_bucket
-            receipt = _stage_original(cloud, journal, item, destination, binding, verify_only=disposed)
-            # Missing versions intentionally disposed after the deadline cannot be
-            # exported again. Preserve the prior reason and spend no read allowance.
-            prior = prior_by_id.get(item['id'])
-            if receipt.get('reason') == 'cached_receipt_missing' and prior is not None:
-                if prior['status'] in ('omitted', 'failed') and all(prior.get(k) == v for k, v in item.items()):
-                    receipt = prior
+                receipt = dict(item, status='delete_marker')
+            else:
+                disposed = item['bucket'] == disposed_bucket
+                receipt = _stage_original(cloud, journal, item, destination, binding, verify_only=disposed)
+                # Missing versions disposed at the deadline cannot be exported
+                # again. Preserve the previous result without another read.
+                prior = prior_by_id.get(item['id'])
+                if receipt.get('reason') == 'cached_receipt_missing' and prior is not None:
+                    if prior['status'] in ('omitted', 'failed') and all(prior.get(k) == v for k, v in item.items()):
+                        receipt = prior
             objects.append(receipt)
+            if state_rows and len(objects) == len(state_rows) and all(
+                    row['status'] in ('exported', 'delete_marker') for row in objects):
+                _record_finish_state_export(journal, destination.parent, binding, state_bucket,
+                                            state_rows, state_export_current)
     listed = all(result == 'complete' for result in listings.values())
     result = dict(schema=1, scope='evidence' if evidence_only else 'all',
                   inventory=inventory, listings=listings,
@@ -861,7 +876,7 @@ def _seal_inventory(destination, binding, inventory, listings, *, raw_scope=Fals
     return sealed
 
 
-def seal_finish_sources(cloud, journal, resources, destination):
+def seal_finish_sources(cloud, journal, resources, destination, *, state_export_current=None):
     """Capture the final inventory after proof of termination, then stage bodies."""
     resources, binding, output = _finish_ownership(journal, resources)
     require(_fence_checkpoint(output, binding, resources['instance']) is not None, 'writer fence required')
@@ -893,13 +908,45 @@ def seal_finish_sources(cloud, journal, resources, destination):
         authorized_seal = raw_seal if raw_seal is not None else sealed
         require(authorized_seal is not None and raw.get('inventory_sha256') == authorized_seal['inventory_sha256'],
                 'raw disposition inventory mismatch')
+    state_export = ((state_bucket, state_export_current)
+                    if sealed is not None and state_export_current is not None else None)
     return _source_export_report(cloud, journal, destination, binding, inventory, listings,
-                                 disposed_bucket=raw_bucket if raw is not None else None)
+                                 disposed_bucket=raw_bucket if raw is not None else None,
+                                 state_export=state_export)
 
 
 def _bucket_missing(answer):
     return (answer.operation == 'GetBucketVersioning' and answer.kind == 'service_error'
             and answer.code == 'NoSuchBucket')
+
+
+def _record_finish_state_export(journal, output, binding, bucket, rows, current):
+    observed = journal.observe(current())
+    verified_at, deadline = observed['last_seen'], observed['cleanup_until']
+    if verified_at >= deadline:
+        return False
+    proof = dict(resources_sha256=binding, bucket=bucket, cleanup_until=deadline, verified_at=verified_at,
+                 inventory_sha256=hashlib.sha256(canonical(rows).encode()).hexdigest())
+    _write_source_json(output / 'state-export-proof.json', proof)
+    return True
+
+
+def prepare_finish_state_export(cloud, journal, resources, destination, *, current):
+    """Archive a state snapshot during termination without authorizing deletion."""
+    resources, binding, output = _finish_ownership(journal, resources)
+    destination = _source_destination(journal, resources, destination)
+    deadline = journal.snapshot()['cleanup_until']
+    if journal.observe(current())['last_seen'] >= deadline:
+        return False
+    bucket = resources['buckets'][1]
+    rows, listings = _source_inventory(CleanupCloud(cloud), (bucket,), None)
+    if listings[bucket] != 'complete':
+        return False
+    for row in rows:
+        if row['kind'] == 'object':
+            if current() >= deadline or _stage_original(cloud, journal, row, destination, binding)['status'] != 'exported':
+                return False
+    return _record_finish_state_export(journal, output, binding, bucket, rows, current)
 
 
 def dispose_finish_state(cloud, journal, resources, destination, *, now, paired_verified=False):
@@ -916,9 +963,12 @@ def dispose_finish_state(cloud, journal, resources, destination, *, now, paired_
         if intent['status'] != 'deleting':
             return intent
 
+    observed = journal.observe(now)
+    now, deadline = observed['last_seen'], observed['cleanup_until']
+
     def deferred(reason, *, keep_intent=False):
         result = dict(status='pending', bucket=bucket, resources_sha256=binding, reason=reason)
-        if not keep_intent and now >= journal.snapshot()['cleanup_until']:
+        if not keep_intent and now >= deadline:
             result.update(status='retained', expiry=None)
             _write_source_json(path, result)
         return result
@@ -930,6 +980,13 @@ def dispose_finish_state(cloud, journal, resources, destination, *, now, paired_
     elif paired_verified is not True or sealed is None:
         return deferred('evidence_incomplete')
     archived = {row['id']: row for row in sealed['inventory'] if row['bucket'] == bucket}
+    if intent is None and now >= deadline:
+        proof = _finish_checkpoint(output / 'state-export-proof.json', binding)
+        digest = hashlib.sha256(canonical(list(archived.values())).encode()).hexdigest()
+        if (proof is None or proof.get('bucket') != bucket or proof.get('cleanup_until') != deadline
+                or type(proof.get('verified_at')) is not int or proof['verified_at'] >= deadline
+                or proof.get('inventory_sha256') != digest):
+            return deferred('predeadline_state_export_unproven')
     cloud = CleanupCloud(cloud)
     complete_archive = all(
         _stage_original(None, None, row, destination, binding, verify_only=True)['status'] == 'exported'

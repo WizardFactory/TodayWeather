@@ -362,36 +362,80 @@ def audit_finish_bucket(source, staged, destination, run_id, launch_sha256):
         return dict(report, directory=final.name)
 
 
-def transfer_finish_evidence(remote, journal, destination, action, *, now, timeout, limit, attempts=None):
+def _finish_ssh_target(journal, launch_sha256):
+    from remote import target
+
+    binding = journal.request('ssh-target')
+    install = journal.request('host-install')
+    require(binding is not None and install is not None
+            and binding['operation'] == 'BindSshTarget' and install['operation'] == 'HostInstall'
+            and binding['receipt'] == {'kind': 'json', 'operation': 'BindSshTarget',
+                                       'payload': {'bound': True}, 'code': None},
+            'SSH recovery binding unavailable')
+    endpoint = target(binding['params'])
+    ownership = journal.mutation('owned-resources')
+    require(ownership is not None and ownership['operation'] == 'BindResources'
+            and endpoint['run_id'] == journal.snapshot()['run_id']
+            and endpoint['instance'] == binding['token'] == ownership['token']
+            and install['params'] == {'target': endpoint, 'launch_sha256': launch_sha256},
+            'SSH recovery host changed')
+    return endpoint
+
+
+def _finish_ssh_staging(destination, *, create):
+    import os
+    import stat
+
+    staging = destination / 'ssh-originals'
+    if create:
+        staging.mkdir(mode=0o700, exist_ok=True)
+    require(not staging.is_symlink() and staging.is_dir()
+            and stat.S_IMODE(staging.stat().st_mode) == 0o700
+            and staging.stat().st_uid == os.geteuid(), 'SSH staging directory unsafe')
+    return staging
+
+
+def _verified_finish_archive(archive, receipt, limit):
+    from remote import artifact_hash_large
+
+    require(receipt.get('operation') == 'HostEvidence' and type(receipt.get('payload')) is dict,
+            'SSH archive receipt identity')
+    saved = receipt['payload']
+    size = saved.get('archive_bytes')
+    require(archive.is_file() and not archive.is_symlink() and type(size) is int
+            and 0 < size == archive.stat().st_size <= limit
+            and artifact_hash_large(archive) == saved.get('sha256'), 'SSH archive receipt mismatch')
+    return archive
+
+
+def transfer_finish_evidence(remote, journal, destination, action, *, now, timeout, limit, attempts=None,
+                             cached_target=None):
     """Reserve one exact bounded SSH attempt, retaining verified prior replies."""
     import hashlib
     import os
-    import stat
     from remote import artifact_hash_large
     from state import sync_directory
 
     require(action in ('finish-ledger', 'finish-pairs'), 'finish transfer action')
-    params = {'target': remote.binding, 'action': action, 'limit': limit, 'attempts': attempts}
+    endpoint = remote.binding if remote is not None else cached_target
+    require(endpoint is not None, 'SSH recovery binding unavailable')
+    params = {'target': endpoint, 'action': action, 'limit': limit, 'attempts': attempts}
     digest = hashlib.sha256(canonical(params).encode()).hexdigest()[:40]
-    staging = destination / 'ssh-originals'
-    staging.mkdir(mode=0o700, exist_ok=True)
-    require(not staging.is_symlink() and staging.is_dir()
-            and stat.S_IMODE(staging.stat().st_mode) == 0o700
-            and staging.stat().st_uid == os.geteuid(), 'SSH staging directory unsafe')
+    staging = _finish_ssh_staging(destination, create=remote is not None)
     for ordinal in range(16):
         intent = f'finish-ssh-{digest}-{ordinal}'
         archive = staging / f'{intent}.tar'
         existing = journal.request(intent)
         if existing is not None:
-            require(existing['params'] == params, 'SSH transfer intent changed')
+            require(existing['params'] == params and existing['operation'] == 'HostEvidence'
+                    and existing['token'] == intent,
+                    'SSH transfer intent changed')
             reply = existing['receipt']
             if reply is None or reply['kind'] != 'json':
                 continue
-            saved = reply['payload']
-            require(archive.is_file() and not archive.is_symlink()
-                    and 0 < archive.stat().st_size == saved['archive_bytes'] <= limit
-                    and artifact_hash_large(archive) == saved['sha256'], 'SSH archive receipt mismatch')
-            return archive
+            return _verified_finish_archive(archive, reply, limit)
+        if remote is None:
+            continue
         require(timeout > 0, 'SSH transfer deadline')
         journal.reserve_control(export_bytes=limit)
         journal.prepare_request(intent, 'HostEvidence', params, intent, now=now, cleanup=True)
@@ -415,6 +459,32 @@ def transfer_finish_evidence(remote, journal, destination, action, *, now, timeo
     raise StateError('SSH transfer retries exhausted')
 
 
+def _cached_finish_pair_archives(destination, journal, endpoint, missing):
+    from remote import EVIDENCE_BYTES
+
+    staging = _finish_ssh_staging(destination, create=False)
+    for archive in sorted(staging.glob('finish-ssh-*.tar')):
+        name = re.fullmatch(r'finish-ssh-([a-f0-9]{40})-([0-9]|1[0-5])', archive.stem)
+        if name is None:
+            continue
+        saved = journal.request(archive.stem)
+        if (saved is None or saved['operation'] != 'HostEvidence' or saved['token'] != archive.stem
+                or saved['params_sha'][:40] != name[1]):
+            continue
+        receipt, params = saved['receipt'], saved['params']
+        if (receipt is None or receipt['kind'] != 'json' or params.get('target') != endpoint
+                or params.get('action') != 'finish-pairs'):
+            continue
+        attempts, limit = params.get('attempts'), params.get('limit')
+        require(type(attempts) is list and 1 <= len(attempts) <= 128
+                and all(type(i) is int and 0 < i < 2**63 for i in attempts)
+                and attempts == sorted(set(attempts))
+                and type(limit) is int and 0 < limit <= EVIDENCE_BYTES,
+                'SSH paired transfer intent fields')
+        if missing.intersection(attempts):
+            yield _verified_finish_archive(archive, receipt, limit), attempts
+
+
 def retained_finish_pairs(destination, launch_sha256):
     """Revalidate a previously complete SSH result without contacting the host."""
     import os
@@ -433,18 +503,19 @@ def recover_finish_pairs(remote, journal, destination, launch_sha256, evidence, 
     import os
     import shutil
     import tempfile
-    from remote import assess_recovery, recovery_archive_limit, unpack_recovery
+    from remote import artifact_hash_large, assess_recovery, recovery_archive_limit, unpack_recovery
     from state import sync_directory
 
     existing = retained_finish_pairs(destination, launch_sha256)
     if existing is not None:
         return existing
     final = destination / 'ssh-paired'
+    endpoint = _finish_ssh_target(journal, launch_sha256) if remote is None else None
 
     def transfer(action, limit, *, attempts=None):
         return transfer_finish_evidence(
             remote, journal, destination, action, now=now,
-            timeout=min(600, until - time.monotonic()), limit=limit, attempts=attempts,
+            timeout=min(600, until - time.monotonic()), limit=limit, attempts=attempts, cached_target=endpoint,
         )
 
     partial = evidence.get('directory')
@@ -459,13 +530,24 @@ def recover_finish_pairs(remote, journal, destination, launch_sha256, evidence, 
         recovered = work / 'transferred'
         recovered.mkdir(mode=0o700)
         missing = plan['missing_or_mismatched']
-        for start in range(0, len(missing), 128):
-            attempts = missing[start:start+128]
-            allowance = recovery_archive_limit(plan['archive_members_bytes'][str(i)] for i in attempts)
-            piece = work / f'piece-{start}'
-            unpack_recovery(transfer('finish-pairs', allowance, attempts=attempts), piece, attempts=attempts)
+        def live_archives():
+            for start in range(0, len(missing), 128):
+                attempts = missing[start:start+128]
+                allowance = recovery_archive_limit(plan['archive_members_bytes'][str(i)] for i in attempts)
+                yield transfer('finish-pairs', allowance, attempts=attempts), attempts
+
+        archives = (_cached_finish_pair_archives(destination, journal, endpoint, set(missing))
+                    if remote is None else live_archives())
+        for archive, attempts in archives:
+            piece = work / 'piece'
+            unpack_recovery(archive, piece, attempts=attempts)
             for path in (piece / 'data' / 'paired').iterdir():
-                path.rename(recovered / path.name)
+                saved = recovered / path.name
+                if saved.exists():
+                    require(artifact_hash_large(path) == artifact_hash_large(saved), 'conflicting SSH pair archives')
+                else:
+                    path.rename(saved)
+            shutil.rmtree(piece)
         report = assess_recovery(ledger, launch_sha256, cached=cached, recovered=recovered)
         if not report['complete']:
             return report
@@ -491,9 +573,10 @@ def recover_finish_pairs(remote, journal, destination, launch_sha256, evidence, 
 
 def finish_bound_run(cloud, remote, journal, resources, destination, launch_sha256, *, now):
     """Verify copies before fencing an installed host and resume owned cleanup."""
+    import tarfile
     from coordinator import (
         cleanup_finish_nonstate, dispose_finish_state, fence_finish_instance,
-        seal_finish_sources, stage_source_versions,
+        prepare_finish_state_export, seal_finish_sources, stage_source_versions,
     )
 
     observed = journal.observe(now)
@@ -507,12 +590,24 @@ def finish_bound_run(cloud, remote, journal, resources, destination, launch_sha2
     def current():
         return int(now + time.monotonic() - started)
 
+    def local_recovery(evidence):
+        if evidence['complete'] or not (destination / 'ssh-originals').exists():
+            return evidence
+        try:
+            recovered = recover_finish_pairs(
+                None, journal, destination, launch_sha256, evidence, now=now, until=started
+            )
+        except (StateError, OSError, ValueError, tarfile.TarError):
+            return evidence
+        return recovered if recovered['complete'] else evidence
+
     evidence = retained_finish_pairs(destination, launch_sha256)
     if evidence is None:
         evidence = {'complete': False, 'status': 'bucket_not_checked'}
     if not evidence['complete'] and not (destination / 'writer-fence.json').exists():
         staged = stage_source_versions(cloud, journal, resources, source, evidence_only=True)
         evidence = audit_finish_bucket(source, staged, destination, run_id, launch_sha256)
+        evidence = local_recovery(evidence)
         if not evidence['complete'] and remote is not None and current() < cleanup_until:
             until = started + cleanup_until - now
             try:
@@ -525,22 +620,20 @@ def finish_bound_run(cloud, remote, journal, resources, destination, launch_sha2
                     evidence = recover_finish_pairs(
                         remote, journal, destination, launch_sha256, evidence, now=now, until=until
                     )
-            except (StateError, OSError, ValueError):
+            except (StateError, OSError, ValueError, tarfile.TarError):
                 evidence['ssh_status'] = 'incomplete'
+    else:
+        evidence = local_recovery(evidence)
 
     fence = fence_finish_instance(
         cloud, journal, resources, now=current(), paired_verified=evidence['complete']
     )
     cleanup_report = {'complete': False, 'fence': fence}
+    if fence['status'] == 'termination_pending' and evidence['complete'] and current() < cleanup_until:
+        prepare_finish_state_export(cloud, journal, resources, source, current=current)
     if fence['status'] == 'fenced':
-        # Freeze the deadline disposition before any additional export. A late
-        # read can enrich the report, but cannot authorize deleting retained state.
-        state_report = None
-        if current() >= cleanup_until:
-            state_report = dispose_finish_state(
-                cloud, journal, resources, source, now=current(), paired_verified=False
-            )
-        sealed = seal_finish_sources(cloud, journal, resources, source)
+        proof_clock = current if evidence['complete'] and current() < cleanup_until else None
+        sealed = seal_finish_sources(cloud, journal, resources, source, state_export_current=proof_clock)
         if not evidence['complete']:
             state_bucket = resources['buckets'][1]
             prefix = f'evidence/{run_id}/'
@@ -549,12 +642,11 @@ def finish_bound_run(cloud, remote, journal, resources, destination, launch_sha2
                 if item['bucket'] == state_bucket and item['key'].startswith(prefix)
             ])
             evidence = audit_finish_bucket(source, evidence_inputs, destination, run_id, launch_sha256)
+            evidence = local_recovery(evidence)
         observed_at = current()
-        if state_report is None:
-            state_report = dispose_finish_state(
-                cloud, journal, resources, source, now=observed_at,
-                paired_verified=evidence['complete'] and observed_at < cleanup_until,
-            )
+        state_report = dispose_finish_state(
+            cloud, journal, resources, source, now=observed_at, paired_verified=evidence['complete']
+        )
         other = cleanup_finish_nonstate(
             cloud, journal, resources, now=observed_at,
             raw_disposable=sealed.get('listings', {}).get(resources['buckets'][0]) == 'complete'
