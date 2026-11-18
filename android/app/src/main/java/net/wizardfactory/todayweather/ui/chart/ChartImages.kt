@@ -15,12 +15,12 @@ import androidx.compose.ui.platform.LocalContext
 internal class ChartImages(private val context: Context) {
     private val cache = HashMap<String, ImageBitmap?>()
 
-    operator fun get(href: String): ImageBitmap? = cache.getOrPut(href) {
-        runCatching {
-            context.assets.open(href).use { BitmapFactory.decodeStream(it)?.apply { setHasMipMap(true) }?.asImageBitmap() }
-        }.getOrNull()
-    }
+    operator fun get(href: String): ImageBitmap? = cache.getOrPut(href) { loadChartImage(context, href) }
 }
+
+internal fun loadChartImage(context: Context, href: String): ImageBitmap? = runCatching {
+    context.assets.open(href).use { BitmapFactory.decodeStream(it)?.apply { setHasMipMap(true) }?.asImageBitmap() }
+}.getOrNull()
 
 @Composable
 internal fun rememberChartImages(): ChartImages {

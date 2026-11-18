@@ -114,7 +114,7 @@ struct RequestSitesTests {
             "Core/Sources/TWStorage/FileProbe.swift",
             "TodayWeather/Ads/AnalyticsConsentFiles.swift",
             "TodayWeather/Chart/ChartStyle.swift",
-            "TodayWeather/Start/StartPage.swift",
+            "TodayWeather/Start/BundledTownLoader.swift",
         ], "the sources reading a URL's contents")
     }
 

@@ -39,6 +39,7 @@ struct PlacesScreenshotTests {
             f.places.focusChanged(true)
             f.places.wordChanged("부산")
             f.places.focusChanged(false)
+            try #require(await HostedShellTests.AirLiveTests.wait(5) { f.places.query.townResults?.word == "부산" })
         case "edit":
             f.places.modeTapped()
         case "location":

@@ -38,13 +38,14 @@ class ChartArtworkTest {
     @Test fun expandedHourlyDetailsUseTheIconArtworkOfTheirTheme() {
         val names = listOf("wind_direction", "humidity_50")
         rule.setContent {
-            val images = rememberChartImages()
+            val cache = rememberForecastChartImages()
             val measurer = rememberTextMeasurer()
             Column {
                 for (name in names) Row {
                     for (theme in Theme.entries) {
                         val colors = ChartColors.of(theme, daily = false)
                         val scene = Svg(120.0, 120.0, listOf(SvgImage(null, "img/icons_default/$name.png", 0.0, 0.0, 120.0, 120.0)))
+                        val images = cache.prepare(colors, scene)
                         Canvas(Modifier.size(120.dp).testTag("$theme-$name")) {
                             drawRect(colors.background)
                             drawSvg(scene, 0.0, images, measurer, colors)
@@ -75,12 +76,13 @@ class ChartArtworkTest {
     @Test fun bothChartsUseTheWeatherArtworkOfTheirTheme() {
         val scene = Svg(120.0, 120.0, listOf(SvgImage(null, "img/weather_default/cloud.png", 0.0, 0.0, 120.0, 120.0)))
         rule.setContent {
-            val images = rememberChartImages()
+            val cache = rememberForecastChartImages()
             val measurer = rememberTextMeasurer()
             Column {
                 for (daily in listOf(false, true)) Row {
                     for (theme in Theme.entries) {
                         val colors = ChartColors.of(theme, daily)
+                        val images = cache.prepare(colors, scene)
                         Canvas(Modifier.size(120.dp).testTag("$theme-$daily")) {
                             drawRect(colors.background)
                             drawSvg(scene, 0.0, images, measurer, colors)
