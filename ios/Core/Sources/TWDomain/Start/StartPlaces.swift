@@ -102,7 +102,7 @@ public enum PredictionName {
 }
 
 /// A bundled town (`window.towns` of town.js, the copy `Client/data/towns.json` of IN-01).
-public struct BundledTown: Equatable, Sendable {
+public struct BundledTown: Decodable, Equatable, Sendable {
     public let first: String
     public let second: String
     public let third: String

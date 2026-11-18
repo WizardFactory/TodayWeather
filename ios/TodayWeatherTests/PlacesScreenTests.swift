@@ -68,7 +68,7 @@ struct PlacesFixture {
         places = PlacesScreens(shell: shell, session: session, makePage: {
             PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
                        acceptLanguage: { "ko-KR,ko;q=0.9" }, removeAlarms: { removed.indices.append($0) })
-        }, search: search, towns: { StartPage.bundledTowns() }, openURL: { _ in })
+        }, search: search, towns: BundledTownLoader(), openURL: { _ in })
         places.query.predictionDelay = .milliseconds(10)
     }
 
