@@ -13,6 +13,14 @@ import TWModel
 struct WeatherFitTests {
     static let widths: [CGFloat] = [375, 393, 834, 1024, 1366]
 
+    @Test func temperaturePrecisionUsesHalfSizeDigits() {
+        for (value, whole, fraction) in [("-0.1", "-0.", "1"), ("12.30", "12.", "30"), ("7", "7", ""), ("", "", "")] {
+            let runs = WeatherMetrics.temperatureRuns(value, size: 80)
+            #expect(runs.map(\.text) == [whole, fraction, "˚"])
+            #expect(runs.map(\.size) == [80, 40, 40])
+        }
+    }
+
     @Test(arguments: ["ko", "en", "de", "ja", "zh-CN", "zh-TW"])
     func pagesFitAtTheLargestTextSize(catalog: String) throws {
         for page in WeatherScreenshotTests.pages where !page.hasSuffix("expanded") {
@@ -85,7 +93,7 @@ struct WeatherFitTests {
                 #expect(asked.width <= window.width + 0.5, "\(name): the page asks for \(asked.width)")
                 if let hero = content.page.hero {
                     let big = content.metrics.bigFontSize
-                    let runs = [CssRun(text: hero.temperature, size: big), CssRun(text: "˚", size: big / 2)]
+                    let runs = WeatherMetrics.temperatureRuns(hero.temperature, size: big)
                     let row = CssLine.width(runs) + content.metrics.bigImageSize
                     #expect(row <= window.width * 0.8 + 0.5, "\(name): temperature row \(row)")
                 }
