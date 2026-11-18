@@ -54,6 +54,7 @@ final class AppLaunch {
     private(set) var alarms: AlarmsScreens?
     /// S01 while the start gate holds (IN-10), created with the shell; nil once it closed.
     private(set) var startPage: StartPage?
+    @ObservationIgnored private let towns = BundledTownLoader()
     /// The device's location (IN-10), created with the shell.
     @ObservationIgnored private(set) var location: (any AppLocation)?
     /// O02 and O03's position variants over the weather pages (IN-10).
@@ -266,27 +267,19 @@ final class AppLaunch {
         let flow = StartFlow(holder: holder, repository: repository,
                              geocode: GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP),
                              location: location, acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry)
-        var towns: TownSearch?
-        return StartPage(shell: shell, flow: flow, search: makePlaceSearch(), towns: {
-            if towns == nil { towns = StartPage.bundledTowns() }
-            return towns
-        }, closed: { [weak self] in self?.startClosed() })
+        return StartPage(shell: shell, flow: flow, search: makePlaceSearch(), towns: towns, closed: { [weak self] in self?.startClosed() })
     }
 
-    /// The Locations tab S02 (IN-11): a visit's page over the session, with IN-10's search (the Places SDK with the
-    /// private key, else the bundled towns) and the alarms' removal through IN-04's push service.
+    /// The Locations tab S02 (IN-11): a visit's page over the session, with bundled towns, optional Places predictions
+    /// and the alarms' removal through IN-04's push service.
     private func makePlaces(_ shell: ShellModel, session: WeatherSession, location: any AppLocation) -> PlacesScreens {
         let locale = self.locale, holder = self.holder, repository = self.repository
         let geocode = GeocodeClient(baseURL: environment.serverURL, http: weatherHTTP)
-        var towns: TownSearch?
         return PlacesScreens(shell: shell, session: session, makePage: {
             PlacesPage(holder: holder, repository: repository, session: session, geocode: geocode, location: location,
                        acceptLanguage: { locale.acceptLanguage }, telemetry: AppLaunch.weatherTelemetry,
                        removeAlarms: { AppPushRemoval().removeCity($0) })
-        }, search: makePlaceSearch(), towns: {
-            if towns == nil { towns = StartPage.bundledTowns() }
-            return towns
-        })
+        }, search: makePlaceSearch(), towns: towns)
     }
 
     /// What the shell shows on a tab: S02 on the Locations tab (IN-11), the weather and air pages on the others.

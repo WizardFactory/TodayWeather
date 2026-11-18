@@ -2,7 +2,6 @@ import Foundation
 import Observation
 import TWData
 import TWDomain
-import TWResources
 import UIKit
 
 /// One visit of the start page S01 (`/start`, StartCtrl and start.html, #2959): the access notice O01 when it opens,
@@ -46,7 +45,7 @@ final class StartPage {
         return nil
     }
 
-    init(shell: ShellModel, flow: StartFlow, search: (any PlaceSearch)?, towns: @escaping () -> TownSearch?,
+    init(shell: ShellModel, flow: StartFlow, search: (any PlaceSearch)?, towns: BundledTownLoader,
          openURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) }, closed: @escaping () -> Void) {
         self.shell = shell
         self.flow = flow
@@ -55,13 +54,6 @@ final class StartPage {
         self.openURL = openURL
         self.closed = closed
         catalog = Catalog(code: shell.locale.catalog)
-    }
-
-    /// The bundled towns of `Client/data/towns.json`, read once.
-    static func bundledTowns() -> TownSearch? {
-        guard let url = TWResources.url("data/towns.json"), let data = try? Data(contentsOf: url),
-              let list = BundledTown.list(data) else { return nil }
-        return TownSearch(towns: list)
     }
 
     /// Whether this build searches with Google's predictions.
@@ -133,6 +125,7 @@ final class StartPage {
     private func show(_ outcome: StartFlow.Outcome) {
         switch outcome {
         case .added:
+            clearSearch()
             closed()
         case .alert(let key):
             // `$rootScope.showAlert(strError, msg)`: `$ionicPopup.alert`, OK positive.
