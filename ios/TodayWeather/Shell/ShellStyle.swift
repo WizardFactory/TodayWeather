@@ -80,7 +80,6 @@ enum Glyphs {
     static let starOutline = "\u{F4B2}"      // ion-ios-star-outline
     static let star = "\u{F4B3}"             // ion-ios-star
     static let clockOutline = "\u{F402}"     // ion-ios-clock-outline
-    static let reload = "\u{F49D}"           // ion-ios-reload
     static let calendarOutline = "\u{F3F3}"  // ion-ios-calendar-outline
     static let cloudOutline = "\u{F409}"     // ion-ios-cloud-outline
     static let navicon = "\u{F20E}"          // ion-navicon
@@ -93,13 +92,12 @@ enum Glyphs {
         return .custom("Ionicons", fixedSize: size)
     }
 
-    /// The tab glyph of `tab` (tabs.html, the iOS template): the selected weather and air tabs show the reload glyph.
     static func tab(_ tab: ShellTab, selected: Bool) -> String {
         switch tab {
         case .search: selected ? star : starOutline
-        case .forecast: selected ? reload : clockOutline
-        case .dailyforecast: selected ? reload : calendarOutline
-        case .air: selected ? reload : cloudOutline
+        case .forecast: clockOutline
+        case .dailyforecast: calendarOutline
+        case .air: cloudOutline
         }
     }
 
