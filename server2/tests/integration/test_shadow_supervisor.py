@@ -2594,6 +2594,99 @@ class EvidenceCopyTests(EvidenceCase):
         self.assertEqual([f['id'] for f in self.index(4)['files']],[3])
         self.assertEqual(self.copy_state()['shipped'],[1,2,3])
 
+    def test_mismatched_body_can_be_recovered_in_a_later_final_generation(self):
+        self.host.attempt(1)
+        body=self.host.paired/'1.body'; original=body.read_bytes()
+        body.write_bytes(b'other!')
+        self.assertEqual(self.run_copy()['status'],'committed')
+        self.assertEqual(self.copy_state()['shipped'],[])
+        self.host.unit=('inactive',STOPPED_AT)
+        result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['reason']),('incomplete','unshipped'))
+        self.assertTrue(self.tree.latch.exists())
+        self.assertEqual(self.audited(name='incomplete')['missing_or_mismatched'],[1])
+        body.write_bytes(original)
+        self.assertEqual(self.run_copy()['status'],'committed')
+        self.assertFalse(self.tree.latch.exists())
+        self.assertTrue(self.audited()['complete'])
+
+    def test_one_finalizer_drains_multiple_capped_batches_and_holds_its_latch(self):
+        for attempt in (1,2,3):
+            self.host.attempt(attempt,body=b'x'*6000)
+        self.now=self.host.launch['epoch']+168*3600
+        self.host.unit=('inactive',STOPPED_AT)
+        pending=[]
+        def observe(stage):
+            if stage=='index':
+                pending.append(self.tree.latch.exists())
+        self.s3.during=observe
+        import tarfile
+        with unittest.mock.patch.object(self.copy,'MAX_BATCH_BYTES',tarfile.RECORDSIZE):
+            result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['kind'],result['shipped']),('committed','final',3))
+        self.assertEqual(pending,[True,True,True])
+        self.assertFalse(self.tree.latch.exists())
+        self.assertEqual([self.index(i)['kind'] for i in range(1,4)],['ordinary','ordinary','final'])
+        self.assertTrue(all(self.index(i)['batch']['size']<=tarfile.RECORDSIZE for i in range(1,4)))
+        self.assertTrue(self.audited()['complete'])
+
+    def test_a_finalizer_with_more_than_four_batches_leaves_a_retryable_tail(self):
+        for attempt in range(1, 6):
+            self.host.attempt(attempt, body=b'x' * 6000)
+        self.host.unit = ('inactive', STOPPED_AT)
+        import tarfile
+        with unittest.mock.patch.object(self.copy, 'MAX_BATCH_BYTES', tarfile.RECORDSIZE):
+            result = self.run_copy(final=True)
+            self.assertEqual((result['status'], result['reason'], result['shipped']), ('incomplete', 'unshipped', 4))
+            self.assertTrue(self.tree.latch.exists())
+            self.assertEqual(self.audited(name='partial')['missing_or_mismatched'], [5])
+            result = self.run_copy()
+        self.assertEqual((result['status'], result['kind'], result['shipped']), ('committed', 'final', 1))
+        self.assertFalse(self.tree.latch.exists())
+        self.assertTrue(self.audited()['complete'])
+
+    def test_monotonic_deadline_prevents_extension_on_wall_clock_rollback(self):
+        wall, elapsed = [self.tree.limit - 0.5], [0.0]
+        deadline = self.copy.Deadline(self.tree.limit, lambda:wall[0], lambda:elapsed[0])
+        self.assertEqual(deadline(), 0.5)
+        wall[0] -= 90
+        elapsed[0] += 0.5
+        self.assertEqual(deadline(), 0)
+
+    def test_expired_put_cannot_report_success(self):
+        elapsed=[0.0]
+        class Connection:
+            def __init__(self, host, timeout):
+                self.timeout=timeout
+                self.status=200
+            def putrequest(self,*args,**kwargs): pass
+            def putheader(self,*args): pass
+            def endheaders(self): pass
+            def send(self,data): elapsed[0]+=0.3
+            def getresponse(self):
+                elapsed[0]+=0.3
+                return self
+            def read(self,size): return b''
+            def close(self): pass
+        client=self.copy.S3Client(self.tree.bucket,self.copy.REGION,
+                                  lambda:dict(AccessKeyId='fixture',SecretAccessKey='fixture',Token='fixture'),
+                                  connect=Connection,clock=lambda:self.now)
+        with self.assertRaises(self.copy.CopyError) as deadline:
+            client.put(self.tree.prefix+'contract.json',b'x','0'*64,1,time_left=lambda:0.5-elapsed[0])
+        self.assertEqual(deadline.exception.reason,'deadline')
+
+    def test_reader_probe_timeout_preserves_latch_and_emits_structured_failure(self):
+        self.host.attempt(1)
+        with unittest.mock.patch.object(self.copy.subprocess,'run',side_effect=subprocess.TimeoutExpired('probe',5)):
+            result=self.copy.run(self.tree,final=True,put=self.s3.put,clock=lambda:self.now,
+                                 unit_state=lambda:self.copy.systemd_unit_state('reader',self.tree.paired/'owner.lock'),
+                                 log=self.lines.append)
+        self.assertEqual((result['status'],result['reason']),('failed','reader'))
+        self.assertTrue(self.tree.latch.exists())
+        self.assertEqual(self.s3.keys,[])
+        self.assertEqual([(line['event'],line['reason']) for line in map(json.loads,self.lines)],
+                         [('copy.failed','reader')])
+
     def test_a_failed_put_never_commits_and_the_next_run_uses_a_new_generation(self):
         for stage in ('batch','ledger','index'):
             with self.subTest(stage=stage):
@@ -2850,6 +2943,20 @@ class EvidenceAuditTests(EvidenceCase):
         report=self.audited()
         self.assertFalse(report['complete'])
         self.assertEqual((report['status'],report['newest_snapshot_at']),('tail_unverified',self.now))
+
+    def test_malformed_newer_object_descriptor_preserves_previous_valid_final(self):
+        final=self.final_run()['generation']
+        original=self.index(final); generation=final+1
+        malformed=dict(original,generation=generation,
+                       ledger=dict(original['ledger'],key=f'evidence/test1/ledger-{generation}.sqlite3'),
+                       batch=dict(original['batch'],key=f'evidence/test1/batch-{generation}.tar'),
+                       files=[dict(original['files'][0],json_size=None)])
+        for name,suffix in (('ledger','sqlite3'),('batch','tar')):
+            self.s3.objects[f'evidence/test1/{name}-{generation}.{suffix}']=self.s3.objects[f'evidence/test1/{name}-{final}.{suffix}']
+        self.s3.objects[f'evidence/test1/index-{generation}.json']=[json.dumps(malformed).encode()]
+        report=self.audited()
+        self.assertTrue(report['complete'],report)
+        self.assertEqual((report['generation'],report['generations']['ignored']),(final,1))
 
     def test_a_missing_or_unbound_contract_is_incomplete(self):
         self.final_run()

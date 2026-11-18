@@ -27,10 +27,10 @@ import re
 import sqlite3
 import tarfile
 
+from evidence_copy import MAX_BODY, MAX_METADATA
 from remote import attempt_matches, ledger_identity
 
 MAX_INDEX = 16 * 1024 ** 2
-MAX_METADATA = 65536
 
 
 def sha256(data):
@@ -52,13 +52,16 @@ def report(status, **fields):
 
 
 def valid_index(value, prefix, generation):
+    def digest(value):
+        return isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value) is not None
+
     entry = lambda v: (type(v) is dict and set(v) == {'key', 'sha256', 'size'} and isinstance(v['key'], str)
-                       and isinstance(v['sha256'], str) and re.fullmatch('[0-9a-f]{64}', v['sha256'])
-                       and type(v['size']) is int and v['size'] >= 0)
-    if not (type(value) is dict and value.get('generation') == generation and value.get('kind') in ('ordinary', 'final')
+                       and digest(v['sha256']) and type(v['size']) is int and v['size'] >= 0)
+    if not (type(value) is dict and type(value.get('generation')) is int and value['generation'] == generation
+            and value.get('kind') in ('ordinary', 'final')
             and type(value.get('at')) is int and entry(value.get('ledger'))
             and value['ledger']['key'] == f'{prefix}ledger-{generation}.sqlite3'
-            and (value.get('batch') is None or (entry(value['batch'])
+            and 'batch' in value and (value['batch'] is None or (entry(value['batch'])
                                                  and value['batch']['key'] == f'{prefix}batch-{generation}.tar'))
             and type(value.get('reader')) is dict and type(value['reader'].get('stopped')) is bool
             and type(value.get('files')) is list):
@@ -66,7 +69,12 @@ def valid_index(value, prefix, generation):
     if value['kind'] == 'final' and not value['reader']['stopped']:
         return False
     fields = {'id', 'json_size', 'json_sha256', 'body_size', 'body_sha256'}
-    return all(type(f) is dict and set(f) == fields and type(f['id']) is int and f['id'] > 0 for f in value['files'])
+    files = value['files']
+    return (all(type(f) is dict and set(f) == fields and type(f['id']) is int and f['id'] > 0
+                and type(f['json_size']) is int and 0 <= f['json_size'] <= MAX_METADATA
+                and type(f['body_size']) is int and 0 <= f['body_size'] <= MAX_BODY
+                and digest(f['json_sha256']) and digest(f['body_sha256']) for f in files)
+            and len({f['id'] for f in files}) == len(files))
 
 
 def batch_files(path, index):
@@ -127,7 +135,7 @@ def audit(objects, *, run_id, launch_sha256, workdir):
     generations = {}
     for name in path_of:
         match = re.fullmatch(r'(index|ledger|batch)-([1-9][0-9]{0,9})\.(json|sqlite3|tar)', name)
-        if match:
+        if match and match.group(3) == {'index': 'json', 'ledger': 'sqlite3', 'batch': 'tar'}[match.group(1)]:
             generations.setdefault(int(match.group(2)), set()).add(match.group(1))
     valid, ignored, incomplete = {}, 0, 0
     shipped, conflicts = {}, set()
