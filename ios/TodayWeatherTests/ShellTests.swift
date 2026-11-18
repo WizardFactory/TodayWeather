@@ -6,44 +6,45 @@ import TWStorage
 import UIKit
 @testable import TodayWeather
 
-/// The shell in a window (IN-07, #2956): tab switching and the reload of the selected tab, the startup page, opening and
+/// The shell in a window (IN-07, #2956): tab navigation, the startup page, opening and
 /// closing the side menu, its rows, and closing a popup, driven through the views' accessibility elements as a tap
 /// reaches them.
 extension HostedShellTests {
 @MainActor
 struct ShellTests {
-    @Test func tabsSwitchAndTheSelectedWeatherTabReloads() async throws {
-        let shell = ShellFixture.shell()
-        var refreshed: [ShellTab] = []
-        var clock: Int64 = 100_000
-        shell.now = { clock }
-        shell.onRefresh = { refreshed.append($0) }
-        let hosted = try HostedView(ShellView(model: shell), size: CGSize(width: 393, height: 852))
+    @Test func tabsNavigateAndPullRefreshesOnlyWeatherPages() async throws {
+        for tab in [ShellTab.forecast, .dailyforecast, .air] {
+            #expect(Glyphs.tab(tab, selected: true) == Glyphs.tab(tab, selected: false))
+        }
+        let f = WeatherTabTests.Fixture(WeatherTabTests.byPlace(seoul: 0.8))
+        let hosted = try HostedView(ShellView(model: f.shell, content: f.screens.content),
+                                    size: CGSize(width: 393, height: 852))
         defer { hosted.close() }
-        try await hosted.settle()
-        #expect(shell.selected == .forecast)
-        try hosted.tap("shell-tab-dailyforecast")
-        try await hosted.settle()
-        #expect(shell.selected == .dailyforecast)
-        #expect(refreshed.isEmpty, "a tab change is no reload")
-        clock += 701
-        try hosted.tap("shell-tab-dailyforecast")
-        #expect(refreshed == [.dailyforecast])
-        clock += 500
-        try hosted.tap("shell-tab-dailyforecast")
-        #expect(refreshed == [.dailyforecast], "a second tap within 700 ms does nothing")
-        try hosted.tap("shell-tab-search")
-        try await hosted.settle()
-        #expect(shell.selected == .search)
-        clock += 5_000
-        try hosted.tap("shell-tab-search")
-        #expect(refreshed == [.dailyforecast], "the saved-places tab does not reload")
-        try hosted.tap("shell-tab-air")
-        try await hosted.settle()
-        #expect(shell.selected == .air)
-        // The selected tab's glyph is the reload glyph; the others keep theirs.
-        #expect(Glyphs.tab(.air, selected: true) == Glyphs.reload)
-        #expect(Glyphs.tab(.search, selected: true) == Glyphs.star)
+        f.screens.handle(.launch)
+        #expect(await AirLiveTests.wait(30) { f.screens.scope?.currentWeather != nil })
+        for tab in [ShellTab.forecast, .dailyforecast, .air, .search] {
+            try hosted.tap("shell-tab-\(tab.rawValue)")
+            try await hosted.settle()
+            #expect(f.shell.selected == tab)
+            let applies = f.screens.session.applies
+            let requests = f.server.requests.count
+            try hosted.tap("shell-tab-\(tab.rawValue)")
+            #expect(f.screens.session.applies == applies, "reselecting the tab keeps its data")
+
+            let scroll = hosted.elements().compactMap { $0 as? UIScrollView }
+                .first { $0.refreshControl != nil }
+            if tab == .search {
+                #expect(scroll == nil)
+                continue
+            }
+            let page = try #require(scroll)
+            let control = try #require(page.refreshControl)
+            control.beginRefreshing()
+            control.sendActions(for: .valueChanged)
+            #expect(await AirLiveTests.wait(10) { f.server.requests.count == requests + 1 })
+            #expect(await AirLiveTests.wait(10) { !f.screens.session.loadingSelected && !control.isRefreshing })
+            #expect(f.server.requests.count == requests + 1, "one refresh request")
+        }
     }
 
     @Test(arguments: [("0", ShellTab.forecast), ("1", .dailyforecast), ("2", .search), ("3", .air), ("7", .forecast)])

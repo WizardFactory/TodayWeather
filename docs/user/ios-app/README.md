@@ -2,22 +2,31 @@
 
 [Read the PDF](manual.pdf) · [Editable source](manual.json) · [Capture provenance](provenance.json)
 
-This is the **native Swift / SwiftUI app** for iPhone and iPad, version 2.0.0 preview (#2948). Its 41 illustrated
+This is the **native Swift / SwiftUI app** for iPhone and iPad, version 2.0.0 preview (#2948). Its 42 illustrated
 steps follow the sections of the [Cordova app manual](../cordova-app/README.md): first launch and the current
 location, hourly and daily charts, air quality and stations, saved places, alarms, units, startup and refresh
 settings, themes, nationwide information, about, privacy and sharing. The app screens are Korean; the instructions
 are English with the Korean control labels. The [Android native manual](../android-app/README.md) describes the
 Android app.
 
-The search and nationwide wind screenshots on pages 16 and 36 were refreshed on 18 November 2026 with fixture data in the running app views. Page 36 shows the next larger text size.
-
-The other screenshots were captured from the running native app on 17 November 2026 (Korea time; the four menu pages 25 and
-38–40 again that evening, after the privacy rows moved below About as in the Cordova app) by a UI test on an owned
-iPhone 16 simulator (iOS 26.5, 393×852 pt at scale 3), Korean app language, default text size, the simulated
-position at Seoul City Hall and the status bar fixed at 9:41. Weather, geocoding, nationwide data and warnings are
+A UI test captured the original 41 screenshots on 17 November 2026 (Korea time). It captured four menu screens
+again that evening after the privacy rows moved below About. The test used an iPhone 16 simulator (iOS 26.5,
+393×852 pt at scale 3), Korean app language, default text size, a simulated position at Seoul City Hall and
+the status bar fixed at 9:41. Weather, geocoding, nationwide data and warnings are
 read-only requests to the legacy weather server; place search uses Google Places. Values and warnings are those of
 the capture time. Images are reduced to 720 pixels wide and a 256-color palette without replacing screen content. The
 banners are Google's test ads of a Debug build; whether one loaded varies between pages.
+
+The saved-place search and nationwide wind screenshots were refreshed on 18 November 2026 with fixture data. The wind screenshot uses the next larger text size.
+
+The pull-to-refresh page uses a Korean hourly forecast from an offline test fixture. Its screenshot shows the
+updated tab bar. Earlier weather screenshots retain the reload icon used by the November 17 build.
+
+## Refresh the selected place
+
+Open 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air). Scroll to the top, pull the page down and lift
+your finger. The app requests the latest data for the selected place and keeps the current tab open. If the request fails, the retry dialog lets you try again or close it. The bottom tabs
+switch between pages. To set an automatic refresh interval, open 업데이트 주기 in the menu.
 
 ## Reader notes
 
@@ -44,7 +53,7 @@ locally installed Arial Unicode TTF, which is not distributed here. From the rep
 `MANUAL_SKILL` and `MANUAL_FONT` pointing to those local prerequisites:
 
 ```sh
-"$MANUAL_PYTHON" "$MANUAL_SKILL/scripts/build_manual.py" docs/user/ios-app/manual.json /tmp/tw-ios-manual.pdf \
+RL_useA85=0 "$MANUAL_PYTHON" "$MANUAL_SKILL/scripts/build_manual.py" docs/user/ios-app/manual.json /tmp/tw-ios-manual.pdf \
   --font "$MANUAL_FONT"
 "$MANUAL_PYTHON" "$MANUAL_SKILL/scripts/render_pages.py" /tmp/tw-ios-manual.pdf /tmp/tw-ios-manual-pages
 "$MANUAL_PYTHON" ios/tools/manual/verify.py docs/user/ios-app

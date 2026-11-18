@@ -57,6 +57,7 @@ enum WeatherBlock: Hashable {
 /// What the page's taps ask for.
 struct WeatherPageActions {
     var toggleExpanded: () -> Void = {}
+    var refresh: @MainActor () async -> Void = {}
     var previous: () -> Void = {}
     var next: () -> Void = {}
     var perform: (PageAction) -> Void = { _ in }
@@ -72,10 +73,12 @@ struct WeatherPageView: View {
     var actions = WeatherPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it, as `HourlyChartFrame`).
     var scrolls = true
+    @Environment(\.shellInsets) private var shellInsets
     @Environment(\.sizeCategory) private var sizeCategory
 
     var body: some View {
         let colors = WeatherColors.of(theme, daily: content.type == .mid)
+        let barHeight = ShellMetrics.headerHeight + shellInsets.top
         let stack = VStack(spacing: 0) {
             VStack(spacing: 0) {
                 WeatherBlockView(block: .header, content: content, theme: theme, actions: actions)
@@ -93,7 +96,13 @@ struct WeatherPageView: View {
         }
         Group {
             if scrolls {
-                ScrollView(.vertical, showsIndicators: false) { stack }
+                ScrollView(.vertical, showsIndicators: false) {
+                    stack.padding(.top, -barHeight)
+                }
+                    // Keep the hero under the translucent bar and the pull indicator below it.
+                    .scrollClipDisabled()
+                    .padding(.top, barHeight)
+                    .refreshable { await actions.refresh() }
             } else {
                 stack.frame(maxHeight: .infinity, alignment: .top)
             }
@@ -231,7 +240,7 @@ private struct HeaderBlock: View {
         .frame(height: height)
         .background(colors.header.color)
         .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 20).onEnded { value in
+        .simultaneousGesture(DragGesture(minimumDistance: 20).onEnded { value in
             // Ionic's swipe: a horizontal fling; left shows the next place.
             let dx = value.predictedEndTranslation.width
             guard abs(value.translation.width) > abs(value.translation.height) else { return }

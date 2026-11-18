@@ -1,6 +1,6 @@
 {
  "title": "TodayWeather for iOS: native app user manual",
- "scenario": "Version 2.0.0 preview on an iPhone 16 simulator, Korean screens; English instructions keep the Korean control labels. Live examples captured on 17 November 2026 (Korea time; the menu pages again that evening after the menu reorder); weather, ads and iOS dialogs vary.",
+ "scenario": "TodayWeather 2.0.0 preview on an iPhone simulator. Korean screens with English instructions. The pull-to-refresh, saved-place search and nationwide wind examples use sample data. Other screens show live examples from 17 November 2026.",
  "steps": [
   {
    "title": "Read the first-launch notice",
@@ -22,6 +22,13 @@
    "screenshot": "screenshots/03-current-location.png",
    "caption": "Hourly weather for the current position (명동 here, from the simulated position at Seoul City Hall).",
    "expected": "The current place opens on the Hourly tab (시간별날씨)."
+  },
+  {
+   "title": "Pull down to refresh",
+   "instruction": "Open 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air). Scroll to the top, then pull the page down until the refresh indicator appears. Lift your finger.",
+   "screenshot": "screenshots/pull-to-refresh.png",
+   "caption": "The refresh indicator appears below 부산광역시 (Busan) as you pull down the hourly page.",
+   "expected": "The indicator disappears after the request. The same tab shows the latest available data for this place. If a request fails, tap 확인 (OK) to retry."
   },
   {
    "title": "Scroll the hourly page",
@@ -210,7 +217,7 @@
    "instruction": "In the menu tap 업데이트 주기 (Refresh interval).",
    "screenshot": "screenshots/30-refresh.png",
    "caption": "수동 (manual) or every 30 minutes to 12 hours.",
-   "expected": "The weather reloads at the chosen interval."
+   "expected": "With 수동 (Manual), pull down on a weather or air page to refresh. A timed interval also refreshes automatically."
   },
   {
    "title": "Choose a theme",
