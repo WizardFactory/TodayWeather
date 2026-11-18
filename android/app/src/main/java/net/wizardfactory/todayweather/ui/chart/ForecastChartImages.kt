@@ -15,7 +15,7 @@ import net.wizardfactory.todayweather.core.domain.chart.SvgNode
 
 internal val LocalForecastChartImages = staticCompositionLocalOf<ForecastChartImages?> { null }
 
-/** Prepared SVG icons shared by the forecast tabs, including misses for the lifetime of a cache entry. */
+/** SVG and Daily detail icons shared across forecast visits. Missing paths are retained until eviction. */
 internal class ForecastChartImages(
     maxBytes: Int = 4 * 1024 * 1024,
     private val load: (String) -> ImageBitmap?,
@@ -30,6 +30,9 @@ internal class ForecastChartImages(
             maxOf(1024, value.bitmap?.asAndroidBitmap()?.allocationByteCount ?: 0)
     }
 
+    operator fun get(path: String): ImageBitmap? =
+        (cache.get(path) ?: Entry(load(path)).also { cache.put(path, it) }).bitmap
+
     fun prepare(colors: ChartColors, vararg scenes: Svg): Map<String, ImageBitmap> {
         val images = mutableMapOf<String, ImageBitmap?>()
         fun collect(node: SvgNode) {
@@ -41,8 +44,7 @@ internal class ForecastChartImages(
                         node.href.startsWith("img/icons_default/") -> colors.iconImages + node.href.removePrefix("img/icons_default")
                         else -> node.href
                     }
-                    val entry = cache.get(path) ?: Entry(load(path)).also { cache.put(path, it) }
-                    images[node.href] = entry.bitmap
+                    images[node.href] = this@ForecastChartImages[path]
                 }
                 else -> Unit
             }

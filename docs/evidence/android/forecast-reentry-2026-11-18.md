@@ -35,3 +35,20 @@ Counts and cumulative measured milliseconds across 20 warmed entries per tab. Th
 | Full change | Hourly | 0 | 0 | 0 |
 
 The chart cache removed builds in isolation. The frame measurements on that variant varied and showed no consistent gain. The full change lowered both tabs' P95 and removed ≥50 ms overruns in the sampled Hourly entries. Daily continued to overrun even with zero measured chart builds and SVG asset work. The samples cover one cached fixture and a small number of frames on one phone. A newly encountered SVG icon still loads synchronously during chart preparation.
+
+## Daily detail icons
+
+The first comparison above stops at `0a2abb55`. The final change also shares decoded Daily detail icons across cells and visits, using the existing 4 MiB cache. The Daily detail card still uses its original horizontal row.
+
+We repeated the same warmed Seoul journey on the S21+, with two batches of ten entries per tab for each build. This comparison added separate probes for Daily detail icons, chart SVGs and other page images. The control was the prior PR version at `0a2abb55`. There were 40 sampled frames per tab per build, no dropped callbacks, and thermal status was 0 before and after each build.
+
+| Build | Tab | Entries ≥50 ms, batches 1 + 2 | P50 (ms) | P95 (ms) | P99 / max (ms) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Prior PR | Daily | 5 + 3 = 8/20 | −0.3 | 55.2 | 57.0 |
+| With shared detail icons | Daily | 0 + 0 = 0/20 | −2.3 | 37.9 | 41.5 |
+| Prior PR | Hourly | 0 + 0 = 0/20 | −9.3 | 43.6 | 45.6 |
+| With shared detail icons | Hourly | 0 + 1 = 1/20 | −7.0 | 42.1 | 71.0 |
+
+Over 20 Daily entries, the control opened 340 detail assets (17.05 ms cumulative) and decoded 340 bitmaps (328.77 ms). The final build recorded zero for both, removing about 16.4 ms of decode work per entry. Daily frame overrun P95 fell by 17.3 ms (31%). Both builds recorded zero chart builds and zero chart SVG opens or decodes on both warmed tabs. Hourly's other page icons accounted for 260 opens and 260 decodes in each build.
+
+Use the control within each comparison when estimating the effect. The rate of long frames varied across runs on this phone. This experiment measured warmed visits with one fixture. A first encounter or cache eviction still allows synchronous preparation of the asset.
