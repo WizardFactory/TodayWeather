@@ -96,9 +96,12 @@ class JournalTests(unittest.TestCase):
             self.assertEqual(j.snapshot()['allocated'], before['allocated'])
             self.assertEqual(j.snapshot()['generations'], 1)
 
-    def test_run_request_budget_rejects_a_second_grant_above_ninety_thousand(self):
+    def test_run_request_budget_rejects_a_second_grant_above_the_server_cap(self):
+        # SR-4: the run's total S3 grant is bounded by the server's own parse cap (900,000);
+        # the cost ceiling prices what is actually used.
+        self.assertEqual(state.Journal.CAPS['reads'],900_000)
         with self.create() as j:
-            j.reserve_generation('initial', self.allocation(reads=90000,writes=90000), now=1000)
+            j.reserve_generation('initial', self.allocation(reads=900_000,writes=900_000), now=1000)
             with self.assertRaises(E):
                 j.reserve_generation('restart-1', self.allocation(reads=1,writes=1), now=1000)
             self.assertEqual(j.snapshot()['generations'],1)
@@ -257,38 +260,60 @@ gspec.loader.exec_module(guard)
 
 
 def cost_policy():
-    return dict(schema=1,observed_at=900,prices_sha256='d'*64,rates={
+    # SR-4 (#3002): one cumulative ceiling (owner: USD 300), spend of earlier attempts and a
+    # reserve kept for what follows a stop (export, cleanup).
+    return dict(schema=2,observed_at=900,prices_sha256='d'*64,rates={
         'ec2_hour':'0.026','ipv4_hour':'0.005','gp3_gb_month':'0.0912',
         's3_gb_month':'0.025','s3_read':'0.00000035','s3_write':'0.0000045',
-        'cpu_vcpu_hour':'0.05','outbound_gb':'0.126'})
+        'cpu_vcpu_hour':'0.05','outbound_gb':'0.126'},
+        ceiling_usd='300',prior_spend_usd='0',finish_reserve_usd='5')
 
 
 class CostTests(unittest.TestCase):
-    def test_idle_seven_days_fit_but_busy_cpu_hits_accrued_stop(self):
-        result=state.estimate_cost(cost_policy(),1000,1000+168*3600,cpu_seconds=60)
-        self.assertFalse(result['stop'])
-        self.assertLess(float(result['accrued_upper_usd']),28)
-        self.assertLess(float(result['projected_upper_usd']),35)
-        busy=state.estimate_cost(cost_policy(),1000,1000+168*3600,cpu_seconds=2*168*3600)
-        self.assertEqual(busy['stop'],'aws_accrued_cost')
+    def worked_example(self,policy):
+        # The guide's worked example, written out independently of state.estimate_cost.
+        from decimal import Decimal as D
+        r={k:D(v) for k,v in policy['rates'].items()};gib=D(1024**3)/D(10**9)
+        hourly=r['ec2_hour']+r['ipv4_hour']+(32*r['gp3_gb_month']+20*r['s3_gb_month'])*gib/672
+        log_puts=4*((24*3600+49)//50)
+        return (D(policy['prior_spend_usd'])+24*hourly+D(3600)/3600*r['cpu_vcpu_hour']
+                +10_000*r['s3_read']+5_000*r['s3_write']+D(2*10**9)/D(10**9)*r['outbound_gb']
+                +log_puts*r['s3_write']+D('1.5'))
 
-    def test_log_object_puts_are_priced(self):
-        from decimal import Decimal
-        free=cost_policy();free['rates']['s3_write']='0.000000001'
-        with_puts=Decimal(state.estimate_cost(cost_policy(),1000,1000,cpu_seconds=0)['accrued_upper_usd'])
-        without=Decimal(state.estimate_cost(free,1000,1000,cpu_seconds=0)['accrued_upper_usd'])
-        self.assertEqual(state.LOG_WRITES,50_000)
-        self.assertGreaterEqual(state.LOG_WRITES,4*72*170)
-        self.assertAlmostEqual(float(with_puts-without),150_000*(0.0000045-0.000000001),places=6)
+    def test_accrued_estimate_uses_measured_counters(self):
+        from decimal import Decimal as D
+        policy=cost_policy();policy['prior_spend_usd']='10'
+        result=state.estimate_cost(policy,1000,1000+24*3600,cpu_seconds=3600,s3_reads=10_000,s3_writes=5_000,
+                                   tx_bytes=2*10**9,paid_usd='1.5')
+        self.assertAlmostEqual(D(result['accrued_usd']),self.worked_example(policy),places=5)
+        self.assertEqual(D(result['limit_usd']),D('295'))
+        self.assertIsNone(result['stop'])
+        # Nothing is booked up front: an idle start costs only the prior spend.
+        idle=state.estimate_cost(cost_policy(),1000,1000,cpu_seconds=0)
+        self.assertEqual(D(idle['accrued_usd']),D(0))
 
-    def test_unknown_price_or_high_projected_cost_cannot_continue(self):
+    def test_ceiling_stop_at_the_boundary(self):
+        from decimal import Decimal as D
+        policy=cost_policy()
+        base=D(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0)['accrued_usd'])
+        policy['prior_spend_usd']=str((D(295)-base-D('0.000001')).quantize(D('.000001')))
+        self.assertIsNone(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0)['stop'])
+        self.assertEqual(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0,tx_bytes=10**6)['stop'],'cost_ceiling')
+
+    def test_policy_requires_a_ceiling_and_a_sufficient_reserve(self):
+        for field in ('ceiling_usd','prior_spend_usd','finish_reserve_usd'):
+            p=cost_policy();del p[field]
+            with self.assertRaises(E):state.validate_cost_policy(p,1000)
+        for field,value in (('ceiling_usd','1001'),('ceiling_usd','0'),('finish_reserve_usd','0.01'),
+                            ('prior_spend_usd','296'),('schema',1)):
+            p=cost_policy();p[field]=value
+            with self.assertRaises(E,msg=(field,value)):state.validate_cost_policy(p,1000)
         missing=cost_policy();del missing['rates']['outbound_gb']
         with self.assertRaises(E):state.estimate_cost(missing,1000,1001,cpu_seconds=0)
-        high=cost_policy();high['rates']['ec2_hour']='1'
-        self.assertEqual(state.estimate_cost(high,1000,1001,cpu_seconds=0)['stop'],'aws_projected_cost')
         for bad in ('NaN','Infinity','-1','',True,0.1):
             invalid=cost_policy();invalid['rates']['ec2_hour']=bad
             with self.assertRaises(E):state.estimate_cost(invalid,1000,1001,cpu_seconds=0)
+        self.assertLess(state.finish_reserve_floor(cost_policy()['rates']),5)
 
 
 def host_manifest():
@@ -298,7 +323,8 @@ def host_manifest():
                 config_directory='/opt/server2-shadow/fixture/config',port=3000,metrics_port=3001,
                 tx_origin=500,interface='ens5',data_directory='/opt/server2-shadow/fixture/data',
                 cgroup='/system.slice/server2-shadow-fixture-candidate.service',
-                allowance=dict(reads=100,writes=100,put_bytes=1000),cost_policy=cost_policy())
+                allowance=dict(reads=100,writes=100,put_bytes=1000),cost_policy=cost_policy(),
+                paid_usd_per_unit=dict(visual_crossing='0.0001',google='0.005',google_air_quality='0.005',openweather=None))
 
 
 def host_sample(m=None):
@@ -398,11 +424,13 @@ class GuardTests(unittest.TestCase):
     def test_network_disk_and_accounting_boundaries(self):
         m=host_manifest()
         for field,value,reason in [('tx_bytes',499,'network_counter_reset'),
-                ('tx_bytes',500+4*guard.GiB-128*1024**2,'network_ceiling'),
                 ('free_bytes',6*guard.GiB-1,'disk_reserve')]:
             s=host_sample();s[field]=value
             self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],reason)
         s=host_sample();s['free_bytes']=6*guard.GiB
+        self.assertIsNone(guard.evaluate(m,s,None,1001)['stop'])
+        # SR-4: transmit volume is priced, not a stop of its own.
+        s=host_sample();s['tx_bytes']=500+40*guard.GiB
         self.assertIsNone(guard.evaluate(m,s,None,1001)['stop'])
 
     def test_provider_rejections_never_stop_and_storage_authorization_does(self):
@@ -421,9 +449,13 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(d['stop'],'s3_authorization')
         self.assertEqual(d['diagnostics']['storage_auth_failures'],guard.STORAGE_AUTH_LIMIT)
         self.assertEqual(guard.STORAGE_AUTH_LIMIT,20)
+        # SR-4: an exhausted S3 allocation is refused by the server and recorded, not a stop;
+        # a remaining count above the allocation is broken accounting (a miss).
         for key in ('s3_reads','s3_writes','s3_put_bytes'):
             s=host_sample();s['metrics'][key]=0
-            self.assertEqual(guard.evaluate(m,s,None,1001)['stop'],'s3_allowance')
+            self.assertIsNone(guard.evaluate(m,s,None,1001)['stop'])
+            s=host_sample();s['metrics'][key]=10**6
+            self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
         s=host_sample();del s['metrics']['s3_reads']
         self.assertEqual(guard.evaluate(m,s,None,1001)['misses'],1)
 
@@ -462,7 +494,7 @@ class GuardTests(unittest.TestCase):
             else:s['diagnostics']={'message':'free text'}
         stops=[('pid',124,'binding_pid'),('pid',None,'binding_pid'),('binary_sha256',None,'binding_binary_sha256'),
                ('listeners',[],'listener_binding'),
-               ('tx_bytes',500+4*guard.GiB,'network_ceiling'),('tx_bytes',499,'network_counter_reset'),
+               ('tx_bytes',499,'network_counter_reset'),
                ('free_bytes',6*guard.GiB-1,'disk_reserve')]
         for kind in ('accounting','metrics','diagnostics'):
             for field,value,reason in stops:
@@ -483,13 +515,24 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(guard.evaluate(m,host_sample(),prior,1000)['stop'],'clock_rollback')
         self.assertEqual(guard.evaluate(m,host_sample(),prior,1000+168*3600)['stop'],'collection_deadline')
 
-    def test_actual_cpu_sample_cost_and_rollback_stop_the_guard(self):
+    def test_cost_ceiling_from_measured_counters_and_cpu_rollback(self):
+        from decimal import Decimal as D
         self.assertEqual(guard.host_cpu_seconds('cpu 100 10 30 500 40 2 3 5 80 5\n',100),2)
+        # A busy week fits under the ceiling; the decision records the estimate.
         m=host_manifest();sample=host_sample(m);now=m['epoch']+167*3600
         sample['observed_at']=now;sample['cpu_seconds']=2*167*3600
-        self.assertEqual(guard.evaluate(m,sample,None,now)['stop'],'aws_accrued_cost')
-        m['cost_policy']['rates']['ec2_hour']='1'
-        self.assertEqual(guard.evaluate(m,host_sample(m),None,1001)['stop'],'aws_projected_cost')
+        d=guard.evaluate(m,sample,None,now)
+        self.assertIsNone(d['stop'])
+        # Used S3 = allocation - remaining (100 - 90), transmit since the origin, paid units used.
+        sample['diagnostics']['paid_units']={p:dict(initial=100,remaining=100) for p in guard.PAID_PROVIDERS}
+        sample['diagnostics']['paid_units']['google']=dict(initial=100,remaining=40)
+        d=guard.evaluate(m,sample,None,now)
+        expected=state.estimate_cost(m['cost_policy'],m['epoch'],now,cpu_seconds=2*167*3600,s3_reads=10,s3_writes=10,
+                                     tx_bytes=1000-500,paid_usd='0.3')
+        self.assertEqual(d['cost'],dict(accrued_usd=expected['accrued_usd'],limit_usd=expected['limit_usd']))
+        # Prior spend close to the ceiling: the next sample's cost crosses it.
+        m=host_manifest();m['cost_policy']['prior_spend_usd']='294.99995'
+        self.assertEqual(guard.evaluate(m,host_sample(m),None,1001)['stop'],'cost_ceiling')
         m=host_manifest();sample=host_sample(m);sample['cpu_seconds']=20
         prior=guard.evaluate(m,sample,None,1001);sample['cpu_seconds']=19
         self.assertEqual(guard.evaluate(m,sample,prior,1001)['stop'],'cpu_accounting_unavailable')
@@ -993,11 +1036,16 @@ def paid_policy():
 
 
 class PaidPolicyTests(unittest.TestCase):
-    def test_whole_run_including_restarts_costs_at_most_five_dollars(self):
+    def test_paid_grants_fit_inside_the_ceiling(self):
+        # SR-4: the priced grants of all generations must fit inside the ceiling minus the
+        # prior spend and the finish reserve (was a separate USD 5 budget).
+        from decimal import Decimal as D
         policy=paid_policy()
         self.assertEqual(state.validate_paid_policy(policy,1000),'5.000')
-        policy['grants']['restart-2']['google_air']+=1
-        with self.assertRaisesRegex(E,'budget'):state.validate_paid_policy(policy,1000)
+        self.assertEqual(state.validate_paid_policy(policy,1000,budget=D(5)),'5.000')
+        with self.assertRaisesRegex(E,'budget'):state.validate_paid_policy(policy,1000,budget=D('4.999'))
+        policy['grants']['restart-2']['google_air']+=1000
+        self.assertEqual(state.validate_paid_policy(policy,1000),'10.000')
 
     def test_unknown_or_zero_tariff_cannot_enable_provider(self):
         for name in ('visual_crossing','openweather'):
@@ -1042,6 +1090,15 @@ class HostBundleTests(unittest.TestCase):
             plan.pop('paid_policy',None)
             launch=dict(plan=plan,epoch=1000,generation='initial',allowance=dict(reads=10,writes=20,put_bytes=30))
             with self.assertRaises(E):operator.launch_plan(launch)
+
+    def test_paid_grants_above_the_ceiling_budget_cannot_launch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            _,plan=self.files(Path(temp))
+            plan['cost_policy']['prior_spend_usd']='290'   # 300 - 290 - 5 reserve = 5 left
+            launch=dict(plan=plan,epoch=1000,generation='initial',allowance=dict(reads=10,writes=20,put_bytes=30))
+            operator.launch_plan(launch)
+            plan['cost_policy']['prior_spend_usd']='290.01'
+            with self.assertRaisesRegex(E,'budget'):operator.launch_plan(launch)
 
     def test_candidate_environment_uses_only_owned_storage_and_no_push(self):
         with tempfile.TemporaryDirectory() as temp:

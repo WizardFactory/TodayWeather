@@ -590,12 +590,20 @@ def host_plan(plan):
     return plan
 
 
+# The paid policy's provider names (state.PAID_PROVIDERS) and the server's paid-unit metric
+# names (guard.PAID_PROVIDERS), in the same order as SERVER2_SHADOW_PROVIDER_UNITS.
+def paid_prices_by_metric(paid_policy):
+    import guard
+    return {metric:paid_policy['usd_per_unit'][name] for name,metric in zip(PAID_PROVIDERS,guard.PAID_PROVIDERS)}
+
+
 def launch_plan(launch):
     require(type(launch) is dict and set(launch)=={'plan','epoch','generation','allowance'},'launch fields')
     host_plan(launch['plan'])
     require(type(launch['epoch']) is int and 0<=launch['epoch']<=253402300799-170*3600,'launch epoch')
-    validate_cost_policy(launch['plan']['cost_policy'],launch['epoch'])
-    validate_paid_policy(launch['plan']['paid_policy'],launch['epoch'])
+    cost=validate_cost_policy(launch['plan']['cost_policy'],launch['epoch'])
+    # SR-4: every priced paid grant must fit the money the ceiling leaves.
+    validate_paid_policy(launch['plan']['paid_policy'],launch['epoch'],budget=cost['ceiling']-cost['prior']-cost['reserve'])
     require(launch['generation'] in ('initial','restart-1','restart-2'),'launch generation')
     require(type(launch['allowance']) is dict and set(launch['allowance'])==set(Journal.CAPS),'launch allowance')
     for name,cap in Journal.CAPS.items():
@@ -820,7 +828,8 @@ def bind_host(path):
         environment_sha256=guard.environment_hash(b''.join((k+'='+v).encode()+b'\0' for k,v in environment.items())),
         config_sha256=plan['artifacts']['config.env'],config_directory=str(root/'config'),
         port=plan['port'],metrics_port=plan['port']+1,tx_origin=0,interface=plan['interface'],
-        data_directory=str(root/'data'),cgroup='/system.slice/'+name+'-candidate.service',allowance=launch['allowance'],cost_policy=plan['cost_policy'])
+        data_directory=str(root/'data'),cgroup='/system.slice/'+name+'-candidate.service',allowance=launch['allowance'],cost_policy=plan['cost_policy'],
+        paid_usd_per_unit=paid_prices_by_metric(plan['paid_policy']))
     guard.validate(manifest)
     deadline=time.monotonic()+20
     while True:

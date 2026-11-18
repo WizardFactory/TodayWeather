@@ -1,0 +1,48 @@
+{
+  "task": "ShadowCeiling3002",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3002",
+  "scope": "SR-4 of #2998: one cumulative cost ceiling priced from measured counters replaces the projected-cost, accrued-cost, network-ceiling and S3-allocation stops of the shadow qualification run; exhausted allocations and paid grants are recorded, not stops. PR to master; no deployment, AWS change or qualification run.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowCeiling3002.json",
+    "server2/deploy/shadow/state.py",
+    "server2/deploy/shadow/guard.py",
+    "server2/deploy/shadow/coordinator.py",
+    "server2/deploy/shadow/provision.py",
+    "server2/deploy/shadow/linux_check.py",
+    "server2/tests/integration/shadow_simulation.py",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tests/integration/test_shadow_simulation.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Cost ceiling section with the estimate formula and a worked example; removed sub-budget stops; decision schema 6"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3002/verification.md",
+      "category": "documentation",
+      "reason": "Selected verification evidence for SR-4"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3002/simulation.json",
+      "category": "documentation",
+      "reason": "Simulation summary for SR-4 against SR-3"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3002/linux-check.json",
+      "category": "documentation",
+      "reason": "Disposable-VM check report"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Update the workflow diagram to describe SR-4 cost accounting and stop conditions"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Update the workflow diagram to describe SR-4 cost accounting and stop conditions"
+    }
+  ]
+}

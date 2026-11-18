@@ -166,7 +166,8 @@ def launch_user_data(run_id, epoch):
 
 class Journal:
     """Exclusive coordinator journal; explicit create and resume cannot be confused."""
-    CAPS = {'reads': 90_000, 'writes': 90_000, 'put_bytes': 2 * 1024**3}
+    # The server's own parse caps (storage/allowance.rs); allocations are sized in SR-6.
+    CAPS = {'reads': 900_000, 'writes': 900_000, 'put_bytes': 2 * 1024**3}
 
     def __init__(self, directory: Path, *, create: bool = False,
                  run_id: str | None = None, manifest_sha: str | None = None,
@@ -433,7 +434,6 @@ class Journal:
 
 # Log object PUTs of the host's collector (LP-6, #2983). Their storage and export
 # fall inside the 20 GB storage and the operator's 2 GiB export allowance.
-LOG_WRITES=50_000
 PRICE_KEYS={'ec2_hour','ipv4_hour','gp3_gb_month','s3_gb_month','s3_read',
             's3_write','cpu_vcpu_hour','outbound_gb'}
 
@@ -443,8 +443,9 @@ PAID_PROVIDERS=('visual_crossing','google_geocode','google_air','openweather')
 GENERATIONS=('initial','restart-1','restart-2')
 
 
-def validate_paid_policy(policy,epoch):
-    """Price all three immutable grants up front, without shared free credits.
+def validate_paid_policy(policy,epoch,*,budget=None):
+    """Price all three immutable grants up front, without shared free credits. The
+    total must fit the money the cost ceiling leaves (`budget`, SR-4).
 
     A null tariff disables the provider. The prelaunch audit must bind each
     nonnull USD/runtime-unit rate to the retained official/account tariff and
@@ -471,57 +472,87 @@ def validate_paid_policy(policy,epoch):
             units=integer(grant[name],1_000_000)
             if price is None and units:raise StateError('unpriced provider enabled')
             if price is not None:total+=Decimal(price)*units
-    if total>5:raise StateError('paid provider budget exhausted')
+    if budget is not None and total>budget:raise StateError('paid provider budget exhausted')
     return str(total)
 
 
-def validate_cost_policy(policy,epoch):
-    """Frozen, externally verified USD tariffs; never invent a missing price."""
+COST_FIELDS={'schema','observed_at','prices_sha256','rates','ceiling_usd','prior_spend_usd','finish_reserve_usd'}
+
+
+def _usd(value,low,high,what):
     from decimal import Decimal
-    if type(policy) is not dict or set(policy)!={'schema','observed_at','prices_sha256','rates'}:
+    if (type(value) is not str or len(value)>24 or not re.fullmatch('[0-9]+(?:\\.[0-9]+)?',value)
+            or not low<=Decimal(value)<=high):raise StateError(what)
+    return Decimal(value)
+
+
+def _hourly(rates):
+    """Instance, IPv4, 32 GB gp3 and 20 GB S3 storage per hour. A 28-day billing month
+    and decimal GB conversions deliberately overestimate the monthly allocation."""
+    from decimal import Decimal
+    gib=Decimal(1024**3)/Decimal(10**9)
+    return rates['ec2_hour']+rates['ipv4_hour']+(32*rates['gp3_gb_month']+20*rates['s3_gb_month'])*gib/672
+
+
+def finish_reserve_floor(rates):
+    """Least money a stop must leave for what follows it: the 2 GiB evidence export, the
+    operator's 9,000 export reads and two more hours of the host until cleanup."""
+    from decimal import Decimal
+    rates={k:Decimal(v) for k,v in rates.items()}
+    gib=Decimal(1024**3)/Decimal(10**9)
+    return 2*gib*rates['outbound_gb']+9000*rates['s3_read']+2*_hourly(rates)
+
+
+def validate_cost_policy(policy,epoch):
+    """Frozen, externally verified USD tariffs and one cumulative ceiling (SR-4).
+
+    Never invent a missing price. The ceiling covers the whole qualification: the
+    recorded spend of earlier attempts plus this run's measured estimate plus the
+    finish reserve must stay below it.
+    """
+    from decimal import Decimal
+    if type(policy) is not dict or set(policy)!=COST_FIELDS:
         raise StateError('cost policy fields')
-    if type(policy['schema']) is not int or policy['schema']!=1:raise StateError('cost schema')
+    if type(policy['schema']) is not int or policy['schema']!=2:raise StateError('cost schema')
     sha256(policy['prices_sha256']);integer(epoch,2**53);integer(policy['observed_at'],2**53)
     if not 0<=epoch-policy['observed_at']<=7*24*3600:raise StateError('price snapshot freshness')
     rates=policy['rates']
     if type(rates) is not dict or set(rates)!=PRICE_KEYS:raise StateError('missing price dimension')
-    for price in rates.values():
-        if (type(price) is not str or len(price)>24 or not re.fullmatch('[0-9]+(?:\\.[0-9]+)?',price)
-                or not 0<Decimal(price)<=1000):raise StateError('invalid price')
-    return {key:Decimal(value) for key,value in rates.items()}
+    for price in rates.values():_usd(price,Decimal('0.000000001'),Decimal(1000),'invalid price')
+    rates={key:Decimal(value) for key,value in rates.items()}
+    ceiling=_usd(policy['ceiling_usd'],Decimal(1),Decimal(1000),'invalid ceiling')
+    prior=_usd(policy['prior_spend_usd'],Decimal(0),Decimal(1000),'invalid prior spend')
+    reserve=_usd(policy['finish_reserve_usd'],Decimal(0),Decimal(1000),'invalid finish reserve')
+    if reserve<finish_reserve_floor(policy['rates']):raise StateError('finish reserve below its floor')
+    if prior+reserve>=ceiling:raise StateError('cost ceiling exhausted')
+    return dict(rates,ceiling=ceiling,prior=prior,reserve=reserve)
 
 
-def estimate_cost(policy,epoch,now,*,cpu_seconds):
-    """Conservative pretax upper estimate, including unused request/export reserve.
+def estimate_cost(policy,epoch,now,*,cpu_seconds,s3_reads=0,s3_writes=0,tx_bytes=0,paid_usd='0'):
+    """Accrued estimate from measured counters against the cumulative ceiling (SR-4).
 
-    CPU is all host nonidle time, not merely the candidate and not credit balance.
-    Ignore earned T3 credits/free tiers. Project two busy vCPUs through the
-    original 170-hour cleanup deadline. Assume full storage for the entire time,
-    all 100,000 request allowances consumed, 50,000 log object PUTs (four sources,
-    one object per 50 s each, through 170 hours: 48,960), and a 48-GiB transfer reservation:
-    4 host threshold + 2 original bodies + 2 paired evidence + 8 control
-    envelopes + 32 contingency for protocol/termination overrun. This is a
-    conservative cost model, not proof of a 48-GiB wire-level ceiling.
-    This is a stop input, not AWS billing-system enforcement or paid API pricing.
+    accrued = prior spend + elapsed hours x hourly (instance, IPv4, storage)
+            + host nonidle CPU seconds x vCPU-hour price + S3 reads/writes actually
+            used + bytes transmitted since the origin x outbound price + an upper bound
+            of log object PUTs (four sources, one object per 50 s each) + paid
+            provider units actually admitted x their price.
+    The run stops with `cost_ceiling` when accrued + finish reserve reaches the
+    ceiling. This is a conservative stop input, not AWS billing.
     """
     from decimal import Decimal, ROUND_CEILING
-    rates=validate_cost_policy(policy,epoch)
+    p=validate_cost_policy(policy,epoch)
     integer(now,2**53);integer(cpu_seconds,2**53)
+    for value in (s3_reads,s3_writes,tx_bytes):integer(value,2**53)
+    paid=_usd(paid_usd,Decimal(0),Decimal(1000),'invalid paid spend')
     if now<epoch:raise StateError('cost clock rollback')
-    elapsed=now-epoch;total=170*3600
-    hours=Decimal(elapsed)/3600
-    # 28-day billing month and decimal GB conversions deliberately overestimate
-    # the usual monthly allocation and binary-volume/storage units.
-    gib=Decimal(1024**3)/Decimal(10**9)
-    hourly=rates['ec2_hour']+rates['ipv4_hour']+(32*rates['gp3_gb_month']+20*rates['s3_gb_month'])*gib/672
-    fixed=(100_000*(rates['s3_read']+rates['s3_write'])+LOG_WRITES*rates['s3_write']
-           +48*gib*rates['outbound_gb'])
-    accrued=hours*hourly+Decimal(cpu_seconds)/3600*rates['cpu_vcpu_hour']+fixed
-    remaining=max(0,total-elapsed)
-    projected=accrued+Decimal(remaining)/3600*(hourly+2*rates['cpu_vcpu_hour'])
-    stop='aws_accrued_cost' if accrued>=28 else 'aws_projected_cost' if projected>=35 else None
-    return dict(accrued_upper_usd=str(accrued.quantize(Decimal('.000001'),rounding=ROUND_CEILING)),
-                projected_upper_usd=str(projected.quantize(Decimal('.000001'),rounding=ROUND_CEILING)),stop=stop)
+    elapsed=now-epoch
+    log_puts=4*((elapsed+49)//50)
+    accrued=(p['prior']+Decimal(elapsed)/3600*_hourly(p)+Decimal(cpu_seconds)/3600*p['cpu_vcpu_hour']
+             +s3_reads*p['s3_read']+(s3_writes+log_puts)*p['s3_write']
+             +Decimal(tx_bytes)/Decimal(10**9)*p['outbound_gb']+paid)
+    limit=p['ceiling']-p['reserve']
+    return dict(accrued_usd=str(accrued.quantize(Decimal('.000001'),rounding=ROUND_CEILING)),
+                limit_usd=str(limit),stop='cost_ceiling' if accrued>=limit else None)
 
 
 def main() -> int:
