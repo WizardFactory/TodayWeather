@@ -181,6 +181,9 @@ struct WeatherBlockView: View {
                 HourlyChartView(chart: hourly, expanded: content.expanded, applyCount: content.scrolls, colors: colors.chart,
                                 onToggleExpanded: actions.toggleExpanded)
                     .id(content.visit)
+                    // IN-11's UI test drags it sideways.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("forecast-chart")
             }
         } else if content.type == .mid, let daily = content.daily {
             if let offset = chartOffset {
@@ -188,6 +191,8 @@ struct WeatherBlockView: View {
             } else {
                 DailyChartView(chart: daily, applyCount: content.scrolls, colors: colors.chart)
                     .id(content.visit)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("forecast-chart")
             }
         }
     }
@@ -738,7 +743,11 @@ private struct DayCells: View {
         GeometryReader { g in
             let row = HStack(alignment: .top, spacing: 0) {
                 ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+                    // A cell as wide as its widest line when that is more than its share (WebKit's table column; the
+                    // English labels, IN-18): without `fixedSize` the frame kept the share and the labels ran into the
+                    // next cell.
                     cell(day).frame(minWidth: cellWidth(g.size.width), alignment: .topLeading)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
             if scrolls {

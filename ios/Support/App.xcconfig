@@ -24,6 +24,9 @@ TW_PLACES_API_KEY_IOS =
 // the Ads SDK starts and no ad is requested.
 TW_ADMOB_APP_ID_IOS = ca-app-pub-0000000000000000~0000000000
 
+// Release signing is scoped to the app target so Swift package resource bundles get no provisioning profile.
+CODE_SIGN_STYLE = Automatic
+
 #include? "../Private.xcconfig"
 
 // Debug builds always use Google's documented test app ID and test banner unit, whatever Private.xcconfig holds,

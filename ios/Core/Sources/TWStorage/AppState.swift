@@ -224,12 +224,17 @@ public struct MigrationInfo: Hashable, Sendable {
     public var keys: [String: String]
     /// The `localStorage` database read, relative to the data container (`nil` when none was found).
     public var localStorageFile: String?
+    /// The generation of the fallback Cordova build's claim this migration adopted (`CordovaHandBack`, IN-17); nil
+    /// without one.
+    public var handBackGeneration: Int?
 
-    public init(source: String, migratedAtMillis: Int64, keys: [String: String], localStorageFile: String? = nil) {
+    public init(source: String, migratedAtMillis: Int64, keys: [String: String], localStorageFile: String? = nil,
+                handBackGeneration: Int? = nil) {
         self.source = source
         self.migratedAtMillis = migratedAtMillis
         self.keys = keys
         self.localStorageFile = localStorageFile
+        self.handBackGeneration = handBackGeneration
     }
 }
 
@@ -279,6 +284,8 @@ extension AppState {
             m["keys"] = .object(JSONObject(migration.keys.sorted { JSString.less($0.key, $1.key) }
                 .map { ($0.key, .string($0.value)) }))
             m["localStorageFile"] = migration.localStorageFile.map(JSONValue.string) ?? .null
+            // Only with a claim, so the files of states without one keep their bytes.
+            if let generation = migration.handBackGeneration { m["handBackGeneration"] = .number(generation) }
             o["migration"] = .object(m)
         } else {
             o["migration"] = .null
@@ -318,7 +325,8 @@ extension AppState {
             for (k, v) in m["keys"]?.objectValue ?? JSONObject() { keys[k] = try string(v, "migration key \(k)") }
             migration = MigrationInfo(source: try string(m["source"], "source"),
                                       migratedAtMillis: Int64(try int(m["migratedAtMillis"], "migratedAtMillis")),
-                                      keys: keys, localStorageFile: try optionalString(m["localStorageFile"], "file"))
+                                      keys: keys, localStorageFile: try optionalString(m["localStorageFile"], "file"),
+                                      handBackGeneration: try m["handBackGeneration"].map { try int($0, "handBackGeneration") })
         }
         self.init(
             schemaVersion: try int(o["schemaVersion"], "schemaVersion"), places: places,

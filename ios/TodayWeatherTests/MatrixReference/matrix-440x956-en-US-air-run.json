@@ -1,0 +1,86 @@
+{
+ "set": "air",
+ "size": "440x956",
+ "language": "en-US",
+ "files": [
+  "matrix-440x956-en-US-air-captures.json",
+  "matrix-440x956-en-US-air-kma-jeju.input.json",
+  "matrix-440x956-en-US-air-kma-seoul.input.json",
+  "matrix-440x956-en-US-air-vc-london.input.json",
+  "matrix-440x956-en-US-kma-seoul-0.png",
+  "matrix-440x956-en-US-kma-seoul-1.png",
+  "matrix-440x956-en-US-kma-seoul-2.png",
+  "matrix-440x956-en-US-kma-seoul-3.png",
+  "matrix-440x956-en-US-kma-seoul-4.png",
+  "matrix-440x956-en-US-kma-seoul-5.png",
+  "matrix-440x956-en-US-kma-seoul-6.png"
+ ],
+ "env": {
+  "screen": {
+   "width": 440,
+   "height": 956
+  },
+  "viewport": {
+   "width": 440,
+   "height": 902
+  },
+  "devicePixelRatio": 3,
+  "language": "en-US",
+  "languages": [
+   "en-US"
+  ],
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+  "region": "US",
+  "theme": "light",
+  "units": {
+   "temperatureUnit": "F",
+   "windSpeedUnit": "mph",
+   "pressureUnit": "inHg",
+   "distanceUnit": "mi",
+   "precipitationUnit": "in",
+   "airUnit": "airnow"
+  },
+  "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready light-theme air"
+ },
+ "device": {
+  "name": "twios_in18_promax",
+  "udid": "4093638A-BB4D-4903-934B-4A4D7A8E6496",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+ },
+ "capturedAt": "2026-11-16T18:20:37Z",
+ "webViewOrigins": [
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  }
+ ]
+}

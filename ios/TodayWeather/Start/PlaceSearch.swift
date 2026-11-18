@@ -1,5 +1,6 @@
 import Foundation
 import GooglePlaces
+import TWDomain
 import os
 
 /// A place prediction: its full text (`description`) and where the typed word first matched in it
@@ -79,5 +80,91 @@ private final class OnceAnswer: @unchecked Sendable {
             return continuation
         }
         pending?.resume(returning: value)
+    }
+}
+
+/// The search of S01 and S02 (IN-10's component, shared with IN-11): the typed word, Google's predictions with the
+/// Places key (300 ms after the last change, AN-10; only the latest word's answer shows; a word without predictions
+/// keeps the last ones, as `callbackAutocomplete` returns on `ZERO_RESULTS`) and the bundled towns (`OnScrollResults`:
+/// 10 at a time, more as the last row appears). S01 scans the towns only without the key and keeps the last ones for a
+/// word without a match (AN-10); S02 always scans them, and a new word replaces them (`searchResults = []`).
+@MainActor
+@Observable
+final class PlaceQuery {
+    struct Predictions: Equatable {
+        let word: String
+        let list: [Prediction]
+    }
+
+    struct Towns: Equatable {
+        let word: String
+        let page: TownPage
+    }
+
+    @ObservationIgnored let search: (any PlaceSearch)?
+    @ObservationIgnored private let towns: () -> TownSearch?
+    @ObservationIgnored private let scansTowns: Bool
+    @ObservationIgnored private let keepsLastTowns: Bool
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
+    /// Google's predictions arrive this long after the last change.
+    @ObservationIgnored var predictionDelay = Duration.milliseconds(300)
+
+    /// The typed word (`search.word`).
+    private(set) var word = ""
+    /// Google's predictions (`searchResults2`).
+    private(set) var predictions: Predictions?
+    /// The bundled towns found (`searchResults`).
+    private(set) var townResults: Towns?
+
+    init(search: (any PlaceSearch)?, towns: @escaping () -> TownSearch?, scansTowns: Bool, keepsLastTowns: Bool) {
+        self.search = search
+        self.towns = towns
+        self.scansTowns = scansTowns
+        self.keepsLastTowns = keepsLastTowns
+    }
+
+    /// `OnChangeSearchWord`: an empty word clears the results; otherwise the towns and the predictions for it.
+    func change(_ text: String) {
+        word = text
+        searchTask?.cancel()
+        let typed = text.trimmingCharacters(in: .whitespaces)
+        if typed.isEmpty {
+            predictions = nil
+            townResults = nil
+            return
+        }
+        if scansTowns, let towns = towns() {
+            let page = towns.search(typed)
+            if !page.towns.isEmpty || !keepsLastTowns { townResults = page.towns.isEmpty ? nil : Towns(word: typed, page: page) }
+        }
+        if let search {
+            let delay = predictionDelay
+            searchTask = Task { [weak self] in
+                do { try await Task.sleep(for: delay) } catch { return }
+                let found = await search.predictions(typed)
+                guard let self, !Task.isCancelled, let found, !found.isEmpty else { return }
+                predictions = Predictions(word: typed, list: found)
+            }
+        }
+    }
+
+    /// `OnScrollResults`: the next ten towns when the last shown one comes into view.
+    func moreTowns() {
+        guard let shown = townResults, shown.page.next >= 0, let towns = towns() else { return }
+        let more = towns.search(shown.word, from: shown.page.next)
+        townResults = Towns(word: shown.word, page: TownPage(towns: shown.page.towns + more.towns, next: more.next))
+    }
+
+    /// Cancel, an add, edit mode: the word and every result go.
+    func clear() {
+        show(word: "")
+    }
+
+    /// The word set without a search (`search.word = geoInfo.name` after find-by-location): the results go.
+    func show(word text: String) {
+        searchTask?.cancel()
+        word = text
+        predictions = nil
+        townResults = nil
     }
 }

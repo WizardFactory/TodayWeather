@@ -109,6 +109,8 @@ struct GeocodeAndPlacesTests {
         let (silent, silentEvents) = AsyncStream<PositionEvent>.makeStream()
         async let none = PositionFix.first(silent, clock: clock)
         silentEvents.yield(.fix(Location(lat: 1, long: 1), at: start.addingTimeInterval(-3600)))
+        // The 60 s wait must be on the clock before it moves, or the timeout falls due after the new time (CODEX-3021-1).
+        #expect(await due(clock, within: 60_000))
         await clock.advance(by: 60_000)
         #expect(await none == nil)
         silentEvents.finish()

@@ -22,7 +22,8 @@ final class Monetization {
     static let shared: Monetization = {
         let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "monetization")
         let settings = AdsSettings.current
-        return Monetization(analytics: UsageAnalytics(sdk: FirebaseAnalyticsSdk(), records: AnalyticsConsentFiles.standard(),
+        // The choice is handed back to a fallback Cordova build at every write (IN-17).
+        return Monetization(analytics: UsageAnalytics(sdk: FirebaseAnalyticsSdk(), records: HandBackConsentRecords.app,
                                                       trafficType: AdsSettings.trafficType(settings),
                                                       log: { log.notice("\($0, privacy: .public)") }),
                             settings: settings)

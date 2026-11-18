@@ -1,0 +1,127 @@
+{
+ "set": "shell",
+ "size": "375x667",
+ "language": "en-US",
+ "files": [
+  "matrix-375x667-en-US-shell-en-US-light-forecast-header.png",
+  "matrix-375x667-en-US-shell-en-US-light-forecast-tabs.png",
+  "matrix-375x667-en-US-shell-en-US-light-menu-statusbar.png",
+  "matrix-375x667-en-US-shell-en-US-light-menu.png",
+  "matrix-375x667-en-US-shell-en-US-light.json"
+ ],
+ "env": {
+  "screen": {
+   "width": 375,
+   "height": 667
+  },
+  "viewport": {
+   "width": 375,
+   "height": 647
+  },
+  "devicePixelRatio": 2,
+  "language": "en-US",
+  "languages": [
+   "en-US"
+  ],
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+  "region": "US",
+  "utilLanguage": "en-US",
+  "translate": "en",
+  "insets": {
+   "top": "0px",
+   "bottom": "0px",
+   "left": "0px",
+   "right": "0px"
+  },
+  "body": "todayWeather grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready old-theme forecast"
+ },
+ "device": {
+  "name": "twios_in18_se",
+  "udid": "3103237B-4BDF-4DC7-AE44-7E3AB0317C01",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation"
+ },
+ "capturedAt": "2026-11-16T18:20:25Z",
+ "webViewOrigins": [
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  },
+  {
+   "x": 0,
+   "y": 40
+  }
+ ]
+}

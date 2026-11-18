@@ -447,3 +447,78 @@ struct PushSyncTests {
         #expect(stored.settings.theme == "dark")
     }
 }
+
+/// `Push.removePushListByCityIndex` through `PushSync.removeCity` (IN-11, #2960; the Android `PushSyncTest` removal
+/// cases of AN-11): the records of the index are dropped and saved before `DELETE /v000903/push` is sent; the request's
+/// shape is compared with the Cordova iOS request in `PushRegistrationTests.removalsMatchCordova` (TWStorageTests).
+@MainActor
+@Suite(.timeLimit(.minutes(1)))
+struct PushRemovalTests {
+    @Test func aPlacesAlarmsAreSavedAwayThenDeleted() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let transport = HeldTransport()
+        let outcome = try #require(try await files.process(transport).sync.removeCity(1))
+        #expect(outcome.requests.map(\.method) == ["DELETE"])
+        let request = try #require(transport.requests.first)
+        #expect(request.path == "/v000903/push")
+        #expect(request.headers == ["Content-Type": "application/json", "Device-Id": "DEVICE"])
+        #expect(request.body.jsonText == #"{"cityIndex":1,"fcmToken":"token-a"}"#)
+        let saved = try #require(try files.file.load())
+        #expect(saved.push.records.isEmpty, "the records of index 1 are saved away")
+        #expect(saved.push.fcmToken == "token-a")
+    }
+
+    /// A24: only the records of the index go; a later place's records keep their index.
+    @Test func otherRecordsAreNotRenumbered() async throws {
+        let files = Files()
+        var records = Files.records
+        records.append(JSONObject([("cityIndex", 2), ("id", 1), ("time", "2026-11-07T22:40:00.000Z"),
+                                   ("dayOfWeek", [true, true, true, true, true, true, true]), ("enable", true), ("category", "alarm")]))
+        try files.file.save(AppState(places: Files.places, placeIndex: 1, push: PushState(type: "ios", fcmToken: "token-a", records: records),
+                                     migration: MigrationInfo(source: "", migratedAtMillis: 0, keys: [:])))
+        _ = try await files.process(HeldTransport()).sync.removeCity(1)
+        let saved = try #require(try files.file.load())
+        #expect(saved.push.records.map { $0["cityIndex"] } == [2])
+    }
+
+    @Test func aRegistrationIDStandsInForAMissingToken() async throws {
+        let files = Files()
+        try files.file.save(AppState(places: Files.places, placeIndex: 1,
+                                     push: PushState(registrationId: "reg-1", type: "ios", fcmToken: nil, records: Files.records),
+                                     migration: MigrationInfo(source: "", migratedAtMillis: 0, keys: [:])))
+        let transport = HeldTransport()
+        _ = try await files.process(transport).sync.removeCity(1)
+        #expect(transport.requests.first?.body.jsonText == #"{"cityIndex":1,"registrationId":"reg-1"}"#)
+    }
+
+    /// Without a token or a registration ID Cordova returns before anything: no request, the records stay.
+    @Test func nothingWithoutATokenOrARegistrationID() async throws {
+        let files = Files()
+        try files.seed(token: nil)
+        let transport = HeldTransport()
+        let outcome = try #require(try await files.process(transport).sync.removeCity(1))
+        #expect(outcome.requests.isEmpty && transport.requests.isEmpty)
+        #expect(try files.file.load()?.push.records.count == 2)
+    }
+
+    /// The records cannot be saved (a full disk): nothing is sent and nothing fails (as #2925 F1).
+    @Test func nothingIsSentWhenTheRecordsCannotBeSaved() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let transport = HeldTransport()
+        let store = ProcessStore(files.file, failures: 1)
+        #expect(try await files.process(transport, store: store).sync.removeCity(1) == nil)
+        #expect(transport.requests.isEmpty)
+    }
+
+    /// Without a request context (no server URL or `Device-Id`) nothing is removed or sent.
+    @Test func nothingWithoutAContext() async throws {
+        let files = Files()
+        try files.seed(token: "token-a")
+        let transport = HeldTransport()
+        #expect(try await files.process(transport) { _ in nil }.sync.removeCity(1) == nil)
+        #expect(transport.requests.isEmpty)
+        #expect(try files.file.load()?.push.records.count == 2)
+    }
+}

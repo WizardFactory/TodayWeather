@@ -195,6 +195,15 @@ let london = Place(currentPosition: false, disable: false, name: "런던", addre
                    location: Location(lat: 51.51, long: -0.13))
 let koreanUnits = UnitSettings.defaults(region: "KR")
 
+/// Waits on the real clock (at most `seconds`) until `ready` holds and a sleep falls due within `within` ms: a request
+/// starts, and its answer waits on the clock, after work that touches no clock. Moving the clock before then leaves the
+/// answer's sleep behind the new time, so a test that then awaits the request waits for ever (a CI job hung so).
+@MainActor
+@discardableResult
+func due(_ clock: VirtualClock, within: Int64, seconds: Double = 30, when ready: () -> Bool = { true }) async -> Bool {
+    await eventually(seconds) { ready() && (clock.nextDeadline ?? .max) <= clock.elapsed + within }
+}
+
 /// Waits on the real clock until `condition` holds (at most `seconds`).
 @MainActor
 func eventually(_ seconds: Double = 5, _ condition: () -> Bool) async -> Bool {

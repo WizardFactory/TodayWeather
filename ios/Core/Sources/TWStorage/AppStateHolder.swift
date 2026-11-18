@@ -16,6 +16,9 @@ extension AppStateStore: AppStateSaving {}
 ///
 /// Other writers of the process (IN-04's push token sync) call `update`, which applies their change the same way and
 /// returns once it is saved. Nothing else writes the state file after the migration.
+///
+/// `onSaved` (IN-17's hand-back) runs with the state the migration produced, once loaded, and with each state after its
+/// save succeeded, in the same order, off the main actor.
 @MainActor
 @Observable
 public final class AppStateHolder {
@@ -23,16 +26,25 @@ public final class AppStateHolder {
     public private(set) var state: AppState?
 
     @ObservationIgnored private let store: any AppStateSaving
+    @ObservationIgnored private let onSaved: (@Sendable (AppState) -> Void)?
     @ObservationIgnored private var lastSave: Task<Void, any Error>?
 
-    public init(store: any AppStateSaving) {
+    public init(store: any AppStateSaving, onSaved: (@Sendable (AppState) -> Void)? = nil) {
         self.store = store
+        self.onSaved = onSaved
     }
 
     /// The state the migration produced (and saved): the holder takes it over. Later calls are ignored.
     public func load(_ migrated: AppState) {
         guard state == nil else { return }
         state = migrated
+        if let onSaved {
+            let previous = lastSave
+            lastSave = Task.detached {
+                _ = await previous?.result
+                onSaved(migrated)
+            }
+        }
     }
 
     /// A change of the UI: shown at once and saved after the changes before it. Ignored before `load`.
@@ -60,10 +72,11 @@ public final class AppStateHolder {
         guard var next = state else { return nil }
         update(&next)
         state = next
-        let previous = lastSave, store = self.store, snapshot = next
+        let previous = lastSave, store = self.store, snapshot = next, onSaved = self.onSaved
         let task = Task.detached {
             _ = await previous?.result
             try store.save(snapshot)
+            onSaved?(snapshot)
         }
         lastSave = task
         return (next, task)

@@ -61,10 +61,12 @@ STATES = {
 # The owned capture simulator (iOS 26.5, iPhone 16, 393x852 pt, scale 3).
 DEVICES = {"517DC815-4EF1-4EC7-835C-FAD594AFB4C5": ("twios_cap_16", "393x852")}
 # Sources of the captured pages inside the built app, compared with client/ at the build commit.
-PAGE_SOURCES = ["templates/units.html", "templates/setting-radio.html", "templates/tab-forecast.html",
+# templates/tab-forecast.html, index.html and locales/*.json are not listed since the 1.1.3 build (IN-18): its
+# tracking-settings hook (#2990) adds its menu row, page notice and strings to the built copies, so they never equal
+# client/; neither shows in these captures (the simulator's tracking answer is undetermined).
+PAGE_SOURCES = ["templates/units.html", "templates/setting-radio.html",
                 "js/controller.units.js", "js/controller.setting.radio.js", "js/controller.settingctrl.js",
-                "js/service.util.js", "js/controller.forecastctrl.js", "js/app.js", "css/ionic.app.css", "data/theme.js",
-                "index.html", "locales/ko.json", "locales/en.json"]
+                "js/service.util.js", "js/controller.forecastctrl.js", "js/app.js", "css/ionic.app.css", "data/theme.js"]
 PRODUCTION_HOSTS = {"todayweather.wizardfactory.net", "tw-wzdfac.rhcloud.com", "todayweather-wizardfactory.rhcloud.com",
                     "todayweather.ai"}
 

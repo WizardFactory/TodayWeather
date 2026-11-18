@@ -1,0 +1,53 @@
+{
+ "set": "start",
+ "size": "440x956",
+ "language": "ko-KR",
+ "files": [
+  "matrix-440x956-ko-KR-start-ko-KR-access-popup.png",
+  "matrix-440x956-ko-KR-start-ko-KR-access-statusbar.png",
+  "matrix-440x956-ko-KR-start-ko-KR-access.json",
+  "matrix-440x956-ko-KR-start-ko-KR-access.png",
+  "matrix-440x956-ko-KR-start-ko-KR-start-statusbar.png",
+  "matrix-440x956-ko-KR-start-ko-KR-start.json",
+  "matrix-440x956-ko-KR-start-ko-KR-start.png"
+ ],
+ "env": {
+  "screen": {
+   "width": 440,
+   "height": 956
+  },
+  "viewport": {
+   "width": 440,
+   "height": 902
+  },
+  "devicePixelRatio": 3,
+  "language": "ko-KR",
+  "languages": [
+   "ko-KR"
+  ],
+  "region": "KR",
+  "body": "todayWeather light-theme grade-a platform-webview platform-cordova platform-ios platform-ios26 platform-ios26_5 platform-ready start",
+  "state": "start"
+ },
+ "device": {
+  "name": "twios_in18_promax",
+  "udid": "4093638A-BB4D-4903-934B-4A4D7A8E6496",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+  "deviceType": "com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro-Max"
+ },
+ "capturedAt": "2026-11-16T16:53:45Z",
+ "webViewOrigins": [
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  },
+  {
+   "x": 0,
+   "y": 162
+  }
+ ]
+}

@@ -26,7 +26,9 @@ let package = Package(
         .target(name: "TWResources", resources: [.copy("Client")]),
         .testTarget(name: "TWResourcesTests", dependencies: ["TWResources"]),
         // The Cordova migration rules and readers, with a fixture of each storage layout; the push requests against
-        // the Cordova iOS requests (Fixtures/push/push.json, written by ios/tools/push/generate.py).
+        // the Cordova iOS requests (Fixtures/push/push.json, written by ios/tools/push/generate.py); the rollback
+        // hand-back's writes against the fallback Cordova build's starts (Fixtures/handback/handback.json, written by
+        // ios/tools/handback/generate.py, IN-17).
         .testTarget(name: "TWStorageTests", dependencies: ["TWStorage"], resources: [.copy("Fixtures")]),
         .testTarget(name: "TWModelTests", dependencies: ["TWModel"]),
         // Push registration runs (PushSync: order, interrupted processes) and the HTTP transport (IN-04). The weather

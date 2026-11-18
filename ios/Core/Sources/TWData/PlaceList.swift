@@ -28,6 +28,25 @@ public enum PlaceList {
         return s
     }
 
+    /// `removeCity(index)` (S02, IN-11): the place at `index` removed (S02 offers no delete for the current position);
+    /// the selection moves to the first enabled place only when it now equals the number of places
+    /// (`setFirstCityIndex`), so deleting an earlier place keeps the selected number, which now names the next place
+    /// (kept, as AN-11).
+    public static func remove(_ state: AppState, _ index: Int) -> AppState {
+        guard state.places.indices.contains(index) else { return state }
+        var s = state
+        s.places.remove(at: index)
+        if s.placeIndex == s.places.count { s.placeIndex = PlaceIndex.first(s.places.map(\.disable), current: s.placeIndex) }
+        return s
+    }
+
+    /// An add from S02 (`setCityIndex(getCityCount() - 1)`): the last place selected; S01's gate is not touched.
+    public static func selectLast(_ state: AppState) -> AppState {
+        var s = state
+        s.placeIndex = s.places.count - 1
+        return s
+    }
+
     /// `disableCity(disable)`: the current position's flag, then `setFirstCityIndex` while the index is at most 0.
     public static func disableCurrent(_ state: AppState, _ disable: Bool) -> AppState {
         if state.places.isEmpty { return state }

@@ -119,8 +119,9 @@ public enum RefreshInterval {
 /// and about rows show a chevron (`ng-if="!isAndroid()"`). The guide row (`ng-if="false"`) is never shown; About shows
 /// in every locale (`showAbout()` returns true).
 public enum MenuRow: String, CaseIterable, Sendable {
+    // index.html's order: since #2990 (client 1.1.3) the privacy blocks follow About.
     case specialWeather, nationalWeather, nationalAir, nullschoolWind, units, startupPage, refreshInterval, theme
-    case analytics, adPrivacy, privacyPolicy, terms, sendFeedback, rateApp, version, about
+    case sendFeedback, rateApp, version, about, analytics, adPrivacy, privacyPolicy, terms
 
     public var textKey: String {
         switch self {
