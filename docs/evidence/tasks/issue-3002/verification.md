@@ -2,6 +2,8 @@
 
 Revision `f785d4ad`, stacked on SR-3 (PR #3015) over master. Run on 2026-11-16: macOS with Python 3.11.15 for the offline checks; a disposable Lima VM (Ubuntu 24.04 aarch64) for the Linux check. Nothing contacted AWS, a provider or production.
 
+The follow-up PR candidate incorporates the reviewed 90-minute CI workflow and updates the workflow diagram. Runtime behavior is unchanged from the measured revision. The source delta consists of comment changes and removal of an unused constant. Archify validation, delivery, provenance and browser checks passed. Both the workflow and revised cost cards were visually checked in Ego Browser.
+
 ## Behaviour
 
 - **Cost policy (schema 2).** Frozen tariffs plus `ceiling_usd` (the cumulative ceiling, USD 300 by the owner's decision of 2026-11-14), `prior_spend_usd` (recorded spend of earlier attempts) and `finish_reserve_usd` (at least the floor computed from the tariffs: 2 GiB evidence export, 9,000 export reads and two more host hours). A policy whose prior spend plus reserve reaches the ceiling is refused.
