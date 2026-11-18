@@ -113,7 +113,7 @@ public final class WeatherRepository {
         return entry
     }
 
-    /// Loads `place` unless the gate stops it (`force` bypasses the gate, as a tab tap, the retry button and the timer
+    /// Loads `place` unless the gate stops it (`force` bypasses the gate, as a manual refresh, the retry button and the timer
     /// do, after `reloadCity`). `acceptLanguage` is the WebView's header (`ShellLocale.acceptLanguage`).
     public func load(_ place: Place, units: UnitSettings, acceptLanguage: String, force: Bool) async -> LoadResult {
         if place.disable || (!force && !canLoad(place)) { return .skipped }

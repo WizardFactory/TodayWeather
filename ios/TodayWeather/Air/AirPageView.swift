@@ -42,6 +42,7 @@ enum AirBlock: Hashable {
 /// What the page's taps ask for: the arrows, a detail cell's pollutant, a station, the current weather (S03) and the
 /// info rows (the units page, the forecast source's description O08).
 struct AirPageActions {
+    var refresh: @MainActor () async -> Void = {}
     var previous: () -> Void = {}
     var next: () -> Void = {}
     var code: (String) -> Void = { _ in }
@@ -60,9 +61,11 @@ struct AirPageView: View {
     var actions = AirPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it).
     var scrolls = true
+    @Environment(\.shellInsets) private var shellInsets
 
     var body: some View {
         let colors = AirColors.of(theme)
+        let barHeight = ShellMetrics.headerHeight + shellInsets.top
         let stack = VStack(spacing: 0) {
             Color.clear.frame(height: 0).id(AirPageView.top)
             VStack(spacing: 0) {
@@ -82,7 +85,13 @@ struct AirPageView: View {
         Group {
             if scrolls {
                 ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) { stack }
+                    ScrollView(.vertical, showsIndicators: false) {
+                        stack.padding(.top, -barHeight)
+                    }
+                        // Keep the hero under the translucent bar and the pull indicator below it.
+                        .scrollClipDisabled()
+                        .padding(.top, barHeight)
+                        .refreshable { await actions.refresh() }
                         .onChange(of: content.scrolls) { proxy.scrollTo(AirPageView.top, anchor: .top) }
                 }
             } else {
@@ -188,7 +197,7 @@ private struct AirHeader: View {
         .frame(height: height)
         .background(colors.page.header.color)
         .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 20).onEnded { value in
+        .simultaneousGesture(DragGesture(minimumDistance: 20).onEnded { value in
             // Ionic's swipe: a horizontal fling; left shows the next place.
             let dx = value.predictedEndTranslation.width
             guard abs(value.translation.width) > abs(value.translation.height) else { return }

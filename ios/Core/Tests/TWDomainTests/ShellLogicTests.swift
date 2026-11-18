@@ -46,7 +46,6 @@ struct ShellLogicTests {
     @Test func tabsInCordovaOrder() {
         #expect(ShellTab.allCases == [.search, .forecast, .dailyforecast, .air])
         #expect(ShellTab.allCases.map(\.textKey) == ["LOC_SAVED_LOCATIONS", "LOC_HOURLY_FORECAST", "LOC_DAILY_FORECAST", "LOC_AIR_INFORMATION"])
-        #expect(ShellTab.allCases.map(\.refreshes) == [false, true, true, true])
     }
 
     /// index.html L97-L171 with the iOS choices: Korea-only rows for KR, chevrons where `!isAndroid()`, blocks. Since
@@ -66,24 +65,6 @@ struct ShellLogicTests {
                                                .refreshInterval, .theme, .sendFeedback, .rateApp])
         #expect(korea.map(\.textKey).first == "LOC_TYPE_SPECIAL_WEATHER")
         #expect(korea.map(\.textKey).last == "LOC_TERMS")
-    }
-
-    /// `doTabForecast`: another tab is selected; the selected weather or air tab reloads unless the previous weather or
-    /// air tab tap was 700 ms or less before (every such tap counts); the saved-places tab never reloads.
-    @Test func tabTapsSelectOrRefresh() {
-        var taps = TabTaps()
-        #expect(taps.tap(.forecast, selected: .forecast, now: 10_000) == .refresh(.forecast))
-        #expect(taps.tap(.forecast, selected: .forecast, now: 10_700) == .none, "700 ms: skipped")
-        #expect(taps.tap(.forecast, selected: .forecast, now: 11_401) == .refresh(.forecast), "701 ms after the skipped tap")
-        #expect(taps.tap(.dailyforecast, selected: .forecast, now: 11_500) == .select(.dailyforecast))
-        #expect(taps.tap(.dailyforecast, selected: .dailyforecast, now: 12_000) == .none, "the switch counted as a tap")
-        #expect(taps.tap(.search, selected: .dailyforecast, now: 12_100) == .select(.search))
-        #expect(taps.tap(.search, selected: .search, now: 20_000) == .none)
-        #expect(taps.tap(.air, selected: .search, now: 20_100) == .select(.air))
-        #expect(taps.tap(.air, selected: .air, now: 21_000) == .refresh(.air), "the saved-places taps did not count")
-        var first = TabTaps()
-        #expect(first.tap(.air, selected: .air, now: 500) == .none, "Cordova's lastClickTime starts at 0")
-        #expect(first.tap(.air, selected: .air, now: 1_201) == .refresh(.air))
     }
 
     @Test func startGateFollowsStartVersion() {

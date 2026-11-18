@@ -7,7 +7,7 @@ import TWModel
 import TWStorage
 @testable import TodayWeather
 
-/// The weather pages in the shell (IN-08, #2957): the launch and a tap on the selected tab reload through IN-07's hook,
+/// The weather pages in the shell (IN-08, #2957): launch and manual refresh load the selected place,
 /// the request carries the WebView's `Accept-Language` and the units, the header shows the spinner while the place loads
 /// (O17), a failure shows the retry confirmation O03 with the Cordova texts and its OK reloads, the expander is stored, the
 /// pollen and air-forecast popups, and a late response stays with its place (V09). The server is a double in this test;
@@ -84,7 +84,7 @@ struct WeatherTabTests {
         return condition()
     }
 
-    @Test func theLaunchLoadsTheSelectedPlaceAndATabTapReloads() async throws {
+    @Test func manualRefreshWaitsForTheSelectedPlacesResponse() async throws {
         let f = Fixture(Self.byPlace(seoul: 0.4))
         #expect(f.shell.selected == .forecast)
         f.screens.handle(.launch)
@@ -101,12 +101,10 @@ struct WeatherTabTests {
         #expect(content.titleAccessory == nil, "loaded: no spinner, and no location glyph for a saved place")
         #expect(f.holder.state?.places[1].source == "KMA")
 
-        // A tap on the selected tab (more than 700 ms after the last one) reloads at once (`reloadEvent 'tab'`).
-        f.shell.now = { 10_000 }
-        f.shell.tapTab(.forecast)
-        #expect(await eventually { f.server.requests.count == 2 })
+        await f.screens.session.refresh()
+        #expect(f.server.requests.count == 2)
+        #expect(!f.screens.session.loadingSelected)
         // The Daily tab opens a new visit of the same place.
-        f.shell.now = { 20_000 }
         f.shell.tapTab(.dailyforecast)
         #expect(await eventually { f.screens.scope?.type == .mid })
         #expect(f.screens.content(.dailyforecast)?.title == "회현동")
@@ -124,8 +122,7 @@ struct WeatherTabTests {
         #expect(popup.lines == captured["body"]?.arrayValue?.compactMap(\.stringValue))
         #expect(popup.buttons.map(\.text) == captured["buttons"]?.arrayValue?.compactMap { $0["text"]?.stringValue })
         #expect(popup.buttons.map(\.style) == [.standard, .positive], "button-default, button-positive")
-        f.shell.now = { 10_000 }
-        f.shell.tapTab(.forecast)
+        await f.screens.session.refresh()
         try await Task.sleep(for: .milliseconds(300))
         #expect(f.server.requests.count == 1, "reloads wait while the confirmation is open")
         f.shell.tapPopupButton(1)

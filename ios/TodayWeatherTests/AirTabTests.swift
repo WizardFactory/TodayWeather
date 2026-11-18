@@ -8,7 +8,7 @@ import TWStorage
 @testable import TodayWeather
 
 /// The air page in the shell (IN-09, #2958): the Air tab opens a visit on the selected place's weather, a station cell
-/// shows that station's values and a reload (a tap on the selected tab) returns to the first station, a pollutant chosen
+/// shows that station's values and a manual refresh returns to the first station, a pollutant chosen
 /// on S03 stays across the weather tabs until the Locations tab (the captured Cordova navigation), the forecast source's
 /// description O08 has the captured texts, the current weather opens S03, and a response without air data shows only the
 /// grade scale. The server is a double; the state is injected through the `AppStateHolder`.
@@ -66,7 +66,6 @@ struct AirTabTests {
         let f = Fixture(Self.byPlace())
         f.screens.handle(.launch)
         #expect(await eventually { f.screens.scope?.currentWeather != nil })
-        f.shell.now = { 10_000 }
         f.shell.tapTab(.air)
         #expect(await eventually { f.screens.airScope != nil })
         let opened = try #require(f.screens.airContent)
@@ -84,9 +83,8 @@ struct AirTabTests {
         #expect(station.page.info?.first?.text.first?.text == "한강대로")
         #expect(station.scrolls == 1, "the page goes to the top")
 
-        // A tap on the selected Air tab reloads (`reloadEvent 'tab'`): the first station again.
-        f.shell.now = { 20_000 }
-        f.shell.tapTab(.air)
+        // Refreshing restores the first station.
+        await f.screens.session.refresh()
         #expect(await eventually { f.server.requests.count == 2 })
         #expect(await eventually { f.screens.airScope?.stnIndex == 0 })
         #expect(f.screens.airContent?.page.gauge.label == "40")
@@ -110,11 +108,7 @@ struct AirTabTests {
         var codes: [String?] = []
         func note() { codes.append(f.shell.selected == .air ? f.screens.airScope?.aqiCode : nil) }
         note()
-        var now: Int64 = 10_000
         for tab in [ShellTab.forecast, .air, .dailyforecast, .air, .search, .air] {
-            now += 1000
-            let time = now
-            f.shell.now = { time }
             f.shell.tapTab(tab)
             try await Task.sleep(for: .milliseconds(150))
             #expect(await eventually { f.shell.selected == tab && (tab != .air || f.screens.airScope != nil) })
@@ -127,7 +121,6 @@ struct AirTabTests {
         let f = Fixture(Self.byPlace())
         f.screens.handle(.launch)
         #expect(await eventually { f.screens.scope?.currentWeather != nil })
-        f.shell.now = { 10_000 }
         f.shell.tapTab(.air)
         #expect(await eventually { f.screens.airScope != nil })
         let info = try #require(f.screens.airContent?.page.info)
@@ -152,7 +145,6 @@ struct AirTabTests {
         f.holder.change { $0.placeIndex = 2 }
         f.screens.handle(.launch)
         #expect(await eventually { f.holder.state?.places[2].source == "KMA" })
-        f.shell.now = { 10_000 }
         f.shell.tapTab(.air)
         #expect(await eventually { f.screens.airScope != nil })
         let page = try #require(f.screens.airContent?.page)
