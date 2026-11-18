@@ -42,6 +42,16 @@
       "reason": "Selected integrated and full-size offline CLI evidence."
     },
     {
+      "path": "docs/evidence/tasks/issue-3003/finish-linux-check.json",
+      "category": "documentation",
+      "reason": "Selected checks and finish observations from the revision-pinned Ubuntu run."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/finish-simulation.json",
+      "category": "documentation",
+      "reason": "Selected scenario outcomes and stop reasons from the revision-pinned offline simulation."
+    },
+    {
       "path": "docs/operations/server2-shadow-supervisor/manual.json",
       "category": "documentation",
       "reason": "Editable operator manual for the resumable finish path."

@@ -1,0 +1,544 @@
+{
+  "source_revision": "5ba1cd88d54a4497ab22895f3efab2f485ede45f",
+  "source_report_sha256": "203995657aa96efbe4d6dec606a9363876439c5a8a4b2ee174737fcfa93f008e",
+  "command_exit_code": 0,
+  "observations": {
+    "collector_tarball_sha256": "12d7e91db2e447003558c955c4f510b17ed1d77340757f3e591e5222e464675c",
+    "egress_rejected_packets": 1,
+    "machine": "aarch64",
+    "peer_hosts": [
+      "dapi.kakao.com",
+      "todayweather.wizardfactory.net"
+    ],
+    "seconds": 799,
+    "server_binary_sha256": "80e5bcb7322ce672295c20ed286e4a885a53b1e31952753183502fc0740b1f12",
+    "source_commit": "5ba1cd88d54a4497ab22895f3efab2f485ede45f"
+  },
+  "passed": true,
+  "finish_cli": {
+    "aws": "local-version-store",
+    "cleanup_complete": true,
+    "evidence_status": "complete",
+    "exit_code": 0,
+    "paired_files": 12,
+    "source_versions": 18
+  },
+  "scenarios": [
+    {
+      "id": "provider-rejection",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install-host answered one JSON object: started",
+          "passed": true
+        },
+        {
+          "check": "candidate: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+          "passed": true
+        },
+        {
+          "check": "candidate: no dependency on or ordering after the collector",
+          "passed": true
+        },
+        {
+          "check": "guard: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+          "passed": true
+        },
+        {
+          "check": "guard: no dependency on or ordering after the collector",
+          "passed": true
+        },
+        {
+          "check": "reader: Restart=no, TimeoutStopSec=10, LogNamespace=server2",
+          "passed": true
+        },
+        {
+          "check": "reader: no dependency on or ordering after the collector",
+          "passed": true
+        },
+        {
+          "check": "guard watchdog 30 s with SIGKILL",
+          "passed": true
+        },
+        {
+          "check": "stop deadline at epoch + 168 h",
+          "passed": true
+        },
+        {
+          "check": "poweroff deadline at epoch + 170 h",
+          "passed": true
+        },
+        {
+          "check": "the 168 h stop leaves the collector running",
+          "passed": true
+        },
+        {
+          "check": "collector running",
+          "passed": true
+        },
+        {
+          "check": "the guard counted the provider rejection",
+          "passed": true
+        },
+        {
+          "check": "the guard did not stop on the provider rejection (SR-3)",
+          "passed": true
+        },
+        {
+          "check": "candidate, guard and reader still active",
+          "passed": true
+        },
+        {
+          "check": "retention stop drained the collector within the SSH bound (150 s)",
+          "passed": true
+        },
+        {
+          "check": "all four units inactive or failed",
+          "passed": true
+        },
+        {
+          "check": "only the five sources under logs/server2",
+          "passed": true
+        },
+        {
+          "check": "the collector only puts objects into the state bucket",
+          "passed": true
+        },
+        {
+          "check": "server records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "reader records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "collector records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+          "passed": true
+        },
+        {
+          "check": "candidate's rejection record at the destination (LP6-AC2)",
+          "passed": true
+        },
+        {
+          "check": "no guard stop record at the destination",
+          "passed": true
+        },
+        {
+          "check": "reader's summary at the destination",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "storage-authorization",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install-host answered one JSON object: started",
+          "passed": true
+        },
+        {
+          "check": "no stop before storage is denied",
+          "passed": true
+        },
+        {
+          "check": "the guard stopped with s3_authorization",
+          "passed": true
+        },
+        {
+          "check": "the decision keeps the storage-authorization count",
+          "passed": true
+        },
+        {
+          "check": "candidate and reader stopped",
+          "passed": true
+        },
+        {
+          "check": "a final evidence generation after the guard stop, reader inactive (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "retention stop drained the collector within 150 s",
+          "passed": true
+        },
+        {
+          "check": "only the five sources under logs/server2",
+          "passed": true
+        },
+        {
+          "check": "the collector only puts objects into the state bucket",
+          "passed": true
+        },
+        {
+          "check": "server records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "guard records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "collector records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+          "passed": true
+        },
+        {
+          "check": "guard's s3_authorization stop record at the destination",
+          "passed": true
+        },
+        {
+          "check": "candidate's storage-authorization record at the destination",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "config-change",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install with the destination unreachable: started",
+          "passed": true
+        },
+        {
+          "check": "no stop before the change",
+          "passed": true
+        },
+        {
+          "check": "a changed .env stops acquisition within one sample and the unit stop (25 s)",
+          "passed": true
+        },
+        {
+          "check": "retention stop after recovery drained within 150 s",
+          "passed": true
+        },
+        {
+          "check": "only the five sources under logs/server2",
+          "passed": true
+        },
+        {
+          "check": "the collector only puts objects into the state bucket",
+          "passed": true
+        },
+        {
+          "check": "server records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "guard records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "collector records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+          "passed": true
+        },
+        {
+          "check": "guard's stop record shipped after the outage",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "frozen-guard",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install: started",
+          "passed": true
+        },
+        {
+          "check": "collector stopped, candidate and guard still active",
+          "passed": true
+        },
+        {
+          "check": "the watchdog killed the frozen guard and acquisition stopped (within 30 s + 10 s + one sample)",
+          "passed": true
+        },
+        {
+          "check": "guard result is the watchdog",
+          "passed": true
+        },
+        {
+          "check": "a final evidence generation after the watchdog kill, reader inactive (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "restarted collector drained within 150 s",
+          "passed": true
+        },
+        {
+          "check": "only the five sources under logs/server2",
+          "passed": true
+        },
+        {
+          "check": "the collector only puts objects into the state bucket",
+          "passed": true
+        },
+        {
+          "check": "server records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "collector records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "collector-broken",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install with a failing collector: started",
+          "passed": true
+        },
+        {
+          "check": "candidate, guard and reader active although the collector failed",
+          "passed": true
+        },
+        {
+          "check": "the collector is not running",
+          "passed": true
+        },
+        {
+          "check": "no stop decision",
+          "passed": true
+        },
+        {
+          "check": "retention stop completes with the collector failed",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "tampered",
+      "checks": [
+        {
+          "check": "install refuses a changed collector file",
+          "passed": true
+        },
+        {
+          "check": "nothing installed or started",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "evidence-copy",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install-host answered one JSON object: started",
+          "passed": true
+        },
+        {
+          "check": "copy: oneshot, Restart=no, start 10 min, stop 10 s, LogNamespace=server2",
+          "passed": true
+        },
+        {
+          "check": "copy: no relation to acquisition or the collector",
+          "passed": true
+        },
+        {
+          "check": "finalize: oneshot, Restart=no, start 10 min, stop 10 s, LogNamespace=server2",
+          "passed": true
+        },
+        {
+          "check": "finalize: no relation to acquisition or the collector",
+          "passed": true
+        },
+        {
+          "check": "poweroff.service neither waits for nor depends on the copy units",
+          "passed": true
+        },
+        {
+          "check": "poweroff.timer neither waits for nor depends on the copy units",
+          "passed": true
+        },
+        {
+          "check": "launch-expiry.service neither waits for nor depends on the copy units",
+          "passed": true
+        },
+        {
+          "check": "launch-expiry.timer neither waits for nor depends on the copy units",
+          "passed": true
+        },
+        {
+          "check": "the reader's stop starts the finalizer without waiting",
+          "passed": true
+        },
+        {
+          "check": "the 168-hour stop starts the finalizer after its stop requests",
+          "passed": true
+        },
+        {
+          "check": "copy timer: hourly, persistent, enabled and active",
+          "passed": true
+        },
+        {
+          "check": "the contract is published at install",
+          "passed": true
+        },
+        {
+          "check": "the copy timer ships batches, ledger snapshots and indexes",
+          "passed": true
+        },
+        {
+          "check": "a refused evidence PUT fails the copy run",
+          "passed": true
+        },
+        {
+          "check": "acquisition unaffected by the copy failure",
+          "passed": true
+        },
+        {
+          "check": "the reader exited 2 and its unit failed",
+          "passed": true
+        },
+        {
+          "check": "candidate and guard keep running after the reader exit",
+          "passed": true
+        },
+        {
+          "check": "a final evidence generation after the reader failure, reader failed (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "the 168-hour stop stopped candidate and guard",
+          "passed": true
+        },
+        {
+          "check": "a final evidence generation after the 168-hour stop, reader failed (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "retention stop drained the collector within 150 s",
+          "passed": true
+        },
+        {
+          "check": "only the five sources under logs/server2",
+          "passed": true
+        },
+        {
+          "check": "the collector only puts objects into the state bucket",
+          "passed": true
+        },
+        {
+          "check": "server records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "collector records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "copy records at the destination (LP6-AC1)",
+          "passed": true
+        },
+        {
+          "check": "no synthetic key, URL or response body at the destination (LP6-AC4)",
+          "passed": true
+        },
+        {
+          "check": "the copy's failure record reached the destination",
+          "passed": true
+        },
+        {
+          "check": "the copy's committed records reached the destination",
+          "passed": true
+        },
+        {
+          "check": "bucket-only audit complete with the host data unreachable (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "assembled files equal the host files",
+          "passed": true
+        },
+        {
+          "check": "finish CLI completed without SSH or host data (SR-5b F1)",
+          "passed": true
+        },
+        {
+          "check": "finish CLI paired files match the independent bucket audit",
+          "passed": true
+        },
+        {
+          "check": "finish CLI original versions match the loopback uploads",
+          "passed": true
+        },
+        {
+          "check": "finish reads evidence before the synthetic writer fence and seals both buckets before deletion",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "evidence-candidate-exit",
+      "checks": [
+        {
+          "check": "launch user data armed the expiry timer",
+          "passed": true
+        },
+        {
+          "check": "install: started",
+          "passed": true
+        },
+        {
+          "check": "the candidate exit stopped guard and reader",
+          "passed": true
+        },
+        {
+          "check": "a final evidence generation after the candidate exit, reader inactive (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "bucket-only audit complete with the host data unreachable (SR-5a)",
+          "passed": true
+        },
+        {
+          "check": "assembled files equal the host files",
+          "passed": true
+        },
+        {
+          "check": "retention stop completes",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}
