@@ -54,7 +54,7 @@ import net.wizardfactory.todayweather.ui.shell.line
  */
 @Composable
 fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme, host: WeatherTabHost,
-                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}): TabContent {
+                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null): TabContent {
     val metrics = rememberScreenMetrics()
     val texts = host.texts
     val airUnit = state.units.airUnit
@@ -131,7 +131,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
                         else -> {}
                     }
                 },
-                scrollState = scroll)
+                scrollState = scroll, nativeAd = nativeAd)
         },
         popups = { source?.let { s -> SourceDialog(s, texts) { source = null } } },
     )

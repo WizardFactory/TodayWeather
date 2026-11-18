@@ -1,0 +1,34 @@
+{
+  "title": "TodayWeather for Android · Forecast advertising",
+  "scenario": "Version 2.0.0 preview. English controls and a saved Seoul forecast. Ads are embedded in the reading flow. The first Hourly and Daily visits each day are protected. At most one full-screen ad can appear across both tabs on eligible return visits that day.",
+  "steps": [
+    {
+      "title": "Hourly forecast",
+      "instruction": "Read the temperature and precipitation chart. Scroll past the hourly air-quality outlook if present.",
+      "screenshot": "screenshots/hourly-native.png",
+      "caption": "Seoul fixture. Google’s sample advertisement is visible in the Hourly forecast screen.",
+      "expected": "The card follows the complete chart and available hourly air outlook."
+    },
+    {
+      "title": "Daily forecast",
+      "instruction": "Open Daily and read the week at a glance. Scroll past the detailed-weather row to continue to the data source.",
+      "screenshot": "screenshots/daily-native.png",
+      "caption": "Seoul fixture. Google’s sample advertisement is visible in the Daily forecast screen.",
+      "expected": "The card is above source attribution, outside the sideways-scrolling dates."
+    },
+    {
+      "title": "Locations",
+      "instruction": "Open Locations and scroll beneath the saved places. Search and edit mode keep the list available for choosing a place.",
+      "screenshot": "screenshots/locations-native.png",
+      "caption": "Seoul fixture. Google’s sample advertisement is visible in the Locations screen.",
+      "expected": "The card follows the saved locations while viewing the populated list."
+    },
+    {
+      "title": "Air quality (AQI)",
+      "instruction": "Open Air and read the current grade and health advice. Follow the hourly outlook before continuing to detailed pollutant readings.",
+      "screenshot": "screenshots/air-native.png",
+      "caption": "Seoul fixture. Google’s sample advertisement is visible in the Air quality screen.",
+      "expected": "The card follows the summary and available hourly outlook, before the detailed readings."
+    }
+  ]
+}

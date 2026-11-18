@@ -1,21 +1,24 @@
 package net.wizardfactory.todayweather
 
 import android.graphics.Bitmap
+import android.os.SystemClock
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import net.wizardfactory.todayweather.core.domain.shell.Tab
+import net.wizardfactory.todayweather.ui.forecast.RETRY_DIALOG
+import net.wizardfactory.todayweather.ui.forecast.ForecastTags
+import net.wizardfactory.todayweather.ui.air.AirTags
+import net.wizardfactory.todayweather.ui.places.PlacesTags
 import net.wizardfactory.todayweather.ui.shell.MenuRow
 import net.wizardfactory.todayweather.ui.shell.PopupTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
@@ -31,8 +34,8 @@ import org.junit.runner.RunWith
 /**
  * The debug build's ads and analytics on an emulator (#2894 AC2), run by tools/emulator/run-ads-check.sh, which reads
  * the Analytics debug log around each run:
- * - `ads` `online`: the consent flow starts the Ads SDK and a banner of Google's test unit loads and shows under the
- *   tab bar, above the navigation bar; usage analytics stays off (the script finds no logged event);
+ * - `ads` `online`: the consent flow starts the Ads SDK and a Google native test ad loads below the forecast, favorites and air pages in scrollable
+ *   content; usage analytics stays off (the script finds no logged event);
  * - `ads` `optin`, offline: 선택적 이용 통계, 동의, then two tabs, so the log shows events and the check above cannot pass
  *   vacuously (nothing is uploaded; the app is removed before the network returns).
  * Each state is captured to the app's files (ads/).
@@ -47,28 +50,66 @@ class AdsDeviceTest {
     private val app get() = rule.activity.application as TestTodayWeatherApp
 
     @Test
-    fun aTestBannerLoadsAndShowsWhileAnalyticsStaysOff() {
+    fun aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff() {
         assumeTrue("needs -e ads online", TestRunner.args.getString("ads") == "online")
+        assertEquals("debug builds request Google's native test unit", "ca-app-pub-3940256099942544/2247696110", BuildConfig.NATIVE_AD_UNIT)
         rule.closeStartChoice()
-        assertEquals("debug builds request Google's test unit", "ca-app-pub-3940256099942544/9214589741", BuildConfig.BANNER_AD_UNIT)
-        rule.waitUntil(120_000) { rule.onAllNodes(hasTestTag(ShellTags.BANNER)).fetchSemanticsNodes().isNotEmpty() }
+        ScreenFitWalk(rule).seed()
+        for (tab in listOf(Tab.DAILY, Tab.HOURLY, Tab.AIR, Tab.LOCATIONS)) {
+            select(tab)
+            // A reader who already reached the placement sees no late insertion.
+            // Allow the SDK's preloaded creative to be used on a fresh visit in that case.
+            val deadline = SystemClock.elapsedRealtime() + 120_000
+            while (!hasCard() && SystemClock.elapsedRealtime() < deadline) {
+                Thread.sleep(3_000)
+                if (!hasCard()) {
+                    // The side menu hides the slot while the SDK fills a spare.
+                    rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+                    rule.waitForIdle()
+                    Thread.sleep(2_000)
+                    rule.activity.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+                    rule.waitForIdle()
+                }
+            }
+            rule.onNodeWithTag("admob-native-card").performScrollTo().assertIsDisplayed()
+            val bounds = rule.onNodeWithTag("admob-native-card").getBoundsInRoot()
+            val tabs = rule.onNodeWithTag(ShellTags.tab(tab)).getBoundsInRoot()
+            assertTrue("visible ad is in the scrolling page above navigation", bounds.bottom <= tabs.top)
+            rule.onNodeWithTag(ShellTags.BANNER).assertDoesNotExist()
+            assertFalse(app.analytics.choice.value)
+            capture("${tab.name.lowercase()}-native")
+        }
+    }
+
+    @Test
+    fun noFillShowsEachPageWithoutAdSpace() {
+        assumeTrue("needs an offline emulator and -e ads nofill", TestRunner.args.getString("ads") == "nofill")
+        rule.closeStartChoice()
+        ScreenFitWalk(rule).seed()
+        for (tab in listOf(Tab.DAILY, Tab.HOURLY, Tab.AIR, Tab.LOCATIONS)) {
+            select(tab)
+            val content = when (tab) {
+                Tab.DAILY, Tab.HOURLY -> ForecastTags.block(2)
+                Tab.AIR -> AirTags.INFO
+                Tab.LOCATIONS -> PlacesTags.row(0)
+            }
+            rule.onNodeWithTag(content).performScrollTo().assertIsDisplayed()
+            rule.onNodeWithTag("admob-native-card").assertDoesNotExist()
+            rule.onNodeWithTag(ShellTags.BANNER).assertDoesNotExist()
+            assertFalse(app.analytics.choice.value)
+            capture("${tab.name.lowercase()}-no-fill")
+        }
+    }
+
+    private fun hasCard() = rule.onAllNodes(hasTestTag("admob-native-card")).fetchSemanticsNodes().isNotEmpty()
+
+    private fun select(tab: Tab) {
+        rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+        rule.waitUntil(30_000) { app.weather.loading.value.isEmpty() }
         rule.waitForIdle()
-        Thread.sleep(2_000)
-        val banner = rule.onNodeWithTag(ShellTags.BANNER).getBoundsInRoot()
-        val tab = rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).getBoundsInRoot()
-        val root = rule.onRoot().getBoundsInRoot()
-        val density = rule.activity.resources.displayMetrics.density
-        val navigation = ViewCompat.getRootWindowInsets(rule.activity.window.decorView)!!.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom / density
-        assertEquals("the banner sits under the tab bar", tab.bottom.value, banner.top.value, 0.5f)
-        assertEquals("and above the navigation bar", root.bottom.value - navigation, banner.bottom.value, 0.5f)
-        assertTrue("an anchored adaptive banner is at least 50 dp tall", banner.bottom.value - banner.top.value >= 50f)
-        assertFalse(app.analytics.choice.value)
-        capture("banner")
-        // The menu ends at the banner's top edge, as it ended at the WebView's.
-        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
-        rule.waitForIdle()
-        assertEquals(banner.top.value, rule.onNodeWithTag(ShellTags.MENU).getBoundsInRoot().bottom.value, 0.5f)
-        capture("menu")
+        if (rule.onAllNodes(hasTestTag(RETRY_DIALOG)).fetchSemanticsNodes().isNotEmpty()) {
+            rule.onNode(hasText(rule.activity.getString(R.string.LOC_CLOSE)) and hasAnyAncestor(hasTestTag(RETRY_DIALOG))).performClick()
+        }
     }
 
     @Test
@@ -100,7 +141,7 @@ class AdsDeviceTest {
     private fun capture(name: String) {
         rule.waitForIdle()
         Thread.sleep(500)
-        val shot = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
+        val shot = checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()) { "No screenshot: $name" }
         val dir = File(rule.activity.getExternalFilesDir(null), "ads").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { shot.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }

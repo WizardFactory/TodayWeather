@@ -42,6 +42,24 @@ class TwAdsTest {
         override fun values() = values
     }
 
+    @Test
+    fun formatSwitchesApplyIndependentlyEvenWhenTheLegacyDelayIsInvalid() = runTest {
+        val values = policy("true", "invalid")
+        val source = Source(
+            values + (RemoteBannerConfig.NATIVE_ENABLED to "false"),
+            values + (RemoteBannerConfig.INTERSTITIAL_ENABLED to "invalid"),
+            fetch = null,
+        )
+        val config = RemoteBannerConfig(source, backgroundScope)
+        config.load()
+        assertFalse(config.policy.value.nativeEnabled)
+        assertTrue(config.policy.value.interstitialEnabled)
+        source.pendingFetch!!.invoke(true)
+        assertTrue(config.policy.value.nativeEnabled)
+        assertFalse(config.policy.value.interstitialEnabled)
+        assertTrue(config.policy.value.ready)
+    }
+
     private class Banner : BannerAdapter {
         val created = mutableListOf<Pair<() -> Unit, () -> Unit>>()
         var destroyed = 0

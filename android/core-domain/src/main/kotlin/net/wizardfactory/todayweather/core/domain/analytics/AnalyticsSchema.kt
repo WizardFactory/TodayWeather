@@ -18,8 +18,8 @@ object AnalyticsSchema {
         "favorite_change" to mapOf("action" to listOf("add", "remove")),
         "location_permission" to mapOf("outcome" to listOf("granted", "denied", "unknown")),
         "ad_lifecycle" to mapOf("action" to listOf("request", "loaded", "failed", "impression", "show", "hide", "consent_failed"),
-            "ad_format" to listOf("banner")),
-        "ad_load_error" to mapOf("ad_format" to listOf("banner"), "error_code" to CODE),
+            "ad_format" to listOf("banner", "native", "interstitial")),
+        "ad_load_error" to mapOf("ad_format" to listOf("banner", "native", "interstitial"), "error_code" to CODE),
         "ad_policy_exposure" to mapOf("delay_seconds" to DELAY),
     )
 

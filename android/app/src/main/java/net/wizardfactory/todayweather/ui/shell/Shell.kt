@@ -133,10 +133,24 @@ object ShellTags {
 class ShellNavigation(initial: Tab, menuOpen: Boolean = false) {
     var selected: Tab by mutableStateOf(initial)
     var menuOpen: Boolean by mutableStateOf(menuOpen)
+    private var pendingForecast: Tab? = null
+
+    /** Save the user's destination if the SDK covers the activity while Android saves its state. */
+    fun deferForecast(tab: Tab, present: (Tab, () -> Unit) -> Boolean): Boolean {
+        if (pendingForecast != null) return true
+        val source = selected
+        pendingForecast = tab
+        val accepted = present(tab) {
+            if (pendingForecast == tab && selected == source) selected = tab
+            pendingForecast = null
+        }
+        if (!accepted) pendingForecast = null
+        return accepted
+    }
 
     companion object {
         /** The tab and the menu; a state saved before the menu was kept (the tab's name alone) or with a tab no longer there restores what it can. */
-        val Saver: Saver<ShellNavigation, Any> = Saver(save = { listOf(it.selected.name, it.menuOpen) }, restore = { saved ->
+        val Saver: Saver<ShellNavigation, Any> = Saver(save = { listOf((it.pendingForecast ?: it.selected).name, it.menuOpen) }, restore = { saved ->
             val (tab, menu) = when (saved) {
                 is String -> saved to false
                 is List<*> -> saved.getOrNull(0) to (saved.getOrNull(1) == true)

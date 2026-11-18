@@ -31,6 +31,10 @@ class AnalyticsSchemaTest {
     fun validEventsKeepOnlyTheirFields() {
         assertEquals(mapOf("outcome" to "success", "duration_ms" to 1234L),
             AnalyticsSchema.validate("weather_fetch", mapOf("outcome" to "success", "duration_ms" to 1234, "city" to "회현동", "lat" to 37.5)))
+        for (format in listOf("native", "interstitial")) {
+            val impression = mapOf("action" to "impression", "ad_format" to format)
+            assertEquals(impression, AnalyticsSchema.validate("ad_lifecycle", impression))
+        }
         assertEquals(mapOf("action" to "impression", "ad_format" to "banner"),
             AnalyticsSchema.validate("ad_lifecycle", mapOf("action" to "impression", "ad_format" to "banner")))
         assertEquals(mapOf("ad_format" to "banner", "error_code" to 3L),
@@ -61,7 +65,7 @@ class AnalyticsSchemaTest {
             "weather_fetch" to mapOf("outcome" to "success", "duration_ms" to true),
             "weather_load" to mapOf("outcome" to "invalid_input", "duration_ms" to 1),
             "ad_lifecycle" to mapOf("action" to "click", "ad_format" to "banner"),
-            "ad_lifecycle" to mapOf("action" to "show", "ad_format" to "interstitial"),
+            "ad_lifecycle" to mapOf("action" to "show", "ad_format" to "unknown"),
             "ad_load_error" to mapOf("ad_format" to "banner", "error_code" to 1000),
             "ad_policy_exposure" to mapOf("delay_seconds" to 121),
             "favorite_change" to mapOf("action" to 1),

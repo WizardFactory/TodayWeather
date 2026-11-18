@@ -23,6 +23,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.swipeRight
 import android.location.LocationManager
 import android.provider.Settings
@@ -103,6 +104,7 @@ class WeatherTabTest {
         answer: suspend (String) -> String = { url -> if ("51.51" in url) londonBody else seoulBody },
         places: List<Place>? = null,
         index: Int = 1,
+        onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
     ) {
         // The current position is off, as when location was never allowed: Seoul and London are saved places.
         memory = Memory(AppState(places = places ?: listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = index,
@@ -120,7 +122,7 @@ class WeatherTabTest {
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next,
                 { expand -> memory.change { it.copy(expandShortChart = expand) } }, onLocationGlyph = glyph::tap, locationEnabled = glyph::enabled)
-            AppContent(state, entries, loading, retry, session, host, "test", onExit = {})
+            AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, onRepeatVisit = onRepeatVisit)
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
@@ -154,6 +156,31 @@ class WeatherTabTest {
             rule.waitForIdle()
             assertTrue("$tab: a header swipe switches", memory.current().placeIndex != selected)
         }
+    }
+
+    @Test
+    fun onlyReadingPastTheChartMakesTheNextForecastTabTapAnAdOpportunity() {
+        val candidates = mutableListOf<Tab>()
+        show(onRepeatVisit = { tab, _ -> candidates += tab; false })
+        fun select(tab: Tab) = rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+
+        // A matrix/automation scroll and a horizontal chart gesture do not establish a user break.
+        rule.onNodeWithTag(ForecastTags.block(3)).performScrollTo()
+        select(Tab.DAILY)
+        select(Tab.HOURLY)
+        rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft() }
+        select(Tab.DAILY)
+        assertEquals(emptyList<Tab>(), candidates)
+
+        select(Tab.HOURLY)
+        repeat(4) {
+            rule.onNodeWithTag(ForecastTags.PAGE).performTouchInput { swipeUp(durationMillis = 500) }
+            rule.waitForIdle()
+        }
+        select(Tab.DAILY)
+        assertEquals(listOf(Tab.DAILY), candidates)
+        select(Tab.HOURLY)
+        assertEquals("a new visit starts unread", listOf(Tab.DAILY), candidates)
     }
 
     @Test

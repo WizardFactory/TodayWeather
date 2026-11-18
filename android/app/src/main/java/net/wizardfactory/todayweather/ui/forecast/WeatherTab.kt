@@ -128,7 +128,8 @@ object WeatherTabTags {
 @Composable
 internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
                        host: WeatherTabHost, charts: ForecastCharts, images: ForecastChartImages, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
-                       locating: Boolean = false, onNoPlace: () -> Unit = {}): TabContent {
+                       locating: Boolean = false, onNoPlace: () -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null,
+                       onForecastRead: (Tab) -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -221,7 +222,8 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
                         expanded = visit.expand
                         host.onExpand(visit.expand)
                     },
-                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll)
+                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll, nativeAd = nativeAd,
+                    onForecastRead = { onForecastRead(tab) })
             }
         },
         popups = {
