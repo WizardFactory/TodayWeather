@@ -57,9 +57,6 @@ public enum ShellTab: String, CaseIterable, Sendable {
         case .air: "LOC_AIR_INFORMATION"
         }
     }
-
-    /// The tabs whose tap runs `doTabForecast` (`ng-click`); the saved-places tab only follows its `href`.
-    public var refreshes: Bool { self != .search }
 }
 
 /// `settingsInfo.startupPage`: the first tab (app.js L369-L390) and the menu's value text (`getStartupPageValueStr`).
@@ -183,33 +180,5 @@ public enum MenuRow: String, CaseIterable, Sendable {
     public static func rows(region: String?) -> [MenuRow] {
         let korea = region.map { JSString.equal($0, "KR") } ?? false
         return allCases.filter { !$0.krOnly || korea }
-    }
-}
-
-/// What a tap on a tab does (controller.tabctrl.js `doTabForecast` and Ionic's tab selection).
-public enum TabTapAction: Equatable, Sendable {
-    /// Another tab: it becomes the selected tab.
-    case select(ShellTab)
-    /// The selected weather or air tab, more than 700 ms after the previous weather or air tab tap: a reload
-    /// (`reloadEvent 'tab'`).
-    case refresh(ShellTab)
-    /// The selected tab again: the saved-places tab, or a weather or air tab within 700 ms of the previous one.
-    case none
-}
-
-/// The tab taps of one shell: `doTabForecast` keeps the time of the last weather or air tab tap (`lastClickTime`,
-/// updated on every such tap, also one that changes the tab) and skips a reload when the gap is 700 ms or less.
-public struct TabTaps: Sendable {
-    private var lastWeatherTap: Int64 = 0
-
-    public init() {}
-
-    /// The action for a tap on `tab` while `selected` is shown, at `now` (milliseconds).
-    public mutating func tap(_ tab: ShellTab, selected: ShellTab, now: Int64) -> TabTapAction {
-        guard tab.refreshes else { return tab == selected ? .none : .select(tab) }
-        let gap = now - lastWeatherTap
-        lastWeatherTap = now
-        if tab != selected { return .select(tab) }
-        return gap <= 700 ? .none : .refresh(tab)
     }
 }

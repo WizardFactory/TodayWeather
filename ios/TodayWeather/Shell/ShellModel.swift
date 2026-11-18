@@ -23,7 +23,7 @@ struct Popup: Identifiable {
 }
 
 /// What the shell shows and how it reacts (IN-07, #2956): the start screen or the selected tab, the side menu, the
-/// popups, and the hooks the screens of IN-08 and later connect (refresh, menu rows, the start choice, entry events).
+/// popups, and the hooks the screens of IN-08 and later connect (menu rows, the start choice, entry events).
 @MainActor
 @Observable
 final class ShellModel {
@@ -43,8 +43,6 @@ final class ShellModel {
     /// keeps it.
     var analyticsAllowed = false
 
-    /// The selected weather or air tab was tapped again: the page reloads (`reloadEvent 'tab'`). IN-08 connects it.
-    @ObservationIgnored var onRefresh: (ShellTab) -> Void = { _ in }
     /// A menu row was chosen (after the menu closed when the row closes it). IN-12, IN-13 and IN-15 connect the rows.
     @ObservationIgnored var onMenuRow: (MenuRow) -> Void = { _ in }
     /// A tap on a tab before the shell handles it: true when the app took it (no enabled place: the start choice O02,
@@ -52,9 +50,6 @@ final class ShellModel {
     @ObservationIgnored var onTabTap: (ShellTab) -> Bool = { _ in false }
     /// An entry event after the migration (IN-04, IN-14 and IN-16 handle notification taps and links).
     @ObservationIgnored var onEntry: (EntryEvent) -> Void = { _ in }
-    /// The clock of the 700 ms reload rule, in milliseconds.
-    @ObservationIgnored var now: () -> Int64 = { Int64(Date().timeIntervalSince1970 * 1000) }
-    @ObservationIgnored private var taps = TabTaps()
 
     init(holder: AppStateHolder, locale: ShellLocale, version: String) {
         self.holder = holder
@@ -90,11 +85,7 @@ final class ShellModel {
     /// A tap on the tab bar.
     func tapTab(_ tab: ShellTab) {
         if onTabTap(tab) { return }
-        switch taps.tap(tab, selected: selected, now: now()) {
-        case .select(let tab): selected = tab
-        case .refresh(let tab): onRefresh(tab)
-        case .none: break
-        }
+        if selected != tab { selected = tab }
     }
 
     /// A page changes the tab (S03's air cells open the Air tab; S01 closes onto the startup page's tab).
