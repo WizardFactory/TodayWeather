@@ -208,10 +208,10 @@ class FinishDestinationTests(unittest.TestCase):
             journal.prepare_request('host-install', 'HostInstall',
                                     {'launch_sha256': 'b' * 64}, 'host-install', now=1001)
 
-    def test_binds_exact_output_and_launch_to_existing_v5_journal(self):
+    def test_binds_exact_output_and_launch_to_existing_journal(self):
         with J(self.journal) as journal:
             before = journal.snapshot()
-            self.assertEqual(journal.db.execute('PRAGMA user_version').fetchone(), (5,))
+            self.assertEqual(journal.db.execute('PRAGMA user_version').fetchone(), (6,))
             self.assertEqual(journal.bind_finish_destination(self.output,
                              now=before['cleanup_until']), self.output)
             request = journal.request('finish-output')
@@ -411,7 +411,7 @@ class CostTests(unittest.TestCase):
         hourly = rates['ec2_hour'] + rates['ipv4_hour'] + (
             32 * rates['gp3_gb_month'] + 20 * rates['s3_gb_month']
         ) * gib / (28 * 24)
-        operator = 10_000 * (rates['s3_read'] + rates['s3_write']) + 10 * gib * rates['outbound_gb']
+        operator = 80_000 * rates['s3_read'] + 10_000 * rates['s3_write'] + 16 * gib * rates['outbound_gb']
         # These PUTs begin after the 24-hour sample. Three finalizer starts
         # were already booked by accrual. Operator retries remain possible.
         remaining_puts = (170 - 24) * (5 * 3600 // 50 + 4) + 4 * (4 * 1024**3 // 65536 - 1)
@@ -434,7 +434,8 @@ class CostTests(unittest.TestCase):
 
         policy = dict(cost_policy(), finish_reserve_usd='1')
         rates = {name: D(value) for name, value in policy['rates'].items()}
-        operator = 10_000 * (rates['s3_read'] + rates['s3_write']) + D(10 * 1024**3) / D(10**9) * rates['outbound_gb']
+        operator = (80_000 * rates['s3_read'] + 10_000 * rates['s3_write']
+                    + D(16 * 1024**3) / D(10**9) * rates['outbound_gb'])
         for hours in (170, 340):
             result = state.estimate_cost(policy, 1000, 1000 + hours * 3600, cpu_seconds=0)
             self.assertEqual(D(result['limit_usd']), D(300) - operator)
@@ -874,17 +875,51 @@ def cloud_json(operation,payload):return operator.CloudResult('json',operation,p
 
 
 class OperatorTests(unittest.TestCase):
+    def test_weekly_state_logs_fit_the_versioned_finish_budget(self):
+        # Five source partitions in each 50-second interval. Plan for the
+        # complete 170-hour bound plus paired sources and inventory pages.
+        day_log_versions = 5 * (170 * 3600 // 50)
+        paired_sources = 509
+        pages = (day_log_versions + paired_sources + 999) // 1000
+        reads = day_log_versions + paired_sources + pages
+        envelope = (day_log_versions + paired_sources) * 65536 + pages * 8 * 1024**2
+        # Full retained paired fixture plus small representative log objects.
+        export = 1_331_232_110 + day_log_versions * 32_768
+        with tempfile.TemporaryDirectory() as temp:
+            journal = Path(temp) / 'journal'
+            with J(journal, create=True, run_id='test1', manifest_sha=DIGEST, epoch=1000) as j:
+                j.reserve_control(reads=reads, response_bytes=envelope, export_bytes=export)
+            with J(journal) as j:
+                charged = j.operator_usage()
+                self.assertEqual(charged['reads'], reads)
+                self.assertEqual(charged['export_bytes'], export)
+                self.assertEqual(charged['work_envelope_bytes'], envelope)
+                j.reserve_control(reads=1_000, writes=1_000, response_bytes=4*1024**3, cleanup=True)
+
+    def test_existing_v5_journal_keeps_its_frozen_allowances(self):
+        with tempfile.TemporaryDirectory() as temp:
+            journal = Path(temp) / 'journal'
+            with J(journal, create=True, run_id='test1', manifest_sha=DIGEST, epoch=1000) as j:
+                j.reserve_control(reads=9_000, export_bytes=2*1024**3, response_bytes=4*1024**3)
+                j.db.execute('PRAGMA user_version=5')
+            with J(journal) as j:
+                for dimension in ('reads', 'export_bytes', 'response_bytes'):
+                    with self.subTest(dimension=dimension), self.assertRaises(E):
+                        j.reserve_control(**{dimension: 1})
+                j.reserve_control(reads=1_000, cleanup=True)
+                self.assertEqual(j.operator_usage()['reads'], 10_000)
+
     def test_export_cannot_spend_reserved_cleanup_attempts(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/'journal'
             with J(root,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                j.reserve_control(reads=9000,writes=9000,export_bytes=2*1024**3)
+                j.reserve_control(reads=79_000,writes=9_000,export_bytes=4*1024**3)
                 with self.assertRaises(E):j.reserve_control(reads=1)
                 with self.assertRaises(E):j.reserve_control(writes=1)
             with J(root) as j:
                 j.observe(1000+171*3600)
                 spent=j.reserve_control(reads=1000,writes=1000,cleanup=True)
-                self.assertEqual(spent,dict(reads=10000,writes=10000,export_bytes=2*1024**3))
+                self.assertEqual(spent,dict(reads=80_000,writes=10_000,export_bytes=4*1024**3))
                 with self.assertRaises(E):j.reserve_control(reads=1,cleanup=True)
                 with self.assertRaises(E):j.reserve_control(export_bytes=1,cleanup=True)
                 self.assertEqual(j.reserve_control(),spent)
@@ -893,7 +928,7 @@ class OperatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             directory=Path(temp)/'run'
             with J(directory,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                j.reserve_control(reads=1,response_bytes=4*1024**3)
+                j.reserve_control(reads=1,response_bytes=8*1024**3)
                 before=j.reserve_control()
                 with self.assertRaises(E):j.reserve_control(reads=1,response_bytes=1)
                 self.assertEqual(j.reserve_control(),before)
@@ -950,7 +985,7 @@ else:
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/'journal'
             with J(root,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                used=j.reserve_control(reads=9000,writes=10,export_bytes=4)
+                used=j.reserve_control(reads=79_000,writes=10,export_bytes=4)
                 with self.assertRaises(E):j.reserve_control(reads=1,writes=2)
                 self.assertEqual(j.reserve_control(),used)
             with J(root) as j:
@@ -1062,7 +1097,7 @@ else:
                     return cloud_json('GetObject',{'VersionId':'newer-version','ContentLength':3,'ContentRange':'bytes 0-2/3'})
                 cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[{'Key':'raw/a','VersionId':'v1','Size':3}]})),('GetObject',body)])
                 with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                    if exhausted:j.reserve_control(export_bytes=2*1024**3)
+                    if exhausted:j.reserve_control(export_bytes=4*1024**3)
                     with self.assertRaises(E):operator.export_sources(cloud,j,owned_resources(),root/'evidence')
                     self.assertFalse(json.loads((root/'evidence/manifest.json').read_text())['complete'])
                     self.assertEqual(len(cloud.calls),1 if exhausted else 2)
@@ -1265,14 +1300,14 @@ class SourceVersionStagingTests(unittest.TestCase):
 
     def test_allowance_omission_keeps_inventory_and_does_not_get_body(self):
         with J(self.journal) as journal:
-            journal.reserve_control(export_bytes=2 * 1024**3)
+            journal.reserve_control(export_bytes=4 * 1024**3)
         report, charged, calls = self.export(self.listing(self.original), self.listing(markers=[self.marker]))
         self.assertFalse(report['complete'])
         self.assertTrue(report['inventory_complete'])
         self.assertEqual(report['objects'][0]['status'], 'omitted')
         self.assertEqual(report['objects'][0]['reason'], 'allowance')
         self.assertEqual(len(report['inventory']), 2)
-        self.assertEqual(charged, 2 * 1024**3)
+        self.assertEqual(charged, 4 * 1024**3)
         self.assertEqual(len(calls), 2)
 
     def test_duplicate_version_inventory_is_failed_instead_of_treated_as_empty(self):
@@ -2830,7 +2865,7 @@ class ProvisionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp,self.journal(Path(temp)/'journal') as j:
             fixture=ProvisionCloud(j)
             provision.provision_resources(fixture,j,provisioning_plan(),now=1001)
-            j.reserve_control(reads=9000,writes=9000,export_bytes=2*1024**3)
+            j.reserve_control(reads=79_000,writes=9_000,export_bytes=4*1024**3)
             class Charged:
                 def call(inner,op,p,**kwargs):
                     cleanup=kwargs.pop('cleanup',False)

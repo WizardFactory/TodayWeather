@@ -26,10 +26,12 @@ from typing import Any
 
 
 HOST_LIFETIME_SECONDS = 170 * 3600
-OPERATOR_ATTEMPTS = 10_000
-OPERATOR_WORK_ATTEMPTS = 9_000
-OPERATOR_EXPORT_BYTES = 2 * 1024**3
-OPERATOR_ENVELOPE_BYTES = 4 * 1024**3
+OPERATOR_READ_ATTEMPTS = 80_000
+OPERATOR_WRITE_ATTEMPTS = 10_000
+OPERATOR_CLEANUP_ATTEMPTS = 1_000
+OPERATOR_EXPORT_BYTES = 4 * 1024**3
+OPERATOR_WORK_ENVELOPE_BYTES = 8 * 1024**3
+OPERATOR_CLEANUP_ENVELOPE_BYTES = 4 * 1024**3
 # The operator reserves this envelope before each finish-finalize SSH call.
 FINISH_CONTROL_ENVELOPE_BYTES = 65_536
 
@@ -259,11 +261,15 @@ class Journal:
                     self.db.execute('CREATE TABLE transfer (id INTEGER PRIMARY KEY CHECK(id=1), work INTEGER, cleanup INTEGER)')
                     self.db.execute('INSERT INTO transfer VALUES (1,0,0)')
                     self.db.execute('INSERT INTO meta VALUES (1,?,?,?,?,NULL)', (run_id, manifest_sha, epoch, epoch))
-                    self.db.execute('PRAGMA user_version=5')
+                    self.db.execute('PRAGMA user_version=6')
                 sync_directory(self.directory)
-            if (self.db.execute('PRAGMA user_version').fetchone()[0] != 5
-                    or self.db.execute('PRAGMA quick_check').fetchall() != [('ok',)]):
+            version = self.db.execute('PRAGMA user_version').fetchone()[0]
+            if version not in (5, 6) or self.db.execute('PRAGMA quick_check').fetchall() != [('ok',)]:
                 raise StateError('invalid journal schema or integrity')
+            # Existing runs must retain the allowances under their frozen cost policy.
+            self.control_caps = (10_000, 10_000, 2 * 1024**3) if version == 5 else (
+                OPERATOR_READ_ATTEMPTS, OPERATOR_WRITE_ATTEMPTS, OPERATOR_EXPORT_BYTES)
+            self.work_envelope = 4 * 1024**3 if version == 5 else OPERATOR_WORK_ENVELOPE_BYTES
             meta = self.snapshot()
             if ((run_id is not None and run_id != meta['run_id'])
                     or (manifest_sha is not None and manifest_sha != meta['manifest_sha'])):
@@ -342,8 +348,9 @@ class Journal:
         incomplete-cleanup condition, not permission to reset the ledger.
         """
         amounts = (reads, writes, export_bytes)
-        caps = (OPERATOR_ATTEMPTS, OPERATOR_ATTEMPTS, OPERATOR_EXPORT_BYTES)
-        integer(response_bytes, OPERATOR_ENVELOPE_BYTES)
+        caps = self.control_caps
+        envelope = OPERATOR_CLEANUP_ENVELOPE_BYTES if cleanup else self.work_envelope
+        integer(response_bytes, envelope)
         if type(cleanup) is not bool or (cleanup and export_bytes):
             raise StateError('cleanup reserve cannot export bodies')
         for amount, cap in zip(amounts, caps):
@@ -353,7 +360,8 @@ class Journal:
             if row is None:
                 raise StateError('missing operator allowance')
             values = tuple(a+b for a,b in zip(row, amounts))
-            limits = caps if cleanup else (OPERATOR_WORK_ATTEMPTS, OPERATOR_WORK_ATTEMPTS, OPERATOR_EXPORT_BYTES)
+            limits = caps if cleanup else (caps[0] - OPERATOR_CLEANUP_ATTEMPTS,
+                                           caps[1] - OPERATOR_CLEANUP_ATTEMPTS, caps[2])
             if any(v > cap for v,cap in zip(values,caps)) or any(
                     amount and value > limit for amount,value,limit in zip(amounts,values,limits)):
                 raise StateError('operator allowance exhausted')
@@ -361,7 +369,7 @@ class Journal:
             if transfer is None:raise StateError('missing transfer allowance')
             dimension=1 if cleanup else 0
             total=transfer[dimension]+response_bytes
-            if total>OPERATOR_ENVELOPE_BYTES:raise StateError('control response allowance exhausted')
+            if total > envelope:raise StateError('control response allowance exhausted')
             self.db.execute('UPDATE transfer SET '+('cleanup' if cleanup else 'work')+'=? WHERE id=1',(total,))
             self.db.execute('UPDATE control SET reads=?,writes=?,export_bytes=? WHERE id=1',values)
         return dict(zip(('reads','writes','export_bytes'),values))
@@ -613,7 +621,7 @@ def finish_reserve_floor(rates):
 
     rates = {key: Decimal(value) for key, value in rates.items()}
     export = Decimal(OPERATOR_EXPORT_BYTES) / 10**9 * rates['outbound_gb']
-    return export + OPERATOR_WORK_ATTEMPTS * rates['s3_read'] + 2 * _hourly(rates)
+    return export + (OPERATOR_READ_ATTEMPTS - OPERATOR_CLEANUP_ATTEMPTS) * rates['s3_read'] + 2 * _hourly(rates)
 
 
 def _background_puts(elapsed):
@@ -627,8 +635,8 @@ def _required_finish_reserve(rates, elapsed, background_puts):
     """Price known host holding, bounded operator work and unaccrued background PUTs."""
     from decimal import Decimal
 
-    operator_bytes = OPERATOR_EXPORT_BYTES + 2 * OPERATOR_ENVELOPE_BYTES
-    operator = (OPERATOR_ATTEMPTS * (rates['s3_read'] + rates['s3_write'])
+    operator_bytes = OPERATOR_EXPORT_BYTES + OPERATOR_WORK_ENVELOPE_BYTES + OPERATOR_CLEANUP_ENVELOPE_BYTES
+    operator = (OPERATOR_READ_ATTEMPTS * rates['s3_read'] + OPERATOR_WRITE_ATTEMPTS * rates['s3_write']
                 + Decimal(operator_bytes) / 10**9 * rates['outbound_gb'])
     remaining = max(0, HOST_LIFETIME_SECONDS - elapsed)
     if not remaining:
@@ -636,7 +644,7 @@ def _required_finish_reserve(rates, elapsed, background_puts):
     # Two starts come from the host timer and reader stop. The remaining starts
     # are operator calls backed by the cleanup envelope. Credit starts accrued
     # above, including the first operator start.
-    starts = 2 + OPERATOR_ENVELOPE_BYTES // FINISH_CONTROL_ENVELOPE_BYTES
+    starts = 2 + OPERATOR_CLEANUP_ENVELOPE_BYTES // FINISH_CONTROL_ENVELOPE_BYTES
     puts_at_deadline = (_background_puts(HOST_LIFETIME_SECONDS)
                         + COPY_OBJECTS * (starts - COPY_FINALIZE_STARTS))
     remaining_puts = puts_at_deadline - background_puts

@@ -68,7 +68,7 @@ def _freeze_launch(host, source, epoch):
     return hashlib.sha256(data).hexdigest()
 
 
-def build_fixture(root, *, attempts=FULL_ATTEMPTS, body_bytes=FULL_BODY_BYTES, epoch=1000):
+def build_fixture(root, *, attempts=FULL_ATTEMPTS, body_bytes=FULL_BODY_BYTES, epoch=1000, log_objects=0):
     """Create a fresh host and version store, returning paths relative to root.
 
     The default workload has 23,414 paired files and approximately 1 GB of body
@@ -78,6 +78,8 @@ def build_fixture(root, *, attempts=FULL_ATTEMPTS, body_bytes=FULL_BODY_BYTES, e
     copy, _ = load_evidence_modules()
     if not 1 <= attempts <= FULL_ATTEMPTS or not 8 <= body_bytes <= copy.MAX_BODY:
         raise ValueError('fixture count or body size')
+    if type(log_objects) is not int or not 0 <= log_objects <= 1_000:
+        raise ValueError('fixture log count')
     if type(epoch) is not int or epoch < 0:
         raise ValueError('fixture epoch')
     root = Path(root)
@@ -122,6 +124,14 @@ def build_fixture(root, *, attempts=FULL_ATTEMPTS, body_bytes=FULL_BODY_BYTES, e
                 raise RuntimeError(f'fixture copy failed at hour {hour}: {result}')
     finally:
         host.ledger.close()
+
+    sources = ('server', 'guard', 'reader', 'collector', 'copy')
+    for ordinal in range(log_objects):
+        source = sources[ordinal % len(sources)]
+        key = f'logs/server2/{source}/dt=2026-11-18/hour=00/instance/{ordinal:05d}.ndjson.gz'
+        line = (state.canonical(dict(source=source, sequence=ordinal, fixture=True)) + '\n').encode()
+        body = gzip.compress(line, mtime=0)
+        objects.put(tree.bucket, key, body, hashlib.sha256(body).hexdigest(), len(body))
 
     original_bucket = f'server2-shadow-{tree.run_id}-raw'
     for key, body in (('fixtures/original', b'first'), ('fixtures/original', b'second'),

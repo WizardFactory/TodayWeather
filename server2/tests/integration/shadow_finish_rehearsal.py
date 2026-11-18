@@ -117,13 +117,13 @@ def verify_output(finish, report, fixture):
                 inventory_sha256=exported['inventory_sha256'])
 
 
-def rehearse(output, attempts, body_bytes, timeout):
+def rehearse(output, attempts, body_bytes, timeout, *, log_objects=0):
     # Use only the synthetic run and a literal local AWS executable.
     cloud = output / 'cloud'
     finish = output / 'finish'
     journal_path = output / 'journal'
     epoch = int(time.time()) - 168 * 3600 - 10
-    fixture = build_fixture(cloud, attempts=attempts, body_bytes=body_bytes, epoch=epoch)
+    fixture = build_fixture(cloud, attempts=attempts, body_bytes=body_bytes, epoch=epoch, log_objects=log_objects)
     resources = owned_resources()
     require(resources['run_id'] == fixture['run_id'], 'fixture run mismatch')
     manifest = cloud / 'fixture.json'
@@ -184,7 +184,7 @@ def rehearse(output, attempts, body_bytes, timeout):
                     for call in replay_calls[len(calls):]), 'terminal replay repeated cleanup effects')
     replay_charges = charged(journal_path)
     require(replay_charges['body_bytes'] == final_charges['body_bytes'], 'terminal replay charged body bytes')
-    return dict(verified, attempts=attempts, fixture_body_bytes=attempts * body_bytes,
+    return dict(verified, attempts=attempts, fixture_body_bytes=attempts * body_bytes, log_objects=log_objects,
                 interrupted_version=interrupted_version,
                 verified_before_interruption=paused['verified_before_interruption'],
                 gets_before_resume=sum(before.values()),
@@ -198,15 +198,16 @@ def main():
     parser.add_argument('--output', required=True, type=Path, help='fresh private evidence directory')
     parser.add_argument('--attempts', default=FULL_ATTEMPTS, type=int)
     parser.add_argument('--body-bytes', default=FULL_BODY_BYTES, type=int)
+    parser.add_argument('--log-objects', default=0, type=int, help='additional gzip source versions, up to 1000')
     parser.add_argument('--timeout', default=600, type=int, help='seconds per successful CLI invocation')
     args = parser.parse_args()
-    if not 1 <= args.attempts <= FULL_ATTEMPTS or args.body_bytes < 8 or args.timeout <= 0:
+    if not 1 <= args.attempts <= FULL_ATTEMPTS or args.body_bytes < 8 or not 0 <= args.log_objects <= 1_000 or args.timeout <= 0:
         parser.error('invalid rehearsal limits')
     os.umask(0o077)
     output = args.output.resolve()
     output.mkdir(mode=0o700)
     try:
-        summary = rehearse(output, args.attempts, args.body_bytes, args.timeout)
+        summary = rehearse(output, args.attempts, args.body_bytes, args.timeout, log_objects=args.log_objects)
     except (KeyError, OSError, TypeError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
         write_json(output / 'failure.json', dict(error=str(error)))
         print(f'Rehearsal failed. See {output / "failure.json"}', file=sys.stderr)
