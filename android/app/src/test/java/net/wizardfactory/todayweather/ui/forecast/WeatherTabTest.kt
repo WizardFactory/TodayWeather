@@ -22,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import android.location.LocationManager
@@ -67,7 +68,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The weather tabs in the app's screens (#2887 AC1): the selected place's page and title, swipes and arrows, the
- * tab tap reload, the spinner, the retry confirmation, the pollen popup, the expander and a late response (A01),
+ * pull-to-refresh gesture, the spinner, the retry confirmation, the pollen popup, the expander and a late response (A01),
  * with the real session and repository over a fake server answering with the AN-02 corpus.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -208,18 +209,21 @@ class WeatherTabTest {
     }
 
     @Test
-    fun tappingTheSelectedTabReloadsAndShowsTheSpinner() {
+    fun pullingTheSelectedForecastRefreshesAndShowsProgress() {
         val pending = CompletableDeferred<String>()
         show(answer = { url -> if (requests.size == 2) pending.await() else if ("51.51" in url) londonBody else seoulBody })
-        rule.onAllNodesWithTag(WeatherTabTags.SPINNER, useUnmergedTree = true).assertCountEquals(0)
+        rule.onAllNodesWithTag(ShellTags.REFRESHING, useUnmergedTree = true).assertCountEquals(0)
         rule.mainClock.advanceTimeBy(1000)
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
         rule.waitForIdle()
-        assertEquals("the tab tap loads at once", 2, requests.size)
-        rule.onNodeWithTag(WeatherTabTags.SPINNER, useUnmergedTree = true).assertExists()
+        assertEquals("reselecting the tab keeps the fresh result", 1, requests.size)
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).performTouchInput { swipeDown(startY = height * 0.25f) }
+        rule.waitForIdle()
+        assertEquals("pulling bypasses the freshness gate", 2, requests.size)
+        rule.onNodeWithTag(ShellTags.REFRESHING, useUnmergedTree = true).assertExists()
         pending.complete(seoulBody)
         rule.waitForIdle()
-        rule.onAllNodesWithTag(WeatherTabTags.SPINNER, useUnmergedTree = true).assertCountEquals(0)
+        rule.onAllNodesWithTag(ShellTags.REFRESHING, useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test
@@ -334,8 +338,7 @@ class WeatherTabTest {
         for ((source, text) in listOf("AIRKOREA" to R.string.LOC_AIRKOREA_DESCRIPTION, "KAQ" to R.string.LOC_KAQ_DESCRIPTION)) {
             if (source == "KAQ") {
                 kaq = true
-                rule.mainClock.advanceTimeBy(1000)
-                rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+                session.reload(WeatherSession.Sender.TAB)
                 rule.waitForIdle()
             }
             rule.onNodeWithText("$source ", substring = true, useUnmergedTree = true).performScrollTo().performClick()

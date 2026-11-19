@@ -3,13 +3,13 @@
 [Read the PDF](manual.pdf) · [Editable source](manual.json) · [Capture provenance](provenance.json)
 
 This is the **native Kotlin / Jetpack Compose app**, version 2.0.0 preview. Its
-44 illustrated steps cover first launch and permissions, current location,
+45 illustrated steps cover first launch and permissions, current location,
 hourly/daily charts, air quality and stations, saved places, alarms, units,
 startup/refresh settings, themes, nationwide information, privacy, sharing and exit.
 The app screens are Korean; the instructions are English with Korean control labels.
 The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1.
 
-The screenshots were captured from the running native app on 15 November 2026
+The original 44 screenshots were captured from the running native app on 15 November 2026
 (all 44 again after the privacy rows moved to the end of the menu, #2990),
 using an owned API36 emulator at 1080×2400 pixels, 420dpi, font scale 1.0,
 Korean app/system language and Asia/Seoul time. Saved places are seeded for later
@@ -17,6 +17,21 @@ sections. Weather, geocoding, nationwide data and Google Places search use the
 configured live services; weather values and warnings are dated examples. Images
 are reduced to 720×1600 and a 256-color palette without replacing screen content.
 Debug banners are Google's test ads; their availability and contents vary.
+
+## Refresh the selected place
+
+On 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air), scroll to the top.
+Pull the page down and release. A circular indicator appears below the header
+while the selected place refreshes. If the request fails, use the retry option.
+The bottom tabs switch between pages. You can set the automatic refresh interval
+under 업데이트 주기 in the menu.
+
+All four tabs use outline icons. On the selected tab, the icon and its label
+use the theme’s accent color, with a short line above the icon. The hourly,
+daily, air and refresh examples show the updated navigation in the running app
+with sample Seoul weather. Earlier captures of other tasks are cropped to the
+page content wherever they showed the previous tab bar. The capture record
+lists the replacement images and the crop bounds.
 
 ## Reader notes
 
