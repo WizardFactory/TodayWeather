@@ -199,7 +199,9 @@ class MainActivity : ComponentActivity() {
                     })
                 }
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
-                    handoffs = handoffs, nation = opened.nation, privacy = privacy, nativeAd = { NativeAdSlot(nativeAds, dark = Theme.of(s.settings.theme) == Theme.DARK) },
+                    handoffs = handoffs, nation = opened.nation, privacy = privacy, nativeAd = { tab ->
+                        NativeAdSlot(nativeAds, compact = tab != Tab.LOCATIONS, dark = Theme.of(s.settings.theme) == Theme.DARK)
+                    },
                     onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
                     openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
@@ -281,7 +283,7 @@ fun AppContent(
     messages: Flow<PushMessage>? = null,
     /** O06 for alarms of the legacy `pushData` (#2893). */
     alertIntro: AlertIntro? = null,
-    nativeAd: (@Composable () -> Unit)? = null,
+    nativeAd: (@Composable (Tab) -> Unit)? = null,
     onVisit: (Tab) -> Unit = {},
     onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
 ) {
@@ -370,7 +372,7 @@ fun AppContent(
     val selected = navigation.selected
     var forecastRead by remember(selected, state.placeIndex, tabContentVisible) { mutableStateOf(false) }
     LaunchedEffect(selected, tabContentVisible) { if (tabContentVisible) onVisit(selected) }
-    val visibleAd = nativeAd.takeIf { tabContentVisible }
+    val visibleAd: (@Composable () -> Unit)? = if (tabContentVisible && nativeAd != null) ({ nativeAd(selected) }) else null
     val texts = host.texts
     val openUnits = { open(SettingsRoutes.UNITS) }
     TodayWeatherShell(

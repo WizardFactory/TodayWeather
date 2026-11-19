@@ -79,7 +79,7 @@ private class SlotPosition {
 
 /** Zero height while empty. An arriving creative may be inserted only below the reader's viewport. */
 @Composable
-fun NativeAdSlot(ads: NativeForecastAds, dark: Boolean = isSystemInDarkTheme()) {
+fun NativeAdSlot(ads: NativeForecastAds, compact: Boolean, dark: Boolean = isSystemInDarkTheme()) {
     var creative by remember(ads) { mutableStateOf<NativeAd?>(null) }
     val position = remember(ads) { SlotPosition() }
     DisposableEffect(ads) {
@@ -97,14 +97,15 @@ fun NativeAdSlot(ads: NativeForecastAds, dark: Boolean = isSystemInDarkTheme()) 
         position.visit?.position(below)
     }) {
         creative?.let { ad ->
-            key(ad, dark) {
+            key(ad, dark, compact) {
                 AndroidView(
                     factory = { context ->
-                        val view = LayoutInflater.from(context).inflate(R.layout.native_forecast_ad, null) as NativeAdView
+                        val layout = if (compact) R.layout.native_forecast_ad_compact else R.layout.native_forecast_ad
+                        val view = LayoutInflater.from(context).inflate(layout, null) as NativeAdView
                         bindNativeCreative(view, ad, dark)
                         view
                     },
-                    modifier = Modifier.fillMaxWidth().padding(12.dp).testTag("admob-native-card"),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = if (compact) 6.dp else 12.dp).testTag("admob-native-card"),
                     onRelease = { it.destroy() },
                 )
             }

@@ -32,7 +32,7 @@ Insert the card in the outer vertical scroll, outside every horizontal gesture a
   └────────────────────────────────────┘
 ```
 
-Use 12 dp inner padding and 12 dp vertical separation from forecast content. Match text contrast to the active theme. Keep attribution and the SDK overlay visible at large font sizes. Wrap text and move the CTA to its own row on narrow displays. Render required assets for the served format and omit absent optional assets. Register the creative views with the SDK and leave surrounding space inert. Preserve scroll position on rotation. [Android native ad rendering](https://developers.google.com/admob/android/native/advanced)
+Saved Places uses the stacked card above with 12 dp inner padding and vertical separation. Hourly, Daily and Air use a compact card targeting approximately half the stacked height at the default phone size. Below the attribution, a 120 × 120 dp MediaView sits beside the icon, headline, advertiser, body and CTA. Use 8 dp inner padding and 6 dp outer vertical spacing. The card grows as needed for larger fonts, long copy and narrow displays. Match text contrast to the active theme. Keep attribution and the SDK overlay visible at large font sizes. Wrap text and move the CTA to its own row on narrow displays. Render required assets for the served format and omit absent optional assets. Register the creative views with the SDK and leave surrounding space inert. Preserve scroll position on rotation. [Android native ad rendering](https://developers.google.com/admob/android/native/advanced)
 
 ### Saved Places and Air
 
