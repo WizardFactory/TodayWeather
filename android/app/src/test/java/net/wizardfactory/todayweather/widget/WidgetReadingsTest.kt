@@ -28,6 +28,23 @@ class WidgetReadingsTest {
         assertEquals(listOf(-1,0), readings.days.map { it.offset })
     }
 
+    @Test fun worldChartFallbackKeepsActualFutureHours() {
+        val fixture = java.io.File(System.getProperty("tw.projectDir"),
+            "../core-domain/src/test/resources/corpus/conversion/vc-no-current-index.json")
+        val weather = Json.parseToJsonElement(fixture.readText()).jsonObject.getValue("expected").jsonObject
+        assertEquals(listOf("18:00", "21:00", "00:00", "03:00", "06:00"),
+            WidgetReadings(weather, "C", labels).hours.map { it.label })
+    }
+
+    @Test fun realMarkerAtLastHourProducesNoFutureHours() {
+        val weather = Json.parseToJsonElement("""{
+            "currentWeather":{"date":"20261107","time":15},
+            "timeTable":[{"date":"20261107","time":18,"currentIndex":true}],
+            "timeChart":[{},{"currentIndex":0}]
+        }""").jsonObject
+        assertEquals(emptyList<ForecastCell>(), WidgetReadings(weather, "C", labels).hours)
+    }
+
     @Test fun handlesSentinelsAndMissingAirWithoutShowingFakeTemperatures() {
         val input = Json.parseToJsonElement("""{
             "currentWeather":{"t1h":-50,"skyIcon":"moon","yesterday":{"t1h":4}},

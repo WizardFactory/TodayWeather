@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import net.wizardfactory.todayweather.core.domain.AirQuality
 import net.wizardfactory.todayweather.core.domain.ForecastText
+import net.wizardfactory.todayweather.core.domain.WeatherConverter
 import net.wizardfactory.todayweather.core.domain.YesterdayText
 
 internal data class ForecastCell(val label: String, val value: String, val icon: String, val offset: Int? = null, val sky: String? = null)
@@ -58,8 +59,11 @@ internal class WidgetReadings(weather: JsonObject, unit: String?, labels: Yester
 
     private val timeTable = (weather["timeTable"] as? JsonArray).orEmpty().filterIsInstance<JsonObject>()
     private val hourSeries = (weather["timeChart"] as? JsonArray)?.getOrNull(1) as? JsonObject
-    private val index = hourSeries.text("currentIndex")?.toIntOrNull()
-    private val futureRows = if (index != null && index in timeTable.indices) timeTable.drop(index + 1)
+    // The world chart places its cursor on the last row when the feed lacks an observation marker.
+    private val index = hourSeries.text("currentIndex")?.toIntOrNull()?.takeIf {
+        it in timeTable.indices && (it != timeTable.lastIndex || WeatherConverter.isCurrentHour(timeTable[it]))
+    }
+    private val futureRows = if (index != null) timeTable.drop(index + 1)
     else timeTable.filter { row ->
         val day = row.text("date") ?: return@filter false
         val currentDay = observation.text("date") ?: return@filter false
