@@ -7,6 +7,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -362,21 +365,21 @@ private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Mo
 @Composable
 fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
+        Modifier.selectableGroup().fillMaxWidth().heightIn(min = 49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
         for (tab in Tab.entries) {
             val on = tab == selected
             val (glyph, label) = when (tab) {
                 Tab.LOCATIONS -> (if (on) Glyphs.STAR else Glyphs.STAR_OUTLINE) to R.string.LOC_SAVED_LOCATIONS
-                Tab.HOURLY -> Glyphs.TIME to R.string.LOC_HOURLY_FORECAST
-                Tab.DAILY -> Glyphs.CALENDAR to R.string.LOC_DAILY_FORECAST
-                Tab.AIR -> Glyphs.CLOUD_OUTLINE to R.string.LOC_AIR_INFORMATION
+                Tab.HOURLY -> (if (on) Glyphs.CLOCK_FILLED else Glyphs.CLOCK_OUTLINE) to R.string.LOC_HOURLY_FORECAST
+                Tab.DAILY -> (if (on) Glyphs.CALENDAR_FILLED else Glyphs.CALENDAR_OUTLINE) to R.string.LOC_DAILY_FORECAST
+                Tab.AIR -> (if (on) Glyphs.CLOUD_FILLED else Glyphs.CLOUD_OUTLINE) to R.string.LOC_AIR_INFORMATION
             }
             // .tab-item: flex 1 up to 150 dp; wider windows center the items (.tabs justify-content).
             Column(
                 Modifier.weight(1f, fill = false).widthIn(max = 150.dp).fillMaxWidth().heightIn(min = 47.dp).alpha(if (on) 1f else 0.7f)
-                    .clickable { onTab(tab) }.testTag(ShellTags.tab(tab)),
+                    .selectable(selected = on, role = Role.Tab, onClick = { onTab(tab) }).testTag(ShellTags.tab(tab)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon { LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons)) }

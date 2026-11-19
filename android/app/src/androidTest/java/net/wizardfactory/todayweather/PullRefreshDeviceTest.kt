@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -80,7 +81,7 @@ class PullRefreshDeviceTest {
         })
         val session = WeatherSession(repository, scope, state, { listOf("ko-KR") }, { null })
         val host = WeatherTabHost(forecastTexts(rule.activity), PhotoLoader(rule.activity), { repository.cached(it) },
-            session::previous, session::next, {})
+            session::previous, session::next, { expand -> state.change { it.copy(expandShortChart = expand) } })
         rule.setContent {
             val model by saved.collectAsState()
             val entries by repository.weather.collectAsState()
@@ -94,6 +95,7 @@ class PullRefreshDeviceTest {
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
             rule.onNodeWithTag(ShellTags.page(tab)).assertIsDisplayed()
+            rule.onNodeWithTag(ShellTags.tab(tab)).assertIsSelected()
             assertEquals("selecting or re-tapping the tab keeps the cache", 1 + index, requests.size)
             rule.onNodeWithTag(ShellTags.page(tab)).performTouchInput { swipeDown(startY = height * 0.22f) }
             rule.waitUntil(10_000) { requests.size >= 2 + index }
@@ -127,9 +129,7 @@ class PullRefreshDeviceTest {
         if (TestRunner.args.getString("capture") == "true") {
             rule.mainClock.advanceTimeBy(500)
             rule.waitForIdle()
-            val image = rule.onRoot().captureToImage().asAndroidBitmap()
-            val file = File(rule.activity.filesDir, "pull-refresh.png")
-            file.outputStream().use { check(image.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+            capture("pull-refresh")
         }
         assertEquals("one manual refresh started while the response was held", appliesBeforePull + 1, session.applies.value)
         hold.set(false)
@@ -146,5 +146,12 @@ class PullRefreshDeviceTest {
         rule.waitUntil(10_000) { requests.size == beforeRetry + 1 && repository.loading.value.isEmpty() }
         rule.onNodeWithTag(RETRY_DIALOG).assertDoesNotExist()
         assertEquals(requests.first(), requests.last())
+        if (TestRunner.args.getString("capture") == "true") captureWeatherAndAir(rule, ::capture)
+    }
+
+    private fun capture(name: String) {
+        val image = rule.onRoot().captureToImage().asAndroidBitmap()
+        val file = File(rule.activity.filesDir, "$name.png")
+        file.outputStream().use { check(image.compress(Bitmap.CompressFormat.PNG, 100, it)) }
     }
 }

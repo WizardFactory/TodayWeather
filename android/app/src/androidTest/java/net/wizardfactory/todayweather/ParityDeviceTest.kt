@@ -64,6 +64,10 @@ class ParityDeviceTest {
             app.weather.cached(place)
             app.appState.dataStore.updateData { it.copy(places = listOf(place), placeIndex = 0, units = UnitSettings.defaults("KR")) }
         }
+        if (TestRunner.args.getString("capture") == "true") {
+            rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).assertIsSelected()
+            capture("16-places")
+        }
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
         closeRetry()
         rule.onNodeWithTag(ForecastTags.HEADER).assertExists()

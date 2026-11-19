@@ -26,9 +26,11 @@ while the selected place refreshes. If the request fails, use the retry option.
 The bottom tabs switch between pages. You can set the automatic refresh interval
 under 업데이트 주기 in the menu.
 
-A device test captured the refresh example on November 19 with a saved Seoul place
-and fixture weather. The image shows the running app and its updated tab icons.
-The earlier screenshots illustrate the other tasks with the November 15 app.
+The selected tab uses a filled icon and the other tabs use outlines. The hourly,
+daily, air and refresh examples show the updated navigation in the running app
+with sample Seoul weather. Earlier captures of other tasks are cropped to the
+page content wherever they showed the previous tab bar. The capture record
+lists the replacement images and the crop bounds.
 
 ## Reader notes
 
