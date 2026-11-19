@@ -12,4 +12,10 @@
     <string name="widget_style_paper">晨报</string>
     <string name="widget_style_blue">蓝色时刻</string>
     <string name="widget_style_open">打开应用</string>
+    <string name="widget_refresh_mode">天气更新</string>
+    <string name="widget_refresh_auto">自动 · 每小时</string>
+    <string name="widget_refresh_manual">手动 · 点按刷新</string>
+    <string name="widget_refresh_stamp">截至 %1$s</string>
+    <string name="widget_refresh_action">刷新天气</string>
+    <string name="widget_refresh_empty">刷新</string>
 </resources>

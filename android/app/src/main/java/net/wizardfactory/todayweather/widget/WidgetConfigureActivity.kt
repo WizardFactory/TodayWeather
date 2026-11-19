@@ -82,6 +82,7 @@ private fun WidgetSettings(
     state: AppState, initial: WidgetOptions, forecast: Boolean, current: Boolean,
     cancel: () -> Unit, save: (WidgetOptions) -> Unit,
 ) {
+    var manualRefresh by rememberSaveable { mutableStateOf(initial.manualRefresh) }
     var style by rememberSaveable { mutableStateOf(initial.style) }
     var pinned by rememberSaveable { mutableStateOf(initial.placeKey) }
     var daily by rememberSaveable { mutableStateOf(initial.daily) }
@@ -92,6 +93,9 @@ private fun WidgetSettings(
         WidgetStyle.entries.forEach { option ->
             Choice(stringResource(option.label), style == option) { style = option }
         }
+        Text(stringResource(R.string.widget_refresh_mode), modifier = Modifier.padding(top = 16.dp))
+        Choice(stringResource(R.string.widget_refresh_auto), !manualRefresh) { manualRefresh = false }
+        Choice(stringResource(R.string.widget_refresh_manual), manualRefresh) { manualRefresh = true }
         Text(stringResource(R.string.widget_cfg_place), modifier = Modifier.padding(top = 20.dp))
         Choice(stringResource(R.string.widget_cfg_follow), pinned == null) { pinned = null }
         for (place in state.places.filterNot { it.disable }) {
@@ -116,7 +120,7 @@ private fun WidgetSettings(
         Text(stringResource(R.string.widget_cfg_visit), modifier = Modifier.padding(vertical = 12.dp), style = MaterialTheme.typography.bodySmall)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = cancel) { Text(stringResource(android.R.string.cancel)) }
-            Button(onClick = { save(WidgetOptions(pinned, daily, yesterday, style)) },
+            Button(onClick = { save(WidgetOptions(pinned, daily, yesterday, style, manualRefresh)) },
                 enabled = pinned == null || WidgetOptions.resolve(state, pinned) != null) {
                 Text(stringResource(R.string.widget_cfg_save))
             }

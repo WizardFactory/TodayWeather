@@ -13,4 +13,10 @@
     <string name="widget_style_paper">아침 종이</string>
     <string name="widget_style_blue">블루 아워</string>
     <string name="widget_style_open">오늘날씨 열기</string>
+    <string name="widget_refresh_mode">날씨 갱신</string>
+    <string name="widget_refresh_auto">자동 · 1시간마다</string>
+    <string name="widget_refresh_manual">수동 · 버튼으로 갱신</string>
+    <string name="widget_refresh_stamp">%1$s 기준</string>
+    <string name="widget_refresh_action">날씨 새로고침</string>
+    <string name="widget_refresh_empty">새로고침</string>
 </resources>

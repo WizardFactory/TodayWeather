@@ -12,4 +12,10 @@
     <string name="widget_style_paper">モーニングペーパー</string>
     <string name="widget_style_blue">ブルーアワー</string>
     <string name="widget_style_open">アプリを開く</string>
+    <string name="widget_refresh_mode">天気の更新</string>
+    <string name="widget_refresh_auto">自動 · 1時間ごと</string>
+    <string name="widget_refresh_manual">手動 · タップで更新</string>
+    <string name="widget_refresh_stamp">%1$s 時点</string>
+    <string name="widget_refresh_action">天気を更新</string>
+    <string name="widget_refresh_empty">更新</string>
 </resources>

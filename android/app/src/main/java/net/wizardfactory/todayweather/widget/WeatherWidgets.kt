@@ -23,12 +23,16 @@ import androidx.glance.layout.size
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalSize
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -95,6 +99,7 @@ class AirReceiver : WeatherReceiver() { override val glanceAppWidget: GlanceAppW
 internal data class Display(
     val placeKey: String? = null, val title: String = "", val daily: Boolean = false, val yesterday: Boolean = false,
     val style: WidgetStyle = WidgetStyle.CLASSIC, val readings: WidgetReadings? = null, val updated: String = "", val shortTime: String = "", val message: Int? = null,
+    val manualRefresh: Boolean = false,
 )
 
 private suspend fun loadDisplay(context: Context, id: Int): Display {
@@ -103,9 +108,10 @@ private suspend fun loadDisplay(context: Context, id: Int): Display {
     val app = context.applicationContext as TodayWeatherApp
     val state = app.appState.state.filterNotNull().first()
     val place = WidgetOptions.resolve(state, options.placeKey) ?: return Display(style = options.style, message = R.string.widget_display_no_place)
-    val entry = app.weather.cached(place)
+    val entry = app.weather.cachedForWidget(place)
     val title = place.name?.takeIf(String::isNotBlank) ?: place.address ?: context.getString(R.string.app_name)
-    if (entry == null) return Display(WidgetOptions.key(place), title, style = options.style, message = R.string.widget_display_no_weather)
+    if (entry == null) return Display(WidgetOptions.key(place), title, style = options.style, message = R.string.widget_display_no_weather,
+        manualRefresh = options.manualRefresh)
     val labels = YesterdayText(context.getString(R.string.LOC_SAME_AS_YESTERDAY), context.getString(R.string.LOC_THAN_YESTERDAY))
     val loaded = Date(entry.loadedAt)
     val time = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(loaded)
@@ -115,7 +121,7 @@ private suspend fun loadDisplay(context: Context, id: Int): Display {
     val shortTime = if (sameDay) android.text.format.DateFormat.getTimeFormat(context).format(loaded)
         else android.text.format.DateFormat.format("MM/dd", loaded).toString()
     return Display(WidgetOptions.key(place), title, options.daily, options.yesterday, options.style,
-        WidgetReadings(entry.weather, entry.temperatureUnit, labels), time, shortTime)
+        WidgetReadings(entry.weather, entry.temperatureUnit, labels), time, shortTime, manualRefresh = options.manualRefresh)
 }
 
 private class WeatherWidget(private val kind: Kind) : GlanceAppWidget() {
@@ -169,7 +175,7 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
     val action = actionStartActivity(WidgetOptions.openIntent(context, data?.placeKey))
     val frame = GlanceModifier.fillMaxSize().cornerRadius(if (style == WidgetStyle.BLUE) 24.dp else 17.dp).background(style.background).clickable(action)
         .padding(horizontal = when { compact -> 3.dp; wide -> 16.dp; else -> 10.dp },
-            vertical = when { strip -> 2.dp; roomy -> 12.dp; else -> 6.dp })
+            vertical = when { strip -> 1.dp; roomy -> 12.dp; else -> 6.dp })
     if (data == null || data.message != null) {
         val message = when {
             data == null -> R.string.app_name
@@ -179,6 +185,11 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
         }
         Box(frame, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (data?.manualRefresh == true && message == R.string.widget_display_no_weather) {
+                    if (!compact && !strip) Label(data.title, 14, bold = true)
+                    RefreshStamp(context, data)
+                    return@Column
+                }
                 Label(context.getString(message), when { compact -> 12; wide -> 19; else -> 16 },
                     lines = if (strip) 3 else 5, bold = true, align = TextAlign.Center)
                 if (wide && roomy && data?.message == R.string.widget_display_expired) {
@@ -197,8 +208,8 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
         horizontalAlignment = if (compact) Alignment.CenterHorizontally else Alignment.Start) {
         if (compact) {
             Label(data.title, 10, primary, bold = true)
-            Label(weather.compact.ifEmpty { "–" }, 14, bold = true)
-            Label(data.shortTime, 9, secondary)
+            Label(weather.compact.ifEmpty { "–" }, 13, bold = true)
+            RefreshStamp(context, data)
             return@Column
         }
         if (strip) {
@@ -207,7 +218,7 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
         }
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(GlanceModifier.defaultWeight()) { Label(data.title, if (roomy) 15 else 13, bold = true) }
-            Label(data.shortTime, 11, secondary)
+            RefreshStamp(context, data)
         }
         Column(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
             when (kind) {
@@ -298,6 +309,41 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
     }
 }
 
+private val refreshPlace = ActionParameters.Key<String>("weather_refresh_place")
+
+class ManualWeatherRefreshAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val placeKey = parameters[refreshPlace] ?: return
+        val id = GlanceAppWidgetManager(context).getAppWidgetId(glanceId)
+        WidgetRefresh.enqueueManual(context, id, placeKey)
+    }
+}
+
+@Composable
+private fun RefreshStamp(context: Context, data: Display) {
+    val size = LocalSize.current
+    val compact = size.width < 130.dp
+    val strip = size.height < 100.dp
+    val time = if (strip && size.width >= 245.dp) data.updated else data.shortTime
+    val stamp = if (compact) time else context.getString(R.string.widget_refresh_stamp, time)
+    val fontSize = if (compact || strip) 9 else 11
+    if (!data.manualRefresh || data.placeKey == null) {
+        Label(stamp, fontSize, secondary)
+        return
+    }
+    val style = localStyle.current
+    val action = actionRunCallback<ManualWeatherRefreshAction>(actionParametersOf(refreshPlace to data.placeKey))
+    val text = if (time.isEmpty()) context.getString(R.string.widget_refresh_empty) else stamp
+    val height = if (strip) 16.dp else 26.dp
+    Row(GlanceModifier.height(height).cornerRadius(13.dp).background(style.surface).clickable(action)
+        .padding(horizontal = if (compact) 3.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!compact) Label(text, fontSize, primary)
+        Image(ImageProvider(R.drawable.widget_refresh), context.getString(R.string.widget_refresh_action),
+            GlanceModifier.padding(start = if (compact) 0.dp else 4.dp).size(if (strip) 12.dp else 15.dp),
+            colorFilter = ColorFilter.tint(primary))
+    }
+}
+
 @Composable
 private fun Reading(weather: WidgetReadings, fontSize: Int, iconSize: Int) {
     val art = skyArtwork(weather.sky)
@@ -341,7 +387,7 @@ private fun Clock(context: Context, sp: Int = 17, alignEnd: Boolean = false) {
 private fun Strip(context: Context, kind: Kind, data: Display, weather: WidgetReadings, wide: Boolean) {
     Row(GlanceModifier.fillMaxWidth()) {
         Column(GlanceModifier.defaultWeight()) { Label(data.title, 10, primary, bold = true) }
-        Label(if (wide) data.updated else data.shortTime, 9, secondary)
+        RefreshStamp(context, data)
     }
     when (kind) {
         Kind.FORECAST -> Cells(context, weather, data.daily, data.yesterday, wide, inlineIcon = true)
@@ -355,10 +401,10 @@ private fun Strip(context: Context, kind: Kind, data: Display, weather: WidgetRe
             Label(detail, 12, secondary)
         }
         Kind.AIR -> {
-            Label(weather.airGrade, 13, bold = true)
+            Label(weather.airGrade, 11, bold = true)
             Label(listOfNotNull(weather.pollutant("pm25")?.let { "PM2.5 $it" },
                 weather.pollutant("pm10")?.let { "PM10 $it" },
-                weather.pollutant("o3")?.takeIf { wide }?.let { "O₃ $it" }).joinToString("  "), 10)
+                weather.pollutant("o3")?.takeIf { wide }?.let { "O₃ $it" }).joinToString("  "), 9)
         }
     }
 }
@@ -397,7 +443,7 @@ private fun Cells(context: Context, weather: WidgetReadings, daily: Boolean, yes
                     Label(high, 17, bold = true)
                     Label("${low}°", 14, secondary)
                 } else if (!classicHours || inlineIcon) {
-                    Label(if (inlineIcon) cell.icon + cell.value else cell.value, if (daily) 11 else 15, bold = true)
+                    Label(if (inlineIcon) cell.icon + cell.value else cell.value, if (inlineIcon || daily) 11 else 15, bold = true)
                 }
             }
         }

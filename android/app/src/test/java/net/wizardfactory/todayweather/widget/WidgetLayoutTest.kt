@@ -62,6 +62,39 @@ class WidgetLayoutTest {
     }
     private val display get() = Display("current", "회현동", readings = readings, updated = "11. 8. 오전 9:00", shortTime = "09:07")
 
+    @Test fun automaticHeaderShowsWhenTheCachedWeatherWasUpdated() {
+        val host = render("auto-update-time", Kind.CURRENT, display, 172, 160)
+        assertTrue("visible update time must describe the cache",
+            host.labels().any { it.text.toString() == "09:07 기준" })
+    }
+
+    @Test fun manualButtonAppearsForCachedAndMissingReadingsButNeverOnExpiredOrMissingPlaces() {
+        val manual = display.copy(manualRefresh = true)
+        for (kind in Kind.entries) {
+            val host = render("manual-$kind", kind, manual, 172, 200)
+            assertEquals(1, host.refreshIcons().size)
+        }
+        val empty = manual.copy(readings = null, shortTime = "", updated = "", message = R.string.widget_display_no_weather)
+        val emptyHost = render("manual-empty", Kind.CURRENT, empty, 172, 200)
+        assertEquals(1, emptyHost.refreshIcons().size)
+        assertTrue(emptyHost.labels().any { it.text.toString() == "새로고침" })
+        assertTrue(emptyHost.labels().none { it.text.contains("기준") })
+        for (message in listOf(R.string.widget_display_no_place, R.string.widget_display_expired)) {
+            val host = render("manual-unavailable-$message", Kind.CURRENT, empty.copy(message = message), 172, 200)
+            assertTrue(host.refreshIcons().isEmpty())
+        }
+        assertTrue(render("automatic", Kind.CURRENT, display, 172, 200).refreshIcons().isEmpty())
+    }
+
+    @Test fun manualControlRemainsVisibleAtMinimumAndOneRowSizes() {
+        for ((kind, width) in listOf(Kind.CURRENT to 48, Kind.CURRENT to 130, Kind.FORECAST to 245,
+            Kind.AIR to 245, Kind.CLOCK to 245)) {
+            val host = render("manual-strip-$kind-$width", kind, display.copy(manualRefresh = true), width, 50)
+            val icon = host.refreshIcons().single()
+            assertTrue("refresh icon must be visible", !host.boundsOf(icon).isEmpty)
+        }
+    }
+
     @Test fun currentAndAirShowReadingsBetweenLocationAndTimestamp() {
         val current = render("current", Kind.CURRENT, display, 172, 160)
         assertTrue(current.labels().any { it.text.toString() == readings.degrees })
@@ -128,6 +161,10 @@ class WidgetLayoutTest {
         }
     }
 
+    private fun AppWidgetHostView.refreshIcons() = descendants.filter {
+        it.contentDescription == context.getString(R.string.widget_refresh_action)
+    }.toList()
+
     private fun dp(value: Int) = (value * context.resources.displayMetrics.density).roundToInt()
     private fun AppWidgetHostView.boundsOf(view: View) = Rect(0, 0, view.width, view.height).also { offsetDescendantRectToMyCoords(view, it) }
     private fun AppWidgetHostView.labels() = descendants.filterIsInstance<TextView>().filter { it.text.isNotEmpty() }.toList()
@@ -163,16 +200,18 @@ class WidgetLayoutTest {
             val bounds = host.boundsOf(label)
             assertTrue("$name: '${label.text}' at $bounds outside $card", !bounds.isEmpty && card.contains(bounds))
             val layout = label.layout
-            assertTrue("$name: '${label.text}' clipped vertically", layout.height <= label.height)
+            assertTrue("$name: '${label.text}' clipped vertically: layout ${layout.height}, bounds $bounds", layout.height <= label.height)
             for (line in 0 until layout.lineCount) assertEquals("$name: '${label.text}' ellipsized", 0, layout.getEllipsisCount(line))
         }
-        if (data.message == null) {
+        if (data.message == null && width >= 130 && height >= 100) {
             val header = host.boundsOf(labels.single { it.text.toString() == data.title })
-            val timestamp = host.boundsOf(labels.single { it.text.toString() == data.shortTime })
+            val stampText = context.getString(R.string.widget_refresh_stamp, data.shortTime)
+            val timestamp = host.boundsOf(labels.single { it.text.toString() == stampText })
             assertTrue("$name: location and update time belong at the top", header.top <= dp(22) && timestamp.top <= dp(24))
             assertTrue("$name: header text overlaps timestamp", header.right <= timestamp.left)
-            assertTrue("$name: timestamp must be right aligned", timestamp.right >= w - dp(20))
-            for (label in labels.filter { it.text.toString() != data.shortTime && it.text.toString() != data.title }) {
+            val end = host.refreshIcons().firstOrNull()?.let { host.boundsOf(it).right } ?: timestamp.right
+            assertTrue("$name: timestamp or refresh button must be right aligned", end >= w - dp(29))
+            for (label in labels.filter { it.text.toString() != stampText && it.text.toString() != data.title }) {
                 assertTrue("$name: '${label.text}' overlaps header", host.boundsOf(label).top >= header.bottom)
             }
         }

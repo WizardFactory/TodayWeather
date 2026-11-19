@@ -26,7 +26,11 @@ import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 
 /** A place's weather fields as `updateCity` keeps them (`currentWeather`, `timeChart`, `dayChart`, …) and when they came. */
-data class WeatherEntry(val weather: JsonObject, val loadedAt: Long, val temperatureUnit: String? = null)
+data class WeatherEntry(
+    val weather: JsonObject, val loadedAt: Long, val temperatureUnit: String? = null,
+    /** Original coordinate/address of a current-position request. Absent in older cache files. */
+    val currentLocationKey: String? = null,
+)
 
 sealed interface LoadResult {
     /** The response applied to the place that requested it; [place] carries what the response changed in it. */
@@ -69,6 +73,7 @@ class WeatherRepository(
     private val running = MutableStateFlow<Set<String>>(emptySet())
     private val loadTimes = HashMap<String, Long>()
     private val latestRequest = HashMap<String, Long>()
+    private val inFlightLocations = HashMap<String, String>()
     private var requests = 0L
     private val commits = Mutex()
 
@@ -92,8 +97,19 @@ class WeatherRepository(
     fun invalidateAll() = synchronized(this) { loadTimes.clear() }
 
     /** The weather [place] has: from this process, else from the cache. */
-    suspend fun cached(place: Place): WeatherEntry? {
-        val key = key(place)
+    suspend fun cached(place: Place): WeatherEntry? = cached(key(place))
+
+    /** A current-position and a pinned widget at the same request coordinates can show either response. */
+    suspend fun cachedForWidget(place: Place): WeatherEntry? {
+        val location = locationKey(place)
+        val saved = cached(location)
+        val current = cached("current")?.takeIf {
+            it.currentLocationKey == location || (place.currentPosition && it.currentLocationKey == null)
+        }
+        return if (saved == null || (current != null && current.loadedAt > saved.loadedAt)) current else saved
+    }
+
+    private suspend fun cached(key: String): WeatherEntry? {
         entries.value[key]?.let { return it }
         val entry = readCache(key) ?: return null
         entries.update { if (key in it) it else it + (key to entry) }
@@ -104,7 +120,16 @@ class WeatherRepository(
      * Loads [place] unless the gate stops it ([force] bypasses the gate, as a tab tap, the retry button and the timer
      * do). [languages] are the app's language tags for `Accept-Language`.
      */
-    suspend fun load(place: Place, units: UnitSettings, languages: List<String>, force: Boolean): LoadResult {
+    suspend fun load(place: Place, units: UnitSettings, languages: List<String>, force: Boolean): LoadResult =
+        load(place, units, languages, force, reserveWidgetAttempt = null)
+
+    /** Reserve the widget budget only after excluding invalid input and requests already in flight. */
+    suspend fun loadFromWidget(place: Place, units: UnitSettings, languages: List<String>, reserveAttempt: () -> Boolean): LoadResult =
+        load(place, units, languages, force = false, reserveWidgetAttempt = reserveAttempt)
+
+    private suspend fun load(
+        place: Place, units: UnitSettings, languages: List<String>, force: Boolean, reserveWidgetAttempt: (() -> Boolean)?,
+    ): LoadResult {
         if (place.disable || (!force && !canLoad(place))) return LoadResult.Skipped
         val started = clock()
         val url = WeatherRequests.url(baseUrl, place, units) ?: run {
@@ -112,13 +137,28 @@ class WeatherRepository(
             return LoadResult.Failed(IllegalArgumentException("no location or address"))
         }
         val key = key(place)
-        val request = synchronized(this) { (++requests).also { latestRequest[key] = it } }
-        running.update { it + key }
+        val location = locationKey(place)
+        val request = synchronized(this) {
+            if (reserveWidgetAttempt != null &&
+                (key in inFlightLocations || location in inFlightLocations.values || !reserveWidgetAttempt())) return LoadResult.Skipped
+            inFlightLocations[key] = location
+            running.update { it + key }
+            (++requests).also { latestRequest[key] = it }
+        }
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages))
         val body = try {
-            firstSettled(WeatherPhotoFeed.ATTEMPTS, WeatherPhotoFeed.ATTEMPT_GAP_MS) { http.get(url, headers) }
+            if (reserveWidgetAttempt != null) {
+                firstSettled(1, 0) { http.getOnce(url, headers) }
+            } else {
+                firstSettled(WeatherPhotoFeed.ATTEMPTS, WeatherPhotoFeed.ATTEMPT_GAP_MS) { http.get(url, headers) }
+            }
         } finally {
-            synchronized(this) { if (latestRequest[key] == request) running.update { it - key } }
+            synchronized(this) {
+                if (latestRequest[key] == request) {
+                    inFlightLocations.remove(key)
+                    running.update { it - key }
+                }
+            }
         }
         // `$http` parses the body as `JSON.parse` does (the server answers with a JSON content type) and rejects it when it
         // cannot.
@@ -136,7 +176,8 @@ class WeatherRepository(
             val previous = cached(place)
             val responseUnits = (parsed.getOrNull() as? JsonObject)?.get("units") as? JsonObject
             val temperatureUnit = (responseUnits?.get("temperatureUnit") as? JsonPrimitive)?.contentOrNull ?: units.temperatureUnit
-            val entry = WeatherEntry(merge(previous?.weather, city), clock(), temperatureUnit.takeIf { it == "C" || it == "F" })
+            val entry = WeatherEntry(merge(previous?.weather, city), clock(), temperatureUnit.takeIf { it == "C" || it == "F" },
+                currentLocationKey = location.takeIf { place.currentPosition })
             val updated = updatePlace(place, city)
             val newKey = key(updated)
             synchronized(this) {
@@ -161,7 +202,7 @@ class WeatherRepository(
         runCatching {
             val o = Json.parseToJsonElement(file.readText()) as JsonObject
             WeatherEntry(o["weather"] as JsonObject, (o["loadedAt"] as JsonPrimitive).content.toLong(),
-                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull)
+                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull, (o["currentLocationKey"] as? JsonPrimitive)?.contentOrNull)
         }.getOrNull()
     }
 
@@ -175,6 +216,7 @@ class WeatherRepository(
                 temp.writeText(buildJsonObject {
                     put("loadedAt", JsonPrimitive(entry.loadedAt))
                     put("weather", entry.weather)
+                    entry.currentLocationKey?.let { put("currentLocationKey", JsonPrimitive(it)) }
                     entry.temperatureUnit?.let { put("temperatureUnit", JsonPrimitive(it)) }
                 }.toString())
                 if (!temp.renameTo(file)) temp.delete()
@@ -196,10 +238,11 @@ class WeatherRepository(
         private val WEATHER_FIELDS = listOf("currentWeather", "timeTable", "timeChart", "dayTable", "dayChart", "source", "airInfo", "airInfoList")
 
         /** Which place a request and its entry belong to: the current position, else its coordinates, else its address. */
-        fun key(place: Place): String {
+        fun key(place: Place): String = if (place.currentPosition) "current" else locationKey(place)
+
+        fun locationKey(place: Place): String {
             val location = place.location
             return when {
-                place.currentPosition -> "current"
                 location != null && location.lat != 0.0 -> "coord:${WeatherRequests.jsNumber(location.lat)},${WeatherRequests.jsNumber(location.long)}"
                 else -> "addr:${place.address.orEmpty()}"
             }

@@ -13,4 +13,10 @@
     <string name="widget_style_paper">Morning Paper</string>
     <string name="widget_style_blue">Blue Hour</string>
     <string name="widget_style_open">Open TodayWeather</string>
+    <string name="widget_refresh_mode">Weather updates</string>
+    <string name="widget_refresh_auto">Automatic · hourly</string>
+    <string name="widget_refresh_manual">Manual · tap to refresh</string>
+    <string name="widget_refresh_stamp">As of %1$s</string>
+    <string name="widget_refresh_action">Refresh weather</string>
+    <string name="widget_refresh_empty">Refresh</string>
 </resources>

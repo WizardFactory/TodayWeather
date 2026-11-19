@@ -649,4 +649,6 @@ Historical restoration also retains a valid pollutant absent from provider curre
 
 ## Native Android home-screen widgets
 
+Each Android widget placement stores an automatic or manual refresh preference. Launcher events request hourly updates for places displayed by automatic widgets. A manual tap requests its own place. Both paths check access, reuse the app cache and share a persistent one-hour interval between widget attempts for the same place. Each admitted attempt issues one GET. The widget keeps cached readings after a failure, and the next main-app visit can supply newer data through the shared repository.
+
 The four native widgets use the app's place-keyed weather repository. Each cached entry carries its retrieval time and may carry a temperature unit. The widgets can read older entries without the unit, displaying degrees without a Celsius/Fahrenheit label until a fresh response supplies it. Only a main-activity visit renews the device-local 120-hour window. The expiry worker redraws offline; Android controls when it runs. The [access lifecycle](diagrams/android-widget-access.html) shows the product rule. See the [widget sources](../../android/app/src/main/java/net/wizardfactory/todayweather/widget/) and [launcher guide](../user/android-app/widgets/README.md).

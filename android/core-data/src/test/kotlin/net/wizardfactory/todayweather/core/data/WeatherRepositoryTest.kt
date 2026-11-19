@@ -2,6 +2,10 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.runBlocking
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -41,6 +45,60 @@ class WeatherRepositoryTest {
     private fun currentOf(entry: WeatherEntry?) = entry!!.weather["currentWeather"]!!.jsonObject
 
     private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
+
+    @Test
+    fun widgetUsesOneWireRequestIncludingSlowRetryableResponses() = runBlocking {
+        MockWebServer().use { server ->
+            server.start()
+            server.enqueue(MockResponse.Builder().code(503).addHeader("Retry-After", "0")
+                .headersDelay(3, TimeUnit.SECONDS).build())
+            server.enqueue(MockResponse.Builder().body(seoulBody).build())
+            val repo = WeatherRepository(server.url("/").toString().trimEnd('/'), null)
+            val result = repo.loadFromWidget(seoul, units, listOf("ko")) { true }
+            assertIs<LoadResult.Failed>(result)
+            assertEquals(1, server.requestCount)
+            assertNull(repo.cached(seoul))
+        }
+    }
+
+    @Test
+    fun widgetSharesAnInFlightForegroundRequestWithoutSupersedingIt() = runTest {
+        val response = CompletableDeferred<String>()
+        var calls = 0
+        val repo = repository({ _, _ -> calls++; response.await() })
+        val appLoad = async { repo.load(seoul, units, listOf("ko"), force = true) }
+        runCurrent()
+        assertIs<LoadResult.Skipped>(repo.loadFromWidget(seoul.copy(currentPosition = true), units, listOf("ko")) { error("busy request must not consume another attempt") })
+        response.complete(seoulBody)
+        assertIs<LoadResult.Loaded>(appLoad.await())
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun widgetsShareOnlyMatchingCoordinatesAndCanReadLegacyCurrentCaches() = runTest {
+        val dir = Files.createTempDirectory("widget-weather").toFile()
+        try {
+            val current = seoul.copy(currentPosition = true)
+            val moved = london.copy(currentPosition = true)
+            val initial = repository({ _, _ -> seoulBody }, dir)
+            val seoulEntry = assertIs<LoadResult.Loaded>(initial.load(current, units, emptyList(), true)).entry
+            val reopened = repository({ _, _ -> londonBody }, dir)
+            assertEquals(seoulEntry, reopened.cachedForWidget(seoul))
+            assertNull(reopened.cachedForWidget(london))
+            assertNull(reopened.cachedForWidget(moved))
+            val currentFile = dir.listFiles()!!.single()
+            val old = JsonObject(Json.parseToJsonElement(currentFile.readText()).jsonObject - "currentLocationKey")
+            currentFile.writeText(old.toString())
+            val legacy = repository({ _, _ -> londonBody }, dir)
+            assertNull(legacy.cachedForWidget(seoul)) // An old current cache has no proven coordinates.
+            assertEquals(seoulEntry.weather, legacy.cachedForWidget(current)?.weather)
+            now++
+            val londonEntry = assertIs<LoadResult.Loaded>(legacy.load(london, units, emptyList(), true)).entry
+            assertEquals(londonEntry, legacy.cachedForWidget(moved))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 
     /** #2887 A01: Cordova put the answer for the place it asked about on the place selected when it came. */
     @Test

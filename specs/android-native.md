@@ -32,6 +32,10 @@ AN-19 (release), widgets, iOS, the #2651 restyle and server changes are outside 
 
 The [widget extension](https://github.com/WizardFactory/TodayWeather/issues/3048) adds four picker entries to the TodayWeather app: current conditions, forecast, clock and weather, and air quality. Each instance follows the app selection or pins an enabled place. Resizing adapts the content; instance settings select daily or hourly forecasts and yesterday comparisons.
 
+Each placement defaults to automatic hourly refresh, including widgets added before refresh settings were introduced. Manual mode shows a refresh control next to the last successful retrieval time. Tapping the widget body opens the main app at its place. When no weather is available yet, an eligible manual widget can still request its first reading.
+
+All widget types and modes on a device share one weather request budget per place. A widget can send one request when both the last widget attempt and the last successful cached retrieval are at least an hour old. Recording the attempt before sending protects against repeated taps, failures and process restarts. A failed attempt leaves the last reading and its timestamp on screen. Main-app requests retain their own refresh policy.
+
 A foreground visit to the main activity enables all widgets for the next 120 hours. A missing visit, a visit in the future, or an age of 120 hours or more requires the user to open the app. The prompt replaces cached weather and air readings. Configuration, background startup and widget refresh do not renew access. A scheduled redraw works offline; Android can defer its delivery during idle periods. A subsequent main-app visit renews all installed widgets. The new providers have different component names from the historical Cordova providers; users of those versions may need to add their widgets again.
 
 ## Assumptions and risks

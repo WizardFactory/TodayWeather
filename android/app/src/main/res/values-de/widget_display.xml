@@ -12,4 +12,10 @@
     <string name="widget_style_paper">Morgenpapier</string>
     <string name="widget_style_blue">Blaue Stunde</string>
     <string name="widget_style_open">App öffnen</string>
+    <string name="widget_refresh_mode">Wetteraktualisierung</string>
+    <string name="widget_refresh_auto">Automatisch · stündlich</string>
+    <string name="widget_refresh_manual">Manuell · per Tastendruck</string>
+    <string name="widget_refresh_stamp">Stand %1$s</string>
+    <string name="widget_refresh_action">Wetter aktualisieren</string>
+    <string name="widget_refresh_empty">Aktualisieren</string>
 </resources>

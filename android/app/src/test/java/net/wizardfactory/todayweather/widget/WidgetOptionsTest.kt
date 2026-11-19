@@ -34,6 +34,19 @@ class WidgetOptionsTest {
         assertEquals(forecast, WidgetOptions.read(context, 17))
     }
 
+    @Test fun oldWidgetsStartAutomaticAndManualModeBelongsOnlyToItsInstance() {
+        val prefs = context.getSharedPreferences("widget_options", Context.MODE_PRIVATE)
+        prefs.edit().putString("style_4", WidgetStyle.BLUE.name).commit()
+        val old = WidgetOptions.read(context, 4)
+        assertEquals(WidgetStyle.BLUE, old.style)
+        assertEquals(false, old.manualRefresh)
+        WidgetOptions.save(context, 4, old.copy(manualRefresh = true))
+        assertEquals(true, WidgetOptions.read(context, 4).manualRefresh)
+        assertEquals(false, WidgetOptions.read(context, 5).manualRefresh)
+        WidgetOptions.remove(context, 4)
+        assertEquals(false, WidgetOptions.read(context, 4).manualRefresh)
+    }
+
     @Test fun pinnedLocationSurvivesReorderAndGeocodeFillButDoesNotFallBackAfterDeletion() {
         val options = WidgetOptions(WidgetOptions.key(home))
         val filled = home.copy(location = Location(37.5, 126.9))

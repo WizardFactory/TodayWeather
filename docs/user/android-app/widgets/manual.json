@@ -10,10 +10,10 @@
       "screenshot": "screenshots/picker.png"
     },
     {
-      "title": "Choose a style, place and forecast",
-      "instruction": "Under 위젯 디자인 choose 클래식 블랙 (Classic Black), 아침 종이 (Morning Paper) or 블루 아워 (Blue Hour). Choose a place and, when offered, hourly or daily forecasts. Tap 저장.",
-      "caption": "Morning Paper is selected for this widget. Other widgets can keep their own style.",
-      "expected": "Each widget keeps its settings when you resize it.",
+      "title": "Choose the refresh mode and place",
+      "instruction": "In widget settings, choose a style and place. Select automatic updates (once hourly) or manual updates for this widget, then scroll down and tap 저장 (Save).",
+      "caption": "The Blue Hour clock has manual updates selected. The other widgets keep their own settings.",
+      "expected": "New and existing widgets use automatic updates until you choose manual updates.",
       "screenshot": "screenshots/configure.png"
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       "title": "Check current conditions",
-      "instruction": "Add 현재 날씨 for an at-a-glance reading. The large number is the current temperature; the smaller pair is the daily range. Select 어제 기온과 비교 in settings to compare against yesterday.",
+      "instruction": "Add 현재 날씨 for an at-a-glance reading. The large number is the current temperature. The smaller pair is the daily range. Select 어제 기온과 비교 in settings to compare against yesterday.",
       "caption": "Morning Paper groups the current temperature and legacy weather artwork on a yellow panel.",
       "expected": "Current conditions, their location and their update time are visible together.",
       "screenshot": "screenshots/current.png"
@@ -33,9 +33,16 @@
     {
       "title": "Show time with the weather",
       "instruction": "Add 시계와 날씨. Choose hourly or daily in widget settings. Enlarge the widget to show more forecast details.",
-      "caption": "Morning Paper on the Galaxy S21+ home screen. Blue Hour places weather first and moves the live clock to the right.",
+      "caption": "Morning Paper on the Galaxy S21+. In Blue Hour, the live clock and date align on the right.",
       "expected": "Time remains visible alongside the selected place and available forecast.",
       "screenshot": "screenshots/clock.png"
+    },
+    {
+      "title": "Refresh a widget manually",
+      "instruction": "Tap the refresh control beside the last update time. Tap elsewhere on the widget to open its place in TodayWeather.",
+      "caption": "The Blue Hour clock shows the refresh control in its upper-right corner.",
+      "expected": "Widgets sharing this place reuse its reading. Within one hour of a widget request, another tap keeps the cached weather. A failed refresh also keeps the previous reading.",
+      "screenshot": "screenshots/manual-refresh.png"
     },
     {
       "title": "Read local air quality",
@@ -48,7 +55,7 @@
       "title": "Resume after five days",
       "instruction": "If five days have passed since you last opened TodayWeather, tap the message in the widget to check the weather in the main app.",
       "caption": "The weather display is replaced by an invitation to open the app. Android may defer its scheduled update while the device sleeps.",
-      "expected": "Opening the main app starts a new 120-hour period. Adding or reconfiguring a widget does not extend it.",
+      "expected": "Opening the main app starts a new 120-hour period. Neither widget settings nor the refresh button extends that period.",
       "screenshot": "screenshots/expired.png"
     },
     {

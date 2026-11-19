@@ -8,7 +8,7 @@ or stay on one saved place. In widget settings, choose Classic Black, Morning
 Paper or Blue Hour independently for each copy. Existing widgets use Classic
 Black until you choose a different style.
 
-[Compare the three clock widgets on a Galaxy S21+ home screen](screenshots/galaxy-comparison.png).
+[Compare automatic and manual clock widgets in three styles on a Galaxy S21+](screenshots/galaxy-comparison.png).
 
 | Widget | Display and settings |
 | --- | --- |
@@ -17,7 +17,15 @@ Black until you choose a different style.
 | Clock and weather | Time and current conditions. A larger widget adds the chosen forecast. The tallest supported layout displays both forecast types. |
 | Air quality | Air-quality grade and available particulate readings. More space allows ozone and the air summary. |
 
-Touch the widget to open TodayWeather. After 120 hours since a main-app visit,
+In widget settings, choose automatic or manual weather updates separately for each
+widget. Automatic is the default and checks hourly, subject to Android scheduling.
+Manual widgets show a refresh control beside the update time. Tap it to request a
+reading for that place. Widgets for the same place share cached weather and allow
+one widget request per hour, including failed attempts. A recent reading from the
+main app also satisfies the widget. A manual widget can therefore show newer
+weather after you use the app or another widget updates that place.
+
+Tap the body of the widget to open TodayWeather. After 120 hours since a main-app visit,
 the widget asks you to check the weather in the app and pauses its weather
 requests. Widget setup and background refresh do not extend this interval. On
 first use, open TodayWeather to activate the widget. While Android defers work
@@ -35,9 +43,10 @@ add the new widget from your launcher's picker if the old widget is unavailable.
 
 Issue [#3048](https://github.com/WizardFactory/TodayWeather/issues/3048), 19 November
 2026. The current guide shows a physical Galaxy S21+ running Android 15
-(API 35), using a separate comparison install and a Seoul weather fixture. The
-three clock crops are from the Samsung launcher. The other style comparisons
-use bound AppWidgetHostViews on the same phone.
+(API 35), using a separate comparison install and a Seoul weather fixture. The three-style comparison and guide show bound AppWidgetHostViews on the phone.
+The widget picker was captured in Samsung One UI. The manual tap was
+exercised against a local Seoul weather fixture. Repeated taps and a process
+restart reused the reading. No live weather provider was involved.
 
 Earlier verification used an isolated Android 16 (API 36) emulator at
 1080×2400 and 420 dpi with Korean labels. Cached readings for Seoul and Jeju
@@ -74,4 +83,4 @@ air widget selected Jeju at its new index 1; tapping the weather widget then
 selected Seoul at its new index 2. [Two installed widgets in the earlier layout](screenshots/android7-two-locations.png).
 
 Use the [native manual build instructions](../README.md#rebuild-and-verify) with
-this directory's JSON and PDF paths to rebuild and render the eight pages.
+this directory's JSON and PDF paths to rebuild and render the nine pages.

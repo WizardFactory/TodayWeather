@@ -30,7 +30,7 @@ internal class WidgetReadings(weather: JsonObject, unit: String?, labels: Yester
     val condition = observation.text("weather").orEmpty()
     val degrees = temp?.let { "$it°" + unit.orEmpty() }.orEmpty()
     val current = listOfNotNull(observation?.icon()?.ifEmpty { null }, temp?.let { "$it°" + unit.orEmpty() }).joinToString(" ")
-    val compact = observation?.icon().orEmpty() + temp?.let { "$it°" }.orEmpty()
+    val compact = temp?.let { "$it°" }.orEmpty()
     val comparison = if (unit != null && temp != null && yesterday.temperature("t1h") != null && yesterday.text("comparisonAvailable") != "false")
         ForecastText.diffTodayYesterday(observation?.get("t1h"), yesterday, unit == "F", labels) else ""
 

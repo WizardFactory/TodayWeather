@@ -8,4 +8,4 @@
     android:description="@string/widget_display_forecast"
     android:configure="net.wizardfactory.todayweather.widget.WidgetConfigureActivity"
     android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
-    android:widgetFeatures="reconfigurable" android:updatePeriodMillis="1800000" />
+    android:widgetFeatures="reconfigurable" android:updatePeriodMillis="3600000" />

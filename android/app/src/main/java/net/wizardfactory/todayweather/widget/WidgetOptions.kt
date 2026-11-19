@@ -12,7 +12,11 @@ data class WidgetOptions(
     val daily: Boolean = false,
     val yesterday: Boolean = false,
     val style: WidgetStyle = WidgetStyle.CLASSIC,
+    val manualRefresh: Boolean = false,
 ) {
+    constructor(placeKey: String?, daily: Boolean, yesterday: Boolean, style: WidgetStyle) :
+        this(placeKey, daily, yesterday, style, false)
+
     companion object {
         const val OPEN = "net.wizardfactory.todayweather.widget.OPEN"
         const val PLACE_KEY = "net.wizardfactory.todayweather.widget.PLACE_KEY"
@@ -35,17 +39,19 @@ data class WidgetOptions(
 
         fun read(context: Context, id: Int): WidgetOptions = prefs(context).let {
             WidgetOptions(it.getString("place_$id", null), it.getBoolean("daily_$id", false), it.getBoolean("yesterday_$id", false),
-                WidgetStyle.entries.find { style -> style.name == it.getString("style_$id", null) } ?: WidgetStyle.CLASSIC)
+                WidgetStyle.entries.find { style -> style.name == it.getString("style_$id", null) } ?: WidgetStyle.CLASSIC,
+                it.getBoolean("manual_$id", false))
         }
 
         fun save(context: Context, id: Int, options: WidgetOptions) {
             prefs(context).edit().putString("place_$id", options.placeKey)
                 .putBoolean("daily_$id", options.daily).putBoolean("yesterday_$id", options.yesterday)
-                .putString("style_$id", options.style.name).apply()
+                .putString("style_$id", options.style.name).putBoolean("manual_$id", options.manualRefresh).apply()
         }
 
         fun remove(context: Context, id: Int) {
-            prefs(context).edit().remove("place_$id").remove("daily_$id").remove("yesterday_$id").remove("style_$id").apply()
+            prefs(context).edit().remove("place_$id").remove("daily_$id").remove("yesterday_$id").remove("style_$id")
+                .remove("manual_$id").apply()
         }
 
         fun openIntent(context: Context, placeKey: String?): Intent =

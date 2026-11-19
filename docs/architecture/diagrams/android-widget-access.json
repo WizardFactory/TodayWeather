@@ -69,6 +69,15 @@
         "Cached readings show their update time while access is active.",
         "Android can defer the scheduled redraw while the device sleeps."
       ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Eligible weather requests",
+      "items": [
+        "Automatic widgets check hourly. Manual widgets check on tap.",
+        "A recent cached reading or widget attempt covers that place for one hour.",
+        "Each admitted widget request sends one GET. Failed refreshes retain cached data."
+      ]
     }
   ]
 }
