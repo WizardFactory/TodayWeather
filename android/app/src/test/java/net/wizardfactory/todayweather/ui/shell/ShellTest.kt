@@ -1,5 +1,7 @@
 package net.wizardfactory.todayweather.ui.shell
 
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.unit.dp
 import android.view.ViewGroup
@@ -57,20 +59,35 @@ class ShellTest {
     }
 
     @Test
-    fun tabsSwitchAndTheSelectedWeatherTabRefreshes() {
+    fun tabsKeepTheirNavigationIconsWhenSelected() {
         show()
         rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
-        for (tab in listOf(Tab.DAILY, Tab.AIR, Tab.LOCATIONS, Tab.HOURLY)) {
+        val icons = mapOf(
+            Tab.LOCATIONS to (Glyphs.STAR to Glyphs.STAR_OUTLINE),
+            Tab.HOURLY to (Glyphs.CLOCK_FILLED to Glyphs.CLOCK_OUTLINE),
+            Tab.DAILY to (Glyphs.CALENDAR_FILLED to Glyphs.CALENDAR_OUTLINE),
+            Tab.AIR to (Glyphs.CLOUD_FILLED to Glyphs.CLOUD_OUTLINE),
+        )
+        for (tab in Tab.entries) {
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
-            rule.waitForIdle()
+            for ((item, pair) in icons) {
+                val button = rule.onNodeWithTag(ShellTags.tab(item))
+                val glyph = if (item == tab) {
+                    button.assertIsSelected()
+                    pair.first
+                } else {
+                    button.assertIsNotSelected()
+                    pair.second
+                }
+                rule.onNode(hasText(glyph) and hasAnyAncestor(hasTestTag(ShellTags.tab(item))), useUnmergedTree = true).assertExists()
+            }
+            // The previous tab handler read wall time and ignored repeats within 700 ms.
+            Thread.sleep(750)
+            rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            assertTrue("reselecting $tab did not dispatch a manual refresh", refreshed.isEmpty())
             rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
         }
-        assertEquals(emptyList<Tab>(), refreshed)
-        Thread.sleep(750)
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick() // within 700 ms: ignored
-        rule.waitForIdle()
-        assertEquals(listOf(Tab.HOURLY), refreshed)
+        assertTrue(refreshed.isEmpty())
     }
 
     @Test

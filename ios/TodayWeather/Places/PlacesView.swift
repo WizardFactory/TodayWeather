@@ -472,7 +472,8 @@ private struct ResultItem: View {
     var body: some View {
         Button(action: action) {
             CssLine(runs: [CssRun(text: text, size: PlacesMetrics.nameText * scale, weight: .medium)], color: colors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // A long prediction must accept the list width before clipping its single line.
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 .clipped()
                 .padding(PlacesMetrics.itemPadding + 1)
                 .contentShape(Rectangle())

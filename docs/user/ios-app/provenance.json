@@ -133,10 +133,10 @@
    ]
   },
   "screenshots/16-place-search.png": {
-   "sha256": "12982f163b0c51e7c28eaa85da797ef71c308dafa998b2b562c448c5b039a9e0",
+   "sha256": "ae39f1870b2922ac802a135b1b5ba045257fa3b3dcdec5869c5028f8f4741d7c",
    "size": [
     720,
-    1562
+    1561
    ]
   },
   "screenshots/17-busan.png": {
@@ -273,10 +273,10 @@
    ]
   },
   "screenshots/36-national-wind.png": {
-   "sha256": "523829edc9a7faa5cab402bd8fe94b26a5faa3816b79c9ef0ac5a9dd50aaccbe",
+   "sha256": "9836ddb6b7e940e2bc3098e9ddd09204eef22f10f3c09fa44e92fa7e4830795d",
    "size": [
     720,
-    1562
+    1561
    ]
   },
   "screenshots/37-national-air.png": {
@@ -322,8 +322,8 @@
    ]
   }
  },
- "manual_sha256": "00cf88f7e87c1b744ad7ed71c152ee5ef62c6a47da865702a3d8e90cf4482f0f",
- "pdf_sha256": "f8e91851b9b3ce078ff5bd31228f9ea6c08cd94134352d218413ead54f90950b",
+ "manual_sha256": "b365d70da0f9647ab91ba8b655a181be9d63520c7063f86e3c26a217faaa784d",
+ "pdf_sha256": "5b324fc83150f11924bbec331743a43ac8bf9d8bedebecdc5d45792f896d33c7",
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "5d2ed56914838cda11d5bcc1542764743b1376203b124cda932758e6b438a4ee",
   "ios/tools/manual/run-manual-capture.sh": "5ce017863dcaa24e0052ab8057c7845e384b26fd4af9c41bb71c0dfb9659131b",
@@ -352,6 +352,14 @@
    ],
    "product_base_commit": "4afc6d2a9ef4eae9e94c5b3a4f74ced5aa5ae2da",
    "capture": "iPhone 16 simulator, iOS 26.5. simctl captured the screen during a downward XCUITest drag on the hourly header in PlacesUITests.testDraggingAChartScrollsOnlyTheChart, fixture mode. The test confirmed one additional local weather request and the same place (Busan) after release."
+  },
+  {
+   "date": "2026-11-18",
+   "screenshots": [
+    "screenshots/16-place-search.png",
+    "screenshots/36-national-wind.png"
+   ],
+   "reason": "Issues #3036 and #3037. App-hosted simulator captures with fixture weather and place results. Search uses standard text and wind uses the next larger Dynamic Type size."
   }
  ],
  "source_changes": [

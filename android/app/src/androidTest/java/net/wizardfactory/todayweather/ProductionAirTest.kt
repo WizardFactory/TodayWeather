@@ -7,6 +7,8 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -53,11 +55,8 @@ class ProductionAirTest {
         assumeTrue("needs -e weather production", TestRunner.args.getString("weather") == "production")
         rule.waitUntil(30_000) { app.appState.current() != null }
         rule.waitForIdle()
-        // The first tap selects the Air tab; the next, past the 700 ms guard, loads Seoul at once (`reloadEvent` "tab").
         rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()
-        rule.waitForIdle()
-        Thread.sleep(800)
-        rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()
+        rule.onNodeWithTag(ShellTags.page(Tab.AIR)).performTouchInput { swipeDown(startY = height * 0.22f) }
         val key = WeatherRepository.key(seoul)
         rule.waitUntil(40_000) { app.weather.weather.value.containsKey(key) }
         rule.waitForIdle()

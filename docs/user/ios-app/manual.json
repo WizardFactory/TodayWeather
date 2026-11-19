@@ -1,6 +1,6 @@
 {
  "title": "TodayWeather for iOS: native app user manual",
- "scenario": "TodayWeather 2.0.0 preview on an iPhone simulator. Korean screens with English instructions. The pull-to-refresh example uses sample weather. Other screens show live examples from 17 November 2026.",
+ "scenario": "TodayWeather 2.0.0 preview on an iPhone simulator. Korean screens with English instructions. The pull-to-refresh, saved-place search and nationwide wind examples use sample data. Other screens show live examples from 17 November 2026.",
  "steps": [
   {
    "title": "Read the first-launch notice",
@@ -119,7 +119,7 @@
    "instruction": "Tap the search field, type a name (부산) and close the keyboard with Done.",
    "screenshot": "screenshots/16-place-search.png",
    "caption": "Matching places appear under 현재위치로 지역찾기 (Find by location): the app's list of Korean towns first, Google's suggestions further down.",
-   "expected": "Tapping a result adds it."
+   "expected": "Tap a result to add it, or tap 취소 (Cancel) beside the search field to return to your saved places."
   },
   {
    "title": "See the new place",
@@ -258,7 +258,7 @@
    "title": "Change the nationwide map mode",
    "instruction": "Tap 풍향/풍속 (Wind).",
    "screenshot": "screenshots/36-national-wind.png",
-   "caption": "Wind direction and speed per city. 강수량 shows precipitation.",
+   "caption": "Read the direction and speed below each city name. Select 강수량 for precipitation.",
    "expected": "The map switches modes at once."
   },
   {
