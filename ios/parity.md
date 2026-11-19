@@ -4,6 +4,8 @@ This checklist records how the native app in `ios/` reproduces the Cordova 1.1.1
 
 **Parity oracle.** The Cordova iOS build: the source at the pull request's base revision, including its iOS branches, and captures of that build on iOS Simulators ([spec](../specs/ios-native.md#behavior-to-retain)). The [Cordova user manual](../docs/user/cordova-app/README.md) (Android captures) and the rewrite specification ([screens](../docs/rewrite/screen-specifications.md), [overlays](../docs/rewrite/screen-overlays.md)) name the screens and states. The Android [parity checklist](../android/parity.md) (AN-18) records the same rows for the Android app and is the reference for decisions already taken; where the sources disagree, the current Cordova iOS behavior wins.
 
+**Current temperature (S03, S04).** The decimal separator and fractional digits use 70% of the whole-number font size in native forecast headers. The [header reference images](TodayWeatherTests/FractionalTemperatureReference/) start from the corresponding Cordova capture. Only the bounding rectangle of the temperature and recentered sky icon was replaced with the inspected native render (Xcode 27.2, iOS 26.5, November 19, 2026). Weather, matrix and settings screenshot tests compare the whole block with their existing tolerances. Integer headers still use the original captures. [Illustrated example](../docs/user/ios-app/current-temperature/manual.pdf)
+
 **Columns.**
 
 - **ID:** S and O IDs are the rewrite specification's. X IDs follow the Android checklist; I IDs are local to this checklist.

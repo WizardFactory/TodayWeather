@@ -140,7 +140,8 @@ struct MatrixScreenshotTests {
                 let index = Int(block["index"]?.numberValue?.double ?? -1)
                 let view = WeatherScreenshotTests.blockView(content.blocks[index], content: content, page: page, headerTop: display.top)
                 let native = render(view.frame(width: display.width), display, width: display.width, language: language)
-                let reference = try References.image(Self.file(display, language, try #require(block["file"]?.stringValue)))
+                let file = Self.file(display, language, try #require(block["file"]?.stringValue))
+                let reference = try References.image(WeatherScreenshotTests.referenceFile(file, block: content.blocks[index], content: content))
                 let hidden = Int((block["hidden"]?.numberValue?.double ?? 0) * Double(display.scale))
                 try report.compare("\(size)-\(language)-forecast-\(page)-\(index)", native, reference, hidden: hidden)
             }
