@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +22,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.core.graphics.Insets
@@ -94,6 +99,7 @@ class PlacesScreenTest {
     private val alarm = Json.parseToJsonElement("""{"cityIndex":1,"id":1,"category":"alarm","enable":true}""") as JsonObject
     private val removed = mutableListOf<Int>()
     private val opened = mutableListOf<String>()
+    private val adVisits = mutableListOf<Tab>()
 
     private class Memory(initial: AppState) : StateAccess {
         val flow = MutableStateFlow(initial)
@@ -144,7 +150,14 @@ class PlacesScreenTest {
                     { listOf("ko-KR") }), device, s, removeAlarms = { removed += it })
             }
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places, startTab = Tab.LOCATIONS,
-                nativeAd = if (withAd) ({ Box(Modifier.size(80.dp).testTag("native-placement")) }) else null,
+                nativeAd = if (withAd) ({ tab ->
+                    DisposableEffect(Unit) {
+                        adVisits += tab
+                        onDispose {}
+                    }
+                    val render: @Composable () -> Unit = { Box(Modifier.size(80.dp).testTag("native-placement")) }
+                    render
+                }) else null,
                 openAppSettings = { opened += "app" }, openLocationSettings = { opened += "location" })
         }
         rule.waitForIdle()
@@ -183,6 +196,42 @@ class PlacesScreenTest {
                     card.getUnclippedBoundsInRoot().top >= details.getUnclippedBoundsInRoot().bottom)
             }
         }
+    }
+
+    @Test
+    fun menuReturnResumesTheCoveredPlacementWhileTabAndCityChangesStartNewVisits() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul, busan), withAd = true)
+        val ad = rule.onNodeWithTag("native-placement")
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        ad.assertDoesNotExist()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        ad.assertExists()
+        assertEquals(listOf(Tab.LOCATIONS), adVisits)
+
+        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.waitForIdle()
+        rule.runOnIdle { memory.change { it.copy(placeIndex = 2) } }
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
+        rule.waitForIdle()
+        assertEquals(listOf(Tab.LOCATIONS, Tab.HOURLY, Tab.HOURLY, Tab.LOCATIONS), adVisits)
+    }
+
+    @Test
+    fun closingMenuAtEndOfDailyKeepsTheFilledCardAndReadingPosition() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul), withAd = true)
+        rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
+        val scroll = rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        scroll.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 100_000f) }
+        rule.waitForIdle()
+        fun offset() = scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        val before = offset()
+        assertTrue(before > 0f)
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.onNodeWithTag("native-placement").assertDoesNotExist()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithTag("native-placement").assertExists()
+        assertEquals(before, offset())
     }
 
     @Test

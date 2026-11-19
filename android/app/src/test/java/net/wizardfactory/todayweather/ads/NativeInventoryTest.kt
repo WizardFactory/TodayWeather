@@ -9,7 +9,7 @@ class NativeInventoryTest {
     private val released = mutableListOf<String>()
     private val inventory = NativeInventory<String>({ loads.add(it) }, { released.add(it) }) { now }
     private var displayed: String? = null
-    private fun visit() = inventory.open { displayed = it }
+    private fun visit() = inventory.open(Any()) { displayed = it }
 
     @Test fun readyCreativeIsShownOnEntryAndReleasedOnce() {
         assertTrue(loads.isEmpty())
@@ -36,6 +36,45 @@ class NativeInventoryTest {
         first.close()
         visit()
         assertEquals("late", displayed)
+    }
+
+    @Test fun returningFromAnOverlayCannotInsertAnAdAfterTheAnchorWasReached() {
+        val page = Any()
+        inventory.setEnabled(true)
+        val first = inventory.open(page) { displayed = it }
+        first.position(belowViewport = false)
+        first.detach()
+        loads.single()("late")
+        val resumed = inventory.open(page) { displayed = it }
+        resumed.position(belowViewport = true)
+        assertNull("an overlay return belongs to the same reading visit", displayed)
+        resumed.close()
+        visit()
+        assertEquals("late", displayed)
+    }
+
+    @Test fun coveredPageRechecksGeometryBeforeUsingAReadyAd() {
+        val page = Any()
+        inventory.setEnabled(true)
+        val first = inventory.open(page) { displayed = it }
+        first.position(belowViewport = true)
+        first.detach()
+        loads.single()("ready")
+        assertNull(displayed)
+        val resumed = inventory.open(page) { displayed = it }
+        assertNull(displayed)
+        resumed.position(belowViewport = true)
+        assertEquals("ready", displayed)
+        resumed.detach()
+        loads[1]("spare")
+        val rendered = mutableListOf<String?>()
+        inventory.open(page, rendered::add)
+        assertEquals(listOf("ready"), rendered)
+        inventory.end(page)
+        assertEquals(listOf("ready", null), rendered)
+        assertEquals(listOf("ready"), released)
+        visit()
+        assertEquals("spare", displayed)
     }
 
     @Test fun adMayArriveWhileStillBelowReaderAndIsRevokedImmediately() {

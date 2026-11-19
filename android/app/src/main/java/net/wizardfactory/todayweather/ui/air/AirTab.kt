@@ -1,7 +1,7 @@
 package net.wizardfactory.todayweather.ui.air
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,7 +80,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
     var taps by remember(visit) { mutableIntStateOf(0) }
     val page = remember(applied, taps, texts, airUnit) { AirPage(visit, texts) }
     val content = remember(page, metrics) { AirContent(page, metrics, visit.airChart, visit.standard, texts["LOC_HOUR"]) }
-    val scroll = remember(visit) { ScrollState(0) }
+    val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     var source by remember(visit) { mutableStateOf<String?>(null) }
     val loadingSelected = place != null && (WeatherRepository.key(place) in loading || place.currentPosition && locating)

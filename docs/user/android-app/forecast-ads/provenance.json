@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "product": "TodayWeather Android native 2.0.0 preview",
-  "product_base_commit": "016907c4d8652ca4bbc910317db8090284ade971",
+  "product_base_commit": "feb9a7dbc547802c503c1c8ecc150f04ab218d71",
   "candidate": "Issue 3041 working tree on top of the base commit. APK and capture-source digests identify the captured candidate.",
   "capture_date": "2026-11-19",
   "environment": {
@@ -15,32 +15,32 @@
     ],
     "density_dpi": 420
   },
-  "capture": "AdsDeviceTest#aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff, ads=online. ScreenFitWalk seeded the Seoul weather fixture. SDK sample native ads arrived on all four real app pages. No production ad requests or clicks.",
+  "capture": "AdsDeviceTest#aTestNativeCardLoadsOnAllFourPagesWhileAnalyticsStaysOff, ads=online. ScreenFitWalk seeded the Seoul fixture. On the review candidate the SDK served Google native test ads on all four pages at both default and enlarged font sizes. The source and APK digests below describe the review candidate. Retained screenshots identify their own earlier capture where applicable.",
   "apk_sha256": {
-    "app-debug.apk": "5c5abe4dc8efbf016dd0f921a603dc53661ba66ec5502938d2c9a46942871159",
-    "app-debug-androidTest.apk": "90d9a06c71b6eb7302c6758989f052773691df68e81df41976f2d59c3d07e571"
+    "app-debug.apk": "0435fc7c77364b99527802d874c408aee2170aa089e3b60688676e715d7fbd35",
+    "app-debug-androidTest.apk": "3e70197d15576793e70903a4a0f3602e5de4a71e2a5a1f599ee5e2ded9646b52"
   },
   "processing": "Lanczos resize to 720x1600, 256-color MEDIANCUT palette. No content replaced or redrawn.",
   "screenshots": {
     "screenshots/hourly-native.png": {
-      "sha256": "83e83ceaf9df4c381a9651f6c8be6b04a89d06c1de63d56756ea695fb7940d81",
+      "sha256": "f356782038b6cabcd0677b06c843dbca30a400458db77ad1d2322ccca4ca52d8",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "1b852cac723f1af3e76310765a47ea4bc70cc5feb3b5a719e47d313c6be2e725",
+      "raw_sha256": "733e4b20dd9b34df8a01c79230781d2a1ab9af6baa46946a88f2c114f3f3848b",
       "raw_size": [
         1080,
         2400
       ]
     },
     "screenshots/daily-native.png": {
-      "sha256": "2760a8fbd7c71b566f430b5bb3dd461b6c10c1e4147f13e4213bad62e7243153",
+      "sha256": "db70ad172bbf035fb51b34446f2320d568f9fedb0b6de239551fdb469683ec7e",
       "size": [
         720,
         1600
       ],
-      "raw_sha256": "339235ccf3e33420266d4c9c9eb1366ef4030a74c82845535065722fe6354fd7",
+      "raw_sha256": "2f668a792dba48f370310729e72c7e7eb7eca97274534f81852b1f9fe538f420",
       "raw_size": [
         1080,
         2400
@@ -56,7 +56,12 @@
       "raw_size": [
         1080,
         2400
-      ]
+      ],
+      "capture": "Previously captured at 411dp on the compact layout. See the screenshot provenance committed in 53d3d19a. The review-candidate SDK validator obscured part of the surrounding page.",
+      "apk_sha256": {
+        "app-debug.apk": "5c5abe4dc8efbf016dd0f921a603dc53661ba66ec5502938d2c9a46942871159",
+        "app-debug-androidTest.apk": "90d9a06c71b6eb7302c6758989f052773691df68e81df41976f2d59c3d07e571"
+      }
     },
     "screenshots/air-native.png": {
       "sha256": "f8ad21ddb3749e8c37f010f41b8899843480fe4be7bba1c5020af5b70a4c6252",
@@ -68,24 +73,31 @@
       "raw_size": [
         1080,
         2400
-      ]
+      ],
+      "capture": "Previously captured at 411dp on the compact layout. See the screenshot provenance committed in 53d3d19a. The review-candidate SDK validator obscured part of the surrounding page.",
+      "apk_sha256": {
+        "app-debug.apk": "5c5abe4dc8efbf016dd0f921a603dc53661ba66ec5502938d2c9a46942871159",
+        "app-debug-androidTest.apk": "90d9a06c71b6eb7302c6758989f052773691df68e81df41976f2d59c3d07e571"
+      }
     }
   },
   "sources": {
-    "android/app/src/androidTest/java/net/wizardfactory/todayweather/AdsDeviceTest.kt": "211efc6308859a9e8477b53bf65dddf4473a5c48dff5a8a1c719984ea9e91ed1",
+    "android/app/src/androidTest/java/net/wizardfactory/todayweather/AdsDeviceTest.kt": "d50c79c9935e49a5a1de59d40013da9fa797ef959f4845db0092a3caca19cd21",
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/ScreenFitWalk.kt": "d042197900e5c2b77305a550682625d8e7b250ddc8cf8784d5426dfa1d7fa2f1",
     "android/app/src/main/res/layout/native_forecast_ad.xml": "de286887a721d222c3f2d5ad575d50b948ee67b84e78c28e8f7f235b05832c24",
     "android/app/src/main/res/values/ad_strings.xml": "ac8c54e6cefa094a3f45ce837f798b330d8d6c91d54ca405798204c25e673681",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeForecastAds.kt": "e5e94d36b8814d0f952f2653e692ce357d8d5007cce26c0a27b56bcdf3ab9ccd",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeInventory.kt": "d0d20d6a867ba440acec100dcf58e10f3042e6dc4b69d4f71774408586b8d9a4",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeForecastAds.kt": "f98e25e9361a58af5ba314a8c403c40d676b82aff0dae7aabe35b462add3d8ef",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ads/NativeInventory.kt": "5b3304d40bb903f49aaddfdf21b0b868067fba442d74a4409bf2f5448b9f9523",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "68da81a98687eeeaf6b5f3e436c3695d8f83f9c16ff7bddc3991a940e327391d",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherPage.kt": "81d096367cd535568677fb25858a4c87cae091db00d9554fe3154bbc9239b75f",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherPage.kt": "9fc2e9b2568bad9d9c9d0e7672daf446a791056aae6389e9f0c3b564b9395074",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirScreen.kt": "f3dab320907448271e2b341607a9eb749f5a3423e7bbb835b62ec639a2246e29",
     "android/app/src/main/res/layout/native_forecast_ad_compact.xml": "7fe5acb067ba1f6b690791d830e2f3692c8391daae9891feeb4eeb46cdc56ef1",
-    "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "d1e05ebe6c39e6b7a6dad4bf721a8c166a5e183f432fee8532338408f1fad4aa"
+    "android/app/src/main/java/net/wizardfactory/todayweather/MainActivity.kt": "6f91d70c9fe7ef50d417bb3537f7cd012b612ad8012a692eff818b90fd2f403a",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/air/AirTab.kt": "31bec3845bd521d3aa80e0eb18c4f497d2c9ec5154ade9bf1ad7a1ecb70ffca5",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/forecast/WeatherTab.kt": "fbfb2fff75baed762e26a3be3ee71b236690907fbbad67d822b5a2709eeed40d"
   },
   "manual_sha256": "04145d9c95bd2e05942735b36eb4e94e770fa8cc18c100fb4a0673e95ec3da8d",
-  "pdf_sha256": "4e23c4a4a462e238f3ba4b42ce363a1f614b0bb5ff7a487f64aded64ca884c96",
+  "pdf_sha256": "77436031bbaf2c4a81d5a4744c94b7fea3b01cf678011a575f6c403c4834e22d",
   "limitations": [
     "The illustrated native placements display Google sample ads. Creative dimensions and text can vary with content, device width and font settings.",
     "Full-screen ads, paid impressions and revenue are outside the scope of these screenshots."

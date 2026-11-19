@@ -4,6 +4,12 @@ import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.key
 import kotlinx.coroutines.delay
@@ -51,13 +57,14 @@ import kotlinx.coroutines.withContext
 import net.wizardfactory.todayweather.ads.NativeForecastAds
 import net.wizardfactory.todayweather.ads.ForecastInterstitial
 import net.wizardfactory.todayweather.ads.AdsConsent
-import net.wizardfactory.todayweather.ads.NativeAdSlot
+import net.wizardfactory.todayweather.ads.rememberNativeAdSlot
 import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.data.PlacesPage
 import net.wizardfactory.todayweather.core.data.SettingsActions
 import net.wizardfactory.todayweather.core.data.StartFlow
 import net.wizardfactory.todayweather.core.data.Telemetry
 import net.wizardfactory.todayweather.core.data.WeatherEntry
+import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
 import net.wizardfactory.todayweather.core.domain.places.PlaceRows
@@ -200,7 +207,7 @@ class MainActivity : ComponentActivity() {
                 }
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
                     handoffs = handoffs, nation = opened.nation, privacy = privacy, nativeAd = { tab ->
-                        NativeAdSlot(nativeAds, compact = tab != Tab.LOCATIONS, dark = Theme.of(s.settings.theme) == Theme.DARK)
+                        rememberNativeAdSlot(nativeAds, compact = tab != Tab.LOCATIONS, dark = Theme.of(s.settings.theme) == Theme.DARK)
                     },
                     onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
@@ -283,7 +290,7 @@ fun AppContent(
     messages: Flow<PushMessage>? = null,
     /** O06 for alarms of the legacy `pushData` (#2893). */
     alertIntro: AlertIntro? = null,
-    nativeAd: (@Composable (Tab) -> Unit)? = null,
+    nativeAd: (@Composable (Tab) -> (@Composable () -> Unit))? = null,
     onVisit: (Tab) -> Unit = {},
     onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
 ) {
@@ -372,7 +379,19 @@ fun AppContent(
     val selected = navigation.selected
     var forecastRead by remember(selected, state.placeIndex, tabContentVisible) { mutableStateOf(false) }
     LaunchedEffect(selected, tabContentVisible) { if (tabContentVisible) onVisit(selected) }
-    val visibleAd: (@Composable () -> Unit)? = if (tabContentVisible && nativeAd != null) ({ nativeAd(selected) }) else null
+    val city = state.places.getOrNull(state.placeIndex)?.let(WeatherRepository::key)
+    val placement = key(selected, city) { nativeAd?.invoke(selected) }
+    var adHeightPx by remember(selected, city) { mutableIntStateOf(0) }
+    val visibleAd: (@Composable () -> Unit)? = placement?.let { render ->
+        {
+            if (tabContentVisible) {
+                Box(Modifier.onSizeChanged { adHeightPx = it.height }) { render() }
+            } else {
+                // Keep the reading position while the creative and its touch targets are covered.
+                Spacer(Modifier.height(with(LocalDensity.current) { adHeightPx.toDp() }))
+            }
+        }
+    }
     val texts = host.texts
     val openUnits = { open(SettingsRoutes.UNITS) }
     TodayWeatherShell(

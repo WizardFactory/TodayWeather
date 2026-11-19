@@ -63,12 +63,10 @@ class AdsDeviceTest {
             while (!hasCard() && SystemClock.elapsedRealtime() < deadline) {
                 Thread.sleep(3_000)
                 if (!hasCard()) {
-                    // The side menu hides the slot while the SDK fills a spare.
-                    rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
-                    rule.waitForIdle()
-                    Thread.sleep(2_000)
-                    rule.activity.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
-                    rule.waitForIdle()
+                    // Enter a different tab before returning. Overlays belong to the same reading visit.
+                    select(if (tab == Tab.LOCATIONS) Tab.AIR else Tab.LOCATIONS)
+                    Thread.sleep(3_000) // Allow a spare to refill if the other page used the previous creative.
+                    select(tab)
                 }
             }
             rule.onNodeWithTag("admob-native-card").performScrollTo().assertIsDisplayed()

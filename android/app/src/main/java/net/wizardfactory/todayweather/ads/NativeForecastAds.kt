@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -45,7 +44,9 @@ class NativeForecastAds(
 
     fun setEnabled(allowed: Boolean) = inventory.setEnabled(allowed && unitId.isNotBlank())
     fun destroy() = inventory.setEnabled(false)
-    internal fun open(show: (NativeAd?) -> Unit) = inventory.open(show)
+    internal fun open(visitKey: Any, show: (NativeAd?) -> Unit) = inventory.open(visitKey, show)
+    internal fun displayedFor(visitKey: Any) = inventory.displayedFor(visitKey)
+    internal fun end(visitKey: Any) = inventory.end(visitKey)
 
     private fun load(settle: (NativeAd?) -> Unit) {
         val loader = AdLoader.Builder(activity, unitId)
@@ -77,18 +78,26 @@ private class SlotPosition {
     var belowViewport: Boolean? = null
 }
 
+/** Keep ownership in the tab/city composition even when an overlay removes its on-screen slot. */
+@Composable
+fun rememberNativeAdSlot(ads: NativeForecastAds, compact: Boolean, dark: Boolean): @Composable () -> Unit {
+    val visitKey = remember(ads) { Any() }
+    DisposableEffect(ads, visitKey) { onDispose { ads.end(visitKey) } }
+    return { NativeAdSlot(ads, visitKey, compact, dark) }
+}
+
 /** Zero height while empty. An arriving creative may be inserted only below the reader's viewport. */
 @Composable
-fun NativeAdSlot(ads: NativeForecastAds, compact: Boolean, dark: Boolean = isSystemInDarkTheme()) {
-    var creative by remember(ads) { mutableStateOf<NativeAd?>(null) }
-    val position = remember(ads) { SlotPosition() }
-    DisposableEffect(ads) {
-        val visit = ads.open { creative = it }
+private fun NativeAdSlot(ads: NativeForecastAds, visitKey: Any, compact: Boolean, dark: Boolean) {
+    var creative by remember(ads, visitKey) { mutableStateOf(ads.displayedFor(visitKey)) }
+    val position = remember(ads, visitKey) { SlotPosition() }
+    DisposableEffect(ads, visitKey) {
+        val visit = ads.open(visitKey) { creative = it }
         position.visit = visit
         position.belowViewport?.let(visit::position)
         onDispose {
             position.visit = null
-            visit.close()
+            visit.detach()
         }
     }
     Box(Modifier.fillMaxWidth().onGloballyPositioned { coordinates ->

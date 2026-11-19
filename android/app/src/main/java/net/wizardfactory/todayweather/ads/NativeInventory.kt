@@ -30,13 +30,23 @@ internal class NativeInventory<T : Any>(
         }
     }
 
-    fun open(show: (T?) -> Unit): Visit {
+    fun open(visitKey: Any, show: (T?) -> Unit): Visit {
+        current?.takeIf { it.key === visitKey }?.let { visit ->
+            visit.attach(show)
+            return visit
+        }
         current?.close()
-        val visit = Visit(show)
+        val visit = Visit(visitKey, show)
         current = visit
         visit.takeReady()
         preload()
         return visit
+    }
+
+    fun displayedFor(visitKey: Any): T? = current?.takeIf { it.key === visitKey }?.displayed
+
+    fun end(visitKey: Any) {
+        current?.takeIf { it.key === visitKey }?.close()
     }
 
     private fun preload() {
@@ -55,14 +65,15 @@ internal class NativeInventory<T : Any>(
         }
     }
 
-    inner class Visit(private val show: (T?) -> Unit) {
-        private var displayed: T? = null
+    inner class Visit(val key: Any, private var show: ((T?) -> Unit)?) {
+        var displayed: T? = null
+            private set
         private var reached = false
         var canInsertOffscreen = false
             private set
 
         fun position(belowViewport: Boolean) {
-            if (current !== this) return
+            if (current !== this || show == null) return
             if (!belowViewport) reached = true
             canInsertOffscreen = belowViewport && !reached && displayed == null
             if (canInsertOffscreen) takeReady()
@@ -77,7 +88,7 @@ internal class NativeInventory<T : Any>(
             } else {
                 displayed = ad
                 canInsertOffscreen = false
-                show(ad)
+                show?.invoke(ad)
             }
             preload()
         }
@@ -87,14 +98,26 @@ internal class NativeInventory<T : Any>(
                 displayed = null
                 reached = true
                 canInsertOffscreen = false
-                show(null)
+                show?.invoke(null)
                 release(ad)
             }
+        }
+
+        // Overlays remove the view but retain the reader's progress and any displayed creative.
+        fun detach() {
+            show = null
+            canInsertOffscreen = false
+        }
+
+        internal fun attach(render: (T?) -> Unit) {
+            show = render
+            render(displayed)
         }
 
         fun close() {
             if (current === this) current = null
             clear()
+            detach()
         }
     }
 }
