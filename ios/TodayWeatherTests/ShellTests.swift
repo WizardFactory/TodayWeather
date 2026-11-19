@@ -13,9 +13,8 @@ extension HostedShellTests {
 @MainActor
 struct ShellTests {
     @Test func tabsNavigateAndPullRefreshesOnlyWeatherPages() async throws {
-        for tab in [ShellTab.forecast, .dailyforecast, .air] {
-            #expect(Glyphs.tab(tab, selected: true) == Glyphs.tab(tab, selected: false))
-        }
+        #expect(ShellTab.allCases.map { Glyphs.tab($0) } ==
+                [Glyphs.starOutline, Glyphs.clockOutline, Glyphs.calendarOutline, Glyphs.cloudOutline])
         let f = WeatherTabTests.Fixture(WeatherTabTests.byPlace(seoul: 0.8))
         let hosted = try HostedView(ShellView(model: f.shell, content: f.screens.content),
                                     size: CGSize(width: 393, height: 852))

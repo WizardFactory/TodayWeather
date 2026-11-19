@@ -32,10 +32,12 @@ struct ShellScreenshotTests {
                 let colors = ShellColors.of(Theme.of(theme), tab: tab)
                 let catalog = Catalog(code: shell.locale.catalog)
                 let name = "\(language)-\(theme)-\(tab.rawValue)"
-                // The tab bar.
-                let tabs = render(TabBar(selected: tab, colors: colors, catalog: catalog, insets: Self.insets, onTap: { _ in }))
+                // Compare label shape and position using the historical label color.
+                var legacyColors = colors
+                legacyColors.tabSelected = colors.tabText
+                let tabs = render(TabBar(selected: tab, colors: legacyColors, catalog: catalog, insets: Self.insets, onTap: { _ in }))
                 try compare("\(name)-tabs", tabs, "shell-\(name)-tabs.png", tolerances, &report,
-                            mask: Self.legacyRefreshGlyph(tab, width: Self.width))
+                            mask: Self.legacySelection(tab, width: Self.width))
                 // The hairlines (a whole-image metric barely sees a 0.5 pt line): the tab bar's top row and the header
                 // bar's bottom row as the capture has them.
                 let tabsReference = try References.image("shell-\(name)-tabs.png")
@@ -58,6 +60,39 @@ struct ShellScreenshotTests {
             try compare("\(language)-\(theme)-menu", menu, "shell-\(language)-\(theme)-menu.png", tolerances, &report)
         }
         print("SHELL-COMPARE \(ImageDiff.directory.path)\n" + report.joined(separator: "\n"))
+    }
+
+    @Test func onlyTheSelectedTabShowsTheThemeAccent() {
+        for theme in Self.themes {
+            for selected in ShellTab.allCases {
+                let colors = ShellColors.of(Theme.of(theme), tab: selected)
+                let tabs = render(TabBar(selected: selected, colors: colors, catalog: Catalog(code: "ko-KR"),
+                                         insets: Self.insets, onTap: { _ in }))
+                let accent: [Int]
+                switch (theme, selected) {
+                case ("dark", _): accent = [133, 214, 255]
+                case ("old", .forecast), ("old", .dailyforecast): accent = [8, 52, 76]
+                default: accent = [17, 109, 155]
+                }
+                for (index, tab) in ShellTab.allCases.enumerated() {
+                    let center = Int((CGFloat(index) + 0.5) * CGFloat(tabs.width) / 4)
+                    // Sample inside the 24 pt line and just beyond its rounded ends.
+                    for dx in [-30, 0, 30] {
+                        #expect((tabs.rgb(x: center + dx, y: 6) == accent) == (tab == selected))
+                    }
+                    #expect(tabs.rgb(x: center + 39, y: 6) != accent)
+                    // The glyph and the label both use the accent on the selected tab.
+                    for rows in [24..<95, 102..<142] {
+                        let tinted = rows.contains { y in
+                            (center - 60...center + 60).contains { x in
+                                close(tabs.rgb(x: x, y: y), accent)
+                            }
+                        }
+                        #expect(tinted == (tab == selected))
+                    }
+                }
+            }
+        }
     }
 
     /// The status bar above the WebView: its color per theme and tab (`applyIOSStatusBar`), also with the menu open.
@@ -90,13 +125,13 @@ struct ShellScreenshotTests {
         print("SHELL-COMPARE\n" + report.joined(separator: "\n"))
     }
 
-    /// The Cordova captures replace the selected weather tab's navigation icon with a reload arrow.
-    /// Compare the rest of the tab bar, including the selected label, against the original capture.
-    static func legacyRefreshGlyph(_ tab: ShellTab, width: CGFloat) -> [CGRect] {
-        guard tab != .search, let index = ShellTab.allCases.firstIndex(of: tab) else { return [] }
+    /// The historical tabs used a filled star or reload glyph and had no selection line.
+    static func legacySelection(_ tab: ShellTab, width: CGFloat) -> [CGRect] {
+        guard let index = ShellTab.allCases.firstIndex(of: tab) else { return [] }
         let itemWidth = min(width / CGFloat(ShellTab.allCases.count), ShellMetrics.tabItemMaxWidth)
         let center = width / 2 + (CGFloat(index) - 1.5) * itemWidth
-        return [CGRect(x: center - 17, y: 2, width: 34, height: 32)]
+        return [CGRect(x: center - 17, y: 2, width: 34, height: 32),
+                CGRect(x: center - 13, y: 1, width: 26, height: 3)]
     }
 
     /// Two colors within 24 levels per channel (WebKit blends the half-pixel line into its neighbor rows).
