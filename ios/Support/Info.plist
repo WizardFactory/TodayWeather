@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>net.wizardfactory.todayweather</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>todayweather</string>
+			</array>
+		</dict>
+	</array>
 	<!-- The scene configuration (IN-17): UIKit keeps a scene session with this name across updates and resolves it in
 	     the build that starts. The Cordova builds (cordova-ios 8) declare the same name with their own delegate, so a
 	     fallback Cordova build after this app, and this app after a Cordova build, each get their own scene delegate. -->

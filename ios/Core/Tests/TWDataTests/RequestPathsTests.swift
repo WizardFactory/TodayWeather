@@ -51,7 +51,7 @@ final class RouteRecorder: URLProtocol, @unchecked Sendable {
 /// request builders: the Cordova corpus's weather cases (coordinates, the KMA town route with one to three parts, the
 /// free-form fallback), geocoding by position and by address, the nation and warning pages, and every push flow. Each
 /// path goes through the route table generated from `server/` (`ios/tools/server-routes/generate.py`; CI fails when it
-/// is stale) as Express dispatches it (`ServerRoutes`). `RequestSitesTests` keeps these clients the only request sites.
+/// is stale) as Express dispatches it (`ServerRoutes`). `RequestSitesTests` also checks the widget source roots and its reuse of the tested weather builder.
 @Suite(.serialized)
 @MainActor
 struct RequestPathsTests {

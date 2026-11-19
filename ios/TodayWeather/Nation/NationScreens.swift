@@ -121,6 +121,12 @@ final class NationScreens {
     /// cancelled. Nothing while `$ionicLoading` covers the page.
     func back() {
         guard !loading else { return }
+        closePage()
+    }
+
+    /// Leave the page and cancel its request, including when a widget link arrives during a load.
+    func closePage() {
+        loading = false
         request?.cancel()
         request = nil
         visit += 1

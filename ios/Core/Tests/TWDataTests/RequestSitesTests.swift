@@ -2,19 +2,25 @@ import Foundation
 import Testing
 import TWModel
 
-/// Keeps `RequestPathsTests` complete (AC3 of #2967); a port of the Android `RequestSitesTest` (AN-18). The app's and
-/// the package's sources send HTTP requests only through the transports of the clients that test runs, write server
-/// paths only in their request builders, and reach other hosts only as the register's E3 and E4
+/// Keeps `RequestPathsTests` complete (AC3 of #2967); a port of the Android `RequestSitesTest` (AN-18). The native clients share
+/// their weather URL builder. Their requests use the reviewed app and widget transports, with server paths only
+/// in the reviewed builders and direct photo/SDK traffic covered by the register's E3 and E4
 /// (`Golden/server-routes/exceptions.json`). A new request site, path, SDK or package fails here until its requests are
 /// enumerated there and it is listed here. The sources are read from the repository's `ios/` directory.
 struct RequestSitesTests {
     static let ios = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent()
 
-    /// The Swift sources of the app and the package by path under `ios/`, without their comment lines.
+    static let targetSources = [
+        "TodayWeather": ["TodayWeather", "WidgetShared"],
+        "WeatherWidget": ["WeatherWidget", "WidgetRefresh", "WidgetShared"],
+    ]
+    static let sourceRoots = Set(targetSources.values.flatMap { $0 }).union(["Core/Sources"])
+
+    /// The Swift sources of both shipped targets and the package, without their comment lines.
     static let sources: [String: String] = {
         var out: [String: String] = [:]
-        for root in ["TodayWeather", "Core/Sources"] {
+        for root in sourceRoots {
             let dir = ios.appendingPathComponent(root)
             guard let walker = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil) else { continue }
             for case let file as URL in walker where file.pathExtension == "swift" {
@@ -42,6 +48,9 @@ struct RequestSitesTests {
     }
 
     @Test func theSourcesAreRead() {
+        for root in Self.sourceRoots {
+            #expect(Self.sources.keys.contains { $0.hasPrefix(root + "/") }, "sources under \(root)")
+        }
         #expect(Self.sources.count > 100, "\(Self.sources.count) sources under \(Self.ios.path)")
     }
 
@@ -50,7 +59,12 @@ struct RequestSitesTests {
             "Core/Sources/TWData/PushTransport.swift",
             "Core/Sources/TWData/WeatherPhotoFeed.swift",
             "TodayWeather/Weather/WeatherPageView.swift",
+            "WidgetRefresh/WidgetRefresh.swift",
         ], "the sources using a network API")
+        #expect(Self.filesMatching(#"\bWeatherRequests\.url\b"#) == [
+            "Core/Sources/TWData/WeatherRepository.swift",
+            "TodayWeather/Weather/WidgetSharing.swift",
+        ], "the app and widget use the weather routes covered by RequestPathsTests")
         let sites = try Self.entry("E3")["sites"]?.arrayValue?.compactMap(\.stringValue)
         #expect(Self.filesMatching(Self.network).filter { $0.hasPrefix("TodayWeather/") } == sites,
                 "E3: the feed's photos are the app's only own request outside the transports")
@@ -118,15 +132,39 @@ struct RequestSitesTests {
         ], "the sources reading a URL's contents")
     }
 
-    /// Every package product the app links is reviewed: it sends no request (the local core), or it is an E4 SDK. The
-    /// pins of `Package.resolved` are the E4 SDKs and their dependencies.
+    /// Check package products per target. The widget links only the model and domain packages.
     @Test func everyProductIsReviewed() throws {
-        let project = try String(contentsOf: Self.ios.appendingPathComponent("TodayWeather.xcodeproj/project.pbxproj"),
-                                 encoding: .utf8)
-        let products = Set(project.matches(of: /productName = ([A-Za-z0-9_]+);/).map { String($0.1) })
-            .subtracting(["TodayWeather", "TodayWeatherTests", "TodayWeatherUITests"])
-        let sdks = try Self.entry("E4")["sdks"]?.arrayValue?.compactMap(\.stringValue) ?? []
-        #expect(products == Set(Self.local.keys).union(sdks), "the linked products")
+        let data = try Data(contentsOf: Self.ios.appendingPathComponent("TodayWeather.xcodeproj/project.pbxproj"))
+        let plist = try PropertyListSerialization.propertyList(from: data, format: nil)
+        let project = try #require(plist as? [String: Any])
+        let objects = try #require(project["objects"] as? [String: [String: Any]])
+        let sdks = try #require(try Self.entry("E4")["sdks"]?.arrayValue?.compactMap(\.stringValue))
+        let reviewed: [String: Set<String>] = [
+            "TodayWeather": Set(Self.local.keys).union(sdks),
+            "WeatherWidget": ["TWDomain", "TWModel"],
+            "TodayWeatherTests": [],
+            "TodayWeatherUITests": [],
+        ]
+        let declarations = objects.values.filter { $0["isa"] as? String == "XCSwiftPackageProductDependency" }
+        let declaredNames = try declarations.map { try #require($0["productName"] as? String) }
+        #expect(Set(declaredNames) == Set(Self.local.keys).union(sdks), "all declared package products are reviewed")
+        let targets = objects.values.filter { $0["isa"] as? String == "PBXNativeTarget" }
+        #expect(Set(targets.compactMap { $0["name"] as? String }) == Set(reviewed.keys))
+        for target in targets {
+            let name = try #require(target["name"] as? String)
+            let references = target["packageProductDependencies"] as? [String] ?? []
+            let products = try references.map { ref in
+                let product = try #require(objects[ref])
+                #expect(product["isa"] as? String == "XCSwiftPackageProductDependency")
+                return try #require(product["productName"] as? String)
+            }
+            #expect(Set(products) == reviewed[name], "the linked package products of \(name)")
+            if let sourceRoots = Self.targetSources[name] {
+                let groups = try #require(target["fileSystemSynchronizedGroups"] as? [String])
+                let paths = try groups.map { ref in try #require(objects[ref]?["path"] as? String) }
+                #expect(Set(paths) == Set(sourceRoots), "the source inventory covers the shipped target \(name)")
+            }
+        }
         let resolved = try JSONValue.parse(Data(contentsOf: Self.ios.appendingPathComponent(
             "TodayWeather.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved")))
         let pins = Set((resolved["pins"]?.arrayValue ?? []).compactMap { $0["identity"]?.stringValue })
