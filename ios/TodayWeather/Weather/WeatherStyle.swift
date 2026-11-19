@@ -60,6 +60,15 @@ struct WeatherColors: Equatable {
 /// Sizes of the Cordova iOS weather pages in points at the default text size, measured in the captures
 /// (Core/Tests/TWDomainTests/ForecastReference) where the SCSS does not give them directly.
 enum WeatherMetrics {
+    static func temperatureRuns(_ value: String, size: CGFloat) -> [CssRun] {
+        let split = value.firstIndex(of: ".") ?? value.endIndex
+        return [
+            CssRun(text: String(value[..<split]), size: size, weight: .light),
+            CssRun(text: String(value[split...]), size: size * 0.7, weight: .light),
+            CssRun(text: "˚", size: size / 2, weight: .light)
+        ]
+    }
+
     /// `.platform-ios [md-page-header]` padding-top: the bar's 44 pt and the old 20 pt status bar.
     static let headerTop: CGFloat = 64
     /// `[md-page-header]` margin-bottom inside the first card, and every card's margin-bottom.

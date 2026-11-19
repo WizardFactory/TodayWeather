@@ -10,7 +10,7 @@ import net.wizardfactory.todayweather.core.domain.shell.Theme
  */
 data class ShellColors(
     val headerBar: Color, val headerLine: Color, val headerText: Color,
-    val tabBar: Color, val tabLine: Color, val tabText: Color,
+    val tabBar: Color, val tabLine: Color, val tabText: Color, val tabSelected: Color,
     val page: Color, val text: Color,
     val menuList: Color, val menuItem: Color, val menuBorder: Color, val menuText: Color,
     /** The photo theme's outline around the header's title and buttons, over the photo (`text-shadow`). */
@@ -23,7 +23,7 @@ data class ShellColors(
         fun of(theme: Theme, tab: Tab): ShellColors {
             val light = ShellColors(
                 headerBar = Color.White, headerLine = Color(0xFFDDDDDD), headerText = Color.Black,
-                tabBar = Color.White, tabLine = Color(0xFFB2B2B2), tabText = Color.Black,
+                tabBar = Color.White, tabLine = Color(0xFFB2B2B2), tabText = Color.Black, tabSelected = Color(0xFF116D9B),
                 page = Color(0xFFF5F5F5), text = Color.Black,
                 menuList = Color.White, menuItem = Color.White, menuBorder = Color(0xFFDDDDDD), menuText = Color(0xFF444444),
             )
@@ -32,7 +32,7 @@ data class ShellColors(
                 Theme.LIGHT -> light
                 Theme.DARK -> ShellColors(
                     headerBar = Color(0xFF1B1B1B), headerLine = Color(0xFF444444), headerText = Color.White,
-                    tabBar = Color(0xFF1B1B1B), tabLine = Color(0xFF444444), tabText = Color.White,
+                    tabBar = Color(0xFF1B1B1B), tabLine = Color(0xFF444444), tabText = Color.White, tabSelected = Color(0xFF85D6FF),
                     page = Color(0xFF171717), text = Color(0xFFDDDDDD),
                     menuList = Color(0xFF171717), menuItem = Color(0xFF1C1C1D), menuBorder = Color(0xFF111111), menuText = Color.White,
                 )
@@ -42,9 +42,9 @@ data class ShellColors(
                 } else plain
                 Theme.OLD -> when (tab) {
                     Tab.HOURLY -> light.copy(headerBar = Color(0xFF03A9F4), headerLine = Color(0xFF0288D1), headerText = Color.White,
-                        tabBar = Color(0xFF03A9F4), tabLine = Color(0xFF0288D1), tabText = Color.White, page = Color(0xFF03A9F4), text = Color.White)
+                        tabBar = Color(0xFF03A9F4), tabLine = Color(0xFF0288D1), tabText = Color.White, tabSelected = Color(0xFF08344C), page = Color(0xFF03A9F4), text = Color.White)
                     Tab.DAILY -> light.copy(headerBar = Color(0xFF00BCD4), headerLine = Color(0xFF0097A7), headerText = Color.White,
-                        tabBar = Color(0xFF00BCD4), tabLine = Color(0xFF0097A7), tabText = Color.White, page = Color(0xFF00BCD4), text = Color.White)
+                        tabBar = Color(0xFF00BCD4), tabLine = Color(0xFF0097A7), tabText = Color.White, tabSelected = Color(0xFF08344C), page = Color(0xFF00BCD4), text = Color.White)
                     else -> plain
                 }
             }

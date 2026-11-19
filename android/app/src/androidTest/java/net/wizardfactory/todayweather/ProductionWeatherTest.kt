@@ -5,6 +5,8 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -55,9 +57,7 @@ class ProductionWeatherTest {
         rule.waitForIdle()
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
         rule.waitForIdle()
-        Thread.sleep(800)
-        // Tapping the selected Hourly tab, past the 700 ms guard, loads the selected place at once (`reloadEvent` "tab").
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).performTouchInput { swipeDown(startY = height * 0.22f) }
         show(seoul, "seoul")
         rule.onNodeWithTag(ForecastTags.NEXT).performClick()
         show(london, "london")

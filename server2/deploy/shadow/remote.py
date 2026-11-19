@@ -21,6 +21,7 @@ import tempfile
 import time
 from coordinator import (require, frozen_resources, resource_digest, verify_bundle,
                          artifact_hash, HOST_ARTIFACTS)
+from evidence_copy import attempt_matches as copy_attempt_matches
 from state import CloudResult, StateError, canonical, sync_directory
 
 
@@ -107,7 +108,7 @@ st=parent.lstat()
 assert not parent.is_symlink() and st.st_uid==0 and st.st_mode&0o077==0
 stage=parent/run_id
 stage.mkdir(mode=0o700)
-expected={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env','collector.tar.gz','collector.json','render.py','status.py','launch.json'}
+expected={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env','collector.tar.gz','collector.json','render.py','status.py','evidence_copy.py','launch.json'}
 seen=set();total=0
 with tarfile.open(fileobj=sys.stdin.buffer,mode='r|') as archive:
  for item in archive:
@@ -174,6 +175,25 @@ def unpack_evidence(archive,destination):
     return {'files':files,'bytes':total,'qualification':'not_assessed'}
 
 
+def ledger_identity(reader,launch):
+    """The identity a paired ledger of this launch must record (paired_read.execute)."""
+    return dict(manifest=reader,candidate='http://127.0.0.1:'+str(launch['plan']['port']),
+                production='https://todayweather.wizardfactory.net',loopback_test=False,
+                sampler_sha256=launch['plan']['artifacts']['paired_read.py'])
+
+
+def attempt_matches(result,metadata,body_size,body_sha256):
+    """A completed attempt's retained files against its ledger result.
+
+    The sampler adds timing to its ledger after the worker has durably written
+    response metadata. Only that field may differ. Shared by the SSH export and the
+    bucket audit (evidence_audit.py, SR-5a).
+    """
+    elapsed=result.get('elapsed_ms')
+    require(type(elapsed) is int and elapsed>=0,'invalid elapsed time')
+    return copy_attempt_matches(result,metadata,body_size,body_sha256)
+
+
 def paired_evidence(directory,files):
     """Check retained ledger/body correspondence; never judge weather parity."""
     from urllib.parse import quote
@@ -187,9 +207,7 @@ def paired_evidence(directory,files):
         try:
             require(db.execute('PRAGMA quick_check').fetchall()==[('ok',)],'ledger integrity')
             identity=json.loads(db.execute('SELECT value FROM meta WHERE key=?',('identity',)).fetchone()[0])
-            require(identity==dict(manifest=reader,candidate='http://127.0.0.1:'+str(launch['plan']['port']),
-                    production='https://todayweather.wizardfactory.net',loopback_test=False,
-                    sampler_sha256=launch['plan']['artifacts']['paired_read.py']),'ledger identity mismatch')
+            require(identity==ledger_identity(reader,launch),'ledger identity mismatch')
             rows=db.execute('SELECT id,substr(result,1,65537) FROM attempts ORDER BY id').fetchmany(12001)
             require(0<len(rows)<=12000,'paired attempts absent or excessive')
         finally:db.close()
@@ -205,13 +223,7 @@ def paired_evidence(directory,files):
             require(files[meta_name]['size']<=65536,'oversized metadata')
             metadata=json.loads((directory/meta_name).read_text())
             body=files[body_name]
-            # The sampler adds timing to its ledger after the worker has
-            # durably written response metadata. Only that field may differ.
-            elapsed=result.get('elapsed_ms')
-            require(type(elapsed) is int and elapsed>=0,'invalid elapsed time')
-            response={key:value for key,value in result.items() if key!='elapsed_ms'}
-            if (metadata!=response or body['size']!=result.get('body_bytes')
-                    or body['sha256']!=result.get('body_sha256')):missing.append(attempt)
+            if not attempt_matches(result,metadata,body['size'],body['sha256']):missing.append(attempt)
         return {'complete':not missing,'attempts':len(rows),'missing_or_mismatched':missing,'qualification':'not_assessed'}
     except (StateError,OSError,ValueError,KeyError,TypeError,sqlite3.Error):
         return {'complete':False,'reason':'paired_evidence_invalid','qualification':'not_assessed'}

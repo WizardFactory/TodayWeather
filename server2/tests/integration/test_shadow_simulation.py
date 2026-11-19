@@ -19,6 +19,11 @@ class SimulationSubsetTests(unittest.TestCase):
         self.assertEqual(run['collected_hours'], 168.0)
         self.assertEqual(run['operator_stop'], 'collection_deadline')
         self.assertTrue(run['evidence_retrievable'])
+        # SR-5a (#3003): judged from the modelled state bucket by the real copy and audit.
+        self.assertEqual(run['evidence']['status'], 'complete', run['evidence'])
+        self.assertEqual(run['evidence']['kind'], 'final')
+        self.assertEqual(run['evidence']['reader'], {'state': 'inactive', 'stopped': True})
+        self.assertEqual((run['evidence']['missing'], run['evidence']['conflicts']), (0, 0))
         self.assertTrue(run['cleanup_complete'])
         self.assertEqual(run['instances_launched'], 1)
         # One status poll per minute for 168 hours, plus the first poll at the start of
@@ -131,6 +136,40 @@ class SimulationSubsetTests(unittest.TestCase):
             run = sim.run_once(sim.SCENARIOS[name], 0)
             self.assertTrue(run['full_run'], (name, run))
             self.assertEqual(run['collected_hours'], 168.0)
+
+    def test_bucket_evidence_survives_an_operator_unreachable_at_the_deadline(self):
+        # SR-5a: SSH is down from day 3 or from the last hour; the hourly copies and the
+        # 168-hour stop's final copy keep complete evidence in the state bucket.
+        for name in ('operator-ip-change-day-3', 'operator-unreachable-at-deadline'):
+            run = sim.run_once(sim.SCENARIOS[name], 0)
+            self.assertFalse(run['ssh_export_reachable'], name)
+            self.assertTrue(run['evidence_retrievable'], (name, run['evidence']))
+            self.assertEqual((run['evidence']['status'], run['evidence']['kind']), ('complete', 'final'), name)
+            self.assertTrue(run['cleanup_complete'], name)
+
+    def test_a_failed_final_copy_is_recovered_by_the_next_hourly_copy(self):
+        run = sim.run_once(sim.SCENARIOS['final-copy-fails-hourly-recovers'], 0)
+        self.assertEqual(run['host_stop'], 'candidate-exit', run)
+        self.assertEqual(run['evidence']['status'], 'complete', run['evidence'])
+        # The hourly timer is a wall-clock calendar timer: the first full hour after the failure.
+        self.assertEqual(run['evidence']['final_at_s'], 61 * 3600 - sim.EPOCH)
+        self.assertGreaterEqual(run['copy_failures'], 1)
+
+    def test_a_final_copy_failing_at_the_deadline_leaves_the_tail_unverified(self):
+        scenario = sim.default_scenario(name='final-fails', copy_failures=[(168 * 3600 - 60, None)])
+        run = sim.run_once(scenario, 0)
+        self.assertFalse(run['evidence_retrievable'])
+        self.assertEqual(run['evidence']['status'], 'tail_unverified', run['evidence'])
+        self.assertEqual(run['evidence']['newest_snapshot_at_s'], 168 * 3600 - sim.EPOCH)
+
+    def test_a_failed_reader_gets_a_final_generation_and_capture_failures_need_no_files(self):
+        scenario = dict(sim.SCENARIOS['reader-failed'],
+                        reader_outcomes={('candidate', 2): {'error': 'deadline', 'captured': False}})
+        run = sim.run_once(scenario, 0)
+        self.assertEqual(run['host_stop'], 'reader:origin-outage', run)
+        self.assertEqual(run['evidence']['status'], 'complete', run['evidence'])
+        self.assertEqual(run['evidence']['reader'], {'state': 'failed', 'stopped': True})
+        self.assertEqual(run['evidence']['capture_failures'], 1)
 
     def workdir(self):
         import tempfile

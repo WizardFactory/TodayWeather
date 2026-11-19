@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 SOURCE = Path(__file__).resolve().parents[2] / 'deploy/shadow/state.py'
 spec = importlib.util.spec_from_file_location('shadow_state', SOURCE)
@@ -275,10 +276,13 @@ class CostTests(unittest.TestCase):
         from decimal import Decimal as D
         r={k:D(v) for k,v in policy['rates'].items()};gib=D(1024**3)/D(10**9)
         hourly=r['ec2_hour']+r['ipv4_hour']+(32*r['gp3_gb_month']+20*r['s3_gb_month'])*gib/672
-        log_puts=4*((24*3600+49)//50)
+        # SR-5a: five log sources (copy added), and the evidence copy's PUT bound: four
+        # objects per hour from the epoch plus four for each of at most three finalizer starts.
+        log_puts=5*((24*3600+49)//50)
+        copy_puts=4*(1+24+3*4)
         return (D(policy['prior_spend_usd'])+24*hourly+D(3600)/3600*r['cpu_vcpu_hour']
                 +10_000*r['s3_read']+5_000*r['s3_write']+D(2*10**9)/D(10**9)*r['outbound_gb']
-                +log_puts*r['s3_write']+D('1.5'))
+                +(log_puts+copy_puts)*r['s3_write']+D('1.5'))
 
     def test_accrued_estimate_uses_measured_counters(self):
         from decimal import Decimal as D
@@ -1172,7 +1176,7 @@ class HostBundleTests(unittest.TestCase):
             self.assertEqual(guard.INTERVAL,10)
             self.assertIn('TimeoutStopSec=10',units['server2-shadow-test1-candidate.service'])
             self.assertNotIn('AWS_SECRET',state.canonical(units))
-            self.assertEqual(len(units),8)
+            self.assertEqual(len(units),11)
             env=operator.candidate_environment(first)
             self.assertEqual(env['SERVER2_SHADOW_S3_LIMITS'],'10,20,30')
             self.assertEqual(env['SERVER2_SHADOW_PROVIDER_UNITS'],'0,400,400,0')
@@ -1183,7 +1187,7 @@ class HostBundleTests(unittest.TestCase):
             result=subprocess.run(command,capture_output=True,text=True,timeout=5)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             self.assertFalse(json.loads(result.stdout)['executed'])
-            self.assertEqual(len(list((root/'units').iterdir())),8)
+            self.assertEqual(len(list((root/'units').iterdir())),11)
             (source/'server2').write_bytes(b'wrong executable')
             command[-1]=str(root/'rejected-units')
             result=subprocess.run(command,capture_output=True,text=True,timeout=5)
@@ -1215,7 +1219,8 @@ class HostLoggingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             units=operator.host_units(self.launch(Path(temp)));name='server2-shadow-test1-'
             collector=units[name+'logs.service'];root='/opt/server2-shadow/test1'
-            mapping=' '.join(['--unit '+name+'candidate.service=server','--unit '+name+'guard.service=guard',
+            mapping=' '.join(['--unit '+name+'candidate.service=server','--unit '+name+'copy.service=copy',
+                              '--unit '+name+'finalize.service=copy','--unit '+name+'guard.service=guard',
                               '--unit '+name+'logs.service=collector','--unit '+name+'reader.service=reader'])
             for command in ('ExecCondition=/usr/bin/python3 -I '+root+'/bin/render.py --env-file '+root+'/config/logging.env',
                             'ExecStartPre=/usr/bin/python3 -I '+root+'/bin/status.py start',
@@ -1384,8 +1389,10 @@ class HostInstallTests(unittest.TestCase):
             self.assertEqual((root/'host/config/.env').stat().st_mode&0o777,0o600)
             starts=[call for call in system.calls if call[0]=='start']
             self.assertEqual(starts,[('start','server2-shadow-test1-stop.timer','server2-shadow-test1-poweroff.timer'),
+                ('start','server2-shadow-test1-copy.timer'),
                 ('start','--no-block','server2-shadow-test1-logs.service'),
-                ('start','server2-shadow-test1-candidate.service'),('start','server2-shadow-test1-reader.service')])
+                ('start','server2-shadow-test1-candidate.service'),('start','server2-shadow-test1-reader.service'),
+                ('start','--no-block','server2-shadow-test1-copy.service')])
             self.assertIn(('enable','server2-shadow-test1-logs.service'),system.calls)
             # The collector's state is never awaited or checked before acquisition starts.
             self.assertNotIn(('show','--property=ActiveState','--value','server2-shadow-test1-logs.service'),system.calls)
@@ -1459,7 +1466,8 @@ class HostInstallTests(unittest.TestCase):
             result=self.install(source,root,system)
             self.assertEqual(result['status'],'started');self.assertTrue(result['collector_start_failed'])
             self.assertIn(('start','server2-shadow-test1-candidate.service'),system.calls)
-            self.assertEqual(system.calls[-1],('show','--property=ActiveState','--value','server2-shadow-test1-reader.service'))
+            self.assertEqual(system.calls[-2:],[('show','--property=ActiveState','--value','server2-shadow-test1-reader.service'),
+                                                ('start','--no-block','server2-shadow-test1-copy.service')])
 
     def test_changed_bundle_expiry_and_existing_unit_fail_before_install(self):
         for defect in ('changed','expired','unit','reader-hash'):
@@ -2380,6 +2388,754 @@ class ProvisionTests(unittest.TestCase):
         for key,value in [('operator_cidr','0.0.0.0/0'),('region','us-east-1'),('root_device','/dev/arbitrary')]:
             invalid=provisioning_plan();invalid[key]=value
             with self.assertRaises((E,ValueError)):provision.cloud_plan(invalid)
+
+
+
+# SR-5a (#3003): paired evidence in the run's state bucket. The host copy program and the
+# operator's bucket-only audit are exercised with a real paired ledger and a fake S3.
+reader_spec=importlib.util.spec_from_file_location('shadow_paired_read',SOURCE.parents[2]/'tools/shadow/paired_read.py')
+paired_tool=importlib.util.module_from_spec(reader_spec);reader_spec.loader.exec_module(paired_tool)
+
+
+def load_evidence_modules():
+    modules=[]
+    for name in ('evidence_copy','evidence_audit'):
+        module_spec=importlib.util.spec_from_file_location('shadow_'+name,SOURCE.with_name(name+'.py'))
+        module=importlib.util.module_from_spec(module_spec);module_spec.loader.exec_module(module)
+        modules.append(module)
+    return modules
+
+
+STOPPED_AT='Mon 2026-11-16 00:00:00 UTC'
+
+
+class FakeS3:
+    """Versioned object store: every PUT appends a version; faults by stage or key."""
+    def __init__(self,copy):
+        self.copy=copy;self.objects={};self.keys=[];self.fail=None;self.lost=None;self.during=None
+    def put(self,key,body,sha256,size,until):
+        data=body if isinstance(body,bytes) else Path(body).read_bytes()
+        assert len(data)==size and operator.hashlib.sha256(data).hexdigest()==sha256,key
+        stage=key.rsplit('/',1)[1].split('-',1)[0].split('.',1)[0]
+        if self.during is not None:self.during(stage)
+        if self.fail is not None and self.fail(stage,key):raise self.copy.CopyError('put',stage=stage,status=503)
+        self.keys.append(key);self.objects.setdefault(key,[]).append(data)
+        if self.lost is not None and self.lost(stage,key):raise self.copy.CopyError('put',stage=stage,status=None)
+    def download(self,directory):
+        directory=Path(directory);directory.mkdir(exist_ok=True);listing=[]
+        for index,(key,versions) in enumerate(sorted(self.objects.items())):
+            for version,data in enumerate(versions):
+                path=directory/f'{index}-{version}.object';path.write_bytes(data);listing.append((key,path))
+        return listing
+
+
+class EvidenceHost:
+    """An installed run as install_host_tree leaves it, with a real paired_read ledger."""
+    def __init__(self,root):
+        source,launch=HostInstallTests.bundle(self,root)
+        self.launch=launch;self.root=root/'host'
+        for directory in ('state','data/paired','bin','config'):(self.root/directory).mkdir(parents=True,mode=0o700)
+        self.launch_bytes=(state.canonical(launch)+'\n').encode()
+        (self.root/'launch.json').write_bytes(self.launch_bytes)
+        (self.root/'reader.json').write_bytes((source/'reader.json').read_bytes())
+        self.launch_sha256=operator.hashlib.sha256(self.launch_bytes).hexdigest()
+        self.reader=json.loads((source/'reader.json').read_text())
+        self.paired=self.root/'data/paired'
+        identity=dict(manifest=self.reader,candidate='http://127.0.0.1:3000',production=paired_tool.PRODUCTION,
+                      loopback_test=False,sampler_sha256=launch['plan']['artifacts']['paired_read.py'])
+        self.ledger=paired_tool.Ledger(self.paired,identity,False)
+        self.unit=('active','')
+
+    def attempt(self,ident,kind='captured',files=True,body=None):
+        """kind: captured (child wrote files), child-timeout, capture-failure, pending."""
+        result=None
+        if kind in ('captured','child-timeout'):
+            body=body if body is not None else f'body {ident}'.encode()
+            meta={'status':200,'headers':{'etag':f'"{ident}"'}} if kind=='captured' else {'error':'deadline'}
+            meta.update(body_bytes=len(body),body_sha256=operator.hashlib.sha256(body).hexdigest())
+            if files:
+                (self.paired/f'{ident}.body').write_bytes(body)
+                (self.paired/f'{ident}.json').write_text(paired_tool.canonical(meta))
+            result=dict(meta,elapsed_ms=40)
+        elif kind=='capture-failure':result={'error':'deadline','captured':False,'elapsed_ms':20000}
+        with self.ledger.db:
+            self.ledger.db.execute('INSERT INTO attempts(id,case_id,slot,origin,path,method,started,result) VALUES (?,?,?,?,?,?,?,?)',
+                                   (ident,'seoul',ident,'candidate' if ident%2 else 'production','/weather/coord/37.566,126.978','GET',
+                                    1000.0+ident,None if result is None else paired_tool.canonical(result)))
+
+    def complete(self,ident):
+        """A pending attempt completes later (its files and result arrive)."""
+        body=f'body {ident}'.encode()
+        meta={'status':200,'headers':{'etag':f'"{ident}"'},'body_bytes':len(body),'body_sha256':operator.hashlib.sha256(body).hexdigest()}
+        (self.paired/f'{ident}.body').write_bytes(body);(self.paired/f'{ident}.json').write_text(paired_tool.canonical(meta))
+        with self.ledger.db:
+            self.ledger.db.execute('UPDATE attempts SET result=? WHERE id=?',(paired_tool.canonical(dict(meta,elapsed_ms=40)),ident))
+
+
+class EvidenceCase(unittest.TestCase):
+    NOW=1000+3*3600
+
+    @classmethod
+    def setUpClass(cls):
+        cls.copy,cls.audit_module=load_evidence_modules()
+
+    def setUp(self):
+        temp=tempfile.TemporaryDirectory();self.addCleanup(temp.cleanup)
+        self.temp=Path(temp.name);self.host=EvidenceHost(self.temp)
+        self.addCleanup(self.host.ledger.close)
+        self.tree=self.copy.HostTree(self.host.root/'launch.json')
+        self.s3=FakeS3(self.copy);self.lines=[];self.now=self.NOW
+
+    def run_copy(self,final=False,unit=None,clock=None,sleep=None):
+        return self.copy.run(self.tree,final=final,put=self.s3.put,clock=clock or (lambda:self.now),
+                             unit_state=lambda:unit or self.host.unit,sleep=sleep or self.advance,
+                             log=self.lines.append)
+
+    def advance(self,seconds):
+        self.now+=seconds
+
+    def audited(self,s3=None,name='audit'):
+        s3=s3 or self.s3
+        objects=s3.download(self.temp/(name+'-objects'))
+        return self.audit_module.audit(objects,run_id='test1',launch_sha256=self.host.launch_sha256,workdir=self.temp/name)
+
+    def copy_state(self):
+        return json.loads((self.host.root/'state/copy.json').read_text())
+
+    def index(self,generation):
+        return json.loads(self.s3.objects[f'evidence/test1/index-{generation}.json'][-1])
+
+
+class EvidenceCopyTests(EvidenceCase):
+    def test_reader_stopped_is_its_lock_released_not_a_systemd_timestamp(self):
+        # Linux check finding: systemd 255 unloads a cleanly stopped unit without references,
+        # after which `systemctl show` reports zero timestamps (ExecMainExitTimestamp empty), as
+        # for a unit never started. The reader holds data/paired/owner.lock (flock, shared with
+        # its children) for its whole life, so a free lock is the stop.
+        import fcntl
+        lock=self.tree.paired/'owner.lock'
+        self.assertFalse(self.copy.reader_gone(lock))            # never started: no lock file
+        lock.write_text('');held=os.open(lock,os.O_RDWR)
+        try:
+            fcntl.flock(held,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            self.assertFalse(self.copy.reader_gone(lock))        # running
+        finally:
+            os.close(held)
+        self.assertTrue(self.copy.reader_gone(lock))             # stopped (lock released)
+        self.assertTrue(lock.exists())                           # probing never deletes or creates
+        calls=[]
+        def show(argv,**k):
+            calls.append(argv);return subprocess.CompletedProcess(argv,0,'ActiveState=inactive\nExecMainExitTimestamp=\n','')
+        from unittest import mock
+        with mock.patch.object(self.copy.subprocess,'run',show):
+            self.assertTrue(self.copy.reader_stopped(self.copy.systemd_unit_state('r.service',lock)))
+            fd=os.open(lock,os.O_RDWR);fcntl.flock(fd,fcntl.LOCK_EX)
+            try:self.assertFalse(self.copy.reader_stopped(self.copy.systemd_unit_state('r.service',lock)))
+            finally:os.close(fd)
+        with mock.patch.object(self.copy.subprocess,'run',lambda argv,**k:subprocess.CompletedProcess(argv,0,'ActiveState=deactivating\n','')):
+            self.assertFalse(self.copy.reader_stopped(self.copy.systemd_unit_state('r.service',lock)))
+
+    def test_a_generation_puts_batch_then_ledger_then_index_last(self):
+        self.host.attempt(1);self.host.attempt(2);self.host.attempt(3,'pending');self.host.attempt(4,'capture-failure')
+        result=self.run_copy()
+        self.assertEqual(result['status'],'committed',result)
+        self.assertEqual(self.s3.keys,['evidence/test1/contract.json','evidence/test1/batch-1.tar',
+                                       'evidence/test1/ledger-1.sqlite3','evidence/test1/index-1.json'])
+        self.assertEqual(self.copy_state()|{'shipped':None},dict(schema=1,reserved=1,committed=1,contract=True,shipped=None))
+        self.assertEqual(self.copy_state()['shipped'],[1,2])
+        index=self.index(1)
+        self.assertEqual((index['generation'],index['kind'],index['run_id']),(1,'ordinary','test1'))
+        self.assertEqual(index['attempts'],dict(total=4,completed=3,pending=1,capture_failures=1))
+        self.assertEqual(index['pending_ids'],[3])
+        self.assertEqual([f['id'] for f in index['files']],[1,2])
+        batch=self.s3.objects['evidence/test1/batch-1.tar'][0]
+        self.assertEqual(index['batch'],dict(key='evidence/test1/batch-1.tar',size=len(batch),
+                                             sha256=operator.hashlib.sha256(batch).hexdigest()))
+        import io,tarfile
+        with tarfile.open(fileobj=io.BytesIO(batch)) as archive:
+            self.assertEqual(sorted(archive.getnames()),['1.body','1.json','2.body','2.json'])
+            self.assertEqual(archive.extractfile('2.body').read(),b'body 2')
+        ledger=self.temp/'ledger.sqlite3';ledger.write_bytes(self.s3.objects['evidence/test1/ledger-1.sqlite3'][0])
+        db=remote.sqlite3.connect(ledger)
+        self.assertEqual(db.execute('PRAGMA integrity_check').fetchall(),[('ok',)])
+        self.assertEqual(db.execute('SELECT count(*) FROM attempts').fetchone()[0],4);db.close()
+        contract=json.loads(self.s3.objects['evidence/test1/contract.json'][0])
+        self.assertEqual(contract['launch_json'].encode(),self.host.launch_bytes)
+        self.assertEqual(contract['launch_sha256'],self.host.launch_sha256)
+        self.assertEqual(contract['reader_sha256'],self.host.launch['plan']['artifacts']['reader.json'])
+        # Fixed-vocabulary JSON lines; never a key, URL, credential or body.
+        self.assertTrue(self.lines)
+        for line in self.lines:
+            record=json.loads(line)
+            self.assertEqual(record['copy_schema'],1)
+            self.assertLessEqual(set(record),self.copy.LOG_FIELDS)
+            for text in ('evidence/','http','body 1','server2-shadow','ASIA'):self.assertNotIn(text,line)
+
+    def test_the_bucket_and_region_are_the_collector_destination(self):
+        settings=operator.logging_settings(self.host.launch)
+        self.assertIn(f'SERVER2_S3_BUCKET={self.tree.bucket}\n',settings)
+        self.assertIn(f'SERVER2_S3_REGION={self.copy.REGION}\n',settings)
+        self.assertEqual(self.tree.prefix,'evidence/test1/')
+        self.assertEqual(self.tree.limit,1000+170*3600-600)
+
+    def test_later_generations_ship_only_new_complete_files(self):
+        self.host.attempt(1);self.host.attempt(2,'pending')
+        self.assertEqual(self.run_copy()['generation'],1)
+        self.host.complete(2);self.host.attempt(3,files=False)
+        self.run_copy()
+        self.assertEqual([f['id'] for f in self.index(2)['files']],[2])
+        # A completed attempt whose files are absent or partial is never shipped half.
+        (self.host.paired/'3.json').write_text('{"status":')
+        self.run_copy()
+        self.assertIsNone(self.index(3)['batch'])
+        self.assertNotIn('evidence/test1/batch-3.tar',self.s3.objects)
+        self.host.complete(3)
+        self.run_copy()
+        self.assertEqual([f['id'] for f in self.index(4)['files']],[3])
+        self.assertEqual(self.copy_state()['shipped'],[1,2,3])
+
+    def test_mismatched_body_can_be_recovered_in_a_later_final_generation(self):
+        self.host.attempt(1)
+        body=self.host.paired/'1.body'; original=body.read_bytes()
+        body.write_bytes(b'other!')
+        self.assertEqual(self.run_copy()['status'],'committed')
+        self.assertEqual(self.copy_state()['shipped'],[])
+        self.host.unit=('inactive',STOPPED_AT)
+        result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['reason']),('incomplete','unshipped'))
+        self.assertTrue(self.tree.latch.exists())
+        self.assertEqual(self.audited(name='incomplete')['missing_or_mismatched'],[1])
+        body.write_bytes(original)
+        self.assertEqual(self.run_copy()['status'],'committed')
+        self.assertFalse(self.tree.latch.exists())
+        self.assertTrue(self.audited()['complete'])
+
+    def test_one_finalizer_drains_multiple_capped_batches_and_holds_its_latch(self):
+        for attempt in (1,2,3):
+            self.host.attempt(attempt,body=b'x'*6000)
+        self.now=self.host.launch['epoch']+168*3600
+        self.host.unit=('inactive',STOPPED_AT)
+        pending=[]
+        def observe(stage):
+            if stage=='index':
+                pending.append(self.tree.latch.exists())
+        self.s3.during=observe
+        import tarfile
+        with unittest.mock.patch.object(self.copy,'MAX_BATCH_BYTES',tarfile.RECORDSIZE):
+            result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['kind'],result['shipped']),('committed','final',3))
+        self.assertEqual(pending,[True,True,True])
+        self.assertFalse(self.tree.latch.exists())
+        self.assertEqual([self.index(i)['kind'] for i in range(1,4)],['ordinary','ordinary','final'])
+        self.assertTrue(all(self.index(i)['batch']['size']<=tarfile.RECORDSIZE for i in range(1,4)))
+        self.assertTrue(self.audited()['complete'])
+
+    def test_a_finalizer_with_more_than_four_batches_leaves_a_retryable_tail(self):
+        for attempt in range(1, 6):
+            self.host.attempt(attempt, body=b'x' * 6000)
+        self.host.unit = ('inactive', STOPPED_AT)
+        import tarfile
+        with unittest.mock.patch.object(self.copy, 'MAX_BATCH_BYTES', tarfile.RECORDSIZE):
+            result = self.run_copy(final=True)
+            self.assertEqual((result['status'], result['reason'], result['shipped']), ('incomplete', 'unshipped', 4))
+            self.assertTrue(self.tree.latch.exists())
+            self.assertEqual(self.audited(name='partial')['missing_or_mismatched'], [5])
+            result = self.run_copy()
+        self.assertEqual((result['status'], result['kind'], result['shipped']), ('committed', 'final', 1))
+        self.assertFalse(self.tree.latch.exists())
+        self.assertTrue(self.audited()['complete'])
+
+    def test_monotonic_deadline_prevents_extension_on_wall_clock_rollback(self):
+        wall, elapsed = [self.tree.limit - 0.5], [0.0]
+        deadline = self.copy.Deadline(self.tree.limit, lambda:wall[0], lambda:elapsed[0])
+        self.assertEqual(deadline(), 0.5)
+        wall[0] -= 90
+        elapsed[0] += 0.5
+        self.assertEqual(deadline(), 0)
+
+    def test_expired_put_cannot_report_success(self):
+        elapsed=[0.0]
+        class Connection:
+            def __init__(self, host, timeout):
+                self.timeout=timeout
+                self.status=200
+            def putrequest(self,*args,**kwargs): pass
+            def putheader(self,*args): pass
+            def endheaders(self): pass
+            def send(self,data): elapsed[0]+=0.3
+            def getresponse(self):
+                elapsed[0]+=0.3
+                return self
+            def read(self,size): return b''
+            def close(self): pass
+        client=self.copy.S3Client(self.tree.bucket,self.copy.REGION,
+                                  lambda:dict(AccessKeyId='fixture',SecretAccessKey='fixture',Token='fixture'),
+                                  connect=Connection,clock=lambda:self.now)
+        with self.assertRaises(self.copy.CopyError) as deadline:
+            client.put(self.tree.prefix+'contract.json',b'x','0'*64,1,time_left=lambda:0.5-elapsed[0])
+        self.assertEqual(deadline.exception.reason,'deadline')
+
+    def test_reader_probe_timeout_preserves_latch_and_emits_structured_failure(self):
+        self.host.attempt(1)
+        with unittest.mock.patch.object(self.copy.subprocess,'run',side_effect=subprocess.TimeoutExpired('probe',5)):
+            result=self.copy.run(self.tree,final=True,put=self.s3.put,clock=lambda:self.now,
+                                 unit_state=lambda:self.copy.systemd_unit_state('reader',self.tree.paired/'owner.lock'),
+                                 log=self.lines.append)
+        self.assertEqual((result['status'],result['reason']),('failed','reader'))
+        self.assertTrue(self.tree.latch.exists())
+        self.assertEqual(self.s3.keys,[])
+        self.assertEqual([(line['event'],line['reason']) for line in map(json.loads,self.lines)],
+                         [('copy.failed','reader')])
+
+    def test_a_failed_put_never_commits_and_the_next_run_uses_a_new_generation(self):
+        for stage in ('batch','ledger','index'):
+            with self.subTest(stage=stage):
+                self.setUp();self.host.attempt(1)
+                self.s3.fail=lambda s,k,stage=stage:s==stage
+                result=self.run_copy()
+                self.assertEqual((result['status'],result['stage']),('failed',stage))
+                self.assertEqual((self.copy_state()['reserved'],self.copy_state()['committed'],self.copy_state()['shipped']),(1,0,[]))
+                self.s3.fail=None
+                self.assertEqual(self.run_copy()['generation'],2)
+                self.assertEqual([f['id'] for f in self.index(2)['files']],[1])
+                self.assertEqual(len(self.s3.keys),len(set(self.s3.keys)),'a key is never reused')
+                self.assertTrue(any(json.loads(l).get('event')=='copy.failed' and json.loads(l).get('status')==503 for l in self.lines))
+
+    def test_a_lost_index_response_or_state_save_reships_and_the_audit_deduplicates(self):
+        for fault in ('lost-index','save'):
+            with self.subTest(fault=fault):
+                self.setUp();self.host.attempt(1);self.host.attempt(2)
+                if fault=='lost-index':self.s3.lost=lambda s,k:s=='index'
+                original=self.copy.save_state
+                calls=[]
+                def failing(tree,value):
+                    calls.append(value['committed'])
+                    if fault=='save' and value['committed']==1:raise OSError('injected save failure')
+                    return original(tree,value)
+                with unittest.mock.patch.object(self.copy,'save_state',failing):
+                    self.assertEqual(self.run_copy()['status'],'failed')
+                self.s3.lost=None
+                self.assertEqual(self.copy_state()['committed'],0)
+                self.host.unit=('inactive',STOPPED_AT);self.host.attempt(3)
+                self.assertEqual(self.run_copy(final=True)['kind'],'final')
+                self.assertEqual([f['id'] for f in self.index(2)['files']],[1,2,3])
+                report=self.audited()
+                self.assertTrue(report['complete'],report)
+                self.assertEqual(report['generations']['valid'],2)
+
+    def test_the_contract_is_published_until_committed(self):
+        self.host.attempt(1)
+        self.s3.fail=lambda s,k:s=='contract'
+        result=self.run_copy()
+        # The generation is still taken: the contract is retried by every later run.
+        self.assertEqual(result['status'],'committed')
+        self.assertFalse(self.copy_state()['contract'])
+        self.s3.fail=None;self.s3.lost=lambda s,k:s=='contract'
+        self.run_copy();self.assertFalse(self.copy_state()['contract'])
+        self.s3.lost=None;self.run_copy()
+        self.assertTrue(self.copy_state()['contract'])
+        self.run_copy()
+        versions=self.s3.objects['evidence/test1/contract.json']
+        self.assertEqual(len(versions),2);self.assertEqual(versions[0],versions[1])
+
+    def test_a_final_generation_needs_the_request_and_a_stopped_reader(self):
+        self.host.attempt(1)
+        cases=[(False,('inactive',STOPPED_AT),'ordinary'),(True,('active',''),'ordinary'),
+               (True,('deactivating',''),'ordinary'),(True,('inactive',''),'ordinary'),
+               (True,('inactive',STOPPED_AT),'final'),(True,('failed',STOPPED_AT),'final')]
+        for requested,unit,kind in cases:
+            with self.subTest(requested=requested,unit=unit):
+                latch=self.host.root/'state/final.requested'
+                if requested:latch.write_text('{}')
+                else:latch.unlink(missing_ok=True)
+                result=self.run_copy(unit=unit)
+                self.assertEqual(result['kind'],kind)
+                index=self.index(result['generation'])
+                self.assertEqual(index['reader']['state'],unit[0])
+                self.assertEqual(index['reader']['stopped'],unit[0] in ('inactive','failed') and bool(unit[1]))
+                self.assertEqual(latch.exists(),requested and kind!='final')
+
+    def test_the_finalizer_waits_for_the_reader_within_its_bound(self):
+        self.host.attempt(1)
+        states=iter([('active','')]*3+[('deactivating','')]+[('failed',STOPPED_AT)]*5)
+        slept=[]
+        result=self.copy.run(self.tree,final=True,put=self.s3.put,clock=lambda:self.NOW+len(slept),
+                             unit_state=lambda:next(states),sleep=slept.append,log=self.lines.append)
+        self.assertEqual(result['kind'],'final');self.assertEqual(len(slept),4)
+        self.assertEqual(self.index(1)['reader']['state'],'failed')
+        self.assertEqual(self.index(1)['terminal'],None)
+        # A reader that never stops within the bound gets an ordinary generation; the
+        # durable request stays for a later run.
+        slept.clear()
+        result=self.copy.run(self.tree,final=True,put=self.s3.put,clock=lambda:self.NOW+2*len(slept),
+                             unit_state=lambda:('active',''),sleep=slept.append,log=self.lines.append)
+        self.assertEqual(result['kind'],'ordinary')
+        self.assertLessEqual(2*len(slept),self.copy.FINAL_WAIT_SECONDS+2)
+        self.assertTrue((self.host.root/'state/final.requested').exists())
+
+    def test_a_failed_final_is_recovered_by_the_next_hourly_run(self):
+        self.host.attempt(1);self.host.unit=('failed',STOPPED_AT)
+        self.s3.fail=lambda s,k:s=='index'
+        self.assertEqual(self.run_copy(final=True)['status'],'failed')
+        self.assertTrue((self.host.root/'state/final.requested').exists())
+        self.assertEqual(self.audited(name='before')['status'],'tail_unverified')
+        self.s3.fail=None;self.now+=3600
+        result=self.run_copy()
+        self.assertEqual((result['status'],result['kind']),('committed','final'))
+        self.assertFalse((self.host.root/'state/final.requested').exists())
+        report=self.audited()
+        self.assertTrue(report['complete'],report)
+        self.assertEqual(report['reader']['state'],'failed')
+
+    def test_a_final_request_during_an_ordinary_run_is_served_by_the_next_locked_run(self):
+        self.host.attempt(1)
+        def request(stage):
+            if stage=='batch':
+                # The finalizer creates its durable request while the hourly run holds the lock.
+                self.copy.request_final(self.tree,self.now)
+                self.host.unit=('inactive',STOPPED_AT)
+        self.s3.during=request
+        self.assertEqual(self.run_copy()['kind'],'ordinary')
+        self.s3.during=None
+        self.assertTrue((self.host.root/'state/final.requested').exists())
+        self.assertEqual(self.run_copy()['kind'],'final')
+
+    def test_runs_are_serialized_by_the_lock_and_bounded_in_time(self):
+        import fcntl
+        self.host.attempt(1)
+        holder=os.open(self.host.root/'state/copy.lock',os.O_RDWR|os.O_CREAT,0o600)
+        self.addCleanup(os.close,holder)
+        fcntl.flock(holder,fcntl.LOCK_EX)
+        clock=[self.NOW]
+        result=self.copy.run(self.tree,final=False,put=self.s3.put,clock=lambda:clock[0],unit_state=lambda:('active',''),
+                             sleep=lambda s:clock.__setitem__(0,clock[0]+s),log=self.lines.append)
+        self.assertEqual((result['status'],result['reason']),('failed','lock'))
+        self.assertLessEqual(clock[0]-self.NOW,self.copy.RUN_SECONDS)
+        self.assertEqual(self.s3.keys,[])
+        # Near the absolute bound the wait stops at the bound itself.
+        clock[0]=self.tree.limit-5
+        result=self.copy.run(self.tree,final=False,put=self.s3.put,clock=lambda:clock[0],unit_state=lambda:('active',''),
+                             sleep=lambda s:clock.__setitem__(0,clock[0]+s),log=self.lines.append)
+        self.assertEqual(result['reason'],'lock');self.assertLessEqual(clock[0],self.tree.limit+1)
+        fcntl.flock(holder,fcntl.LOCK_UN)
+        # At or after epoch + 170 h - 10 min nothing starts.
+        self.now=self.tree.limit
+        result=self.run_copy(final=True)
+        self.assertEqual((result['status'],result['reason']),('failed','deadline'))
+        self.assertEqual(self.s3.keys,[]);self.assertFalse((self.host.root/'state/copy.json').exists())
+        self.assertFalse((self.host.root/'state/final.requested').exists())
+
+    def test_a_hot_journal_of_a_stopped_reader_is_rolled_back_on_a_private_copy(self):
+        for ident in range(1,4):self.host.attempt(ident)
+        self.host.ledger.close()
+        script=('import os,sqlite3,sys\ndb=sqlite3.connect(sys.argv[1],isolation_level=None)\n'
+                "db.execute('PRAGMA cache_size=1');db.execute('BEGIN')\n"
+                "db.execute('UPDATE attempts SET result=NULL');db.execute(\"INSERT INTO meta VALUES ('pad',?)\",('x'*200000,))\n"
+                'os._exit(0)\n')
+        subprocess.run([sys.executable,'-c',script,str(self.host.paired/'ledger.sqlite3')],check=True,timeout=20)
+        journal=self.host.paired/'ledger.sqlite3-journal'
+        self.assertTrue(journal.exists())
+        before=(self.host.paired/'ledger.sqlite3').read_bytes(),journal.read_bytes()
+        result=self.run_copy(final=True,unit=('failed',STOPPED_AT))
+        self.assertEqual((result['status'],result['kind']),('committed','final'),self.lines)
+        self.assertEqual(self.index(1)['attempts']['completed'],3)
+        self.assertEqual(((self.host.paired/'ledger.sqlite3').read_bytes(),journal.read_bytes()),before,
+                         'the live ledger and its journal are never modified')
+        self.host.ledger=paired_tool.Ledger.__new__(paired_tool.Ledger);self.host.ledger.db=remote.sqlite3.connect(':memory:')
+        self.assertTrue(self.audited()['complete'])
+
+    def test_an_install_without_a_ledger_publishes_only_the_contract(self):
+        self.host.ledger.close();(self.host.paired/'ledger.sqlite3').unlink()
+        self.host.ledger.db=remote.sqlite3.connect(':memory:')
+        result=self.run_copy(final=True,unit=('inactive',''))
+        self.assertEqual((result['status'],result['reason']),('skipped','no_ledger'))
+        self.assertEqual(self.s3.keys,['evidence/test1/contract.json'])
+        self.assertEqual(self.copy_state()['reserved'],0)
+        self.assertEqual(self.audited()['status'],'no_paired_evidence')
+
+    def test_sigv4_matches_the_published_s3_example(self):
+        # AWS S3 API reference, "Signature Calculations for the Authorization Header",
+        # GET Object example (example credentials, us-east-1, 2013-05-24).
+        headers={'host':'examplebucket.s3.amazonaws.com','range':'bytes=0-9',
+                 'x-amz-content-sha256':'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+                 'x-amz-date':'20130524T000000Z'}
+        signature,signed,scope=self.copy.sign('wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY','us-east-1','GET','/test.txt',headers,
+                                              headers['x-amz-content-sha256'])
+        self.assertEqual(signed,'host;range;x-amz-content-sha256;x-amz-date')
+        self.assertEqual(scope,'20130524/us-east-1/s3/aws4_request')
+        self.assertEqual(signature,'f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41')
+
+    def test_imds_credentials_and_the_signed_put_on_the_wire(self):
+        from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+        import threading
+        seen=[]
+        class Handler(BaseHTTPRequestHandler):
+            protocol_version='HTTP/1.1'
+            def log_message(self,*args):pass
+            def reply(self,status,body=b''):
+                self.send_response(status);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
+            def do_PUT(self):
+                if self.path=='/latest/api/token':
+                    seen.append(('token',self.headers.get('X-aws-ec2-metadata-token-ttl-seconds')));return self.reply(200,b'tok')
+                body=self.rfile.read(int(self.headers['Content-Length']))
+                seen.append(('put',self.path,dict(self.headers),body))
+                return self.reply(int(self.server.status),b'<Error><Code>Fixture</Code></Error>')
+            def do_GET(self):
+                if self.headers.get('X-aws-ec2-metadata-token')!='tok':return self.reply(401)
+                if self.path=='/latest/meta-data/iam/security-credentials/':return self.reply(200,b'role-1')
+                if self.path=='/latest/meta-data/iam/security-credentials/role-1':
+                    return self.reply(200,json.dumps({'Code':'Success','AccessKeyId':'ASIAFIXTURE','SecretAccessKey':'secret',
+                                                      'Token':'session'}).encode())
+                return self.reply(404)
+        server=ThreadingHTTPServer(('127.0.0.1',0),Handler);server.status=200;server.daemon_threads=True
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+        self.addCleanup(server.server_close);self.addCleanup(server.shutdown)
+        import http.client
+        connect=lambda host,timeout:http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=timeout)
+        credentials=self.copy.imds_credentials(connect=connect)
+        self.assertEqual(credentials['AccessKeyId'],'ASIAFIXTURE')
+        client=self.copy.S3Client(self.tree.bucket,self.copy.REGION,lambda:credentials,connect=connect,clock=lambda:1.8e9)
+        body=b'fixture object';digest=operator.hashlib.sha256(body).hexdigest()
+        client.put('evidence/test1/index-1.json',body,digest,len(body),time_left=lambda:30)
+        _,path,headers,received=seen[-1]
+        self.assertEqual((path,received),('/evidence/test1/index-1.json',body))
+        self.assertEqual(headers['Host'],'server2-shadow-test1-state.s3.ap-northeast-2.amazonaws.com')
+        self.assertEqual(headers['x-amz-content-sha256'],digest);self.assertEqual(headers['x-amz-security-token'],'session')
+        self.assertTrue(headers['Authorization'].startswith('AWS4-HMAC-SHA256 Credential=ASIAFIXTURE/20270115/ap-northeast-2/s3/aws4_request, '
+                                                            'SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature='))
+        server.status=503
+        with self.assertRaises(self.copy.CopyError) as failure:client.put('evidence/test1/index-2.json',body,digest,len(body),time_left=lambda:30)
+        self.assertEqual((failure.exception.reason,failure.exception.status),('put',503))
+        self.assertNotIn('evidence',str(failure.exception))
+
+    def test_the_host_command_refuses_outside_its_installed_tree(self):
+        result=subprocess.run([sys.executable,'-I',str(SOURCE.with_name('evidence_copy.py')),'--launch',str(self.host.root/'launch.json')],
+                              capture_output=True,text=True,timeout=20)
+        self.assertEqual(result.returncode,2)
+        record=json.loads(result.stdout.strip())
+        self.assertEqual((record['event'],record['reason']),('copy.failed','host'))
+        self.assertEqual(result.stderr,'')
+
+
+class EvidenceAuditTests(EvidenceCase):
+    def final_run(self):
+        self.host.attempt(1);self.host.attempt(2,'child-timeout');self.host.attempt(3,'capture-failure')
+        self.run_copy()
+        self.host.attempt(4);self.host.attempt(5,'pending')
+        self.host.unit=('inactive',STOPPED_AT)
+        return self.run_copy(final=True)
+
+    def test_a_final_generation_with_every_attempt_accounted_for_is_complete(self):
+        self.assertEqual(self.final_run()['kind'],'final')
+        report=self.audited()
+        self.assertTrue(report['complete'],report)
+        self.assertEqual(report['status'],'complete')
+        self.assertEqual((report['generation'],report['kind'],report['attempts']),(2,'final',5))
+        self.assertEqual((report['pending'],report['capture_failures'],report['missing_or_mismatched']),([5],[3],[]))
+        self.assertEqual(report['reader'],{'state':'inactive','stopped':True})
+        self.assertEqual(report['qualification'],'not_assessed')
+        # The assembly is the files of the final ledger, from the bucket only.
+        self.assertEqual((self.temp/'audit/files/4.body').read_bytes(),b'body 4')
+        self.assertEqual((self.temp/'audit/files/2.json').read_bytes(),(self.host.paired/'2.json').read_bytes())
+
+    def test_ordinary_generations_only_leave_the_tail_unverified(self):
+        self.host.attempt(1);self.run_copy();self.now+=3600;self.run_copy()
+        report=self.audited()
+        self.assertFalse(report['complete'])
+        self.assertEqual((report['status'],report['newest_snapshot_at']),('tail_unverified',self.now))
+
+    def test_malformed_newer_object_descriptor_preserves_previous_valid_final(self):
+        final=self.final_run()['generation']
+        original=self.index(final); generation=final+1
+        malformed=dict(original,generation=generation,
+                       ledger=dict(original['ledger'],key=f'evidence/test1/ledger-{generation}.sqlite3'),
+                       batch=dict(original['batch'],key=f'evidence/test1/batch-{generation}.tar'),
+                       files=[dict(original['files'][0],json_size=None)])
+        for name,suffix in (('ledger','sqlite3'),('batch','tar')):
+            self.s3.objects[f'evidence/test1/{name}-{generation}.{suffix}']=self.s3.objects[f'evidence/test1/{name}-{final}.{suffix}']
+        self.s3.objects[f'evidence/test1/index-{generation}.json']=[json.dumps(malformed).encode()]
+        report=self.audited()
+        self.assertTrue(report['complete'],report)
+        self.assertEqual((report['generation'],report['generations']['ignored']),(final,1))
+
+    def test_a_missing_or_unbound_contract_is_incomplete(self):
+        self.final_run()
+        for defect in ('missing','launch','reader','journal'):
+            with self.subTest(defect=defect):
+                s3=FakeS3(self.copy);s3.objects={k:list(v) for k,v in self.s3.objects.items()}
+                contract=json.loads(s3.objects['evidence/test1/contract.json'][0])
+                if defect=='missing':del s3.objects['evidence/test1/contract.json']
+                if defect=='launch':contract['launch_json']=contract['launch_json'].replace('"port":3000','"port":3001')
+                if defect=='reader':contract['reader_json']=contract['reader_json'].replace('3600','1800')
+                if defect in ('launch','reader'):s3.objects['evidence/test1/contract.json']=[json.dumps(contract).encode()]
+                objects=s3.download(self.temp/(defect+'-objects'))
+                expected=self.host.launch_sha256 if defect!='journal' else 'f'*64
+                report=self.audit_module.audit(objects,run_id='test1',launch_sha256=expected,workdir=self.temp/defect)
+                self.assertFalse(report['complete'])
+                self.assertEqual(report['status'],'contract_missing' if defect=='missing' else 'contract_mismatch')
+
+    def test_same_bytes_deduplicate_and_different_bytes_conflict(self):
+        self.final_run()
+        import io,tarfile
+        def rebatch(generation,members):
+            data=io.BytesIO()
+            with tarfile.open(fileobj=data,mode='w',format=tarfile.USTAR_FORMAT) as archive:
+                for name,content in members.items():
+                    item=tarfile.TarInfo(name);item.size=len(content);archive.addfile(item,io.BytesIO(content))
+            return data.getvalue()
+        for same in (True,False):
+            with self.subTest(same=same):
+                s3=FakeS3(self.copy);s3.objects={k:list(v) for k,v in self.s3.objects.items()}
+                body=b'body 1' if same else b'changed 1'
+                meta=(self.host.paired/'1.json').read_bytes()
+                if not same:
+                    m=json.loads(meta);m['body_bytes']=len(body);m['body_sha256']=operator.hashlib.sha256(body).hexdigest()
+                    meta=paired_tool.canonical(m).encode()
+                batch=rebatch(9,{'1.body':body,'1.json':meta})
+                index=json.loads(s3.objects['evidence/test1/index-1.json'][0])
+                index.update(generation=9,kind='ordinary',batch=dict(key='evidence/test1/batch-9.tar',size=len(batch),
+                             sha256=operator.hashlib.sha256(batch).hexdigest()),
+                             ledger=dict(index['ledger'],key='evidence/test1/ledger-9.sqlite3'),
+                             files=[dict(id=1,json_size=len(meta),json_sha256=operator.hashlib.sha256(meta).hexdigest(),
+                                         body_size=len(body),body_sha256=operator.hashlib.sha256(body).hexdigest())])
+                s3.objects['evidence/test1/batch-9.tar']=[batch]
+                s3.objects['evidence/test1/ledger-9.sqlite3']=list(s3.objects['evidence/test1/ledger-1.sqlite3'])
+                s3.objects['evidence/test1/index-9.json']=[json.dumps(index).encode()]
+                report=self.audited(s3,name='same' if same else 'conflict')
+                self.assertEqual(report['complete'],same,report)
+                self.assertEqual(report['conflicts'],[] if same else [1])
+
+    def test_failed_generations_and_tampered_objects_are_ignored_or_mismatched(self):
+        self.host.attempt(1)
+        self.s3.fail=lambda s,k:s=='index'
+        self.run_copy()          # batch-1 and ledger-1 without an index: ignored
+        self.s3.fail=None;self.host.unit=('inactive',STOPPED_AT);self.host.attempt(2)
+        self.run_copy(final=True)
+        report=self.audited()
+        self.assertTrue(report['complete'],report)
+        self.assertEqual(report['generations'],{'valid':1,'ignored':0,'incomplete':1})
+        # A batch whose bytes do not match its index invalidates that generation: its
+        # attempts are then missing, never pending.
+        s3=FakeS3(self.copy);s3.objects={k:list(v) for k,v in self.s3.objects.items()}
+        s3.objects['evidence/test1/batch-2.tar']=[s3.objects['evidence/test1/batch-2.tar'][0].replace(b'body 2',b'body X')]
+        report=self.audited(s3,name='tampered')
+        self.assertFalse(report['complete'])
+        self.assertEqual(report['status'],'tail_unverified')
+
+    def test_audit_order_pending_then_capture_failure_then_both_files(self):
+        self.host.attempt(1)
+        # A capture failure written with body fields is not a capture failure: files required.
+        self.host.attempt(2,'capture-failure')
+        with self.host.ledger.db:
+            self.host.ledger.db.execute('UPDATE attempts SET result=? WHERE id=2',
+                (paired_tool.canonical({'error':'deadline','captured':False,'body_bytes':0,'body_sha256':'0'*64,'elapsed_ms':1}),))
+        self.host.attempt(3,'child-timeout',files=False)   # the child's own timeout: files required
+        self.host.attempt(4,'pending')
+        (self.host.paired/'4.body').write_bytes(b'partial')  # files of a pending attempt are not checked
+        self.host.attempt(5)
+        meta=json.loads((self.host.paired/'5.json').read_text());meta['status']=201
+        (self.host.paired/'5.json').write_text(paired_tool.canonical(meta))   # metadata differs from the ledger result
+        self.host.unit=('failed',STOPPED_AT)
+        self.run_copy(final=True)
+        report=self.audited()
+        self.assertFalse(report['complete'])
+        self.assertEqual((report['pending'],report['capture_failures'],report['missing_or_mismatched']),([4],[],[2,3,5]))
+
+    def test_the_shared_attempt_check_is_the_ssh_evidence_check(self):
+        identity=remote.ledger_identity({'candidate_sha256':'a'*64},dict(plan=dict(port=3000,artifacts={'paired_read.py':'b'*64})))
+        self.assertEqual(identity,dict(manifest={'candidate_sha256':'a'*64},candidate='http://127.0.0.1:3000',
+                                       production='https://todayweather.wizardfactory.net',loopback_test=False,sampler_sha256='b'*64))
+        result={'status':200,'body_bytes':3,'body_sha256':'c'*64,'elapsed_ms':5}
+        self.assertTrue(remote.attempt_matches(result,{'status':200,'body_bytes':3,'body_sha256':'c'*64},3,'c'*64))
+        self.assertFalse(remote.attempt_matches(result,{'status':200,'body_bytes':3,'body_sha256':'c'*64},4,'c'*64))
+        # An invalid timing field invalidates the evidence, as before (paired_evidence).
+        with self.assertRaises(E):remote.attempt_matches(dict(result,elapsed_ms=True),{'status':200,'body_bytes':3,'body_sha256':'c'*64},3,'c'*64)
+
+
+class EvidenceUnitTests(unittest.TestCase):
+    """SR-5a: copy, timer and finalizer units; nothing on the shutdown path waits on them."""
+    def units(self):
+        temp=tempfile.TemporaryDirectory();self.addCleanup(temp.cleanup)
+        launch=HostLoggingTests.launch(self,Path(temp.name))
+        return launch,operator.host_units(launch)
+
+    def test_copy_and_finalize_units_are_independent_oneshots(self):
+        launch,units=self.units();name='server2-shadow-test1-';root='/opt/server2-shadow/test1'
+        self.assertEqual(len(units),11)
+        for unit,flag in (('copy.service',''),('finalize.service',' --final')):
+            text=units[name+unit]
+            for line in ('Type=oneshot','Restart=no','TimeoutStartSec=600','TimeoutStopSec=10','LogNamespace=server2',
+                         'NoNewPrivileges=yes',f'ExecStart=/usr/bin/python3 -I {root}/bin/evidence_copy.py --launch {root}/launch.json{flag}'):
+                self.assertIn('\n'+line+'\n',text,(unit,line))
+            for other in ('candidate','guard','reader','logs','stop','poweroff'):
+                self.assertNotIn(name+other+'.',text,(unit,other))
+            self.assertNotIn('[Install]',text)
+        timer=units[name+'copy.timer']
+        for line in ('OnCalendar=hourly','Persistent=true','Unit='+name+'copy.service','WantedBy=timers.target'):
+            self.assertIn('\n'+line+'\n',timer)
+
+    def test_reader_stop_and_the_168_hour_stop_start_the_finalizer_without_waiting(self):
+        _,units=self.units();name='server2-shadow-test1-'
+        start='/usr/bin/systemctl start --no-block '+name+'finalize.service'
+        self.assertIn('\nExecStopPost=-'+start+'\n',units[name+'reader.service'])
+        stop=[l for l in units[name+'stop.service'].splitlines() if l.startswith('ExecStart=')]
+        self.assertEqual(stop,['ExecStart=/usr/bin/systemctl --no-block stop '+name+'reader.service '+name+'candidate.service '+name+'guard.service',
+                               'ExecStart=-'+start])
+        # The poweroff and launch-expiry paths neither wait for nor depend on the copy units.
+        for text in (units[name+'poweroff.service'],units[name+'poweroff.timer'],
+                     *state.launch_expiry_units('test1',1000).values()):
+            self.assertNotIn('copy',text);self.assertNotIn('finalize',text)
+        for unit in ('candidate.service','guard.service'):self.assertNotIn('finalize',units[name+unit])
+
+    def test_copy_units_are_shipped_as_the_copy_source(self):
+        sources=operator.log_sources('test1')
+        self.assertEqual(sources['server2-shadow-test1-copy.service'],'copy')
+        self.assertEqual(sources['server2-shadow-test1-finalize.service'],'copy')
+        _,units=self.units()
+        self.assertIn('--unit server2-shadow-test1-copy.service=copy',units['server2-shadow-test1-logs.service'])
+
+    def test_the_copy_program_is_a_pinned_host_artifact_everywhere(self):
+        self.assertIn('evidence_copy.py',operator.HOST_ARTIFACTS)
+        import ast,re as regex
+        expected=ast.literal_eval(regex.search(r"expected=(\{[^}]*\})",remote.RECEIVER).group(1))
+        self.assertEqual(expected,operator.HOST_ARTIFACTS|{'launch.json'})
+
+    def test_install_arms_the_copy_timer_before_acquisition_and_publishes_the_contract_last(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);source,launch=HostInstallTests.bundle(self,root);system=HostInstallTests.System()
+            result=HostInstallTests.install(self,source,root,system)
+            self.assertEqual(result['status'],'started')
+            name='server2-shadow-test1-'
+            starts=[c for c in system.calls if c[0]=='start']
+            self.assertEqual(starts,[('start',name+'stop.timer',name+'poweroff.timer'),('start',name+'copy.timer'),
+                ('start','--no-block',name+'logs.service'),('start',name+'candidate.service'),('start',name+'reader.service'),
+                ('start','--no-block',name+'copy.service')])
+            self.assertIn(('enable',name+'copy.timer'),system.calls)
+            self.assertIn(('show','--property=ActiveState','--value',name+'copy.timer'),system.calls)
+            self.assertEqual(operator.artifact_hash(root/'host/bin/evidence_copy.py'),launch['plan']['artifacts']['evidence_copy.py'])
+        with tempfile.TemporaryDirectory() as temp:
+            # The contract run is queued without waiting; its failure never stops acquisition.
+            root=Path(temp);source,_=HostInstallTests.bundle(self,root)
+            system=HostInstallTests.System(('start','--no-block','server2-shadow-test1-copy.service'))
+            result=HostInstallTests.install(self,source,root,system)
+            self.assertEqual(result['status'],'started');self.assertTrue(result['copy_start_failed'])
+
+
+class EvidenceCostTests(unittest.TestCase):
+    def test_charged_finalizer_limit_matches_the_host_limit(self):
+        copy, _ = load_evidence_modules()
+        self.assertEqual(state.COPY_FINALIZE_GENERATIONS, copy.MAX_FINAL_GENERATIONS)
+
+    def test_copy_puts_and_five_log_sources_are_bounded_from_the_epoch(self):
+        from decimal import Decimal as D
+        policy=cost_policy();w=D(policy['rates']['s3_write'])
+        base=lambda now:D(state.estimate_cost(dict(policy,rates=dict(policy['rates'],s3_write='0.000000001')),1000,now,cpu_seconds=0)['accrued_usd'])
+        for hours in (1,24,168):
+            now=1000+hours*3600
+            puts=5*((hours*3600+49)//50)+4*(1+hours+3*4)
+            accrued=D(state.estimate_cost(policy,1000,now,cpu_seconds=0)['accrued_usd'])
+            self.assertAlmostEqual(accrued-base(now),puts*(w-D('0.000000001')),places=5)
+        self.assertEqual(D(state.estimate_cost(policy,1000,1000,cpu_seconds=0)['accrued_usd']),D(0))
 
 
 if __name__ == '__main__':

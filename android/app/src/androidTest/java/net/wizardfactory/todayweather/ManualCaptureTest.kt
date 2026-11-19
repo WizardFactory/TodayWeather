@@ -12,6 +12,7 @@ import net.wizardfactory.todayweather.ui.nation.NationRoutes
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.espresso.Espresso
@@ -126,38 +127,8 @@ class ManualCaptureTest {
         rule.waitUntil(30_000) { app.appState.current() != null }
         walk.tab(Tab.DAILY); walk.tab(Tab.HOURLY); walk.tap(ShellTags.tab(Tab.HOURLY)); walk.weather()
     }
-    @Test fun weatherAndAir() {
-        walk.capture("05-hourly")
-        rule.onNodeWithTag(EXPANDER_TAG).performScrollTo().performClick()
-        walk.capture("06-hourly-expanded")
-        chartEnds("07-hourly-past", "08-hourly-future")
-        walk.tab(Tab.DAILY); walk.capture("09-daily")
-        chartEnds("10-daily-past", "11-daily-future")
-        walk.tab(Tab.AIR); walk.capture("12-air")
-        rule.onNodeWithTag(AirTags.code("pm25")).performScrollTo().performClick()
-        rule.onNodeWithTag(AirTags.code("pm25")).assertIsSelected()
-        walk.capture("13-air-pm25")
-        rule.onNodeWithTag(AirTags.STATIONS).performScrollTo()
-        walk.capture("14-stations")
-        walk.tap(AirTags.station(1))
-        rule.onNodeWithTag(AirTags.station(1)).assertIsSelected()
-        walk.capture("15-station-selected")
-    }
-    private fun chartEnds(first: String, last: String) {
-        rule.onNodeWithTag(ForecastTags.block(1)).performScrollTo()
-        val matcher = SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange) and hasAnyAncestor(hasTestTag(ForecastTags.block(1)))
-        val node = rule.onNode(matcher, useUnmergedTree = true)
-        fun move(end: Boolean) {
-            repeat(16) {
-                val range = node.fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange]
-                if (if (end) range.value() >= range.maxValue() - 1 else range.value() <= 1) return
-                node.performTouchInput { if (end) swipeLeft() else swipeRight() }
-                rule.waitForIdle()
-            }
-            error("Chart did not reach endpoint")
-        }
-        move(false); walk.capture(first); move(true); walk.capture(last)
-    }
+    @Test fun weatherAndAir() = captureWeatherAndAir(rule) { walk.capture(it) }
+
     @Test fun places() {
         walk.tab(Tab.LOCATIONS); walk.capture("16-places")
         rule.onNodeWithTag(PlacesTags.INPUT).performClick().performTextInput("부산")
@@ -213,7 +184,7 @@ class ManualCaptureTest {
         walk.back(); walk.capture("33-dark-weather")
         walk.menu(MenuRow.THEME); walk.tap(SettingsTags.row(0)); walk.back()
         // Refresh applies the feed's photo to the selected place.
-        Thread.sleep(800); walk.tap(ShellTags.tab(Tab.HOURLY))
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).performTouchInput { swipeDown(startY = height * 0.22f) }
         rule.waitUntil(60_000) { rule.onAllNodes(hasTestTag(ForecastTags.PHOTO)).fetchSemanticsNodes().isNotEmpty() }
         walk.capture("34-photo-theme")
     }
@@ -264,4 +235,47 @@ class ManualCaptureTest {
         walk.automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
         Thread.sleep(1000); walk.back(); walk.capture("43-exit")
     }
+}
+
+/** Both manual capture paths walk the same chart endpoints and selected pollutant and station. */
+internal fun captureWeatherAndAir(
+    rule: ComposeContentTestRule,
+    capture: (String) -> Unit,
+) {
+    fun chartEnds(first: String, last: String) {
+        rule.onNodeWithTag(ForecastTags.block(1)).performScrollTo()
+        val matcher = SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange) and hasAnyAncestor(hasTestTag(ForecastTags.block(1)))
+        val node = rule.onNode(matcher, useUnmergedTree = true)
+        fun move(end: Boolean) {
+            repeat(16) {
+                val range = node.fetchSemanticsNode().config[SemanticsProperties.HorizontalScrollAxisRange]
+                if (if (end) range.value() >= range.maxValue() - 1 else range.value() <= 1) return
+                node.performTouchInput { if (end) swipeLeft() else swipeRight() }
+                rule.waitForIdle()
+            }
+            error("Chart did not reach endpoint")
+        }
+        move(false); capture(first); move(true); capture(last)
+    }
+
+    capture("05-hourly")
+    rule.onNodeWithTag(EXPANDER_TAG).performScrollTo().performClick()
+    capture("06-hourly-expanded")
+    chartEnds("07-hourly-past", "08-hourly-future")
+    rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
+    capture("09-daily")
+    chartEnds("10-daily-past", "11-daily-future")
+    rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()
+    capture("12-air")
+    val pm25 = rule.onNodeWithTag(AirTags.code("pm25"))
+    // Scroll the page to the horizontal pollutant row before scrolling within that row.
+    pm25.onParent().performScrollTo()
+    pm25.performScrollTo().performClick()
+    rule.onNodeWithTag(AirTags.code("pm25")).assertIsSelected()
+    capture("13-air-pm25")
+    rule.onNodeWithTag(AirTags.STATIONS).performScrollTo()
+    capture("14-stations")
+    rule.onNodeWithTag(AirTags.station(1)).performClick()
+    rule.onNodeWithTag(AirTags.station(1)).assertIsSelected()
+    capture("15-station-selected")
 }

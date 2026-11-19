@@ -16,10 +16,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import net.wizardfactory.todayweather.ui.shell.IonicPopup
@@ -107,7 +104,6 @@ class WeatherTabHost(
 
 object WeatherTabTags {
     const val LOCATION = "weather-location"
-    const val SPINNER = "weather-spinner"
     const val BELL = "weather-bell"
     const val SHARE = "weather-share"
     const val POLLEN_DIALOG = "weather-pollen-dialog"
@@ -118,11 +114,11 @@ object WeatherTabTags {
  * The Hourly or Daily tab (#2887): a visit of ForecastCtrl's scope, new each time the tab opens, that applies the
  * selected place's record whenever it changes (a swipe, a load, the cache) and on each of TabCtrl's `applyEvent`s
  * ([applies]: a load starting, the gate included, or a response applied), as ForecastCtrl did; the page, its title
- * with the current position's location glyph or the loading spinner, the bell and share buttons, and the pollen and
+ * with the current position's location glyph, the bell and share buttons, and the pollen and
  * forecast-source popups. The air elements open S05 on their pollutant ([onAirInfo], `goAirInfoPage`) and the
  * standard opens S07 ([onUnits], `goUnitsPage`). The visit reads the temperature unit and the theme as it applies, as
  * ForecastCtrl did, so a change on the settings pages over it shows in the next apply. Opened with no enabled place, it
- * asks how to start ([onNoPlace], `startPopup`). The title's spinner also turns while the current position is looked up
+ * asks how to start ([onNoPlace], `startPopup`). The refresh indicator also covers the current-position lookup
  * ([locating]).
  */
 @Composable
@@ -194,6 +190,7 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
     }
     return TabContent(
         title = page.title,
+        refreshing = if (place != null && !place.disable) loadingSelected else null,
         afterTitle = { colors ->
             if (page.currentPosition && !loadingSelected) {
                 val glyph = if (host.locationEnabled()) LOCATION_ON else LOCATION_OFF
@@ -201,10 +198,6 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
                     OutlinedText(" $glyph", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
                         Modifier.clickable(onClick = host.onLocationGlyph).testTag(WeatherTabTags.LOCATION))
                 }
-            }
-            if (loadingSelected) {
-                Spacer(Modifier.width(4.dp))
-                Bubbles(Modifier.size(14.dp).testTag(WeatherTabTags.SPINNER))
             }
         },
         actions = { colors ->
@@ -305,9 +298,7 @@ fun RetryDialog(onClose: () -> Unit, onRetry: () -> Unit) {
 const val RETRY_DIALOG = "weather-retry-dialog"
 
 /**
- * `<ion-spinner icon="bubbles">`: nine dots around a circle, each fading in turn. In the title it is white
- * (`.body-content .bar p svg`), which the light theme's white bar hides (A08, kept); `$ionicLoading` draws it in
- * [color] (`spinner-stable`).
+ * `<ion-spinner icon="bubbles">`: nine dots around a circle, each fading in turn. The loading overlay uses [color] (`spinner-stable`).
  */
 @Composable
 internal fun Bubbles(modifier: Modifier, color: Color = Color.White) {

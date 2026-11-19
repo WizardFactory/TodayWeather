@@ -60,7 +60,7 @@ class WeatherSession(
         /** The app opened (TabCtrl `init`). */
         INIT,
 
-        /** The selected Hourly, Daily or Air tab was tapped again. */
+        /** Manual refresh from the selected weather or air page (legacy "tab" sender). */
         TAB,
 
         /** The app came back to the foreground; gated. */

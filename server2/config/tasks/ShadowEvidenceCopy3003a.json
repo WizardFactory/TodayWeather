@@ -1,0 +1,64 @@
+{
+  "task": "ShadowEvidenceCopy3003a",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3003",
+  "scope": "SR-5a of #3003 (refs #2998): the qualification host copies its paired evidence (contract, file batches, ledger snapshots, indexes) to the run's state bucket hourly and as a final generation after the reader stops; the operator can audit and assemble it from bucket objects only; the paired reader marks results of children it had to stop as capture failures; the copy units log as source `copy`; the cost estimate bounds five log sources and the copy PUTs. The finish order, export and deletion changes are SR-5b. PR to master; no deployment, AWS change or qualification run.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowEvidenceCopy3003a.json",
+    "server2/deploy/shadow/evidence_copy.py",
+    "server2/deploy/shadow/evidence_audit.py",
+    "server2/deploy/shadow/coordinator.py",
+    "server2/deploy/shadow/remote.py",
+    "server2/deploy/shadow/state.py",
+    "server2/deploy/shadow/linux_check.py",
+    "server2/deploy/logging/render.py",
+    "server2/deploy/logging/standin.py",
+    "server2/deploy/logging/test_logging.py",
+    "server2/tools/shadow/paired_read.py",
+    "server2/tests/integration/test_paired_read.py",
+    "server2/tests/integration/shadow_simulation.py",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tests/integration/test_shadow_simulation.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Paired evidence in the state bucket (copy program, units, audit), host logs with the copy source, installation, simulation and cost sections with the recomputed worked example"
+    },
+    {
+      "path": "docs/operations/server2-logging.md",
+      "category": "documentation",
+      "reason": "The qualification host's source map gains the copy and finalize units as source copy"
+    },
+    {
+      "path": "docs/operations/server2-paired-reads.md",
+      "category": "documentation",
+      "reason": "Results of children the sampler had to stop are capture failures (captured false, no body fields)"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/verification.md",
+      "category": "documentation",
+      "reason": "Selected verification evidence for SR-5a (written by the coordinator)"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/simulation.json",
+      "category": "documentation",
+      "reason": "Simulation summary for SR-5a (written by the coordinator)"
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/linux-check.json",
+      "category": "documentation",
+      "reason": "Disposable-VM check report (written by the coordinator)"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Archify source: evidence copy to the state bucket and the cost ceiling"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Archify HTML regenerated from the source"
+    }
+  ]
+}
