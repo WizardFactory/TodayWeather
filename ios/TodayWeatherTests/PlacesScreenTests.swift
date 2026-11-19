@@ -115,6 +115,35 @@ struct PlacesScreenTests {
         #expect(f.state.places.count == 2)
     }
 
+    /// Exercise all four tab entry points with a populated Seoul forecast and a reserved status bar.
+    @Test func mainTabContentClearsTheBar() async throws {
+        let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+        let size = CGSize(width: 402, height: 874)
+        let insets = ShellInsets(statusBar: 54, top: 8, bottom: 34, leading: 0, trailing: 0)
+        let view = ShellFrame(model: f.shell, insets: insets, content: { tab in
+            tab == .search ? f.places.content(tab) : f.weather.content(tab)
+        })
+        let hosted = try HostedView(view.ignoresSafeArea(), size: size)
+        defer { hosted.close() }
+        for tab in [ShellTab.search, .forecast, .dailyforecast, .air] {
+            try hosted.tap("shell-tab-\(tab.rawValue)")
+            let target = tab == .search ? "places-name-1" : tab == .air ? "air-header" : "forecast-header"
+            try #require(await HostedShellTests.AirLiveTests.wait(5) { f.shell.selected == tab && hosted.element(target) != nil })
+            await f.settle()
+            try await hosted.settle()
+            let frame = try #require(hosted.element(target)).accessibilityFrame
+            if tab == .search {
+                #expect(frame.minY >= insets.statusBar + insets.top + ShellMetrics.headerHeight)
+            } else {
+                #expect(abs(frame.maxY - size.height * 5 / 12) < 1, "\(tab) header ends at \(frame.maxY)")
+            }
+            let image = UIGraphicsImageRenderer(size: size).image { _ in
+                hosted.window.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
+            }
+            Attachment.record(try #require(image.pngData()), named: "main-tab-\(tab.rawValue).png")
+        }
+    }
+
     /// #2960: each place with its temperature, range and bell; a row tap selects it and opens the startup page.
     @Test func theListShowsThePlacesAndARowOpensTheStartupPage() async throws {
         let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul, PlacesFixture.london], records: [PlacesFixture.alarm(2)],

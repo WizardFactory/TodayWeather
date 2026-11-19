@@ -107,7 +107,7 @@ struct ShellFitTests {
                            _ where_: String) throws {
         let catalog = Catalog(code: shell.locale.catalog)
         let font = UIFont.systemFont(ofSize: UIFontMetrics(forTextStyle: .caption2)
-            .scaledValue(for: ShellMetrics.tabLabel, compatibleWith: UITraitCollection(preferredContentSizeCategory: dynamicType.category)))
+            .scaledValue(for: ShellMetrics.tabLabel, compatibleWith: UITraitCollection(preferredContentSizeCategory: dynamicType.isAccessibilitySize ? dynamicType.category : min(dynamicType, .large).category)))
         var previous: CGRect?
         for tab in ShellTab.allCases {
             let element = try #require(hosted.element("shell-tab-\(tab.rawValue)"), "\(where_) tab \(tab)")

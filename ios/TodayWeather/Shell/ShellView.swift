@@ -105,6 +105,15 @@ struct SplashFrame: View {
     }
 }
 
+/// Cordova used fixed CSS sizes in the forecast summary and navigation bars.
+struct CordovaChromeTextSize: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var size
+
+    func body(content: Content) -> some View {
+        content.environment(\.dynamicTypeSize, size.isAccessibilitySize ? size : min(size, .large))
+    }
+}
+
 /// The frame every screen shares (IN-07): the page of the selected tab under its header bar, the bottom tab bar, the
 /// full-screen side menu, the popups and the reserved slot for the bottom banner (IN-15), laid out as the Cordova iOS
 /// build: the status bar in the theme's color (`applyIOSStatusBar`) above the WebView's area; the tab bar reaching the
@@ -164,6 +173,7 @@ struct ShellFrame: View {
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
                     HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, titleView: tab.titleView,
                               insets: insets, onMenu: model.openMenu) { tab.actions }
+                        .modifier(CordovaChromeTextSize())
                 }
                 .frame(maxHeight: .infinity)
                 // The WebView's area: a page scrolled up must not draw over the status bar (IN-18, seen in the manual's
@@ -171,6 +181,7 @@ struct ShellFrame: View {
                 .clipped()
                 TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
                        onTap: model.tapTab)
+                    .modifier(CordovaChromeTextSize())
                 if let banner {
                     // IN-15: black below the banner, over the home indicator's inset (the plugin's root view).
                     banner.frame(maxWidth: .infinity).padding(.bottom, insets.bottom).background(Color.black)

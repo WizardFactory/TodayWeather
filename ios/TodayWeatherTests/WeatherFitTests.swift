@@ -13,6 +13,17 @@ import TWModel
 struct WeatherFitTests {
     static let widths: [CGFloat] = [375, 393, 834, 1024, 1366]
 
+    @Test func hourlyAndDailyChartStartAtTheWindowHeaderBoundary() throws {
+        let insets = ShellInsets(statusBar: 54, top: 8, bottom: 34, leading: 0, trailing: 0)
+        for page in ["kma-seoul-hourly", "kma-seoul-daily"] {
+            let content = try Self.content(page, catalog: "ko", width: 402, height: 874)
+            let view = WeatherBlockView(block: .header, content: content, theme: .light)
+                .environment(\.shellInsets, insets)
+            let height = UIHostingController(rootView: view).sizeThatFits(in: CGSize(width: 402, height: 874)).height
+            #expect(abs(height + insets.statusBar - 874 * 5 / 12) < 1)
+        }
+    }
+
     @Test(arguments: ["ko", "en", "de", "ja", "zh-CN", "zh-TW"])
     func pagesFitAtTheLargestTextSize(catalog: String) throws {
         for page in WeatherScreenshotTests.pages where !page.hasSuffix("expanded") {

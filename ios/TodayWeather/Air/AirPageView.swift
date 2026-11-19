@@ -120,7 +120,8 @@ struct AirBlockView: View {
         let page = content.page
         switch block {
         case .header:
-            AirHeader(page: page, metrics: content.metrics, theme: theme, colors: colors, s: s, actions: actions)
+            AirHeader(page: page, metrics: content.metrics, theme: theme, colors: colors, actions: actions)
+                .modifier(CordovaChromeTextSize())
         case .gauge:
             AirGaugeView(gauge: page.gauge, colors: colors, s: s)
                 .padding(.horizontal, 4)
@@ -160,14 +161,16 @@ struct AirBlockView: View {
 
 // MARK: - The header block
 
-/// `[md-page-header]`: at least `headerHeight` tall with 64 pt above its content (the bar, on iOS) and 5 pt below, the
-/// main box (80 % wide) between the arrows, centered. Without a main box the arrows share the space around them.
+/// Air uses the same window-relative header geometry as the forecast tabs. The main box takes 80% of its width.
+/// Without a main box the arrows share the space around them.
 private struct AirHeader: View {
     let page: AirPage
     let metrics: ChartMetrics
     let theme: Theme
     let colors: AirColors
-    let s: TextScale
+    @Environment(\.shellInsets) private var insets
+    @Environment(\.sizeCategory) private var category
+    private var s: TextScale { TextScale(category) }
     let actions: AirPageActions
 
     var body: some View {
@@ -191,7 +194,7 @@ private struct AirHeader: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.top, WeatherMetrics.headerTop)
+            .padding(.top, WeatherMetrics.headerPadding(insets: insets))
             .padding(.bottom, 5)
         }
         .frame(height: height)
@@ -210,7 +213,7 @@ private struct AirHeader: View {
     /// `min-height: headerHeight`, or the content with its padding when taller (larger text).
     var height: CGFloat {
         let content = page.main.map { AirMainBox.height(main: $0, metrics: metrics, s: s, width: metrics.bodyWidth * 0.8) } ?? 0
-        return max(metrics.headerHeight, WeatherMetrics.headerTop + content + 5)
+        return WeatherMetrics.visibleHeaderHeight(metrics.headerHeight, content: content, bottom: 5, insets: insets)
     }
 
     /// `.main-box-arrow`: 10 % wide, the chevron (17 pt Ionicons) centered; a tap switches the place.

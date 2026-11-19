@@ -62,6 +62,16 @@ struct WeatherColors: Equatable {
 enum WeatherMetrics {
     /// `.platform-ios [md-page-header]` padding-top: the bar's 44 pt and the old 20 pt status bar.
     static let headerTop: CGFloat = 64
+    static func headerPadding(insets: ShellInsets) -> CGFloat {
+        max(0, headerTop - insets.statusBar)
+    }
+
+    static func visibleHeaderHeight(_ height: CGFloat, content: CGFloat, bottom: CGFloat, insets: ShellInsets) -> CGFloat {
+        let top = headerPadding(insets: insets)
+        // Centering puts half the spare space above the content. Keep wrapped text below the overlaid navigation bar.
+        let clearance = max(0, ShellMetrics.headerHeight + insets.top - top)
+        return max(height - insets.statusBar, top + content + bottom + 2 * clearance)
+    }
     /// `[md-page-header]` margin-bottom inside the first card, and every card's margin-bottom.
     static let gap: CGFloat = 5
     /// `.card` padding.
