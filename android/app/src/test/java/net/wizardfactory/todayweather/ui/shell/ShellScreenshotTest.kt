@@ -216,7 +216,7 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
                 .crop(captured.int("offset", "x"), captured.int("offset", "y"), captured.int("size", "width"), captured.int("size", "height"))
             // Cordova shows a reload glyph for Hourly and the old calendar for Daily.
             // ShellTest checks both icon states. Keep comparing the labels, layout and remaining icons.
-            val reference = if (p == "tabs") cordova.withNativeWeatherIcons(native) else cordova
+            val reference = if (p == "tabs") cordova.withHourlyTabIconsFrom(native) else cordova
             val diff = ImageDiff.of(native, reference)
             val name = "$lang-${theme.key}-$p"
             val outputName = (matrixSize?.let { "$it-" } ?: "") + name
@@ -250,19 +250,6 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
         }),
         MenuRow.ANALYTICS to stringResource(R.string.LOC_ANALYTICS_DISABLED),
     ))
-
-    private fun Pixels.withNativeWeatherIcons(native: Pixels): Pixels {
-        if (native.width != width || native.height != height) return this
-        val pixels = argb.copyOf()
-        // Reference captures use density 2: the 32 dp icon starts below 2 dp of tab padding.
-        for (center in listOf(width * 3 / 8, width * 5 / 8)) {
-            for (y in 4 until 68) {
-                val start = y * width + center - 32
-                native.argb.copyInto(pixels, start, start, start + 64)
-            }
-        }
-        return Pixels(width, height, pixels)
-    }
 
     private fun JsonObject.int(a: String, b: String) = this[a]!!.jsonObject[b]!!.jsonPrimitive.content.toInt()
     private fun JsonObject.num(k: String) = this[k]!!.jsonPrimitive.double

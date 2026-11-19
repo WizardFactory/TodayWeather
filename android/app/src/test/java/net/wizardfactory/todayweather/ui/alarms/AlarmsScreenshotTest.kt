@@ -58,6 +58,7 @@ import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.PopupTags
+import net.wizardfactory.todayweather.ui.shell.withHourlyTabIconsFrom
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -361,13 +362,13 @@ class AlarmsScreenshotTest {
         rule.mainClock.advanceTimeBy(600)
         rule.waitForIdle()
         popupBoxes("$lang/intro")
-        if (matrixSize != null) compare("$lang/intro")
+        if (matrixSize != null) compare("$lang/intro", showsHourlyTabs = true)
         rule.onAllNodesWithTag(PopupTags.BUTTON)[0].performClick()
         rule.waitForIdle()
         messages.tryEmit(PushMessage("서울 맑음 3˚", "내일 아침 -1˚, 낮 9˚", emptyMap(), "1", false))
         rule.waitForIdle()
         popupBoxes("$lang/foreground")
-        if (matrixSize != null) compare("$lang/foreground")
+        if (matrixSize != null) compare("$lang/foreground", showsHourlyTabs = true)
     }
 
     private fun rect(o: JsonObject) = o["rect"]!!.jsonObject.let { r -> listOf("x", "y", "w", "h").map { r[it]!!.jsonPrimitive.double.toFloat() } }
@@ -424,10 +425,11 @@ class AlarmsScreenshotTest {
 
     private val failures = mutableListOf<String>()
 
-    private fun compare(name: String) {
+    private fun compare(name: String, showsHourlyTabs: Boolean = false) {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
-        val diff = ImageDiff.of(native, cordova)
+        val reference = if (showsHourlyTabs) cordova.withHourlyTabIconsFrom(native) else cordova
+        val diff = ImageDiff.of(native, reference)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
         ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
