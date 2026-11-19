@@ -173,7 +173,6 @@ struct ShellFrame: View {
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
                     HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, titleView: tab.titleView,
                               insets: insets, onMenu: model.openMenu) { tab.actions }
-                        .modifier(CordovaChromeTextSize())
                 }
                 .frame(maxHeight: .infinity)
                 // The WebView's area: a page scrolled up must not draw over the status bar (IN-18, seen in the manual's
@@ -233,12 +232,18 @@ struct BarFrame<Leading: View, Trailing: View>: View {
     var titleView: AnyView? = nil
     let insets: ShellInsets
     let titleIdentifier: String
+    var usesCordovaTitleSize = false
     /// How far WebKit puts the title below where SwiftUI centers it on the 44 pt line (measured: 1 pt in a tab's
     /// `ion-header-bar`, -1/3 pt in the menu's `header.bar`).
     var titleOffset: CGFloat = ShellMetrics.titleBaseline
     @ViewBuilder let leading: () -> Leading
     @ViewBuilder let trailing: () -> Trailing
+    @Environment(\.dynamicTypeSize) private var dynamicType
     @ScaledMetric(relativeTo: .headline) private var titleSize = ShellMetrics.titleSize
+
+    private var displayedTitleSize: CGFloat {
+        usesCordovaTitleSize && !dynamicType.isAccessibilitySize ? min(titleSize, ShellMetrics.titleSize) : titleSize
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -249,7 +254,7 @@ struct BarFrame<Leading: View, Trailing: View>: View {
             } else {
                 HStack(spacing: 0) {
                     Text(title)
-                        .font(.system(size: titleSize, weight: .medium))
+                        .font(.system(size: displayedTitleSize, weight: .medium))
                         .foregroundStyle(colors.headerText.color)
                         .outlined(colors.headerOutline)
                         .lineLimit(1)
@@ -293,7 +298,7 @@ struct HeaderBar<Actions: View>: View {
 
     var body: some View {
         BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, titleView: titleView, insets: insets,
-                 titleIdentifier: "shell-title") {
+                 titleIdentifier: "shell-title", usesCordovaTitleSize: true) {
             BarButton(glyph: Glyphs.navicon, colors: colors, width: 40, action: onMenu)
                 .accessibilityLabel("menu")
                 .accessibilityIdentifier("shell-menu-button")
