@@ -7,7 +7,7 @@
       "instruction": "Open Hourly Weather (시간별날씨) and look beside the sky icon near the top of the screen.",
       "screenshot": "hourly.png",
       "caption": "The Seoul forecast shows 3.3 degrees Celsius.",
-      "expected": "The digit after the decimal point is half the size of the whole-number digit. Both sit on the same baseline."
+      "expected": "The decimal point and the digit after it use 70% of the whole-number font size. The entire number sits on one baseline."
     }
   ]
 }

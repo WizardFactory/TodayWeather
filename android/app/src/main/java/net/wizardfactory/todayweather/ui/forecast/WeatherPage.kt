@@ -240,8 +240,8 @@ private fun MainBox(page: ForecastPage, metrics: ChartMetrics, theme: Theme, col
 internal fun temperatureNumber(value: String, size: Double): AnnotatedString = buildAnnotatedString {
     append(value)
     val point = value.indexOf('.')
-    if (point >= 0 && point < value.lastIndex) {
-        addStyle(SpanStyle(fontSize = (size / 2).sp), point + 1, value.length)
+    if (point >= 0) {
+        addStyle(SpanStyle(fontSize = (size * 0.7).sp), point, value.length)
     }
 }
 
