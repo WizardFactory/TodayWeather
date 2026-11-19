@@ -170,6 +170,7 @@ struct PlacesScreenTests {
             let view = ShellFrame(model: f.shell, insets: insets, content: { f.weather.content($0) })
             let hosted = try HostedView(view.ignoresSafeArea(), size: size, dynamicType: type)
             defer { hosted.close() }
+            f.weather.handle(.launch)
             try #require(await HostedShellTests.AirLiveTests.wait(5) { hosted.element("forecast-summary-air") != nil })
             try await hosted.settle()
             let summary = try #require(hosted.element("forecast-summary-air")).accessibilityFrame
