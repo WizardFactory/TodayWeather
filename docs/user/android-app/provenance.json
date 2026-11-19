@@ -1000,8 +1000,8 @@
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/ParityDeviceTest.kt": "13e55cf997f134bbbf6b9f32578f8bc4c14bfc08da60b76ecc8fdb0b0caab829",
     "android/core-domain/src/test/resources/corpus/inputs/kma-seoul.json": "75b92bbcfca72d79438021b4245c4efab4502f5954ba991d3b8c9e70d9578b17"
   },
-  "manual_sha256": "28e8b46b41dbba3a4ad061e210277bf512d7fb9e8ff46baf709a81048694f0ca",
-  "pdf_sha256": "7c0b5d2db5ef1a9e54707a76ded25ee92e21a75fa37788d496a18ea8080aa241",
+  "manual_sha256": "ee3786dc4bd64a09d166fde46324b8f814fd4dc8a3d6b6281166bcdba5f2627d",
+  "pdf_sha256": "f851b864ccad71d1c164beaf1054139dc674c37a2aef6d9439be496c7307765c",
   "limitations": [
     "API36 emulator captures; not a release APK or physical-device certification",
     "Live values, test advertisements, forecasts, available warning bulletins and Android dialogs vary",

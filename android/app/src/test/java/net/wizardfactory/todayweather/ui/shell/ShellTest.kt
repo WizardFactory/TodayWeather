@@ -16,6 +16,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -80,6 +82,7 @@ class ShellTest {
                 val accent = Color.rgb(17, 109, 155)
                 assertEquals("line at top of $item when $tab is selected", item == tab, pixels.getPixel(center, 1) == accent)
                 assertNotEquals(accent, pixels.getPixel(center - 26, 1))
+                assertNotEquals(accent, pixels.getPixel(center + 26, 1))
                 fun containsAccent(rows: IntRange) = rows.any { y ->
                     (0 until pixels.width).any { x -> pixels.getPixel(x, y) == accent }
                 }
@@ -94,6 +97,17 @@ class ShellTest {
             rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
         }
         assertTrue(refreshed.isEmpty())
+    }
+
+    @Test
+    fun theSelectedTabLabelIsLegibleOnEveryTabBackground() {
+        for (theme in Theme.entries) {
+            for (tab in Tab.entries) {
+                val colors = ShellColors.of(theme, tab)
+                assertTrue("$theme $tab label contrast", ColorUtils.calculateContrast(
+                    colors.tabSelected.toArgb(), colors.tabBar.toArgb()) >= 4.5)
+            }
+        }
     }
 
     @Test

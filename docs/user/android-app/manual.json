@@ -90,7 +90,7 @@
       "title": "Read the air-quality summary",
       "instruction": "Tap 대기정보 (Air information). Read the grade and advice, then swipe up to see pollutant cards and the information source.",
       "screenshot": "screenshots/12-air.png",
-      "caption": "The short line above the blue cloud marks Air as selected.",
+      "caption": "The cloud icon and Air label turn blue when selected. A short line appears above the cloud.",
       "expected": "The selected air standard controls the grade bands. Missing readings may appear as a dash."
     },
     {

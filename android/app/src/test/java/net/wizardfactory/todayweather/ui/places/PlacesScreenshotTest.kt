@@ -319,12 +319,12 @@ class PlacesScreenshotTest {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
         val theme = if (name.endsWith("-dark")) Theme.DARK else Theme.LIGHT
-        val reference = cordova.withCurrentTabIconsFrom(native, Tab.LOCATIONS)
-            .withTabAccent(Tab.LOCATIONS, ShellColors.of(theme, Tab.LOCATIONS))
+        val reference = cordova.withTabAccent(Tab.LOCATIONS, ShellColors.of(theme, Tab.LOCATIONS))
+            .withCurrentTabIconsFrom(native, Tab.LOCATIONS)
         val diff = ImageDiff.of(native, reference)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
-        ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
+        ImageIO.write(ImageDiff.overlay(native, reference).toBufferedImage(), "png", File(out, "$base-diff.png"))
         println("places-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject
