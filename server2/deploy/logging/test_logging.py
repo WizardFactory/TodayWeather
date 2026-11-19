@@ -211,14 +211,19 @@ class RenderTest(unittest.TestCase):
         saved = dict(render.UNITS)
         self.addCleanup(lambda: (render.UNITS.clear(), render.UNITS.update(saved)))
         render.use_units(['a-candidate.service=server', 'a-guard.service=guard', 'a-reader.service=reader',
-                          'a-logs.service=collector'])
+                          'a-copy.service=copy', 'a-finalize.service=copy', 'a-logs.service=collector'])
         out = self.rendered(SERVER2_LOG_SINKS='s3')
         self.assertEqual(out['sources']['journal_s3']['include_units'],
-                         ['a-candidate.service', 'a-guard.service', 'a-reader.service', 'a-logs.service'])
+                         ['a-candidate.service', 'a-guard.service', 'a-reader.service', 'a-copy.service',
+                          'a-finalize.service', 'a-logs.service'])
         program = out['transforms']['select_s3']['source']
         self.assertIn('if unit == "a-guard.service" { "guard" }', program)
         self.assertIn('if unit == "a-reader.service" { "reader" }', program)
-        # Guard and reader lines leave the host only as non-empty JSON objects.
+        # SR-5a (#3003): the evidence copy and its finalizer are shipped as source `copy`.
+        self.assertIn('if unit == "a-copy.service" { "copy" }', program)
+        self.assertIn('if unit == "a-finalize.service" { "copy" }', program)
+        self.assertEqual(render.SOURCES, ('server', 'collector', 'guard', 'reader', 'copy'))
+        # Guard, reader and copy lines leave the host only as non-empty JSON objects.
         self.assertIn('} else {\n  if length(parsed) == 0 { abort }\n}', program)
 
     def test_invalid_unit_maps_are_rejected(self):

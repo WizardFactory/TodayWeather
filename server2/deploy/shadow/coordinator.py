@@ -527,8 +527,10 @@ def cleanup(cloud,journal,resources,*,source_destination=None):
 # pinned collector archive and its pin, and the renderer and status recorder of
 # server2/deploy/logging. They ship the candidate, guard and reader output to the run's
 # `-state` bucket, which the cleanup exports before deleting it.
+# The evidence copy (SR-5a, #3003) ships the paired reader's files, ledger snapshots and
+# the run's contract to the same bucket, under evidence/<run>/.
 HOST_ARTIFACTS={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env',
-                'collector.tar.gz','collector.json','render.py','status.py'}
+                'collector.tar.gz','collector.json','render.py','status.py','evidence_copy.py'}
 LOG_PREFIX='logs/server2'
 # Failures and stop reasons only: warn keeps the log objects small next to the
 # candidate's own objects, which share the operator's export allowance.
@@ -562,7 +564,7 @@ def log_sources(run_id):
     """Units the collector reads, and the source each is shipped as."""
     name='server2-shadow-'+run_id
     return {name+'-candidate.service':'server',name+'-guard.service':'guard',name+'-reader.service':'reader',
-            name+'-logs.service':'collector'}
+            name+'-copy.service':'copy',name+'-finalize.service':'copy',name+'-logs.service':'collector'}
 
 
 def logging_settings(launch):
@@ -717,6 +719,7 @@ WatchdogSec=30
 WatchdogSignal=SIGKILL
 NotifyAccess=main
 {common}'''
+    finalize=f'ExecStopPost=-/usr/bin/systemctl start --no-block {name}-finalize.service'
     reader=f'''[Unit]
 Description=Owned paired reader {plan['run_id']}
 BindsTo={name}-guard.service {name}-candidate.service
@@ -724,12 +727,38 @@ After={name}-guard.service {name}-candidate.service
 {logged}[Service]
 Type=exec
 {journal}ExecStart=/usr/bin/python3 {root}/bin/paired_read.py --manifest {root}/reader.json --candidate http://127.0.0.1:{plan['port']} --candidate-binary {root}/bin/server2 --state {root}/data/paired --execute
+{finalize}
 {common}'''
     stop=f'''[Unit]
 Description=Original collection deadline {plan['run_id']}
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/systemctl --no-block stop {name}-reader.service {name}-candidate.service {name}-guard.service
+ExecStart=-/usr/bin/systemctl start --no-block {name}-finalize.service
+'''
+    # SR-5a (#3003): the evidence copy. One program, run hourly and by the finalizer, which
+    # the reader's stop (guard stop, candidate exit, watchdog, the reader's own exit) and
+    # the 168-hour stop start without waiting. No relation to the acquisition units or the
+    # collector; short fixed bounds so the 170-hour poweroff is never delayed by them.
+    def copier(description,flag):
+        return f'''[Unit]
+Description={description} {plan['run_id']}
+{logged}[Service]
+Type=oneshot
+{journal}ExecStart=/usr/bin/python3 -I {root}/bin/evidence_copy.py --launch {root}/launch.json{flag}
+Restart=no
+TimeoutStartSec=600
+TimeoutStopSec=10
+NoNewPrivileges=yes
+'''
+    copy_timer=f'''[Unit]
+Description=Hourly shadow evidence copy {plan['run_id']}
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit={name}-copy.service
+[Install]
+WantedBy=timers.target
 '''
     off=f'''[Unit]
 Description=Original host deadline {plan['run_id']}
@@ -772,7 +801,8 @@ WantedBy=multi-user.target
     return {name+'-candidate.service':candidate,name+'-guard.service':guardian,name+'-reader.service':reader,
             name+'-stop.service':stop,name+'-stop.timer':timer(168,'stop'),
             name+'-poweroff.service':off,name+'-poweroff.timer':timer(170,'poweroff'),
-            name+'-logs.service':collector}
+            name+'-logs.service':collector,name+'-copy.service':copier('Owned shadow evidence copy',''),
+            name+'-copy.timer':copy_timer,name+'-finalize.service':copier('Owned shadow final evidence copy',' --final')}
 
 
 def host_context(path):
@@ -975,6 +1005,10 @@ def install_host_tree(bundle,root,unit_dir,system,*,now,machine):
         system.run('start',name+'-stop.timer',name+'-poweroff.timer')
         for suffix in ('stop.timer','poweroff.timer'):
             require(system.run('show','--property=ActiveState','--value',name+'-'+suffix)=='active','deadline timer inactive')
+        # SR-5a: the hourly evidence copy is armed before acquisition starts.
+        system.run('enable',name+'-copy.timer')
+        system.run('start',name+'-copy.timer')
+        require(system.run('show','--property=ActiveState','--value',name+'-copy.timer')=='active','evidence copy timer inactive')
         # Queued without waiting and without a check: acquisition never depends on the
         # collector (the inspect step reports its state). It reads the namespace from
         # the beginning of the boot, so it ships records written before it ran.
@@ -988,6 +1022,10 @@ def install_host_tree(bundle,root,unit_dir,system,*,now,machine):
             require(system.run('show','--property=ActiveState','--value',name+'-'+suffix+'.service')=='active','candidate binding unavailable')
         system.run('start',name+'-reader.service')
         require(system.run('show','--property=ActiveState','--value',name+'-reader.service')=='active','reader inactive')
+        # Publishes the run's contract at install; queued without waiting, and its
+        # failure never stops acquisition (the hourly copy publishes it later).
+        try:system.run('start','--no-block',name+'-copy.service')
+        except (StateError,OSError,subprocess.TimeoutExpired):status['copy_start_failed']=True
         status['status']='started'
         guard.save(root/'state/install.json',status)
         return status
