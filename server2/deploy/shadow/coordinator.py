@@ -16,6 +16,8 @@ import itertools
 import os
 from pathlib import Path
 import re
+import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -176,7 +178,7 @@ class Aws:
         return decode_cloud(operation,completed.returncode,completed.stdout,completed.stderr)
 
 
-def inventory(cloud, resources):
+def inventory(cloud, resources, *, nonstate=False):
     """Independent exact-ID absence reads. Unknown is never converted to gone."""
     r=frozen_resources(resources)
     requests=[('instance','DescribeInstances',{'InstanceIds':[r['instance']]},r['instance']),
@@ -187,7 +189,11 @@ def inventory(cloud, resources):
     result={}
     for key,operation,params,name in requests:
         answer=cloud.call(operation,params)
-        result[key]={'gone':absence(answer,name=name),'kind':answer.kind,'code':answer.code}
+        fenced_instance_absent = (nonstate and key == 'instance' and answer.operation == operation
+                                  and answer.kind == 'service_error'
+                                  and answer.code == 'InvalidInstanceID.NotFound')
+        result[key]={'gone':absence(answer,name=name) or fenced_instance_absent,
+                     'kind':answer.kind,'code':answer.code}
     # ListBuckets may paginate; each explicit page must succeed and terminate.
     names=[]; token=None; seen=set(); kind='json'; code=None
     for _ in range(100):
@@ -208,18 +214,20 @@ def inventory(cloud, resources):
     else:
         kind='incomplete'
     whole=CloudResult(kind,'ListBuckets',{'Buckets':names},code)
-    for bucket in r['buckets']:
+    buckets = r['buckets'][:1] if nonstate else r['buckets']
+    for bucket in buckets:
         result[bucket]={'gone':kind=='json' and not token and absence(whole,name=bucket),'kind':kind,'code':code}
     return {'schema':1,'resources_sha256':hashlib.sha256(canonical(r).encode()).hexdigest(),
             'checks':result,'complete':all(v['gone'] for v in result.values())}
 
 
-def versions(cloud,bucket):
+def versions(cloud,bucket,*,prefix=None):
     """Yield exact versions, including delete markers; reject incomplete pagination."""
     marker={}; seen=set()
+    scope={} if prefix is None else {'Prefix':prefix}
     for _ in range(10000):
-        answer=cloud.call('ListObjectVersions',{'Bucket':bucket,'MaxKeys':1000,**marker})
-        require(answer.kind=='json','version listing unavailable')
+        answer=cloud.call('ListObjectVersions',{'Bucket':bucket,'MaxKeys':1000,**scope,**marker})
+        require(answer.kind=='json' and type(answer.payload) is dict,'version listing unavailable')
         p=answer.payload
         require(type(p.get('IsTruncated')) is bool,'version listing shape')
         for field in ('Versions','DeleteMarkers'):
@@ -334,6 +342,307 @@ def export_sources(cloud,journal,resources,destination):
     return manifest
 
 
+def _source_inventory(cloud, buckets, prefix):
+    """A failed bucket listing cannot become an empty successful inventory."""
+    inventory, listings = [], {}
+    for bucket in buckets:
+        rows = {}
+        try:
+            for item in versions(cloud, bucket, prefix=prefix):
+                key, version = item['Key'], item['VersionId']
+                require(prefix is None or key.startswith(prefix), 'version outside prefix')
+                require((key, version) not in rows, 'duplicate source version')
+                marker = item['DeleteMarker']
+                identity = dict(bucket=bucket, key=key, version=version,
+                                kind='delete_marker' if marker else 'object')
+                ident = hashlib.sha256(canonical(identity).encode()).hexdigest()
+                rows[key, version] = dict(identity, id=ident)
+                if not marker:
+                    rows[key, version]['size'] = item['Size']
+        except (OSError, StateError, UnicodeError):
+            listings[bucket] = 'failed'
+        else:
+            listings[bucket] = 'complete'
+            inventory.extend(rows[key] for key in sorted(rows))
+    return inventory, listings
+
+
+def _original_digest(path, size, *, durable=False):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        saved = os.fstat(stream.fileno())
+        require(stat.S_ISREG(saved.st_mode) and saved.st_size == size, 'source byte count')
+        digest = hashlib.sha256()
+        remaining = size
+        while remaining:
+            block = stream.read(min(1024**2, remaining))
+            require(block, 'source short read')
+            digest.update(block)
+            remaining -= len(block)
+        require(not stream.read(1), 'source long read')
+        if durable:
+            os.fsync(stream.fileno())
+        return digest.hexdigest()
+
+
+def _write_source_json(path, value):
+    fd, temporary = tempfile.mkstemp(prefix='.write-', dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(canonical(value) + '\n')
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        sync_directory(path.parent)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def _source_response(headers, item, extent):
+    require(type(headers) is dict and headers.get('VersionId') == item['version']
+            and type(headers.get('ContentLength')) is int and headers['ContentLength'] == item['size']
+            and (extent is None or headers.get('ContentRange') == extent), 'source response identity')
+
+
+def _verified_source_receipt(slot, expected, binding, extent):
+    try:
+        path = slot / 'receipt.json'
+        require(slot.is_dir() and not slot.is_symlink() and path.is_file()
+                and not path.is_symlink() and path.stat().st_size <= 128*1024, 'source receipt')
+        record = json.loads(path.read_bytes())
+        receipt = record['object']
+        require(record['resources_sha256'] == binding
+                and {k: receipt[k] for k in expected} == expected, 'source receipt binding')
+        digest = _original_digest(slot / 'body', expected['size'])
+        require(digest == receipt['sha256'], 'source cached hash')
+        _source_response(receipt['headers'], expected, extent)
+        source_headers(receipt['headers'], expected['key'], digest)
+        return receipt
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _promote_source_receipt(pending, slot):
+    # The journal owner lock serializes promotion and resume.
+    require(not os.path.lexists(slot), 'source receipt already exists')
+    pending.rename(slot)
+    sync_directory(slot.parent)
+
+
+def _stage_original(cloud, journal, item, destination, binding, *, verify_only=False):
+    slot = destination / 'objects' / item['id']
+    pending = slot.with_name('.pending-' + slot.name)
+    file = (slot / 'body').relative_to(destination).as_posix()
+    size = item['size']
+    extent = f'bytes 0-{size-1}/{size}' if size else None
+    expected = dict(item, status='exported', file=file)
+    if os.path.lexists(slot):
+        receipt = _verified_source_receipt(slot, expected, binding, extent)
+        return receipt if receipt is not None else dict(item, status='failed', reason='cached_receipt_invalid')
+
+    created = False
+    try:
+        if os.path.lexists(pending):
+            info = pending.lstat()
+            require(stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode) == 0o700
+                    and info.st_uid == os.geteuid(), 'source pending path not private')
+            receipt = _verified_source_receipt(pending, expected, binding, extent)
+            if receipt is not None:
+                _promote_source_receipt(pending, slot)
+                return receipt
+            if not verify_only:
+                shutil.rmtree(pending)
+        if verify_only:
+            return dict(item, status='failed', reason='cached_receipt_missing')
+        pending.mkdir(mode=0o700)
+        created = True
+        sync_directory(pending.parent)
+        path = pending / 'body'
+        os.close(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+        journal.reserve_control(export_bytes=size)
+        params = dict(Bucket=item['bucket'], Key=item['key'], VersionId=item['version'])
+        if extent is None:
+            result = cloud.call('HeadObject', params)
+        else:
+            result = cloud.call('GetObject', dict(params, Range=f'bytes=0-{size-1}'), output=path)
+        require(result.kind == 'json', 'source transfer unavailable')
+        _source_response(result.payload, item, extent)
+        digest = _original_digest(path, size, durable=True)
+        headers = source_headers(result.payload, item['key'], digest)
+        receipt = dict(expected, sha256=digest, headers=headers)
+        _write_source_json(pending / 'receipt.json', dict(resources_sha256=binding, object=receipt))
+        _promote_source_receipt(pending, slot)
+        return receipt
+    except StateError as error:
+        if str(error) in ('operator allowance exhausted', 'control response allowance exhausted'):
+            return dict(item, status='omitted', reason='allowance')
+        return dict(item, status='failed', reason='transfer')
+    except (OSError, UnicodeError):
+        return dict(item, status='failed', reason='transfer')
+    finally:
+        # Keep a published receipt after an uncertain promotion. A known
+        # failed transfer has no receipt and can be discarded immediately.
+        if created and not (pending / 'receipt.json').is_file():
+            shutil.rmtree(pending, ignore_errors=True)
+
+
+def _admitted_finish_output(journal, destination=None):
+    snapshot = journal.snapshot()
+    output = journal.request('finish-output')
+    require(output is not None and output['receipt'] is not None, 'finish output not admitted')
+    requested = Path(output['params']['destination']) if destination is None else destination
+    return journal.bind_finish_destination(requested, now=snapshot['last_seen'])
+
+
+def _source_destination(journal, resources, destination):
+    require(resources['run_id'] == journal.snapshot()['run_id'], 'source run identity')
+    destination = Path(destination)
+    parent = _admitted_finish_output(journal, destination.parent)
+    destination = parent / destination.name
+    require(destination.parent == parent and destination.name != '..', 'source path')
+    for private in (destination, destination / 'objects'):
+        private.mkdir(mode=0o700, exist_ok=True)
+        require(not private.is_symlink() and private.is_dir()
+                and private.stat().st_uid == os.geteuid()
+                and stat.S_IMODE(private.stat().st_mode) == 0o700, 'source path not private')
+    return destination
+
+
+def _stage_committed_evidence(cloud, journal, destination, binding, inventory, prefix):
+    # This coordinator also travels to the capture host. The audit module is
+    # loaded only for the operator's evidence export path.
+    from evidence_audit import MAX_INDEX, valid_index
+
+    controls, references = {}, set()
+    available = {item['key'] for item in inventory if item['kind'] == 'object'}
+    for item in inventory:
+        if item['kind'] != 'object':
+            continue
+        key = item['key'].removeprefix(prefix)
+        index_name = re.fullmatch(r'index-([1-9][0-9]{0,9})\.json', key)
+        if key != 'contract.json' and index_name is None:
+            continue
+        if index_name is not None and item['size'] > MAX_INDEX:
+            controls[item['id']] = dict(item, status='failed', reason='invalid_evidence_index')
+            continue
+        receipt = _stage_original(cloud, journal, item, destination, binding)
+        if index_name is not None and receipt['status'] == 'exported':
+            try:
+                index = json.loads((destination / receipt['file']).read_bytes())
+            except (OSError, ValueError):
+                index = None
+            if valid_index(index, prefix, int(index_name[1])):
+                references.add(index['ledger']['key'])
+                if index['batch'] is not None:
+                    references.add(index['batch']['key'])
+            else:
+                receipt = dict(item, status='failed', reason='invalid_evidence_index')
+        controls[item['id']] = receipt
+
+    objects = []
+    for item in inventory:
+        if item['kind'] == 'delete_marker':
+            receipt = dict(item, status='delete_marker')
+        elif item['id'] in controls:
+            receipt = controls[item['id']]
+        elif item['key'] in references:
+            # A commit names a key and digest, not a VersionId. Stage every
+            # listed version so conflicting bytes cannot be hidden from audit.
+            receipt = _stage_original(cloud, journal, item, destination, binding)
+        else:
+            receipt = dict(item, status='omitted', reason='uncommitted')
+        objects.append(receipt)
+    return objects, sorted(references - available)
+
+
+def _source_export_report(cloud, journal, destination, binding, inventory, listings, *,
+                          evidence_prefix=None, disposed_bucket=None, state_export=None):
+    inventory_sha = hashlib.sha256(canonical(inventory).encode()).hexdigest()
+    evidence_only = evidence_prefix is not None
+    missing = []
+    if evidence_only:
+        objects, missing = _stage_committed_evidence(
+            cloud, journal, destination, binding, inventory, evidence_prefix)
+    else:
+        prior_by_id = {}
+        if disposed_bucket is not None:
+            prior = _finish_checkpoint(destination / 'manifest.json', binding)
+            if prior is not None and prior['listings'].get(disposed_bucket) == 'complete':
+                archived = [row for row in prior['inventory'] if row['bucket'] == disposed_bucket]
+                if archived == [row for row in inventory if row['bucket'] == disposed_bucket]:
+                    prior_by_id = {row['id']: row for row in prior['objects'] if row['bucket'] == disposed_bucket}
+        objects = []
+        state_rows = None
+        if state_export is not None:
+            # Full seals inventory state first. Timestamp its archive before any
+            # raw-object work so raw delays cannot affect state disposition.
+            state_bucket, state_export_current = state_export
+            require(listings[state_bucket] == 'complete', 'state listing unavailable')
+            state_rows = [row for row in inventory if row['bucket'] == state_bucket]
+            require(inventory[:len(state_rows)] == state_rows, 'state inventory order')
+            if not state_rows:
+                _record_finish_state_export(journal, destination.parent, binding, state_bucket,
+                                            state_rows, state_export_current)
+        for item in inventory:
+            if item['kind'] == 'delete_marker':
+                receipt = dict(item, status='delete_marker')
+            else:
+                disposed = item['bucket'] == disposed_bucket
+                receipt = _stage_original(cloud, journal, item, destination, binding, verify_only=disposed)
+                # Missing versions disposed at the deadline cannot be exported
+                # again. Preserve the previous result without another read.
+                prior = prior_by_id.get(item['id'])
+                if receipt.get('reason') == 'cached_receipt_missing' and prior is not None:
+                    if prior['status'] in ('omitted', 'failed') and all(prior.get(k) == v for k, v in item.items()):
+                        receipt = prior
+            objects.append(receipt)
+            if state_rows and len(objects) == len(state_rows) and all(
+                    row['status'] in ('exported', 'delete_marker') for row in objects):
+                _record_finish_state_export(journal, destination.parent, binding, state_bucket,
+                                            state_rows, state_export_current)
+    listed = all(result == 'complete' for result in listings.values())
+    result = dict(schema=1, scope='evidence' if evidence_only else 'all',
+                  inventory=inventory, listings=listings,
+                  inventory_sha256=inventory_sha,
+                  resources_sha256=binding, inventory_complete=listed, objects=objects,
+                  complete=listed and not missing and all(
+                      r['status'] in ('exported', 'delete_marker')
+                      or (evidence_only and r['status'] == 'omitted' and r.get('reason') == 'uncommitted')
+                      for r in objects))
+    if evidence_only:
+        result['missing_evidence_keys'] = missing
+    _write_source_json(destination / ('evidence-manifest.json' if evidence_only else 'manifest.json'), result)
+    return result
+
+
+def stage_source_versions(cloud, journal, resources, destination, *, evidence_only=False):
+    """Inventory and checkpoint exact originals using an admitted finish destination.
+
+    The evidence-only and full passes share object receipts and charge only new
+    body attempts. A full listing is an observation until the caller fences writers.
+    This helper never makes a cleanup decision.
+    """
+    resources = frozen_resources(resources)
+    destination = _source_destination(journal, resources, destination)
+    raw, state_bucket = resources['buckets']
+    buckets = (state_bucket,) if evidence_only else (state_bucket, raw)
+    prefix = f"evidence/{resources['run_id']}/" if evidence_only else None
+    inventory, listings = _source_inventory(cloud, buckets, prefix)
+    return _source_export_report(cloud, journal, destination, resource_digest(resources),
+                                 inventory, listings, evidence_prefix=prefix)
+
+
+def _delete_version_batch(cloud, bucket, batch):
+    answer = cloud.call('DeleteObjects', {'Bucket':bucket, 'Delete':{'Objects':batch, 'Quiet':False}})
+    require(answer.kind == 'json' and type(answer.payload) is dict
+            and not answer.payload.get('Errors'), 'version deletion unavailable')
+    deleted = answer.payload.get('Deleted')
+    require(isinstance(deleted,list) and len(deleted) == len(batch), 'version deletion incomplete')
+    expected = {(item['Key'], item['VersionId']) for item in batch}
+    require(all(isinstance(i,dict) and (i.get('Key'),i.get('VersionId')) in expected for i in deleted)
+            and len({(i['Key'],i['VersionId']) for i in deleted}) == len(expected), 'version deletion mismatch')
+
+
 def delete_versions(cloud,bucket):
     """Exact version deletes after acquisition stops; inspect per-object errors."""
     # Restart the listing after each bounded deletion batch, never continue a
@@ -346,13 +655,7 @@ def delete_versions(cloud,bucket):
         fingerprint=hashlib.sha256(canonical(batch).encode()).hexdigest()
         require(fingerprint!=previous,'cleanup made no progress')
         previous=fingerprint
-        answer=cloud.call('DeleteObjects',{'Bucket':bucket,'Delete':{'Objects':batch,'Quiet':False}})
-        require(answer.kind=='json' and not answer.payload.get('Errors'),'version deletion unavailable')
-        deleted=answer.payload.get('Deleted')
-        require(isinstance(deleted,list) and len(deleted)==len(batch),'version deletion incomplete')
-        expected={(item['Key'],item['VersionId']) for item in batch}
-        require(all(isinstance(i,dict) and (i.get('Key'),i.get('VersionId')) in expected for i in deleted)
-                and len({(i['Key'],i['VersionId']) for i in deleted})==len(expected),'version deletion mismatch')
+        _delete_version_batch(cloud,bucket,batch)
         total+=len(batch)
     raise StateError('cleanup pagination exhausted')
 
@@ -474,6 +777,382 @@ def bind_resources(cloud,journal,resources,*,now):
     journal.record_cleanup_ownership(resource_digest(r),r['instance'],resources=r)
 
 
+
+def _finish_ownership(journal, resources):
+    resources = frozen_resources(resources)
+    binding = resource_digest(resources)
+    require(journal.mutation('owned-resources') == dict(operation='BindResources',
+            params_sha=binding, token=resources['instance']), 'finish requires bound resources')
+    return resources, binding, _admitted_finish_output(journal)
+
+
+def _finish_checkpoint(path, binding):
+    if not os.path.lexists(path):
+        return None
+    try:
+        require(path.is_file() and not path.is_symlink(), 'finish checkpoint path')
+        checkpoint = json.loads(path.read_bytes())
+        require(type(checkpoint) is dict and checkpoint.get('resources_sha256') == binding,
+                'finish checkpoint binding')
+        return checkpoint
+    except (OSError, ValueError, TypeError):
+        raise StateError('finish checkpoint unavailable or unbound') from None
+
+
+def _writer_observation(cloud, instance):
+    answer = cloud.call('DescribeInstances', {'InstanceIds': [instance]})
+    if answer.operation != 'DescribeInstances':
+        return 'unknown'
+    if answer.kind == 'service_error' and answer.code == 'InvalidInstanceID.NotFound':
+        return 'absent'
+    if answer.kind != 'json' or type(answer.payload) is not dict:
+        return 'unknown'
+    if absence(answer, name=instance):
+        return 'terminated'
+    payload = answer.payload
+    reservations = payload.get('Reservations')
+    if (payload.get('NextToken') or not isinstance(reservations, list) or len(reservations) != 1
+            or not isinstance(reservations[0], dict)):
+        return 'unknown'
+    instances = reservations[0].get('Instances')
+    if not isinstance(instances, list) or len(instances) != 1 or not isinstance(instances[0], dict):
+        return 'unknown'
+    observed = instances[0]
+    if observed.get('InstanceId') != instance or not isinstance(observed.get('State'), dict):
+        return 'unknown'
+    code = observed['State'].get('Code')
+    name = {0:'pending', 16:'running', 32:'shutting-down', 64:'stopping', 80:'stopped'}.get(code) if type(code) is int else None
+    return name if name is not None and observed['State'].get('Name') == name else 'unknown'
+
+
+def _fence_checkpoint(output, binding, instance):
+    checkpoint = _finish_checkpoint(output / 'writer-fence.json', binding)
+    if checkpoint is not None:
+        require(checkpoint.get('status') == 'fenced' and checkpoint.get('instance') == instance
+                and checkpoint.get('observation') in ('absent', 'terminated'), 'invalid writer fence')
+    return checkpoint
+
+
+def fence_finish_instance(cloud, journal, resources, *, now, paired_verified=False):
+    """Fence the exact owned host and retain independent terminal-state proof."""
+    resources, binding, output = _finish_ownership(journal, resources)
+    instance = resources['instance']
+    checkpoint = _fence_checkpoint(output, binding, instance)
+    if checkpoint is not None:
+        return checkpoint
+    cloud = CleanupCloud(cloud)
+    observed = _writer_observation(cloud, instance)
+    if observed not in ('absent', 'terminated'):
+        if paired_verified is not True and now < journal.snapshot()['cleanup_until']:
+            return dict(status='awaiting_evidence', observation=observed)
+        if observed not in ('unknown', 'shutting-down'):
+            cloud.call('TerminateInstances', {'InstanceIds': [instance]})
+            observed = _writer_observation(cloud, instance)
+    if observed not in ('absent', 'terminated'):
+        return dict(status='termination_pending', observation=observed)
+    checkpoint = dict(status='fenced', resources_sha256=binding, instance=instance,
+                      observation=observed, observed_at=now)
+    _write_source_json(output / 'writer-fence.json', checkpoint)
+    return checkpoint
+
+
+def _sealed_inventory(destination, binding, buckets, *, raw_scope=False):
+    name = 'sealed-raw-inventory.json' if raw_scope else 'sealed-inventory.json'
+    sealed = _finish_checkpoint(destination / name, binding)
+    if sealed is not None:
+        require(sealed.get('listings') == dict.fromkeys(buckets, 'complete')
+                and type(sealed.get('inventory')) is list
+                and all(type(row) is dict and row.get('bucket') in buckets for row in sealed['inventory'])
+                and hashlib.sha256(canonical(sealed['inventory']).encode()).hexdigest()
+                    == sealed.get('inventory_sha256'), 'invalid sealed source inventory')
+    return sealed
+
+
+def _seal_inventory(destination, binding, inventory, listings, *, raw_scope=False):
+    name = 'sealed-raw-inventory.json' if raw_scope else 'sealed-inventory.json'
+    sealed = dict(resources_sha256=binding, inventory=inventory, listings=listings,
+                  inventory_sha256=hashlib.sha256(canonical(inventory).encode()).hexdigest())
+    _write_source_json(destination / name, sealed)
+    return sealed
+
+
+def seal_finish_sources(cloud, journal, resources, destination, *, state_export_current=None):
+    """Capture the final inventory after proof of termination, then stage bodies."""
+    resources, binding, output = _finish_ownership(journal, resources)
+    require(_fence_checkpoint(output, binding, resources['instance']) is not None, 'writer fence required')
+    destination = _source_destination(journal, resources, destination)
+    raw_bucket, state_bucket = resources['buckets']
+    buckets = (state_bucket, raw_bucket)
+    sealed = _sealed_inventory(destination, binding, buckets)
+    raw_seal = _sealed_inventory(destination, binding, (raw_bucket,), raw_scope=True)
+    if sealed is None:
+        unsealed_buckets = buckets if raw_seal is None else (state_bucket,)
+        inventory, listings = _source_inventory(CleanupCloud(cloud), unsealed_buckets, None)
+        if raw_seal is not None:
+            inventory.extend(raw_seal['inventory'])
+            listings.update(raw_seal['listings'])
+        if listings == dict.fromkeys(buckets, 'complete'):
+            sealed = _seal_inventory(destination, binding, inventory, listings)
+        elif raw_seal is None and listings.get(raw_bucket) == 'complete':
+            # A failed state listing must not prevent exact raw cleanup at the
+            # deadline. Keep its independent fence snapshot through deletion.
+            raw_seal = _seal_inventory(destination, binding, inventory,
+                                       {raw_bucket: 'complete'}, raw_scope=True)
+    else:
+        inventory, listings = sealed['inventory'], sealed['listings']
+    if sealed is not None and raw_seal is not None:
+        require(raw_seal['inventory'] == [row for row in inventory if row['bucket'] == raw_bucket],
+                'raw seal inventory mismatch')
+    raw = _raw_disposition(output, binding, raw_bucket)
+    if raw is not None:
+        authorized_seal = raw_seal if raw_seal is not None else sealed
+        require(authorized_seal is not None and raw.get('inventory_sha256') == authorized_seal['inventory_sha256'],
+                'raw disposition inventory mismatch')
+    state_export = ((state_bucket, state_export_current)
+                    if sealed is not None and state_export_current is not None else None)
+    return _source_export_report(cloud, journal, destination, binding, inventory, listings,
+                                 disposed_bucket=raw_bucket if raw is not None else None,
+                                 state_export=state_export)
+
+
+def _bucket_missing(answer):
+    return (answer.operation == 'GetBucketVersioning' and answer.kind == 'service_error'
+            and answer.code == 'NoSuchBucket')
+
+
+def _record_finish_state_export(journal, output, binding, bucket, rows, current):
+    observed = journal.observe(current())
+    verified_at, deadline = observed['last_seen'], observed['cleanup_until']
+    if verified_at >= deadline:
+        return False
+    proof = dict(resources_sha256=binding, bucket=bucket, cleanup_until=deadline, verified_at=verified_at,
+                 inventory_sha256=hashlib.sha256(canonical(rows).encode()).hexdigest())
+    _write_source_json(output / 'state-export-proof.json', proof)
+    return True
+
+
+def prepare_finish_state_export(cloud, journal, resources, destination, *, current):
+    """Archive a state snapshot during termination without authorizing deletion."""
+    resources, binding, output = _finish_ownership(journal, resources)
+    destination = _source_destination(journal, resources, destination)
+    deadline = journal.snapshot()['cleanup_until']
+    if journal.observe(current())['last_seen'] >= deadline:
+        return False
+    bucket = resources['buckets'][1]
+    rows, listings = _source_inventory(CleanupCloud(cloud), (bucket,), None)
+    if listings[bucket] != 'complete':
+        return False
+    for row in rows:
+        if row['kind'] == 'object':
+            if current() >= deadline or _stage_original(cloud, journal, row, destination, binding)['status'] != 'exported':
+                return False
+    return _record_finish_state_export(journal, output, binding, bucket, rows, current)
+
+
+def dispose_finish_state(cloud, journal, resources, destination, *, now, paired_verified=False):
+    """Delete only archived sealed state versions, or preserve incomplete state."""
+    resources, binding, output = _finish_ownership(journal, resources)
+    require(_fence_checkpoint(output, binding, resources['instance']) is not None, 'writer fence required')
+    destination = _source_destination(journal, resources, destination)
+    bucket = resources['buckets'][1]
+    path = output / 'state-disposition.json'
+    intent = _finish_checkpoint(path, binding)
+    if intent is not None:
+        require(intent.get('bucket') == bucket and intent.get('status') in ('retained', 'deleting', 'deleted'),
+                'invalid state disposition')
+        if intent['status'] != 'deleting':
+            return intent
+
+    observed = journal.observe(now)
+    now, deadline = observed['last_seen'], observed['cleanup_until']
+
+    def deferred(reason, *, keep_intent=False):
+        result = dict(status='pending', bucket=bucket, resources_sha256=binding, reason=reason)
+        if not keep_intent and now >= deadline:
+            result.update(status='retained', expiry=None)
+            _write_source_json(path, result)
+        return result
+
+    sealed = _sealed_inventory(destination, binding, resources['buckets'])
+    if intent is not None:
+        require(sealed is not None and intent.get('inventory_sha256') == sealed['inventory_sha256'],
+                'state deletion inventory mismatch')
+    elif paired_verified is not True or sealed is None:
+        return deferred('evidence_incomplete')
+    archived = {row['id']: row for row in sealed['inventory'] if row['bucket'] == bucket}
+    if intent is None and now >= deadline:
+        proof = _finish_checkpoint(output / 'state-export-proof.json', binding)
+        digest = hashlib.sha256(canonical(list(archived.values())).encode()).hexdigest()
+        if (proof is None or proof.get('bucket') != bucket or proof.get('cleanup_until') != deadline
+                or type(proof.get('verified_at')) is not int or proof['verified_at'] >= deadline
+                or proof.get('inventory_sha256') != digest):
+            return deferred('predeadline_state_export_unproven')
+    cloud = CleanupCloud(cloud)
+    complete_archive = all(
+        _stage_original(None, None, row, destination, binding, verify_only=True)['status'] == 'exported'
+        for row in archived.values() if row['kind'] == 'object')
+    if not complete_archive:
+        if intent is None:
+            return deferred('state_export_incomplete')
+        # A restart may find missing local bytes after the delete already took
+        # effect. Confirm absence without attempting another unsafe deletion.
+        current = cloud.call('GetBucketVersioning', {'Bucket': bucket})
+        if not _bucket_missing(current):
+            return deferred('state_export_incomplete', keep_intent=current.kind != 'json')
+    else:
+        if intent is None:
+            intent = dict(status='deleting', bucket=bucket, resources_sha256=binding,
+                          inventory_sha256=sealed['inventory_sha256'])
+            _write_source_json(path, intent)
+        failure = _delete_sealed_bucket(cloud, resources, bucket, archived, bucket_kind='state')
+        if failure:
+            return deferred(failure, keep_intent=failure != 'unexpected_versions')
+
+    result = dict(intent, status='deleted')
+    _write_source_json(path, result)
+    return result
+
+
+def _delete_sealed_bucket(cloud, resources, bucket, archived, *, bucket_kind):
+    params = {'Bucket': bucket}
+    observed = cloud.call('GetBucketVersioning', params)
+    if not _bucket_missing(observed):
+        if observed.kind != 'json' or not isinstance(observed.payload, dict) or observed.payload.get('Status') != 'Enabled':
+            return f'{bucket_kind}_versioning_unavailable'
+        tagged = cloud.call('GetBucketTagging', params)
+        if (tagged.kind != 'json' or not isinstance(tagged.payload, dict)
+                or not has_run_tag(tagged.payload.get('TagSet'), resources['run_id'])):
+            return f'{bucket_kind}_ownership_unavailable'
+        live, listed = _source_inventory(cloud, (bucket,), None)
+        if listed[bucket] != 'complete':
+            return f'{bucket_kind}_inventory_unavailable'
+        if any(archived.get(row['id']) != row for row in live):
+            return 'unexpected_versions'
+        for start in range(0, len(live), 1000):
+            batch = [{'Key': row['key'], 'VersionId': row['version']} for row in live[start:start+1000]]
+            try:
+                _delete_version_batch(cloud, bucket, batch)
+            except (OSError, StateError):
+                return 'version_deletion_unconfirmed'
+        live, listed = _source_inventory(cloud, (bucket,), None)
+        if listed[bucket] != 'complete' or live:
+            return f'{bucket_kind}_versions_remain'
+        cloud.call('DeleteBucket', params)
+        observed = cloud.call('GetBucketVersioning', params)
+    return None if _bucket_missing(observed) else 'bucket_absence_unconfirmed'
+
+
+def _raw_disposition(output, binding, bucket):
+    result = _finish_checkpoint(output / 'raw-disposition.json', binding)
+    if result is not None:
+        require(result.get('bucket') == bucket and result.get('status') == 'deleted',
+                'invalid raw disposition')
+    return result
+
+
+def _dispose_finish_raw(cloud, resources, binding, output, *, raw_disposable, deadline_reached):
+    bucket = resources['buckets'][0]
+    path = output / 'raw-disposition.json'
+    result = _raw_disposition(output, binding, bucket)
+    if result is not None:
+        return result
+
+    def pending(reason):
+        return dict(status='pending', bucket=bucket, reason=reason)
+
+    if raw_disposable is not True:
+        return pending('raw_disposal_not_requested')
+    destination = output / 'sources'
+    sealed = _sealed_inventory(destination, binding, (bucket,), raw_scope=True)
+    if sealed is None:
+        sealed = _sealed_inventory(destination, binding, resources['buckets'])
+    if sealed is None:
+        return pending('raw_inventory_unsealed')
+    archived = {row['id']: row for row in sealed['inventory'] if row['bucket'] == bucket}
+    originals = [row for row in archived.values() if row['kind'] == 'object']
+    if deadline_reached:
+        # A sealed listing may outlive an interrupted export. Keep failed or
+        # omitted dispositions on disk before removing their remote originals.
+        export = _finish_checkpoint(destination / 'manifest.json', binding)
+        if (export is None or export['listings'].get(bucket) != 'complete'
+                or [row for row in export['inventory'] if row['bucket'] == bucket] != list(archived.values())):
+            return pending('raw_export_not_recorded')
+        reported = {row['id']: row['status'] for row in export['objects'] if row['bucket'] == bucket}
+        if any(reported.get(row['id']) not in ('exported', 'omitted', 'failed') for row in originals):
+            return pending('raw_export_not_recorded')
+    elif any(_stage_original(None, None, row, destination, binding, verify_only=True)['status'] != 'exported'
+             for row in originals):
+        return pending('raw_export_incomplete')
+    failure = _delete_sealed_bucket(cloud, resources, bucket, archived, bucket_kind='raw')
+    if failure:
+        return pending(failure)
+    result = dict(status='deleted', bucket=bucket, resources_sha256=binding,
+                  inventory_sha256=sealed['inventory_sha256'])
+    _write_source_json(path, result)
+    return result
+
+
+def _remove_compute_dependencies(call, resources, *, role=True, profile=True):
+    r = resources
+    if role and profile:
+        call('RemoveRoleFromInstanceProfile', {'InstanceProfileName': r['profile'], 'RoleName': r['role']})
+    if profile:
+        call('DeleteInstanceProfile', {'InstanceProfileName': r['profile']})
+    if role:
+        call('DeleteRolePolicy', {'RoleName': r['role'], 'PolicyName': r['policy']})
+        call('DeleteRole', {'RoleName': r['role']})
+    call('DeleteSecurityGroup', {'GroupId': r['security_group']})
+    # A root volume should be deleted with its instance. Delete only the one
+    # bound volume if AWS successfully reports it detached and available.
+    answer = call('DescribeVolumes', {'Filters': [{'Name': 'volume-id', 'Values': r['volumes']}]})
+    if answer.kind == 'json':
+        volumes = answer.payload.get('Volumes')
+        if isinstance(volumes, list) and len(volumes) == 1:
+            volume = volumes[0]
+            if (isinstance(volume, dict) and volume.get('VolumeId') == r['volumes'][0]
+                    and volume.get('State') == 'available' and volume.get('Attachments') == []):
+                call('DeleteVolume', {'VolumeId': r['volumes'][0]})
+
+
+def _matching_iam_resource(call, resources, *, profile=False):
+    field, kind, key = ('InstanceProfile', 'instance-profile', 'profile') if profile else ('Role', 'role', 'role')
+    name = resources[key]
+    answer = call('Get' + field, {field + 'Name': name})
+    observed = answer.payload.get(field) if answer.kind == 'json' and isinstance(answer.payload, dict) else None
+    return (isinstance(observed, dict)
+            and observed.get('Arn') == f"arn:aws:iam::{resources['account']}:{kind}/{name}"
+            and has_run_tag(observed.get('Tags'), resources['run_id']))
+
+
+def cleanup_finish_nonstate(cloud, journal, resources, *, now, raw_disposable=False):
+    """Remove fenced resources and independently verify their absence."""
+    resources, binding, output = _finish_ownership(journal, resources)
+    require(_fence_checkpoint(output, binding, resources['instance']) is not None, 'writer fence required')
+    cloud = CleanupCloud(cloud)
+    raw = _dispose_finish_raw(cloud, resources, binding, output, raw_disposable=raw_disposable,
+                              deadline_reached=now >= journal.snapshot()['cleanup_until'])
+    actions = []
+
+    def call(operation, params):
+        answer = cloud.call(operation, params)
+        actions.append(dict(operation=operation, kind=answer.kind, code=answer.code))
+        return answer
+
+    path = output / 'nonstate-absence.json'
+    previous = _finish_checkpoint(path, binding)
+    if previous is None:
+        role = _matching_iam_resource(call, resources)
+        profile = _matching_iam_resource(call, resources, profile=True)
+        _remove_compute_dependencies(call, resources, role=role, profile=profile)
+    proof = inventory(cloud, resources, nonstate=True)
+    if proof['complete'] and previous is None:
+        _write_source_json(path, proof)
+    if raw['status'] == 'pending' and proof['checks'][resources['buckets'][0]]['gone']:
+        raw = dict(status='deleted', bucket=resources['buckets'][0], reason='already_absent')
+    return dict(schema=1, status='complete' if proof['complete'] else 'pending',
+                complete=proof['complete'], raw=raw, actions=actions, independent_inventory=proof)
+
+
 def cleanup(cloud,journal,resources,*,source_destination=None):
     """Terminate exact bound instance, export stopped sources, delete owned state.
 
@@ -503,21 +1182,7 @@ def cleanup(cloud,journal,resources,*,source_destination=None):
         except (StateError,OSError,ValueError):
             actions.append({'operation':'DeleteObjects','kind':'incomplete','code':None})
         call('DeleteBucket',{'Bucket':bucket})
-    call('RemoveRoleFromInstanceProfile',{'InstanceProfileName':r['profile'],'RoleName':r['role']})
-    call('DeleteInstanceProfile',{'InstanceProfileName':r['profile']})
-    call('DeleteRolePolicy',{'RoleName':r['role'],'PolicyName':r['policy']})
-    call('DeleteRole',{'RoleName':r['role']})
-    call('DeleteSecurityGroup',{'GroupId':r['security_group']})
-    # A root volume should be deleted with its instance. Delete only the one
-    # bound volume if AWS successfully reports it detached and available.
-    answer=call('DescribeVolumes',{'Filters':[{'Name':'volume-id','Values':r['volumes']}]})
-    if answer.kind=='json':
-        volumes=answer.payload.get('Volumes')
-        if isinstance(volumes,list) and len(volumes)==1:
-            volume=volumes[0]
-            if (isinstance(volume,dict) and volume.get('VolumeId')==r['volumes'][0]
-                    and volume.get('State')=='available' and volume.get('Attachments')==[]):
-                call('DeleteVolume',{'VolumeId':r['volumes'][0]})
+    _remove_compute_dependencies(call, r)
     proof=inventory(cloud,r)
     return {'schema':1,'resources_gone':proof['complete'],'sources_complete':sources,
             'qualification':'not_assessed','actions':actions,'independent_inventory':proof}

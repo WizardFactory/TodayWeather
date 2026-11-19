@@ -1,0 +1,70 @@
+{
+  "task": "ShadowEvidenceFinish3003b",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3003",
+  "scope": "SR-5b resumable bucket-first finish, exact original version export, writer fence, retention and cleanup, offline verification and operator documentation. No cloud launch.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowEvidenceFinish3003b.json",
+    "server2/tools/ci.py",
+    "server2/deploy/shadow/coordinator.py",
+    "server2/deploy/shadow/provision.py",
+    "server2/deploy/shadow/remote.py",
+    "server2/deploy/shadow/state.py",
+    "server2/deploy/shadow/linux_check.py",
+    "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tests/integration/shadow_simulation.py",
+    "server2/tests/integration/test_shadow_simulation.py",
+    "server2/tests/integration/shadow_finish_fake_aws.py",
+    "server2/tests/integration/shadow_finish_fixture.py",
+    "server2/tests/integration/shadow_finish_rehearsal.py",
+    "server2/tests/integration/test_shadow_finish.py",
+    "server2/tests/integration/test_shadow_finish_remote.py",
+    "server2/tests/integration/test_shadow_finish_staging.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Operator guide for exact resume, evidence disposition and cleanup deadline."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Canonical SR-5b finish workflow source."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Generated workflow HTML."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/finish-verification.md",
+      "category": "documentation",
+      "reason": "Selected integrated and full-size offline CLI evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/finish-linux-check.json",
+      "category": "documentation",
+      "reason": "Selected checks and finish observations from the revision-pinned Ubuntu run."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3003/finish-simulation.json",
+      "category": "documentation",
+      "reason": "Selected scenario outcomes and stop reasons from the revision-pinned offline simulation."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/manual.json",
+      "category": "documentation",
+      "reason": "Editable operator manual for the resumable finish path."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/manual.pdf",
+      "category": "documentation",
+      "reason": "Generated operator manual."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/finish-output.png",
+      "category": "documentation",
+      "reason": "Sanitized screenshot of actual offline CLI rehearsal output."
+    }
+  ]
+}

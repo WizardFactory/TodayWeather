@@ -15,6 +15,10 @@
     {
       "id": "cleanup",
       "label": "Evidence and cleanup"
+    },
+    {
+      "id": "finish",
+      "label": "Operator finish"
     }
   ],
   "mainPath": [
@@ -75,27 +79,27 @@
     },
     {
       "id": "export",
-      "lane": "cleanup",
-      "col": 2,
+      "lane": "finish",
+      "col": 3,
       "type": "database",
-      "label": "Export originals",
-      "sublabel": "bytes + metadata"
+      "label": "Seal originals",
+      "sublabel": "version IDs and hashes"
     },
     {
       "id": "clean",
-      "lane": "cleanup",
-      "col": 1,
+      "lane": "finish",
+      "col": 2,
       "type": "cloud",
-      "label": "Delete owned",
-      "sublabel": "exact resources"
+      "label": "Dispose owned",
+      "sublabel": "retain incomplete state"
     },
     {
       "id": "verified",
-      "lane": "cleanup",
-      "col": 0,
+      "lane": "finish",
+      "col": 1,
       "type": "backend",
-      "label": "Verify absence",
-      "sublabel": "errors stay unknown"
+      "label": "Verify disposition",
+      "sublabel": "absence or retention"
     },
     {
       "id": "copy",
@@ -112,6 +116,22 @@
       "type": "database",
       "label": "State bucket",
       "sublabel": "logs/ and evidence/"
+    },
+    {
+      "id": "audit",
+      "lane": "finish",
+      "col": 5,
+      "type": "database",
+      "label": "Audit bucket first",
+      "sublabel": "SSH fills missing pairs"
+    },
+    {
+      "id": "fence",
+      "lane": "finish",
+      "col": 4,
+      "type": "security",
+      "label": "Fence the host",
+      "sublabel": "verified copy or 170h"
     }
   ],
   "edges": [
@@ -140,11 +160,6 @@
       "to": "logs",
       "variant": "default",
       "label": "candidate, guard, reader"
-    },
-    {
-      "from": "stop",
-      "to": "export",
-      "variant": "default"
     },
     {
       "from": "export",
@@ -182,10 +197,18 @@
     },
     {
       "from": "bucket",
+      "to": "audit",
+      "variant": "default"
+    },
+    {
+      "from": "audit",
+      "to": "fence",
+      "variant": "security"
+    },
+    {
+      "from": "fence",
       "to": "export",
-      "variant": "default",
-      "label": "exported with originals",
-      "route": "bottom-channel"
+      "variant": "default"
     }
   ],
   "cards": [
@@ -223,6 +246,15 @@
         "A host timer copies completed attempts' bodies, a consistent ledger snapshot and the run contract to evidence/ in the state bucket at least hourly; an index object commits each generation.",
         "After the reader stops (any stop path or the 168h stop) a finalizer takes a final generation; it never delays the 170h poweroff.",
         "The bucket alone proves the evidence: pending attempts and capture failures are reported, not counted as missing."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Resumable finish",
+      "items": [
+        "Resume into the original private output directory and retain verified version receipts.",
+        "After the exact instance is terminated, seal the version inventory before cleanup.",
+        "At the deadline, keep the state bucket without expiry when evidence export remains incomplete."
       ]
     }
   ]

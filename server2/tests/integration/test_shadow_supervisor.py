@@ -196,6 +196,124 @@ j=m.Journal(__import__('pathlib').Path(sys.argv[2]));j.reserve_generation('initi
                 self.assertEqual(p.stat().st_mode & 0o077,0)
 
 
+class FinishDestinationTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name).resolve()
+        self.journal = self.root / 'run'
+        self.output = self.root / 'result'
+        with J(self.journal, create=True, run_id='qualification-1', manifest_sha=DIGEST,
+               epoch=1000) as journal:
+            journal.prepare_request('host-install', 'HostInstall',
+                                    {'launch_sha256': 'b' * 64}, 'host-install', now=1001)
+
+    def test_binds_exact_output_and_launch_to_existing_journal(self):
+        with J(self.journal) as journal:
+            before = journal.snapshot()
+            self.assertEqual(journal.db.execute('PRAGMA user_version').fetchone(), (6,))
+            self.assertEqual(journal.bind_finish_destination(self.output,
+                             now=before['cleanup_until']), self.output)
+            request = journal.request('finish-output')
+            self.assertEqual(request['params'], dict(destination=str(self.output),
+                             run_id='qualification-1', manifest_sha=DIGEST, epoch=1000,
+                             launch_sha256='b' * 64))
+            self.assertEqual(self.output.stat().st_mode & 0o777, 0o700)
+        (self.output / 'already-retained').write_text('evidence')
+        with J(self.journal) as journal:
+            self.assertEqual(journal.bind_finish_destination(self.output,
+                             now=before['cleanup_until'] + 1), self.output)
+            self.assertEqual(journal.request('finish-output'), request)
+        self.assertEqual((self.output / 'already-retained').read_text(), 'evidence')
+
+    def test_first_call_refuses_existing_output_and_symlink_without_binding(self):
+        self.output.mkdir()
+        with J(self.journal) as journal:
+            with self.assertRaises(E):
+                journal.bind_finish_destination(self.output, now=1002)
+            self.assertIsNone(journal.request('finish-output'))
+            link = self.root / 'link'
+            link.symlink_to(self.output)
+            with self.assertRaises(E):
+                journal.bind_finish_destination(link, now=1002)
+            self.assertIsNone(journal.request('finish-output'))
+        self.assertEqual(list(self.output.iterdir()), [])
+
+    def test_changed_path_and_directory_are_refused_without_writing(self):
+        with J(self.journal) as journal:
+            journal.bind_finish_destination(self.output, now=1002)
+        displaced = self.root / 'displaced'
+        self.output.rename(displaced)
+        self.output.mkdir(mode=0o700)
+        (self.output / '.finish-binding').write_bytes((displaced / '.finish-binding').read_bytes())
+        other = self.root / 'other'
+        with J(self.journal) as journal:
+            with self.assertRaises(E):
+                journal.bind_finish_destination(other, now=1003)
+            self.assertFalse(other.exists())
+            with self.assertRaises(E):
+                journal.bind_finish_destination(self.output, now=1003)
+        self.assertEqual([entry.name for entry in self.output.iterdir()], ['.finish-binding'])
+
+    def test_completed_binding_is_refused_when_output_is_missing(self):
+        with J(self.journal) as journal:
+            journal.bind_finish_destination(self.output, now=1002)
+        self.output.rename(self.root / 'displaced')
+        with J(self.journal) as journal:
+            with self.assertRaises(E):
+                journal.bind_finish_destination(self.output, now=1003)
+        self.assertFalse(self.output.exists())
+
+    def test_resumes_prepared_request_after_interruption_before_mkdir(self):
+        with J(self.journal) as journal:
+            with unittest.mock.patch.object(Path, 'mkdir', side_effect=OSError):
+                with self.assertRaises((E, OSError)):
+                    journal.bind_finish_destination(self.output, now=1002)
+            request = journal.request('finish-output')
+            self.assertIsNotNone(request)
+            self.assertIsNone(request['receipt'])
+        self.assertFalse(self.output.exists())
+        with J(self.journal) as journal:
+            self.assertEqual(journal.bind_finish_destination(self.output, now=1003), self.output)
+            self.assertEqual(journal.request('finish-output')['token'], request['token'])
+
+    def test_reconciles_existing_marker_after_interruption_before_receipt(self):
+        with J(self.journal) as journal:
+            with unittest.mock.patch.object(journal, 'record_receipt', side_effect=OSError):
+                with self.assertRaises((E, OSError)):
+                    journal.bind_finish_destination(self.output, now=1002)
+            self.assertIsNone(journal.request('finish-output')['receipt'])
+        identity = self.output.stat().st_ino
+        with J(self.journal) as journal:
+            self.assertEqual(journal.bind_finish_destination(self.output, now=1003), self.output)
+            self.assertIsNotNone(journal.request('finish-output')['receipt'])
+        self.assertEqual(self.output.stat().st_ino, identity)
+
+    def test_refuses_unmarked_output_after_interrupted_admission(self):
+        with J(self.journal) as journal:
+            with unittest.mock.patch.object(Path, 'mkdir', side_effect=OSError):
+                with self.assertRaises((E, OSError)):
+                    journal.bind_finish_destination(self.output, now=1002)
+        self.output.mkdir(mode=0o700)
+        with J(self.journal) as journal:
+            with self.assertRaises(E):
+                journal.bind_finish_destination(self.output, now=1003)
+            self.assertIsNone(journal.request('finish-output')['receipt'])
+        self.assertEqual(list(self.output.iterdir()), [])
+
+    def test_an_uninstalled_journal_cannot_resume_against_a_later_install(self):
+        empty_run = self.root / 'uninstalled'
+        with J(empty_run, create=True, run_id='qualification-2', manifest_sha=DIGEST,
+               epoch=1000) as journal:
+            journal.bind_finish_destination(self.output, now=1002)
+            self.assertIsNone(journal.request('finish-output')['params']['launch_sha256'])
+            journal.prepare_request('host-install', 'HostInstall',
+                                    {'launch_sha256': 'c' * 64}, 'host-install', now=1003)
+        with J(empty_run) as journal:
+            with self.assertRaisesRegex(E, 'request changed'):
+                journal.bind_finish_destination(self.output, now=1004)
+
+
 class ResultTests(unittest.TestCase):
     def decode(self, operation, payload):
         return state.decode_cloud(operation,0,json.dumps(payload))
@@ -284,13 +402,57 @@ class CostTests(unittest.TestCase):
                 +10_000*r['s3_read']+5_000*r['s3_write']+D(2*10**9)/D(10**9)*r['outbound_gb']
                 +(log_puts+copy_puts)*r['s3_write']+D('1.5'))
 
+    def test_modeled_reserve_includes_only_unaccrued_host_and_background_tail(self):
+        from decimal import Decimal as D
+
+        policy = cost_policy()
+        rates = {name: D(value) for name, value in policy['rates'].items()}
+        gib = D(1024**3) / D(10**9)
+        hourly = rates['ec2_hour'] + rates['ipv4_hour'] + (
+            32 * rates['gp3_gb_month'] + 20 * rates['s3_gb_month']
+        ) * gib / (28 * 24)
+        operator = 80_000 * rates['s3_read'] + 10_000 * rates['s3_write'] + 16 * gib * rates['outbound_gb']
+        # These PUTs begin after the 24-hour sample. Three finalizer starts
+        # were already booked by accrual. Operator retries remain possible.
+        remaining_puts = (170 - 24) * (5 * 3600 // 50 + 4) + 16 * (4 * 1024**3 // 65536 - 1)
+        required = (170 - 24) * hourly + operator + remaining_puts * rates['s3_write']
+        result = state.estimate_cost(policy, 1000, 1000+24*3600, cpu_seconds=3600,
+                                     s3_reads=10_000, s3_writes=5_000, tx_bytes=2*10**9, paid_usd='1.5')
+        self.assertAlmostEqual(D(result['limit_usd']), D(300) - required, places=10)
+        self.assertAlmostEqual(D(result['accrued_usd']), self.worked_example(policy), places=5)
+
+    def test_early_tail_can_stop_and_late_tail_keeps_the_configured_floor(self):
+        policy = dict(cost_policy(), prior_spend_usd='292')
+        early = state.estimate_cost(policy, 1000, 1000, cpu_seconds=0)
+        late = state.estimate_cost(policy, 1000, 1000 + 170 * 3600, cpu_seconds=0)
+        self.assertEqual(early['stop'], 'cost_ceiling')
+        self.assertEqual(late['limit_usd'], '295')
+        self.assertLess(float(early['limit_usd']), float(late['limit_usd']))
+
+    def test_reserve_does_not_project_indefinite_retention_beyond_the_host_deadline(self):
+        from decimal import Decimal as D
+
+        policy = dict(cost_policy(), finish_reserve_usd='1')
+        rates = {name: D(value) for name, value in policy['rates'].items()}
+        operator = (80_000 * rates['s3_read'] + 10_000 * rates['s3_write']
+                    + D(16 * 1024**3) / D(10**9) * rates['outbound_gb'])
+        for hours in (170, 340):
+            result = state.estimate_cost(policy, 1000, 1000 + hours * 3600, cpu_seconds=0)
+            self.assertEqual(D(result['limit_usd']), D(300) - operator)
+
+    def test_early_reserve_exhaustion_keeps_a_state_safe_zero_limit(self):
+        policy = dict(cost_policy(), ceiling_usd='10')
+        policy['rates']['ec2_hour'] = '1'
+        result = state.estimate_cost(policy, 1000, 1000, cpu_seconds=0)
+        self.assertEqual((result['limit_usd'], result['stop']), ('0', 'cost_ceiling'))
+
     def test_accrued_estimate_uses_measured_counters(self):
         from decimal import Decimal as D
-        policy=cost_policy();policy['prior_spend_usd']='10'
+        policy=dict(cost_policy(), prior_spend_usd='10', finish_reserve_usd='20')
         result=state.estimate_cost(policy,1000,1000+24*3600,cpu_seconds=3600,s3_reads=10_000,s3_writes=5_000,
                                    tx_bytes=2*10**9,paid_usd='1.5')
         self.assertAlmostEqual(D(result['accrued_usd']),self.worked_example(policy),places=5)
-        self.assertEqual(D(result['limit_usd']),D('295'))
+        self.assertEqual(D(result['limit_usd']),D('280'))
         self.assertIsNone(result['stop'])
         # Nothing is booked up front: an idle start costs only the prior spend.
         idle=state.estimate_cost(cost_policy(),1000,1000,cpu_seconds=0)
@@ -298,9 +460,9 @@ class CostTests(unittest.TestCase):
 
     def test_ceiling_stop_at_the_boundary(self):
         from decimal import Decimal as D
-        policy=cost_policy()
+        policy=dict(cost_policy(), finish_reserve_usd='20')
         base=D(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0)['accrued_usd'])
-        policy['prior_spend_usd']=str((D(295)-base-D('0.000001')).quantize(D('.000001')))
+        policy['prior_spend_usd']=str((D(280)-base-D('0.000001')).quantize(D('.000001')))
         self.assertIsNone(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0)['stop'])
         self.assertEqual(state.estimate_cost(policy,1000,1000+3600,cpu_seconds=0,tx_bytes=10**6)['stop'],'cost_ceiling')
 
@@ -713,17 +875,51 @@ def cloud_json(operation,payload):return operator.CloudResult('json',operation,p
 
 
 class OperatorTests(unittest.TestCase):
+    def test_weekly_state_logs_fit_the_versioned_finish_budget(self):
+        # Five source partitions in each 50-second interval. Plan for the
+        # complete 170-hour bound plus paired sources and inventory pages.
+        day_log_versions = 5 * (170 * 3600 // 50)
+        paired_sources = 509
+        pages = (day_log_versions + paired_sources + 999) // 1000
+        reads = day_log_versions + paired_sources + pages
+        envelope = (day_log_versions + paired_sources) * 65536 + pages * 8 * 1024**2
+        # Full retained paired fixture plus small representative log objects.
+        export = 1_331_232_110 + day_log_versions * 32_768
+        with tempfile.TemporaryDirectory() as temp:
+            journal = Path(temp) / 'journal'
+            with J(journal, create=True, run_id='test1', manifest_sha=DIGEST, epoch=1000) as j:
+                j.reserve_control(reads=reads, response_bytes=envelope, export_bytes=export)
+            with J(journal) as j:
+                charged = j.operator_usage()
+                self.assertEqual(charged['reads'], reads)
+                self.assertEqual(charged['export_bytes'], export)
+                self.assertEqual(charged['work_envelope_bytes'], envelope)
+                j.reserve_control(reads=1_000, writes=1_000, response_bytes=4*1024**3, cleanup=True)
+
+    def test_existing_v5_journal_keeps_its_frozen_allowances(self):
+        with tempfile.TemporaryDirectory() as temp:
+            journal = Path(temp) / 'journal'
+            with J(journal, create=True, run_id='test1', manifest_sha=DIGEST, epoch=1000) as j:
+                j.reserve_control(reads=9_000, export_bytes=2*1024**3, response_bytes=4*1024**3)
+                j.db.execute('PRAGMA user_version=5')
+            with J(journal) as j:
+                for dimension in ('reads', 'export_bytes', 'response_bytes'):
+                    with self.subTest(dimension=dimension), self.assertRaises(E):
+                        j.reserve_control(**{dimension: 1})
+                j.reserve_control(reads=1_000, cleanup=True)
+                self.assertEqual(j.operator_usage()['reads'], 10_000)
+
     def test_export_cannot_spend_reserved_cleanup_attempts(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/'journal'
             with J(root,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                j.reserve_control(reads=9000,writes=9000,export_bytes=2*1024**3)
+                j.reserve_control(reads=79_000,writes=9_000,export_bytes=4*1024**3)
                 with self.assertRaises(E):j.reserve_control(reads=1)
                 with self.assertRaises(E):j.reserve_control(writes=1)
             with J(root) as j:
                 j.observe(1000+171*3600)
                 spent=j.reserve_control(reads=1000,writes=1000,cleanup=True)
-                self.assertEqual(spent,dict(reads=10000,writes=10000,export_bytes=2*1024**3))
+                self.assertEqual(spent,dict(reads=80_000,writes=10_000,export_bytes=4*1024**3))
                 with self.assertRaises(E):j.reserve_control(reads=1,cleanup=True)
                 with self.assertRaises(E):j.reserve_control(export_bytes=1,cleanup=True)
                 self.assertEqual(j.reserve_control(),spent)
@@ -732,7 +928,7 @@ class OperatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             directory=Path(temp)/'run'
             with J(directory,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                j.reserve_control(reads=1,response_bytes=4*1024**3)
+                j.reserve_control(reads=1,response_bytes=8*1024**3)
                 before=j.reserve_control()
                 with self.assertRaises(E):j.reserve_control(reads=1,response_bytes=1)
                 self.assertEqual(j.reserve_control(),before)
@@ -789,7 +985,7 @@ else:
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/'journal'
             with J(root,create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                used=j.reserve_control(reads=9000,writes=10,export_bytes=4)
+                used=j.reserve_control(reads=79_000,writes=10,export_bytes=4)
                 with self.assertRaises(E):j.reserve_control(reads=1,writes=2)
                 self.assertEqual(j.reserve_control(),used)
             with J(root) as j:
@@ -901,7 +1097,7 @@ else:
                     return cloud_json('GetObject',{'VersionId':'newer-version','ContentLength':3,'ContentRange':'bytes 0-2/3'})
                 cloud=FixtureCloud([('ListObjectVersions',cloud_json('ListObjectVersions',{'IsTruncated':False,'Versions':[{'Key':'raw/a','VersionId':'v1','Size':3}]})),('GetObject',body)])
                 with J(root/'journal',create=True,run_id='test1',manifest_sha=DIGEST,epoch=1000) as j:
-                    if exhausted:j.reserve_control(export_bytes=2*1024**3)
+                    if exhausted:j.reserve_control(export_bytes=4*1024**3)
                     with self.assertRaises(E):operator.export_sources(cloud,j,owned_resources(),root/'evidence')
                     self.assertFalse(json.loads((root/'evidence/manifest.json').read_text())['complete'])
                     self.assertEqual(len(cloud.calls),1 if exhausted else 2)
@@ -998,6 +1194,460 @@ else:
             result=subprocess.run(command,capture_output=True,text=True,timeout=5)
             self.assertEqual(result.returncode,1,result.stdout+result.stderr)
             self.assertNotIn('secret value',result.stdout)
+
+
+class SourceVersionStagingTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name).resolve()
+        self.resources = owned_resources()
+        self.raw, self.bucket = self.resources['buckets']
+        self.output = self.root / 'finish'
+        self.journal = self.root / 'run'
+        with J(self.journal, create=True, run_id='test1', manifest_sha=DIGEST, epoch=1000) as journal:
+            journal.bind_finish_destination(self.output, now=1001)
+        self.destination = self.output / 'sources'
+        self.key = 'evidence/test1/contract.json'
+        self.original = dict(Key=self.key, VersionId='v1', Size=4)
+        self.empty = dict(Key='fixtures/empty', VersionId='empty', Size=0)
+        self.marker = dict(Key='fixtures/empty', VersionId='marker')
+
+    def listing(self, *objects, markers=()):
+        return ('ListObjectVersions', cloud_json('ListObjectVersions',
+                dict(IsTruncated=False, Versions=list(objects), DeleteMarkers=list(markers))))
+
+    def headers(self, version, length, extent=None):
+        payload = dict(VersionId=version, ContentLength=length, Metadata={},
+                       LastModified='2026-11-15T01:00:50Z')
+        if extent is not None:
+            payload['ContentRange'] = extent
+        return payload
+
+    def download(self, data=b'body'):
+        def body(params, options):
+            self.assertEqual(params, dict(Bucket=self.bucket, Key=self.key,
+                             VersionId='v1', Range='bytes=0-3'))
+            options['output'].write_bytes(data)
+            return cloud_json('GetObject', self.headers('v1', 4, 'bytes 0-3/4'))
+        return ('GetObject', body)
+
+    def export(self, *replies, evidence_only=False):
+        cloud = FixtureCloud(replies)
+        with J(self.journal) as journal:
+            report = operator.stage_source_versions(cloud, journal, self.resources,
+                                                    self.destination, evidence_only=evidence_only)
+            charged = journal.db.execute('SELECT export_bytes FROM control WHERE id=1').fetchone()[0]
+        self.assertEqual(cloud.replies, [])
+        return report, charged, cloud.calls
+
+    def test_verified_evidence_is_reused_when_full_inventory_adds_markers_and_empty_originals(self):
+        first, charged, calls = self.export(self.listing(self.original), self.download(), evidence_only=True)
+        self.assertTrue(first['complete'])
+        self.assertEqual(charged, 4)
+        self.assertEqual(calls[0][1]['Prefix'], 'evidence/test1/')
+        second, charged, calls = self.export(self.listing(self.original),
+                                             self.listing(self.empty, markers=[self.marker]),
+                                             ('HeadObject', cloud_json('HeadObject', self.headers('empty', 0))))
+        self.assertEqual([name for name, _ in calls], ['ListObjectVersions', 'ListObjectVersions', 'HeadObject'])
+        self.assertEqual(charged, 4)
+        self.assertTrue(second['complete'])
+        self.assertEqual(second['inventory_sha256'],
+                         operator.hashlib.sha256(state.canonical(second['inventory']).encode()).hexdigest())
+        disposition = {entry['version']: entry for entry in second['objects']}
+        self.assertEqual(disposition['v1'], first['objects'][0])
+        for version, body in [('v1', b'body'), ('empty', b'')]:
+            entry = disposition[version]
+            self.assertEqual(entry['status'], 'exported')
+            self.assertEqual((self.destination / entry['file']).read_bytes(), body)
+            self.assertEqual(entry['sha256'], operator.hashlib.sha256(body).hexdigest())
+        self.assertEqual(disposition['marker']['status'], 'delete_marker')
+        self.assertNotIn('file', disposition['marker'])
+        repeated, charged, _ = self.export(self.listing(self.original),
+                                            self.listing(self.empty, markers=[self.marker]))
+        self.assertEqual(second, repeated)
+        self.assertEqual(charged, 4)
+
+    def test_verified_pending_download_promotes_without_recharging(self):
+        rename = Path.rename
+
+        def lost_promotion(source, target):
+            if target.parent == self.destination / 'objects':
+                raise OSError('interrupted before promotion')
+            return rename(source, target)
+
+        with unittest.mock.patch.object(Path, 'rename', lost_promotion):
+            interrupted, charged, _ = self.export(self.listing(self.original), self.listing(), self.download())
+        self.assertFalse(interrupted['complete'])
+        self.assertEqual(charged, 4)
+        resumed, charged, calls = self.export(self.listing(self.original), self.listing())
+        self.assertTrue(resumed['complete'], resumed)
+        self.assertEqual(charged, 4)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual((self.destination / resumed['objects'][0]['file']).read_bytes(), b'body')
+
+    def test_short_download_is_failed_and_retries_from_scratch(self):
+        report, charged, _ = self.export(self.listing(self.original), self.listing(), self.download(b'bo'))
+        self.assertFalse(report['complete'])
+        self.assertEqual(report['objects'][0]['status'], 'failed')
+        self.assertNotIn('file', report['objects'][0])
+        self.assertEqual(list((self.destination / 'objects').iterdir()), [])
+        self.assertEqual(charged, 4)
+        report, charged, _ = self.export(self.listing(self.original), self.listing(), self.download())
+        self.assertTrue(report['complete'])
+        self.assertEqual(report['objects'][0]['status'], 'exported')
+        self.assertEqual(charged, 8)
+
+    def test_allowance_omission_keeps_inventory_and_does_not_get_body(self):
+        with J(self.journal) as journal:
+            journal.reserve_control(export_bytes=4 * 1024**3)
+        report, charged, calls = self.export(self.listing(self.original), self.listing(markers=[self.marker]))
+        self.assertFalse(report['complete'])
+        self.assertTrue(report['inventory_complete'])
+        self.assertEqual(report['objects'][0]['status'], 'omitted')
+        self.assertEqual(report['objects'][0]['reason'], 'allowance')
+        self.assertEqual(len(report['inventory']), 2)
+        self.assertEqual(charged, 4 * 1024**3)
+        self.assertEqual(len(calls), 2)
+
+    def test_duplicate_version_inventory_is_failed_instead_of_treated_as_empty(self):
+        report, charged, _ = self.export(self.listing(self.original, self.original), self.listing())
+        self.assertFalse(report['inventory_complete'])
+        self.assertFalse(report['complete'])
+        self.assertEqual(report['listings'], {self.bucket: 'failed', self.raw: 'complete'})
+        self.assertEqual(charged, 0)
+
+    def test_corrupted_completed_body_cannot_be_adopted_or_overwritten(self):
+        report, _, _ = self.export(self.listing(self.original), self.listing(), self.download())
+        (self.destination / report['objects'][0]['file']).write_bytes(b'altered')
+        report, charged, _ = self.export(self.listing(self.original), self.listing())
+        self.assertFalse(report['complete'])
+        self.assertEqual(report['objects'][0]['reason'], 'cached_receipt_invalid')
+        self.assertEqual(charged, 4)
+
+
+class FinishStateDispositionTests(unittest.TestCase):
+    listing = SourceVersionStagingTests.listing
+    headers = SourceVersionStagingTests.headers
+    download = SourceVersionStagingTests.download
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name).resolve()
+        self.journal = self.root / 'run'
+        self.resources = owned_resources()
+        self.raw, self.bucket = self.resources['buckets']
+        self.output = self.root / 'result'
+        self.destination = self.output / 'sources'
+        self.key = 'evidence/test1/contract.json'
+        self.original = dict(Key=self.key, VersionId='v1', Size=4)
+        self.marker = dict(Key=self.key, VersionId='marker')
+        with J(self.journal, create=True, run_id='test1', manifest_sha=DIGEST, epoch=1000) as journal:
+            journal.bind_finish_destination(self.output, now=1001)
+            self.deadline = journal.snapshot()['cleanup_until']
+
+    def own_resources(self, journal):
+        journal.record_cleanup_ownership(operator.resource_digest(self.resources),
+                                         self.resources['instance'], resources=self.resources)
+
+    def instance(self, name, code):
+        return ('DescribeInstances', cloud_json('DescribeInstances', {'Reservations': [
+            {'Instances': [dict(InstanceId=self.resources['instance'], State=dict(Name=name, Code=code))]}
+        ]}))
+
+    def fence(self, *replies, paired_verified=False, now=1002):
+        cloud = FixtureCloud(replies)
+        with J(self.journal) as journal:
+            result = operator.fence_finish_instance(cloud, journal, self.resources, now=now,
+                                                    paired_verified=paired_verified)
+        self.assertEqual(cloud.replies, [])
+        return result
+
+    def seal(self, *replies):
+        cloud = FixtureCloud(replies)
+        with J(self.journal) as journal:
+            report = operator.seal_finish_sources(cloud, journal, self.resources, self.destination)
+        self.assertEqual(cloud.replies, [])
+        return report
+
+    def dispose(self, *replies, paired_verified=True, now=1003):
+        cloud = FixtureCloud(replies)
+        with J(self.journal) as journal:
+            result = operator.dispose_finish_state(cloud, journal, self.resources, self.destination,
+                                                   now=now, paired_verified=paired_verified)
+        self.assertEqual(cloud.replies, [])
+        return result
+
+    def own_and_fence(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+        result = self.fence(self.instance('terminated', 48))
+        self.assertEqual(result['status'], 'fenced')
+
+    def test_fence_requires_journal_ownership_and_independent_terminal_observation(self):
+        with self.assertRaises(E):
+            self.fence()
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+        self.assertEqual(self.fence(self.instance('running', 16))['status'], 'awaiting_evidence')
+        termination = ('TerminateInstances', cloud_json('TerminateInstances', {'TerminatingInstances': []}))
+        result = self.fence(self.instance('running', 16), termination, self.instance('shutting-down', 32),
+                            paired_verified=True)
+        self.assertEqual(result['status'], 'termination_pending')
+        with self.assertRaises(E):
+            self.seal()
+        self.assertEqual(self.fence(self.instance('terminated', 48))['status'], 'fenced')
+        self.assertEqual(self.fence()['status'], 'fenced')
+
+    def test_deadline_allows_exact_termination_and_notfound_confirms_fence(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+        absent = ('DescribeInstances', operator.CloudResult('service_error', 'DescribeInstances',
+                                                             code='InvalidInstanceID.NotFound'))
+        def terminate(params, _):
+            self.assertEqual(params, {'InstanceIds': [self.resources['instance']]})
+            return operator.CloudResult('timeout', 'TerminateInstances')
+        result = self.fence(self.instance('running', 16), ('TerminateInstances', terminate), absent,
+                            now=self.deadline)
+        self.assertEqual(result['status'], 'fenced')
+        self.assertEqual(result['observation'], 'absent')
+
+    def test_failed_state_export_is_preserved_and_deadline_retention_is_sticky(self):
+        self.own_and_fence()
+        sources = self.seal(self.listing(self.original), self.listing(), self.download(b'bo'))
+        self.assertFalse(sources['complete'])
+        self.assertEqual(self.dispose()['status'], 'pending')
+        retained = self.dispose(now=self.deadline)
+        self.assertEqual(retained['status'], 'retained')
+        self.assertIsNone(retained['expiry'])
+        self.assertTrue(self.seal(self.download())['complete'])
+        self.assertEqual(self.dispose(now=self.deadline + 1), retained)
+
+    def test_state_deletion_ack_loss_reconciles_even_after_deadline(self):
+        self.own_and_fence()
+        report = self.seal(self.listing(self.original), self.listing(), self.download())
+        self.assertTrue(report['complete'])
+        enabled = ('GetBucketVersioning', cloud_json('GetBucketVersioning', {'Status': 'Enabled'}))
+        tag = ('GetBucketTagging', cloud_json('GetBucketTagging', {
+            'TagSet': [{'Key': 'ShadowRunId', 'Value': 'test1'}]}))
+        deleted = ('DeleteObjects', cloud_json('DeleteObjects', {'Deleted': [
+            {'Key': self.key, 'VersionId': 'v1'}]}))
+
+        def lose_receipt(params, _):
+            self.assertEqual(params, {'Bucket': self.bucket})
+            raise OSError('process interrupted after bucket vanished')
+
+        with self.assertRaisesRegex(OSError, 'process interrupted'):
+            self.dispose(enabled, tag, self.listing(self.original), deleted, self.listing(),
+                         ('DeleteBucket', lose_receipt))
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        outcome = self.dispose(absent, paired_verified=False, now=self.deadline)
+        self.assertEqual(outcome['status'], 'deleted')
+        self.assertEqual(outcome['inventory_sha256'], report['inventory_sha256'])
+
+    def test_late_state_deletion_requires_verified_predeadline_state_inventory(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+            cloud = FixtureCloud([self.listing(self.original), self.download()])
+            self.assertTrue(operator.prepare_finish_state_export(
+                cloud, journal, self.resources, self.destination, current=lambda: self.deadline - 1))
+            self.assertEqual(cloud.replies, [])
+        self.assertEqual(self.fence(self.instance('terminated', 48), now=self.deadline)['status'], 'fenced')
+        report = self.seal(self.listing(self.original), self.listing())
+        self.assertTrue(report['complete'])
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        outcome = self.dispose(absent, now=self.deadline)
+        self.assertEqual(outcome['status'], 'deleted')
+
+    def test_predeadline_state_export_survives_raw_work_crossing_deadline(self):
+        self.own_and_fence()
+        raw_original = dict(Key='raw/an-attempt', VersionId='raw-v1', Size=4)
+        clock = [self.deadline - 1]
+        def late_raw_download(params, kwargs):
+            self.assertEqual(params, dict(Bucket=self.raw, Key=raw_original['Key'],
+                                          VersionId=raw_original['VersionId'], Range='bytes=0-3'))
+            clock[0] = self.deadline
+            kwargs['output'].write_bytes(b'body')
+            return cloud_json('GetObject', self.headers(raw_original['VersionId'], 4, 'bytes 0-3/4'))
+
+        cloud = FixtureCloud([self.listing(self.original), self.listing(raw_original),
+                              self.download(), ('GetObject', late_raw_download)])
+        with J(self.journal) as journal:
+            report = operator.seal_finish_sources(cloud, journal, self.resources, self.destination,
+                                                  state_export_current=lambda: clock[0])
+        self.assertTrue(report['complete'])
+        self.assertEqual(cloud.replies, [])
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        self.assertEqual(self.dispose(absent, now=self.deadline)['status'], 'deleted')
+
+    def test_late_export_cannot_create_retroactive_state_deletion_proof(self):
+        self.own_and_fence()
+        report = self.seal(self.listing(self.original), self.listing(), self.download())
+        self.assertTrue(report['complete'])
+        retained = self.dispose(now=self.deadline)
+        self.assertEqual(retained['status'], 'retained')
+        self.assertIsNone(retained['expiry'])
+        self.assertEqual(self.dispose(now=self.deadline + 1), retained)
+
+    def test_late_state_deletion_rejects_changed_fenced_inventory(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+            cloud = FixtureCloud([self.listing(self.original), self.download()])
+            self.assertTrue(operator.prepare_finish_state_export(
+                cloud, journal, self.resources, self.destination, current=lambda: self.deadline - 1))
+            self.assertEqual(cloud.replies, [])
+        self.assertEqual(self.fence(self.instance('terminated', 48), now=self.deadline)['status'], 'fenced')
+        self.assertTrue(self.seal(self.listing(self.original, markers=[self.marker]), self.listing())['complete'])
+        retained = self.dispose(now=self.deadline)
+        self.assertEqual(retained['status'], 'retained')
+        self.assertEqual(retained['reason'], 'predeadline_state_export_unproven')
+
+    def test_disposal_refuses_unexpected_versions_then_only_removes_sealed_versions(self):
+        self.own_and_fence()
+        report = self.seal(self.listing(self.original, markers=[self.marker]), self.listing(), self.download())
+        self.assertTrue(report['complete'])
+        self.assertEqual(self.seal(), report)
+        tag = ('GetBucketTagging', cloud_json('GetBucketTagging', {'TagSet': [{'Key':'ShadowRunId','Value':'test1'}]}))
+        enabled = ('GetBucketVersioning', cloud_json('GetBucketVersioning', {'Status': 'Enabled'}))
+        late = dict(Key=self.key, VersionId='late', Size=1)
+        pending = self.dispose(enabled, tag, self.listing(self.original, late, markers=[self.marker]))
+        self.assertEqual(pending['status'], 'pending')
+        self.assertEqual(pending['reason'], 'unexpected_versions')
+        def delete(params, _):
+            self.assertEqual(params['Bucket'], self.bucket)
+            expected = [{'Key': self.key, 'VersionId': 'marker'}, {'Key': self.key, 'VersionId': 'v1'}]
+            self.assertEqual(params['Delete']['Objects'], expected)
+            return cloud_json('DeleteObjects', {'Deleted': expected})
+        absent = ('GetBucketVersioning', operator.CloudResult('service_error', 'GetBucketVersioning',
+                                                              code='NoSuchBucket'))
+        deleted = self.dispose(enabled, tag, self.listing(self.original, markers=[self.marker]),
+                               ('DeleteObjects', delete), self.listing(),
+                               ('DeleteBucket', operator.CloudResult('empty_success', 'DeleteBucket')), absent)
+        self.assertEqual(deleted['status'], 'deleted')
+        self.assertEqual(self.dispose(), deleted)
+
+
+    def nonstate(self, *replies, raw_disposable=True, now=1003):
+        cloud = FixtureCloud(replies)
+        with J(self.journal) as journal:
+            result = operator.cleanup_finish_nonstate(
+                cloud, journal, self.resources, now=now, raw_disposable=raw_disposable)
+        self.assertEqual(cloud.replies, [])
+        return result
+
+    def nonstate_absence(self, raw_present=False):
+        replies = OperatorTests.gone_replies(self)
+        replies[0] = ('DescribeInstances', operator.CloudResult(
+            'service_error', 'DescribeInstances', code='InvalidInstanceID.NotFound'))
+        buckets = [self.bucket] + ([self.raw] if raw_present else [])
+        replies[-1] = ('ListBuckets', cloud_json('ListBuckets', {
+            'Buckets': [{'Name': bucket} for bucket in buckets]}))
+        return replies
+
+    def nonstate_dependencies(self):
+        return [
+            ('GetRole', operator.CloudResult('service_error', 'GetRole', code='NoSuchEntity')),
+            ('GetInstanceProfile', operator.CloudResult(
+                'service_error', 'GetInstanceProfile', code='NoSuchEntity')),
+            ('DeleteSecurityGroup', operator.CloudResult('empty_success', 'DeleteSecurityGroup')),
+            ('DescribeVolumes', cloud_json('DescribeVolumes', {'Volumes': []})),
+        ]
+
+    def raw_download_failure(self):
+        def failure(params, _):
+            self.assertEqual(params['Bucket'], self.raw)
+            return operator.CloudResult('timeout', 'GetObject')
+        return ('GetObject', failure)
+
+    def test_nonstate_cleanup_requires_a_writer_fence(self):
+        with J(self.journal) as journal:
+            self.own_resources(journal)
+        with self.assertRaisesRegex(E, 'writer fence required'):
+            self.nonstate()
+
+    def test_raw_seal_and_disposal_continue_after_failed_state_listing(self):
+        self.own_and_fence()
+        failed_listing = ('ListObjectVersions', operator.CloudResult('timeout', 'ListObjectVersions'))
+        retained = self.dispose(paired_verified=False, now=self.deadline)
+        self.assertEqual(retained['status'], 'retained')
+        report = self.seal(failed_listing, self.listing(self.original), self.raw_download_failure())
+        self.assertFalse(report['inventory_complete'])
+        self.assertEqual(report['listings'], {self.bucket: 'failed', self.raw: 'complete'})
+        self.assertEqual(report['objects'][0]['status'], 'failed')
+        enabled = ('GetBucketVersioning', cloud_json('GetBucketVersioning', {'Status': 'Enabled'}))
+        tag = ('GetBucketTagging', cloud_json('GetBucketTagging', {
+            'TagSet': [{'Key': 'ShadowRunId', 'Value': 'test1'}]}))
+
+        def delete(params, _):
+            self.assertEqual(params['Bucket'], self.raw)
+            expected = [{'Key': self.key, 'VersionId': 'v1'}]
+            self.assertEqual(params['Delete']['Objects'], expected)
+            return cloud_json('DeleteObjects', {'Deleted': expected})
+
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        outcome = self.nonstate(enabled, tag, self.listing(self.original), ('DeleteObjects', delete),
+                                self.listing(), ('DeleteBucket', operator.CloudResult('timeout', 'DeleteBucket')),
+                                absent, *self.nonstate_dependencies(), *self.nonstate_absence(), now=self.deadline)
+        self.assertTrue(outcome['complete'], outcome)
+        self.assertEqual(outcome['raw']['inventory_sha256'], report['inventory_sha256'])
+        self.assertEqual(self.seal(failed_listing), report)
+        self.assertEqual(self.dispose(now=self.deadline + 1), retained)
+        restored = self.seal(self.listing(self.original), self.download())
+        self.assertTrue(restored['inventory_complete'])
+        self.assertEqual(next(row for row in restored['objects'] if row['bucket'] == self.raw),
+                         report['objects'][0])
+        self.assertEqual(self.nonstate(*self.nonstate_absence(), now=self.deadline + 1)['raw'],
+                         outcome['raw'])
+
+    def test_nonstate_cleanup_preserves_incomplete_raw_before_deadline(self):
+        self.own_and_fence()
+        report = self.seal(self.listing(), self.listing(self.original), self.raw_download_failure())
+        self.assertFalse(report['complete'])
+        result = self.nonstate(*self.nonstate_dependencies(), *self.nonstate_absence(raw_present=True))
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['raw']['status'], 'pending')
+        self.assertEqual(result['raw']['reason'], 'raw_export_incomplete')
+
+    def test_nonstate_cleanup_at_deadline_drops_only_sealed_raw_versions(self):
+        self.own_and_fence()
+        report = self.seal(self.listing(), self.listing(self.original, markers=[self.marker]),
+                           self.raw_download_failure())
+        self.assertFalse(report['complete'])
+        enabled = ('GetBucketVersioning', cloud_json('GetBucketVersioning', {'Status': 'Enabled'}))
+        tag = ('GetBucketTagging', cloud_json('GetBucketTagging', {
+            'TagSet': [{'Key': 'ShadowRunId', 'Value': 'test1'}]}))
+        absent = ('GetBucketVersioning', operator.CloudResult(
+            'service_error', 'GetBucketVersioning', code='NoSuchBucket'))
+        late = dict(Key=self.key, VersionId='late', Size=1)
+        result = self.nonstate(enabled, tag, self.listing(self.original, late, markers=[self.marker]),
+                               *self.nonstate_dependencies(), *self.nonstate_absence(raw_present=True),
+                               now=self.deadline)
+        self.assertEqual(result['raw']['reason'], 'unexpected_versions')
+
+        def delete(params, _):
+            self.assertEqual(params['Bucket'], self.raw)
+            expected = [{'Key': self.key, 'VersionId': 'marker'}, {'Key': self.key, 'VersionId': 'v1'}]
+            self.assertEqual(params['Delete']['Objects'], expected)
+            return cloud_json('DeleteObjects', {'Deleted': expected})
+
+        result = self.nonstate(enabled, tag, self.listing(self.original, markers=[self.marker]),
+                               ('DeleteObjects', delete), self.listing(),
+                               ('DeleteBucket', operator.CloudResult('timeout', 'DeleteBucket')), absent,
+                               *self.nonstate_dependencies(), *self.nonstate_absence(), now=self.deadline)
+        self.assertEqual(result['raw']['status'], 'deleted')
+        self.assertTrue(result['complete'])
+        self.assertNotIn(self.bucket, result['independent_inventory']['checks'])
+        self.assertTrue(result['independent_inventory']['checks']['instance']['gone'])
+        reread = self.nonstate(*self.nonstate_absence(), now=self.deadline + 1)
+        self.assertEqual(reread['raw'], result['raw'])
+        self.assertEqual(reread['actions'], [])
+        after_cleanup = self.seal()
+        self.assertEqual(after_cleanup, report)
 
 
 class RecordedDispatchTests(unittest.TestCase):
@@ -1824,8 +2474,9 @@ class LifecycleTests(unittest.TestCase):
                 if action=='inspect':fault('poll')
                 if action=='install':fault('install')
                 if action=='install':return state.CloudResult('empty_success','HostInstall')
-                if action=='stop':inner.stopped=True;return state.CloudResult('empty_success','HostObserve')
-                if action=='export':return state.CloudResult('timeout','HostEvidence')
+                if action in ('stop','finish-finalize'):inner.stopped=True;return state.CloudResult('empty_success','HostObserve')
+                if action=='finish-drain':return state.CloudResult('empty_success','HostObserve')
+                if action in ('export','finish-ledger'):return state.CloudResult('timeout','HostEvidence')
                 inner.polls+=1
                 # After the operator's stop the host reports every unit inactive.
                 answer='inactive' if inner.stopped else behaviour(inner.polls,moment[0])
@@ -1869,7 +2520,7 @@ class LifecycleTests(unittest.TestCase):
             run,cloud,calls,events,moment,j=self.collecting(Path(temp),behaviour)
             result=run()
             self.assertEqual(result['stop_reason'],'collection_deadline')
-            stops=[at for action,at in calls if action=='stop']
+            stops=[at for action,at in calls if action=='finish-finalize']
             self.assertTrue(stops and min(stops)>=1000+168*3600,stops[:1])
             self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
             self.assertEqual(sum(action=='install' for action,_ in calls),1)
@@ -1878,12 +2529,12 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(max(e['consecutive'] for e in unreachable),480)
             self.assertTrue(any(e.get('poll')=='recovered' for e in events))
 
-    def test_host_stop_is_reported_and_finished(self):
+    def test_host_stop_is_reported_and_unverified_finish_preserves_host(self):
         with tempfile.TemporaryDirectory() as temp:
             run,cloud,calls,events,moment,j=self.collecting(Path(temp),lambda poll,now:'active' if poll<5 else 'inactive')
             result=run()
             self.assertEqual(result['stop_reason'],'host_stopped')
-            self.assertEqual(cloud.instance['State']['Name'],'terminated')
+            self.assertEqual(cloud.instance['State']['Name'],'running')
 
     def test_operator_interrupt_detaches_without_teardown_and_resumes(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -1897,7 +2548,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(result,{'schema':1,'detached':True,'stop_reason':'operator_detached'})
             self.assertEqual(cloud.instance['State']['Name'],'running')
             self.assertFalse((root/'result').exists())
-            self.assertNotIn('stop',[action for action,_ in calls])
+            self.assertNotIn('finish-finalize',[action for action,_ in calls])
             self.assertFalse(any(op=='TerminateInstances' for op,_ in cloud.calls))
             resumed=run()
             self.assertEqual(resumed['stop_reason'],'collection_deadline')
@@ -1926,7 +2577,7 @@ class LifecycleTests(unittest.TestCase):
                 before=len(cloud.calls)
                 result=run()
                 self.assertEqual(result['stop_reason'],'collection_deadline')
-                stops=[at for action,at in calls if action=='stop']
+                stops=[at for action,at in calls if action=='finish-finalize']
                 self.assertTrue(stops and min(stops)>=1000+168*3600,stops[:1])
                 self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
                 self.assertEqual(sum(action=='install' for action,_ in calls),1)
@@ -1943,10 +2594,11 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(result['stop_reason'],'collection_deadline')
                 self.assertIsNone(result['failure_class'])
                 terminations=[op for op,_ in cloud.calls if op=='TerminateInstances']
-                stops=[at for action,at in calls if action=='stop']
+                stops=[at for action,at in calls if action=='finish-finalize']
                 self.assertTrue(stops and min(stops)>=1000+168*3600,stops[:1])
-                self.assertTrue(terminations)
-                self.assertIn('export',[action for action,_ in calls])
+                self.assertEqual(terminations,[])
+                self.assertEqual(result['cleanup']['fence']['status'],'awaiting_evidence')
+                self.assertIn('finish-ledger',[action for action,_ in calls])
                 self.assertIn({'phase':'collecting','poll':'recovered','after':3},events)
 
     def test_every_interrupt_and_fault_follows_the_phase_table(self):
@@ -1957,7 +2609,7 @@ class LifecycleTests(unittest.TestCase):
         until=1000+168*3600
         kinds=[KeyboardInterrupt(),OSError('io'),state.StateError('state'),subprocess.TimeoutExpired('ssh',30),RuntimeError('bug')]
         def untouched(cloud,calls):
-            return (cloud.instance['State']['Name']=='running' and not any(a in ('stop','export') for a,_ in calls)
+            return (cloud.instance['State']['Name']=='running' and not any(a in ('stop','export','finish-finalize','finish-ledger') for a,_ in calls)
                     and not any(op=='TerminateInstances' for op,_ in cloud.calls))
         cases=[]
         # Collecting (resumed before the deadline): first call of each site after the resume.
@@ -1992,16 +2644,16 @@ class LifecycleTests(unittest.TestCase):
                     self.assertFalse((root/'result').exists())
                 else:
                     self.assertEqual(result['stop_reason'],'collection_deadline',result)
-                    self.assertEqual(cloud.instance['State']['Name'],'terminated')
+                    self.assertEqual(cloud.instance['State']['Name'],'running')
                     self.assertTrue((root/'result/lifecycle.json').is_file())
                     # Nothing reaches the host before the deadline; without a reconnect the
-                    # finish cannot stop it over SSH and only terminates the instance.
-                    stops=[at for action,at in calls[before:] if action=='stop']
+                    # finish cannot stop it over SSH. Until expiry it preserves the host.
+                    stops=[at for action,at in calls[before:] if action=='finish-finalize']
                     self.assertTrue(all(at>=until for at in stops),stops[:1])
                     if expect=='retry':
                         self.assertTrue(stops)
-                        self.assertIn('export',[a for a,_ in calls[before:]])
-        # Startup (before the marker): unchanged, every event finishes with cleanup.
+                        self.assertIn('finish-ledger',[a for a,_ in calls[before:]])
+        # Startup without an install attempt can clean immediately. An uncertain installed host is preserved.
         for point in ('connect','install'):
             for error in kinds:
                 with self.subTest(phase='startup',point=point,error=type(error).__name__),tempfile.TemporaryDirectory() as temp:
@@ -2012,7 +2664,8 @@ class LifecycleTests(unittest.TestCase):
                     else:
                         expected='operator_interrupted' if isinstance(error,KeyboardInterrupt) else 'acquisition_failed'
                         self.assertEqual(run()['stop_reason'],expected)
-                    self.assertEqual(cloud.instance['State']['Name'],'terminated')
+                    expected_instance = 'running' if j.request('host-install') else 'terminated'
+                    self.assertEqual(cloud.instance['State']['Name'],expected_instance)
                     self.assertIsNone(j.request('collection-started'))
         # Marker boundary (CX-SR2-013): a failure right after collection-started is stored
         # is a collecting event, read from the journal when it happens.
@@ -2042,8 +2695,8 @@ class LifecycleTests(unittest.TestCase):
             moment[0]=until+5;before=len(calls)
             result=run()
             self.assertEqual(result['stop_reason'],'collection_deadline',result)
-            self.assertIn('export',[a for a,_ in calls[before:]])
-            self.assertEqual(cloud.instance['State']['Name'],'terminated')
+            self.assertIn('finish-ledger',[a for a,_ in calls[before:]])
+            self.assertEqual(cloud.instance['State']['Name'],'running')
         # The CLI reports a detach as success and an operator failure as an error.
         from unittest.mock import patch
         import io,contextlib
@@ -2063,7 +2716,7 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(result['stop_reason'],'collection_deadline')
             self.assertIsNone(result['failure_class'])
             self.assertTrue((root/'result/lifecycle.json').is_file())
-            self.assertEqual(cloud.instance['State']['Name'],'terminated')
+            self.assertEqual(cloud.instance['State']['Name'],'running')
 
     def test_only_a_validated_stop_ends_collection(self):
         # CX-SR2-002: unvalidated unit states are unreachable, not a stop.
@@ -2086,9 +2739,9 @@ class LifecycleTests(unittest.TestCase):
             result=run()
             self.assertEqual(result['stop_reason'],'collection_deadline')
             self.assertTrue((root/'result/lifecycle.json').is_file())
-            self.assertIn('export',[action for action,_ in calls])
-            self.assertEqual(cloud.instance['State']['Name'],'terminated')
-            self.assertEqual(sum(action=='inspect' for action,_ in calls)-polls,1)  # the stopped-state check only
+            self.assertIn('finish-ledger',[action for action,_ in calls])
+            self.assertEqual(cloud.instance['State']['Name'],'running')
+            self.assertEqual(sum(action=='inspect' for action,_ in calls)-polls,0)  # finish uses a stopped-ledger request
 
     def test_live_run_after_the_deadline_reaches_the_lifecycle(self):
         # CX-SR2-003: live_command observes the journal instead of requiring it active.
@@ -2134,23 +2787,13 @@ class LifecycleTests(unittest.TestCase):
                 self.assertEqual(bound.binding,binding)
 
     def test_one_host_install_monitor_and_cleanup_across_failure_paths(self):
-        for mode in ('deadline','lost_install_ack','ssh_timeout','guard_stop','termination_delay'):
+        for mode in ('deadline','lost_install_ack','ssh_timeout','guard_stop'):
             with self.subTest(mode=mode),tempfile.TemporaryDirectory() as temp:
                 root=Path(temp);source,host=HostBundleTests.files(self,root)
                 plan=dict(host=host,cloud=provisioning_plan(),allowance=dict(reads=10,writes=20,put_bytes=30))
                 provision.prepare_run(plan,source,root/'run',root/'bundle',now=1000)
                 with J(root/'run') as j:
-                    class Cloud(ProvisionCloud):
-                        terminations=0
-                        def call(inner,op,params,**kwargs):
-                            if op=='TerminateInstances':
-                                inner.terminations+=1
-                                if mode=='termination_delay' and inner.terminations==1:
-                                    inner.calls.append((op,params))
-                                    inner.instance['State']={'Name':'shutting-down','Code':32}
-                                    return cloud_json(op,{'TerminatingInstances':[]})
-                            return super().call(op,params,**kwargs)
-                    cloud=Cloud(j);moment=[1001];events=[];calls=[]
+                    cloud=ProvisionCloud(j);moment=[1001];events=[];calls=[]
                     launch=operator.verify_bundle(root/'bundle')
                     expected=operator.hashlib.sha256((state.canonical(launch)+'\n').encode()).hexdigest()
                     binding=RemoteTests.binding(self)
@@ -2165,8 +2808,9 @@ class LifecycleTests(unittest.TestCase):
                                 with remote.tarfile.open(fileobj=kwargs['archive'],mode='r') as archive:
                                     self.assertEqual(set(archive.getnames()),operator.HOST_ARTIFACTS|{'launch.json'})
                                 return state.CloudResult('timeout' if mode=='lost_install_ack' else 'empty_success','HostInstall')
-                            if action=='stop':inner.active=False;return state.CloudResult('empty_success','HostObserve')
-                            if action=='export':return state.CloudResult('timeout','HostEvidence')
+                            if action in ('stop','finish-finalize'):inner.active=False;return state.CloudResult('empty_success','HostObserve')
+                            if action=='finish-drain':return state.CloudResult('empty_success','HostObserve')
+                            if action in ('export','finish-ledger'):return state.CloudResult('timeout','HostEvidence')
                             inner.inspections+=1
                             if mode=='lost_install_ack' and inner.inspections==1:
                                 return state.CloudResult('timeout','HostObserve')
@@ -2185,20 +2829,17 @@ class LifecycleTests(unittest.TestCase):
                         else:moment[0]+=seconds
                     result=provision.lifecycle(cloud,j,plan['cloud'],root/'bundle',root/'result',connect,
                         clock=lambda:moment[0],sleep=pause,progress=events.append)
-                    self.assertTrue(result['cleanup']['complete'],result)
+                    self.assertEqual(result['cleanup']['complete'],mode=='ssh_timeout',result)
                     self.assertFalse(result['host_evidence']['complete'])
                     self.assertEqual(result['qualification'],'not_assessed')
                     self.assertEqual(sum(op=='RunInstances' for op,_ in cloud.calls),1)
                     self.assertEqual(transport.uploads,0 if mode=='ssh_timeout' else 1)
                     self.assertEqual(j.snapshot()['generations'],1)
-                    self.assertFalse(cloud.buckets)
-                    self.assertEqual(cloud.instance['State']['Name'],'terminated')
+                    self.assertEqual(bool(cloud.buckets),mode!='ssh_timeout')
+                    self.assertEqual(cloud.instance['State']['Name'],'terminated' if mode=='ssh_timeout' else 'running')
                     self.assertEqual(result['stop_reason'],{'ssh_timeout':'acquisition_failed','guard_stop':'host_stopped'}.get(mode,'collection_deadline'))
                     self.assertEqual(events[-1]['phase'],'finishing')
                     self.assertTrue((root/'result/lifecycle.json').is_file())
-                    if mode=='termination_delay':
-                        self.assertTrue((root/'result/sources/manifest.json').is_file())
-                        self.assertTrue(result['cleanup']['sources_complete'])
 
     def test_public_live_commands_require_explicit_execute_without_any_effect(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -2283,7 +2924,7 @@ class ProvisionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp,self.journal(Path(temp)/'journal') as j:
             fixture=ProvisionCloud(j)
             provision.provision_resources(fixture,j,provisioning_plan(),now=1001)
-            j.reserve_control(reads=9000,writes=9000,export_bytes=2*1024**3)
+            j.reserve_control(reads=79_000,writes=9_000,export_bytes=4*1024**3)
             class Charged:
                 def call(inner,op,p,**kwargs):
                     cleanup=kwargs.pop('cleanup',False)
