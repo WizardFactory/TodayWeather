@@ -49,6 +49,11 @@ import net.wizardfactory.todayweather.core.storage.Settings
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.core.storage.closeStart
 import net.wizardfactory.todayweather.search.BundledTowns
+import net.wizardfactory.todayweather.core.domain.shell.Tab
+import net.wizardfactory.todayweather.core.domain.shell.Theme
+import net.wizardfactory.todayweather.ui.shell.ShellColors
+import net.wizardfactory.todayweather.ui.shell.withCurrentTabIconsFrom
+import net.wizardfactory.todayweather.ui.shell.withTabAccent
 import net.wizardfactory.todayweather.ui.chart.ImageDiff
 import net.wizardfactory.todayweather.ui.chart.Pixels
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
@@ -313,10 +318,13 @@ class PlacesScreenshotTest {
     private fun compare(name: String) {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
-        val diff = ImageDiff.of(native, cordova)
+        val theme = if (name.endsWith("-dark")) Theme.DARK else Theme.LIGHT
+        val reference = cordova.withTabAccent(Tab.LOCATIONS, ShellColors.of(theme, Tab.LOCATIONS))
+            .withCurrentTabIconsFrom(native, Tab.LOCATIONS)
+        val diff = ImageDiff.of(native, reference)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
-        ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
+        ImageIO.write(ImageDiff.overlay(native, reference).toBufferedImage(), "png", File(out, "$base-diff.png"))
         println("places-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject

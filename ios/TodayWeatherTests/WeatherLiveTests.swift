@@ -146,7 +146,7 @@ struct WeatherLiveTests {
             let hero = try #require(content.page.hero)
             let s = TextScale(.extraExtraExtraLarge)
             let big = content.metrics.bigFontSize
-            let temperature = [CssRun(text: hero.temperature, size: big), CssRun(text: "˚", size: big / 2)]
+            let temperature = WeatherMetrics.temperatureRuns(hero.temperature, size: big)
             let row = CssLine.width(temperature) + content.metrics.bigImageSize
             let box = size.width * 0.8
             #expect(row <= box + 0.5, "\(size): the temperature row \(row) fits the main box \(box)")

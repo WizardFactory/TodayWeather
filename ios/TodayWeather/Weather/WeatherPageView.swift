@@ -335,9 +335,8 @@ private struct MainBox: View {
             let big = metrics.bigFontSize
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    CssLine(runs: [CssRun(text: hero.temperature, size: big, weight: .light),
-                                   CssRun(text: "˚", size: big / 2, weight: .light)],
-                            color: colors.headerText, outline: colors.headerOutline, raise: [1: WeatherMetrics.superRaise(big)])
+                    CssLine(runs: WeatherMetrics.temperatureRuns(hero.temperature, size: big),
+                            color: colors.headerText, outline: colors.headerOutline, raise: [2: WeatherMetrics.superRaise(big)])
                     ThemeImage(image: hero.sky, theme: theme, height: metrics.bigImageSize)
                 }
                 SummaryLines(text: hero.summary, colors: colors, s: s, width: width)

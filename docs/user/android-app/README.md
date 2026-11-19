@@ -28,7 +28,8 @@ while the selected place refreshes. If the request fails, use the retry option.
 The bottom tabs switch between pages. You can set the automatic refresh interval
 under 업데이트 주기 in the menu.
 
-The selected tab uses a filled icon and the other tabs use outlines. The hourly,
+All four tabs use outline icons. On the selected tab, the icon and its label
+use the theme’s accent color, with a short line above the icon. The hourly,
 daily, air and refresh examples show the updated navigation in the running app
 with sample Seoul weather. Earlier captures of other tasks are cropped to the
 page content wherever they showed the previous tab bar. The capture record
