@@ -10,6 +10,7 @@ struct WidgetForecast: Codable, Equatable, Sendable {
     let label: String
     let temperature: String
     let symbol: String
+    var previousTemperature: String? = nil
 }
 
 struct WidgetWeather: Codable, Equatable, Sendable {
@@ -21,6 +22,7 @@ struct WidgetWeather: Codable, Equatable, Sendable {
     let air: String
     let daily: [WidgetForecast]
     let hourly: [WidgetForecast]
+    var airGrade: Double? = nil
 }
 
 enum WidgetVisit {

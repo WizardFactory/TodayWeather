@@ -4,16 +4,16 @@
   "steps": [
     {
       "title": "소형 위젯으로 현재 날씨 확인하기",
-      "instruction": "홈 화면의 빈 공간을 길게 누릅니다. 편집에서 위젯 추가를 선택한 뒤 TodayWeather를 검색하고 검색 결과를 누릅니다. 첫 번째 크기를 선택합니다.",
-      "screenshot": "screenshots/small.png",
-      "caption": "소형 미리보기에는 지역명, 기온, 최고·최저 기온과 대기질이 표시됩니다.",
+      "instruction": "홈 화면을 길게 눌러 편집에서 위젯 추가를 선택합니다. 오늘날씨를 검색한 뒤 클래식 컬러, 아침 하늘, 기온 곡선 중 원하는 디자인의 소형을 추가하세요.",
+      "screenshot": "screenshots/styles-hourly.png",
+      "caption": "맨 위에는 클래식 컬러와 아침 하늘 소형, 맨 아래에는 기온 곡선 소형이 있습니다.",
       "expected": "위젯 추가를 누르고 완료를 선택하면 홈 화면에 소형 위젯이 나타납니다."
     },
     {
       "title": "중형 위젯으로 예보 확인하기",
-      "instruction": "같은 갤러리에서 미리보기를 왼쪽으로 밀어 두 번째 크기를 선택합니다. 위젯 추가를 누르고 완료를 선택합니다.",
-      "screenshot": "screenshots/medium.png",
-      "caption": "중형 미리보기 하단에는 예보가 최대 여섯 칸까지 표시됩니다.",
+      "instruction": "위젯 갤러리에서 원하는 디자인의 중형을 골라 위젯 추가를 누르세요. 일별 예보를 확인하려면 시간대별 예보를 끕니다.",
+      "screenshot": "screenshots/styles-medium.png",
+      "caption": "중형 위젯 세 가지입니다. 기온 곡선은 일별 최고와 최저를 두 선으로 표시합니다.",
       "expected": "홈 화면에서 현재 날씨와 일별 예보를 함께 볼 수 있습니다."
     },
     {
@@ -22,6 +22,13 @@
       "screenshot": "screenshots/settings.png",
       "caption": "이 위젯에서 사용할 지역과 예보 종류를 고르는 화면입니다.",
       "expected": "같은 앱의 위젯을 여러 개 놓고 서로 다른 지역과 예보를 볼 수 있습니다."
+    },
+    {
+      "title": "시간별 기온을 전날과 비교하기",
+      "instruction": "중형 기온 곡선에서 시간대별 예보를 켜세요. 주황 실선은 예보, 연보라 점선은 각 시각의 전날 기온입니다.",
+      "screenshot": "screenshots/curve-hourly-comparison.png",
+      "caption": "서울 예시에서 정오의 예보는 12도이고 전날 정오는 8도입니다.",
+      "expected": "두 선과 숫자를 같은 시각에서 비교할 수 있습니다. 전날 값이 빠진 구간은 점선이 끊깁니다."
     },
     {
       "title": "앱 방문 안내가 나타나면 날씨 다시 열기",

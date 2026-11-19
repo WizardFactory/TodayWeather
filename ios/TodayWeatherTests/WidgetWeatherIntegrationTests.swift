@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import TWModel
 import TWDomain
 import TWStorage
 @testable import TodayWeather
@@ -16,7 +17,44 @@ struct WidgetWeatherIntegrationTests {
         #expect(weather.daily.first?.label == (fixture == "kma-seoul" ? "11/8" : "11/7"))
         #expect(weather.hourly.first?.label == (fixture == "kma-seoul" ? "03:00" : "18:00"))
         #expect(weather.temperature == (fixture == "kma-seoul" ? "3°" : "10°"))
+        let previous = fixture == "kma-seoul" ? ["5°", "3°", "4°", "8°", "10°", "8°"]
+                                              : ["11°", "8°", "6°", "5°", "5°", "5°"]
+        #expect(weather.hourly.map(\.previousTemperature) == previous)
         #expect(!weather.air.isEmpty)
+    }
+
+    @Test func curveUnderstandsBothForecastModesInPreviouslyCachedWeather() throws {
+        let rows = try JSONDecoder().decode([WidgetForecast].self, from: Data("""
+          [{"label":"03:00","temperature":"-3°","symbol":"cloud.fill"},
+           {"label":"11/8","temperature":"2°/-4°","symbol":"sun.max.fill"}]
+          """.utf8))
+        let hour = try #require(WidgetTemperatureSample(rows[0], hourly: true))
+        #expect(hour.label == "03:00" && hour.upper == -3 && hour.lower == nil && hour.previous == nil)
+        let day = try #require(WidgetTemperatureSample(rows[1], hourly: false))
+        #expect(day.upper == 2 && day.lower == -4)
+        #expect(WidgetTemperatureSample(rows[1], hourly: true) == nil)
+        #expect(WidgetTemperatureSample.value("–") == nil)
+    }
+
+    @Test func previousDayMatchesLocalHoursAcrossNewYearAndKeepsGaps() throws {
+        let record = try #require(try JSONValue.parse("""
+        {
+          "source":"KMA", "currentWeather":{"date":"20261231","time":21,"t1h":5},
+          "timeTable":[
+            {"date":"20270101","time":0,"t3h":2}, {"date":"20270101","time":3,"t3h":3},
+            {"date":"20270101","time":6,"t3h":4}, {"date":"20270101","time":9,"t3h":5},
+            {"date":"20270101","time":24,"t3h":6}
+          ],
+          "timeChart":[{"name":"yesterday","values":[
+            {"value":{"date":"20261231","time":9,"t3h":0}},
+            {"value":{"date":"20261230","time":24,"t3h":-2}},
+            {"value":{"date":"20261231","time":6,"t3h":-50}},
+            {"value":{"date":"20270101","time":0,"t3h":2}}
+          ]}]
+        }
+        """).objectValue)
+        let weather = try #require(WidgetWeatherProjection.make(record, updatedAt: .now))
+        #expect(weather.hourly.map(\.previousTemperature) == ["-2°", nil, nil, "0°", nil])
     }
 
     @Test func widgetCatalogPublishesTheRegisteredWeatherRoutesAndUnits() throws {

@@ -99,7 +99,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         WidgetStore.activated(at: Date())
-        WidgetCenter.shared.reloadTimelines(ofKind: WidgetStore.kind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

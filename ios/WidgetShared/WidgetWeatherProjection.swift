@@ -16,14 +16,7 @@ enum WidgetWeatherProjection {
                   let high = degrees(row["tmx"]), let low = degrees(row["tmn"]) else { return nil }
             return WidgetForecast(label: "\(month)/\(day)", temperature: "\(high)/\(low)", symbol: symbol(row["skyIcon"]))
         }
-        let hours = record["timeTable"]?.arrayValue ?? []
-        let hourly = hours.compactMap { row -> WidgetForecast? in
-            guard let date = row["date"]?.stringValue, let hour = row["time"]?.numberValue?.double,
-                  let currentDate = current["date"]?.stringValue, let currentHour = current["time"]?.numberValue?.double,
-                  date > currentDate || (date == currentDate && hour > currentHour),
-                  (0...24).contains(hour), let temp = degrees(row["t3h"]) else { return nil }
-            return WidgetForecast(label: String(format: "%02d:00", Int(hour) % 24), temperature: temp, symbol: symbol(row["skyIcon"]))
-        }
+        let hourly = hourlyForecast(record, current: current)
         let pollution = current["arpltn"]
         let worst = ["khai", "pm10", "pm25"].compactMap { key -> (Double, String)? in
             guard let grade = pollution?[key + "Grade"]?.numberValue?.double,
@@ -32,7 +25,48 @@ enum WidgetWeatherProjection {
         }.max { $0.0 < $1.0 }
         return WidgetWeather(date: updatedAt, temperature: currentTemperature, symbol: symbol(current["skyIcon"]),
                              high: degrees(today?["tmx"]) ?? "–", low: degrees(today?["tmn"]) ?? "–",
-                             air: worst?.1 ?? "", daily: Array(daily.prefix(6)), hourly: Array(hourly.prefix(6)))
+                             air: worst?.1 ?? "", daily: Array(daily.prefix(6)), hourly: Array(hourly.prefix(6)),
+                             airGrade: worst?.0)
+    }
+
+    // The service supplies place-local dates and hours. A fixed calendar keeps those wall-clock
+    // labels independent of the device time zone and treats 24:00 as the next day's 00:00.
+    private static let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        return calendar
+    }()
+
+    private static func localHour(_ row: JSONObject) -> Date? {
+        guard let date = row["date"]?.stringValue, date.count == 8,
+              let year = Int(date.prefix(4)), let month = Int(date.dropFirst(4).prefix(2)),
+              let day = Int(date.suffix(2)), let raw = row["time"]?.numberValue?.double,
+              let hour = Int(exactly: raw), (0...24).contains(hour) else { return nil }
+        let parts = DateComponents(year: year, month: month, day: day)
+        guard parts.isValidDate(in: calendar), let midnight = calendar.date(from: parts) else { return nil }
+        return calendar.date(byAdding: .hour, value: hour, to: midnight)
+    }
+
+    private static func hourlyForecast(_ record: JSONObject, current: JSONObject) -> [WidgetForecast] {
+        guard let now = localHour(current) else { return [] }
+        let series = record["timeChart"]?.arrayValue?.first { $0["name"]?.stringValue == "yesterday" }
+        var previous: [Date: String] = [:]
+        for entry in series?["values"]?.arrayValue ?? [] {
+            guard let row = entry["value"]?.objectValue, let hour = localHour(row), hour <= now,
+                  let value = row["t3h"], let temperature = degrees(value) else { continue }
+            if record["source"]?.stringValue == "KMA",
+               (value.numberValue?.double ?? value.stringValue.flatMap(Double.init)) == -50 { continue }
+            previous[hour] = temperature
+        }
+        let rows = record["timeTable"]?.arrayValue ?? []
+        return rows.compactMap { entry in
+            guard let row = entry.objectValue, let hour = localHour(row), hour > now,
+                  let temperature = degrees(row["t3h"]) else { return nil }
+            let label = String(format: "%02d:00", calendar.component(.hour, from: hour))
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: hour)
+            return WidgetForecast(label: label, temperature: temperature, symbol: symbol(row["skyIcon"]),
+                                  previousTemperature: yesterday.flatMap { previous[$0] })
+        }
     }
 
     private static func degrees(_ value: JSONValue?) -> String? {

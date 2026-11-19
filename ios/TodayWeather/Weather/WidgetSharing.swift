@@ -30,7 +30,7 @@ enum WidgetSharing {
         let selectedID = state.places.indices.contains(state.placeIndex) && !state.places[state.placeIndex].disable
             ? id(state.places[state.placeIndex]) : places.first?.id
         if WidgetStore.publish(places: places, selectedID: selectedID) {
-            WidgetCenter.shared.reloadTimelines(ofKind: WidgetStore.kind)
+            WidgetCenter.shared.reloadAllTimelines()
         }
     }
 
@@ -40,7 +40,7 @@ enum WidgetSharing {
               let target = WidgetStore.places().first(where: { $0.id == id && $0.request == request }),
               let weather = WidgetWeatherProjection.make(entry.weather, updatedAt: entry.loadedAt),
               WidgetStore.save(weather, for: target) else { return }
-        WidgetCenter.shared.reloadTimelines(ofKind: WidgetStore.kind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     struct Link {

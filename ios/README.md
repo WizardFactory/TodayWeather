@@ -119,7 +119,7 @@ Then run the tests; update `tolerances.json` with the measured values (the test 
 
 ## Home Screen weather widget (#3043)
 
-The iOS 17+ WidgetKit extension offers small current conditions and a medium forecast. Use **Edit Widget** to select an enabled place or follow the app selection. On medium, choose daily or hourly forecasts. Tapping opens the main app.
+The iOS 17+ WidgetKit gallery offers Classic Color, Morning Sky and Temperature Curve in small and medium sizes. Classic Color keeps the original widget identifier for existing placements. Small shows current conditions. The medium Temperature Curve plots separate daily high and low lines or an amber hourly forecast with a dashed lavender line for available temperatures at the same local hours on the previous day. Use **Edit Widget** to select an enabled place or follow the app selection. On medium, choose daily or hourly forecasts. Tapping opens the main app.
 
 A foreground scene activation records the visit in the App Group. Five elapsed days later, the widget replaces its weather with an invitation to open TodayWeather. The timeline includes this entry before it is needed. iOS controls when entries appear on screen. Background starts and widget requests leave the visit time unchanged. An expired widget skips weather requests until the app is opened. Within the window the extension can fetch updated weather using the configured location and units, with the last successful result and its update time available offline.
 

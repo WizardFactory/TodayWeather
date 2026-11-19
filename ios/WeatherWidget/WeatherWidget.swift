@@ -79,79 +79,52 @@ struct WeatherProvider: AppIntentTimelineProvider {
 }
 
 @main
-struct TodayWeatherWidget: Widget {
-    var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: WidgetStore.kind, intent: WeatherConfiguration.self,
-                               provider: WeatherProvider()) { entry in
-            WeatherWidgetView(entry: entry)
-                .widgetURL(entry.url)
-                .containerBackground(.background, for: .widget)
-        }
-        .configurationDisplayName("TodayWeather")
-        .description("Current conditions and forecasts for your place.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+struct TodayWeatherWidgets: WidgetBundle {
+    var body: some Widget {
+        ClassicWeatherWidget()
+        SkyWeatherWidget()
+        CurveWeatherWidget()
     }
 }
 
-struct WeatherWidgetView: View {
-    @Environment(\.widgetFamily) private var family
-    let entry: WeatherWidgetEntry
+enum WeatherDesign {
+    case classic, sky, curve
 
-    var body: some View {
-        switch entry.content {
-        case .openApp:
-            message("Open TodayWeather and check the weather to resume widget updates.")
-        case .unavailable:
-            message("Open TodayWeather to check the weather for this place.")
-        case let .weather(name, weather, mode):
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(name).font(.headline).lineLimit(1)
-                    Spacer(minLength: 3)
-                    Text(weather.date, style: Calendar.current.isDate(weather.date, inSameDayAs: entry.date) ? .time : .date)
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-                HStack(spacing: 6) {
-                    Image(systemName: weather.symbol).accessibilityHidden(true)
-                    Text(weather.temperature).font(.title.bold())
-                    if family == .systemMedium {
-                        Spacer()
-                        temperatureRange(weather)
-                    }
-                }
-                if family == .systemSmall { temperatureRange(weather) }
-                if !weather.air.isEmpty { Text(weather.air).font(.caption).lineLimit(1) }
-                if family == .systemMedium {
-                    forecastRow(mode == .daily ? weather.daily : weather.hourly)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    var kind: String {
+        switch self {
+        case .classic: WidgetStore.kind
+        case .sky: "TodayWeatherSky"
+        case .curve: "TodayWeatherCurve"
         }
     }
 
-    private func message(_ text: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label("TodayWeather", systemImage: "cloud.sun").font(.headline)
-            Text(text).font(.subheadline)
-        }.frame(maxWidth: .infinity, alignment: .leading)
+    var title: LocalizedStringKey {
+        switch self {
+        case .classic: "Classic Color"
+        case .sky: "Morning Sky"
+        case .curve: "Temperature Curve"
+        }
     }
+}
 
-    private func temperatureRange(_ weather: WidgetWeather) -> some View {
-        HStack(spacing: 6) {
-            if !weather.high.isEmpty { Text("↑ \(weather.high)") }
-            if !weather.low.isEmpty { Text("↓ \(weather.low)") }
-        }.font(.caption).foregroundStyle(.secondary)
-    }
+private struct ClassicWeatherWidget: Widget {
+    var body: some WidgetConfiguration { weatherConfiguration(.classic) }
+}
 
-    private func forecastRow(_ items: [WidgetForecast]) -> some View {
-        HStack(spacing: 2) {
-            ForEach(Array(items.prefix(6).enumerated()), id: \.offset) { _, item in
-                VStack(spacing: 2) {
-                    Text(item.label)
-                    Image(systemName: item.symbol).accessibilityHidden(true)
-                    Text(item.temperature)
-                }.frame(maxWidth: .infinity)
-            }
-        }.font(.caption2).lineLimit(1).minimumScaleFactor(0.75)
+private struct SkyWeatherWidget: Widget {
+    var body: some WidgetConfiguration { weatherConfiguration(.sky) }
+}
+
+private struct CurveWeatherWidget: Widget {
+    var body: some WidgetConfiguration { weatherConfiguration(.curve) }
+}
+
+@MainActor private func weatherConfiguration(_ design: WeatherDesign) -> some WidgetConfiguration {
+    AppIntentConfiguration(kind: design.kind, intent: WeatherConfiguration.self, provider: WeatherProvider()) { entry in
+        WeatherWidgetView(entry: entry, design: design).widgetURL(entry.url)
     }
+    .configurationDisplayName(design.title)
+    .description("Current conditions and forecasts for your place.")
+    .supportedFamilies([.systemSmall, .systemMedium])
+    .contentMarginsDisabled()
 }
