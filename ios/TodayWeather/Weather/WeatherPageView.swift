@@ -137,8 +137,9 @@ struct WeatherBlockView: View {
         let page = content.page
         switch block {
         case .header:
-            HeaderBlock(page: page, metrics: content.metrics, theme: theme, colors: colors, photo: content.photo, s: s,
+            HeaderBlock(page: page, metrics: content.metrics, theme: theme, colors: colors, photo: content.photo,
                         actions: actions)
+                .modifier(CordovaChromeTextSize())
         case .chart:
             chart(colors)
         case .hourlyAqi:
@@ -209,15 +210,17 @@ struct WeatherBlockView: View {
 
 // MARK: - The header block
 
-/// `[md-page-header]`: at least `headerHeight` tall with 64 pt above its content (the bar, on iOS) and 5 pt below (22 pt
-/// in the photo theme), the photo under it, and the main box (80 % wide) between the arrows, centered.
+/// The forecast summary uses the window-relative Cordova header dimensions. The shell reserves the status bar.
+/// The 80%-wide main box is centered between the arrows, with 5 pt below it (22 pt in the photo theme).
 private struct HeaderBlock: View {
     let page: ForecastPage
     let metrics: ChartMetrics
     let theme: Theme
     let colors: WeatherColors
     let photo: URL?
-    let s: TextScale
+    @Environment(\.shellInsets) private var insets
+    @Environment(\.sizeCategory) private var sizeCategory
+    private var s: TextScale { TextScale(sizeCategory) }
     let actions: WeatherPageActions
 
     var body: some View {
@@ -233,7 +236,7 @@ private struct HeaderBlock: View {
                     if page.arrows { arrow(Glyphs.chevronRight, width: width, label: "next", action: actions.next) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, WeatherMetrics.headerTop)
+                .padding(.top, WeatherMetrics.headerPadding(insets: insets))
                 .padding(.bottom, colors.headerBottom)
             }
         }
@@ -254,7 +257,7 @@ private struct HeaderBlock: View {
     /// main box is 80 % of the page, whose width is the window's (`metrics.bodyWidth`, CODEX-IN08-2).
     var height: CGFloat {
         let content = MainBox.height(page: page, metrics: metrics, s: s, width: metrics.bodyWidth * 0.8)
-        return max(metrics.headerHeight, WeatherMetrics.headerTop + content + colors.headerBottom)
+        return WeatherMetrics.visibleHeaderHeight(metrics.headerHeight, content: content, bottom: colors.headerBottom, insets: insets)
     }
 
     /// `.main-box-arrow`: 10 % wide, the chevron (17 pt Ionicons) centered; a tap switches the place.
