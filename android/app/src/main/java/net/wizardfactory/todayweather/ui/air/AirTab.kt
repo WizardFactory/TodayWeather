@@ -1,10 +1,7 @@
 package net.wizardfactory.todayweather.ui.air
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,7 +25,6 @@ import net.wizardfactory.todayweather.core.domain.forecast.PageAction
 import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
 import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.core.storage.AppState
-import net.wizardfactory.todayweather.ui.forecast.Bubbles
 import net.wizardfactory.todayweather.ui.forecast.LOCATION_OFF
 import net.wizardfactory.todayweather.ui.forecast.LOCATION_ON
 import net.wizardfactory.todayweather.ui.forecast.SourceDialog
@@ -49,12 +45,13 @@ import net.wizardfactory.todayweather.ui.shell.line
  * of TabCtrl's `applyEvent`s ([applies]: a load starting, the gate included, or a response applied) it returns to
  * the first station first. A detail or station cell selects its pollutant or station and brings the page to the top;
  * the current weather opens S03 ([onWeather]); the standard opens the units page ([onUnits], `goUnitsPage`) and the
- * forecast source its popup (O08). The title, location glyph (inert on S05, A10), spinner, bell and share are the
+ * forecast source its popup (O08). The title, location glyph (inert on S05, A10), refresh indicator, bell and share are the
  * weather pages'. A new air standard chosen on S08 goes to the visit as it is (`changeAirUnitEvent`).
  */
 @Composable
 fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme, host: WeatherTabHost,
-                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null): TabContent {
+                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}, locating: Boolean = false,
+                   nativeAd: (@Composable () -> Unit)? = null): TabContent {
     val metrics = rememberScreenMetrics()
     val texts = host.texts
     val airUnit = state.units.airUnit
@@ -86,7 +83,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
     val scroll = remember(visit) { ScrollState(0) }
     val scope = rememberCoroutineScope()
     var source by remember(visit) { mutableStateOf<String?>(null) }
-    val loadingSelected = place != null && WeatherRepository.key(place) in loading
+    val loadingSelected = place != null && (WeatherRepository.key(place) in loading || place.currentPosition && locating)
     // `$ionicScrollDelegate.scrollTop()`: at once, without animation.
     fun toTop() {
         taps++
@@ -94,6 +91,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
     }
     return TabContent(
         title = page.title,
+        refreshing = if (place != null && !place.disable) loadingSelected else null,
         afterTitle = { colors ->
             if (page.currentPosition && !loadingSelected) {
                 // `switchToLocationSettings()` is not defined on S05: the glyph does nothing (A10).
@@ -102,10 +100,6 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
                     OutlinedText(" $glyph", line(19.sp, TextUnit.Unspecified, colors.headerText, family = Glyphs.materialIcons), colors.headerOutline,
                         Modifier.testTag(WeatherTabTags.LOCATION))
                 }
-            }
-            if (loadingSelected) {
-                Spacer(Modifier.width(4.dp))
-                Bubbles(Modifier.size(14.dp).testTag(WeatherTabTags.SPINNER))
             }
         },
         actions = { colors ->

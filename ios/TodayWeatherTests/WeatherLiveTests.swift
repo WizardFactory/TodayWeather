@@ -82,9 +82,8 @@ struct WeatherLiveTests {
         let x = try #require(w.chartScroll).contentOffset.x
         #expect(abs(x - end) < 1.0 / 6, "the chart keeps the user's position: \(x), was \(end)")
 
-        // A real applyEvent (a tab tap reloads) still brings the chart back to today's position.
-        f.shell.now = { 10_000 }
-        f.shell.tapTab(.forecast)
+        // A manual refresh still brings the chart back to today's position.
+        await f.screens.session.refresh()
         #expect(await eventually { (f.screens.scope?.scrolls ?? 0) > applies + 1 })
     }
 
@@ -147,7 +146,7 @@ struct WeatherLiveTests {
             let hero = try #require(content.page.hero)
             let s = TextScale(.extraExtraExtraLarge)
             let big = content.metrics.bigFontSize
-            let temperature = [CssRun(text: hero.temperature, size: big), CssRun(text: "˚", size: big / 2)]
+            let temperature = WeatherMetrics.temperatureRuns(hero.temperature, size: big)
             let row = CssLine.width(temperature) + content.metrics.bigImageSize
             let box = size.width * 0.8
             #expect(row <= box + 0.5, "\(size): the temperature row \(row) fits the main box \(box)")

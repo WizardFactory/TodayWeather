@@ -42,6 +42,7 @@ enum AirBlock: Hashable {
 /// What the page's taps ask for: the arrows, a detail cell's pollutant, a station, the current weather (S03) and the
 /// info rows (the units page, the forecast source's description O08).
 struct AirPageActions {
+    var refresh: @MainActor () async -> Void = {}
     var previous: () -> Void = {}
     var next: () -> Void = {}
     var code: (String) -> Void = { _ in }
@@ -60,9 +61,11 @@ struct AirPageView: View {
     var actions = AirPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it).
     var scrolls = true
+    @Environment(\.shellInsets) private var shellInsets
 
     var body: some View {
         let colors = AirColors.of(theme)
+        let barHeight = ShellMetrics.headerHeight + shellInsets.top
         let stack = VStack(spacing: 0) {
             Color.clear.frame(height: 0).id(AirPageView.top)
             VStack(spacing: 0) {
@@ -82,7 +85,13 @@ struct AirPageView: View {
         Group {
             if scrolls {
                 ScrollViewReader { proxy in
-                    ScrollView(.vertical, showsIndicators: false) { stack }
+                    ScrollView(.vertical, showsIndicators: false) {
+                        stack.padding(.top, -barHeight)
+                    }
+                        // Keep the hero under the translucent bar and the pull indicator below it.
+                        .scrollClipDisabled()
+                        .padding(.top, barHeight)
+                        .refreshable { await actions.refresh() }
                         .onChange(of: content.scrolls) { proxy.scrollTo(AirPageView.top, anchor: .top) }
                 }
             } else {
@@ -111,7 +120,8 @@ struct AirBlockView: View {
         let page = content.page
         switch block {
         case .header:
-            AirHeader(page: page, metrics: content.metrics, theme: theme, colors: colors, s: s, actions: actions)
+            AirHeader(page: page, metrics: content.metrics, theme: theme, colors: colors, actions: actions)
+                .modifier(CordovaChromeTextSize())
         case .gauge:
             AirGaugeView(gauge: page.gauge, colors: colors, s: s)
                 .padding(.horizontal, 4)
@@ -151,14 +161,16 @@ struct AirBlockView: View {
 
 // MARK: - The header block
 
-/// `[md-page-header]`: at least `headerHeight` tall with 64 pt above its content (the bar, on iOS) and 5 pt below, the
-/// main box (80 % wide) between the arrows, centered. Without a main box the arrows share the space around them.
+/// Air uses the same window-relative header geometry as the forecast tabs. The main box takes 80% of its width.
+/// Without a main box the arrows share the space around them.
 private struct AirHeader: View {
     let page: AirPage
     let metrics: ChartMetrics
     let theme: Theme
     let colors: AirColors
-    let s: TextScale
+    @Environment(\.shellInsets) private var insets
+    @Environment(\.sizeCategory) private var category
+    private var s: TextScale { TextScale(category) }
     let actions: AirPageActions
 
     var body: some View {
@@ -182,13 +194,13 @@ private struct AirHeader: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.top, WeatherMetrics.headerTop)
+            .padding(.top, WeatherMetrics.headerPadding(insets: insets))
             .padding(.bottom, 5)
         }
         .frame(height: height)
         .background(colors.page.header.color)
         .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 20).onEnded { value in
+        .simultaneousGesture(DragGesture(minimumDistance: 20).onEnded { value in
             // Ionic's swipe: a horizontal fling; left shows the next place.
             let dx = value.predictedEndTranslation.width
             guard abs(value.translation.width) > abs(value.translation.height) else { return }
@@ -201,7 +213,7 @@ private struct AirHeader: View {
     /// `min-height: headerHeight`, or the content with its padding when taller (larger text).
     var height: CGFloat {
         let content = page.main.map { AirMainBox.height(main: $0, metrics: metrics, s: s, width: metrics.bodyWidth * 0.8) } ?? 0
-        return max(metrics.headerHeight, WeatherMetrics.headerTop + content + 5)
+        return WeatherMetrics.visibleHeaderHeight(metrics.headerHeight, content: content, bottom: 5, insets: insets)
     }
 
     /// `.main-box-arrow`: 10 % wide, the chevron (17 pt Ionicons) centered; a tap switches the place.

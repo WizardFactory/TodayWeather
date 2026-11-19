@@ -16,6 +16,8 @@ These are the states of the Cordova manual's pages 3 to 9 (S03 at the top and in
 ## Tests
 
 - `ForecastScreenshotTest` (app, Robolectric native graphics, SDK 34): every block of both pages, rendered at 384 dp and density 2 from the same fixtures, against the PNGs; each comparison passes within the tolerance recorded for it (`ImageDiff`). Renders and difference overlays go to `app/build/forecast-compare/`.
+- Native forecast headers show the decimal point and following digits at 70% of the whole-number font size. For a decimal reading, the test replaces only the captured temperature, degree and adjacent sky icon rectangle with the matching SDK 34 [native row](../../app/src/test/resources/native-temperature/). The icon moves horizontally as the narrower row stays centered. The original comparison tolerances apply to the resulting image. Both locales share row pixels at each width. The Old theme supplies separate Hourly and Daily backgrounds. The Korean notification screenshot tests apply the alert scrim over the same Light row. Integer temperatures use the unmodified Cordova reference.
+
 - `ForecastPageTest` (core-domain): the text, images and grade colors of every element of the JSON records against the page model, and the template rules the captures do not reach.
 - CI runs the JVM tests in both Android jobs; the job with `client/` also runs [`tools/emulator/check-sources.mjs`](../emulator/check-sources.mjs), which fails when a page source in `client/www` no longer matches the one in `provenance.json`.
 

@@ -183,6 +183,9 @@ class PairedReadTests(unittest.TestCase):
         result = capture.capture(slow.origin, manifest()['cases'][0], {}, self.path, 1, .4, self.lockfile.fileno())
         self.assertEqual(result['error'], 'deadline')
         self.assertLess(time.monotonic()-started, 1.5)
+        # SR-5a (#3003): the parent stopped this child, so nothing was captured.
+        self.assertIs(result['captured'], False)
+        self.assertFalse({'body_bytes', 'body_sha256'} & set(result))
         large = self.peer(body=b'x' * (capture.MAX_BODY + 1))
         result = capture.capture(large.origin, manifest()['cases'][0], {}, self.path, 2, 3, self.lockfile.fileno())
         self.assertEqual(result['error'], 'oversize')
@@ -385,6 +388,26 @@ class PairedReadTests(unittest.TestCase):
                                         idx, owner, .001)
                 result = json.loads((self.path/f'{idx}.json').read_text())
                 self.assertEqual(result.get('error'), 'deadline' if immediate else None)
+                # The child's own timeout keeps its files and body fields (SR-5a).
+                self.assertNotIn('captured', result)
+                self.assertEqual((result['body_bytes'], (self.path/f'{idx}.body').read_bytes()), (0, b''))
+
+    def test_a_child_the_parent_had_to_stop_is_a_capture_failure(self):
+        # SR-5a (#3003): deadline kill and worker exit are written by the parent with
+        # captured=false and no body fields, so the evidence audit needs no files for them.
+        slow = self.peer(delay=3)
+        case = manifest()['cases'][0]
+        killed = capture.capture(slow.origin, case, {}, self.path, 7, .3, self.lockfile.fileno())
+        self.assertEqual(set(killed), {'error', 'captured', 'elapsed_ms'})
+        self.assertEqual((killed['error'], killed['captured']), ('deadline', False))
+        exited = capture.capture(self.peer().origin, case, {}, self.path / 'missing-directory', 8, 3,
+                                 self.lockfile.fileno())
+        self.assertEqual(set(exited), {'error', 'captured', 'elapsed_ms'})
+        self.assertEqual((exited['error'], exited['captured']), ('worker-exit', False))
+        # A completed child's result is its own file, with body fields and no marker.
+        done = capture.capture(self.peer().origin, case, {}, self.path, 9, 3, self.lockfile.fileno())
+        self.assertNotIn('captured', done)
+        self.assertEqual(done['body_sha256'], capture.digest((self.path / '9.body').read_bytes()))
 
     def test_existing_directory_and_concurrent_owner_rejected(self):
         state = self.path / 'lock'

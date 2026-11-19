@@ -64,6 +64,10 @@ class ParityDeviceTest {
             app.weather.cached(place)
             app.appState.dataStore.updateData { it.copy(places = listOf(place), placeIndex = 0, units = UnitSettings.defaults("KR")) }
         }
+        if (TestRunner.args.getString("capture") == "true") {
+            rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).assertIsSelected()
+            capture("16-places")
+        }
         rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
         closeRetry()
         rule.onNodeWithTag(ForecastTags.HEADER).assertExists()
@@ -99,10 +103,8 @@ class ParityDeviceTest {
             closeRetry()
         }
         // Use the production refresh route with the offline host to exercise retry -> close.
-        app.weather.invalidate(place)
-        // The production double-tap guard uses elapsed wall time, not Compose's animation clock.
-        Thread.sleep(800)
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.onNodeWithTag(ForecastTags.HEADER).performScrollTo()
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).performTouchInput { swipeDown(startY = height * 0.22f) }
         rule.waitUntil(30_000) { rule.onAllNodesWithTag(RETRY_DIALOG).fetchSemanticsNodes().isNotEmpty() }
         closeRetry()
         rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }

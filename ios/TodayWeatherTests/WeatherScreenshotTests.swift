@@ -18,6 +18,16 @@ import TWModel
 struct WeatherScreenshotTests {
     nonisolated static let pages = ["kma-seoul-hourly", "kma-seoul-hourly-expanded", "kma-seoul-daily", "vc-london-hourly", "vc-london-daily"]
 
+    @Test func captureFractionalWeatherHeader() throws {
+        let page = "kma-seoul-hourly"
+        let content = try Self.content(page, exampleTemperature: -0.1)
+        #expect(content.page.hero?.temperature == "-0.1")
+        let header = Self.blockView(.header, content: content, page: page)
+        let bitmap = try render(header, width: 393, scale: 3)
+        let png = try #require(UIImage(cgImage: bitmap.image).pngData())
+        Attachment.record(png, named: "ios-fractional-header.png")
+    }
+
     @Test(arguments: pages)
     func pageBlocksMatchTheCordovaPages(page: String) throws {
         let manifest = try References.json("forecast-captures.json")
@@ -32,7 +42,8 @@ struct WeatherScreenshotTests {
             let kind = content.blocks[index]
             let view = Self.blockView(kind, content: content, page: page)
             let native = try render(view, width: 393, scale: scale)
-            let reference = try References.image(try #require(block["file"]?.stringValue))
+            let file = try #require(block["file"]?.stringValue)
+            let reference = try References.image(Self.referenceFile(file, block: kind, content: content))
             let diff = ImageDiff(native: native, reference: reference)
             try diff.write("forecast-\(name)")
             // A block that ends under the tab bar was captured without its last points (`hidden`).
@@ -50,9 +61,15 @@ struct WeatherScreenshotTests {
         print("FORECAST-COMPARE \(ImageDiff.directory.path)\n" + report.joined(separator: "\n"))
     }
 
+    /// The native baseline replaces only the temperature and its recentered sky icon in fractional headers.
+    static func referenceFile(_ file: String, block: WeatherBlock, content: WeatherPageContent) -> String {
+        guard block == .header, content.page.hero?.temperature.contains(".") == true else { return file }
+        return "fractional-" + file
+    }
+
     /// The page model of a captured page: the served response converted, with the place's own fields, applied as the
     /// Cordova visit did (London as the second of two places).
-    static func content(_ page: String) throws -> WeatherPageContent {
+    static func content(_ page: String, exampleTemperature: Double? = nil) throws -> WeatherPageContent {
         let manifest = try References.json("forecast-captures.json")
         let fixture = page.hasPrefix("vc-london") ? "vc-london" : "kma-seoul"
         let place = try #require(manifest["places"]?[fixture]?.objectValue)
@@ -61,6 +78,10 @@ struct WeatherScreenshotTests {
         for field in WeatherRepository.weatherFields { if let v = converted[field], Js.truthy(v) { record[field] = v } }
         for key in ["name", "address", "country", "location"] { record[key] = place[key] }
         record["currentPosition"] = .bool(false)
+        if let exampleTemperature, var current = record["currentWeather"]?.objectValue {
+            current["t1h"] = .number(exampleTemperature)
+            record["currentWeather"] = .object(current)
+        }
         var scope = ForecastScope(type: page.contains("daily") ? .mid : .short, metrics: ChartMetrics(bodyWidth: 393, bodyHeight: 852),
                                   fahrenheit: false, photoTheme: false,
                                   yesterday: YesterdayText(same: Catalog(code: "ko")("LOC_SAME_AS_YESTERDAY"),

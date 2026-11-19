@@ -36,8 +36,9 @@ NAMESPACE = 'server2'
 UNITS = {'server2.service': 'server', 'server2-logs.service': 'collector',
          'server2-logs-status.service': 'collector', 'server2-logs-watch.service': 'collector'}
 # Sources a unit can be shipped as (LP-6, #2983): the qualification host adds its shadow
-# guard and paired reader. Their output leaves the host only as JSON objects.
-SOURCES = ('server', 'collector', 'guard', 'reader')
+# guard and paired reader, and its evidence copy and finalizer as `copy` (SR-5a, #3003).
+# Their output leaves the host only as JSON objects.
+SOURCES = ('server', 'collector', 'guard', 'reader', 'copy')
 
 
 def use_units(pairs):

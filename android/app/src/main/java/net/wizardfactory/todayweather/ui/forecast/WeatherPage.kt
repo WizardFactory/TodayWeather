@@ -263,6 +263,14 @@ private fun MainBox(page: ForecastPage, metrics: ChartMetrics, theme: Theme, col
     }
 }
 
+internal fun temperatureNumber(value: String, size: Double): AnnotatedString = buildAnnotatedString {
+    append(value)
+    val point = value.indexOf('.')
+    if (point >= 0) {
+        addStyle(SpanStyle(fontSize = (size * 0.7).sp), point, value.length)
+    }
+}
+
 /**
  * The temperature in the light weight at [size] sp with its sign at half the size, raised by a third of [size]
  * (`vertical-align: super`) without making the line taller, as in the WebView.
@@ -271,7 +279,7 @@ private fun MainBox(page: ForecastPage, metrics: ChartMetrics, theme: Theme, col
 private fun Temperature(value: String, size: Double, color: Color, modifier: Modifier) {
     val style = plain(size.sp, color, FontWeight.Light)
     Layout(content = {
-        Text(value, style = style)
+        Text(temperatureNumber(value, size), style = style)
         Text("˚", style = style.copy(fontSize = (size / 2).sp))
     }, modifier = modifier) { (number, sign), constraints ->
         val loose = constraints.copy(minWidth = 0, minHeight = 0)

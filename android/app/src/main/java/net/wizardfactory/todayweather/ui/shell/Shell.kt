@@ -7,6 +7,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,11 +39,14 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
@@ -51,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -120,6 +127,7 @@ object ShellTags {
     const val MENU = "shell-menu"
     const val MENU_BACK = "shell-menu-back"
     const val EXIT_DIALOG = "shell-exit-dialog"
+    const val REFRESHING = "shell-refreshing"
     const val BANNER = "shell-banner"
     fun tab(tab: Tab) = "shell-tab-${tab.state}"
     fun page(tab: Tab) = "shell-page-${tab.state}"
@@ -167,10 +175,12 @@ fun rememberShellNavigation(startup: Tab): ShellNavigation = rememberSaveable(sa
 
 /**
  * What a tab shows: its page, and in the header bar its title with what follows it (the weather pages' location
- * glyph and spinner) and its buttons. [scrolled] is the page's scroll in dp: the photo theme's bar darkens with it.
+ * glyph) and its buttons. [scrolled] is the page's scroll in dp: the photo theme's bar darkens with it.
  */
 class TabContent(
     val title: String = "",
+    /** Loading state of a page that supports pull-to-refresh. */
+    val refreshing: Boolean? = null,
     /** A header of the tab's own in place of the title bar (S02's search field), given the colors and the menu's opener. */
     val header: (@Composable (ShellColors, () -> Unit) -> Unit)? = null,
     val afterTitle: @Composable RowScope.(ShellColors) -> Unit = {},
@@ -211,7 +221,6 @@ fun TodayWeatherShell(
     val selected = navigation.selected
     val menuOpen = navigation.menuOpen
     var exitAsked by rememberSaveable { mutableStateOf(false) }
-    var lastTap by remember { mutableLongStateOf(0L) }
     val colors = ShellColors.of(state.theme, selected)
 
     BackHandler(enabled = menuOpen) { navigation.menuOpen = false }
@@ -228,7 +237,7 @@ fun TodayWeatherShell(
                     Box(Modifier.fillMaxWidth().weight(1f).windowInsetsPadding(WindowInsets.sides)) {
                         Column(Modifier.fillMaxSize()) {
                             Box(Modifier.fillMaxWidth().weight(1f).testTag(ShellTags.page(selected))) {
-                                tab.page(this, colors)
+                                RefreshablePage(tab, colors) { onRefresh(selected) }
                                 val header = tab.header
                                 if (header != null) {
                                     header(colors) { navigation.menuOpen = true }
@@ -238,17 +247,10 @@ fun TodayWeatherShell(
                                 }
                             }
                             TabBar(selected, colors) { tab ->
-                                val now = System.currentTimeMillis()
-                                if (onTabTap(tab)) {
-                                    // Taken before the tab changes or reloads.
-                                } else if (tab == selected) {
-                                    // Cordova: the selected weather or air tab refreshes; a second tap within 700 ms does nothing.
-                                    if (tab != Tab.LOCATIONS && now - lastTap >= 700) onRefresh(tab)
-                                } else {
+                                if (!onTabTap(tab) && tab != selected) {
                                     navigation.selected = tab
                                     onSelect(tab)
                                 }
-                                lastTap = now
                             }
                         }
                         overlay()
@@ -268,6 +270,34 @@ fun TodayWeatherShell(
             }
         }
     }
+}
+
+private val HeaderHeight = 44.dp
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BoxScope.RefreshablePage(tab: TabContent, colors: ShellColors, onRefresh: () -> Unit) {
+    val refreshing = tab.refreshing
+    if (refreshing == null) {
+        tab.page(this, colors)
+        return
+    }
+    val state = rememberPullToRefreshState()
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = onRefresh,
+        state = state,
+        modifier = Modifier.fillMaxSize(),
+        indicator = {
+            Box(Modifier.align(Alignment.TopCenter).padding(top = HeaderHeight)) {
+                PullToRefreshDefaults.Indicator(
+                    state = state,
+                    isRefreshing = refreshing,
+                    modifier = if (refreshing) Modifier.testTag(ShellTags.REFRESHING) else Modifier,
+                )
+            }
+        },
+    ) { tab.page(this, colors) }
 }
 
 /**
@@ -292,7 +322,7 @@ fun HeaderBar(
             Row { actions() }
             BarTitle(title, colors, afterTitle = afterTitle)
         },
-        modifier = Modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).drawBehind {
+        modifier = Modifier.fillMaxWidth().height(HeaderHeight).background(colors.headerBar).drawBehind {
             val y = scrolled()
             if (y >= 44) {
                 val start = minOf(1f, (y - 44) / 88)
@@ -350,26 +380,34 @@ private fun BarTitle(title: String, colors: ShellColors, modifier: Modifier = Mo
 @Composable
 fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
+        Modifier.selectableGroup().fillMaxWidth().heightIn(min = 49.dp).background(colors.tabBar).hairline(colors.tabLine, bottom = false).padding(top = 2.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
         for (tab in Tab.entries) {
             val on = tab == selected
+            val ink = if (on) colors.tabSelected else colors.tabText
             val (glyph, label) = when (tab) {
-                Tab.LOCATIONS -> (if (on) Glyphs.STAR else Glyphs.STAR_OUTLINE) to R.string.LOC_SAVED_LOCATIONS
-                Tab.HOURLY -> (if (on) Glyphs.REFRESH else Glyphs.TIME) to R.string.LOC_HOURLY_FORECAST
-                Tab.DAILY -> (if (on) Glyphs.REFRESH else Glyphs.CALENDAR) to R.string.LOC_DAILY_FORECAST
-                Tab.AIR -> (if (on) Glyphs.REFRESH else Glyphs.CLOUD_OUTLINE) to R.string.LOC_AIR_INFORMATION
+                Tab.LOCATIONS -> Glyphs.STAR_OUTLINE to R.string.LOC_SAVED_LOCATIONS
+                Tab.HOURLY -> Glyphs.CLOCK_OUTLINE to R.string.LOC_HOURLY_FORECAST
+                Tab.DAILY -> Glyphs.CALENDAR_OUTLINE to R.string.LOC_DAILY_FORECAST
+                Tab.AIR -> Glyphs.CLOUD_OUTLINE to R.string.LOC_AIR_INFORMATION
             }
             // .tab-item: flex 1 up to 150 dp; wider windows center the items (.tabs justify-content).
             Column(
                 Modifier.weight(1f, fill = false).widthIn(max = 150.dp).fillMaxWidth().heightIn(min = 47.dp).alpha(if (on) 1f else 0.7f)
-                    .clickable { onTab(tab) }.testTag(ShellTags.tab(tab)),
+                    .drawBehind {
+                        if (on) {
+                            val width = 24.dp.toPx()
+                            drawRoundRect(ink, Offset((size.width - width) / 2, -1.dp.toPx()),
+                                Size(width, 2.5.dp.toPx()), CornerRadius(2.dp.toPx()))
+                        }
+                    }
+                    .selectable(selected = on, role = Role.Tab, onClick = { onTab(tab) }).testTag(ShellTags.tab(tab)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon { LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons)) }
+                Icon { LineText(glyph, line(32.sp, 32.sp, ink, family = Glyphs.ionicons)) }
                 // A label too long for its item (large text, a narrow window) wraps onto a second line.
-                LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText).copy(textAlign = TextAlign.Center, hyphens = Hyphens.Auto, lineBreak = LineBreak.Heading), maxLines = 2)
+                LineText(stringResource(label), line(10.sp, 14.sp, ink).copy(textAlign = TextAlign.Center, hyphens = Hyphens.Auto, lineBreak = LineBreak.Heading), maxLines = 2)
             }
         }
     }
@@ -436,7 +474,7 @@ fun SideMenu(state: ShellState, onRow: (MenuRow?) -> Unit) {
  */
 @Composable
 internal fun PlainHeader(title: String, colors: ShellColors, onBack: () -> Unit, modifier: Modifier = Modifier, backTag: String) {
-    Box(modifier.fillMaxWidth().height(44.dp).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
+    Box(modifier.fillMaxWidth().height(HeaderHeight).background(colors.headerBar).hairline(colors.headerLine, bottom = true)) {
         BarTitle(title, colors, Modifier.align(Alignment.TopCenter).padding(horizontal = 10.dp))
         BarButton(Glyphs.ARROW_BACK, colors, onBack, Modifier.padding(start = 5.dp).testTag(backTag))
     }

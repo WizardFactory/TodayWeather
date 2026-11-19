@@ -23,6 +23,26 @@ enum NationFixtures {
 extension HostedShellTests {
 @MainActor
 struct NationTests {
+    @Test(arguments: [DynamicTypeSize.large, .xLarge])
+    func ulsanWindFitsAboveBusan(typeSize: DynamicTypeSize) async throws {
+        var content = try NationScreenshotTests.state("nation-wind").1
+        content.labels = content.labels.map { city in
+            guard city.name == "울산" else { return city }
+            return NationLabel(name: city.name, top: city.top, left: city.left,
+                               lines: [LabelLine(text: "북북서"), LabelLine(text: "3", unit: "m/s")])
+        }
+        let app = try HostedView(NationWeatherBody(content: content, theme: .light, onMode: { _ in }),
+                                 size: CGSize(width: 375, height: 667), dynamicType: typeSize)
+        defer { app.close() }
+        try await app.settle()
+        let ulsan = try #require(app.element("nation-label-울산")).accessibilityFrame
+        let busan = try #require(app.element("nation-label-부산")).accessibilityFrame
+        // Both cities have one name, one direction and one speed row.
+        #expect(abs(ulsan.height - busan.height) < 1)
+        #expect(ulsan.maxY <= busan.minY, "Ulsan \(ulsan), Busan \(busan)")
+        #expect(app.window.frame.contains(ulsan))
+    }
+
     /// A server double on the real clock: per request the behavior its URL asks for.
     final class Server: WeatherHTTP, @unchecked Sendable {
         enum Behavior { case answer(Double, Data), fail(Double, Int) }

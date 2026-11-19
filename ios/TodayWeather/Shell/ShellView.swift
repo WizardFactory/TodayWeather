@@ -105,6 +105,15 @@ struct SplashFrame: View {
     }
 }
 
+/// Cordova used fixed CSS sizes in the forecast summary and navigation bars.
+struct CordovaChromeTextSize: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var size
+
+    func body(content: Content) -> some View {
+        content.environment(\.dynamicTypeSize, size.isAccessibilitySize ? size : min(size, .large))
+    }
+}
+
 /// The frame every screen shares (IN-07): the page of the selected tab under its header bar, the bottom tab bar, the
 /// full-screen side menu, the popups and the reserved slot for the bottom banner (IN-15), laid out as the Cordova iOS
 /// build: the status bar in the theme's color (`applyIOSStatusBar`) above the WebView's area; the tab bar reaching the
@@ -171,6 +180,7 @@ struct ShellFrame: View {
                 .clipped()
                 TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
                        onTap: model.tapTab)
+                    .modifier(CordovaChromeTextSize())
                 if let banner {
                     // IN-15: black below the banner, over the home indicator's inset (the plugin's root view).
                     banner.frame(maxWidth: .infinity).padding(.bottom, insets.bottom).background(Color.black)
@@ -222,12 +232,18 @@ struct BarFrame<Leading: View, Trailing: View>: View {
     var titleView: AnyView? = nil
     let insets: ShellInsets
     let titleIdentifier: String
+    var usesCordovaTitleSize = false
     /// How far WebKit puts the title below where SwiftUI centers it on the 44 pt line (measured: 1 pt in a tab's
     /// `ion-header-bar`, -1/3 pt in the menu's `header.bar`).
     var titleOffset: CGFloat = ShellMetrics.titleBaseline
     @ViewBuilder let leading: () -> Leading
     @ViewBuilder let trailing: () -> Trailing
+    @Environment(\.dynamicTypeSize) private var dynamicType
     @ScaledMetric(relativeTo: .headline) private var titleSize = ShellMetrics.titleSize
+
+    private var displayedTitleSize: CGFloat {
+        usesCordovaTitleSize && !dynamicType.isAccessibilitySize ? min(titleSize, ShellMetrics.titleSize) : titleSize
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -238,7 +254,7 @@ struct BarFrame<Leading: View, Trailing: View>: View {
             } else {
                 HStack(spacing: 0) {
                     Text(title)
-                        .font(.system(size: titleSize, weight: .medium))
+                        .font(.system(size: displayedTitleSize, weight: .medium))
                         .foregroundStyle(colors.headerText.color)
                         .outlined(colors.headerOutline)
                         .lineLimit(1)
@@ -282,7 +298,7 @@ struct HeaderBar<Actions: View>: View {
 
     var body: some View {
         BarFrame(colors: colors, title: title, titleAccessory: titleAccessory, titleView: titleView, insets: insets,
-                 titleIdentifier: "shell-title") {
+                 titleIdentifier: "shell-title", usesCordovaTitleSize: true) {
             BarButton(glyph: Glyphs.navicon, colors: colors, width: 40, action: onMenu)
                 .accessibilityLabel("menu")
                 .accessibilityIdentifier("shell-menu-button")

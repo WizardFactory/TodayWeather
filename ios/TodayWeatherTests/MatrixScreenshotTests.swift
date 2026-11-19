@@ -140,7 +140,8 @@ struct MatrixScreenshotTests {
                 let index = Int(block["index"]?.numberValue?.double ?? -1)
                 let view = WeatherScreenshotTests.blockView(content.blocks[index], content: content, page: page, headerTop: display.top)
                 let native = render(view.frame(width: display.width), display, width: display.width, language: language)
-                let reference = try References.image(Self.file(display, language, try #require(block["file"]?.stringValue)))
+                let file = Self.file(display, language, try #require(block["file"]?.stringValue))
+                let reference = try References.image(WeatherScreenshotTests.referenceFile(file, block: content.blocks[index], content: content))
                 let hidden = Int((block["hidden"]?.numberValue?.double ?? 0) * Double(display.scale))
                 try report.compare("\(size)-\(language)-forecast-\(page)-\(index)", native, reference, hidden: hidden)
             }
@@ -223,8 +224,9 @@ struct MatrixScreenshotTests {
         let tabsReference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png"))
         // The home indicator iOS drew over the WebView's bottom inset in some captures (system UI, not the page's).
         let indicator = CGRect(x: display.width / 2 - 75, y: CGFloat(tabsReference.height) / display.scale - 14, width: 150, height: 12)
+        let masks = ShellScreenshotTests.legacyRefreshGlyph(.forecast, width: display.width) + (display.bottom > 0 ? [indicator] : [])
         try report.compare("\(size)-\(language)-shell-tabs",
-                           display.bottom > 0 ? tabs.copying([indicator], from: tabsReference, scale: display.scale) : tabs, tabsReference)
+                           tabs.copying(masks, from: tabsReference, scale: display.scale), tabsReference)
         let reference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-header.png"))
         let header = render(HeaderBar(colors: colors, title: "회현동", insets: insets, onMenu: {}) { EmptyView() }
             .background(reference.color(x: 2, y: 2)).frame(width: display.width), display, width: display.width, language: language)

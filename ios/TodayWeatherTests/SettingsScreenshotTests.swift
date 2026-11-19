@@ -96,7 +96,9 @@ struct SettingsScreenshotTests {
             renderer.scale = Self.scale
             renderer.proposedSize = ProposedViewSize(width: 393, height: nil)
             let native = Bitmap(try #require(renderer.cgImage, "render"))
-            try compare("ko-KR-\(state)-\(index)", native, try #require(block["file"]?.stringValue), tolerances, &report)
+            let file = try #require(block["file"]?.stringValue)
+            try compare("ko-KR-\(state)-\(index)", native,
+                        WeatherScreenshotTests.referenceFile(file, block: content.blocks[index], content: content), tolerances, &report)
         }
         print("SETTINGS-COMPARE \(ImageDiff.directory.path)\n" + report.joined(separator: "\n"))
     }

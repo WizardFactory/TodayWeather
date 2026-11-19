@@ -1,0 +1,34 @@
+{
+  "title": "TodayWeather for iOS · Main tabs",
+  "scenario": "Seoul fixture forecast, Korean controls and default text size. Each image shows the native app and system status bar on an iPhone 17 Pro simulator running iOS 26.5.",
+  "steps": [
+    {
+      "title": "Saved Places",
+      "instruction": "Tap 즐겨찾기 to see your saved locations.",
+      "screenshot": "search.png",
+      "caption": "Saved Places for the saved Seoul location.",
+      "expected": "The first saved place appears below the search bar."
+    },
+    {
+      "title": "Hourly weather",
+      "instruction": "Tap 시간별날씨 to see the current temperature and read the hourly forecast below it.",
+      "screenshot": "forecast.png",
+      "caption": "Hourly weather for the saved Seoul location.",
+      "expected": "The summary leads into the three-hour forecast chart."
+    },
+    {
+      "title": "Daily weather",
+      "instruction": "Tap 일별날씨 and read the high and low temperatures for each day.",
+      "screenshot": "dailyforecast.png",
+      "caption": "Daily weather for the saved Seoul location.",
+      "expected": "The daily chart starts below the selected location’s summary."
+    },
+    {
+      "title": "Air quality",
+      "instruction": "Tap 대기정보 to read the air grade for your selected place.",
+      "screenshot": "air.png",
+      "caption": "Air quality for the saved Seoul location.",
+      "expected": "The air-quality scale appears below the current reading and advice."
+    }
+  ]
+}

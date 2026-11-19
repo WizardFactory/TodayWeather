@@ -15,6 +15,10 @@
     {
       "id": "cleanup",
       "label": "Evidence and cleanup"
+    },
+    {
+      "id": "finish",
+      "label": "Operator finish"
     }
   ],
   "mainPath": [
@@ -75,27 +79,59 @@
     },
     {
       "id": "export",
-      "lane": "cleanup",
-      "col": 2,
+      "lane": "finish",
+      "col": 3,
       "type": "database",
-      "label": "Export originals",
-      "sublabel": "bytes + metadata"
+      "label": "Seal originals",
+      "sublabel": "version IDs and hashes"
     },
     {
       "id": "clean",
-      "lane": "cleanup",
-      "col": 1,
+      "lane": "finish",
+      "col": 2,
       "type": "cloud",
-      "label": "Delete owned",
-      "sublabel": "exact resources"
+      "label": "Dispose owned",
+      "sublabel": "retain incomplete state"
     },
     {
       "id": "verified",
-      "lane": "cleanup",
-      "col": 0,
+      "lane": "finish",
+      "col": 1,
       "type": "backend",
-      "label": "Verify absence",
-      "sublabel": "errors stay unknown"
+      "label": "Verify disposition",
+      "sublabel": "absence or retention"
+    },
+    {
+      "id": "copy",
+      "lane": "cleanup",
+      "col": 4,
+      "type": "backend",
+      "label": "Copy evidence",
+      "sublabel": "hourly; final after stop"
+    },
+    {
+      "id": "bucket",
+      "lane": "cleanup",
+      "col": 5,
+      "type": "database",
+      "label": "State bucket",
+      "sublabel": "logs/ and evidence/"
+    },
+    {
+      "id": "audit",
+      "lane": "finish",
+      "col": 5,
+      "type": "database",
+      "label": "Audit bucket first",
+      "sublabel": "SSH fills missing pairs"
+    },
+    {
+      "id": "fence",
+      "lane": "finish",
+      "col": 4,
+      "type": "security",
+      "label": "Fence the host",
+      "sublabel": "verified copy or 170h"
     }
   ],
   "edges": [
@@ -126,11 +162,6 @@
       "label": "candidate, guard, reader"
     },
     {
-      "from": "stop",
-      "to": "export",
-      "variant": "default"
-    },
-    {
       "from": "export",
       "to": "clean",
       "variant": "default"
@@ -141,10 +172,43 @@
       "variant": "default"
     },
     {
-      "from": "logs",
-      "to": "export",
+      "from": "collect",
+      "to": "copy",
       "variant": "default",
-      "label": "drained, then exported"
+      "label": "bodies, ledger snapshot"
+    },
+    {
+      "from": "stop",
+      "to": "copy",
+      "variant": "security",
+      "label": "final copy"
+    },
+    {
+      "from": "logs",
+      "to": "bucket",
+      "variant": "default",
+      "label": "logs/server2"
+    },
+    {
+      "from": "copy",
+      "to": "bucket",
+      "variant": "default",
+      "label": "evidence/"
+    },
+    {
+      "from": "bucket",
+      "to": "audit",
+      "variant": "default"
+    },
+    {
+      "from": "audit",
+      "to": "fence",
+      "variant": "security"
+    },
+    {
+      "from": "fence",
+      "to": "export",
+      "variant": "default"
     }
   ],
   "cards": [
@@ -154,15 +218,15 @@
       "items": [
         "Original epoch: 168h collection, 170h host expiry",
         "One initial process; resume never uploads twice",
-        "Exhausted grants and S3 allocations are recorded and reported"
+        "One cumulative cost ceiling (USD 300) priced from measured counters"
       ]
     },
     {
       "dot": "rose",
       "title": "Accounting and evidence",
       "items": [
-        "One cumulative USD 300 ceiling uses measured usage and prior spend",
-        "Guard stops when accrued cost plus the finish reserve reaches the ceiling",
+        "Guard stops with cost_ceiling when estimate + finish reserve reach the ceiling",
+        "Control envelopes and cleanup budgets are separate",
         "Missing original linkage stays incomplete; no live PASS"
       ]
     },
@@ -173,6 +237,24 @@
         "Candidate, guard and reader write to the server2 journal namespace; the collector ships them to logs/server2 in the run's state bucket.",
         "Server records at warn and above; guard and reader only as JSON objects; no URL, body or key.",
         "The collector never starts, stops or delays acquisition; the retention stop drains it before export."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Evidence copy (SR-5a)",
+      "items": [
+        "A host timer copies completed attempts' bodies, a consistent ledger snapshot and the run contract to evidence/ in the state bucket at least hourly; an index object commits each generation.",
+        "After the reader stops (any stop path or the 168h stop) a finalizer takes a final generation; it never delays the 170h poweroff.",
+        "The bucket alone proves the evidence: pending attempts and capture failures are reported, not counted as missing."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Resumable finish",
+      "items": [
+        "Resume into the original private output directory and retain verified version receipts.",
+        "After the exact instance is terminated, seal the version inventory before cleanup.",
+        "At the deadline, keep the state bucket without expiry when evidence export remains incomplete."
       ]
     }
   ]

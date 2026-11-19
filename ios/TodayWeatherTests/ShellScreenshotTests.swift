@@ -34,7 +34,8 @@ struct ShellScreenshotTests {
                 let name = "\(language)-\(theme)-\(tab.rawValue)"
                 // The tab bar.
                 let tabs = render(TabBar(selected: tab, colors: colors, catalog: catalog, insets: Self.insets, onTap: { _ in }))
-                try compare("\(name)-tabs", tabs, "shell-\(name)-tabs.png", tolerances, &report)
+                try compare("\(name)-tabs", tabs, "shell-\(name)-tabs.png", tolerances, &report,
+                            mask: Self.legacyRefreshGlyph(tab, width: Self.width))
                 // The hairlines (a whole-image metric barely sees a 0.5 pt line): the tab bar's top row and the header
                 // bar's bottom row as the capture has them.
                 let tabsReference = try References.image("shell-\(name)-tabs.png")
@@ -87,6 +88,15 @@ struct ShellScreenshotTests {
         try compare("ko-KR-splash", splash, "shell-ko-KR-splash.png", tolerances, &report, mask: [CGRect(x: 0, y: 0, width: 393, height: 54)],
                     scale: 1)
         print("SHELL-COMPARE\n" + report.joined(separator: "\n"))
+    }
+
+    /// The Cordova captures replace the selected weather tab's navigation icon with a reload arrow.
+    /// Compare the rest of the tab bar, including the selected label, against the original capture.
+    static func legacyRefreshGlyph(_ tab: ShellTab, width: CGFloat) -> [CGRect] {
+        guard tab != .search, let index = ShellTab.allCases.firstIndex(of: tab) else { return [] }
+        let itemWidth = min(width / CGFloat(ShellTab.allCases.count), ShellMetrics.tabItemMaxWidth)
+        let center = width / 2 + (CGFloat(index) - 1.5) * itemWidth
+        return [CGRect(x: center - 17, y: 2, width: 34, height: 32)]
     }
 
     /// Two colors within 24 levels per channel (WebKit blends the half-pixel line into its neighbor rows).

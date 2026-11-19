@@ -23,6 +23,19 @@ Scenarios (one run ID each, the host reset in between):
                  acquisition stops; the restarted collector ships what it missed (LP6-AC3)
   collector-broken  the collector cannot start; installation still starts acquisition (LP6-AC3)
   tampered       a changed collector file in the bundle is refused before anything starts (LP6-AC5)
+  evidence-copy  SR-5a (#3003): the copy timer (shortened by a test-only drop-in in this VM)
+                 ships contract, batches, ledger snapshots and indexes to the state bucket; a
+                 refused evidence PUT is logged and its record reaches the destination; the
+                 reader exits 2 on its own terminal state and a final generation follows with
+                 the reader `failed`; the 168-hour stop.service starts the finalizer again; the
+                 copy/finalize unit properties; the bucket-only audit of the stand-in's objects
+                 is complete while the host's data directory is unreachable. SR-5b then
+                 runs the operator finish CLI without SSH against those exact stored bytes
+                 and prebound synthetic resources, and verifies ordered stub cleanup.
+  evidence-candidate-exit  SR-5a: a killed candidate stops the reader and a final generation
+                 follows; the bucket-only audit is complete
+The storage-authorization (guard stop) and frozen-guard (watchdog kill) scenarios also
+require a final generation after acquisition stopped (SR-5a).
 
 The host is modified (units, /etc/hosts, CA store, iptables, journal namespace), so run
 it only in a throwaway VM, never on a qualification or server2 host:
@@ -58,6 +71,7 @@ STANDIN_STATE = WORK / 'standin'
 PEER_STATE = WORK / 'peers'
 IMDS_STATE = WORK / 'imds'
 UNITS_DIR = Path('/etc/systemd/system')
+INSTALL_ROOT = Path('/opt/server2-shadow')
 HOSTS_MARK = '# server2-shadow-check'
 RULE = 'server2-shadow-check'
 SYNTHETIC = 'SYNTHETIC-PRIVATE-2802'
@@ -70,8 +84,12 @@ PROVIDERS = ('apis.data.go.kr', 'apihub.kma.go.kr', 'www.weather.go.kr', 'www.km
              'airquality.googleapis.com', 'fcm.googleapis.com', 'dapi.kakao.com', 'api.waqi.info',
              'weather.visualcrossing.com', 'api.openweathermap.org', 'api.openai.com')
 MARKER = 'PEER-BODY-MARKER-2983'
-RUNS = ('lp6-provider', 'lp6-storage', 'lp6-config', 'lp6-frozen', 'lp6-broken', 'lp6-tampered')
-SOURCES = {'server', 'guard', 'reader', 'collector'}
+RUNS = ('lp6-provider', 'lp6-storage', 'lp6-config', 'lp6-frozen', 'lp6-broken', 'lp6-tampered',
+        'sr5-evidence', 'sr5-candidate')
+SOURCES = {'server', 'guard', 'reader', 'collector', 'copy'}
+# Test-only drop-in for this disposable VM: the hourly copy timer every 20 seconds. The
+# generated product unit is unchanged (OnCalendar=hourly).
+COPY_TIMER_DROPIN = '[Timer]\nOnCalendar=\nOnCalendar=*:*:0/20\nAccuracySec=1s\n'
 
 
 def run(*args, check=True, **kwargs):
@@ -196,6 +214,8 @@ def reset_host():
     """Remove every earlier run's units, the namespace journal and the collector state."""
     for run_id in RUNS:
         name = 'server2-shadow-' + run_id
+        for dropin in UNITS_DIR.glob(name + '-*.d'):
+            shutil.rmtree(dropin)
         units = sorted(p.name for p in UNITS_DIR.glob(name + '-*'))
         if units:
             systemctl('stop', *units)
@@ -241,7 +261,7 @@ def prepare(args, run_id, interface):
     shutil.copy(args.collector_tarball, source / 'collector.tar.gz')
     for name in ('paired_read.py',):
         shutil.copy(SERVER2 / 'tools/shadow' / name, source / name)
-    for name in ('guard.py', 'coordinator.py', 'state.py', 'bootstrap.sh'):
+    for name in ('guard.py', 'coordinator.py', 'state.py', 'bootstrap.sh', 'evidence_copy.py'):
         shutil.copy(HERE / name, source / name)
     for name in ('collector.json', 'render.py', 'status.py'):
         shutil.copy(LOGGING / name, source / name)
@@ -383,7 +403,7 @@ def delivery_checks(report, entry, run_id, expect):
         by_source.setdefault(source, []).append(line)
     entry['observations']['records_per_source'] = {k: len(v) for k, v in sorted(by_source.items())}
     entry['observations']['objects'] = len(keys)
-    report.check(entry, 'only the four sources under logs/server2', set(by_source) <= SOURCES, sorted(by_source))
+    report.check(entry, 'only the five sources under logs/server2', set(by_source) <= SOURCES, sorted(by_source))
     actions = sorted({(o.get('service'), o.get('action'), o.get('bucket')) for o in operations
                       if o.get('bucket') == f'server2-shadow-{run_id}-state'})
     report.check(entry, 'the collector only puts objects into the state bucket', actions == [('s3', 'PutObject', f'server2-shadow-{run_id}-state')], actions)
@@ -391,6 +411,199 @@ def delivery_checks(report, entry, run_id, expect):
         report.check(entry, f'{source} records at the destination (LP6-AC1)', by_source.get(source), sorted(by_source))
     privacy_checks(report, entry, raw)
     return by_source
+
+
+def evidence_objects(run_id):
+    """The run's evidence objects as the stand-in stored them (state bucket, evidence/<run>/)."""
+    base = STANDIN_STATE / 's3' / 'evidence' / run_id
+    return sorted(p for p in base.iterdir() if p.is_file() and not p.name.startswith('.')) if base.exists() else []
+
+
+def evidence_indexes(run_id):
+    indexes = []
+    for path in evidence_objects(run_id):
+        if path.name.startswith('index-'):
+            try:
+                indexes.append(json.loads(path.read_text()))
+            except ValueError:
+                pass
+    return sorted(indexes, key=lambda index: index.get('generation', 0))
+
+
+def wait_final(run_id, seconds, after=0):
+    def found():
+        finals = [i for i in evidence_indexes(run_id) if i.get('kind') == 'final' and i.get('generation', 0) > after]
+        return finals[-1] if finals else None
+    return wait_until(found, seconds, 1)
+
+
+def final_check(report, entry, run_id, reader_state, after=0, label='the stop'):
+    """SR-5a: the finalizer started by the reader's stop commits a final generation."""
+    index = wait_final(run_id, 120, after)
+    entry['observations'].setdefault('final_generations', []).append(
+        index and {k: index.get(k) for k in ('generation', 'reader', 'terminal', 'attempts', 'shipped_total')})
+    report.check(entry, f'a final evidence generation after {label}, reader {reader_state} (SR-5a)',
+                 index is not None and index.get('reader') == {'state': reader_state, 'stopped': True},
+                 index and index.get('reader'))
+    return index
+
+
+def bucket_audit(report, entry, run_id):
+    """Operator-side audit from the stand-in's stored objects only, the host data unreachable."""
+    import evidence_audit
+    objects = [(f'evidence/{run_id}/{path.name}', path) for path in evidence_objects(run_id)]
+    launch_sha256 = coordinator.artifact_hash(WORK / 'runs' / run_id / 'bundle/launch.json')
+    data = INSTALL_ROOT / run_id / 'data'
+    hidden = data.with_name('data.unreachable')
+    workdir = WORK / 'audit' / run_id
+    shutil.rmtree(workdir, ignore_errors=True)
+    workdir.parent.mkdir(parents=True, exist_ok=True)
+    data.rename(hidden)
+    try:
+        result = evidence_audit.audit(objects, run_id=run_id, launch_sha256=launch_sha256, workdir=workdir)
+    finally:
+        hidden.rename(data)
+    summary = {k: result.get(k) for k in ('status', 'generation', 'kind', 'reader', 'generations', 'attempts')}
+    summary.update({k: len(result.get(k) or []) for k in ('pending', 'capture_failures', 'missing_or_mismatched', 'conflicts')})
+    entry['observations']['bucket_audit'] = summary
+    report.check(entry, 'bucket-only audit complete with the host data unreachable (SR-5a)', result['complete'], summary)
+    assembled = sorted((workdir / 'files').iterdir()) if (workdir / 'files').exists() else []
+    differing = [p.name for p in assembled if not (data / 'paired' / p.name).is_file()
+                 or (data / 'paired' / p.name).read_bytes() != p.read_bytes()]
+    report.check(entry, 'assembled files equal the host files', assembled and not differing,
+                 (len(assembled), differing[:5]))
+    return result
+
+
+def finish_cli_check(report, entry, run_id):
+    """Run the actual operator CLI against the uploaded bytes, with synthetic AWS only."""
+    import provision
+
+    work = WORK / 'runs' / run_id
+    fixture = work / 'finish-aws-fixture'
+    fixture.mkdir(mode=0o700)
+    prefix = f'server2-shadow-{run_id}'
+    resources = dict(schema=1, account='123456789012', region=REGION, run_id=run_id,
+                     instance='i-1234567890abcdef0', security_group='sg-1234567890abcdef0',
+                     volumes=['vol-1234567890abcdef0'], buckets=[prefix + '-raw', prefix + '-state'],
+                     role=prefix, profile=prefix, policy=prefix)
+    state_bucket = resources['buckets'][1]
+    # The loopback receiver stores confirmed uploads as files, without AWS
+    # version IDs. Give the exact evidence bytes deterministic fixture IDs.
+    versions = []
+    for number, path in enumerate(evidence_objects(run_id), 1):
+        mirror = fixture / f'{number}.object'
+        shutil.copyfile(path, mirror)
+        versions.append(dict(bucket=state_bucket, key=f'evidence/{run_id}/{path.name}',
+                             version=f'v{number:05}', kind='object', path=mirror.name,
+                             size=mirror.stat().st_size, sha256=coordinator.artifact_hash(mirror)))
+    manifest = fixture / 'fixture.json'
+    fd = os.open(manifest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        json.dump(dict(resources=resources, versions=versions, instance_state='running',
+                       buckets=resources['buckets']), stream)
+
+    launch_sha256 = coordinator.artifact_hash(work / 'bundle/launch.json')
+    journal_path = work / 'journal'
+    with state.Journal(journal_path) as journal:
+        # Keep the real generation journal. Its host install receipt and the
+        # ownership proof below model the operator's records for this fixture.
+        now = journal.snapshot()['last_seen']
+        provision.freeze_plan(journal, dict(schema=1, run_id=run_id, account=resources['account'],
+                                            region=REGION, image='ami-12345678', vpc='vpc-12345678',
+                                            subnet='subnet-12345678', key_name='fixture-key',
+                                            operator_cidr='8.8.8.8/32', root_device='/dev/xvda'), now)
+        journal.prepare_request('host-install', 'HostInstall', {'launch_sha256': launch_sha256},
+                                'fixture', now=now)
+        journal.record_receipt('host-install', state.CloudResult('empty_success', 'HostInstall'))
+        journal.record_cleanup_ownership(coordinator.resource_digest(resources), resources['instance'],
+                                         resources=resources)
+
+    cli = SERVER2 / 'tests/integration/shadow_finish_fake_aws.py'
+    output = work / 'finish'
+    env = dict(PATH=str(Path(sys.executable).parent) + os.pathsep + os.defpath,
+               SHADOW_FINISH_AWS_FIXTURE=str(manifest), PYTHONDONTWRITEBYTECODE='1')
+    data = INSTALL_ROOT / run_id / 'data'
+    hidden = data.with_name('data.unreachable')
+    data.rename(hidden)
+    try:
+        result = run(sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
+                     '--state', str(journal_path), '--output', str(output),
+                     '--aws-executable', str(cli), env=env, check=False, timeout=180)
+    finally:
+        hidden.rename(data)
+
+    receipt = parsed(result.stdout.strip()) or {}
+    paired = receipt.get('host_evidence', {})
+    cleanup = receipt.get('cleanup', {})
+    summary = dict(aws='local-version-store', exit_code=result.returncode,
+                   evidence_status=paired.get('status'), source_versions=len(versions),
+                   cleanup_complete=cleanup.get('complete'))
+    entry['observations']['finish_cli'] = summary
+    report.check(entry, 'finish CLI completed without SSH or host data (SR-5b F1)',
+                 result.returncode == 0 and receipt.get('schema') == 2 and paired.get('complete') is True
+                 and cleanup.get('complete') is True, summary)
+    if result.returncode != 0:
+        return
+    expected_files = WORK / 'audit' / run_id / 'files'
+    actual_files = output / paired['directory'] / 'files'
+    hashes = lambda directory: {p.name: coordinator.artifact_hash(p) for p in directory.iterdir()}
+    expected = hashes(expected_files)
+    report.check(entry, 'finish CLI paired files match the independent bucket audit',
+                 bool(expected) and hashes(actual_files) == expected, {'paired_files': len(expected)})
+
+    sources = output / 'sources'
+    exported = json.loads((sources / 'manifest.json').read_bytes())
+    identity = lambda row: (row['bucket'], row['key'], row['version'])
+    expected_sources = {identity(row): row['sha256'] for row in versions}
+    actual_sources = {identity(row): coordinator.artifact_hash(sources / row['file'])
+                      for row in exported['objects'] if row['status'] == 'exported'}
+    report.check(entry, 'finish CLI original versions match the loopback uploads',
+                 exported['complete'] and actual_sources == expected_sources)
+    calls = [json.loads(line) for line in (fixture / 'aws-calls.jsonl').read_text().splitlines()]
+    commands = [call['command'] for call in calls]
+    # These operations refer only to the lifecycle of the synthetic resources.
+    terminate = commands.index('terminate-instances') if 'terminate-instances' in commands else len(calls)
+    delete = next((i for i, command in enumerate(commands)
+                   if command.startswith(('delete-', 'remove-'))), len(calls))
+    between = calls[terminate + 1:delete]
+    listed_after_fence = [call['parameters']['Bucket'] for call in between
+                          if call['command'] == 'list-object-versions' and 'Prefix' not in call['parameters']]
+    report.check(entry, 'finish reads evidence before the synthetic writer fence and seals both buckets before deletion',
+                 'get-object' in commands[:terminate] and terminate < delete < len(calls)
+                 and bool(between) and between[0]['command'] == 'describe-instances'
+                 and set(listed_after_fence) == set(resources['buckets']))
+    summary['paired_files'] = len(expected)
+
+
+def evidence_unit_checks(report, entry, name, run_id):
+    """SR-5a unit properties: independent oneshots with short bounds; no shutdown dependency."""
+    acquisition = [f'{name}-{s}.service' for s in ('candidate', 'guard', 'reader', 'logs')]
+    for suffix in ('copy', 'finalize'):
+        unit = f'{name}-{suffix}.service'
+        values = {p: prop(unit, p) for p in ('Type', 'Restart', 'TimeoutStartUSec', 'TimeoutStopUSec', 'LogNamespace')}
+        report.check(entry, f'{suffix}: oneshot, Restart=no, start 10 min, stop 10 s, LogNamespace=server2',
+                     values == {'Type': 'oneshot', 'Restart': 'no', 'TimeoutStartUSec': '10min', 'TimeoutStopUSec': '10s',
+                                'LogNamespace': 'server2'}, values)
+        relations = ' '.join(prop(unit, p) for p in ('Requires', 'Wants', 'BindsTo', 'Requisite', 'PartOf', 'After'))
+        report.check(entry, f'{suffix}: no relation to acquisition or the collector',
+                     not any(a in relations for a in acquisition), relations)
+    for unit in (f'{name}-poweroff.service', f'{name}-poweroff.timer', f'{name}-launch-expiry.service',
+                 f'{name}-launch-expiry.timer'):
+        relations = ' '.join(prop(unit, p) for p in ('Requires', 'Wants', 'BindsTo', 'Requisite', 'After'))
+        report.check(entry, f'{unit.split(name + "-")[1]} neither waits for nor depends on the copy units',
+                     'copy' not in relations and 'finalize' not in relations, relations)
+    reader = prop(f'{name}-reader.service', 'ExecStopPost')
+    report.check(entry, "the reader's stop starts the finalizer without waiting",
+                 f'start --no-block {name}-finalize.service' in reader.replace(' ;', ''), reader[:300])
+    stop = (UNITS_DIR / f'{name}-stop.service').read_text()
+    report.check(entry, 'the 168-hour stop starts the finalizer after its stop requests',
+                 stop.index('--no-block stop') < stop.index(f'start --no-block {name}-finalize.service'), stop)
+    timer = (UNITS_DIR / f'{name}-copy.timer').read_text()
+    report.check(entry, 'copy timer: hourly, persistent, enabled and active',
+                 'OnCalendar=hourly\n' in timer and 'Persistent=true\n' in timer
+                 and systemctl('is-enabled', f'{name}-copy.timer').stdout.strip() == 'enabled'
+                 and prop(f'{name}-copy.timer', 'ActiveState') == 'active', timer)
 
 
 def provider_rejection(report, args, interface):
@@ -462,6 +675,7 @@ def storage_authorization(report, args, interface):
                  ((latest.get('diagnostics') or {}).get('storage_auth_failures') or 0) >= 20, latest.get('diagnostics'))
     report.check(entry, 'candidate and reader stopped', wait_until(lambda: all(
         prop(f'{name}-{s}.service', 'ActiveState') in ('inactive', 'failed') for s in ('candidate', 'reader')), 30))
+    final_check(report, entry, run_id, 'inactive', label='the guard stop')
     code, seconds, states = retention_stop(name)
     entry['observations']['retention_stop_seconds'] = round(seconds, 1)
     report.check(entry, 'retention stop drained the collector within 150 s', code == 0 and seconds < 150, (code, seconds))
@@ -535,6 +749,7 @@ def frozen_guard(report, args, interface):
                  stopped and seconds <= 52, seconds)
     report.check(entry, 'guard result is the watchdog', prop(f'{name}-guard.service', 'Result') == 'watchdog',
                  prop(f'{name}-guard.service', 'Result'))
+    final_check(report, entry, run_id, 'inactive', label='the watchdog kill')
     systemctl('start', f'{name}-logs.service')
     code, seconds, states = retention_stop(name)
     report.check(entry, 'restarted collector drained within 150 s', code == 0 and seconds < 150, (code, seconds))
@@ -579,6 +794,92 @@ def tampered(report, args, interface):
                  and prop(f'{name}-candidate.service', 'ActiveState') in ('inactive', ''))
 
 
+def evidence_copy(report, args, interface):
+    run_id = 'sr5-evidence'; name = 'server2-shadow-' + run_id; root = Path('/opt/server2-shadow') / run_id
+    entry = report.scenario('evidence-copy', ['SR5a', 'SR5b-F1'])
+    reset_host(); start_standins(run_id)
+    (PEER_STATE / 'provider-status').write_text('200\n')
+    launch, result, receipt = install(report, entry, args, run_id, interface)
+    report.check(entry, 'install-host answered one JSON object: started', receipt is not None and receipt.get('status') == 'started',
+                 result.stdout[-500:] + result.stderr[-1500:])
+    if receipt is None or receipt.get('status') != 'started':
+        return
+    evidence_unit_checks(report, entry, name, run_id)
+    report.check(entry, 'the contract is published at install',
+                 wait_until(lambda: (STANDIN_STATE / 's3/evidence' / run_id / 'contract.json').is_file(), 60))
+    dropin = UNITS_DIR / f'{name}-copy.timer.d'
+    dropin.mkdir()
+    (dropin / 'check.conf').write_text(COPY_TIMER_DROPIN)
+    systemctl('daemon-reload')
+    systemctl('restart', f'{name}-copy.timer')
+    def ordinary_batches():
+        found = [i for i in evidence_indexes(run_id) if i.get('kind') == 'ordinary' and i.get('batch')]
+        return found if len(found) >= 2 else None
+    shipped = wait_until(ordinary_batches, 120, 1)
+    entry['observations']['ordinary_generations'] = [i.get('generation') for i in evidence_indexes(run_id)]
+    report.check(entry, 'the copy timer ships batches, ledger snapshots and indexes', shipped,
+                 [p.name for p in evidence_objects(run_id)][-8:])
+    # A refused evidence PUT: the copy run fails and logs it; acquisition is unaffected.
+    (STANDIN_STATE / 'fail-evidence').write_text('')
+    failed = wait_until(lambda: prop(f'{name}-copy.service', 'Result') == 'exit-code', 60, 1)
+    (STANDIN_STATE / 'fail-evidence').unlink()
+    report.check(entry, 'a refused evidence PUT fails the copy run', failed, prop(f'{name}-copy.service', 'Result'))
+    report.check(entry, 'acquisition unaffected by the copy failure', all(
+        prop(f'{name}-{s}.service', 'ActiveState') == 'active' for s in ('candidate', 'guard', 'reader')))
+    # The reader ends on its own terminal state (as after a 30-minute origin outage): exit 2.
+    import sqlite3
+    before = max([i.get('generation', 0) for i in evidence_indexes(run_id)] or [0])
+    db = sqlite3.connect(root / 'data/paired/ledger.sqlite3', timeout=30)
+    with db:
+        db.execute("INSERT OR REPLACE INTO meta VALUES ('terminal', ?)", (json.dumps('origin-outage'),))
+    db.close()
+    ended = wait_until(lambda: prop(f'{name}-reader.service', 'ActiveState') == 'failed', 60)
+    status = (prop(f'{name}-reader.service', 'ExecMainStatus'), prop(f'{name}-reader.service', 'Result'))
+    report.check(entry, 'the reader exited 2 and its unit failed', ended and status == ('2', 'exit-code'), status)
+    report.check(entry, 'candidate and guard keep running after the reader exit', all(
+        prop(f'{name}-{s}.service', 'ActiveState') == 'active' for s in ('candidate', 'guard')))
+    first = final_check(report, entry, run_id, 'failed', after=before, label='the reader failure')
+    # The 168-hour stop.service, started as its timer would: stops the rest, starts the finalizer.
+    systemctl('start', f'{name}-stop.service')
+    report.check(entry, 'the 168-hour stop stopped candidate and guard', wait_until(lambda: all(
+        prop(f'{name}-{s}.service', 'ActiveState') in ('inactive', 'failed') for s in ('candidate', 'guard')), 30))
+    final_check(report, entry, run_id, 'failed', after=(first or {}).get('generation', before), label='the 168-hour stop')
+    code, seconds, states = retention_stop(name)
+    report.check(entry, 'retention stop drained the collector within 150 s', code == 0 and seconds < 150, (code, seconds))
+    by_source = delivery_checks(report, entry, run_id, ('server', 'collector', 'copy'))
+    copies = [r for r in map(parsed, by_source.get('copy', [])) if r]
+    entry['observations']['copy_records'] = copies[-3:]
+    report.check(entry, "the copy's failure record reached the destination",
+                 any(r.get('event') == 'copy.failed' and r.get('status') == 503 for r in copies), copies[-5:])
+    report.check(entry, "the copy's committed records reached the destination",
+                 any(r.get('event') == 'copy.committed' and r.get('kind') == 'final' for r in copies), copies[-5:])
+    bucket_audit(report, entry, run_id)
+    systemctl('stop', f'{name}-copy.timer', f'{name}-copy.service', f'{name}-finalize.service', check=True)
+    finish_cli_check(report, entry, run_id)
+
+
+def evidence_candidate_exit(report, args, interface):
+    run_id = 'sr5-candidate'; name = 'server2-shadow-' + run_id
+    entry = report.scenario('evidence-candidate-exit', ['SR5a'])
+    reset_host(); start_standins(run_id)
+    (PEER_STATE / 'provider-status').write_text('200\n')
+    launch, result, receipt = install(report, entry, args, run_id, interface)
+    report.check(entry, 'install: started', receipt is not None and receipt.get('status') == 'started',
+                 result.stdout[-500:] + result.stderr[-1500:])
+    if receipt is None or receipt.get('status') != 'started':
+        return
+    time.sleep(45)  # a few paired attempts
+    pid = prop(f'{name}-candidate.service', 'MainPID')
+    os.kill(int(pid), 9)
+    stopped = wait_until(lambda: all(prop(f'{name}-{s}.service', 'ActiveState') in ('inactive', 'failed')
+                                     for s in ('candidate', 'guard', 'reader')), 30)
+    report.check(entry, 'the candidate exit stopped guard and reader', stopped)
+    final_check(report, entry, run_id, 'inactive', label='the candidate exit')
+    bucket_audit(report, entry, run_id)
+    code, seconds, states = retention_stop(name)
+    report.check(entry, 'retention stop completes', code == 0 and seconds < 150, (code, seconds))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--disposable-host', action='store_true', required=True)
@@ -586,7 +887,8 @@ def main():
     parser.add_argument('--collector-tarball', required=True, type=Path)
     parser.add_argument('--source-commit', required=True)
     parser.add_argument('--report', required=True, type=Path)
-    parser.add_argument('--scenario', action='append', choices=['provider-rejection', 'storage-authorization', 'config-change', 'frozen-guard', 'collector-broken', 'tampered'])
+    parser.add_argument('--scenario', action='append', choices=['provider-rejection', 'storage-authorization', 'config-change', 'frozen-guard',
+                                                                'collector-broken', 'tampered', 'evidence-copy', 'evidence-candidate-exit'])
     args = parser.parse_args()
     if os.geteuid() != 0 or sys.platform != 'linux':
         raise SystemExit('run as root on a disposable Linux VM')
@@ -599,7 +901,8 @@ def main():
     try:
         for scenario, function in (('provider-rejection', provider_rejection), ('storage-authorization', storage_authorization),
                                    ('config-change', config_change),
-                                   ('frozen-guard', frozen_guard), ('collector-broken', collector_broken), ('tampered', tampered)):
+                                   ('frozen-guard', frozen_guard), ('collector-broken', collector_broken), ('tampered', tampered),
+                                   ('evidence-copy', evidence_copy), ('evidence-candidate-exit', evidence_candidate_exit)):
             if args.scenario and scenario not in args.scenario:
                 continue
             try:

@@ -388,7 +388,7 @@ fun AppContent(
                 MenuRow.ANALYTICS to stringResource(if (analyticsChoice) R.string.LOC_ANALYTICS_ALLOWED else R.string.LOC_ANALYTICS_DISABLED),
             ),
         ),
-        // The selected Hourly, Daily or Air tab reloads the selected place (`reloadEvent` "tab").
+        // A pull bypasses the freshness gate for the selected place.
         onRefresh = { session.reload(WeatherSession.Sender.TAB) },
         // SettingCtrl's `clickMenu` and `settingRadio`: the rows that leave the menu close it first (`toggleLeft`).
         onMenuRow = { row ->
@@ -536,7 +536,7 @@ fun AppContent(
             }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup, nativeAd = visibleAd,
                 onForecastRead = { if (it == selected) forecastRead = true })
             Tab.AIR -> rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
-                onUnits = openUnits, nativeAd = visibleAd)
+                onUnits = openUnits, locating = locating, nativeAd = visibleAd)
             else -> placesPage?.let { page ->
                 // A new visit gets a new tab: its state and its opening run again.
                 key(page) {

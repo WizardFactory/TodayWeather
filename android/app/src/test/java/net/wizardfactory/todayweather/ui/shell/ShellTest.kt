@@ -1,7 +1,10 @@
 package net.wizardfactory.todayweather.ui.shell
 
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.unit.dp
+import android.graphics.Color
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
@@ -13,6 +16,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -57,20 +62,52 @@ class ShellTest {
     }
 
     @Test
-    fun tabsSwitchAndTheSelectedWeatherTabRefreshes() {
+    fun tabsKeepTheirNavigationIconsWhenSelected() {
         show()
         rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
-        for (tab in listOf(Tab.DAILY, Tab.AIR, Tab.LOCATIONS, Tab.HOURLY)) {
+        val icons = mapOf(
+            Tab.LOCATIONS to Glyphs.STAR_OUTLINE,
+            Tab.HOURLY to Glyphs.CLOCK_OUTLINE,
+            Tab.DAILY to Glyphs.CALENDAR_OUTLINE,
+            Tab.AIR to Glyphs.CLOUD_OUTLINE,
+        )
+        for (tab in Tab.entries) {
             rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
-            rule.waitForIdle()
+            for ((item, glyph) in icons) {
+                val button = rule.onNodeWithTag(ShellTags.tab(item))
+                if (item == tab) button.assertIsSelected() else button.assertIsNotSelected()
+                val pixels = button.captureToImage().asAndroidBitmap()
+                // At xhdpi the 24 dp line spans 48 px, centered above the glyph.
+                val center = pixels.width / 2
+                val accent = Color.rgb(17, 109, 155)
+                assertEquals("line at top of $item when $tab is selected", item == tab, pixels.getPixel(center, 1) == accent)
+                assertNotEquals(accent, pixels.getPixel(center - 26, 1))
+                assertNotEquals(accent, pixels.getPixel(center + 26, 1))
+                fun containsAccent(rows: IntRange) = rows.any { y ->
+                    (0 until pixels.width).any { x -> pixels.getPixel(x, y) == accent }
+                }
+                assertEquals("icon tint on $item", item == tab, containsAccent(5 until 64))
+                assertEquals("label tint on $item", item == tab, containsAccent(64 until pixels.height))
+                rule.onNode(hasText(glyph) and hasAnyAncestor(hasTestTag(ShellTags.tab(item))), useUnmergedTree = true).assertExists()
+            }
+            // The previous tab handler read wall time and ignored repeats within 700 ms.
+            Thread.sleep(750)
+            rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            assertTrue("reselecting $tab did not dispatch a manual refresh", refreshed.isEmpty())
             rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
         }
-        assertEquals(emptyList<Tab>(), refreshed)
-        Thread.sleep(750)
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
-        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick() // within 700 ms: ignored
-        rule.waitForIdle()
-        assertEquals(listOf(Tab.HOURLY), refreshed)
+        assertTrue(refreshed.isEmpty())
+    }
+
+    @Test
+    fun theSelectedTabLabelIsLegibleOnEveryTabBackground() {
+        for (theme in Theme.entries) {
+            for (tab in Tab.entries) {
+                val colors = ShellColors.of(theme, tab)
+                assertTrue("$theme $tab label contrast", ColorUtils.calculateContrast(
+                    colors.tabSelected.toArgb(), colors.tabBar.toArgb()) >= 4.5)
+            }
+        }
     }
 
     @Test

@@ -57,6 +57,7 @@ enum WeatherBlock: Hashable {
 /// What the page's taps ask for.
 struct WeatherPageActions {
     var toggleExpanded: () -> Void = {}
+    var refresh: @MainActor () async -> Void = {}
     var previous: () -> Void = {}
     var next: () -> Void = {}
     var perform: (PageAction) -> Void = { _ in }
@@ -72,10 +73,12 @@ struct WeatherPageView: View {
     var actions = WeatherPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it, as `HourlyChartFrame`).
     var scrolls = true
+    @Environment(\.shellInsets) private var shellInsets
     @Environment(\.sizeCategory) private var sizeCategory
 
     var body: some View {
         let colors = WeatherColors.of(theme, daily: content.type == .mid)
+        let barHeight = ShellMetrics.headerHeight + shellInsets.top
         let stack = VStack(spacing: 0) {
             VStack(spacing: 0) {
                 WeatherBlockView(block: .header, content: content, theme: theme, actions: actions)
@@ -93,7 +96,13 @@ struct WeatherPageView: View {
         }
         Group {
             if scrolls {
-                ScrollView(.vertical, showsIndicators: false) { stack }
+                ScrollView(.vertical, showsIndicators: false) {
+                    stack.padding(.top, -barHeight)
+                }
+                    // Keep the hero under the translucent bar and the pull indicator below it.
+                    .scrollClipDisabled()
+                    .padding(.top, barHeight)
+                    .refreshable { await actions.refresh() }
             } else {
                 stack.frame(maxHeight: .infinity, alignment: .top)
             }
@@ -128,8 +137,9 @@ struct WeatherBlockView: View {
         let page = content.page
         switch block {
         case .header:
-            HeaderBlock(page: page, metrics: content.metrics, theme: theme, colors: colors, photo: content.photo, s: s,
+            HeaderBlock(page: page, metrics: content.metrics, theme: theme, colors: colors, photo: content.photo,
                         actions: actions)
+                .modifier(CordovaChromeTextSize())
         case .chart:
             chart(colors)
         case .hourlyAqi:
@@ -200,15 +210,17 @@ struct WeatherBlockView: View {
 
 // MARK: - The header block
 
-/// `[md-page-header]`: at least `headerHeight` tall with 64 pt above its content (the bar, on iOS) and 5 pt below (22 pt
-/// in the photo theme), the photo under it, and the main box (80 % wide) between the arrows, centered.
+/// The forecast summary uses the window-relative Cordova header dimensions. The shell reserves the status bar.
+/// The 80%-wide main box is centered between the arrows, with 5 pt below it (22 pt in the photo theme).
 private struct HeaderBlock: View {
     let page: ForecastPage
     let metrics: ChartMetrics
     let theme: Theme
     let colors: WeatherColors
     let photo: URL?
-    let s: TextScale
+    @Environment(\.shellInsets) private var insets
+    @Environment(\.sizeCategory) private var sizeCategory
+    private var s: TextScale { TextScale(sizeCategory) }
     let actions: WeatherPageActions
 
     var body: some View {
@@ -224,14 +236,14 @@ private struct HeaderBlock: View {
                     if page.arrows { arrow(Glyphs.chevronRight, width: width, label: "next", action: actions.next) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.top, WeatherMetrics.headerTop)
+                .padding(.top, WeatherMetrics.headerPadding(insets: insets))
                 .padding(.bottom, colors.headerBottom)
             }
         }
         .frame(height: height)
         .background(colors.header.color)
         .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 20).onEnded { value in
+        .simultaneousGesture(DragGesture(minimumDistance: 20).onEnded { value in
             // Ionic's swipe: a horizontal fling; left shows the next place.
             let dx = value.predictedEndTranslation.width
             guard abs(value.translation.width) > abs(value.translation.height) else { return }
@@ -245,7 +257,7 @@ private struct HeaderBlock: View {
     /// main box is 80 % of the page, whose width is the window's (`metrics.bodyWidth`, CODEX-IN08-2).
     var height: CGFloat {
         let content = MainBox.height(page: page, metrics: metrics, s: s, width: metrics.bodyWidth * 0.8)
-        return max(metrics.headerHeight, WeatherMetrics.headerTop + content + colors.headerBottom)
+        return WeatherMetrics.visibleHeaderHeight(metrics.headerHeight, content: content, bottom: colors.headerBottom, insets: insets)
     }
 
     /// `.main-box-arrow`: 10 % wide, the chevron (17 pt Ionicons) centered; a tap switches the place.
@@ -326,9 +338,8 @@ private struct MainBox: View {
             let big = metrics.bigFontSize
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    CssLine(runs: [CssRun(text: hero.temperature, size: big, weight: .light),
-                                   CssRun(text: "˚", size: big / 2, weight: .light)],
-                            color: colors.headerText, outline: colors.headerOutline, raise: [1: WeatherMetrics.superRaise(big)])
+                    CssLine(runs: WeatherMetrics.temperatureRuns(hero.temperature, size: big),
+                            color: colors.headerText, outline: colors.headerOutline, raise: [2: WeatherMetrics.superRaise(big)])
                     ThemeImage(image: hero.sky, theme: theme, height: metrics.bigImageSize)
                 }
                 SummaryLines(text: hero.summary, colors: colors, s: s, width: width)

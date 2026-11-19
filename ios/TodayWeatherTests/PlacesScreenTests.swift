@@ -98,6 +98,103 @@ struct PlacesFixture {
 extension HostedShellTests {
 @MainActor
 struct PlacesScreenTests {
+    @Test func cancelStaysOnScreenWithALongQuery() async throws {
+        let query = String(repeating: "서울특별시", count: 12)
+        let search = TestPlaceSearch([query: [Prediction(fullText: query + " 중구", firstMatch: 0)]])
+        let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul], search: search)
+        let app = try await f.hosted()
+        defer { app.close() }
+        f.places.focusChanged(true)
+        f.places.wordChanged(query)
+        try #require(await HostedShellTests.AirLiveTests.wait(5) { app.element("places-prediction-0") != nil })
+        try await app.settle()
+        let cancel = try #require(app.element("places-mode")).accessibilityFrame
+        #expect(!cancel.isEmpty && app.window.frame.contains(cancel))
+        try app.tap("places-mode")
+        #expect(!f.places.searching && f.places.query.word.isEmpty)
+        #expect(f.state.places.count == 2)
+    }
+
+    /// Exercise all four tab entry points with a populated Seoul forecast and a reserved status bar.
+    @Test func mainTabContentClearsTheBar() async throws {
+        let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+        let size = CGSize(width: 402, height: 874)
+        let insets = ShellInsets(statusBar: 54, top: 8, bottom: 34, leading: 0, trailing: 0)
+        let view = ShellFrame(model: f.shell, insets: insets, content: { tab in
+            tab == .search ? f.places.content(tab) : f.weather.content(tab)
+        })
+        let hosted = try HostedView(view.ignoresSafeArea(), size: size)
+        defer { hosted.close() }
+        for tab in [ShellTab.search, .forecast, .dailyforecast, .air] {
+            try hosted.tap("shell-tab-\(tab.rawValue)")
+            let target = tab == .search ? "places-name-1" : tab == .air ? "air-header" : "forecast-header"
+            try #require(await HostedShellTests.AirLiveTests.wait(5) { f.shell.selected == tab && hosted.element(target) != nil })
+            await f.settle()
+            try await hosted.settle()
+            let frame = try #require(hosted.element(target)).accessibilityFrame
+            if tab == .search {
+                #expect(frame.minY >= insets.statusBar + insets.top + ShellMetrics.headerHeight)
+            } else {
+                #expect(abs(frame.maxY - size.height * 5 / 12) < 1, "\(tab) header ends at \(frame.maxY)")
+            }
+            let image = UIGraphicsImageRenderer(size: size).image { _ in
+                hosted.window.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
+            }
+            Attachment.record(try #require(image.pngData()), named: "main-tab-\(tab.rawValue).png")
+        }
+    }
+
+    @Test func savedPlacesHeaderFollowsLargerStandardText() async throws {
+        func sizes(at type: DynamicTypeSize) async throws -> (inputHeight: CGFloat, buttonWidth: CGFloat) {
+            let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+            f.shell.select(.search)
+            let view = ShellView(model: f.shell, content: { f.places.content($0) })
+            let hosted = try HostedView(view, size: CGSize(width: 402, height: 874), dynamicType: type)
+            defer { hosted.close() }
+            try await hosted.settle()
+            let input = try #require(hosted.element("places-input"))
+            let mode = try #require(hosted.element("places-mode"))
+            return (input.accessibilityFrame.height, mode.accessibilityFrame.width)
+        }
+        let standard = try await sizes(at: .large)
+        let larger = try await sizes(at: .xxxLarge)
+        #expect(larger.inputHeight > standard.inputHeight)
+        #expect(larger.buttonWidth > standard.buttonWidth)
+    }
+
+    @Test func accessibilityTextGrowsAndTheHourlyChartRemainsReachable() async throws {
+        func sizes(at type: DynamicTypeSize) async throws -> (summary: CGFloat, tab: CGFloat) {
+            let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul])
+            let size = CGSize(width: 402, height: 874)
+            let insets = ShellInsets(statusBar: 54, top: 8, bottom: 34, leading: 0, trailing: 0)
+            let view = ShellFrame(model: f.shell, insets: insets, content: { f.weather.content($0) })
+            let hosted = try HostedView(view.ignoresSafeArea(), size: size, dynamicType: type)
+            defer { hosted.close() }
+            f.weather.handle(.launch)
+            try #require(await HostedShellTests.AirLiveTests.wait(5) { hosted.element("forecast-summary-air") != nil })
+            try await hosted.settle()
+            let summary = try #require(hosted.element("forecast-summary-air")).accessibilityFrame
+            let tab = try #require(hosted.element("shell-tab-forecast")).accessibilityFrame
+            let barBottom = insets.statusBar + insets.top + ShellMetrics.headerHeight
+            #expect(summary.minY >= barBottom)
+            if type.isAccessibilitySize {
+                let chart = try #require(hosted.element("forecast-chart")).accessibilityFrame
+                let scroll = try #require(hosted.elements().compactMap { $0 as? UIScrollView }
+                    .first { $0.contentSize.height > $0.bounds.height + 1 && $0.bounds.height > 0 })
+                scroll.setContentOffset(CGPoint(x: scroll.contentOffset.x, y: scroll.contentOffset.y + chart.minY - barBottom), animated: false)
+                try await hosted.settle()
+                let visibleChart = try #require(hosted.element("forecast-chart")).accessibilityFrame
+                #expect(visibleChart.minY < chart.minY)
+                #expect(visibleChart.minY < tab.minY && visibleChart.maxY > barBottom)
+            }
+            return (summary.height, tab.height)
+        }
+        let standard = try await sizes(at: .large)
+        let accessible = try await sizes(at: .accessibility3)
+        #expect(accessible.summary > standard.summary)
+        #expect(accessible.tab > standard.tab)
+    }
+
     /// #2960: each place with its temperature, range and bell; a row tap selects it and opens the startup page.
     @Test func theListShowsThePlacesAndARowOpensTheStartupPage() async throws {
         let f = try PlacesFixture(places: [.currentPositionPlaceholder, PlacesFixture.seoul, PlacesFixture.london], records: [PlacesFixture.alarm(2)],

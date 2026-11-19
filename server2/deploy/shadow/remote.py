@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import re
+import select
 import shlex
 import subprocess
 import sqlite3
@@ -21,6 +22,7 @@ import tempfile
 import time
 from coordinator import (require, frozen_resources, resource_digest, verify_bundle,
                          artifact_hash, HOST_ARTIFACTS)
+from evidence_copy import attempt_matches as copy_attempt_matches
 from state import CloudResult, StateError, canonical, sync_directory
 
 
@@ -107,7 +109,7 @@ st=parent.lstat()
 assert not parent.is_symlink() and st.st_uid==0 and st.st_mode&0o077==0
 stage=parent/run_id
 stage.mkdir(mode=0o700)
-expected={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env','collector.tar.gz','collector.json','render.py','status.py','launch.json'}
+expected={'server2','paired_read.py','guard.py','coordinator.py','state.py','bootstrap.sh','reader.json','config.env','collector.tar.gz','collector.json','render.py','status.py','evidence_copy.py','launch.json'}
 seen=set();total=0
 with tarfile.open(fileobj=sys.stdin.buffer,mode='r|') as archive:
  for item in archive:
@@ -145,6 +147,115 @@ with tarfile.open(fileobj=sys.stdout.buffer,mode='w|',format=tarfile.USTAR_FORMA
 '''
 
 
+# The selected export accepts typed attempt numbers on stdin. The command and
+# installed paths are fixed. The installed copier supplies the stopped-reader
+# check and reconciles a hot rollback journal into the private SQLite snapshot.
+# The host has its own deadline even when the operator disconnects mid-transfer.
+FINISH_EXPORTER=r'''import json,os,re,signal,stat,sys,tarfile,tempfile,time
+from pathlib import Path
+run_id,mode=sys.argv[1:]
+assert re.fullmatch('[a-z0-9-]{1,30}',run_id)
+root=Path('/opt/server2-shadow')/run_id
+assert root.resolve()==root
+sys.path.insert(0,str(root/'bin'))
+from evidence_copy import Deadline,HostTree,reader_stopped,remaining,snapshot,systemd_unit_state
+from state import HOST_LIFETIME_SECONDS
+raw=sys.stdin.buffer.read(512*1024+1)
+assert len(raw)<=512*1024
+request=json.loads(raw)
+assert type(request) is dict and set(request)=={'attempts','limit','timeout'}
+attempts,limit,timeout=request['attempts'],request['limit'],request['timeout']
+assert type(attempts) is list and len(attempts)<=12000
+assert all(type(i) is int and 1<=i<=2**63-1 for i in attempts)
+assert attempts==sorted(set(attempts))
+assert (mode=='ledger' and not attempts) or (mode=='pairs' and attempts)
+assert type(limit) is int and 0<limit<=2*1024**3
+assert type(timeout) in (int,float) and 0<timeout<=600
+tree=HostTree(root/'launch.json')
+assert tree.run_id==run_id and tree.paired.resolve()==tree.paired
+deadline=Deadline(tree.epoch+HOST_LIFETIME_SECONDS,time.time,time.monotonic)
+transfer_end=time.monotonic()+timeout
+def time_left():
+ return min(deadline(),transfer_end-time.monotonic())
+def stop_export(*args):
+ raise TimeoutError('SSH recovery deadline')
+signal.signal(signal.SIGALRM,stop_export)
+signal.setitimer(signal.ITIMER_REAL,remaining(time_left,'host'))
+assert reader_stopped(systemd_unit_state(tree.reader_unit,tree.paired/'owner.lock',time_left))
+with tempfile.TemporaryDirectory(dir=tree.state_dir) as work:
+ if mode=='ledger':
+  for name in ('ledger.sqlite3','ledger.sqlite3-journal'):
+   source=tree.paired/name
+   if name=='ledger.sqlite3' or os.path.lexists(source):
+    assert stat.S_ISREG(source.lstat().st_mode)
+  ledger=Path(work)/'ledger.sqlite3'
+  snapshot(tree,ledger,True,time_left)
+  files={'launch.json':root/'launch.json','reader.json':root/'reader.json',
+         'data/paired/ledger.sqlite3':ledger}
+ else:
+  files={'data/paired/'+str(i)+suffix:tree.paired/(str(i)+suffix)
+         for i in attempts for suffix in ('.body','.json')}
+ total=1024
+ for path in files.values():
+  info=path.lstat()
+  assert stat.S_ISREG(info.st_mode)
+  total+=512+(info.st_size+511)//512*512
+ assert (total+10239)//10240*10240<=limit
+ with tarfile.open(fileobj=sys.stdout.buffer,mode='w|',format=tarfile.USTAR_FORMAT) as archive:
+  for name,path in sorted(files.items()):archive.add(path,arcname=name,recursive=False)
+'''
+
+RECOVERY_LEDGER_NAMES = {'launch.json', 'reader.json', 'data/paired/ledger.sqlite3'}
+RECOVERY_CONTROL_TIMEOUTS = {'finish-finalize': 620, 'finish-drain': 120}
+
+
+def _selected_attempts(attempts):
+    require(type(attempts) in (tuple, list) and 0 < len(attempts) <= 12000
+            and all(type(i) is int and 1 <= i <= 2**63 - 1 for i in attempts)
+            and list(attempts) == sorted(set(attempts)), 'invalid recovery attempts')
+    return attempts
+
+
+def _receive_recovery(argv, destination, request, limit, timeout):
+    # Store the small request in a private file so writing it cannot prevent
+    # sibling stdout reads or exceed the same wall-clock transfer timeout.
+    until = time.monotonic() + timeout
+    try:
+        with tempfile.TemporaryFile() as incoming, open(destination, 'xb', opener=_open_private) as output:
+            incoming.write(canonical(request).encode())
+            incoming.seek(0)
+            with subprocess.Popen(argv, stdin=incoming, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as proc:
+                size = 0
+                try:
+                    while True:
+                        remaining = until - time.monotonic()
+                        if remaining <= 0 or not select.select([proc.stdout], [], [], remaining)[0]:
+                            return CloudResult('timeout', 'HostEvidence')
+                        block = os.read(proc.stdout.fileno(), min(1024**2, limit - size + 1))
+                        if not block:
+                            break
+                        size += len(block)
+                        if size > limit:
+                            return CloudResult('command_error', 'HostEvidence')
+                        output.write(block)
+                    if proc.wait(timeout=max(0, until - time.monotonic())) != 0 or not size:
+                        return CloudResult('command_error', 'HostEvidence')
+                    output.flush()
+                    os.fsync(output.fileno())
+                    return CloudResult('json', 'HostEvidence', {'archive_bytes': size})
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
+    except subprocess.TimeoutExpired:
+        return CloudResult('timeout', 'HostEvidence')
+    except OSError:
+        return CloudResult('command_error', 'HostEvidence')
+
+
+def _open_private(path, flags):
+    return os.open(path, flags | os.O_NOFOLLOW, 0o600)
+
+
 def evidence_name(name):
     return name in {'launch.json','reader.json','state/install.json','state/guard.json','state/decision.json',
                     'data/paired/ledger.sqlite3','data/paired/ledger.sqlite3-journal'} or bool(
@@ -153,11 +264,24 @@ def evidence_name(name):
 
 def unpack_evidence(archive,destination):
     """Extract only the fixed evidence inventory into an exclusive private tree."""
+    required = RECOVERY_LEDGER_NAMES | {'state/install.json', 'state/guard.json', 'state/decision.json'}
+    return _unpack_archive(archive, destination, evidence_name, required)
+
+
+def unpack_recovery(archive, destination, *, attempts=None):
+    """Accept exactly the stopped-ledger files, or exactly the requested pairs."""
+    names = RECOVERY_LEDGER_NAMES if attempts is None else {
+        f'data/paired/{i}.{suffix}' for i in _selected_attempts(attempts) for suffix in ('json', 'body')
+    }
+    return _unpack_archive(archive, destination, names.__contains__, names)
+
+
+def _unpack_archive(archive, destination, allowed, required):
     destination=Path(destination);destination.mkdir(mode=0o700)
     files={};total=0
     with tarfile.open(archive,mode='r:') as bundle:
         for member in bundle:
-            require(member.isfile() and evidence_name(member.name) and member.name not in files,'evidence archive member')
+            require(member.isfile() and allowed(member.name) and member.name not in files,'evidence archive member')
             total+=member.size
             require(0<=member.size<=EVIDENCE_BYTES and total<=EVIDENCE_BYTES and len(files)<EVIDENCE_FILES,'evidence allowance')
             path=destination/member.name;path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -168,10 +292,28 @@ def unpack_evidence(archive,destination):
                 output.flush();os.fsync(output.fileno())
             require(size==member.size,'evidence truncated')
             files[member.name]={'size':size,'sha256':h.hexdigest()}
-    require({'launch.json','reader.json','state/install.json','state/guard.json','state/decision.json',
-             'data/paired/ledger.sqlite3'}<=set(files),'required evidence absent')
+    require(required <= set(files), 'required evidence absent')
     sync_directory(destination)
     return {'files':files,'bytes':total,'qualification':'not_assessed'}
+
+
+def ledger_identity(reader,launch):
+    """The identity a paired ledger of this launch must record (paired_read.execute)."""
+    return dict(manifest=reader,candidate='http://127.0.0.1:'+str(launch['plan']['port']),
+                production='https://todayweather.wizardfactory.net',loopback_test=False,
+                sampler_sha256=launch['plan']['artifacts']['paired_read.py'])
+
+
+def attempt_matches(result,metadata,body_size,body_sha256):
+    """A completed attempt's retained files against its ledger result.
+
+    The sampler adds timing to its ledger after the worker has durably written
+    response metadata. Only that field may differ. Shared by the SSH export and the
+    bucket audit (evidence_audit.py, SR-5a).
+    """
+    elapsed=result.get('elapsed_ms')
+    require(type(elapsed) is int and elapsed>=0,'invalid elapsed time')
+    return copy_attempt_matches(result,metadata,body_size,body_sha256)
 
 
 def paired_evidence(directory,files):
@@ -187,9 +329,7 @@ def paired_evidence(directory,files):
         try:
             require(db.execute('PRAGMA quick_check').fetchall()==[('ok',)],'ledger integrity')
             identity=json.loads(db.execute('SELECT value FROM meta WHERE key=?',('identity',)).fetchone()[0])
-            require(identity==dict(manifest=reader,candidate='http://127.0.0.1:'+str(launch['plan']['port']),
-                    production='https://todayweather.wizardfactory.net',loopback_test=False,
-                    sampler_sha256=launch['plan']['artifacts']['paired_read.py']),'ledger identity mismatch')
+            require(identity==ledger_identity(reader,launch),'ledger identity mismatch')
             rows=db.execute('SELECT id,substr(result,1,65537) FROM attempts ORDER BY id').fetchmany(12001)
             require(0<len(rows)<=12000,'paired attempts absent or excessive')
         finally:db.close()
@@ -205,20 +345,115 @@ def paired_evidence(directory,files):
             require(files[meta_name]['size']<=65536,'oversized metadata')
             metadata=json.loads((directory/meta_name).read_text())
             body=files[body_name]
-            # The sampler adds timing to its ledger after the worker has
-            # durably written response metadata. Only that field may differ.
-            elapsed=result.get('elapsed_ms')
-            require(type(elapsed) is int and elapsed>=0,'invalid elapsed time')
-            response={key:value for key,value in result.items() if key!='elapsed_ms'}
-            if (metadata!=response or body['size']!=result.get('body_bytes')
-                    or body['sha256']!=result.get('body_sha256')):missing.append(attempt)
+            if not attempt_matches(result,metadata,body['size'],body['sha256']):missing.append(attempt)
         return {'complete':not missing,'attempts':len(rows),'missing_or_mismatched':missing,'qualification':'not_assessed'}
     except (StateError,OSError,ValueError,KeyError,TypeError,sqlite3.Error):
         return {'complete':False,'reason':'paired_evidence_invalid','qualification':'not_assessed'}
 
 
+def recovery_archive_limit(member_bytes):
+    """Total USTAR payload for planned members, including end blocks and padding."""
+    total = sum(member_bytes) + 1024
+    return (total + 10239) // 10240 * 10240
+
+
+def _stopped_rows(directory, launch_sha256):
+    from urllib.parse import quote
+
+    launch_path = directory / 'launch.json'
+    reader_path = directory / 'reader.json'
+    paired = directory / 'data/paired'
+    ledger = paired / 'ledger.sqlite3'
+    for path, cap in ((launch_path, 65536), (reader_path, 65536), (ledger, EVIDENCE_BYTES)):
+        require(not path.is_symlink() and path.is_file() and path.stat().st_size <= cap, 'invalid recovery contract file')
+    require(not os.path.lexists(paired / 'ledger.sqlite3-journal'), 'unreconciled SQLite journal')
+    launch_bytes = launch_path.read_bytes()
+    reader_bytes = reader_path.read_bytes()
+    require(hashlib.sha256(launch_bytes).hexdigest() == launch_sha256, 'recovery launch mismatch')
+    launch = json.loads(launch_bytes)
+    reader = json.loads(reader_bytes)
+    artifacts = launch['plan']['artifacts']
+    require(hashlib.sha256(reader_bytes).hexdigest() == artifacts['reader.json']
+            and reader['candidate_sha256'] == artifacts['server2'], 'recovery reader mismatch')
+
+    db = sqlite3.connect('file:' + quote(str(ledger.resolve())) + '?mode=ro&immutable=1', uri=True)
+    try:
+        require(db.execute('PRAGMA quick_check').fetchall() == [('ok',)], 'ledger integrity')
+        row = db.execute('SELECT value FROM meta WHERE key=?', ('identity',)).fetchone()
+        require(row is not None and json.loads(row[0]) == ledger_identity(reader, launch), 'ledger identity mismatch')
+        rows = db.execute('SELECT id,substr(result,1,65537) FROM attempts ORDER BY id').fetchmany(12001)
+        require(0 < len(rows) <= 12000, 'paired attempts absent or excessive')
+        return rows
+    finally:
+        db.close()
+
+
+def _matches_local_pair(directory, attempt, result):
+    if directory is None:
+        return False
+    directory = Path(directory)
+    metadata_path, body = directory / f'{attempt}.json', directory / f'{attempt}.body'
+    try:
+        if any(path.is_symlink() or not path.is_file() for path in (metadata_path, body)):
+            return False
+        size = body.stat().st_size
+        if size != result['body_bytes'] or metadata_path.stat().st_size > 65536:
+            return False
+        metadata = json.loads(metadata_path.read_bytes())
+        return attempt_matches(result, metadata, size, artifact_hash_large(body))
+    except (StateError, OSError, ValueError, TypeError):
+        return False
+
+
+def assess_recovery(directory, launch_sha256, *, cached=None, recovered=None):
+    """Validate the stopped ledger and plan or verify just its missing pairs.
+
+    cached and recovered are flat directories of attempt bodies and metadata.
+    The files map selects the verified directory for each required attempt.
+    archive_members_bytes contains padded member totals per missing attempt.
+    The caller must reserve archive_limit before requesting every missing pair.
+    """
+    report = {'complete': False, 'status': 'ledger_invalid', 'qualification': 'not_assessed'}
+    pending, failures = [], []
+    files, missing_bytes = {}, {}
+    try:
+        rows = _stopped_rows(Path(directory), launch_sha256)
+        for attempt, raw in rows:
+            require(type(attempt) is int and 1 <= attempt <= 2**63-1, 'attempt ID')
+            if raw is None:
+                pending.append(attempt)
+                continue
+            require(len(raw) <= 65536, 'oversized result')
+            result = json.loads(raw)
+            require(type(result) is dict, 'invalid result shape')
+            if result.get('captured') is False and 'body_bytes' not in result and 'body_sha256' not in result:
+                failures.append(attempt)
+                continue
+            size = result.get('body_bytes')
+            digest = result.get('body_sha256')
+            require(type(size) is int and 0 <= size <= 2 * 1024**2
+                    and isinstance(digest, str) and re.fullmatch('[0-9a-f]{64}', digest), 'invalid recovery body')
+            if _matches_local_pair(cached, attempt, result):
+                files[str(attempt)] = 'cached'
+            elif _matches_local_pair(recovered, attempt, result):
+                files[str(attempt)] = 'recovered'
+            else:
+                metadata = {key: value for key, value in result.items() if key != 'elapsed_ms'}
+                meta_size = len(canonical(metadata).encode())
+                missing_bytes[str(attempt)] = sum(512 + (n + 511)//512*512 for n in (meta_size, size))
+    except (StateError, OSError, ValueError, KeyError, TypeError, sqlite3.Error):
+        return report
+    return dict(
+        report, complete=not missing_bytes, status='missing_pairs' if missing_bytes else 'complete',
+        attempts=len(rows), pending=pending, capture_failures=failures,
+        missing_or_mismatched=[int(attempt) for attempt in missing_bytes], files=files,
+        archive_members_bytes=missing_bytes,
+        archive_limit=recovery_archive_limit(missing_bytes.values()) if missing_bytes else 0,
+    )
+
+
 class Remote:
-    """No caller-provided remote command; only fixed install/inspect/stop actions."""
+    """Pinned SSH transport for the fixed install, observe and recovery actions."""
     def __init__(self,binding,identity,known_hosts,*,ssh='/usr/bin/ssh'):
         self.binding=target(binding);self.identity=Path(identity);self.known_hosts=Path(known_hosts)
         require(self.identity.is_absolute() and self.identity.is_file() and not self.identity.is_symlink()
@@ -233,14 +468,37 @@ class Remote:
         require(not self.known_hosts.is_symlink() and self.known_hosts.is_file()
                 and self.known_hosts.stat().st_mode&0o077==0 and self.known_hosts.read_text()==expected,'known host binding')
 
-    def invoke(self,action,*,archive=None,destination=None):
-        require(action in ('install','inspect','stop','export') and (action=='install')==(archive is not None)
-                and (action=='export')==(destination is not None),'SSH action')
+    def invoke(self, action, *, archive=None, destination=None, attempts=None, limit=None, timeout=None):
+        require(type(action) is str, 'SSH action')
+        recovery = action in ('finish-ledger', 'finish-pairs')
+        control = action in RECOVERY_CONTROL_TIMEOUTS
+        transfer = recovery or action == 'export'
+        require((action in ('install', 'inspect', 'stop', 'export') or recovery or control)
+                and (action == 'install') == (archive is not None)
+                and transfer == (destination is not None)
+                and (action == 'finish-pairs') == (attempts is not None)
+                and recovery == (limit is not None), 'SSH action')
+        if recovery:
+            require(type(limit) is int and 0 < limit <= EVIDENCE_BYTES, 'recovery archive limit')
+            selected = [] if attempts is None else _selected_attempts(attempts)
+        upper = RECOVERY_CONTROL_TIMEOUTS.get(action, 600 if transfer else 150 if action == 'stop' else 120)
+        if timeout is None:
+            timeout = upper
+        require(type(timeout) in (int, float) and 0 < timeout <= upper, 'SSH timeout')
         b=self.binding;root='/opt/server2-shadow/'+b['run_id'];name='server2-shadow-'+b['run_id']
         require(not self.known_hosts.is_symlink() and self.known_hosts.read_text()==
                 b['instance']+' '+b['host_key']+'\n','known host changed')
         if action=='install':command='sudo -n /usr/bin/python3 -c '+shlex.quote(RECEIVER)+' '+shlex.quote(b['run_id'])
         elif action=='export':command='sudo -n /usr/bin/python3 -c '+shlex.quote(EXPORTER)+' '+shlex.quote(b['run_id'])
+        elif recovery:
+            mode = 'ledger' if action == 'finish-ledger' else 'pairs'
+            command = 'sudo -n /usr/bin/python3 -I -c ' + shlex.quote(FINISH_EXPORTER) + ' ' + shlex.quote(b['run_id']) + ' ' + mode
+        elif action == 'finish-finalize':
+            command = ('sudo -n /usr/bin/systemctl stop ' + ' '.join(
+                name + '-' + suffix + '.service' for suffix in ('reader', 'candidate', 'guard'))
+                + ' && sudo -n /usr/bin/timeout 600 /usr/bin/systemctl start ' + name + '-finalize.service')
+        elif action == 'finish-drain':
+            command = 'sudo -n /usr/bin/systemctl stop ' + name + '-logs.service'
         elif action=='inspect':
             script=('import json,subprocess;from pathlib import Path;'
                     'receipt=json.loads(Path('+repr(root+'/state/install.json')+').read_text());'
@@ -260,12 +518,15 @@ class Remote:
               '-o','ForwardAgent=no','-o','ClearAllForwardings=yes','-o','ConnectTimeout=10',
               '-o','ConnectionAttempts=1','-o','ServerAliveInterval=10','-o','ServerAliveCountMax=2',
               'ec2-user@'+b['ipv4'],command]
+        if recovery:
+            request = {'attempts': selected, 'limit': limit, 'timeout': timeout}
+            return _receive_recovery(argv, destination, request, limit, timeout)
         if action=='export':
             fd=os.open(destination,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
             try:
                 with os.fdopen(fd,'wb') as output:
                     completed=subprocess.run(argv,stdin=subprocess.DEVNULL,stdout=output,stderr=subprocess.DEVNULL,
-                                             timeout=600,check=False)
+                                             timeout=timeout,check=False)
                     output.flush();os.fsync(output.fileno())
                 size=Path(destination).stat().st_size
                 require(completed.returncode==0 and 0<size<=EVIDENCE_BYTES+EVIDENCE_FILES*1024+20480,'evidence transfer incomplete')
@@ -276,12 +537,12 @@ class Remote:
             # A stop waits for the collector's drain: units 10 s, then drain 75 s and
             # collector shutdown 20 s (TimeoutStopSec=100), inside 150 s.
             result=subprocess.run(argv,stdin=archive if archive is not None else subprocess.DEVNULL,
-                                  capture_output=True,text=True,timeout=150 if action=='stop' else 120,check=False)
+                                  capture_output=True,text=True,timeout=timeout,check=False)
         except subprocess.TimeoutExpired:return CloudResult('timeout','HostInstall' if action=='install' else 'HostObserve')
         except OSError:return CloudResult('command_error','HostInstall' if action=='install' else 'HostObserve')
         operation='HostInstall' if action=='install' else 'HostObserve'
         if result.returncode!=0 or len(result.stdout)>65536:return CloudResult('command_error',operation)
-        if action=='stop':return CloudResult('empty_success',operation)
+        if action=='stop' or control:return CloudResult('empty_success',operation)
         try:payload=json.loads(result.stdout)
         except ValueError:return CloudResult('malformed',operation)
         return CloudResult('json',operation,payload) if type(payload) is dict else CloudResult('malformed',operation)

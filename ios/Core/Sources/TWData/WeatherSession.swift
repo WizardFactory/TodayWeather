@@ -18,7 +18,7 @@ public final class WeatherSession {
     public enum Sender: Sendable, Equatable {
         /// The app opened (TabCtrl `init`).
         case initial
-        /// The selected Hourly, Daily or Air tab was tapped again.
+        /// Manual reload of the selected forecast or air page.
         case tab
         /// The app came back to the foreground; gated.
         case resume
@@ -116,21 +116,33 @@ public final class WeatherSession {
     /// `locationOn` reloads only the current position; the refresh-interval setting restarts the timer only. Otherwise
     /// `reloadCity` and `loadWeatherData`.
     public func reload(_ sender: Sender) {
-        if retry || positionRetry != nil { return }
-        guard let s = holder.state, let place = selected else { return }
+        _ = startReload(sender)
+    }
+
+    /// Keeps the native refresh control active until the weather and any current-position update settle.
+    public func refresh() async {
+        guard let weather = startReload(.tab) else { return }
+        let position = selected?.currentPosition == true ? lookup : nil
+        await weather.value
+        await position?.value
+    }
+
+    private func startReload(_ sender: Sender) -> Task<Void, Never>? {
+        if retry || positionRetry != nil { return nil }
+        guard let s = holder.state, let place = selected else { return nil }
         switch sender {
         case .resume, .search:
-            if !repository.canLoad(place) { return }
+            if !repository.canLoad(place) { return nil }
         case .locationOn:
-            if !place.currentPosition { return }
+            if !place.currentPosition { return nil }
         case .refreshInterval:
             restartTimer(s)
-            return
+            return nil
         default:
             break
         }
         repository.invalidate(place)
-        loadWeatherData()
+        return loadWeatherData()
     }
 
     /// A notification tap (`reloadEvent 'push'`) or an entry link selecting `index` (`setCityIndex`, which refuses an
@@ -248,14 +260,15 @@ public final class WeatherSession {
     }
 
     /// `loadWeatherData`: restarts the timer and fires `applyEvent`, then loads the selected place unless the gate stops it.
-    private func loadWeatherData() {
-        guard let s = holder.state else { return }
+    @discardableResult
+    private func loadWeatherData() -> Task<Void, Never>? {
+        guard let s = holder.state else { return nil }
         restartTimer(s)
         applies += 1
-        guard let place = selected, repository.canLoad(place) else { return }
+        guard let place = selected, repository.canLoad(place) else { return nil }
         let units = s.units
         let language = acceptLanguage()
-        Task { @MainActor [weak self] in
+        let weather = Task { @MainActor [weak self] in
             guard let self else { return }
             let started = clock.now
             let result = await repository.load(place, units: units, acceptLanguage: language, force: false)
@@ -281,6 +294,7 @@ public final class WeatherSession {
         }
         // After the saved place's request, as TabCtrl started them.
         if place.currentPosition { lookupCurrentPosition(place) }
+        return weather
     }
 
     /// `updateCurrentPosition` with its follow-up in `loadWeatherData` (controller.tabctrl.js L870-L926, L954-L1088), iOS

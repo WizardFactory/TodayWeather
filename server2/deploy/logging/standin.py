@@ -14,7 +14,9 @@ with --log-group, as on AWS, where the instance role cannot create them.
 Fault: while <state>/fail-s3 or <state>/fail-logs exists, that service answers 503;
 while <state>/deny-data exists, every data-bucket request answers 403 AccessDenied (a lost
 instance role, shadow check of SR-3); while <state>/delay-s3 exists, a server object is stored but confirmed only after that many seconds;
-while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds.
+while <state>/slow-s3 exists, every object is stored and confirmed only after that many seconds;
+while <state>/fail-evidence exists, a PUT under evidence/ of the log bucket answers 503 and log
+objects are still stored (the evidence copy fails while its failure record is shipped, SR-5a).
 Data buckets (--data-bucket, the shadow check of LP-6): an empty, writable weather
 bucket for the server itself; GET/HEAD of a missing key answer 404 NoSuchKey, a list
 answers the stored keys, a PUT with If-None-Match: * of an existing key answers 412.
@@ -168,6 +170,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(404, b'<Error><Code>NoSuchBucket</Code></Error>', 'application/xml')
         if not SAFE.match(key) or '..' in key.split('/'):
             return self.reply(400, b'<Error><Code>InvalidKey</Code></Error>', 'application/xml')
+        if key.startswith('evidence/') and (self.server.state / 'fail-evidence').exists():
+            return self.reply(503, b'<Error><Code>ServiceUnavailable</Code></Error>', 'application/xml')
         # Test fault: while <state>/slow-s3 exists, every object is stored and confirmed only
         # after that many seconds (a slow upload).
         slow = self.server.state / 'slow-s3'
