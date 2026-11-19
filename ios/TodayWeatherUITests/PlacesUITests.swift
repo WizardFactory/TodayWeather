@@ -88,6 +88,15 @@ final class PlacesUITests: XCTestCase {
         closeNotice()
         tap("start-shortcut-0")
         XCTAssertTrue(waitForTitle { $0 == "서울" }, "Hourly for 서울: \(title)")
+        // Walk the main tabs with a saved place and capture the selection shown on each page.
+        let tabs = ["search", "forecast", "dailyforecast", "air"]
+        for tab in tabs {
+            tap("shell-tab-\(tab)")
+            for item in tabs {
+                XCTAssertEqual(element("shell-tab-\(item)").isSelected, item == tab)
+            }
+            shot("selected-\(tab)")
+        }
         search("부산")
         tapResult("places-town-0")
         XCTAssertTrue(waitForTitle { $0 == "부산광역시" }, "Hourly for 부산광역시: \(title)")

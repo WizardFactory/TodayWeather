@@ -352,9 +352,10 @@ struct TabBar: View {
         HStack(alignment: .top, spacing: 0) {
             ForEach(ShellTab.allCases, id: \.self) { tab in
                 let on = tab == selected
+                let ink = (on ? colors.tabSelected : colors.tabText).color
                 Button { onTap(tab) } label: {
                     VStack(spacing: 0) {
-                        Text(Glyphs.tab(tab, selected: on))
+                        Text(Glyphs.tab(tab))
                             .font(Glyphs.ionicons(ShellMetrics.tabGlyph))
                             .frame(height: ShellMetrics.tabGlyphLine)
                         Text(catalog(tab.textKey))
@@ -366,7 +367,7 @@ struct TabBar: View {
                             // WebKit's 14 pt line puts the label 2 px (at 3x) higher than SwiftUI centers it.
                             .offset(y: ShellMetrics.tabLabelBaseline)
                     }
-                    .foregroundStyle(colors.tabText.color)
+                    .foregroundStyle(ink)
                     .frame(maxWidth: .infinity, minHeight: ShellMetrics.tabItemHeight, alignment: .top)
                     .padding(.horizontal, 2)
                     .contentShape(Rectangle())
@@ -374,6 +375,15 @@ struct TabBar: View {
                 .buttonStyle(.plain)
                 .opacity(on ? 1 : 0.7)
                 .frame(maxWidth: ShellMetrics.tabItemMaxWidth)
+                .overlay(alignment: .top) {
+                    if on {
+                        Capsule().fill(ink)
+                            .frame(width: 24, height: 2.5)
+                            .offset(y: -1)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .accessibilityIdentifier("shell-tab-\(tab.rawValue)")
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
