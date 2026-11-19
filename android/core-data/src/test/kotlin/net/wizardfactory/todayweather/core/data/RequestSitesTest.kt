@@ -81,18 +81,7 @@ class RequestSitesTest {
     @Test
     fun sdksAreUsedWhereTheRegisterSays() {
         assertEquals(
-            listOf(
-                "app/src/main/java/net/wizardfactory/todayweather/MessagingService.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/Push.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/TodayWeatherApp.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/ads/AdMobBanner.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/ads/AdsConsent.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/analytics/Analytics.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/analytics/RemoteBannerConfig.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/location/AndroidLocationAccess.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/notify/Notifications.kt",
-                "app/src/main/java/net/wizardfactory/todayweather/search/PlaceSearch.kt",
-            ),
+            entry("E4")["sites"]!!.jsonArray.map { it.jsonPrimitive.content },
             filesMatching(SDK),
             "the sources using an E4 SDK",
         )

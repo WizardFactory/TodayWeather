@@ -29,6 +29,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -39,6 +41,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.layout.LastBaseline
@@ -142,13 +148,31 @@ fun WeatherPage(
     onAction: (PageAction) -> Unit,
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
+    nativeAd: (@Composable () -> Unit)? = null,
+    onForecastRead: () -> Unit = {},
 ) {
     val daily = content.type == ForecastType.MID
     val colors = ForecastColors.of(theme, daily)
     val page = content.page
-    Column(modifier.fillMaxSize().background(colors.page).verticalScroll(scrollState).testTag(ForecastTags.PAGE)) {
+    val chartVisible = if (daily) content.daily != null else page.showChart && content.hourly != null
+    val chartCardHeight = remember { mutableIntStateOf(0) }
+    val read = rememberUpdatedState(onForecastRead)
+    val detector = remember(scrollState, chartVisible) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // Only a deliberate vertical read beyond the chart qualifies. Restoration, chart swipes,
+                // semantics/programmatic scrolling and an SDK layout change do not establish a break.
+                if (chartVisible && source == NestedScrollSource.UserInput && consumed.y < 0 &&
+                    chartCardHeight.intValue > 0 && scrollState.value >= chartCardHeight.intValue) {
+                    read.value()
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    Column(modifier.fillMaxSize().background(colors.page).nestedScroll(detector).verticalScroll(scrollState).testTag(ForecastTags.PAGE)) {
         // `.card:first-child`: the header block, its 5 dp margin, the chart and 10 dp of padding.
-        Column(Modifier.fillMaxWidth().cardShadow().background(colors.card)) {
+        Column(Modifier.fillMaxWidth().onSizeChanged { chartCardHeight.intValue = it.height }.cardShadow().background(colors.card)) {
             HeaderBlock(page, content.metrics, theme, colors, photo, photoGradient, onPrevious, onNext, onAction)
             Spacer(Modifier.height(5.dp))
             Box(Modifier.testTag(ForecastTags.block(1))) {
@@ -171,6 +195,7 @@ fun WeatherPage(
         fun card(title: String?, action: PageAction? = null, body: @Composable ColumnScope.() -> Unit) =
             Card(colors, title, Modifier.testTag(ForecastTags.block(block++)), action?.let { { onAction(it) } }, body)
         page.hourlyAqi?.let { cells -> card(page.hourlyAqiTitle, PageAction.AirInfo("aqi")) { AqiTable(cells, colors, null) } }
+        if (!daily && chartVisible) nativeAd?.invoke()
         page.currentAir?.let { cells -> card(null) { AqiTable(cells, colors, onAction) } }
         page.detailWeather?.let { rows -> card(page.detailWeatherTitle) { WeatherRows(rows, theme, colors, onAction) } }
         page.detailAir?.let { rows -> card(page.detailAirTitle) { AirRows(rows, colors, onAction) } }
@@ -181,6 +206,7 @@ fun WeatherPage(
             }
         }
         page.dayDetails?.let { days -> card(page.detailWeatherTitle) { DayCells(days, theme, colors) } }
+        if (daily && chartVisible) nativeAd?.invoke()
         page.attribution?.let { Box(Modifier.testTag(ForecastTags.block(block++))) { Attribution(it, colors, onAction) } }
     }
 }

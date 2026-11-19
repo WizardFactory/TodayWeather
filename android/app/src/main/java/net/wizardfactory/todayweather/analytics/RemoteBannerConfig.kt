@@ -54,7 +54,7 @@ class FirebaseRemoteConfigSource(private val config: FirebaseRemoteConfig) : Rem
  * after that are ignored. Without Firebase ([source] null) the defaults apply at once.
  */
 class RemoteBannerConfig(private val source: RemoteConfigSource?, private val scope: CoroutineScope) {
-    data class State(val policy: BannerPolicy, val ready: Boolean)
+    data class State(val policy: BannerPolicy, val ready: Boolean, val nativeEnabled: Boolean = true, val interstitialEnabled: Boolean = true)
 
     private val state = MutableStateFlow(State(BannerPolicy.DEFAULT, ready = false))
     private var started = false
@@ -75,7 +75,7 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
             finish("timeout")
         }
         try {
-            source.setDefaults(RemoteBannerPolicy.DEFAULTS) { ok ->
+            source.setDefaults(RemoteBannerPolicy.DEFAULTS + mapOf(NATIVE_ENABLED to true, INTERSTITIAL_ENABLED to true)) { ok ->
                 if (closed) return@setDefaults
                 if (!ok) return@setDefaults fail()
                 source.setSettings(FETCH_TIMEOUT_S, MINIMUM_INTERVAL_S) { set ->
@@ -102,6 +102,11 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
 
     /** A valid pair applies whole; an invalid one is ignored (`invalid_values`). */
     private fun apply(values: Map<String, String>) {
+        // Apply format controls independently, including when an unrelated legacy parameter is malformed.
+        state.value = state.value.copy(
+            nativeEnabled = values.getOrDefault(NATIVE_ENABLED, "true") == "true",
+            interstitialEnabled = values.getOrDefault(INTERSTITIAL_ENABLED, "true") == "true",
+        )
         val policy = RemoteBannerPolicy.parse(values)
         if (policy == null) {
             Log.i(TAG, "remote_config invalid_values")
@@ -121,6 +126,8 @@ class RemoteBannerConfig(private val source: RemoteConfigSource?, private val sc
     }
 
     companion object {
+        const val NATIVE_ENABLED = "tw_native_enabled"
+        const val INTERSTITIAL_ENABLED = "tw_interstitial_enabled"
         const val TIMEOUT_MS = 12_000L
         const val FETCH_TIMEOUT_S = 10L
         const val MINIMUM_INTERVAL_S = 3600L

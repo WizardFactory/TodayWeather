@@ -13,7 +13,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -35,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -124,7 +124,8 @@ object WeatherTabTags {
 @Composable
 internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
                        host: WeatherTabHost, charts: ForecastCharts, images: ForecastChartImages, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
-                       locating: Boolean = false, onNoPlace: () -> Unit = {}): TabContent {
+                       locating: Boolean = false, onNoPlace: () -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null,
+                       onForecastRead: (Tab) -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -171,7 +172,7 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
         WeatherPageContent(type, page, metrics, hourly, daily, visit.scrolls)
     }
     var expanded by remember(visit) { mutableStateOf(visit.expand) }
-    val scroll = remember(visit) { ScrollState(0) }
+    val scroll = key(tab) { rememberScrollState() }
     val photo = rememberPhoto(visit, (visit.photo as? JsonPrimitive)?.takeIf { it.isString }?.content, host.photos)
     var pollen by remember(visit) { mutableStateOf<List<PollenRow>?>(null) }
     var source by remember(visit) { mutableStateOf<String?>(null) }
@@ -214,7 +215,8 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
                         expanded = visit.expand
                         host.onExpand(visit.expand)
                     },
-                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll)
+                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll, nativeAd = nativeAd,
+                    onForecastRead = { onForecastRead(tab) })
             }
         },
         popups = {

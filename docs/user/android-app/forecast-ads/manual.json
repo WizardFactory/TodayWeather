@@ -1,0 +1,34 @@
+{
+  "title": "TodayWeather for Android · Forecast advertising",
+  "scenario": "Version 2.0.0 preview. English controls and a saved Seoul forecast. Ads are embedded in the reading flow. The first Hourly and Daily visits each day are protected. At most one full-screen ad can appear across both tabs on eligible return visits that day.",
+  "steps": [
+    {
+      "title": "Hourly forecast",
+      "instruction": "Read the temperature and precipitation chart. Scroll past the hourly air-quality outlook if present.",
+      "screenshot": "screenshots/hourly-native.png",
+      "caption": "The sample ad shows its image on the left and text on the right.",
+      "expected": "The compact card follows the chart and any hourly air-quality outlook."
+    },
+    {
+      "title": "Daily forecast",
+      "instruction": "Open Daily and read the week at a glance. Scroll past the detailed-weather row to continue to the data source.",
+      "screenshot": "screenshots/daily-native.png",
+      "caption": "The sideways-scrolling dates and weather details sit above the compact sample ad.",
+      "expected": "The card appears above source attribution."
+    },
+    {
+      "title": "Locations",
+      "instruction": "Open Locations and scroll beneath the saved places. Search and edit mode keep the list available for choosing a place.",
+      "screenshot": "screenshots/locations-native.png",
+      "caption": "The sample ad below Seoul uses a full-width card with its image above the description.",
+      "expected": "The card follows the saved locations while viewing the populated list."
+    },
+    {
+      "title": "Air quality (AQI)",
+      "instruction": "Open Air and read the current grade and health advice. Follow the hourly outlook before continuing to detailed pollutant readings.",
+      "screenshot": "screenshots/air-native.png",
+      "caption": "The sample ad shows its image beside the text, below the hourly AQI forecast.",
+      "expected": "The compact card comes before the detailed pollutant readings."
+    }
+  ]
+}

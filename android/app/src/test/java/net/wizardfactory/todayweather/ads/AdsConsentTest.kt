@@ -207,6 +207,19 @@ class AdsConsentTest {
     }
 
     @Test
+    fun withdrawingConsentRevokesPermissionAfterTheSdkStarted() {
+        val platform = Platform(allowed = true)
+        val consent = consent(platform)
+        consent.start(activity)
+        assertTrue(consent.allowed.value)
+        platform.privacyRequired = true
+        platform.allowed = false
+        consent.openPrivacyOptions(activity) { error("expected a form") }
+        assertEquals(false, consent.allowed.value)
+        assertEquals(1, ready)
+    }
+
+    @Test
     fun theAdPrivacyRowShowsTheFormOrTheMessage() {
         var unavailable = 0
         val platform = Platform(allowed = false, update = null)

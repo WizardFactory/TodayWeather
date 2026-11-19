@@ -7,6 +7,8 @@ import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onRoot
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +26,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.swipeRight
 import android.location.LocationManager
 import android.provider.Settings
@@ -53,6 +56,7 @@ import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.location.LocationGlyph
+import net.wizardfactory.todayweather.ui.air.AirTags
 import net.wizardfactory.todayweather.ui.shell.ShellTags
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -104,6 +108,8 @@ class WeatherTabTest {
         answer: suspend (String) -> String = { url -> if ("51.51" in url) londonBody else seoulBody },
         places: List<Place>? = null,
         index: Int = 1,
+        onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
+        install: (@Composable () -> Unit) -> Unit = rule::setContent,
     ) {
         // The current position is off, as when location was never allowed: Seoul and London are saved places.
         memory = Memory(AppState(places = places ?: listOf(Place.currentPositionPlaceholder(), seoul, london), placeIndex = index,
@@ -113,7 +119,7 @@ class WeatherTabTest {
         session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
         // The activity's glyph: a tap with location off clears the selected place's gate, as MainActivity's does.
         val glyph = LocationGlyph(rule.activity) { memory.current().let { s -> s.places.getOrNull(s.placeIndex)?.let(repository::invalidate) } }
-        rule.setContent {
+        install {
             val state by memory.state.collectAsState()
             val entries by repository.weather.collectAsState()
             val loading by repository.loading.collectAsState()
@@ -121,7 +127,7 @@ class WeatherTabTest {
             val context = LocalContext.current
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next,
                 { expand -> memory.change { it.copy(expandShortChart = expand) } }, onLocationGlyph = glyph::tap, locationEnabled = glyph::enabled)
-            AppContent(state, entries, loading, retry, session, host, "test", onExit = {})
+            AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, onRepeatVisit = onRepeatVisit)
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
@@ -154,6 +160,61 @@ class WeatherTabTest {
             rule.onNodeWithTag(ForecastTags.HEADER).performTouchInput { swipeLeft(durationMillis = 100) }
             rule.waitForIdle()
             assertTrue("$tab: a header swipe switches", memory.current().placeIndex != selected)
+        }
+    }
+
+    @Test
+    fun onlyReadingPastTheChartMakesTheNextForecastTabTapAnAdOpportunity() {
+        val candidates = mutableListOf<Tab>()
+        show(onRepeatVisit = { tab, _ -> candidates += tab; false })
+        fun select(tab: Tab) = rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+
+        // A matrix/automation scroll and a horizontal chart gesture do not establish a user break.
+        rule.onNodeWithTag(ForecastTags.block(3)).performScrollTo()
+        select(Tab.DAILY)
+        select(Tab.HOURLY)
+        rule.onNodeWithTag(ForecastTags.block(1)).performTouchInput { swipeLeft() }
+        select(Tab.DAILY)
+        assertEquals(emptyList<Tab>(), candidates)
+
+        select(Tab.HOURLY)
+        repeat(4) {
+            rule.onNodeWithTag(ForecastTags.PAGE).performTouchInput { swipeUp(durationMillis = 500) }
+            rule.waitForIdle()
+        }
+        select(Tab.DAILY)
+        assertEquals(listOf(Tab.DAILY), candidates)
+        select(Tab.HOURLY)
+        assertEquals("a new visit starts unread", listOf(Tab.DAILY), candidates)
+    }
+
+    @Test
+    fun verticalScrollSurvivesActivityRecreationAndResetsOnANewTabVisit() {
+        lateinit var render: @Composable () -> Unit
+        show(install = { content ->
+            render = content
+            rule.setContent(content)
+        })
+        fun select(tab: Tab) = rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+        fun offset() = rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+            .fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+
+        for (tab in listOf(Tab.HOURLY, Tab.DAILY, Tab.AIR)) {
+            select(tab)
+            assertEquals("$tab opens at the top", 0f, offset(), 0f)
+            val page = if (tab == Tab.AIR) AirTags.PAGE else ForecastTags.PAGE
+            rule.onNodeWithTag(page).performTouchInput { swipeUp(durationMillis = 500) }
+            val before = offset()
+            assertTrue("$tab can be scrolled", before > 0f)
+
+            rule.activityRule.scenario.recreate()
+            rule.activityRule.scenario.onActivity { it.setContent(content = render) }
+            rule.onNodeWithTag(ShellTags.page(tab)).assertExists()
+            assertEquals("$tab restores the same reading position", before, offset(), 0f)
+
+            select(if (tab == Tab.HOURLY) Tab.DAILY else Tab.HOURLY)
+            select(tab)
+            assertEquals("$tab starts a new visit at the top", 0f, offset(), 0f)
         }
     }
 

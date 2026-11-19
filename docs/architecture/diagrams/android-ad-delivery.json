@@ -1,0 +1,151 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Android ad delivery",
+    "subtitle": "Release design for issue #3041 \u00b7 device-local day",
+    "output": "docs/architecture/diagrams/android-ad-delivery.html",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow"
+  },
+  "lanes": [
+    {
+      "id": "visits",
+      "label": "Tab navigation"
+    },
+    {
+      "id": "fullscreen",
+      "label": "Forecast interstitial"
+    },
+    {
+      "id": "content",
+      "label": "Native placement"
+    }
+  ],
+  "mainPath": [
+    "tap",
+    "eligibility",
+    "reserve",
+    "show",
+    "open"
+  ],
+  "nodes": [
+    {
+      "id": "tap",
+      "lane": "visits",
+      "col": 0,
+      "type": "frontend",
+      "label": "Select forecast",
+      "sublabel": "Hourly or Daily",
+      "width": 156
+    },
+    {
+      "id": "eligibility",
+      "lane": "visits",
+      "col": 1,
+      "type": "security",
+      "label": "Check repeat visit",
+      "sublabel": "Independent first visits",
+      "width": 156
+    },
+    {
+      "id": "reserve",
+      "lane": "fullscreen",
+      "col": 1,
+      "type": "database",
+      "label": "Reserve day",
+      "sublabel": "Persist shared allowance",
+      "width": 156
+    },
+    {
+      "id": "show",
+      "lane": "fullscreen",
+      "col": 2,
+      "type": "external",
+      "label": "Show preloaded ad",
+      "sublabel": "At most once per day",
+      "width": 156
+    },
+    {
+      "id": "open",
+      "lane": "visits",
+      "col": 3,
+      "type": "frontend",
+      "label": "Open destination",
+      "sublabel": "Record visible forecast",
+      "width": 156
+    },
+    {
+      "id": "slot",
+      "lane": "content",
+      "col": 3,
+      "type": "frontend",
+      "label": "Reach card slot",
+      "sublabel": "Scroll past core content",
+      "width": 156
+    },
+    {
+      "id": "creative",
+      "lane": "content",
+      "col": 4,
+      "type": "external",
+      "label": "Display native ad",
+      "sublabel": "Ready at insertion point",
+      "width": 156
+    }
+  ],
+  "edges": [
+    {
+      "from": "tap",
+      "to": "eligibility"
+    },
+    {
+      "from": "eligibility",
+      "to": "reserve",
+      "label": "Eligible, draw < 10%"
+    },
+    {
+      "from": "reserve",
+      "to": "show",
+      "label": "Saved"
+    },
+    {
+      "from": "show",
+      "to": "open",
+      "label": "Dismissed or failed"
+    },
+    {
+      "from": "eligibility",
+      "to": "open",
+      "label": "Pass through"
+    },
+    {
+      "from": "open",
+      "to": "slot"
+    },
+    {
+      "from": "slot",
+      "to": "creative"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Full-screen eligibility",
+      "items": [
+        "Only direct repeat forecast switches at a clear break qualify.",
+        "Consent, format enablement, a ready ad and unused daily allowance are required.",
+        "A confirmed failure before display releases the allowance. An uncertain outcome keeps it spent."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Native placement by screen",
+      "items": [
+        "Hourly follows the hourly air outlook. Daily follows the multi-day detail row.",
+        "Favorites follows the saved list. Air follows the hourly air graph.",
+        "Omit unavailable or late ads and keep search, editing and alerts clear."
+      ]
+    }
+  ]
+}

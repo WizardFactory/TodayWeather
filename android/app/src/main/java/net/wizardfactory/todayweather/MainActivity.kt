@@ -4,9 +4,17 @@ import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.key
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.Flow
 import net.wizardfactory.todayweather.core.domain.alarms.ForegroundMessage
 import net.wizardfactory.todayweather.core.data.AlarmPage
@@ -46,18 +54,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.wizardfactory.todayweather.ads.NativeForecastAds
+import net.wizardfactory.todayweather.ads.ForecastInterstitial
 import net.wizardfactory.todayweather.widget.WidgetAccess
 import net.wizardfactory.todayweather.widget.WidgetRefresh
-import net.wizardfactory.todayweather.ads.AdMobBanner
 import net.wizardfactory.todayweather.ads.AdsConsent
-import net.wizardfactory.todayweather.ads.BannerSlot
-import net.wizardfactory.todayweather.ads.TwAds
+import net.wizardfactory.todayweather.ads.rememberNativeAdSlot
 import net.wizardfactory.todayweather.analytics.RemoteBannerConfig
 import net.wizardfactory.todayweather.core.data.PlacesPage
 import net.wizardfactory.todayweather.core.data.SettingsActions
 import net.wizardfactory.todayweather.core.data.StartFlow
 import net.wizardfactory.todayweather.core.data.Telemetry
 import net.wizardfactory.todayweather.core.data.WeatherEntry
+import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.domain.forecast.PlaceIndex
 import net.wizardfactory.todayweather.core.domain.places.PlaceRows
@@ -104,7 +113,6 @@ import net.wizardfactory.todayweather.ui.start.locationText
 import net.wizardfactory.todayweather.ui.start.StartChoicePopup
 import net.wizardfactory.todayweather.ui.start.StartPage
 import net.wizardfactory.todayweather.ui.start.StartScreen
-import net.wizardfactory.todayweather.ui.start.hideBannerWhileStartShows
 
 /**
  * The launcher activity. It keeps the Cordova component name (`net.wizardfactory.todayweather/.MainActivity`),
@@ -120,7 +128,8 @@ class MainActivity : ComponentActivity() {
         LocationGlyph(this) { app.appState.current()?.let { s -> s.places.getOrNull(s.placeIndex)?.let(app.weather::invalidate) } }
     }
     private lateinit var opened: OpenedModel
-    private lateinit var banner: AdMobBanner
+    private lateinit var nativeAds: NativeForecastAds
+    private lateinit var interstitial: ForecastInterstitial
     private var resumedBefore = false
 
     override fun attachBaseContext(newBase: Context) {
@@ -137,9 +146,21 @@ class MainActivity : ComponentActivity() {
         app.notifications.attach(this)
         if (savedInstanceState == null) app.entryIntents.submit(intent)
         val session = opened.session
-        // The banner belongs to this activity: a configuration change loads a new one at the new width (V21).
-        banner = AdMobBanner(this, BuildConfig.BANNER_AD_UNIT, app.analytics::track)
-        opened.ads.attach(banner)
+        nativeAds = NativeForecastAds(this, BuildConfig.NATIVE_AD_UNIT, app.analytics::track)
+        interstitial = ForecastInterstitial(this, BuildConfig.INTERSTITIAL_AD_UNIT, app.analytics::track)
+        lifecycleScope.launch {
+            combine(opened.consent.allowed, opened.adConfig.policy) { consent, config -> consent to config }
+                .collectLatest { (consent, config) ->
+                    val allow = consent && config.ready && config.policy.enabled
+                    nativeAds.setEnabled(false)
+                    interstitial.setEnabled(false)
+                    if (allow) {
+                        delay((opened.adStart + config.policy.delaySeconds * 1000L - SystemClock.elapsedRealtime()).coerceAtLeast(0L))
+                        nativeAds.setEnabled(config.nativeEnabled)
+                        interstitial.setEnabled(config.interstitialEnabled)
+                    }
+                }
+        }
         // UMP and the Ads SDK start with the tabs, after the start page (TabCtrl's `TwAds.init`).
         lifecycleScope.launch {
             app.appState.state.first { it != null && !it.startShows }
@@ -186,9 +207,11 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch { Handoff.openLink(this@MainActivity, withContext(Dispatchers.Default) { Handoff.feedbackMail(this@MainActivity) }) }
                     })
                 }
-                val shown by opened.ads.shown.collectAsState()
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
-                    handoffs = handoffs, nation = opened.nation, privacy = privacy, banner = if (shown) ({ BannerSlot(banner) }) else null,
+                    handoffs = handoffs, nation = opened.nation, privacy = privacy, nativeAd = { tab ->
+                        rememberNativeAdSlot(nativeAds, compact = tab != Tab.LOCATIONS, dark = Theme.of(s.settings.theme) == Theme.DARK)
+                    },
+                    onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
                     openAppSettings = { AndroidLocationAccess.openAppSettings(this) },
                     openLocationSettings = { AndroidLocationAccess.openLocationSettings(this) }, places = opened.places,
@@ -204,12 +227,10 @@ class MainActivity : ComponentActivity() {
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
         resumedBefore = true
         app.foreground.resumed = true
-        banner.resume()
     }
 
     override fun onPause() {
         app.foreground.resumed = false
-        banner.pause()
         super.onPause()
     }
 
@@ -217,8 +238,8 @@ class MainActivity : ComponentActivity() {
         app.location.detach(this)
         app.notifications.detach()
         opened.consent.stop(this)
-        opened.ads.detach(banner)
-        banner.destroy()
+        nativeAds.destroy()
+        interstitial.destroy()
         super.onDestroy()
     }
 
@@ -272,6 +293,9 @@ fun AppContent(
     messages: Flow<PushMessage>? = null,
     /** O06 for alarms of the legacy `pushData` (#2893). */
     alertIntro: AlertIntro? = null,
+    nativeAd: (@Composable (Tab) -> (@Composable () -> Unit))? = null,
+    onVisit: (Tab) -> Unit = {},
+    onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
 ) {
     val theme = Theme.of(state.settings.theme)
     val forecastCharts = remember { ForecastCharts() }
@@ -353,6 +377,24 @@ fun AppContent(
     }
     val screen = pages.lastOrNull()?.let(::screenName) ?: "tab.${navigation.selected.state}"
     LaunchedEffect(screen) { onScreen(screen) }
+    val tabContentVisible = pages.isEmpty() && !navigation.menuOpen && !retry && !startPopup &&
+        positionRetry == null && !about && !intro && !analyticsPopup && privacyAlert == null && foregroundMessages.isEmpty()
+    val selected = navigation.selected
+    var forecastRead by remember(selected, state.placeIndex, tabContentVisible) { mutableStateOf(false) }
+    LaunchedEffect(selected, tabContentVisible) { if (tabContentVisible) onVisit(selected) }
+    val city = state.places.getOrNull(state.placeIndex)?.let(WeatherRepository::key)
+    val placement = key(selected, city) { nativeAd?.invoke(selected) }
+    var adHeightPx by remember(selected, city) { mutableIntStateOf(0) }
+    val visibleAd: (@Composable () -> Unit)? = placement?.let { render ->
+        {
+            if (tabContentVisible) {
+                Box(Modifier.onSizeChanged { adHeightPx = it.height }) { render() }
+            } else {
+                // Keep the reading position while the creative and its touch targets are covered.
+                Spacer(Modifier.height(with(LocalDensity.current) { adHeightPx.toDp() }))
+            }
+        }
+    }
     val texts = host.texts
     val openUnits = { open(SettingsRoutes.UNITS) }
     TodayWeatherShell(
@@ -416,7 +458,10 @@ fun AppContent(
         onTabTap = { tab ->
             val none = tab != Tab.LOCATIONS && PlaceIndex.enabledCount(state.places.map { it.disable }) == 0
             if (none) session.openStartPopup()
-            none
+            none || (forecastRead && tabContentVisible && tab != navigation.selected &&
+                (navigation.selected == Tab.HOURLY || navigation.selected == Tab.DAILY) &&
+                (tab == Tab.HOURLY || tab == Tab.DAILY) &&
+                navigation.deferForecast(tab, onRepeatVisit))
         },
         overlay = {
             pages.lastOrNull()?.let { route ->
@@ -510,14 +555,15 @@ fun AppContent(
                 // `goAirInfoPage(code)`: /tab/air?code=.
                 airCode = code
                 navigation.selected = Tab.AIR
-            }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup)
+            }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup, nativeAd = visibleAd,
+                onForecastRead = { if (it == selected) forecastRead = true })
             Tab.AIR -> rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
-                onUnits = openUnits, locating = locating)
+                onUnits = openUnits, locating = locating, nativeAd = visibleAd)
             else -> placesPage?.let { page ->
                 // A new visit gets a new tab: its state and its opening run again.
                 key(page) {
                     rememberPlacesTab(state, entries, theme, page, places!!, onSelect = ::openFromPlaces, onAdded = { openFromPlaces(null) },
-                        onAlarm = { i -> if (alarms != null) open(AlarmRoutes.of(i)) })
+                        onAlarm = { i -> if (alarms != null) open(AlarmRoutes.of(i)) }, nativeAd = visibleAd)
                 }
             } ?: TabContent()
         }
@@ -581,11 +627,9 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     /** `locationOn`: location services turned on while the app is open reload a selected current position. */
     private val locationSwitch = LocationSwitch(app) { session.reload(WeatherSession.Sender.LOCATION_ON) }
 
-    /** The banner of this app open (TabCtrl's `TwAds.init`) and its Remote Config policy. */
-    val ads = TwAds(viewModelScope, RemoteBannerConfig(twApp.remoteConfigSource(), viewModelScope), twApp.analytics::track, SystemClock::elapsedRealtime)
-
-    /** UMP and the Ads SDK start of this app open. */
-    val consent = AdsConsent(twApp.adsPlatform(), BuildConfig.RELEASE_ADS, twApp.analytics::track, ads::onSdkReady)
+    val adStart = SystemClock.elapsedRealtime()
+    val adConfig = RemoteBannerConfig(twApp.remoteConfigSource(), viewModelScope).apply { load() }
+    val consent = AdsConsent(twApp.adsPlatform(), BuildConfig.RELEASE_ADS, twApp.analytics::track) {}
 
     /** The settings pages' changes; a unit change posts the push list again in the app's scope (`Push.updateUnits`). */
     val settings = SettingsActions(twApp.appState, session) { twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateUnits() } }
@@ -607,7 +651,7 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
         locationSwitch.register()
         viewModelScope.launch {
             twApp.migration.await()
-            val state = hideBannerWhileStartShows(twApp.appState.state, ads::setShowAds)
+            val state = twApp.appState.state.first { it != null && !it.startShows }!!
             // The cached weather first, as Cordova showed the saved cities while it loaded.
             state.places.getOrNull(state.placeIndex)?.let { twApp.weather.cached(it) }
             session.reload(WeatherSession.Sender.INIT)

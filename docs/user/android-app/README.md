@@ -2,6 +2,12 @@
 
 [Read the PDF](manual.pdf) · [Editable source](manual.json) · [Capture provenance](provenance.json)
 
+The [forecast advertising supplement](forecast-ads/manual.pdf) shows the Android
+native cards on Hourly, Daily, Locations and AQI. Its four device captures from
+18 November replace the older manual’s bottom-banner depiction for those pages.
+The [editable supplement](forecast-ads/manual.json) and [capture record](forecast-ads/provenance.json)
+identify the Android 14 Google Play emulator, sample ads and saved Seoul fixture.
+
 This is the **native Kotlin / Jetpack Compose app**, version 2.0.0 preview. Its
 45 illustrated steps cover first launch and permissions, current location,
 hourly/daily charts, air quality and stations, saved places, alarms, units,

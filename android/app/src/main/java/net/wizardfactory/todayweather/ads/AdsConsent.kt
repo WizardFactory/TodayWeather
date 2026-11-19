@@ -8,6 +8,8 @@ import android.util.Log
 import com.google.android.gms.ads.MobileAds
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.google.android.ump.UserMessagingPlatform
 
 /** A consent form loaded to be shown once. */
@@ -99,6 +101,9 @@ class AdsConsent(
     private val track: (String, Map<String, Any?>) -> Boolean,
     private val onReady: () -> Unit,
 ) {
+    private val requestAllowed = MutableStateFlow(false)
+    val allowed = requestAllowed.asStateFlow()
+    private var sdkReady = false
     private var requested = false
     private var updated = false
     private var formDone = false
@@ -182,6 +187,7 @@ class AdsConsent(
                     Log.w(TAG, "privacy ad_choices form_unavailable")
                     onUnavailable()
                 }
+                fellBack = false
                 startIfAllowed()
             }
         } catch (e: Exception) {
@@ -190,7 +196,9 @@ class AdsConsent(
     }
 
     private fun startIfAllowed() {
-        if (platform.canRequestAds()) startSdk()
+        val consent = platform.canRequestAds()
+        if (consent) startSdk()
+        requestAllowed.value = sdkReady && (consent || fellBack)
     }
 
     private fun consentFailed(reason: String) {
@@ -205,7 +213,11 @@ class AdsConsent(
     private fun startSdk() {
         if (started) return
         started = true
-        platform.startSdk(onReady)
+        platform.startSdk {
+            sdkReady = true
+            requestAllowed.value = platform.canRequestAds() || fellBack
+            onReady()
+        }
     }
 
     companion object {
