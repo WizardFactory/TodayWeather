@@ -58,7 +58,7 @@ import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.PopupTags
-import net.wizardfactory.todayweather.ui.shell.withHourlyTabIconsFrom
+import net.wizardfactory.todayweather.ui.shell.withCurrentTabIconsFrom
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -428,7 +428,7 @@ class AlarmsScreenshotTest {
     private fun compare(name: String, showsHourlyTabs: Boolean = false) {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
-        val reference = if (showsHourlyTabs) cordova.withHourlyTabIconsFrom(native) else cordova
+        val reference = if (showsHourlyTabs) cordova.withCurrentTabIconsFrom(native, Tab.HOURLY, Tab.DAILY) else cordova
         val diff = ImageDiff.of(native, reference)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))

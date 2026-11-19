@@ -34,7 +34,7 @@
       "title": "Read hourly weather",
       "instruction": "Tap 시간별날씨 (Hourly weather). Read the current temperature and summary, then the hourly sky, precipitation probability and temperature chart. Swipe up to see lower cards.",
       "screenshot": "screenshots/05-hourly.png",
-      "caption": "The filled clock marks Hourly as selected. The other tabs show outline icons.",
+      "caption": "The clock and Hourly label appear in blue. A short line above the clock also marks the selected tab.",
       "expected": "The blue chart shows forecast temperatures; the gray comparison shows yesterday where available."
     },
     {
@@ -69,7 +69,7 @@
       "title": "Read daily weather",
       "instruction": "Tap 일별날씨 (Daily weather). Read the dates, sky symbols, precipitation and low/high temperature ranges. Swipe up for detail cards.",
       "screenshot": "screenshots/09-daily.png",
-      "caption": "The filled calendar marks Daily as selected.",
+      "caption": "The blue calendar and label, with a short line above them, mark Daily as selected.",
       "expected": "Daily forecast information replaces the hourly chart."
     },
     {
@@ -90,7 +90,7 @@
       "title": "Read the air-quality summary",
       "instruction": "Tap 대기정보 (Air information). Read the grade and advice, then swipe up to see pollutant cards and the information source.",
       "screenshot": "screenshots/12-air.png",
-      "caption": "The filled cloud marks Air as selected.",
+      "caption": "The short line above the blue cloud marks Air as selected.",
       "expected": "The selected air standard controls the grade bands. Missing readings may appear as a dash."
     },
     {
@@ -118,7 +118,7 @@
       "title": "Open saved places",
       "instruction": "Tap 즐겨찾기 (Favorites) to see saved places. Tap the search field to add another place.",
       "screenshot": "screenshots/16-places.png",
-      "caption": "The filled star marks Favorites as selected.",
+      "caption": "The blue star, Favorites label and line above the star mark the selected tab.",
       "expected": "The list shows the available locations and their alarm buttons."
     },
     {

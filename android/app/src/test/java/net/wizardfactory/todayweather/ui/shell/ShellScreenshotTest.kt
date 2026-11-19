@@ -17,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -186,6 +188,8 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
     private fun compare(theme: Theme) {
         val record = Json.parseToJsonElement(File(references, "$lang/${theme.key}.json").readText()).jsonObject
         val colors = ShellColors.of(theme, Tab.HOURLY)
+        assertTrue("selected tab label contrast in ${theme.key}",
+            ColorUtils.calculateContrast(colors.tabSelected.toArgb(), colors.tabBar.toArgb()) >= 4.5)
         val parts = listOf("tabs", "header", "menu")
         var part by mutableStateOf(parts.first())
         rule.setContent {
@@ -216,7 +220,7 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
                 .crop(captured.int("offset", "x"), captured.int("offset", "y"), captured.int("size", "width"), captured.int("size", "height"))
             // Cordova shows a reload glyph for Hourly and the old calendar for Daily.
             // ShellTest checks both icon states. Keep comparing the labels, layout and remaining icons.
-            val reference = if (p == "tabs") cordova.withHourlyTabIconsFrom(native) else cordova
+            val reference = if (p == "tabs") cordova.withCurrentTabIconsFrom(native, Tab.HOURLY, Tab.DAILY).withTabAccent(Tab.HOURLY, colors) else cordova
             val diff = ImageDiff.of(native, reference)
             val name = "$lang-${theme.key}-$p"
             val outputName = (matrixSize?.let { "$it-" } ?: "") + name

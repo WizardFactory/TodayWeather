@@ -91,10 +91,10 @@
         720,
         1600
       ],
-      "sha256": "149f8cdd572c9816c805ef73ca454bac801dc031d43742486af8050dfe40240f",
-      "raw_sha256": "0ddc754a53a405da8f50774ce2e7843970ddc13b797a57a37af39569a515ea02",
-      "exported_at": "2026-11-19T04:32:24.329644+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "802e71ae741ebfaaf47735877edb125540cc303814255db454b0082cb6bdda1e",
+      "raw_sha256": "0589a66a3030077d9d129d4d9aafb8a6c431e4be3d79e8316562b1c9fce8c3ec",
+      "exported_at": "2026-11-19T06:03:34.108835+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/06-hourly-expanded.png": {
@@ -102,10 +102,10 @@
         720,
         1600
       ],
-      "sha256": "396c2ac3bc51dc88d567a10e579262258b40a429caf28c86616754a308d196d0",
-      "raw_sha256": "e1b78d6a70c952bd8a85ae55cebc3ceae41c48a451787abcd0c2efe88dee7b08",
-      "exported_at": "2026-11-19T04:32:24.419394+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "22cb5f95c8dacd55918b317a28ed8019ab98bf5752c10bf4d10eb67e510349c1",
+      "raw_sha256": "2cf4f3772e66b87f9cafc73bd3e78153a20d9fba33349c8088f41c05e9ebb84e",
+      "exported_at": "2026-11-19T06:03:34.154792+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/07-hourly-past.png": {
@@ -113,10 +113,10 @@
         720,
         1600
       ],
-      "sha256": "14b33435c948c4458f191040e45e0fefbd7e6b677df64e36abf1fd6bf69647f1",
-      "raw_sha256": "1fc3a4f3bc421e552ba1b74bc00dc1151321d95076efdf9e70c9f0621632bda9",
-      "exported_at": "2026-11-19T04:32:24.506582+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "6c13d7304fa6400bd80649a69d1c4308a228c73b405c9895c53bc7030e846a86",
+      "raw_sha256": "8550a95a5c733611799f4be948f26aa8f790381fb3d2e718193120a276fbd7fe",
+      "exported_at": "2026-11-19T06:03:34.185985+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/08-hourly-future.png": {
@@ -124,10 +124,10 @@
         720,
         1600
       ],
-      "sha256": "0448b5b6d760c3be42f7cad779c056b1d5dac7f36df7a62fb68dad48dc1ec9c8",
-      "raw_sha256": "7997efd8d1e27871ff7f14d04149d3c89bbc6d8f5676f587555b994fc1a2ba14",
-      "exported_at": "2026-11-19T04:32:24.541763+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "c772b77a283c9f6e2dd46ec17dfb96d7fca3014319e8303b68bf4d54dc8dcc2b",
+      "raw_sha256": "d5b488cf1346db5aadeee890c882d447aebdbb790f6c3b70d1bb96fb48681520",
+      "exported_at": "2026-11-19T06:03:34.210973+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/09-daily.png": {
@@ -135,10 +135,10 @@
         720,
         1600
       ],
-      "sha256": "74b75089b9fe1fa8c3d53f010fb5914bf9ebd4f524ca0cc0a246801002ac5778",
-      "raw_sha256": "044d36819952433700dabc49d4a0064be06660af7f4e0e31612000ed5644d561",
-      "exported_at": "2026-11-19T04:32:24.602386+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "019c096cbe0835bffdd048a0581f718d854131fc3258305e7b282c19d2a289e7",
+      "raw_sha256": "358de504f7479fa4dfd8aeda5f283542c1aab1b1e67d0bfbe04010bc80d1a442",
+      "exported_at": "2026-11-19T06:03:34.233857+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/10-daily-past.png": {
@@ -146,10 +146,10 @@
         720,
         1600
       ],
-      "sha256": "d8ee9aab44a0696019756f2a3e9013aa245d3709ba98eb6197816ae5296f2918",
-      "raw_sha256": "a0613454775203feb4055320fbbc11416a6758556a1a010f2f74b03e4f98eaef",
-      "exported_at": "2026-11-19T04:32:24.665052+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "2ace8c6f4e379c62fdec4fcf69dfa729b2c45a404c6e2a21e9d7c99baca209cb",
+      "raw_sha256": "1b0617f9c61a90f50badec7475b86773878fd7916838f2afe95ef5b8dec5bd88",
+      "exported_at": "2026-11-19T06:03:34.258658+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/11-daily-future.png": {
@@ -157,10 +157,10 @@
         720,
         1600
       ],
-      "sha256": "4e99fd9344ff91309f492dd0713bde30fbb4aa1f30095f0c6e20806a0c0a1e24",
-      "raw_sha256": "9a1d2c94e2252ceab166c36f7db9abc847a64d0dd352236c6cd0afed7129dce6",
-      "exported_at": "2026-11-19T04:32:24.691721+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "98ecd5708fa00f29150ab47ba04de06affdba8d8e13f47a59728b3af380dea6c",
+      "raw_sha256": "483b3979bafcfde3f5829c96345340ead7cd29914762e12abbac6263ceda23fc",
+      "exported_at": "2026-11-19T06:03:34.281971+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/12-air.png": {
@@ -168,10 +168,10 @@
         720,
         1600
       ],
-      "sha256": "80f83d4a546c8ce6468ac55d9233542a90a8c11780e8b1c98bdb5e2e53b92038",
-      "raw_sha256": "3829745b5e76eb8853475143fc918cbfdf14035a1361dbaa39d6eee3148703da",
-      "exported_at": "2026-11-19T04:32:24.713417+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "be6055f69209407805a14ccc24def6c5ec18b79ef0eb63464a736a3f36810e80",
+      "raw_sha256": "601922f0064c94cfeac2132cc08a66dca2384bb8d6e51f92840fbb0d9c65d6c5",
+      "exported_at": "2026-11-19T06:03:34.303219+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/13-air-pm25.png": {
@@ -179,10 +179,10 @@
         720,
         1600
       ],
-      "sha256": "ce74dcef562568964840c33e8da5a272107f0611fe3eb3dd7d614b2bc196c186",
-      "raw_sha256": "3a90e13d59ba4c06cad3953b2ebc7cf48055d8ff6d17d3c30d2da68d49325f88",
-      "exported_at": "2026-11-19T04:32:24.734916+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "5b6a54c9cff7384f1076a3865f4dee4b0dd7a8bff7d4dd7691a6f2eac29cc758",
+      "raw_sha256": "ecafdcefe7b267752d6c7c5280c2b39c32169a7871178b6787cbbc1829c239c3",
+      "exported_at": "2026-11-19T06:03:34.324505+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/14-stations.png": {
@@ -190,10 +190,10 @@
         720,
         1600
       ],
-      "sha256": "e905fd5342b40b6d6d0228117543a07a1839ff5c7caed5b148879ac207e92159",
-      "raw_sha256": "f3a193a88372010fc7aa308075750a3d424dad1cdfd1ea8a06aee0eeead0d2b1",
-      "exported_at": "2026-11-19T04:32:24.758125+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "036096235b3a7bdff64428df12934dc163265588c60bb657dfaf3d3ee392bc3e",
+      "raw_sha256": "def0c339855ca1ab601387302d40ead8a7a31f6d9c64f4c36e73561e338a2443",
+      "exported_at": "2026-11-19T06:03:34.347056+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/15-station-selected.png": {
@@ -201,10 +201,10 @@
         720,
         1600
       ],
-      "sha256": "2d5b50c70245c30ab2212139f9dfbeb2bc7c34b2a8d2a6db4823197e6b6c99b5",
-      "raw_sha256": "c1f82f07dadb7d30dc74b44f5b10623739b16cf3f7ef0a3949cacddb3c8f8a7f",
-      "exported_at": "2026-11-19T04:32:24.782517+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "d73c8651d09993280aaeafd5111d07dca684dbf241f0ccb594df5e3e0230e4e0",
+      "raw_sha256": "3079342bcc78383041ba871ae3692217d37e4b93c9324d31d2c94a2e0c2a168a",
+      "exported_at": "2026-11-19T06:03:34.368651+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/16-places.png": {
@@ -212,10 +212,10 @@
         720,
         1600
       ],
-      "sha256": "68a300145e3fedd6757f7beab073e79dc89aec4a59f848015888a9c916487157",
-      "raw_sha256": "e7ee1765f3ab9dcd3d9ba68fce063fb3ab9f26dd672ea59c9705373937219b16",
-      "exported_at": "2026-11-19T04:32:36.535957+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "9b30f3f39fc2017d8ab63f9ace422ca477ceb2c5f7ac10a74d147a16c4984921",
+      "raw_sha256": "e98bbc1e4627867242d4efd5b44bab0929067cd6c9eef3657da2efe147969331",
+      "exported_at": "2026-11-19T06:03:47.251732+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/17-place-search.png": {
@@ -493,10 +493,10 @@
         720,
         1600
       ],
-      "sha256": "fdeec5cb80570f46e2ca5dbc32eecee13ee921c9a4ed19c35bc6ca4a8b62fdf9",
-      "raw_sha256": "c06ff54293198e513d8a3ebe5364f97eb4bb0c56245ddc816713982cfd05ae75",
-      "exported_at": "2026-11-19T04:32:36.671828+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "7eca5362c1d115a826863b70ba6a97208cd21acb9a8d9397db4e81f6be749959",
+      "raw_sha256": "5b72456a461af96f644e7e079bef1894936db1dcd49d830ab403c1a0e8178624",
+      "exported_at": "2026-11-19T06:03:47.298067+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     },
     "screenshots/pull-to-refresh.png": {
@@ -504,10 +504,10 @@
         720,
         1600
       ],
-      "sha256": "a5205bb30befe8943bd42560758d4ee4b074e581600012a278a71becb26af440",
-      "raw_sha256": "e6d888b6e9099886e4d48384a8d3d28578e00a7a95fb70d6b0924cf8465b31a3",
-      "exported_at": "2026-11-19T04:32:24.256143+00:00",
-      "capture_update": "selected-tab-icons",
+      "sha256": "331ef42cf72e8538acf25dc231dacc8e2dd958ea23dd776cf012b868f39fc3c9",
+      "raw_sha256": "61a02a6513146aa586cd328e1cd4ae16508fcf037c734494907c99c6f284cd90",
+      "exported_at": "2026-11-19T06:03:34.054843+00:00",
+      "capture_update": "outline-tab-selection",
       "app_language": "ko"
     }
   },
@@ -902,10 +902,10 @@
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/nation/NationScreens.kt": "697c07c3dbd7e0a7c0f31750dc3ec1ccebe749ca962469ad098cfde00d6d537e",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/places/PlacesTab.kt": "100e4564aa6a16fa4e3a89406a0a5b9656cf69257c60cff6135fc629d5e81657",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/settings/SettingsPages.kt": "ad54ccbc98bcc03b6e270834d500f98deba30967ebc42eca201d197675e61aa1",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "dfd2d7f785bad148c1e65edbed683dfed267a275461391623092143ffe20d739",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "75f207c3ff789a9301c303aa7d60e3aa5ea6b4912b1de5e71a9ff7724d09da21",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Popup.kt": "b9902e4bae319182e85063f5f1859a69677e4a359aa73f16664b9d38ec17b034",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "c6e97ab9a1a025c97da4fac49b4187b62e0a6101103237193cefd9b256b538b6",
-    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/ShellColors.kt": "8fd2cdb579e2af28c0c987f59476e39f640ae08be0592eed3a6574e5627cf984",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "bbbb76be31223779865a5e88a75dd05ed96d45afb77c62cf56c5077e6c84f3cc",
+    "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/ShellColors.kt": "9b32fe195fec072b740fea082eaac6c6c7ef3b6cd1cecfb8f0eda88a0bdef171",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/SystemBars.kt": "09520a8ccf1aff7b0818ff2daf29d382aedccab7552c91a4f23da4a9cba498d2",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/LocationPopups.kt": "da51561865338e046444e7e441e75de9fa6eb3e7fda8d7f0c18c76ebc1473be5",
     "android/app/src/main/java/net/wizardfactory/todayweather/ui/start/StartBanner.kt": "19a47677d2c9754212e690a45d6a941cd057473499d2c7aa6d75cfd68f63345b",
@@ -1000,8 +1000,8 @@
     "android/app/src/androidTest/java/net/wizardfactory/todayweather/ParityDeviceTest.kt": "13e55cf997f134bbbf6b9f32578f8bc4c14bfc08da60b76ecc8fdb0b0caab829",
     "android/core-domain/src/test/resources/corpus/inputs/kma-seoul.json": "75b92bbcfca72d79438021b4245c4efab4502f5954ba991d3b8c9e70d9578b17"
   },
-  "manual_sha256": "90bae51e24e602d4954347d947f8a43045a4cb9ce6c606f807274642c6dd1da2",
-  "pdf_sha256": "bf642464115f4b0e56a694fdb8c8c7f61985e96900a21a216a102c87e426446c",
+  "manual_sha256": "28e8b46b41dbba3a4ad061e210277bf512d7fb9e8ff46baf709a81048694f0ca",
+  "pdf_sha256": "7c0b5d2db5ef1a9e54707a76ded25ee92e21a75fa37788d496a18ea8080aa241",
   "limitations": [
     "API36 emulator captures; not a release APK or physical-device certification",
     "Live values, test advertisements, forecasts, available warning bulletins and Android dialogs vary",
@@ -1164,6 +1164,38 @@
         "android/app/src/androidTest/java/net/wizardfactory/todayweather/ParityDeviceTest.kt",
         "android/core-domain/src/test/resources/corpus/inputs/kma-seoul.json"
       ]
+    },
+    {
+      "id": "outline-tab-selection",
+      "issue": 3046,
+      "previous_edition": "852aae105e6c908c894530aa20947b79edd9ca80",
+      "screenshots": [
+        "screenshots/05-hourly.png",
+        "screenshots/pull-to-refresh.png",
+        "screenshots/06-hourly-expanded.png",
+        "screenshots/07-hourly-past.png",
+        "screenshots/08-hourly-future.png",
+        "screenshots/09-daily.png",
+        "screenshots/10-daily-past.png",
+        "screenshots/11-daily-future.png",
+        "screenshots/12-air.png",
+        "screenshots/13-air-pm25.png",
+        "screenshots/14-stations.png",
+        "screenshots/15-station-selected.png",
+        "screenshots/16-places.png",
+        "screenshots/43-exit.png"
+      ],
+      "capture": "Offline API 36 emulator, ko-KR, Asia/Seoul, 1080×2400, 420dpi. PullRefreshDeviceTest captured the Compose root during the held refresh and on the hourly, daily and air pages using the Seoul fixture. ParityDeviceTest captured the full device on Favorites and the exit confirmation. All four light-theme examples show an outline icon, accent-colored label and short top indicator for the selected tab. November 19, 2026 (KST).",
+      "image_processing": "Full frames reduced proportionally to 720 px wide using Lanczos and quantized to 256 colors.",
+      "previous_source_hashes": {
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Glyphs.kt": "dfd2d7f785bad148c1e65edbed683dfed267a275461391623092143ffe20d739",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/Shell.kt": "c6e97ab9a1a025c97da4fac49b4187b62e0a6101103237193cefd9b256b538b6",
+        "android/app/src/main/java/net/wizardfactory/todayweather/ui/shell/ShellColors.kt": "8fd2cdb579e2af28c0c987f59476e39f640ae08be0592eed3a6574e5627cf984"
+      },
+      "apk_sha256": {
+        "app-debug.apk": "5b742a750d8b703ca82aeadb7c8bf490e9ee90fe5f8d25de719170401b66484b",
+        "app-debug-androidTest.apk": "638faa929e9169b92050205a80dd5ebca1374e74ead52711b91eb869724045e2"
+      }
     }
   ]
 }
