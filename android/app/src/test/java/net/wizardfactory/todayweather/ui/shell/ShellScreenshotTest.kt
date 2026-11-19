@@ -214,7 +214,10 @@ abstract class ShellScreenshotTest(private val lang: String, private val region:
             val captured = record[if (p == "tabs") "tabs" else p]!!.jsonObject["clip"]!!.jsonObject
             val cordova = ImageIO.read(File(references, "$lang/${theme.key}-$p.png")).toPixels()
                 .crop(captured.int("offset", "x"), captured.int("offset", "y"), captured.int("size", "width"), captured.int("size", "height"))
-            val diff = ImageDiff.of(native, cordova)
+            // Cordova shows a reload glyph for Hourly and the old calendar for Daily.
+            // ShellTest checks both icon states. Keep comparing the labels, layout and remaining icons.
+            val reference = if (p == "tabs") cordova.withHourlyTabIconsFrom(native) else cordova
+            val diff = ImageDiff.of(native, reference)
             val name = "$lang-${theme.key}-$p"
             val outputName = (matrixSize?.let { "$it-" } ?: "") + name
             ImageIO.write(native.toBufferedImage(), "png", File(out, "$outputName-native.png"))

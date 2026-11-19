@@ -12,8 +12,11 @@ object Glyphs {
     // Ionicons code points (ionic.css `.ion-*:before { content }`).
     const val STAR_OUTLINE = ""
     const val STAR = ""
-    const val TIME = ""
-    const val REFRESH = ""
+    const val CLOCK_OUTLINE = "\uF402"
+    const val CLOCK_FILLED = "\uF403"
+    const val CALENDAR_OUTLINE = "\uF3F3"
+    const val CALENDAR_FILLED = "\uF3F4"
+    const val CLOUD_FILLED = "\uF37A"
     const val CALENDAR = ""
     const val CLOUD_OUTLINE = ""
     const val NAVICON = ""

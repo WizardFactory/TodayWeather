@@ -18,6 +18,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import android.location.LocationManager
@@ -141,11 +143,14 @@ class AirTabTest {
         // The page went to the top: the header shows again.
         rule.onNodeWithTag(AirTags.HEADER).assertIsDisplayed()
 
-        // Tapping the selected Air tab loads again: back to the nearest station.
-        rule.mainClock.advanceTimeBy(1000)
+        // Re-selecting Air preserves the station. Pulling refreshes it and selects the nearest station.
         rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()
         rule.waitForIdle()
-        assertEquals("the tab tap loaded again", 2, requests.size)
+        rule.onNodeWithTag(AirTags.station(1)).assertIsSelected()
+        assertEquals(1, requests.size)
+        rule.onNodeWithTag(ShellTags.page(Tab.AIR)).performTouchInput { swipeDown(startY = height * 0.22f) }
+        rule.waitForIdle()
+        assertEquals("the pull loaded again", 2, requests.size)
         rule.onNodeWithTag(AirTags.station(0)).assertIsSelected()
         label("40").assertExists()
     }
