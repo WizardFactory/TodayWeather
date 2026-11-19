@@ -46,6 +46,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.wizardfactory.todayweather.widget.WidgetAccess
+import net.wizardfactory.todayweather.widget.WidgetRefresh
 import net.wizardfactory.todayweather.ads.AdMobBanner
 import net.wizardfactory.todayweather.ads.AdsConsent
 import net.wizardfactory.todayweather.ads.BannerSlot
@@ -197,6 +199,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        WidgetAccess.mainAppOpened(this)
         // Cordova's `resume`: each return to the foreground reloads the selected place if the gate allows.
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
         resumedBefore = true
@@ -539,8 +542,11 @@ class OpenedModel(app: Application) : AndroidViewModel(app) {
     val photoLoader = PhotoLoader(app)
     private val telemetry = Telemetry { name, params -> twApp.analytics.track(name, params) }
 
-    /** `window.updateCityInfo(index)`: a place's alarms follow its update, in the app's scope (`Push.updateCityInfo`). */
-    private val cityUpdated: (Int) -> Unit = { index -> twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateCity(index) } }
+    /** Refresh alarms and publish the newly cached weather to home-screen widgets after a place update. */
+    private val cityUpdated: (Int) -> Unit = { index ->
+        twApp.appScope.launch(Dispatchers.IO) { twApp.push.updateCity(index) }
+        twApp.appScope.launch { WidgetRefresh.refresh(twApp, displayOnly = true) }
+    }
 
     val session = WeatherSession(twApp.weather, viewModelScope, twApp.appState, ::languages, { twApp.photos.photos }, ::loadPhotos,
         telemetry = telemetry, location = twApp.location, cityUpdated = cityUpdated)

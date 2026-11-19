@@ -154,6 +154,7 @@ class RequestSitesTest {
             "androidx.compose:compose-bom" to "versions",
             "androidx.core:core-splashscreen" to "the splash screen",
             "androidx.datastore:datastore" to "the saved state",
+            "androidx.glance:glance-appwidget" to "rendering cached widget content through Android RemoteViews",
             "androidx.work:work-runtime" to "background work",
             "com.android.tools:desugar_jdk_libs" to "Java APIs on old Android versions",
             "org.jetbrains.kotlinx:kotlinx-coroutines-android" to "coroutines",
