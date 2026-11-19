@@ -22,7 +22,7 @@ updated tab bar. Earlier weather screenshots retain the reload icon used by the 
 
 ## Read the current temperature
 
-On the Hourly and Daily tabs, digits after the decimal point appear at half the size of the whole-number digits.
+On the Hourly and Daily tabs, the decimal point and the digits after it appear at 70% of the whole-number size.
 The illustrated example shows −0.1° in the Hourly header. [Read the guide](current-temperature/manual.pdf) · [Editable source](current-temperature/manual.json)
 
 ## Refresh the selected place

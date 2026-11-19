@@ -7,7 +7,7 @@
       "instruction": "Open the Hourly forecast (시간별날씨). Find the current temperature beside the weather icon at the top of the page.",
       "screenshot": "hourly-temperature.png",
       "caption": "The current temperature in this example is −0.1°, one tenth of a degree below zero.",
-      "expected": "The digit after the decimal point appears at half the size of the whole-number digits. The minus sign and decimal point stay at the larger size."
+      "expected": "The decimal point and the following digit appear at 70% of the whole-number size. The minus sign and zero remain full size."
     }
   ]
 }

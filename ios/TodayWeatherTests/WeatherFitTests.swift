@@ -13,11 +13,11 @@ import TWModel
 struct WeatherFitTests {
     static let widths: [CGFloat] = [375, 393, 834, 1024, 1366]
 
-    @Test func temperaturePrecisionUsesHalfSizeDigits() {
-        for (value, whole, fraction) in [("-0.1", "-0.", "1"), ("12.30", "12.", "30"), ("7", "7", ""), ("", "", "")] {
+    @Test func temperatureIncludesDecimalPointAtSeventyPercent() {
+        for (value, whole, fraction) in [("-0.1", "-0", ".1"), ("12.30", "12", ".30"), ("7", "7", ""), ("", "", "")] {
             let runs = WeatherMetrics.temperatureRuns(value, size: 80)
             #expect(runs.map(\.text) == [whole, fraction, "˚"])
-            #expect(runs.map(\.size) == [80, 40, 40])
+            #expect(runs.map(\.size) == [80, 56, 40])
         }
     }
 

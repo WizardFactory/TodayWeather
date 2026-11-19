@@ -61,10 +61,10 @@ struct WeatherColors: Equatable {
 /// (Core/Tests/TWDomainTests/ForecastReference) where the SCSS does not give them directly.
 enum WeatherMetrics {
     static func temperatureRuns(_ value: String, size: CGFloat) -> [CssRun] {
-        let split = value.firstIndex(of: ".").map { value.index(after: $0) } ?? value.endIndex
+        let split = value.firstIndex(of: ".") ?? value.endIndex
         return [
             CssRun(text: String(value[..<split]), size: size, weight: .light),
-            CssRun(text: String(value[split...]), size: size / 2, weight: .light),
+            CssRun(text: String(value[split...]), size: size * 0.7, weight: .light),
             CssRun(text: "˚", size: size / 2, weight: .light)
         ]
     }
