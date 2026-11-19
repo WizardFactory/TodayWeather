@@ -1,0 +1,14 @@
+<resources>
+    <string name="widget_cfg_title">Widget-Einstellungen</string>
+    <string name="widget_cfg_place">Ort</string>
+    <string name="widget_cfg_follow">In der App ausgewählten Ort verwenden</string>
+    <string name="widget_cfg_position">Aktueller Standort</string>
+    <string name="widget_cfg_missing">Dieser Ort ist nicht verfügbar. Bitte einen anderen Ort wählen.</string>
+    <string name="widget_cfg_forecast">Vorhersage</string>
+    <string name="widget_cfg_hourly">Stündlich</string>
+    <string name="widget_cfg_daily">Täglich</string>
+    <string name="widget_cfg_compare">Mit gestern vergleichen</string>
+    <string name="widget_cfg_yesterday">Gestern einbeziehen</string>
+    <string name="widget_cfg_visit">Öffne die App mindestens einmal alle fünf Tage, damit das Widget das Wetter anzeigt.</string>
+    <string name="widget_cfg_save">Speichern</string>
+</resources>

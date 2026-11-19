@@ -77,6 +77,9 @@ public final class WeatherRepository {
     @ObservationIgnored private var latestRequest: [String: Int] = [:]
     @ObservationIgnored private var requests = 0
 
+    /// Observes a successful load with its actual request, so a consumer can distinguish units and location.
+    @ObservationIgnored public var onLoaded: ((WeatherEntry, Place, URL) -> Void)?
+
     /// Entries by place key, as loaded or read from the cache in this process.
     public private(set) var weather: [String: WeatherEntry] = [:]
     /// Keys of the places with a request in flight (the title's spinner).
@@ -173,6 +176,7 @@ public final class WeatherRepository {
             weather[newKey] = entry
             writeCache(key, entry)
             if newKey != key { writeCache(newKey, entry) }
+            if let url { onLoaded?(entry, updated, url) }
             return .loaded(key: key, entry: entry, place: updated)
         }
     }

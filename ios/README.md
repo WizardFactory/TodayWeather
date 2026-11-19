@@ -117,12 +117,18 @@ python3 ios/tools/chart-reference/capture.py provenance ios/build/chart-referenc
 
 Then run the tests; update `tolerances.json` with the measured values (the test prints them) only for an explained change. After the Android references change, re-run `python3 ios/tools/import_chart_reference.py`; CI fails on a stale copy.
 
+## Home Screen weather widget (#3043)
+
+The iOS 17+ WidgetKit gallery offers Classic Color, Morning Sky and Temperature Curve in small and medium sizes. Classic Color keeps the original widget identifier for existing placements. Small shows current conditions. The medium Temperature Curve plots separate daily high and low lines or an amber hourly forecast with a dashed lavender line for available temperatures at the same local hours on the previous day. Use **Edit Widget** to select an enabled place or follow the app selection. On medium, choose daily or hourly forecasts. Tapping opens the main app.
+
+A foreground scene activation records the visit in the App Group. Five elapsed days later, the widget replaces its weather with an invitation to open TodayWeather. The timeline includes this entry before it is needed. iOS controls when entries appear on screen. Background starts and widget requests leave the visit time unchanged. An expired widget skips weather requests until the app is opened. Within the window the extension can fetch updated weather using the configured location and units, with the last successful result and its update time available offline.
+
 ## App shell (IN-07)
 
 The frame every screen shares (#2956): the rules in `TWDomain` `Shell/` (Foundation only), the state owner in `TWStorage`, the photo feed in `TWData`, the SwiftUI shell in `TodayWeather/Shell/`. The Cordova iOS build decides; the Android AN-07 shell is the port's starting point.
 
 - **Start (`AppLaunch`, `RootView`):** the launch screen (`LaunchScreen.storyboard`: the `Splash` image with aspect fill on white, the layout of cordova-ios's `CDVLaunchScreen`) and then `SplashView` (the image filling the screen under a white status bar, as the Cordova splash shows it until the first view) stay until the Cordova migration has finished. `AppStartup` (IN-03) hands the migrated state to `AppLaunch.migrationFinished` (a `didSet` on its `state`), which creates the shell. `StartGate`: S01 shows while the stored `startVersion` is missing or below 1 (app.js L362-L367; S01 is IN-10's `StartView`); otherwise the first tab follows the startup-page setting (`StartupPage.tab`: "0" Hourly, "1" Daily, "2" Locations, "3" Air, anything else Hourly).
-- **Entry events (`EntryQueue`, `EntryEvent`):** the launch, a return from the background (Cordova's `resume`), notification taps and links are held until the migration has finished and then handled in arrival order, later ones at once. The app registers no URL scheme, as the Cordova 1.1.x build registers none but Firebase's (IN-16, [entry links](#entry-links)), so no link event reaches it. IN-04 and IN-14 submit notification taps (`AppLaunch.shared.entries.submit(.notification(cityIndex:))`).
+- **Entry events (`EntryQueue`, `EntryEvent`):** the launch, a return from the background (Cordova's `resume`), notification taps and links are held until the migration has finished and then handled in arrival order, later ones at once. The native widget's place link waits in the same queue during cold start. IN-04 and IN-14 submit notification taps (`AppLaunch.shared.entries.submit(.notification(cityIndex:))`).
 - **State (`AppStateHolder`):** the single owner of the app state for the UI from the end of the migration on. A change shows at once and is saved in order; each save writes the whole state after that change, one after the other (a chain of tasks, no continuations), so the file ends with the newest state; a failed save stays shown and is written with the next change. Other writers of the process use `update`, which returns once saved. IN-04's `PushSync`, which now reloads and rewrites the state file itself, should move its token and record writes to `AppLaunch.shared.holder.update { … }` when IN-04 and IN-07 meet, so the two never overwrite each other's changes.
 - **Tabs:** Locations, Hourly, Daily and Air keep their navigation icons when selected. Pull down from the top of Hourly, Daily or Air to refresh the selected place. With no enabled place, tapping a weather tab opens the start choice.
 - **Side menu (S06, `SideMenu`):** full screen over the WebView's area, sliding in over 200 ms; rows in Cordova order (index.html L97-L171), the Korea-only rows for region KR, chevrons where the iOS template has them (also Units, Send feedback, Rate and About), the analytics, ad privacy, policy and terms rows as blocks, the version and the startup page, refresh interval and theme values. Rows that leave the menu close it first (`toggleLeft`); `ShellModel.onMenuRow` connects them (IN-12, IN-13, IN-15).
@@ -503,9 +509,9 @@ Sharing (O16), entry links and device transfer (#2965), from TabCtrl's `doTabSha
   - iPad: the sheet is a popover pointing at the share button that was tapped (`ShareAnchor`, a transparent view behind each header's button; with several windows the sheet opens in the tapped button's window), and it follows the button when the window turns or is resized. Deliberate difference: the Cordova plugin anchored it at the bottom center of the WebView (`getIPadPopupCoordinates` returns nil since 5.5.0, so the plugin took a 400×400 rect below the WebView's bottom edge); that rect remains the fallback when no share button is in a window.
   - No analytics event: the Cordova `Util.ga.trackEvent('action', 'tab', 'share')` is inert in 1.1.x (`service.util.js`).
   - `WeatherShare.shared.connect(AppLaunch.shared)` in `AppDelegate` (`didFinishLaunching`) chains `AppLaunch.onShell` and sets `WeatherScreens.onShare`.
-- **Entry links:** the shipped app registers no `todayweather` scheme, so no entry link exists on iOS. The native app registers no URL scheme and no associated domain either; a link would reach `SceneDelegate` and the entry queue as IN-07 wired `onOpenURL`, and the screens ignore a `.link` event.
+- **Entry links.** The native app registers `todayweather://widget?place=<id>` for Home Screen widgets (#3043). A widget opens its enabled place on the forecast tab, including after cold-start migration. A removed place falls back to the current selection.
   - Method (2026-11-16; the App Store IPA is not available here): `python3 ios/tools/share/check_url_types.py --app <Cordova build>` (a plugin file naming the scheme counts as registered; the verdict states whether the built app was read) reads `client/config.xml` (no `CFBundleURLTypes` or associated-domains entry), downloads each Cordova package of `client/package.json` as `client/package-lock.json` pins it (refused unless the SHA-512 matches) and searches its `plugin.xml`, scripts and hooks, and reads the `Info.plist` and entitlements of a Cordova iOS build. Only `cordova-plugin-firebasex-core` 2.0.1 adds a URL type: its `after_prepare` hook (`scripts/ios/helper.js`, `ensureEncodedAppIdInUrlSchemes`) registers the encoded Google app ID (`app-<GOOGLE_APP_ID with ":" as "-">`) for Firebase authentication flows. The Cordova build of `ios/tools/upgrade/build-cordova.sh` (commit 62c694cb, 1.1.2, a dummy Firebase project) has exactly that one scheme (`app-1-000000000000-ios-…`) and no associated domains. The 1.1.1 release commit (07dbb370) differs from it in no URL-type input (the plugin list and `config.xml` changed only in version and the tracking changes of #2945).
-  - The Branch plugin left the build in #2605 (`branchInit` returns without `window.Branch`), and the 1.0.x project `tw.ios/` declares no URL type, so the TodayWeather widget's `todayweather://N` (`docs/rewrite/client-data-contracts.md`, app entry links) opened nothing in the shipped app. The Android AN-16 registers the scheme for its widgets to come; on iOS widgets are out of scope (#2948) and would bring the scheme with them. The native app also leaves out Firebase's encoded-app-ID scheme: it uses no Firebase authentication.
+  - The Branch plugin left the build in #2605 (`branchInit` returns without `window.Branch`), and the 1.0.x project `tw.ios/` declares no URL type, so the TodayWeather widget's `todayweather://N` (`docs/rewrite/client-data-contracts.md`, app entry links) opened nothing in the shipped app. The native app also leaves out Firebase's encoded-app-ID scheme: it uses no Firebase authentication.
 - **Backup and device transfer (`BackupPolicy`, `TWStorage`):** an iCloud backup and a device-to-device transfer carry `Library` except `Caches`, the App Group container and the standard preferences, unless a file is marked excluded. The Cordova 1.1.1 build marked nothing: its `BackupWebStorage` `none` preference is unused by cordova-ios 8.1.1 (removed in 7.0.0, GH-1339). The native policy for the app's own files in `Library/Application Support/TodayWeather/`:
 
   | File | Backup | Why |
@@ -551,7 +557,8 @@ python3 ios/tools/server-routes/generate.py     # needs server/, android/tools/s
 
 - `tools/server-routes/generate.py` runs the Android route generator (`android/tools/server-routes/generate.mjs`, AN-18) unchanged with Node; `redirect.mjs`, preloaded, makes it write `Core/Tests/TWDataTests/Golden/server-routes/routes.json` instead of the Android path (any other write, or none, fails the run). The table lists each router of `server/app.js` with its layers in registration order and the expression Express 4.13.4 matches, and the last commit and SHA-256 of each server file read. Running it again without server changes changes nothing; CI's build job re-runs it (with Node 22) and fails on a stale table, and the workflow runs on changes to `server/app.js`, `server/routes/**`, `server/package-lock.json` and the Android generator. Commit a server change first, then regenerate and commit the table.
 - `RequestPathsTests` (`TWDataTests`) sends the app's requests through the production clients and transports (`URLSessionGet`, `HTTPPushTransport`) over a `URLSession` whose protocol records them: `WeatherRepository` with every weather case of the Cordova corpus, `GeocodeClient` by position and by address, `NationSource`, `PushSync` in every flow (open with a new token, a delivered token, a unit change, an S09 save, O06, a deletion) and `WeatherPhotoFeed`. It dispatches each path as sent (percent-encoded) through the table as Express does (`ServerRoutes`, a port of the Android dispatcher): routers in order, case-insensitive except the gateway, mounts trimmed, methods matched, error handlers skipped. A request passes when a route of its method serves it under `v000903` and each middleware before it is one the test reviewed, or when a register entry lists the request itself and the route that answers it. The routes reached must be the twelve the Android client reaches, E1 and E2 must occur, and the test prints the table of requests and routes.
-- `RequestSitesTests` (`TWDataTests`) keeps that list complete by reading the sources: network APIs only in the two transports and E3's `AsyncImage`; server paths only in the request builders (and the weather log's route label); the E4 SDKs only in their known sources; the WKWebView of the settings loads nothing and Network is only the path monitor; every linked package product and every pin of `Package.resolved` reviewed.
+- For the Home Screen widget (#3043), the app builds each enabled place's URL with the same `WeatherRequests` routes and unit settings. The extension reads that URL from the App Group and issues a GET with `URLSession` when the five-day visit window permits a refresh. The coordinate and KMA town requests use the existing served routes. The free-form address request falls under E1 and the widget handles failure with its cached weather or unavailable state.
+- `RequestSitesTests` scans the main app, widget, shared widget code and Core package. It checks network API sites, weather URL builder callers, server path literals, E3's photo loader and the E4 SDK sources. It verifies the source groups of both shipped targets, their linked package products and the pins in `Package.resolved`. The widget links only TWDomain and TWModel.
 
 ### iPad
 
@@ -616,7 +623,7 @@ From `ios/`, put the existing production Firebase configuration at
 `TodayWeather/GoogleService-Info.plist` and supply the production server, photo,
 feedback, Places and AdMob values in the ignored `Private.xcconfig`. Confirm that
 the Firebase configuration and real AdMob IDs match the existing release setup.
-Use the existing Apple Distribution identity and App Store profile. Set the
+Use the existing Apple Distribution identity and a separate App Store profile for each target. Both profiles must include the TodayWeather App Group. The widget uses the legacy extension ID `net.wizardfactory.todayweather.todayext`. Set the
 following in `Private.xcconfig`, replacing the team and profile placeholders
 with the existing values:
 
@@ -624,10 +631,12 @@ with the existing values:
 CODE_SIGN_STYLE[config=Release][sdk=iphoneos*] = Manual
 CODE_SIGN_IDENTITY[config=Release][sdk=iphoneos*] = Apple Distribution
 DEVELOPMENT_TEAM[config=Release][sdk=iphoneos*] = TEAM_ID
-PROVISIONING_PROFILE_SPECIFIER[config=Release][sdk=iphoneos*] = PROFILE_UUID
+PROVISIONING_PROFILE_SPECIFIER[config=Release][sdk=iphoneos*] = APP_PROFILE_UUID
+TW_WIDGET_PROVISIONING_PROFILE = WIDGET_PROFILE_UUID
 ```
 
-This scopes provisioning to the app target. Command-line provisioning settings
+The app uses its profile directly. The widget uses the profile named by
+`TW_WIDGET_PROVISIONING_PROFILE` in `Support/Widget.xcconfig`. Command-line provisioning settings
 would also reach Swift package resource bundles, which cannot use the profile.
 With the approved version and build number in the command environment:
 
@@ -646,7 +655,9 @@ matches the signing team and application identifier, and that the signature
 contains `aps-environment=production` and
 `group.net.wizardfactory.todayweather`. Verify the bundle ID, version, build
 number, and minimum OS in the packaged `Info.plist`. Check those values again
-on the distribution export.
+on the distribution export. Inspect the embedded `PlugIns/WeatherWidget.appex` as well.
+Check its signature, extension identifier, matching version/build and App Group entitlement
+against its own embedded profile. The widget requests only the App Group entitlement.
 
 Verify the app's `PrivacyInfo.xcprivacy`, the bundled SDK manifests, and the
 location purpose string and localized tracking purpose strings on the archive. The app manifest

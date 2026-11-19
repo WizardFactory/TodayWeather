@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import WidgetKit
 
 /// The app's process delegate (`@main`): the start of every process (`AppStartup`, also when iOS starts the app in the
 /// background) and the app's warm starts.
@@ -94,6 +95,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let scene = scene as? UIWindowScene else { return }
         show(in: scene)
         submit(options.urlContexts.map(\.url) + options.userActivities.compactMap(\.webpageURL))
+    }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        WidgetStore.activated(at: Date())
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

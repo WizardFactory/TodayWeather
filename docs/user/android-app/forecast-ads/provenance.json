@@ -2,7 +2,7 @@
   "schema": 1,
   "product": "TodayWeather Android native 2.0.0 preview",
   "product_base_commit": "feb9a7dbc547802c503c1c8ecc150f04ab218d71",
-  "candidate": "Issue 3041 working tree on top of the base commit. APK and capture-source digests identify the captured candidate.",
+  "candidate": "Source and APK digests identify the captured advertising UI. The later integration of widget refresh code also changed MainActivity; use capture_source_commit for the archived source hashes. Individual screenshots identify their capture revision below.",
   "capture_date": "2026-11-19",
   "environment": {
     "device": "task-owned Android 14 API 34 Google Play emulator; arm64-v8a",
@@ -101,5 +101,6 @@
   "limitations": [
     "The illustrated native placements display Google sample ads. Creative dimensions and text can vary with content, device width and font settings.",
     "Full-screen ads, paid impressions and revenue are outside the scope of these screenshots."
-  ]
+  ],
+  "capture_source_commit": "281781416e115e2f1230202abccd455fb9116916"
 }

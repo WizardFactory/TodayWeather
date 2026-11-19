@@ -1,0 +1,69 @@
+{
+  "title": "TodayWeather home-screen widgets",
+  "scenario": "Samsung Galaxy S21+ • Android 15 / One UI • Korean labels • Seoul sample weather",
+  "steps": [
+    {
+      "title": "Add a widget to the home screen",
+      "instruction": "Open the Widgets menu on the home screen, find TodayWeather, choose a widget and confirm the addition. The confirmation shown here is from Samsung One UI.",
+      "caption": "The launcher previews the default Classic Black clock and weather widget.",
+      "expected": "You can add several widgets and give each one a different place.",
+      "screenshot": "screenshots/picker.png"
+    },
+    {
+      "title": "Choose the refresh mode and place",
+      "instruction": "In widget settings, choose a style and place. Select automatic updates (once hourly) or manual updates for this widget, then scroll down and tap 저장 (Save).",
+      "caption": "The Blue Hour clock has manual updates selected. The other widgets keep their own settings.",
+      "expected": "New and existing widgets use automatic updates until you choose manual updates.",
+      "screenshot": "screenshots/configure.png"
+    },
+    {
+      "title": "Read a wide forecast",
+      "instruction": "Check the update time at the upper right. Read the current temperature above the forecast. In each daily column the high is above the low.",
+      "caption": "Five days of sample Seoul weather in Classic Black.",
+      "expected": "The columns use the available width. To change the width, touch and hold the widget and drag a resize handle.",
+      "screenshot": "screenshots/active.png"
+    },
+    {
+      "title": "Check current conditions",
+      "instruction": "Add 현재 날씨 for an at-a-glance reading. The large number is the current temperature. The smaller pair is the daily range. Select 어제 기온과 비교 in settings to compare against yesterday.",
+      "caption": "Morning Paper groups the current temperature and legacy weather artwork on a yellow panel.",
+      "expected": "Current conditions, their location and their update time are visible together.",
+      "screenshot": "screenshots/current.png"
+    },
+    {
+      "title": "Show time with the weather",
+      "instruction": "Add 시계와 날씨. Choose hourly or daily in widget settings. Enlarge the widget to show more forecast details.",
+      "caption": "Morning Paper on the Galaxy S21+. In Blue Hour, the live clock and date align on the right.",
+      "expected": "Time remains visible alongside the selected place and available forecast.",
+      "screenshot": "screenshots/clock.png"
+    },
+    {
+      "title": "Refresh a widget manually",
+      "instruction": "Tap the refresh control beside the last update time. Tap elsewhere on the widget to open its place in TodayWeather.",
+      "caption": "The Blue Hour clock shows the refresh control in its upper-right corner.",
+      "expected": "Widgets sharing this place reuse its reading. Within one hour of a widget request, another tap keeps the cached weather. A failed refresh also keeps the previous reading.",
+      "screenshot": "screenshots/manual-refresh.png"
+    },
+    {
+      "title": "Read local air quality",
+      "instruction": "Add 대기질 and select a place. Read the grade and AQI first, then the pollutant values and their units.",
+      "caption": "The narrow Blue Hour widget shows the AQI, grade face and particulate concentrations.",
+      "expected": "Increasing the widget size makes more of the available air-quality details visible.",
+      "screenshot": "screenshots/air.png"
+    },
+    {
+      "title": "Resume after five days",
+      "instruction": "If five days have passed since you last opened TodayWeather, tap the message in the widget to check the weather in the main app.",
+      "caption": "The weather display is replaced by an invitation to open the app. Android may defer its scheduled update while the device sleeps.",
+      "expected": "Opening the main app starts a new 120-hour period. Neither widget settings nor the refresh button extends that period.",
+      "screenshot": "screenshots/expired.png"
+    },
+    {
+      "title": "Return to the home screen",
+      "instruction": "Open the main app, then return to the widget. The selected style and location are retained as weather display resumes.",
+      "caption": "The clock and hourly forecast return after reopening TodayWeather.",
+      "expected": "You can continue using your selected places and forecast mode without adding the widgets again.",
+      "screenshot": "screenshots/restored.png"
+    }
+  ]
+}

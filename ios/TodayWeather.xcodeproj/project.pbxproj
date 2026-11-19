@@ -19,6 +19,9 @@
 		7A1000000000000000150104 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000150604 /* FirebaseRemoteConfig */; };
 		7A1000000000000000040101 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000040601 /* FirebaseMessaging */; };
 		7A1000000000000000100101 /* GooglePlaces in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000100601 /* GooglePlaces */; };
+		7A1000000000000000200101 /* TWModel in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000200601 /* TWModel */; };
+		7A1000000000000000200102 /* TWDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1000000000000000200602 /* TWDomain */; };
+		7A1000000000000000200103 /* WeatherWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 7A1000000000000000200301 /* WeatherWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,7 +39,28 @@
 			remoteGlobalIDString = 7A1000000000000000000401;
 			remoteInfo = TodayWeather;
 		};
+		7A1000000000000000200201 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7A1000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7A1000000000000000200401;
+			remoteInfo = WeatherWidget;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7A1000000000000000200D01 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7A1000000000000000200103 /* WeatherWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		7A1000000000000000000301 /* TodayWeather.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodayWeather.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -44,6 +68,8 @@
 		7A1000000000000000110301 /* TodayWeatherUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TodayWeatherUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A1000000000000000000303 /* Core */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Core; sourceTree = "<group>"; };
 		7A1000000000000000040301 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Support/App.xcconfig; sourceTree = "<group>"; };
+		7A1000000000000000200301 /* WeatherWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WeatherWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A1000000000000000200302 /* Widget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Support/Widget.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +86,21 @@
 		7A1000000000000000110701 /* TodayWeatherUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TodayWeatherUITests;
+			sourceTree = "<group>";
+		};
+		7A1000000000000000200701 /* WeatherWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WeatherWidget;
+			sourceTree = "<group>";
+		};
+		7A1000000000000000200702 /* WidgetShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetShared;
+			sourceTree = "<group>";
+		};
+		7A1000000000000000200703 /* WidgetRefresh */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetRefresh;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -98,6 +139,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A1000000000000000200801 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A1000000000000000200101 /* TWModel in Frameworks */,
+				7A1000000000000000200102 /* TWDomain in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -106,9 +156,13 @@
 			children = (
 				7A1000000000000000000701 /* TodayWeather */,
 				7A1000000000000000000702 /* TodayWeatherTests */,
+				7A1000000000000000200701 /* WeatherWidget */,
+				7A1000000000000000200702 /* WidgetShared */,
+				7A1000000000000000200703 /* WidgetRefresh */,
 				7A1000000000000000110701 /* TodayWeatherUITests */,
 				7A1000000000000000000303 /* Core */,
 				7A1000000000000000040301 /* App.xcconfig */,
+				7A1000000000000000200302 /* Widget.xcconfig */,
 				7A1000000000000000000902 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -117,6 +171,7 @@
 			isa = PBXGroup;
 			children = (
 				7A1000000000000000000301 /* TodayWeather.app */,
+				7A1000000000000000200301 /* WeatherWidget.appex */,
 				7A1000000000000000000302 /* TodayWeatherTests.xctest */,
 				7A1000000000000000110301 /* TodayWeatherUITests.xctest */,
 			);
@@ -133,13 +188,16 @@
 				7A1000000000000000000A01 /* Sources */,
 				7A1000000000000000000801 /* Frameworks */,
 				7A1000000000000000000B01 /* Resources */,
+				7A1000000000000000200D01 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				7A1000000000000000200C01 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7A1000000000000000000701 /* TodayWeather */,
+				7A1000000000000000200702 /* WidgetShared */,
 			);
 			name = TodayWeather;
 			packageProductDependencies = (
@@ -202,6 +260,30 @@
 			productReference = 7A1000000000000000110301 /* TodayWeatherUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		7A1000000000000000200401 /* WeatherWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A1000000000000000201101 /* Build configuration list for PBXNativeTarget "WeatherWidget" */;
+			buildPhases = (
+				7A1000000000000000200A01 /* Sources */,
+				7A1000000000000000200801 /* Frameworks */,
+				7A1000000000000000200B01 /* Resources */,
+			);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (
+				7A1000000000000000200701 /* WeatherWidget */,
+				7A1000000000000000200702 /* WidgetShared */,
+				7A1000000000000000200703 /* WidgetRefresh */,
+			);
+			name = WeatherWidget;
+			packageProductDependencies = (
+				7A1000000000000000200601 /* TWModel */,
+				7A1000000000000000200602 /* TWDomain */,
+			);
+			productName = WeatherWidget;
+			productReference = 7A1000000000000000200301 /* WeatherWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -252,6 +334,7 @@
 			projectRoot = "";
 			targets = (
 				7A1000000000000000000401 /* TodayWeather */,
+				7A1000000000000000200401 /* WeatherWidget */,
 				7A1000000000000000000402 /* TodayWeatherTests */,
 				7A1000000000000000110401 /* TodayWeatherUITests */,
 			);
@@ -274,6 +357,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		7A1000000000000000110B01 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A1000000000000000200B01 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -304,6 +394,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A1000000000000000200A01 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -317,6 +414,11 @@
 			target = 7A1000000000000000000401 /* TodayWeather */;
 			targetProxy = 7A1000000000000000110201 /* PBXContainerItemProxy */;
 		};
+		7A1000000000000000200C01 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7A1000000000000000200401 /* WeatherWidget */;
+			targetProxy = 7A1000000000000000200201 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -324,6 +426,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				MARKETING_VERSION = 2.0.0;
+				CURRENT_PROJECT_VERSION = 1;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -352,6 +456,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				MARKETING_VERSION = 2.0.0;
+				CURRENT_PROJECT_VERSION = 1;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -378,7 +484,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Support/TodayWeather.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
@@ -391,7 +496,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -410,7 +514,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Support/TodayWeatherRelease.entitlements;
-				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
@@ -423,7 +526,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -505,6 +607,18 @@
 			};
 			name = Release;
 		};
+		7A1000000000000000201001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A1000000000000000200302 /* Widget.xcconfig */;
+			buildSettings = {};
+			name = Debug;
+		};
+		7A1000000000000000201002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A1000000000000000200302 /* Widget.xcconfig */;
+			buildSettings = {};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -540,6 +654,15 @@
 			buildConfigurations = (
 				7A1000000000000000111001 /* Debug */,
 				7A1000000000000000111002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A1000000000000000201101 /* Build configuration list for PBXNativeTarget "WeatherWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A1000000000000000201001 /* Debug */,
+				7A1000000000000000201002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -643,6 +766,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A1000000000000000100501 /* XCRemoteSwiftPackageReference "ios-places-sdk" */;
 			productName = GooglePlaces;
+		};
+		7A1000000000000000200601 /* TWModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TWModel;
+		};
+		7A1000000000000000200602 /* TWDomain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TWDomain;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

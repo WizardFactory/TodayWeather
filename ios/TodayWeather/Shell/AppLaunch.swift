@@ -17,8 +17,7 @@ enum EntryEvent: Equatable, Sendable {
     case resume
     /// A tap on a delivered notification; `cityIndex` as its payload carries it (a string). IN-04 and IN-14 submit it.
     case notification(cityIndex: String?)
-    /// A link that opened the app (`onOpenURL`). The app registers no URL scheme and no associated domain, as the shipped
-    /// Cordova 1.1.x app (IN-16, ios/README.md "Entry links"), so no link reaches it and the screens ignore this event.
+    /// A URL that opened the app, including the configured weather widget's saved place.
     case link(URL)
 }
 
@@ -28,7 +27,7 @@ enum EntryEvent: Equatable, Sendable {
 @MainActor
 @Observable
 final class AppLaunch {
-    static let shared = AppLaunch(store: AppLaunch.standardStore(), environment: .system, handBack: AppHandBack.writer)
+    static let shared = AppLaunch(store: AppLaunch.standardStore(), environment: .system, handBack: AppHandBack.writer, sharesWidgets: true)
 
     /// The single owner of the app state for the UI; its `state` is nil until the migration has finished.
     let holder: AppStateHolder
@@ -116,12 +115,18 @@ final class AppLaunch {
     }
 
     /// `handBack` (IN-17) gets the state the migration produced and every state saved after it; nil writes no hand-back.
-    init(store: any AppStateSaving, environment: Environment, handBack: HandBackWriter? = nil, http: any HTTPGetting = URLSessionGet(),
+    init(store: any AppStateSaving, environment: Environment, handBack: HandBackWriter? = nil, sharesWidgets: Bool = false, http: any HTTPGetting = URLSessionGet(),
          weatherHTTP: any WeatherHTTP = URLSessionGet(), weatherCache: URL? = AppLaunch.weatherCache(),
          location: @escaping @MainActor () -> any AppLocation = { CoreLocationAccess() },
          placeSearch: @escaping @MainActor () -> (any PlaceSearch)? = { GooglePlaceSearch(key: GooglePlaceSearch.bundleKey) }) {
+        let base = environment.serverURL
         var onSaved: (@Sendable (AppState) -> Void)?
-        if let handBack { onSaved = { handBack.write($0) } }
+        if handBack != nil || sharesWidgets {
+            onSaved = { state in
+                handBack?.write(state)
+                if sharesWidgets { WidgetSharing.publish(state, base: base) }
+            }
+        }
         holder = AppStateHolder(store: store, onSaved: onSaved)
         self.environment = environment
         self.weatherHTTP = weatherHTTP
@@ -132,6 +137,7 @@ final class AppLaunch {
         // `weather_fetch` and `weather_load` go to the usage analytics (IN-15; sent only while the user opted in).
         repository = WeatherRepository(baseURL: environment.serverURL, cacheDirectory: weatherCache, http: weatherHTTP,
                                        telemetry: AppLaunch.weatherTelemetry)
+        if sharesWidgets { repository.onLoaded = WidgetSharing.received }
         // The process started: the first entry event, before any notification tap or link of this launch.
         entries.submit(.launch)
     }
@@ -254,7 +260,21 @@ final class AppLaunch {
     }
 
     private func handle(_ event: EntryEvent) {
-        log.info("entry event \(String(describing: event), privacy: .public)")
+        log.info("entry event \(String(describing: event), privacy: .private)")
+        if case .link(let url) = event, let link = WidgetSharing.Link(url),
+           let shell, case .tab = shell.screen, let state = holder.state {
+            shell.closeMenu()
+            while settings?.top != nil { settings?.back() }
+            if nation?.page != nil { nation?.closePage() }
+            alarms?.page?.cancel() // An edited alarm keeps its normal save/discard confirmation.
+            shell.select(.forecast)
+            if let id = link.placeID, let index = state.places.firstIndex(where: { !$0.disable && WidgetSharing.id($0) == id }) {
+                weather?.session.openPlace(index)
+            } else {
+                weather?.session.reload(.deeplink)
+            }
+            return
+        }
         // `checkLocationMode` on each return to the foreground (app.js `resume`), IN-10.
         if event == .resume { location?.check() }
         shell?.handle(event)
