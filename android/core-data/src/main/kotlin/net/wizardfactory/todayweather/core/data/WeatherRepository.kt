@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -25,7 +26,7 @@ import net.wizardfactory.todayweather.core.storage.Place
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 
 /** A place's weather fields as `updateCity` keeps them (`currentWeather`, `timeChart`, `dayChart`, …) and when they came. */
-data class WeatherEntry(val weather: JsonObject, val loadedAt: Long)
+data class WeatherEntry(val weather: JsonObject, val loadedAt: Long, val temperatureUnit: String? = null)
 
 sealed interface LoadResult {
     /** The response applied to the place that requested it; [place] carries what the response changed in it. */
@@ -133,7 +134,9 @@ class WeatherRepository(
         return commits.withLock {
             if (!latest(key, request)) return@withLock LoadResult.Superseded
             val previous = cached(place)
-            val entry = WeatherEntry(merge(previous?.weather, city), clock())
+            val responseUnits = (parsed.getOrNull() as? JsonObject)?.get("units") as? JsonObject
+            val temperatureUnit = (responseUnits?.get("temperatureUnit") as? JsonPrimitive)?.contentOrNull ?: units.temperatureUnit
+            val entry = WeatherEntry(merge(previous?.weather, city), clock(), temperatureUnit.takeIf { it == "C" || it == "F" })
             val updated = updatePlace(place, city)
             val newKey = key(updated)
             synchronized(this) {
@@ -157,7 +160,8 @@ class WeatherRepository(
         if (!file.isFile) return@withContext null
         runCatching {
             val o = Json.parseToJsonElement(file.readText()) as JsonObject
-            WeatherEntry(o["weather"] as JsonObject, (o["loadedAt"] as JsonPrimitive).content.toLong())
+            WeatherEntry(o["weather"] as JsonObject, (o["loadedAt"] as JsonPrimitive).content.toLong(),
+                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull)
         }.getOrNull()
     }
 
@@ -168,7 +172,11 @@ class WeatherRepository(
             // A file of its own, renamed over the entry: a reader sees the old entry or the new one, never half.
             val temp = File.createTempFile(file.nameWithoutExtension, ".tmp", file.parentFile)
             try {
-                temp.writeText(JsonObject(mapOf("loadedAt" to JsonPrimitive(entry.loadedAt), "weather" to entry.weather)).toString())
+                temp.writeText(buildJsonObject {
+                    put("loadedAt", JsonPrimitive(entry.loadedAt))
+                    put("weather", entry.weather)
+                    entry.temperatureUnit?.let { put("temperatureUnit", JsonPrimitive(it)) }
+                }.toString())
                 if (!temp.renameTo(file)) temp.delete()
             } finally {
                 if (temp.exists()) temp.delete()

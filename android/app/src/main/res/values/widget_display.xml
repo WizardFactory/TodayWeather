@@ -1,0 +1,16 @@
+<resources>
+    <string name="widget_display_current">Current weather</string>
+    <string name="widget_display_forecast">Forecast</string>
+    <string name="widget_display_clock">Clock and weather</string>
+    <string name="widget_display_air">Air quality</string>
+    <string name="widget_display_expired">Open the app to check the weather</string>
+    <string name="widget_display_no_place">Select a saved place in widget settings</string>
+    <string name="widget_display_no_weather">Open the app to load weather</string>
+    <string name="widget_display_expired_compact">Weather in app</string>
+    <item type="string" name="widget_display_expired_card">@string/widget_display_expired</item>
+    <string name="widget_style_title">Widget style</string>
+    <string name="widget_style_classic">Classic Black</string>
+    <string name="widget_style_paper">Morning Paper</string>
+    <string name="widget_style_blue">Blue Hour</string>
+    <string name="widget_style_open">Open TodayWeather</string>
+</resources>

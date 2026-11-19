@@ -1,0 +1,16 @@
+<resources>
+    <string name="widget_display_current">현재 날씨</string>
+    <string name="widget_display_forecast">예보</string>
+    <string name="widget_display_clock">시계와 날씨</string>
+    <string name="widget_display_air">대기질</string>
+    <string name="widget_display_expired">앱에서 날씨를 확인하세요</string>
+    <string name="widget_display_no_place">위젯 설정에서 장소를 선택하세요</string>
+    <string name="widget_display_no_weather">앱을 열어 날씨를 불러오세요</string>
+    <string name="widget_display_expired_compact">앱에서 날씨 확인</string>
+    <string name="widget_display_expired_card">앱에서 날씨를\n확인하세요</string>
+    <string name="widget_style_title">위젯 디자인</string>
+    <string name="widget_style_classic">클래식 블랙</string>
+    <string name="widget_style_paper">아침 종이</string>
+    <string name="widget_style_blue">블루 아워</string>
+    <string name="widget_style_open">오늘날씨 열기</string>
+</resources>

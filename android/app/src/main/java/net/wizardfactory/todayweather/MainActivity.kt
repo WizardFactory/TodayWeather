@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.wizardfactory.todayweather.widget.WidgetAccess
 import net.wizardfactory.todayweather.ads.AdMobBanner
 import net.wizardfactory.todayweather.ads.AdsConsent
 import net.wizardfactory.todayweather.ads.BannerSlot
@@ -197,6 +198,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        WidgetAccess.mainAppOpened(this)
         // Cordova's `resume`: each return to the foreground reloads the selected place if the gate allows.
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
         resumedBefore = true

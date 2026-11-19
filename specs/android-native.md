@@ -26,7 +26,13 @@ The native app reproduces the Cordova 1.1.1 app (`client/`, Android build) for u
 
 ## Exclusions
 
-AN-19 (release), widgets, iOS, the #2651 restyle and server changes.
+AN-19 (release), widgets, iOS, the #2651 restyle and server changes are outside the original parity baseline.
+
+## Native home-screen widgets (#3048)
+
+The [widget extension](https://github.com/WizardFactory/TodayWeather/issues/3048) adds four picker entries to the TodayWeather app: current conditions, forecast, clock and weather, and air quality. Each instance follows the app selection or pins an enabled place. Resizing adapts the content; instance settings select daily or hourly forecasts and yesterday comparisons.
+
+A foreground visit to the main activity enables all widgets for the next 120 hours. A missing visit, a visit in the future, or an age of 120 hours or more requires the user to open the app. The prompt replaces cached weather and air readings. Configuration, background startup and widget refresh do not renew access. A scheduled redraw works offline; Android can defer its delivery during idle periods. A subsequent main-app visit renews all installed widgets. The new providers have different component names from the historical Cordova providers; users of those versions may need to add their widgets again.
 
 ## Assumptions and risks
 

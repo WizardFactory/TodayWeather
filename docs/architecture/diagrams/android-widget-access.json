@@ -1,0 +1,74 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Home-screen widget access",
+    "output": "docs/architecture/diagrams/android-widget-access.html",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "visual_preset": "signal-flow"
+  },
+  "mainPath": [
+    "initial",
+    "eligible",
+    "expired"
+  ],
+  "states": [
+    {
+      "id": "initial",
+      "type": "start",
+      "label": "First placement",
+      "sublabel": "No recorded app visit"
+    },
+    {
+      "id": "eligible",
+      "type": "active",
+      "label": "Weather enabled",
+      "sublabel": "Last visit under 120 hours"
+    },
+    {
+      "id": "expired",
+      "type": "waiting",
+      "label": "Open app prompt",
+      "sublabel": "Weather refresh suspended"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "open",
+      "from": "initial",
+      "to": "eligible",
+      "label": "Visit main app"
+    },
+    {
+      "id": "expiry",
+      "from": "eligible",
+      "to": "expired",
+      "label": "120 hours elapse"
+    },
+    {
+      "id": "return",
+      "from": "expired",
+      "to": "eligible",
+      "label": "Reopen main app"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Main app visits",
+      "items": [
+        "Entering the main screen renews access for every widget.",
+        "Changing widget settings leaves the visit time intact."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Offline and idle",
+      "items": [
+        "Cached readings show their update time while access is active.",
+        "Android can defer the scheduled redraw while the device sleeps."
+      ]
+    }
+  ]
+}

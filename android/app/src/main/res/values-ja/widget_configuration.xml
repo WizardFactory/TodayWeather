@@ -1,0 +1,14 @@
+<resources>
+    <string name="widget_cfg_title">ウィジェットの設定</string>
+    <string name="widget_cfg_place">地域</string>
+    <string name="widget_cfg_follow">アプリで選択した地域を使用</string>
+    <string name="widget_cfg_position">現在地</string>
+    <string name="widget_cfg_missing">この地域は利用できません。別の地域を選んでください。</string>
+    <string name="widget_cfg_forecast">予報</string>
+    <string name="widget_cfg_hourly">時間別</string>
+    <string name="widget_cfg_daily">日別</string>
+    <string name="widget_cfg_compare">昨日の気温と比較</string>
+    <string name="widget_cfg_yesterday">昨日を含める</string>
+    <string name="widget_cfg_visit">ウィジェットに天気を表示するには、5日以内に一度アプリを開いてください。</string>
+    <string name="widget_cfg_save">保存</string>
+</resources>

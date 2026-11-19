@@ -101,6 +101,26 @@ class WeatherRepositoryTest {
     }
 
     @Test
+    fun diskCacheKeepsTheResponseUnitAndReadsEntriesFromBeforeWidgets() = runTest {
+        val cache = Files.createTempDirectory("weather-unit").toFile()
+        try {
+            val fahrenheit = File(corpus, "inputs/kma-seoul-imperial.json").readText()
+            val repo = repository({ _, _ -> fahrenheit }, cache)
+            assertIs<LoadResult.Loaded>(repo.load(seoul, units, listOf("ko"), force = true))
+            val restart = { repository({ _, _ -> error("offline") }, cache) }
+            val stored = restart().cached(seoul)!!
+            assertEquals("F", stored.temperatureUnit, "the cached response carries its own units")
+            val file = cache.listFiles()!!.single()
+            file.writeText(JsonObject(Json.parseToJsonElement(file.readText()).jsonObject - "temperatureUnit").toString())
+            val legacy = restart().cached(seoul)!!
+            assertEquals(stored.weather, legacy.weather)
+            assertNull(legacy.temperatureUnit)
+        } finally {
+            cache.deleteRecursively()
+        }
+    }
+
+    @Test
     fun aLaterRequestForTheSamePlaceWins() = runTest {
         val first = CompletableDeferred<String>()
         var call = 0

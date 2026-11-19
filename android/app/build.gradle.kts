@@ -117,6 +117,7 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.core.splashscreen)
 

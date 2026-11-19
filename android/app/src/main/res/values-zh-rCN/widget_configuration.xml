@@ -1,0 +1,14 @@
+<resources>
+    <string name="widget_cfg_title">小组件设置</string>
+    <string name="widget_cfg_place">地点</string>
+    <string name="widget_cfg_follow">使用应用中选定的地点</string>
+    <string name="widget_cfg_position">当前位置</string>
+    <string name="widget_cfg_missing">该地点不可用，请选择其他地点。</string>
+    <string name="widget_cfg_forecast">预报</string>
+    <string name="widget_cfg_hourly">逐小时</string>
+    <string name="widget_cfg_daily">逐日</string>
+    <string name="widget_cfg_compare">与昨天的气温比较</string>
+    <string name="widget_cfg_yesterday">包含昨天</string>
+    <string name="widget_cfg_visit">请至少每五天打开一次主应用，以便小组件继续显示天气。</string>
+    <string name="widget_cfg_save">保存</string>
+</resources>
