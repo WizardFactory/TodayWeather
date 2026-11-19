@@ -18,6 +18,8 @@ configured live services; weather values and warnings are dated examples. Images
 are reduced to 720×1600 and a 256-color palette without replacing screen content.
 Debug banners are Google's test ads; their availability and contents vary.
 
+[Read the current-temperature supplement](current-temperature/manual.pdf) for the updated fractional reading in the forecast header. Its [editable source](current-temperature/manual.json) uses a Korean Seoul fixture rendered with the native Android Compose screen under Robolectric SDK 34.
+
 ## Refresh the selected place
 
 On 시간별날씨 (Hourly), 일별날씨 (Daily) or 대기정보 (Air), scroll to the top.

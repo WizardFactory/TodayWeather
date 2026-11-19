@@ -212,7 +212,9 @@ class ForecastScreenshotTest {
             val i = block["index"]!!.jsonPrimitive.content.toInt()
             val native = rule.onNodeWithTag(ForecastTags.block(i)).captureToImage().asAndroidBitmap().toPixels()
             val size = block["clip"]!!.jsonObject["size"]!!.jsonObject
-            val cordova = ImageIO.read(File(references, "$prefix$place/$page-$i.png")).toPixels()
+            val reference = ImageIO.read(File(references, "$prefix$place/$page-$i.png"))
+            if (i == 0) applyNativeTemperatureRow(reference, block, project)
+            val cordova = reference.toPixels()
             val name = "$prefix$place-$page-$i"
             val outputName = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
             // A block that ends under the tab bar is captured without its last pixels (`hidden`).

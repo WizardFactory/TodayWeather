@@ -1,0 +1,13 @@
+{
+  "title": "TodayWeather for Android · Current temperature",
+  "scenario": "Hourly weather for a saved place in Celsius. This example uses the Seoul weather fixture in the native Android forecast view.",
+  "steps": [
+    {
+      "title": "Read the current temperature",
+      "instruction": "Open Hourly Weather (시간별날씨) and look beside the sky icon near the top of the screen.",
+      "screenshot": "hourly.png",
+      "caption": "The Seoul forecast shows 3.3 degrees Celsius.",
+      "expected": "The decimal point and the digit after it use 70% of the whole-number font size. The entire number sits on one baseline."
+    }
+  ]
+}

@@ -55,6 +55,7 @@ import net.wizardfactory.todayweather.ui.chart.ImageDiff
 import net.wizardfactory.todayweather.ui.chart.Pixels
 import net.wizardfactory.todayweather.ui.forecast.ForecastTags
 import net.wizardfactory.todayweather.ui.forecast.WeatherPage
+import net.wizardfactory.todayweather.ui.forecast.applyNativeTemperatureRow
 import net.wizardfactory.todayweather.ui.forecast.WeatherPageContent
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.BarButton
@@ -401,15 +402,20 @@ class SettingsScreenshotTest {
         for (block in record["blocks"]!!.jsonArray.map { it.jsonObject }) {
             val i = block["index"]!!.jsonPrimitive.content.toInt()
             val native = rule.onNodeWithTag(ForecastTags.block(i)).captureToImage().asAndroidBitmap().toPixels()
-            compare("$lang/$name-$i", "$lang/$name/$page-$i.png", native, crop = block["hidden"] != null)
+            compare("$lang/$name-$i", "$lang/$name/$page-$i.png", native, crop = block["hidden"] != null) { reference ->
+                if (i == 0) {
+                    val style = if (theme == Theme.OLD) "old-$page" else theme.key
+                    applyNativeTemperatureRow(reference, block, project, style)
+                }
+            }
         }
     }
 
     private val failures = mutableListOf<String>()
 
     /** [native] against the capture [file]; [crop] cuts the native image to the capture's height (a page's list, `hidden`). */
-    private fun compare(name: String, file: String, native: Pixels, crop: Boolean) {
-        val cordova = ImageIO.read(File(references, file)).toPixels()
+    private fun compare(name: String, file: String, native: Pixels, crop: Boolean, adjustReference: (BufferedImage) -> Unit = {}) {
+        val cordova = ImageIO.read(File(references, file)).also(adjustReference).toPixels()
         val shown = if (crop) native.crop(0, 0, native.width, minOf(native.height, cordova.height)) else native
         val diff = ImageDiff.of(shown, cordova)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')

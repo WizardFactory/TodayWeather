@@ -55,6 +55,7 @@ import net.wizardfactory.todayweather.notify.PushMessage
 import net.wizardfactory.todayweather.ui.chart.ImageDiff
 import net.wizardfactory.todayweather.ui.chart.Pixels
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
+import net.wizardfactory.todayweather.ui.forecast.applyNativeTemperatureRow
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
@@ -430,7 +431,13 @@ class AlarmsScreenshotTest {
 
     private fun compare(name: String, showsHourlyTabs: Boolean = false) {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
-        val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
+        val image = ImageIO.read(File(references, "$name.png"))
+        if (matrixSize != null && name in setOf("ko-KR/intro", "ko-KR/foreground")) {
+            val hourly = File(references.parentFile, "forecast/ko-KR/kma-seoul/hourly.json")
+            val header = Json.parseToJsonElement(hourly.readText()).jsonObject.getValue("blocks").jsonArray.first().jsonObject
+            applyNativeTemperatureRow(image, header, project, dimmed = true)
+        }
+        val cordova = image.toPixels()
         val reference = if (showsHourlyTabs) {
             // Both notification popups cover the light Hourly page with a 40% black backdrop.
             cordova.withTabAccent(Tab.HOURLY, ShellColors.of(Theme.LIGHT, Tab.HOURLY), blackScrimAlpha = 0.4f)
