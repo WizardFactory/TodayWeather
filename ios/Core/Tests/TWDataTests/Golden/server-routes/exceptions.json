@@ -7,9 +7,9 @@
    "kind": "not-served",
    "match": {"method": "GET", "path": "^/weather/v000903/addr/.+$"},
    "route": {"file": "server/routes/gateway.js", "method": "ALL", "path": "OWN_PATH"},
-   "reason": "The Cordova free-form weather fallback (_makeQueryUrlWithAddr in service.weatherutil.js), sent for a place with an address but no coordinates whose address has no KMA town (foreign free text, or 대한민국 alone). The legacy server's gateway answers every other /weather path with 404 (the AWS Lambda answered 501); the app shows the failure as the Cordova app does (O03).",
+   "reason": "The Cordova free-form weather fallback (_makeQueryUrlWithAddr in service.weatherutil.js), sent for a place with an address but no coordinates whose address has no KMA town (foreign free text, or 대한민국 alone). The legacy server's gateway answers every other /weather path with 404 (the AWS Lambda answered 501); the app shows the failure as the Cordova app does (O03). The Home Screen widget sends the same saved URL and falls back to cached weather or its unavailable state.",
    "decision": "AN-06 (#2885), inherited by #2948: the free-form weather-address fallback is kept",
-   "evidence": ["server/routes/gateway.js router.all(OWN_PATH)", "specs/issue-2606.md shape X1", "docs/architecture/aws-code-correlation.md"],
+   "evidence": ["ios/TodayWeather/Weather/WidgetSharing.swift", "ios/WidgetRefresh/WidgetRefresh.swift", "server/routes/gateway.js router.all(OWN_PATH)", "specs/issue-2606.md shape X1", "docs/architecture/aws-code-correlation.md"],
    "observedBy": "RequestPathsTests"
   },
   {

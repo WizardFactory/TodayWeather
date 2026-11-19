@@ -1,0 +1,21 @@
+// Keep signing scoped to the extension. App-only SDK settings are not embedded in the widget.
+APPLICATION_EXTENSION_API_ONLY = YES
+CODE_SIGN_ENTITLEMENTS = Support/WeatherWidget.entitlements
+CODE_SIGN_STYLE = Automatic
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_FILE = Support/WidgetInfo.plist
+INFOPLIST_KEY_CFBundleDisplayName = TodayWeather
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @executable_path/../../Frameworks
+PRODUCT_BUNDLE_IDENTIFIER = net.wizardfactory.todayweather.todayext
+PRODUCT_NAME = $(TARGET_NAME)
+SKIP_INSTALL = YES
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator
+SUPPORTS_MACCATALYST = NO
+SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO
+SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO
+TARGETED_DEVICE_FAMILY = 1,2
+
+#include? "../Private.xcconfig"
+
+// The containing app and this extension use different provisioning profiles under manual release signing.
+PROVISIONING_PROFILE_SPECIFIER[config=Release][sdk=iphoneos*] = $(TW_WIDGET_PROVISIONING_PROFILE)
