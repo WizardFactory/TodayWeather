@@ -41,6 +41,7 @@ import net.wizardfactory.todayweather.core.data.NotificationAccess
 import net.wizardfactory.todayweather.core.data.StateAccess
 import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.WeatherSession
+import net.wizardfactory.todayweather.core.domain.shell.Theme
 import net.wizardfactory.todayweather.core.domain.shell.Tab
 import net.wizardfactory.todayweather.core.storage.Settings
 import net.wizardfactory.todayweather.core.storage.AppState
@@ -58,7 +59,9 @@ import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
 import net.wizardfactory.todayweather.ui.shell.PopupTags
-import net.wizardfactory.todayweather.ui.shell.withHourlyTabIconsFrom
+import net.wizardfactory.todayweather.ui.shell.ShellColors
+import net.wizardfactory.todayweather.ui.shell.withTabAccent
+import net.wizardfactory.todayweather.ui.shell.withCurrentTabIconsFrom
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -428,11 +431,15 @@ class AlarmsScreenshotTest {
     private fun compare(name: String, showsHourlyTabs: Boolean = false) {
         val native = rule.onNodeWithTag(ROOT).captureToImage().asAndroidBitmap().toPixels()
         val cordova = ImageIO.read(File(references, "$name.png")).toPixels()
-        val reference = if (showsHourlyTabs) cordova.withHourlyTabIconsFrom(native) else cordova
+        val reference = if (showsHourlyTabs) {
+            // Both notification popups cover the light Hourly page with a 40% black backdrop.
+            cordova.withTabAccent(Tab.HOURLY, ShellColors.of(Theme.LIGHT, Tab.HOURLY), blackScrimAlpha = 0.4f)
+                .withCurrentTabIconsFrom(native, Tab.HOURLY, Tab.DAILY)
+        } else cordova
         val diff = ImageDiff.of(native, reference)
         val base = (matrixSize?.let { "$it-" } ?: "") + name.replace('/', '-')
         ImageIO.write(native.toBufferedImage(), "png", File(out, "$base-native.png"))
-        ImageIO.write(ImageDiff.overlay(native, cordova).toBufferedImage(), "png", File(out, "$base-diff.png"))
+        ImageIO.write(ImageDiff.overlay(native, reference).toBufferedImage(), "png", File(out, "$base-diff.png"))
         println("push-compare ${matrixSize ?: "historical"}/$name native=${native.width}x${native.height} cordova=${cordova.width}x${cordova.height} $diff")
         val limit = tolerances["cases"]?.jsonObject?.get(name)?.jsonObject
         val margin = tolerances["margin"]?.jsonObject

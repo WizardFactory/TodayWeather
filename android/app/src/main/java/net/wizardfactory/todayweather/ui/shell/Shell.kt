@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -370,21 +371,29 @@ fun TabBar(selected: Tab, colors: ShellColors, onTab: (Tab) -> Unit) {
     ) {
         for (tab in Tab.entries) {
             val on = tab == selected
+            val ink = if (on) colors.tabSelected else colors.tabText
             val (glyph, label) = when (tab) {
-                Tab.LOCATIONS -> (if (on) Glyphs.STAR else Glyphs.STAR_OUTLINE) to R.string.LOC_SAVED_LOCATIONS
-                Tab.HOURLY -> (if (on) Glyphs.CLOCK_FILLED else Glyphs.CLOCK_OUTLINE) to R.string.LOC_HOURLY_FORECAST
-                Tab.DAILY -> (if (on) Glyphs.CALENDAR_FILLED else Glyphs.CALENDAR_OUTLINE) to R.string.LOC_DAILY_FORECAST
-                Tab.AIR -> (if (on) Glyphs.CLOUD_FILLED else Glyphs.CLOUD_OUTLINE) to R.string.LOC_AIR_INFORMATION
+                Tab.LOCATIONS -> Glyphs.STAR_OUTLINE to R.string.LOC_SAVED_LOCATIONS
+                Tab.HOURLY -> Glyphs.CLOCK_OUTLINE to R.string.LOC_HOURLY_FORECAST
+                Tab.DAILY -> Glyphs.CALENDAR_OUTLINE to R.string.LOC_DAILY_FORECAST
+                Tab.AIR -> Glyphs.CLOUD_OUTLINE to R.string.LOC_AIR_INFORMATION
             }
             // .tab-item: flex 1 up to 150 dp; wider windows center the items (.tabs justify-content).
             Column(
                 Modifier.weight(1f, fill = false).widthIn(max = 150.dp).fillMaxWidth().heightIn(min = 47.dp).alpha(if (on) 1f else 0.7f)
+                    .drawBehind {
+                        if (on) {
+                            val width = 24.dp.toPx()
+                            drawRoundRect(ink, Offset((size.width - width) / 2, -1.dp.toPx()),
+                                Size(width, 2.5.dp.toPx()), CornerRadius(2.dp.toPx()))
+                        }
+                    }
                     .selectable(selected = on, role = Role.Tab, onClick = { onTab(tab) }).testTag(ShellTags.tab(tab)),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon { LineText(glyph, line(32.sp, 32.sp, colors.tabText, family = Glyphs.ionicons)) }
+                Icon { LineText(glyph, line(32.sp, 32.sp, ink, family = Glyphs.ionicons)) }
                 // A label too long for its item (large text, a narrow window) wraps onto a second line.
-                LineText(stringResource(label), line(10.sp, 14.sp, colors.tabText).copy(textAlign = TextAlign.Center, hyphens = Hyphens.Auto, lineBreak = LineBreak.Heading), maxLines = 2)
+                LineText(stringResource(label), line(10.sp, 14.sp, ink).copy(textAlign = TextAlign.Center, hyphens = Hyphens.Auto, lineBreak = LineBreak.Heading), maxLines = 2)
             }
         }
     }
