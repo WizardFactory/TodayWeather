@@ -1,0 +1,82 @@
+--- a/ios/TodayWeather/AppScenes.swift
++++ b/ios/TodayWeather/AppScenes.swift
+@@ -118,7 +118,7 @@
+     /// The window with the root view; a second call for the same scene changes nothing.
+     private func show(in scene: UIWindowScene) {
+         guard window == nil else { return }
+-        let window = UIWindow(windowScene: scene)
++        let window = CloseoutWindow(windowScene: scene)
+         window.rootViewController = UIHostingController(rootView: RootView(launch: AppLaunch.shared))
+         window.makeKeyAndVisible()
+         self.window = window
+--- a/ios/TodayWeather/Alarms/AlarmsView.swift
++++ b/ios/TodayWeather/Alarms/AlarmsView.swift
+@@ -187,7 +187,7 @@
+             }
+             HStack(spacing: 0) {
+                 bottomButton(catalog("LOC_CANCEL"), color: colors.cancel, identifier: "alarms-cancel", action: actions.back)
+-                bottomButton(catalog("LOC_SAVE"), color: CssColor(0xEF473A), identifier: "alarms-save", action: actions.save)
++                bottomButton(catalog("LOC_SAVE"), color: CssColor(0xEF473A), identifier: "alarms-save", action: { CloseoutProbe.record("save", "tap"); actions.save() })
+             }
+             .frame(height: AlarmsMetrics.buttonsHeight)
+         }
+@@ -425,7 +425,7 @@
+                     dragging = abs(value.startLocation.x - x(from)) <= abs(value.startLocation.x - x(to)) && !(from == to && value.startLocation.x > x(to)) ? 0 : 1
+                 }
+                 let next = dragging == 0 ? (min(hour, to), to) : (from, max(hour, from))
+-                if next.0 != from || next.1 != to { onChange(next.0, next.1) }
++                if next.0 != from || next.1 != to { CloseoutProbe.record("track", String(Int(next.0)) + "-" + String(Int(next.1))); onChange(next.0, next.1) }
+             }.onEnded { _ in dragging = nil })
+         }
+         .frame(height: Self.height)
+--- a/ios/TodayWeather/Places/PlacesView.swift
++++ b/ios/TodayWeather/Places/PlacesView.swift
+@@ -124,7 +124,7 @@
+         let textTop = -0.5 + PlacesMetrics.inputPaddingTop + (content - (lineHeight.ascent + lineHeight.descent)) / 2
+         let glyphTop = (PlacesMetrics.fieldHeight * scale - PlacesMetrics.glyphLine) / 2
+         let inputLeading = PlacesMetrics.inputLeading
+-        let binding = Binding(get: { screens.query.word }, set: { screens.wordChanged($0) })
++        let binding = Binding(get: { screens.query.word }, set: { word in CloseoutProbe.record("input", String(word.count)); screens.wordChanged(word) })
+         return ZStack(alignment: .topLeading) {
+             CssColor(0xEEEEEE).color
+             FixedCssLine(text: Glyphs.iosSearch, size: PlacesMetrics.glyphSize, color: CssColor(0x444444), height: PlacesMetrics.glyphLine,
+--- a/ios/TodayWeather/Shell/AppLaunch.swift
++++ b/ios/TodayWeather/Shell/AppLaunch.swift
+@@ -193,13 +193,14 @@
+     private func makeAlarms(_ shell: ShellModel, weather: WeatherScreens) -> AlarmsScreens {
+         let holder = self.holder
+         let alarms = AlarmsScreens(shell: shell, makePage: {
+-            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: FirebasePush.configured),
+-                      post: { index in AppStartup.shared.push?.postPlace(index) },
++            AlarmPage(holder: holder, notifications: UserNotificationAccess(available: false),
++                      post: { index in CloseoutProbe.record("fixturePost", String(index)) },
+                       openSettings: { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } })
+-        }, postList: { AppStartup.shared.push?.postList() })
++        }, postList: { CloseoutProbe.record("fixturePostList", "") })
+         weather.onBell = { [weak alarms, weak holder] in alarms?.open(fav: holder?.state?.placeIndex) }
+         places?.onBell = { [weak alarms] index in alarms?.open(fav: index) }
+         alarms.onClosed = { [weak self] in
++            CloseoutProbe.record("closed", "return")
+             self?.places?.reopen()
+             self?.weather?.reopen()
+         }
+--- a/ios/Core/Sources/TWData/WeatherRepository.swift
++++ b/ios/Core/Sources/TWData/WeatherRepository.swift
+@@ -14,12 +14,10 @@
+
+ extension URLSessionGet: WeatherHTTP {
+     public func get(_ url: URL, headers: [String: String]) async throws -> Data {
+-        var request = URLRequest(url: url)
+-        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+-        let (data, response) = try await session.data(for: request)
+-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+-            throw StatusError(status: http.statusCode)
+-        }
+-        return data
++        guard url.host == "fixture.invalid", url.path == "/weather/v000903/coord/37.567,126.978",
++              let fixture = Bundle.main.url(forResource: "DeviceSeoul", withExtension: "json") else {
++            throw StatusError(status: 404)
++        }
++        return try Data(contentsOf: fixture)
+     }
+ }

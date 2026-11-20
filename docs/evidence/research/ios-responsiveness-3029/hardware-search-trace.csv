@@ -1,0 +1,49 @@
+build,batch,run,action,xcui_relative_s,activity
+baseline,1,1,cold-search,15.87,"Type '부산' into ""places-input"" TextField"
+baseline,1,1,cold-search,15.87,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline,1,1,cold-search,15.88,"Find the ""places-input"" TextField"
+baseline,1,1,cold-search,15.90,"Check for interrupting elements affecting ""places-input"" TextField"
+baseline,1,1,cold-search,15.95,Synthesize event
+baseline,1,1,cold-search,16.20,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline,1,1,cold-search,16.48,"Find the ""places-input"" TextField"
+baseline,1,1,cold-search,16.52,"Find the ""places-town-0"" Button"
+baseline,1,1,warm-search,18.02,"Type '부산' into ""places-input"" TextField"
+baseline,1,1,warm-search,18.02,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline,1,1,warm-search,18.04,"Find the ""places-input"" TextField"
+baseline,1,1,warm-search,18.06,"Check for interrupting elements affecting ""places-input"" TextField"
+baseline,1,1,warm-search,18.11,Synthesize event
+baseline,1,1,warm-search,18.36,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline,1,1,warm-search,18.64,"Find the ""places-input"" TextField"
+baseline,1,1,warm-search,18.69,"Find the ""places-town-0"" Button"
+master,1,1,cold-search,17.62,"Type '부산' into ""places-input"" TextField"
+master,1,1,cold-search,17.63,Wait for net.wizardfactory.todayweather.profile3029 to idle
+master,1,1,cold-search,17.63,"Find the ""places-input"" TextField"
+master,1,1,cold-search,17.65,"Check for interrupting elements affecting ""places-input"" TextField"
+master,1,1,cold-search,17.71,Synthesize event
+master,1,1,cold-search,17.95,Wait for net.wizardfactory.todayweather.profile3029 to idle
+master,1,1,cold-search,18.22,"Find the ""places-input"" TextField"
+master,1,1,cold-search,18.26,"Find the ""places-town-0"" Button"
+master,1,1,warm-search,19.75,"Type '부산' into ""places-input"" TextField"
+master,1,1,warm-search,19.75,Wait for net.wizardfactory.todayweather.profile3029 to idle
+master,1,1,warm-search,19.76,"Find the ""places-input"" TextField"
+master,1,1,warm-search,19.78,"Check for interrupting elements affecting ""places-input"" TextField"
+master,1,1,warm-search,19.83,Synthesize event
+master,1,1,warm-search,20.07,Wait for net.wizardfactory.todayweather.profile3029 to idle
+master,1,1,warm-search,20.34,"Find the ""places-input"" TextField"
+master,1,1,warm-search,20.38,"Find the ""places-town-0"" Button"
+baseline-repeat,1,1,cold-search,17.69,"Type '부산' into ""places-input"" TextField"
+baseline-repeat,1,1,cold-search,17.70,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline-repeat,1,1,cold-search,17.71,"Find the ""places-input"" TextField"
+baseline-repeat,1,1,cold-search,17.73,"Check for interrupting elements affecting ""places-input"" TextField"
+baseline-repeat,1,1,cold-search,17.79,Synthesize event
+baseline-repeat,1,1,cold-search,18.03,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline-repeat,1,1,cold-search,18.31,"Find the ""places-input"" TextField"
+baseline-repeat,1,1,cold-search,18.33,"Find the ""places-town-0"" Button"
+baseline-repeat,1,1,warm-search,19.54,"Type '부산' into ""places-input"" TextField"
+baseline-repeat,1,1,warm-search,19.54,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline-repeat,1,1,warm-search,19.55,"Find the ""places-input"" TextField"
+baseline-repeat,1,1,warm-search,19.57,"Check for interrupting elements affecting ""places-input"" TextField"
+baseline-repeat,1,1,warm-search,19.63,Synthesize event
+baseline-repeat,1,1,warm-search,19.88,Wait for net.wizardfactory.todayweather.profile3029 to idle
+baseline-repeat,1,1,warm-search,20.12,"Find the ""places-input"" TextField"
+baseline-repeat,1,1,warm-search,20.15,"Find the ""places-town-0"" Button"

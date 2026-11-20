@@ -1,0 +1,81 @@
+{
+  "template": "Time Profiler",
+  "sample_weight_ms": 1,
+  "order": "leaf to root",
+  "groups": {
+    "baseline": {
+      "sample_count": 265,
+      "representative": {
+        "time": "00:00.903.285",
+        "frames": [
+          "0x1981a44dd",
+          "0x19842fcd3",
+          "0x1983f0673",
+          "0x1982cbed3",
+          "specialized String.init<A, B>(decoding:as:)",
+          "JSONParser.parseString()",
+          "JSONParser.parseObject(depth:)",
+          "JSONParser.parseValue(depth:)",
+          "JSONParser.parseArray(depth:)",
+          "JSONParser.parseValue(depth:)",
+          "JSONParser.parseDocument()",
+          "specialized static JSONValue.parse(_:)",
+          "static JSONValue.parse(_:)",
+          "static BundledTown.list(_:)",
+          "main",
+          "start_sim",
+          "start"
+        ]
+      }
+    },
+    "candidate": {
+      "sample_count": 67,
+      "representative": {
+        "time": "00:00.875.284",
+        "frames": [
+          "0x18123c595",
+          "0x180b9059f",
+          "0x180b76227",
+          "0x180b8eff3",
+          "0x19850a6a3",
+          "specialized TownFields.init(from:)",
+          "<deduplicated_symbol>",
+          "0x19850a65b",
+          "0x180b73eaf",
+          "0x180b959ef",
+          "0x180b96b4b",
+          "0x1982a99f7",
+          "0x1982a9aab",
+          "0x19850a65b",
+          "0x180b73eaf",
+          "0x180b97fb7",
+          "0x180b759bf",
+          "0x180b97fdb",
+          "0x180b75d43",
+          "0x180b732af",
+          "0x180b984bf",
+          "typedList(_:)",
+          "main",
+          "start_sim"
+        ]
+      }
+    },
+    "control": {
+      "sample_count": 37,
+      "representative": {
+        "time": "00:00.932.285",
+        "frames": [
+          "0x1801ea7e9",
+          "0x19818efc7",
+          "0x19818faeb",
+          "specialized static JSString.indexOf(_:_:from:)",
+          "static JSString.includes(_:_:)",
+          "TownSearch.search(_:from:)",
+          "main",
+          "start_sim",
+          "start"
+        ]
+      }
+    }
+  }
+}

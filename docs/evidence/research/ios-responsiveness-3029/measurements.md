@@ -1,0 +1,125 @@
+# Release fixture measurements
+
+Times are milliseconds. Each cell gives the median and full range of ten successful observations. The table includes only complete batch pairs. Batch 0 in the [raw samples](samples.csv) is rehearsal. Interrupted attempts and failed observations remain in the CSV. Monitoring boundaries and fixture controls are documented in the [investigation](README.md).
+
+| Series | Action | Batch A | Batch B |
+| --- | --- | ---: | ---: |
+| drawer | open-drawer | 460.06 (443.75–581.97) | 454.76 (441.17–547.97) |
+| drawer | show-units | 529.70 (501.06–703.44) | 523.28 (493.44–622.16) |
+| drawer | return-hourly | 499.66 (484.46–569.76) | 491.51 (471.38–577.81) |
+| journeys | nationalWeather | 1568.09 (1545.77–1578.22) | 1559.04 (1537.93–2206.74) |
+| journeys | nationalWeather-back | 453.05 (440.45–472.28) | 450.87 (439.13–803.56) |
+| journeys | nationalAir | 1578.69 (1546.31–1648.69) | 1593.44 (1562.42–1976.63) |
+| journeys | nationalAir-back | 438.72 (431.92–553.69) | 450.96 (447.89–623.93) |
+| journeys | specialWeather | 1680.79 (1561.35–1925.16) | 1657.45 (1573.18–2670.28) |
+| journeys | specialWeather-back | 519.71 (472.21–814.44) | 504.83 (462.49–977.87) |
+| journeys | startupPage | 1801.59 (1613.24–1996.40) | 1989.39 (1649.46–4481.35) |
+| journeys | startupPage-back | 541.94 (492.16–710.71) | 1055.09 (621.36–3450.92) |
+| journeys | refreshInterval | 1870.17 (1777.35–2495.71) | 1881.80 (1648.39–2144.32) |
+| journeys | refreshInterval-back | 732.57 (557.01–1128.91) | 669.56 (519.00–991.43) |
+| journeys | theme | 1890.26 (1705.20–4788.31) | 2961.75 (1687.95–4688.96) |
+| journeys | theme-back | 664.05 (497.06–2238.85) | 1383.96 (564.44–3004.34) |
+| journeys | cold-search | 654.39 (411.27–913.97) | 532.40 (343.38–617.65) |
+| journeys | warm-search | 414.70 (361.34–570.84) | 348.42 (338.34–444.98) |
+| dialogs | alarms | 388.54 (373.88–400.59) | 389.74 (366.61–405.97) |
+| dialogs | picker | 419.31 (404.17–429.32) | 419.57 (406.05–510.85) |
+| dialogs | minute-step | 402.83 (397.80–408.34) | 399.01 (383.62–438.95) |
+| dialogs | picker-close | 476.67 (471.28–480.28) | 475.46 (459.31–533.39) |
+| dialogs | discard | 456.15 (435.53–462.87) | 458.70 (437.18–634.15) |
+| dialogs | about | 479.46 (452.44–922.30) | 476.52 (471.51–478.62) |
+| dialogs | about-back | 581.20 (555.93–636.14) | 577.73 (545.22–587.19) |
+| dialogs | analytics | 475.08 (456.92–513.61) | 472.43 (459.43–491.70) |
+| dialogs | analytics-back | 581.36 (573.22–587.88) | 579.00 (542.31–613.79) |
+| dialogs | adPrivacy | 491.39 (471.16–564.53) | 476.82 (457.01–501.19) |
+| dialogs | adPrivacy-back | 618.58 (565.72–1145.18) | 585.64 (566.67–645.29) |
+| popover | tab-dailyforecast | 382.94 (368.91–407.71) | 379.51 (365.80–416.21) |
+| popover | tab-air | 394.07 (376.68–487.75) | 396.88 (383.11–411.95) |
+| popover | tab-search | 376.52 (360.50–436.91) | 371.74 (357.20–392.00) |
+| popover | tab-forecast | 377.77 (371.59–443.89) | 377.64 (372.51–401.40) |
+| popover | share | 1872.69 (1414.37–1925.39) | 1870.26 (1849.15–1981.67) |
+| popover | dismiss-share | 2030.25 (1982.81–2071.38) | 2024.22 (2001.63–2046.39) |
+| typed-app | cold-search | 496.96 (342.00–684.96) | 348.48 (337.13–362.86) |
+| typed-app | warm-search | 348.67 (341.00–385.49) | 352.82 (341.07–434.13) |
+| baseline-repeat | cold-search | 357.12 (335.51–684.53) | 618.11 (337.06–714.12) |
+| baseline-repeat | warm-search | 360.80 (329.10–501.81) | 377.10 (339.29–488.30) |
+| hosted | first-ten | 30.88 (29.80–33.91) | 31.39 (30.42–33.81) |
+| hosted | next-ten | 31.40 (30.03–32.15) | 31.29 (29.75–31.73) |
+| hosted | prediction | 349.69 (335.95–356.15) | 346.64 (342.20–412.97) |
+| hosted | nationalWeather-route | 13.58 (11.42–79.52) | 13.13 (11.41–17.71) |
+| hosted | nationalWeather-response | 264.17 (259.56–331.87) | 263.66 (260.14–271.83) |
+| hosted | nationalWeather-content | 333.44 (330.28–443.09) | 331.43 (315.35–397.09) |
+| hosted | nationalWeather-back | 12.98 (12.26–14.87) | 14.43 (11.83–16.68) |
+| hosted | nationalAir-route | 15.21 (13.41–17.90) | 14.94 (13.02–27.81) |
+| hosted | nationalAir-response | 264.25 (261.68–268.12) | 265.97 (261.77–284.18) |
+| hosted | nationalAir-content | 322.06 (308.52–325.92) | 323.12 (308.78–454.33) |
+| hosted | nationalAir-back | 13.33 (12.22–15.39) | 14.02 (11.62–19.55) |
+| hosted | specialWeather-route | 10.46 (9.60–11.78) | 10.84 (8.98–11.93) |
+| hosted | specialWeather-response | 252.54 (252.03–255.36) | 253.62 (252.14–257.24) |
+| hosted | specialWeather-content | 309.37 (297.21–315.30) | 310.81 (299.14–329.91) |
+| hosted | specialWeather-back | 18.70 (16.11–20.72) | 19.12 (17.69–25.02) |
+| hosted-repeat | drawer-first-displacement | 67.93 (58.44–77.98) | 63.05 (61.00–71.62) |
+| hosted-repeat | drawer-settled | 251.85 (243.39–259.12) | 245.98 (238.52–252.61) |
+| hosted-repeat | first-ten | 31.68 (29.98–37.67) | 30.26 (29.44–32.35) |
+| hosted-repeat | next-ten | 31.20 (30.00–32.78) | 31.09 (29.53–33.64) |
+| hosted-repeat | prediction | 348.98 (336.54–356.32) | 347.30 (343.63–352.59) |
+| hosted-repeat | nationalWeather-route | 13.35 (11.24–14.29) | 13.79 (11.34–18.42) |
+| hosted-repeat | nationalWeather-response | 263.69 (259.86–268.21) | 266.71 (259.00–270.85) |
+| hosted-repeat | nationalWeather-content | 330.22 (320.73–368.50) | 335.39 (312.51–378.63) |
+| hosted-repeat | nationalWeather-back | 12.31 (12.02–14.31) | 12.25 (11.72–12.84) |
+| hosted-repeat | nationalAir-route | 14.78 (13.65–16.97) | 13.38 (12.24–17.84) |
+| hosted-repeat | nationalAir-response | 264.86 (261.89–273.82) | 263.32 (260.54–271.08) |
+| hosted-repeat | nationalAir-content | 326.35 (316.91–348.43) | 327.68 (313.87–338.42) |
+| hosted-repeat | nationalAir-back | 13.22 (12.18–14.81) | 12.93 (11.80–14.92) |
+| hosted-repeat | specialWeather-route | 10.14 (8.43–11.42) | 10.32 (8.63–11.12) |
+| hosted-repeat | specialWeather-response | 253.28 (252.27–255.72) | 255.33 (253.09–257.40) |
+| hosted-repeat | specialWeather-content | 311.85 (295.85–330.73) | 313.95 (310.01–320.24) |
+| hosted-repeat | specialWeather-back | 17.48 (16.40–18.83) | 18.53 (17.04–19.45) |
+| replay | alarms | 389.45 (373.43–423.80) | 396.98 (378.09–404.96) |
+| replay | picker | 434.85 (395.99–534.68) | 422.76 (411.71–434.21) |
+| replay | minute-step | 398.79 (392.28–420.19) | 406.70 (383.48–519.89) |
+| replay | picker-close | 488.18 (462.83–508.84) | 480.23 (467.41–493.38) |
+| replay | discard | 469.48 (451.60–485.26) | 464.33 (438.93–491.22) |
+| replay | open-drawer | 434.61 (406.56–451.53) | 429.61 (413.76–458.27) |
+| replay | show-units | 495.09 (484.11–512.24) | 489.29 (469.78–615.00) |
+| replay | return-hourly | 478.90 (467.54–487.46) | 466.02 (456.00–554.11) |
+| replay | nationalWeather | 1586.25 (1536.06–1789.93) | 1545.25 (1512.34–1586.99) |
+| replay | nationalWeather-back | 467.65 (427.04–485.73) | 440.92 (430.67–456.68) |
+| replay | nationalAir | 1578.78 (1547.73–1845.46) | 1573.07 (1549.70–1711.36) |
+| replay | nationalAir-back | 442.26 (434.79–569.73) | 439.36 (426.22–451.03) |
+| replay | specialWeather | 1554.52 (1516.45–1798.83) | 1549.50 (1531.45–2526.80) |
+| replay | specialWeather-back | 465.14 (448.93–552.01) | 456.69 (447.17–471.19) |
+| replay | startupPage | 1567.65 (1517.49–1973.47) | 1550.33 (1528.41–1827.08) |
+| replay | startupPage-back | 435.28 (428.47–475.86) | 434.02 (424.18–462.57) |
+| replay | refreshInterval | 1538.97 (1518.92–1594.21) | 1570.90 (1546.64–1818.07) |
+| replay | refreshInterval-back | 432.35 (424.05–1544.28) | 445.74 (428.72–496.84) |
+| replay | theme | 1558.18 (1545.82–1590.42) | 1547.18 (1518.95–1574.27) |
+| replay | theme-back | 439.19 (418.90–507.33) | 428.52 (415.88–440.53) |
+| replay | about | 481.53 (461.72–766.17) | 480.74 (451.85–864.35) |
+| replay | about-back | 597.00 (557.54–680.79) | 592.52 (571.46–1066.33) |
+| replay | analytics | 459.77 (449.97–610.48) | 467.48 (449.34–493.54) |
+| replay | analytics-back | 558.31 (550.21–581.38) | 571.59 (560.68–782.48) |
+| replay | adPrivacy | 471.85 (466.99–504.71) | 468.64 (453.13–717.95) |
+| replay | adPrivacy-back | 567.72 (539.58–712.20) | 570.44 (559.09–987.49) |
+| replay | cold-search | 628.45 (598.84–1165.75) | 622.59 (340.12–675.12) |
+| replay | warm-search | 373.16 (343.25–961.45) | 347.48 (330.50–457.79) |
+| replay | tab-dailyforecast | 371.65 (362.83–438.65) | 378.30 (370.68–402.21) |
+| replay | tab-air | 382.73 (374.10–545.46) | 383.71 (378.20–398.47) |
+| replay | tab-search | 369.60 (349.96–374.01) | 372.99 (347.12–457.31) |
+| replay | tab-forecast | 372.80 (359.12–506.43) | 378.81 (359.28–410.51) |
+| replay | share | 1842.90 (1392.03–1916.89) | 1864.28 (1756.52–2003.54) |
+| replay | dismiss-share | 1999.84 (1964.14–2117.72) | 2002.83 (1975.54–2533.17) |
+| decoder-pair | cached | 0.68 (0.66–1.46) | 0.67 (0.65–0.68) |
+| decoder-pair | first | 30.32 (22.44–37.37) | 22.41 (22.19–24.97) |
+| decoder-pair | typed-first | 7.64 (6.18–10.92) | 6.01 (5.86–6.51) |
+| decoder-pair | second-page | 0.0027 (0.0013–0.0068) | 0.0020 (0.0013–0.0028) |
+| decoder-pair | no-match | 1.53 (1.35–2.95) | 1.37 (1.34–1.55) |
+| iPad | fresh | 3638.83 (1454.48–7827.33) | 1892.32 (1215.43–3467.44) |
+| iPad | upgrade | 3504.47 (1618.65–14601.86) | 2001.92 (1505.12–3664.65) |
+| XCTest | Duration (ApplicationFirstFramePresentationResponsive) | 1402.19 (1205.02–3006.50) | 1461.12 (1255.97–1718.56) |
+| XCTest | Duration (Scroll_Deceleration) | 1898.76 (1882.49–1916.48) | 1899.32 (1415.98–1915.81) |
+| XCTest | Duration (Scroll_Dragging) | 550.37 (533.44–567.01) | 550.34 (534.03–1720.72) |
+| replay-XCTest | Duration (Scroll_Deceleration) | 1898.84 (1882.68–1906.55) | 1899.16 (1881.71–1899.93) |
+| replay-XCTest | Duration (Scroll_Dragging) | 550.71 (548.38–551.63) | 550.76 (549.65–568.11) |
+| replay-XCTest | Duration (ApplicationFirstFramePresentationResponsive) | 1362.44 (1147.59–1895.34) | 1204.52 (1141.49–1544.78) |
+| delayed-Seoul | cached | 1472.18 (1449.20–1831.78) | 1489.83 (1437.50–1869.89) |
+| delayed-Seoul | fresh | 5590.75 (5411.05–6221.96) | 5683.47 (5462.06–6147.10) |

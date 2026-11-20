@@ -1,0 +1,11 @@
+trace_start_s,duration_ms,swap_id,gesture,phase,instrument_label
+45.323727791,16.672416,10411193,forecast-left-1-3,after-release,0x9edcb9
+52.076060875,16.670875,10411517,forecast-right-1-4,drag,0x9eddfd
+57.694863333,16.666,10411796,forecast-right-1-5,drag,0x9edf14
+59.645696583,16.673458,10411913,forecast-right-1-5,after-release,0x9edf89
+124.303716208,16.681541,10415203,forecast-left-2-7,after-release,0x9eec63
+134.390593666,16.672041,10415712,,,0x9eee60
+139.242242416,16.666,10415976,forecast-right-2-9,after-release,0x9eef68
+142.826630708,16.666,10416138,forecast-right-2-10,drag,0x9ef00a
+144.543794125,16.672291,10416241,forecast-right-2-10,after-release,0x9ef071
+277.873661375,16.666,10422375,,,0x9f0867

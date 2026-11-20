@@ -1,0 +1,630 @@
+series,action,batch,run,metric,unit,value,passed
+baseline,testDeviceDailyChart,1,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,1,1,Duration (Scroll_DraggingAndDeceleration),s,1.6718758,1
+baseline,testDeviceDailyChart,1,2,Duration (Scroll_DraggingAndDeceleration),s,1.8173682,1
+baseline,testDeviceDailyChart,1,3,Duration (Scroll_DraggingAndDeceleration),s,1.818813,1
+baseline,testDeviceDailyChart,1,4,Duration (Scroll_DraggingAndDeceleration),s,1.6713092,1
+baseline,testDeviceDailyChart,1,5,Duration (Scroll_DraggingAndDeceleration),s,1.6706515,1
+baseline,testDeviceDailyChart,1,6,Duration (Scroll_DraggingAndDeceleration),s,1.8219898,1
+baseline,testDeviceDailyChart,1,7,Duration (Scroll_DraggingAndDeceleration),s,1.734415,1
+baseline,testDeviceDailyChart,1,8,Duration (Scroll_DraggingAndDeceleration),s,1.8217753,1
+baseline,testDeviceDailyChart,1,9,Duration (Scroll_DraggingAndDeceleration),s,1.8175559,1
+baseline,testDeviceDailyChart,1,10,Duration (Scroll_DraggingAndDeceleration),s,1.6701735,1
+baseline,testDeviceDailyChart,1,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,1,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,1,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.4205322,1
+baseline,testDeviceDailyChart,1,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.8236389,1
+baseline,testDeviceDailyChart,1,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.7816734,1
+baseline,testDeviceDailyChart,1,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.8416672,1
+baseline,testDeviceDailyChart,1,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.8640404,1
+baseline,testDeviceDailyChart,1,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,53.2384987,1
+baseline,testDeviceDailyChart,1,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.0797653,1
+baseline,testDeviceDailyChart,1,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.6958504,1
+baseline,testDeviceDailyChart,1,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.8181801,1
+baseline,testDeviceDailyChart,1,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.4790573,1
+baseline,testDeviceDailyChart,1,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,1,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,1,1,Duration (Scroll_DraggingAndDeceleration),s,2.4181755,1
+baseline,testDeviceHourlyChart,1,2,Duration (Scroll_DraggingAndDeceleration),s,2.4534068,1
+baseline,testDeviceHourlyChart,1,3,Duration (Scroll_DraggingAndDeceleration),s,2.4513983,1
+baseline,testDeviceHourlyChart,1,4,Duration (Scroll_DraggingAndDeceleration),s,2.4364764,1
+baseline,testDeviceHourlyChart,1,5,Duration (Scroll_DraggingAndDeceleration),s,2.455532,1
+baseline,testDeviceHourlyChart,1,6,Duration (Scroll_DraggingAndDeceleration),s,2.4553429,1
+baseline,testDeviceHourlyChart,1,7,Duration (Scroll_DraggingAndDeceleration),s,2.4556132,1
+baseline,testDeviceHourlyChart,1,8,Duration (Scroll_DraggingAndDeceleration),s,2.4358714,1
+baseline,testDeviceHourlyChart,1,9,Duration (Scroll_DraggingAndDeceleration),s,2.4384972,1
+baseline,testDeviceHourlyChart,1,10,Duration (Scroll_DraggingAndDeceleration),s,2.4535345,1
+baseline,testDeviceHourlyChart,1,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,1,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,1,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.3084259,1
+baseline,testDeviceHourlyChart,1,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.8787003,1
+baseline,testDeviceHourlyChart,1,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7419891,1
+baseline,testDeviceHourlyChart,1,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.2808838,1
+baseline,testDeviceHourlyChart,1,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.2358513,1
+baseline,testDeviceHourlyChart,1,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.6476173,1
+baseline,testDeviceHourlyChart,1,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.0483894,1
+baseline,testDeviceHourlyChart,1,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7058868,1
+baseline,testDeviceHourlyChart,1,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.8729401,1
+baseline,testDeviceHourlyChart,1,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.6908417,1
+baseline,testDeviceHourlyChart,1,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,1,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,1,1,Duration (Scroll_DraggingAndDeceleration),s,2.4720466,1
+baseline,testDeviceVertical,1,2,Duration (Scroll_DraggingAndDeceleration),s,2.472052,1
+baseline,testDeviceVertical,1,3,Duration (Scroll_DraggingAndDeceleration),s,2.4687227,1
+baseline,testDeviceVertical,1,4,Duration (Scroll_DraggingAndDeceleration),s,2.521621,1
+baseline,testDeviceVertical,1,5,Duration (Scroll_DraggingAndDeceleration),s,2.50086,1
+baseline,testDeviceVertical,1,6,Duration (Scroll_DraggingAndDeceleration),s,2.5178548,1
+baseline,testDeviceVertical,1,7,Duration (Scroll_DraggingAndDeceleration),s,2.5211601,1
+baseline,testDeviceVertical,1,8,Duration (Scroll_DraggingAndDeceleration),s,2.4677184,1
+baseline,testDeviceVertical,1,9,Duration (Scroll_DraggingAndDeceleration),s,2.4676311,1
+baseline,testDeviceVertical,1,10,Duration (Scroll_DraggingAndDeceleration),s,2.4863956,1
+baseline,testDeviceVertical,1,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,1,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,1,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.6558533,1
+baseline,testDeviceVertical,1,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.0602493,1
+baseline,testDeviceVertical,1,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.3297615,1
+baseline,testDeviceVertical,1,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.5026932,1
+baseline,testDeviceVertical,1,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.1796379,1
+baseline,testDeviceVertical,1,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.1773643,1
+baseline,testDeviceVertical,1,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7031326,1
+baseline,testDeviceVertical,1,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.1639633,1
+baseline,testDeviceVertical,1,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7608109,1
+baseline,testDeviceVertical,1,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.9151611,1
+baseline,testDeviceVertical,1,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,1,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testNativeRelaunch,1,1,Duration (ApplicationFirstFramePresentationResponsive),s,0.5816817,1
+baseline,testNativeRelaunch,1,2,Duration (ApplicationFirstFramePresentationResponsive),s,0.5716939,1
+baseline,testNativeRelaunch,1,3,Duration (ApplicationFirstFramePresentationResponsive),s,0.5613135,1
+baseline,testNativeRelaunch,1,4,Duration (ApplicationFirstFramePresentationResponsive),s,0.5704911,1
+baseline,testNativeRelaunch,1,5,Duration (ApplicationFirstFramePresentationResponsive),s,0.5748733,1
+baseline,testNativeRelaunch,1,6,Duration (ApplicationFirstFramePresentationResponsive),s,0.5803705,1
+baseline,testNativeRelaunch,1,7,Duration (ApplicationFirstFramePresentationResponsive),s,0.5806033,1
+baseline,testNativeRelaunch,1,8,Duration (ApplicationFirstFramePresentationResponsive),s,0.5857443,1
+baseline,testNativeRelaunch,1,9,Duration (ApplicationFirstFramePresentationResponsive),s,0.5692444,1
+baseline,testNativeRelaunch,1,10,Duration (ApplicationFirstFramePresentationResponsive),s,0.5813443,1
+baseline,testDeviceDailyChart,2,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceDailyChart,2,1,Duration (Scroll_DraggingAndDeceleration),s,2.0015578,1
+baseline,testDeviceDailyChart,2,2,Duration (Scroll_DraggingAndDeceleration),s,1.8217631,1
+baseline,testDeviceDailyChart,2,3,Duration (Scroll_DraggingAndDeceleration),s,1.8198409,1
+baseline,testDeviceDailyChart,2,4,Duration (Scroll_DraggingAndDeceleration),s,1.8217073,1
+baseline,testDeviceDailyChart,2,5,Duration (Scroll_DraggingAndDeceleration),s,1.6715812,1
+baseline,testDeviceDailyChart,2,6,Duration (Scroll_DraggingAndDeceleration),s,1.6716663,1
+baseline,testDeviceDailyChart,2,7,Duration (Scroll_DraggingAndDeceleration),s,1.6716083,1
+baseline,testDeviceDailyChart,2,8,Duration (Scroll_DraggingAndDeceleration),s,1.6714864,1
+baseline,testDeviceDailyChart,2,9,Duration (Scroll_DraggingAndDeceleration),s,1.8177329,1
+baseline,testDeviceDailyChart,2,10,Duration (Scroll_DraggingAndDeceleration),s,1.820097,1
+baseline,testDeviceDailyChart,2,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceDailyChart,2,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceDailyChart,2,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,55.4568024,1
+baseline,testDeviceDailyChart,2,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.6364746,1
+baseline,testDeviceDailyChart,2,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.7518654,1
+baseline,testDeviceDailyChart,2,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.6978188,1
+baseline,testDeviceDailyChart,2,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.2341843,1
+baseline,testDeviceDailyChart,2,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.829525,1
+baseline,testDeviceDailyChart,2,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.8314972,1
+baseline,testDeviceDailyChart,2,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.2373657,1
+baseline,testDeviceDailyChart,2,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.8130417,1
+baseline,testDeviceDailyChart,2,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,52.744442,1
+baseline,testDeviceDailyChart,2,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceDailyChart,2,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,16.684291,1
+baseline,testDeviceHourlyChart,2,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceHourlyChart,2,1,Duration (Scroll_DraggingAndDeceleration),s,2.4360824,1
+baseline,testDeviceHourlyChart,2,2,Duration (Scroll_DraggingAndDeceleration),s,2.4551151,1
+baseline,testDeviceHourlyChart,2,3,Duration (Scroll_DraggingAndDeceleration),s,2.4555537,1
+baseline,testDeviceHourlyChart,2,4,Duration (Scroll_DraggingAndDeceleration),s,2.4346145,1
+baseline,testDeviceHourlyChart,2,5,Duration (Scroll_DraggingAndDeceleration),s,2.4388169,1
+baseline,testDeviceHourlyChart,2,6,Duration (Scroll_DraggingAndDeceleration),s,2.4513133,1
+baseline,testDeviceHourlyChart,2,7,Duration (Scroll_DraggingAndDeceleration),s,2.455251,1
+baseline,testDeviceHourlyChart,2,8,Duration (Scroll_DraggingAndDeceleration),s,2.4511019,1
+baseline,testDeviceHourlyChart,2,9,Duration (Scroll_DraggingAndDeceleration),s,2.4187957,1
+baseline,testDeviceHourlyChart,2,10,Duration (Scroll_DraggingAndDeceleration),s,2.4363402,1
+baseline,testDeviceHourlyChart,2,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,6.7957269,1
+baseline,testDeviceHourlyChart,2,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceHourlyChart,2,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceHourlyChart,2,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7008057,1
+baseline,testDeviceHourlyChart,2,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.431118,1
+baseline,testDeviceHourlyChart,2,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.2353363,1
+baseline,testDeviceHourlyChart,2,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7361984,1
+baseline,testDeviceHourlyChart,2,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.2249565,1
+baseline,testDeviceHourlyChart,2,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.3360786,1
+baseline,testDeviceHourlyChart,2,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.649807,1
+baseline,testDeviceHourlyChart,2,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.9331245,1
+baseline,testDeviceHourlyChart,2,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7068977,1
+baseline,testDeviceHourlyChart,2,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.5154953,1
+baseline,testDeviceHourlyChart,2,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+baseline,testDeviceHourlyChart,2,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceHourlyChart,2,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,0,1
+baseline,testDeviceVertical,2,1,Duration (Scroll_DraggingAndDeceleration),s,2.5206869,1
+baseline,testDeviceVertical,2,2,Duration (Scroll_DraggingAndDeceleration),s,2.5021229,1
+baseline,testDeviceVertical,2,3,Duration (Scroll_DraggingAndDeceleration),s,2.5380441,1
+baseline,testDeviceVertical,2,4,Duration (Scroll_DraggingAndDeceleration),s,2.486328,1
+baseline,testDeviceVertical,2,5,Duration (Scroll_DraggingAndDeceleration),s,2.4838885,1
+baseline,testDeviceVertical,2,6,Duration (Scroll_DraggingAndDeceleration),s,2.4839802,1
+baseline,testDeviceVertical,2,7,Duration (Scroll_DraggingAndDeceleration),s,2.5178216,1
+baseline,testDeviceVertical,2,8,Duration (Scroll_DraggingAndDeceleration),s,2.536428,1
+baseline,testDeviceVertical,2,9,Duration (Scroll_DraggingAndDeceleration),s,2.4675887,1
+baseline,testDeviceVertical,2,10,Duration (Scroll_DraggingAndDeceleration),s,2.537783,1
+baseline,testDeviceVertical,2,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,0,1
+baseline,testDeviceVertical,2,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+baseline,testDeviceVertical,2,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7141571,1
+baseline,testDeviceVertical,2,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.1497803,1
+baseline,testDeviceVertical,2,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7066193,1
+baseline,testDeviceVertical,2,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7211304,1
+baseline,testDeviceVertical,2,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7788048,1
+baseline,testDeviceVertical,2,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.776638,1
+baseline,testDeviceVertical,2,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.3837967,1
+baseline,testDeviceVertical,2,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.1382866,1
+baseline,testDeviceVertical,2,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,58.7618141,1
+baseline,testDeviceVertical,2,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,59.1067047,1
+baseline,testDeviceVertical,2,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testDeviceVertical,2,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,0,1
+baseline,testNativeRelaunch,2,1,Duration (ApplicationFirstFramePresentationResponsive),s,0.5749079,1
+baseline,testNativeRelaunch,2,2,Duration (ApplicationFirstFramePresentationResponsive),s,0.5813139,1
+baseline,testNativeRelaunch,2,3,Duration (ApplicationFirstFramePresentationResponsive),s,0.5725841,1
+baseline,testNativeRelaunch,2,4,Duration (ApplicationFirstFramePresentationResponsive),s,0.5743239,1
+baseline,testNativeRelaunch,2,5,Duration (ApplicationFirstFramePresentationResponsive),s,0.5851895,1
+baseline,testNativeRelaunch,2,6,Duration (ApplicationFirstFramePresentationResponsive),s,0.5781504,1
+baseline,testNativeRelaunch,2,7,Duration (ApplicationFirstFramePresentationResponsive),s,0.574884,1
+baseline,testNativeRelaunch,2,8,Duration (ApplicationFirstFramePresentationResponsive),s,0.6078042,1
+baseline,testNativeRelaunch,2,9,Duration (ApplicationFirstFramePresentationResponsive),s,0.573943,1
+baseline,testNativeRelaunch,2,10,Duration (ApplicationFirstFramePresentationResponsive),s,0.5612927,1
+injection-control,testInjectedHourlyChart,1,1,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,83.366958,1
+injection-control,testInjectedHourlyChart,1,2,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,83.360416,1
+injection-control,testInjectedHourlyChart,1,3,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,83.371708,1
+injection-control,testInjectedHourlyChart,1,4,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,116.713708,1
+injection-control,testInjectedHourlyChart,1,5,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,66.692458,1
+injection-control,testInjectedHourlyChart,1,6,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,83.365791,1
+injection-control,testInjectedHourlyChart,1,7,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,83.365249,1
+injection-control,testInjectedHourlyChart,1,8,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,133.414289,1
+injection-control,testInjectedHourlyChart,1,9,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,116.715499,1
+injection-control,testInjectedHourlyChart,1,10,Hitches Total Duration (Scroll_DraggingAndDeceleration),ms,116.702873,1
+injection-control,testInjectedHourlyChart,1,1,Duration (Scroll_DraggingAndDeceleration),s,2.4344528,1
+injection-control,testInjectedHourlyChart,1,2,Duration (Scroll_DraggingAndDeceleration),s,2.4549408,1
+injection-control,testInjectedHourlyChart,1,3,Duration (Scroll_DraggingAndDeceleration),s,2.4384225,1
+injection-control,testInjectedHourlyChart,1,4,Duration (Scroll_DraggingAndDeceleration),s,2.4854432,1
+injection-control,testInjectedHourlyChart,1,5,Duration (Scroll_DraggingAndDeceleration),s,2.4545733,1
+injection-control,testInjectedHourlyChart,1,6,Duration (Scroll_DraggingAndDeceleration),s,2.4676829,1
+injection-control,testInjectedHourlyChart,1,7,Duration (Scroll_DraggingAndDeceleration),s,2.4553327,1
+injection-control,testInjectedHourlyChart,1,8,Duration (Scroll_DraggingAndDeceleration),s,2.4339177,1
+injection-control,testInjectedHourlyChart,1,9,Duration (Scroll_DraggingAndDeceleration),s,2.4550565,1
+injection-control,testInjectedHourlyChart,1,10,Duration (Scroll_DraggingAndDeceleration),s,2.4380969,1
+injection-control,testInjectedHourlyChart,1,1,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,34.2446401,1
+injection-control,testInjectedHourlyChart,1,2,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,33.9561816,1
+injection-control,testInjectedHourlyChart,1,3,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,34.1908373,1
+injection-control,testInjectedHourlyChart,1,4,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,46.9589118,1
+injection-control,testInjectedHourlyChart,1,5,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,27.1706934,1
+injection-control,testInjectedHourlyChart,1,6,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,33.7830248,1
+injection-control,testInjectedHourlyChart,1,7,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,33.9527306,1
+injection-control,testInjectedHourlyChart,1,8,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,54.8146271,1
+injection-control,testInjectedHourlyChart,1,9,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,47.5408611,1
+injection-control,testInjectedHourlyChart,1,10,Hitch Time Ratio (Scroll_DraggingAndDeceleration),ms per s,47.8663806,1
+injection-control,testInjectedHourlyChart,1,1,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,2,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,3,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,4,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,5,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,6,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,7,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,8,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,9,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,10,Frame Count (Scroll_DraggingAndDeceleration),frames,0,1
+injection-control,testInjectedHourlyChart,1,1,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.5077896,1
+injection-control,testInjectedHourlyChart,1,2,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.2131615,1
+injection-control,testInjectedHourlyChart,1,3,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.4141693,1
+injection-control,testInjectedHourlyChart,1,4,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.73032,1
+injection-control,testInjectedHourlyChart,1,5,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.6289864,1
+injection-control,testInjectedHourlyChart,1,6,Frame Rate (Scroll_DraggingAndDeceleration),fps,57.1386223,1
+injection-control,testInjectedHourlyChart,1,7,Frame Rate (Scroll_DraggingAndDeceleration),fps,56.6114769,1
+injection-control,testInjectedHourlyChart,1,8,Frame Rate (Scroll_DraggingAndDeceleration),fps,55.4661293,1
+injection-control,testInjectedHourlyChart,1,9,Frame Rate (Scroll_DraggingAndDeceleration),fps,55.8031998,1
+injection-control,testInjectedHourlyChart,1,10,Frame Rate (Scroll_DraggingAndDeceleration),fps,55.781208,1
+injection-control,testInjectedHourlyChart,1,1,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,2,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,3,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,4,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,5,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,6,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,7,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,1,1
+injection-control,testInjectedHourlyChart,1,8,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,4,1
+injection-control,testInjectedHourlyChart,1,9,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,3,1
+injection-control,testInjectedHourlyChart,1,10,Number of Hitches (Scroll_DraggingAndDeceleration),hitches,3,1
+baseline,open-drawer,0,1,XCUI action to assertion,ms,512.3942499,1
+baseline,show-units,0,1,XCUI action to assertion,ms,569.1706666,1
+baseline,return-hourly,0,1,XCUI action to assertion,ms,585.3471668,1
+baseline,open-drawer,1,1,XCUI action to assertion,ms,508.0074167,1
+baseline,show-units,1,1,XCUI action to assertion,ms,579.3437082,1
+baseline,return-hourly,1,1,XCUI action to assertion,ms,588.2167083,1
+baseline,open-drawer,1,2,XCUI action to assertion,ms,497.2988751,1
+baseline,show-units,1,2,XCUI action to assertion,ms,582.4823333,1
+baseline,return-hourly,1,2,XCUI action to assertion,ms,592.3446666,1
+baseline,open-drawer,1,3,XCUI action to assertion,ms,483.1312918,1
+baseline,show-units,1,3,XCUI action to assertion,ms,585.931625,1
+baseline,return-hourly,1,3,XCUI action to assertion,ms,588.7681667,1
+baseline,open-drawer,1,4,XCUI action to assertion,ms,496.1961249,1
+baseline,show-units,1,4,XCUI action to assertion,ms,578.2282916,1
+baseline,return-hourly,1,4,XCUI action to assertion,ms,584.2784999,1
+baseline,open-drawer,1,5,XCUI action to assertion,ms,489.5454168,1
+baseline,show-units,1,5,XCUI action to assertion,ms,579.9961248,1
+baseline,return-hourly,1,5,XCUI action to assertion,ms,581.5545833,1
+baseline,open-drawer,1,6,XCUI action to assertion,ms,490.1170833,1
+baseline,show-units,1,6,XCUI action to assertion,ms,697.9091251,1
+baseline,return-hourly,1,6,XCUI action to assertion,ms,582.507625,1
+baseline,open-drawer,1,7,XCUI action to assertion,ms,491.485375,1
+baseline,show-units,1,7,XCUI action to assertion,ms,573.9654165,1
+baseline,return-hourly,1,7,XCUI action to assertion,ms,580.2284167,1
+baseline,open-drawer,1,8,XCUI action to assertion,ms,481.737125,1
+baseline,show-units,1,8,XCUI action to assertion,ms,568.1772083,1
+baseline,return-hourly,1,8,XCUI action to assertion,ms,574.4475834,1
+baseline,open-drawer,1,9,XCUI action to assertion,ms,497.9305833,1
+baseline,show-units,1,9,XCUI action to assertion,ms,583.2567916,1
+baseline,return-hourly,1,9,XCUI action to assertion,ms,584.4290834,1
+baseline,open-drawer,1,10,XCUI action to assertion,ms,561.4643749,1
+baseline,show-units,1,10,XCUI action to assertion,ms,592.3602916,1
+baseline,return-hourly,1,10,XCUI action to assertion,ms,581.8120833,1
+baseline,open-drawer,2,1,XCUI action to assertion,ms,500.919,1
+baseline,show-units,2,1,XCUI action to assertion,ms,582.2157501,1
+baseline,return-hourly,2,1,XCUI action to assertion,ms,578.3644167,1
+baseline,open-drawer,2,2,XCUI action to assertion,ms,493.0382085,1
+baseline,show-units,2,2,XCUI action to assertion,ms,565.9669584,1
+baseline,return-hourly,2,2,XCUI action to assertion,ms,574.573125,1
+baseline,open-drawer,2,3,XCUI action to assertion,ms,485.22425,1
+baseline,show-units,2,3,XCUI action to assertion,ms,576.3752917,1
+baseline,return-hourly,2,3,XCUI action to assertion,ms,574.1147082,1
+baseline,open-drawer,2,4,XCUI action to assertion,ms,488.9570833,1
+baseline,show-units,2,4,XCUI action to assertion,ms,592.3129166,1
+baseline,return-hourly,2,4,XCUI action to assertion,ms,589.0054167,1
+baseline,open-drawer,2,5,XCUI action to assertion,ms,488.8719583,1
+baseline,show-units,2,5,XCUI action to assertion,ms,571.571125,1
+baseline,return-hourly,2,5,XCUI action to assertion,ms,584.0407917,1
+baseline,open-drawer,2,6,XCUI action to assertion,ms,490.2755832,1
+baseline,show-units,2,6,XCUI action to assertion,ms,581.235125,1
+baseline,return-hourly,2,6,XCUI action to assertion,ms,591.3732918,1
+baseline,open-drawer,2,7,XCUI action to assertion,ms,494.290875,1
+baseline,show-units,2,7,XCUI action to assertion,ms,581.9197916,1
+baseline,return-hourly,2,7,XCUI action to assertion,ms,584.0804167,1
+baseline,open-drawer,2,8,XCUI action to assertion,ms,496.2309999,1
+baseline,show-units,2,8,XCUI action to assertion,ms,569.5984582,1
+baseline,return-hourly,2,8,XCUI action to assertion,ms,579.1685833,1
+baseline,open-drawer,2,9,XCUI action to assertion,ms,502.8680416,1
+baseline,show-units,2,9,XCUI action to assertion,ms,594.2504166,1
+baseline,return-hourly,2,9,XCUI action to assertion,ms,592.2445832,1
+baseline,open-drawer,2,10,XCUI action to assertion,ms,494.8959583,1
+baseline,show-units,2,10,XCUI action to assertion,ms,587.0438751,1
+baseline,return-hourly,2,10,XCUI action to assertion,ms,583.6502917,1
+baseline,cold-search,0,1,XCUI action to assertion,ms,1062.8104585,1
+baseline,warm-search,0,1,XCUI action to assertion,ms,640.8466666,1
+baseline,cold-search,1,1,XCUI action to assertion,ms,697.6999999,1
+baseline,warm-search,1,1,XCUI action to assertion,ms,712.6147083,1
+baseline,cold-search,1,2,XCUI action to assertion,ms,752.9049583,1
+baseline,warm-search,1,2,XCUI action to assertion,ms,697.7900835,1
+baseline,cold-search,1,3,XCUI action to assertion,ms,767.1785417,1
+baseline,warm-search,1,3,XCUI action to assertion,ms,651.0242501,1
+baseline,cold-search,1,4,XCUI action to assertion,ms,658.1059999,1
+baseline,warm-search,1,4,XCUI action to assertion,ms,653.4409167,1
+baseline,cold-search,1,5,XCUI action to assertion,ms,690.95775,1
+baseline,warm-search,1,5,XCUI action to assertion,ms,675.3301665,1
+baseline,cold-search,1,6,XCUI action to assertion,ms,721.697625,1
+baseline,warm-search,1,6,XCUI action to assertion,ms,672.0879166,1
+baseline,cold-search,1,7,XCUI action to assertion,ms,690.7871249,1
+baseline,warm-search,1,7,XCUI action to assertion,ms,663.3456249,1
+baseline,cold-search,1,8,XCUI action to assertion,ms,769.2265834,1
+baseline,warm-search,1,8,XCUI action to assertion,ms,662.01525,1
+baseline,cold-search,1,9,XCUI action to assertion,ms,696.4777918,1
+baseline,warm-search,1,9,XCUI action to assertion,ms,670.8473333,1
+baseline,cold-search,1,10,XCUI action to assertion,ms,753.9628332,1
+baseline,warm-search,1,10,XCUI action to assertion,ms,680.7240834,1
+baseline,cold-search,2,1,XCUI action to assertion,ms,771.5698751,1
+baseline,warm-search,2,1,XCUI action to assertion,ms,684.6573749,1
+baseline,cold-search,2,2,XCUI action to assertion,ms,667.4931666,1
+baseline,warm-search,2,2,XCUI action to assertion,ms,661.3002084,1
+baseline,cold-search,2,3,XCUI action to assertion,ms,673.9290832,1
+baseline,warm-search,2,3,XCUI action to assertion,ms,671.5186667,1
+baseline,cold-search,2,4,XCUI action to assertion,ms,678.9955415,1
+baseline,warm-search,2,4,XCUI action to assertion,ms,685.1267084,1
+baseline,cold-search,2,5,XCUI action to assertion,ms,719.8067915,1
+baseline,warm-search,2,5,XCUI action to assertion,ms,677.5325835,1
+baseline,cold-search,2,6,XCUI action to assertion,ms,742.0680001,1
+baseline,warm-search,2,6,XCUI action to assertion,ms,652.9962083,1
+baseline,cold-search,2,7,XCUI action to assertion,ms,750.0896666,1
+baseline,warm-search,2,7,XCUI action to assertion,ms,666.4882083,1
+baseline,cold-search,2,8,XCUI action to assertion,ms,682.8080001,1
+baseline,warm-search,2,8,XCUI action to assertion,ms,713.7060417,1
+baseline,cold-search,2,9,XCUI action to assertion,ms,686.23725,1
+baseline,warm-search,2,9,XCUI action to assertion,ms,655.2502916,1
+baseline,cold-search,2,10,XCUI action to assertion,ms,746.5970416,1
+baseline,warm-search,2,10,XCUI action to assertion,ms,673.0936249,1
+master,cold-search,0,1,XCUI action to assertion,ms,707.9332501,1
+master,warm-search,0,1,XCUI action to assertion,ms,685.3935833,1
+master,cold-search,1,1,XCUI action to assertion,ms,664.6935418,1
+master,warm-search,1,1,XCUI action to assertion,ms,677.6629167,1
+master,cold-search,1,2,XCUI action to assertion,ms,672.9724584,1
+master,warm-search,1,2,XCUI action to assertion,ms,672.72425,1
+master,cold-search,1,3,XCUI action to assertion,ms,671.2197915,1
+master,warm-search,1,3,XCUI action to assertion,ms,682.3013334,1
+master,cold-search,1,4,XCUI action to assertion,ms,692.7380417,1
+master,warm-search,1,4,XCUI action to assertion,ms,669.4327085,1
+master,cold-search,1,5,XCUI action to assertion,ms,685.0230417,1
+master,warm-search,1,5,XCUI action to assertion,ms,678.4970418,1
+master,cold-search,1,6,XCUI action to assertion,ms,667.2870417,1
+master,warm-search,1,6,XCUI action to assertion,ms,650.5212083,1
+master,cold-search,1,7,XCUI action to assertion,ms,678.8035417,1
+master,warm-search,1,7,XCUI action to assertion,ms,642.6400833,1
+master,cold-search,1,8,XCUI action to assertion,ms,688.4793751,1
+master,warm-search,1,8,XCUI action to assertion,ms,661.5342917,1
+master,cold-search,1,9,XCUI action to assertion,ms,692.7341248,1
+master,warm-search,1,9,XCUI action to assertion,ms,680.2062918,1
+master,cold-search,1,10,XCUI action to assertion,ms,692.2018749,1
+master,warm-search,1,10,XCUI action to assertion,ms,692.8170417,1
+master,cold-search,2,1,XCUI action to assertion,ms,681.3913749,1
+master,warm-search,2,1,XCUI action to assertion,ms,675.2153332,1
+master,cold-search,2,2,XCUI action to assertion,ms,620.1012083,1
+master,warm-search,2,2,XCUI action to assertion,ms,680.2937917,1
+master,cold-search,2,3,XCUI action to assertion,ms,680.4106666,1
+master,warm-search,2,3,XCUI action to assertion,ms,676.9730002,1
+master,cold-search,2,4,XCUI action to assertion,ms,698.352125,1
+master,warm-search,2,4,XCUI action to assertion,ms,684.5441666,1
+master,cold-search,2,5,XCUI action to assertion,ms,640.1867084,1
+master,warm-search,2,5,XCUI action to assertion,ms,667.4378752,1
+master,cold-search,2,6,XCUI action to assertion,ms,678.5330416,1
+master,warm-search,2,6,XCUI action to assertion,ms,665.6094166,1
+master,cold-search,2,7,XCUI action to assertion,ms,637.8373334,1
+master,warm-search,2,7,XCUI action to assertion,ms,645.0466665,1
+master,cold-search,2,8,XCUI action to assertion,ms,665.8372083,1
+master,warm-search,2,8,XCUI action to assertion,ms,665.9521251,1
+master,cold-search,2,9,XCUI action to assertion,ms,682.2084999,1
+master,warm-search,2,9,XCUI action to assertion,ms,789.7642499,1
+master,cold-search,2,10,XCUI action to assertion,ms,680.9848335,1
+master,warm-search,2,10,XCUI action to assertion,ms,681.376125,1
+baseline-repeat,cold-search,0,1,XCUI action to assertion,ms,686.5704167,1
+baseline-repeat,warm-search,0,1,XCUI action to assertion,ms,670.4836667,1
+baseline-repeat,cold-search,1,1,XCUI action to assertion,ms,674.4989166,1
+baseline-repeat,warm-search,1,1,XCUI action to assertion,ms,646.1629167,1
+baseline-repeat,cold-search,1,2,XCUI action to assertion,ms,685.503125,1
+baseline-repeat,warm-search,1,2,XCUI action to assertion,ms,665.5680833,1
+baseline-repeat,cold-search,1,3,XCUI action to assertion,ms,670.415625,1
+baseline-repeat,warm-search,1,3,XCUI action to assertion,ms,684.4958335,1
+baseline-repeat,cold-search,1,4,XCUI action to assertion,ms,774.9551667,1
+baseline-repeat,warm-search,1,4,XCUI action to assertion,ms,677.6369999,1
+baseline-repeat,cold-search,1,5,XCUI action to assertion,ms,666.6522084,1
+baseline-repeat,warm-search,1,5,XCUI action to assertion,ms,669.6015,1
+baseline-repeat,cold-search,1,6,XCUI action to assertion,ms,773.2686668,1
+baseline-repeat,warm-search,1,6,XCUI action to assertion,ms,671.2508334,1
+baseline-repeat,cold-search,1,7,XCUI action to assertion,ms,765.6417917,1
+baseline-repeat,warm-search,1,7,XCUI action to assertion,ms,703.9362502,1
+baseline-repeat,cold-search,1,8,XCUI action to assertion,ms,783.1635415,1
+baseline-repeat,warm-search,1,8,XCUI action to assertion,ms,681.7751667,1
+baseline-repeat,cold-search,1,9,XCUI action to assertion,ms,778.289875,1
+baseline-repeat,warm-search,1,9,XCUI action to assertion,ms,663.0809582,1
+baseline-repeat,cold-search,1,10,XCUI action to assertion,ms,750.2705415,1
+baseline-repeat,warm-search,1,10,XCUI action to assertion,ms,660.5665418,1
+baseline-repeat,cold-search,2,1,XCUI action to assertion,ms,769.6110001,1
+baseline-repeat,warm-search,2,1,XCUI action to assertion,ms,688.6487084,1
+baseline-repeat,cold-search,2,2,XCUI action to assertion,ms,680.2725834,1
+baseline-repeat,warm-search,2,2,XCUI action to assertion,ms,698.1483335,1
+baseline-repeat,cold-search,2,3,XCUI action to assertion,ms,836.7362916,1
+baseline-repeat,warm-search,2,3,XCUI action to assertion,ms,688.2428331,1
+baseline-repeat,cold-search,2,4,XCUI action to assertion,ms,768.3437916,1
+baseline-repeat,warm-search,2,4,XCUI action to assertion,ms,666.69075,1
+baseline-repeat,cold-search,2,5,XCUI action to assertion,ms,748.0198334,1
+baseline-repeat,warm-search,2,5,XCUI action to assertion,ms,694.7496252,1
+baseline-repeat,cold-search,2,6,XCUI action to assertion,ms,677.3502917,1
+baseline-repeat,warm-search,2,6,XCUI action to assertion,ms,657.455625,1
+baseline-repeat,cold-search,2,7,XCUI action to assertion,ms,670.1801252,1
+baseline-repeat,warm-search,2,7,XCUI action to assertion,ms,665.3064582,1
+baseline-repeat,cold-search,2,8,XCUI action to assertion,ms,669.8380415,1
+baseline-repeat,warm-search,2,8,XCUI action to assertion,ms,654.1841666,1
+baseline-repeat,cold-search,2,9,XCUI action to assertion,ms,776.7874999,1
+baseline-repeat,warm-search,2,9,XCUI action to assertion,ms,685.1351666,1
+baseline-repeat,cold-search,2,10,XCUI action to assertion,ms,762.019,1
+baseline-repeat,warm-search,2,10,XCUI action to assertion,ms,838.3453332,1

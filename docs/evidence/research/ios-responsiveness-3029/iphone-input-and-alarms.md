@@ -1,0 +1,19 @@
+# Physical iPhone keyboard and alarm measurements, 20 November 2026
+
+An iPhone 12 Pro Max showed the typed `s` a median of 66.7 ms after the system key first visibly enlarged in both batches. All 20 measured alarm drags updated the eight intervening whole-hour values in order. All 20 saves produced exactly one fixture callback for Seoul, returned to Hourly and reopened the editor with the expected saved range.
+
+The arm64 Release profile build used TodayWeather 2.0.0 (1) at `8dd57e3`, Xcode 27.2, iOS 26.0.1, portrait 428 × 926 pt, a native Seoul seed and the dense 324,517-byte weather fixture. The instrumented executable SHA-256 was `cd9d80467055a4c986a5949e838ce49b3966f68f2ba8c6ff04c0e0466bc13009`. The app opened the bundled fixture for weather and recorded alarm posts locally. The notification SDK was disabled. Each action used a rehearsal and ten measured trials per batch with the same action, app and data. The alarm runner's return assertion was revised after the preliminary visit, before either retained alarm batch. [Fixture setup and reproduction](../../../../ios/tools/responsiveness/iphone/README.md)
+
+| Boundary | A median (min–max) | B median (min–max) |
+| --- | ---: | ---: |
+| First captured enlarged key → first captured glyph in field, 10 taps | 66.7 (50.0–83.3) ms | 66.7 (66.7–83.3) ms |
+| XCUI tap dispatch → captured field screenshot, 10 taps | 545.4 (496.8–557.9) ms | 549.3 (515.2–555.6) ms |
+| UIKit touch event timestamp → changed hour callback, 80 updates | 3.06 (1.42–11.40) ms | 2.82 (1.11–11.46) ms |
+| Save touch release → editor closed callback, 10 saves | 33.57 (21.19–59.52) ms | 33.11 (25.47–40.20) ms |
+| XCUI Save dispatch → observed editor disappearance, weather header and return control, 10 saves | 1.706 (1.657–1.914) s | 1.668 (1.635–1.722) s |
+
+**Keyboard.** The test tapped the on-screen English key, checked the field’s character, captured the field and deleted the character before repeating. Its Xcode screen recording shows the enlarged system key while the placeholder is still present, then the glyph in the same field. The following image shows the field and key region in A1 at presentation timestamps 11.800 and 11.867 s. The variable-rate recording quantizes both visual boundaries. The separate dispatch-to-screenshot upper bound includes XCTest input synthesis and capture. Physical contact onset and the panel’s exact presentation time were unavailable. [Paired captured frames](iphone-key-echo.png) · [Per-tap recording timestamps and observer bounds](iphone-key-samples.csv)
+
+**Alarms.** Slow drags alternated the lower limit between 02:00 and 10:00. The upper limit stayed at 22:00. Each measured gesture produced eight one-hour changes. The app logged touch and callback times on the same device clock. The tracking series measures delivery to the control callback. The close callback follows clearing the editor state. The longer automation observation includes polling and element lookup. The test then actually tapped the bell and read the expected range in the newly opened editor, independently verifying a usable return. The fixture used one local post per save and initiated no external notification registration. [Every changed hour, callback delay, save and return](iphone-alarm-samples.csv)
+
+**Failures and scope.** The first alarm rehearsal saved successfully and returned to the weather screen in the recording, but an immediate accessibility hittability check failed. The accepted runner waits for the old slider to disappear, locates the return control and verifies reopening and persistence. This preliminary failed attempt is excluded from the two full batches. There were zero failures in the 20 measured keyboard and 20 measured alarm trials. No physical iPad was available. Physical iPad measurements, including interactive resize, are outside the agreed scope. The simulator iPad layout and navigation walk remains evidence for those specific configurations.
