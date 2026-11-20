@@ -6,6 +6,11 @@ const {SearchSunLongitude} = require('astronomy-engine');
 const names = Object.freeze('소한 대한 입춘 우수 경칩 춘분 청명 곡우 입하 소만 망종 하지 소서 대서 입추 처서 백로 추분 한로 상강 입동 소설 대설 동지'.split(' '));
 const algorithm = 'astronomy-engine/2.1.19';
 const offset = 9 * 3600000;
+const defaultHorizon = 20;
+
+function validHorizon(years) {
+    return Number.isInteger(years) && years >= defaultHorizon && years <= 50;
+}
 
 function digest(data) {
     return createHash('sha256').update(data).digest('hex');
@@ -46,8 +51,8 @@ function buildYear(year, baseline, edition) {
 // import paths calculate instants or publish data; a request does a map lookup.
 function createCalendar(options = {}) {
     const now = options.now || (() => new Date());
-    const future = options.futureYears === undefined ? 20 : Number(options.futureYears);
-    if (!Number.isInteger(future) || future < 20 || future > 50) throw new Error('Invalid solar-term horizon');
+    const future = options.futureYears === undefined ? defaultHorizon : Number(options.futureYears);
+    if (!validHorizon(future)) throw new Error('Invalid solar-term horizon');
     const records = new Map();
     let restoring = false;
     function currentYear() { return Number(koreaDate(now()).slice(0, 4)); }
@@ -117,6 +122,13 @@ function validateEdition(e) {
     });
 }
 
-const active = createCalendar({futureYears: process.env.SOLAR_TERMS_FUTURE_YEARS,
-    seeds: require('./published.json')});
+const configuredHorizon = process.env.SOLAR_TERMS_FUTURE_YEARS;
+let futureYears = defaultHorizon;
+if (configuredHorizon !== undefined) {
+    const years = Number(configuredHorizon);
+    if (validHorizon(years)) futureYears = years;
+    else console.warn('Invalid SOLAR_TERMS_FUTURE_YEARS; using the default 20-year horizon.');
+}
+
+const active = createCalendar({futureYears, seeds: require('./published.json')});
 module.exports = {names, algorithm, digest, isoDate, koreaDate, calculate, validateEdition, createCalendar, ...active};

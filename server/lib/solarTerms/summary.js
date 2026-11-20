@@ -26,21 +26,36 @@ try {
 }
 
 const bands = {warning:5, risk:4, meaningful:3, featured:2, routine:1, spare:0};
-const precipitationRisks = new Set([16,22,23,26,30,36,37,39,43,44,45,46,48,49,50,51,52,55,56,58]);
-const warningTopics = {1:'wind',3:'precipitation',4:'precipitation',9:'temperature-risk',11:'air',12:'temperature-risk',13:'temperature-risk'};
+// Codes come from WeatherDescription.makeWeatherType. The topic is what makes
+// two messages redundant: lightning or hail still matters during a rain warning.
+const weatherRisks = new Map();
+for (const [topic, codes] of Object.entries({
+    visibility: [8],
+    air: [12],
+    rain: [16, 22, 23, 26],
+    sleet: [30],
+    snow: [36, 37, 39, 43, 44, 45, 46],
+    waterspout: [48],
+    hail: [49],
+    thunderstorm: [50, 51, 52, 55, 56],
+    ice: [58],
+    wind: [63]
+})) {
+    for (const code of codes) weatherRisks.set(code, topic);
+}
+// KMA PTY codes: rain / rain and snow / snow / shower / drops / mixed / flurries.
+const precipitationTopics = {1:'rain', 2:'sleet', 3:'snow', 4:'rain', 5:'rain', 6:'sleet', 7:'snow'};
+const warningTopics = {1:'wind',3:'rain',4:'snow',9:'temperature-risk',11:'air',12:'temperature-risk',13:'temperature-risk'};
 
 function classify(item, current, units) {
     switch (item.kind) {
     case 'weather':
-        if (precipitationRisks.has(current.weatherType)) return ['risk','precipitation'];
-        if (current.weatherType === 63) return ['risk','wind'];
-        if (current.weatherType === 12) return ['risk','air'];
-        if (current.weatherType === 8) return ['risk','visibility'];
-        if (current.pty > 0) return ['meaningful','precipitation'];
+        if (weatherRisks.has(current.weatherType)) return ['risk', weatherRisks.get(current.weatherType)];
+        if (current.pty > 0) return ['meaningful', precipitationTopics[current.pty] || 'precipitation'];
         return [current.weatherType > 3 ? 'meaningful' : 'routine','weather'];
     case 'precipitation':
         if (!(current.rn1 > 0 && current.pty > 0)) return null;
-        return ['meaningful','precipitation'];
+        return ['meaningful', precipitationTopics[current.pty] || 'precipitation'];
     case 'air':
         return [item.grade >= 3 ? 'risk' : 'routine','air'];
     case 'uv':
@@ -119,7 +134,7 @@ function context(req, res) {
     const year = require('./calendar').readYear(Number(now.slice(0,4)));
     if (!year) return null;
     const iso = now.slice(0,4)+'-'+now.slice(4,6)+'-'+now.slice(6);
-    const term = res.getLocale() === 'ko' && !req.solarTermWarningsUnavailable && year.terms.find(entry => entry.date === iso);
+    const term = res.getLocale() === 'ko' && req.solarTermWarningsCovered === true && year.terms.find(entry => entry.date === iso);
     return {date:iso, rank:items => select(items,obs,req.query,term,
         req.solarTermRange && req.solarTermRange.date === now ? req.solarTermRange : null,res)};
 }

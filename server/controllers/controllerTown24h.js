@@ -2053,12 +2053,12 @@ function ControllerTown24h() {
            return next();
         }
 
-        kmaSpecial.getSpecialInfo(town, stnName, function(err, list) {
+        kmaSpecial.getSpecialInfo(town, stnName, function(err, list, zonesChecked) {
             if (err) {
-                req.solarTermWarningsUnavailable = true;
                 log.error(err);
                 return next();
             }
+            req.solarTermWarningsCovered = zonesChecked === true;
             req.current = req.current || {};
             if (list && list.length > 0) {
                 req.current.specialInfo = list;

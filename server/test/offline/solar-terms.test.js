@@ -13,6 +13,26 @@ const fixture = year => fs.readFileSync(path.join(__dirname, 'fixtures/solar-ter
 const url2024 = 'https://www.gwanbo.go.kr/ezpdf/customLayout.jsp?contentId=I0000000000000001687328191439000&tocId=I0000000000000001686831567351000&isTocOrder=N';
 const url2027 = seeds[1].sourceUrl;
 
+function checkStartupHorizon() {
+    const calendarPath = require.resolve('../../lib/solarTerms/calendar');
+    const check = `
+        const assert = require('assert');
+        const clock = require(process.argv[1]);
+        const finalYear = clock.currentYear() + Number(process.argv[2]);
+        assert.equal(clock.readYear(finalYear).terms.length, 24);
+        assert.equal(clock.readYear(finalYear + 1), null);
+        require(process.argv[1]);
+    `;
+    for (const [raw, horizon, warnings] of [['51',20,1], ['invalid',20,1], ['50',50,0]]) {
+        const result = require('child_process').spawnSync(process.execPath, ['-e', check, calendarPath, String(horizon)],
+            {env: {...process.env, SOLAR_TERMS_FUTURE_YEARS: raw}, encoding: 'utf8'});
+        assert.ifError(result.error);
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(result.stderr.split('Invalid SOLAR_TERMS_FUTURE_YEARS').length - 1, warnings);
+    }
+    assert.throws(() => calendar.createCalendar({futureYears: 51}), /Invalid solar-term horizon/);
+}
+
 function checkAstronomy() {
     const calculated = calendar.calculate(2024);
     const edition = official.parseEdition(2024, url2024, '1'.repeat(64), fixture(2024));
@@ -138,6 +158,7 @@ async function checkLookup(item, db) {
 }
 
 (async () => {
+    checkStartupHorizon();
     checkAstronomy();
     const downloaded = await checkSource();
     const port = process.env.SOLAR_TEST_MONGO_PORT;

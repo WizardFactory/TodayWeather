@@ -19,6 +19,18 @@ async function run() {
         const ko = await current('ko','C');
         assert.equal(ko.summaryForDate, '2026-09-24');
         assert.match(ko.summary,/최저 .+℃, 최고 .+℃, 입춘/);
+        // The forecast province is recognized, but this name has no warning-zone mapping.
+        // A failed coverage lookup must not turn an empty warning list into a quiet day.
+        const changed = makeFixture(Object.assign({},locations[0],{
+            town:{first:'전남광주통합특별시',second:'동구',third:'충장동'}
+        }),'newer');
+        changed.zoneRows = [];
+        changed.townRows = [changed.place];
+        const uncovered = createHarness(db,changed,{modules:{'./calendar':calendar},translate:key=>strings[key] || key});
+        const uncoveredWeather = (await uncovered.request({temperatureUnit:'C'},{locale:'ko'})).body.current;
+        assert.equal(uncoveredWeather.summaryForDate, ko.summaryForDate);
+        assert.match(uncoveredWeather.summary,/최저 .+℃, 최고 .+℃/);
+        assert.doesNotMatch(uncoveredWeather.summary,/입춘/);
         const areaCode = require('../../lib/kmaWarningZones').zonesForTown(fixture.place.town)[0];
         fixture.zoneRows.push({active:true, areaCode, warnVar:3, warnStress:0});
         const air = {stationName:'중구',dataTime:'2026-09-24 09:00',pm25Value:200,pm25Grade:4};

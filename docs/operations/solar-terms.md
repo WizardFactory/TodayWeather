@@ -6,7 +6,7 @@ The forecast presenter looks up a Korean civil date in memory. Calendar clients 
 
 A successful body includes `year`, `timeZone: "Asia/Seoul"`, `status`, `revision`, `officialEdition` and chronological `terms`. Each term has a stable longitude ID, `nameKo`, effective `date` and `corrected` flag. A calculated snapshot has null edition metadata. A verified snapshot identifies the gazette notice, source URL and publication date. Revalidate a cached year with its ETag after one hour. On 200 replace the complete year; on 304 retain it. A source failure leaves readers on the last complete revision. A malformed year gets 400, an out-of-horizon year gets 404, and unavailable in-range data gets 503.
 
-Startup calculates the current KST year plus 20 future years. Set `SOLAR_TERMS_FUTURE_YEARS` to an integer from 20 to 50 on every server1 worker to extend coverage. Preparation stages one more year privately so the first lookup after KST New Year succeeds. The service bundles the independently checked 2026 and 2027 editions for cold starts. The service and gather workers need access to the same Mongo database.
+Startup calculates the current KST year plus 20 future years. Set `SOLAR_TERMS_FUTURE_YEARS` to an integer from 20 to 50 on every server1 worker to extend coverage. An invalid setting logs one startup warning per worker and uses 20 future years. Preparation stages one more year privately so the first lookup after KST New Year succeeds. The service bundles the independently checked 2026 and 2027 editions for cold starts. The service and gather workers need access to the same Mongo database.
 
 ## Calculation and source
 
