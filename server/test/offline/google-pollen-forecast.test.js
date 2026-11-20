@@ -6,6 +6,10 @@ const googlePollen = require('../../lib/pollen/googleForecast');
 
 const tokyo = {lat: 35.68, lon: 139.69};
 const syntheticKey = 'POLLEN_FIXTURE_TOKEN';
+function localDay(at, timeZone) {
+    return new Intl.DateTimeFormat('en', {timeZone, day: 'numeric'})
+        .formatToParts(at).find(part => part.type === 'day').value;
+}
 function lookup(place, response) {
     const calls = [];
     const axios = {
@@ -36,7 +40,7 @@ test('Tokyo day records preserve supported species without inventing a zero', as
     assert.equal(url.searchParams.get('location.longitude'), '139.69');
     assert.equal(url.searchParams.get('days'), '5');
     assert.deepEqual(result, {outcome: 'ok', source: 'google', attribution: 'Google Maps', region: 'JP', days: [{
-        date: '2026-11-20',
+        dateUtc: '2026-11-20',
         types: [{code: 'TREE'}, {code: 'GRASS', index: 0}],
         plants: [{code: 'JAPANESE_CEDAR'}, {code: 'JAPANESE_CYPRESS', inSeason: false}]
     }]});
@@ -73,7 +77,7 @@ test('viewed country gates acquisition and unsupported countries spend no reques
             get(url) {
                 requests.push(url);
                 return Promise.resolve({status: 200, data: {regionCode: 'JP', dailyInfo: [
-                    {date: {year: 2026, month: 11, day: 21}, plantInfo: [{code: 'JAPANESE_CEDAR'}]}
+                    {date: {year: 2026, month: 11, day: 20}, plantInfo: [{code: 'JAPANESE_CEDAR'}]}
                 ]}});
             }
         }
@@ -89,9 +93,26 @@ test('viewed country gates acquisition and unsupported countries spend no reques
     const result = await load('JP');
     assert.equal(result.region, 'JP');
     assert.equal(result.retrievedAt, now.toISOString());
-    assert.equal(result.days[0].date, '2026-11-21');
+    assert.equal(localDay(now, 'Asia/Tokyo'), '21');
+    assert.equal(result.days[0].dateUtc, '2026-11-20');
     assert.equal(result.days[0].plants[0].index, undefined);
     assert.equal(requests.length, 2);
+});
+
+test('a UTC day is kept even when the viewed American date is the previous day', async () => {
+    const now = new Date('2026-11-21T01:00:00.000Z');
+    const losAngeles = {lat: 34.05, lon: -118.24};
+    const forecast = require('../../lib/pollen/coordinateForecast')({
+        keyString: {google_key: syntheticKey}, timeoutMs: 60,
+        reserve(at, callback) { callback(true); },
+        axios: {get: () => Promise.resolve({status: 200, data: {regionCode: 'US', dailyInfo: [
+            {date: {year: 2026, month: 11, day: 21}, pollenTypeInfo: [{code: 'GRASS', indexInfo: {value: 0}}]}
+        ]}})}
+    });
+    assert.equal(localDay(now, 'America/Los_Angeles'), '20');
+    const result = await new Promise(resolve => forecast.fetch(losAngeles, 'US', now, resolve));
+    assert.equal(result.days[0].dateUtc, '2026-11-21');
+    assert.equal(result.days[0].types[0].index, 0);
 });
 
 test('pollen quota refusal and late admission do not contact Google', async () => {

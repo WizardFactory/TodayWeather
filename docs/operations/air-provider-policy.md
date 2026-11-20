@@ -72,8 +72,12 @@ D23 response hint: when the overseas air deadline expires with work outstanding,
 
 `AIR_COORDINATE_FORECAST_ENABLED` defaults to `false`. It enables the additive
 server1 v000903 coordinate air-forecast route. Google requests 24 forecast
-hours in one request. If Google returns no usable rows or admission fails,
-OpenWeather can supply up to 96 hours. This product reserves free monthly
+hours in one request for supported focus markets. Uruguay and other locations
+outside that Google coverage selection go directly to OpenWeather. If Google
+returns no usable rows or admission fails, OpenWeather can supply up to 96
+hours. [Google Air Quality country coverage](https://developers.google.com/maps/documentation/air-quality/coverage)
+
+This product reserves free monthly
 capacity in the existing Google or OpenWeather counters before transport.
 Reservation failure denies that provider. It never uses paid capacity,
 including when the existing observation paid phase is enabled. OpenWeather

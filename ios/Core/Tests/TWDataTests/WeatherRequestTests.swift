@@ -283,7 +283,7 @@ struct WeatherRequestTests {
         #expect(await cold.coordinateAirForecast(cached, place: place, acceptLanguage: "en") == nil)
         #expect(http.attempts.count == 2)
     }
-    @Test func readCoordinatePollenWithViewedLocalDay() async throws {
+    @Test func readCoordinatePollenWithReportedUtcDay() async throws {
         let clock = VirtualClock()
         let at = ISO8601DateFormatter()
         at.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -292,7 +292,7 @@ struct WeatherRequestTests {
         let forecast = """
         {"source":"google","attribution":"Google Maps","region":"GB",
          "retrievedAt":"\(at.string(from: clock.now))",
-         "days":[{"date":"2026-11-14","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]}
+         "days":[{"dateUtc":"2026-11-14","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]}
         """
         let weatherData = Data(JSONValue.object(weather).jsonText.utf8)
         let forecastData = Data(forecast.utf8)
@@ -306,7 +306,7 @@ struct WeatherRequestTests {
         let pollen = try #require(await repository.coordinatePollenForecast(entry, place: place, acceptLanguage: "ko"))
         #expect(pollen.source == "google")
         #expect(pollen.region == "GB")
-        #expect(pollen.days.first?["date"]?.stringValue == "2026-11-14")
+        #expect(pollen.days.first?["dateUtc"]?.stringValue == "2026-11-14")
         let plants = try #require(pollen.days.first?["plants"]?.arrayValue)
         #expect(plants.first?["index"] == nil)
         #expect(plants.last?["index"]?.numberValue?.double == 0)

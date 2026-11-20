@@ -46,11 +46,11 @@ function parse(body) {
         if (!row || typeof row !== 'object') {
             return;
         }
-        var date = isoDay(row.date);
+        var dateUtc = isoDay(row.date);
         var types = parseEntries(row.pollenTypeInfo);
         var plants = parseEntries(row.plantInfo);
-        if (date && (types.length || plants.length)) {
-            byDate.set(date, {date: date, types: types, plants: plants});
+        if (dateUtc && (types.length || plants.length)) {
+            byDate.set(dateUtc, {dateUtc: dateUtc, types: types, plants: plants});
         }
     });
     if (!byDate.size) {
@@ -61,7 +61,7 @@ function parse(body) {
         source: 'google',
         attribution: 'Google Maps',
         region: body.regionCode,
-        days: Array.from(byDate.values()).sort(function (a, b) { return a.date.localeCompare(b.date); })
+        days: Array.from(byDate.values()).sort(function (a, b) { return a.dateUtc.localeCompare(b.dateUtc); })
     };
 }
 

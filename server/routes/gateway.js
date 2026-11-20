@@ -384,9 +384,7 @@ function createGatewayRouter(deps) {
     router.get('/weather/:version(v000901|v000902|v000903)/coord/:loc', guarded('weather', weather()));
     if (airForecast) {
         router.get('/weather/:version(v000903)/coord/:loc/air-forecast', guarded('weather-air-forecast',
-            coordinateForecast(function (country) { return country !== 'KR'; }, function (loc, country, now, done) {
-                airForecast(loc, now, done);
-            })));
+            coordinateForecast(function (country) { return country !== 'KR'; }, airForecast)));
     }
     if (pollenForecast) {
         router.get('/weather/:version(v000903)/coord/:loc/pollen-forecast', guarded('weather-pollen-forecast',

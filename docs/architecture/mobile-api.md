@@ -125,8 +125,14 @@ the existing `GOOGLE_SECRET_KEY` with the Pollen API enabled. The allowance
 belongs to the separate Pollen SKU.
 
 The optional response uses `Cache-Control: no-store` and returns `source`,
-`attribution`, `region`, `retrievedAt`, and `days`. Each `day.date` is a civil
-date at the viewed location. Its `plants` and `types` have their source codes,
+`attribution`, `region`, `retrievedAt`, and `days`. Each `day.dateUtc` is the
+UTC date reported by Google for the viewed coordinate. The API does not
+deliver intraday values for a conversion to a complete local civil day.
+For example, a one-day Tokyo lookup at 2026-11-20 15:56 UTC returned November
+20 while Tokyo's local date was November 21. Display the source date with
+its UTC basis. [Google's DayInfo contract](https://developers.google.com/maps/documentation/pollen/reference/rest/v1/forecast/lookup#DayInfo)
+
+The `plants` and `types` have their source codes,
 optional season flags and optional index values 0 through 5. Missing indices
 stay absent. A Google index, measured pollen concentration and Korean KMA
 risk grade are separate. Colombia and Uruguay are absent from Google coverage.

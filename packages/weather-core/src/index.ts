@@ -219,7 +219,7 @@ export type CoordinatePollenForecast = {
   attribution: string;
   region: string;
   retrievedAt: string;
-  days: { date: string; plants: PollenEntry[]; types: PollenEntry[] }[];
+  days: { dateUtc: string; plants: PollenEntry[]; types: PollenEntry[] }[];
 };
 
 export function normalizeCoordinatePollenForecast(
@@ -242,10 +242,10 @@ export function normalizeCoordinatePollenForecast(
     }];
   });
   const days = array(data.days).flatMap((item) => {
-    const row = record(item), date = row.date;
-    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+    const row = record(item), dateUtc = row.dateUtc;
+    if (typeof dateUtc !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateUtc)) return [];
     const plants = pollenEntries(row.plants), types = pollenEntries(row.types);
-    return plants.length || types.length ? [{date, plants, types}] : [];
+    return plants.length || types.length ? [{dateUtc, plants, types}] : [];
   });
   return days.length ? {source, attribution, region, retrievedAt, days} : undefined;
 }

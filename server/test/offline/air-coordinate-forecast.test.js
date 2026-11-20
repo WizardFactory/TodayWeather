@@ -82,7 +82,7 @@ test('forecast service only admits configured providers inside their free limits
         }
     };
     const service = require('../../lib/air/coordinateForecast')(options);
-    const result = await new Promise(resolve => service(coord, time, resolve));
+    const result = await new Promise(resolve => service(coord, 'MX', time, resolve));
     assert.equal(result.source, 'openweather');
     assert.equal(result.rows[0].pollutants.pm25, 0);
     assert.deepEqual(calls, [['check', 'google', 'forecast', 1], ['check', 'openweather', 'forecast', 1], ['record', 'openweather', 'forecast', false]]);
@@ -105,10 +105,34 @@ test('forecast service releases the weather caller at the deadline while billing
             record(id, phase, result, callback) { ledger.push(id + ':recorded'); markRecorded(); callback(); }
         }
     });
-    const result = await new Promise(resolve => service(coord, time, resolve));
+    const result = await new Promise(resolve => service(coord, 'MX', time, resolve));
     assert.equal(result, undefined);
     assert.deepEqual(ledger, ['google']);
     respondToProvider({status: 200, data: {hourlyForecasts: []}});
     await recorded;
     assert.deepEqual(ledger, ['google', 'google:recorded']);
+});
+
+test('Montevideo skips Google budget and transport and preserves OpenWeather units', async () => {
+    const calls = [];
+    const service = require('../../lib/air/coordinateForecast')({
+        providers: {google, openweather},
+        keyString, timeoutMs: 300,
+        axios: {
+            post: () => { throw Error('Unsupported Google request'); },
+            get: () => Promise.resolve({status: 200, data: {list: [
+                {dt: Date.parse('2026-11-20T09:00:00Z') / 1000, main: {aqi: 2}, components: {pm2_5: 9, pm10: 12, o3: 60}}
+            ]}})
+        },
+        budget: {
+            check(id, phase, cost, done) { calls.push(id); done({allowed: true}); },
+            record(id, phase, result, done) { done(); }
+        }
+    });
+    const forecast = await new Promise(resolve => service({lat: -34.901, lon: -56.165}, 'UY', time, resolve));
+    assert.deepEqual(calls, ['openweather']);
+    assert.equal(forecast.source, 'openweather');
+    assert.equal(forecast.rows[0].pollutants.pm10, 12);
+    assert.ok(forecast.rows[0].pollutants.o3 > 0);
+    assert.deepEqual(forecast.rows[0].indexes, {owm: 2});
 });

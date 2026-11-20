@@ -50,7 +50,7 @@ data class CoordinateAirForecast(
     val rows: JsonArray,
 )
 
-/** Google day rows retain the civil dates at the viewed coordinate. */
+/** Google day rows keep the reported UTC dates for the viewed coordinate. */
 data class CoordinatePollenForecast(
     val attribution: String,
     val region: String,
@@ -259,11 +259,10 @@ class WeatherRepository(
     }
 
     private suspend fun readCoordinateForecast(loaded: LoadResult.Loaded, product: String, languages: List<String>): JsonObject? {
-        val location = loaded.place.location ?: return null
-        val path = "/weather/${WeatherRequests.VERSION}/coord/${WeatherRequests.jsNumber(location.lat)},${WeatherRequests.jsNumber(location.long)}/$product"
+        val url = WeatherRequests.coordinateForecastUrl(baseUrl, loaded.place, product) ?: return null
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages), "Cache-Control" to "no-store")
         return try {
-            withTimeoutOrNull(2500) { NationSource.strictJson(http.getOnce(baseUrl + path, headers)) } as? JsonObject
+            withTimeoutOrNull(2500) { NationSource.strictJson(http.getOnce(url, headers)) } as? JsonObject
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

@@ -108,13 +108,13 @@ describe("static browser API transport", () => {
       }))
       .mockResolvedValueOnce(json({
         source: "google", attribution: "Google Maps", region: "JP", retrievedAt,
-        days: [{date: "2026-11-21", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
+        days: [{dateUtc: "2026-11-20", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
       }));
     const weather = await api<Weather>("/weather?lat=35.681&lon=139.767&airUnit=airnow");
     const signal = new AbortController().signal;
     expect(await fetchCoordinatePollenForecast(weather, signal)).toEqual({
       source: "google", attribution: "Google Maps", region: "JP", retrievedAt,
-      days: [{date: "2026-11-21", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
+      days: [{dateUtc: "2026-11-20", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
     });
     expect(fetcher.mock.calls[1][0]).toContain("/weather/v000903/coord/35.681,139.767/pollen-forecast");
     expect(fetcher.mock.calls[1][1].cache).toBe("no-store");

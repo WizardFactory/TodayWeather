@@ -145,8 +145,8 @@ test('coordinate air forecast is separately requested, never stored by HTTP cach
             })
         }),
         loopback: async () => ({status: 200, json: true, body: {}}),
-        airForecast: (location, now, callback) => {
-            calls.push(location);
+        airForecast: (location, country, now, callback) => {
+            calls.push({location, country});
             callback(location.lon === -56.165 ? forecast : undefined);
         }
     });
@@ -170,7 +170,7 @@ test('coordinate air forecast is separately requested, never stored by HTTP cach
                 body: response.json
             }, null, 2) + '\n');
         }
-        assert.deepEqual(calls, [{lat: -34.901, lon: -56.165}]);
+        assert.deepEqual(calls, [{location: {lat: -34.901, lon: -56.165}, country: 'UY'}]);
 
         const unavailable = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.166/air-forecast');
         assert.deepEqual(unavailable.json, {available: false});
@@ -202,8 +202,8 @@ test('pollen forecast uses viewed ISO country, leaving Korea and unsupported ord
             fetch: (coordinate, country, now, callback) => {
                 fetched.push({coordinate, country});
                 callback(country === 'JP' ? {source: 'google', attribution: 'Google Maps', region: 'JP',
-                    retrievedAt: '2026-11-20T15:12:00.000Z',
-                    days: [{date: '2026-11-21', plants: [{code: 'JAPANESE_CEDAR'}], types: []}]} : undefined);
+                    retrievedAt: '2026-11-20T15:56:10.000Z',
+                    days: [{dateUtc: '2026-11-20', plants: [{code: 'JAPANESE_CEDAR'}], types: []}]} : undefined);
             }
         }
     });
@@ -217,6 +217,7 @@ test('pollen forecast uses viewed ISO country, leaving Korea and unsupported ord
         assert.equal(forecast.status, 200);
         assert.equal(forecast.headers['cache-control'], 'no-store');
         assert.equal(forecast.json.region, 'JP');
+        assert.equal(forecast.json.days[0].dateUtc, '2026-11-20');
         if (process.env.TW_POLLEN_FORECAST_CAPTURE) {
             fs.writeFileSync(process.env.TW_POLLEN_FORECAST_CAPTURE, JSON.stringify({
                 path: '/weather/v000903/coord/35.681,139.767/pollen-forecast',

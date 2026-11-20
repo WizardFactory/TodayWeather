@@ -19,7 +19,7 @@
     {"id": "weather", "from": "app", "to": "server", "y": 163, "label": "GET coordinate weather", "variant": "emphasis"},
     {"id": "availability", "from": "server", "to": "app", "y": 200, "label": "Weather and availability signal", "variant": "return"},
     {"id": "forecast", "from": "app", "to": "server", "y": 250, "label": "GET coordinate air forecast", "variant": "emphasis"},
-    {"id": "reserve-google", "from": "server", "to": "budget", "y": 282, "label": "Reserve Google allowance", "variant": "default"},
+    {"id": "reserve-google", "from": "server", "to": "budget", "y": 282, "label": "Supported: reserve Google allowance", "variant": "default"},
     {"id": "fetch-google", "from": "server", "to": "google", "y": 317, "label": "Request next 24 hours if admitted", "variant": "default"},
     {"id": "google-result", "from": "google", "to": "server", "y": 350, "label": "Valid UTC hours or no usable data", "variant": "return"},
     {"id": "reserve-openweather", "from": "server", "to": "budget", "y": 384, "label": "Reserve alternate allowance on miss", "variant": "default"},
@@ -33,7 +33,7 @@
       "title": "Forecast budgets",
       "items": [
         "A separate request uses a free allowance reservation before a provider call.",
-        "The source, attribution and original AQI scale travel with the rows."
+        "Uruguay goes directly to OpenWeather. Rows carry the source, attribution and original AQI scale."
       ]
     },
     {

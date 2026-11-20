@@ -119,7 +119,7 @@ class WeatherRepositoryTest {
                 if (!url.endsWith("/pollen-forecast")) liveBody
                 else """{
                     "source":"google", "attribution":"Google Maps", "region":"GB", "retrievedAt":"2027-01-15T08:00:00.000Z",
-                    "days":[{"date":"2027-01-15","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]
+                    "days":[{"dateUtc":"2027-01-15","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]
                 }"""
             }, dir)
             val loaded = assertIs<LoadResult.Loaded>(repo.load(london, units, listOf("ko"), true))
@@ -127,7 +127,7 @@ class WeatherRepositoryTest {
             assertEquals("google", pollen?.source)
             assertEquals("GB", pollen?.region)
             val day = pollen?.days?.single()?.jsonObject
-            assertEquals("2027-01-15", day?.get("date")?.jsonPrimitive?.content)
+            assertEquals("2027-01-15", day?.get("dateUtc")?.jsonPrimitive?.content)
             val plants = day?.get("plants")?.jsonArray
             assertNull(plants?.get(0)?.jsonObject?.get("index"))
             assertEquals(0, plants?.get(1)?.jsonObject?.get("index")?.jsonPrimitive?.int)

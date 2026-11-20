@@ -51,7 +51,7 @@ public struct CoordinateAirForecast: Sendable {
     public let rows: [JSONValue]
 }
 
-/// Optional Google day rows preserve the local dates of the viewed location.
+/// Optional Google day rows retain the reported UTC dates for the viewed coordinate.
 public struct CoordinatePollenForecast: Sendable {
     public let source = "google"
     public let attribution: String
@@ -247,8 +247,7 @@ public final class WeatherRepository {
 
     private func readCoordinateForecast(_ place: Place, _ product: String, _ acceptLanguage: String) async -> JSONValue? {
         guard let baseURL, let location = place.location,
-              let url = WeatherRequests.requestURL(
-                  "\(baseURL)/weather/\(WeatherRequests.version)/coord/\(location.lat),\(location.long)/\(product)")
+              let url = WeatherRequests.coordinateForecastURL(base: baseURL, lat: location.lat, long: location.long, product: product)
         else { return nil }
         let http = self.http, clock = self.clock
         let response = await firstSettled(attempts: 1, gap: .zero, timeout: .milliseconds(2500), clock: clock) {

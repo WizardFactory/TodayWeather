@@ -1,15 +1,20 @@
 'use strict';
 
+// Focus markets listed by Google, excluding Korea's existing station path.
+// Uruguay routes to OpenWeather before any Google transport or reservation.
+var googleForecastCountries = new Set(['AR', 'AT', 'AU', 'BE', 'BR', 'CA', 'CH', 'CL', 'CO',
+    'DE', 'ES', 'FR', 'GB', 'IE', 'JP', 'MX', 'NZ', 'PT', 'US']);
+
 // Forecast calls use the same provider budgets as observations. They never
 // escalate a request to the paid phase or delay the usual weather deadline.
 module.exports = function createCoordinateForecast(options) {
-    var ids = ['google', 'openweather'];
-    return function fetch(gCoord, now, callback) {
+    return function fetch(gCoord, country, now, callback) {
+        var ids = googleForecastCountries.has(country) ? ['google', 'openweather'] : ['openweather'];
         var lat = gCoord && gCoord.lat != null ? Number(gCoord.lat) : NaN;
         var lon = gCoord && gCoord.lon != null ? Number(gCoord.lon) : NaN;
         if (!Number.isFinite(lat) || Math.abs(lat) > 90 ||
             !Number.isFinite(lon) || Math.abs(lon) > 180 ||
-            !now || !Number.isFinite(now.getTime())) {
+            country === 'KR' || !now || !Number.isFinite(now.getTime())) {
             return callback();
         }
         var coord = {lat: lat, lon: lon};

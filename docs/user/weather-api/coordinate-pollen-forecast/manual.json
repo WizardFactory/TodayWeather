@@ -4,10 +4,10 @@
   "steps": [
     {
       "title": "Read the date and available species",
-      "instruction": "If the ordinary coordinate weather advertises pollenForecastAvailable, request the same coordinate path with /pollen-forecast. Read the region and date at the viewed location, along with source, credit and plant or pollen type codes.",
+      "instruction": "If the ordinary coordinate weather advertises pollenForecastAvailable, request the same coordinate path with /pollen-forecast. Read the region and the dateUtc reported by Google for the viewed location, along with source, credit and plant or pollen type codes.",
       "screenshot": "server1-http.png",
-      "caption": "A local Tokyo response with a date and Japanese cedar but no numeric index.",
-      "expected": "Keep the index missing when it is absent. Keep an explicit zero when provided. Preserve ordinary weather when the optional forecast is unavailable."
+      "caption": "An isolated Tokyo gateway response with a UTC date and Japanese cedar. The numeric index is absent.",
+      "expected": "Use the UTC date as given. Keep the index missing when it is absent and keep an explicit zero when provided. Preserve ordinary weather when the optional forecast is unavailable."
     }
   ]
 }
