@@ -1,108 +1,151 @@
 package net.wizardfactory.todayweather.ads
 
+import net.wizardfactory.todayweather.core.domain.shell.Tab
 import org.junit.Assert.*
 import org.junit.Test
 
 class NativeInventoryTest {
     private var now = 0L
+    private val pending = ArrayDeque<() -> Unit>()
     private val loads = mutableListOf<(String?) -> Unit>()
     private val released = mutableListOf<String>()
-    private val inventory = NativeInventory<String>({ loads.add(it) }, { released.add(it) }) { now }
+    private val inventory = NativeInventory<String>(loads::add, released::add, { now }, pending::addLast)
     private var displayed: String? = null
-    private fun visit() = inventory.open(Any()) { displayed = it }
 
-    @Test fun readyCreativeIsShownOnEntryAndReleasedOnce() {
-        assertTrue(loads.isEmpty())
+    private fun start() {
+        inventory.setForeground(true)
         inventory.setEnabled(true)
-        loads.single()("creative-1")
-        val first = visit()
-        assertEquals("creative-1", displayed)
-        loads[1]("creative-2")
-        val second = visit()
-        first.close()
-        assertEquals("creative-2", displayed)
-        second.close()
-        assertEquals(listOf("creative-1", "creative-2"), released)
     }
 
-    @Test fun lateAdWaitsForNextVisitOnceReaderReachedSlot() {
-        inventory.setEnabled(true)
-        val first = visit()
-        first.position(belowViewport = true)
-        first.position(belowViewport = false)
-        first.position(belowViewport = true)
-        loads.single()("late")
-        assertNull(displayed)
-        first.close()
-        visit()
-        assertEquals("late", displayed)
+    private fun visit(tab: Tab, key: Any = Any()) = inventory.open(tab, key) { displayed = it }
+
+    private fun dispatch() {
+        while (pending.isNotEmpty()) pending.removeFirst()()
     }
 
-    @Test fun returningFromAnOverlayCannotInsertAnAdAfterTheAnchorWasReached() {
-        val page = Any()
-        inventory.setEnabled(true)
-        val first = inventory.open(page) { displayed = it }
-        first.position(belowViewport = false)
-        first.detach()
-        loads.single()("late")
-        val resumed = inventory.open(page) { displayed = it }
-        resumed.position(belowViewport = true)
-        assertNull("an overlay return belongs to the same reading visit", displayed)
-        resumed.close()
-        visit()
-        assertEquals("late", displayed)
+    @Test fun returningToHourlyReusesItsCardWithoutWaitingForANewLoad() {
+        start()
+        dispatch()
+        loads.single()("hourly-ad")
+        visit(Tab.HOURLY)
+        assertEquals("hourly-ad", displayed)
+        dispatch()
+        loads[1]("daily-ad")
+        visit(Tab.DAILY)
+        assertEquals("daily-ad", displayed)
+        visit(Tab.HOURLY)
+        assertEquals("hourly-ad", displayed)
+        visit(Tab.DAILY)
+        assertEquals("daily-ad", displayed)
+        assertTrue(released.isEmpty())
+        assertEquals(1, pending.size)
+        dispatch()
+        assertEquals(3, loads.size)
     }
 
-    @Test fun coveredPageRechecksGeometryBeforeUsingAReadyAd() {
-        val page = Any()
-        inventory.setEnabled(true)
-        val first = inventory.open(page) { displayed = it }
-        first.position(belowViewport = true)
-        first.detach()
-        loads.single()("ready")
+    @Test fun missingSlotNeverInsertsLateAndSavesTheFillForAnotherVisit() {
+        start()
+        val key = Any()
+        val empty = visit(Tab.HOURLY, key)
         assertNull(displayed)
-        val resumed = inventory.open(page) { displayed = it }
+        dispatch()
+        loads.single()("next-page")
         assertNull(displayed)
-        resumed.position(belowViewport = true)
-        assertEquals("ready", displayed)
-        resumed.detach()
+        empty.detach()
+        visit(Tab.HOURLY, key)
+        assertNull("return from an overlay is still the same visit", displayed)
+        inventory.end(key)
+        visit(Tab.AIR)
+        assertEquals("next-page", displayed)
+        assertEquals(1, pending.size)
+    }
+
+    @Test fun expiredAssignedAndSpareCreativesAreReleasedFromLoadTime() {
+        start()
+        dispatch()
+        loads.single()("hourly")
+        now = 30 * 60_000
+        visit(Tab.HOURLY)
+        dispatch()
         loads[1]("spare")
-        val rendered = mutableListOf<String?>()
-        inventory.open(page, rendered::add)
-        assertEquals(listOf("ready"), rendered)
-        inventory.end(page)
-        assertEquals(listOf("ready", null), rendered)
-        assertEquals(listOf("ready"), released)
-        visit()
+        now = 55 * 60_000 - 1L
+        visit(Tab.HOURLY)
+        assertEquals("hourly", displayed)
+        now++
+        visit(Tab.HOURLY)
         assertEquals("spare", displayed)
+        assertEquals(listOf("hourly"), released)
+        dispatch()
+        loads[2]("unused")
+        now += 55 * 60_000L
+        visit(Tab.DAILY)
+        assertNull(displayed)
+        assertEquals(listOf("hourly", "spare", "unused"), released)
     }
 
-    @Test fun adMayArriveWhileStillBelowReaderAndIsRevokedImmediately() {
-        val slot = visit()
-        slot.position(belowViewport = true)
-        inventory.setEnabled(true)
-        loads.single()("creative")
-        assertEquals("creative", displayed)
+    @Test fun fourAssignedTabsNeedNoFifthCreativeAndRevocationReleasesEachOnce() {
+        start()
+        for ((i, tab) in Tab.entries.withIndex()) {
+            dispatch()
+            loads[i](tab.name)
+            visit(tab)
+            assertEquals(tab.name, displayed)
+        }
+        for (tab in Tab.entries.reversed()) {
+            visit(tab)
+            assertEquals(tab.name, displayed)
+        }
+        assertTrue(pending.isEmpty())
+        assertEquals(4, loads.size)
         inventory.setEnabled(false)
         assertNull(displayed)
-        loads[1]("stale")
-        slot.close()
-        assertEquals(listOf("creative", "stale"), released)
+        inventory.setEnabled(false)
+        assertEquals(Tab.entries.map { it.name }.sorted(), released.sorted())
     }
 
-    @Test fun unknownGeometryAndNoFillLeaveNoSlotAndDoNotLoopRequests() {
+    @Test fun requestsCoalesceAndNoFillRetriesOnlyOnLaterDemand() {
+        start()
+        for (tab in Tab.entries) visit(tab)
+        assertEquals(1, pending.size)
+        assertTrue(loads.isEmpty())
+        dispatch()
+        for (tab in Tab.entries) visit(tab)
+        assertTrue(pending.isEmpty())
+        loads.single()(null)
+        now = 59_999L
+        visit(Tab.HOURLY)
+        inventory.setForeground(false)
+        inventory.setForeground(true)
+        assertTrue(pending.isEmpty())
+        now++
+        visit(Tab.AIR)
+        visit(Tab.DAILY)
+        assertNull(displayed)
+        assertEquals(1, pending.size)
+        dispatch()
+        assertEquals(2, loads.size)
+    }
+
+    @Test fun backgroundSkipsQueuedWorkAndRevocationRejectsOldCallbacks() {
+        start()
+        inventory.setForeground(false)
+        dispatch()
+        assertTrue(loads.isEmpty())
+        inventory.setForeground(true)
+        dispatch()
+        assertEquals(1, loads.size)
+        inventory.setEnabled(false)
         inventory.setEnabled(true)
-        val first = visit()
-        loads.single()("ready-after-entry")
+        dispatch()
+        loads[0]("stale")
+        loads[1]("spare")
+        inventory.setEnabled(false)
+        assertEquals(listOf("stale", "spare"), released)
+        visit(Tab.AIR)
         assertNull(displayed)
-        first.position(belowViewport = false)
-        assertNull(displayed)
-        first.close()
-        now += 3_600_001
-        visit()
-        assertNull(displayed)
-        assertEquals(listOf("ready-after-entry"), released)
-        loads[1](null)
+        inventory.setEnabled(true)
+        inventory.setEnabled(false)
+        dispatch()
         assertEquals(2, loads.size)
     }
 }

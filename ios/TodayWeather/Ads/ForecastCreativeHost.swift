@@ -10,6 +10,21 @@ final class ForecastCreative {
     let body: String?
     let action: String?
     let icon: UIImage?
+    /// A return to this placement keeps the already registered SDK view, including its media and AdChoices.
+    lazy var registeredView = ForecastCreativeView()
+    private(set) weak var placement: ForecastNativePlacement?
+
+    /// A second window must leave this visit empty while the first still owns the registered view.
+    func claim(for visit: ForecastNativePlacement) -> Bool {
+        guard placement == nil || placement === visit else { return false }
+        placement = visit
+        return true
+    }
+
+    func release(from visit: ForecastNativePlacement) {
+        if placement === visit { placement = nil }
+    }
+
     let bind: (NativeAdView) -> Void
 
     init(headline: String?, advertiser: String?, body: String?, action: String?, icon: UIImage?, bind: @escaping (NativeAdView) -> Void) {
@@ -39,7 +54,7 @@ struct ForecastCreativeHost: UIViewRepresentable {
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     func makeUIView(context: Context) -> ForecastCreativeView {
-        ForecastCreativeView()
+        ad.registeredView
     }
 
     func updateUIView(_ view: ForecastCreativeView, context: Context) {

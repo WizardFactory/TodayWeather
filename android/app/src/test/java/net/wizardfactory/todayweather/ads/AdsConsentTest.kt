@@ -1,6 +1,7 @@
 package net.wizardfactory.todayweather.ads
 
 import android.app.Activity
+import net.wizardfactory.todayweather.core.domain.shell.Tab
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.Test
@@ -214,9 +215,59 @@ class AdsConsentTest {
         assertTrue(consent.allowed.value)
         platform.privacyRequired = true
         platform.allowed = false
-        consent.openPrivacyOptions(activity) { error("expected a form") }
+        val refreshed = mutableListOf<Boolean>()
+        consent.openPrivacyOptions(activity, { refreshed += consent.nativeAllowed }) { error("expected a form") }
+        assertEquals(listOf(false, false), refreshed)
         assertEquals(false, consent.allowed.value)
         assertEquals(1, ready)
+    }
+
+    @Test
+    fun aPrivacyFormWithTheSamePermissionPausesNativeAdsWhileItIsVisible() {
+        val original = Platform(allowed = true).apply { privacyRequired = true }
+        val loads = mutableListOf<(String?) -> Unit>()
+        val released = mutableListOf<String>()
+        val inventory = NativeInventory<String>(loads::add, released::add, { 0L }, { it() })
+        lateinit var c: AdsConsent
+        val platform = object : AdsPlatform by original {
+            override fun showPrivacyOptionsForm(activity: Activity, onDone: (Boolean) -> Unit) {
+                assertTrue(!c.nativeAllowed)
+                assertEquals(listOf("old-personalization"), released)
+                loads[1]("stale-fill")
+                inventory.open(Tab.DAILY, Any()) { assertEquals(null, it) }
+                assertEquals(2, loads.size)
+                onDone(true) // UMP can answer synchronously; canRequestAds stays true.
+            }
+        }
+        c = AdsConsent(platform, true, { _, _ -> true }) {}
+        c.start(activity)
+        inventory.setForeground(true)
+        inventory.setEnabled(c.nativeAllowed)
+        loads.single()("old-personalization")
+        inventory.open(Tab.HOURLY, Any()) {}
+        c.openPrivacyOptions(activity, { inventory.setEnabled(c.nativeAllowed) }) { error("expected a form") }
+        assertTrue(c.nativeAllowed)
+        assertEquals(3, loads.size, "the next spare uses the new privacy choices")
+        assertEquals(listOf("old-personalization", "stale-fill"), released)
+    }
+
+    @Test
+    fun pendingPrivacyOptionsKeepNativeServingOffUntilTheCurrentFormCloses() {
+        val original = Platform(allowed = true).apply { privacyRequired = true }
+        lateinit var dismiss: (Boolean) -> Unit
+        val platform = object : AdsPlatform by original {
+            override fun showPrivacyOptionsForm(activity: Activity, onDone: (Boolean) -> Unit) { dismiss = onDone }
+        }
+        val c = AdsConsent(platform, true, { _, _ -> true }) {}
+        c.start(activity)
+        val refreshed = mutableListOf<Boolean>()
+        c.openPrivacyOptions(activity, { refreshed += c.nativeAllowed }) { error("expected a form") }
+        c.start(activity) // Rechecking UMP while the form is open still cannot authorize a native ad.
+        assertTrue(!c.nativeAllowed)
+        assertEquals(listOf(false), refreshed)
+        dismiss(true)
+        dismiss(true)
+        assertEquals(listOf(false, true), refreshed)
     }
 
     @Test
