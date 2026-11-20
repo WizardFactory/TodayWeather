@@ -527,7 +527,7 @@ runner.test('restore retries failed regions without resealing or reopening write
         storage: store,
         resolve: async function (location) {
             if (location.lat === 37) healthyCalls++;
-            else if (retries < 3) throw new Error('region temporarily unavailable');
+            else if (retries < 3) throw new (feature('errors').RegionError)('unavailable', true);
             return { zones: ['37'] };
         }
     });

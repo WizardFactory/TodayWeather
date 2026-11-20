@@ -90,7 +90,8 @@ for later investigation. No deployment, data migration or automatic deletion is 
 
 ## Spot replacement and recovery
 
-1. Verify the service Elastic IP is attached to the replacement instance. From that host,
+1. Verify the service Elastic IP is attached to the replacement instance. Follow the
+   [service EIP readiness procedure](service-eip-readiness.md#manual-recheck) if attachment is delayed. From that host,
    a direct `GET` to `$SERVICE_SERVER/health` must return HTTP 200 with body `OK`.
    Use the configured service origin hostname so this check exercises its public route.
    During this wait, the coordinator logs `push-origin-unavailable` with the next delay,
@@ -100,7 +101,7 @@ for later investigation. No deployment, data migration or automatic deletion is 
    expect HTTP 200 and a JSON response with `country: "KR"` and a populated
    `kmaAddress.name1`. A single success can be cached. Readiness also requires resolution
    of the stored regions. Failed lookups retry with delays from 30 seconds to five
-   minutes. `push-restore-pending` reports the unresolved device count and next delay.
+   minutes. `push-restore-pending` reports the unresolved device count, reason categories and next delay. Each coordinate lookup has a five-second total deadline. An incomplete domestic address stays pending. A permanent geocoder rejection such as HTTP 403 or an error applying the result terminates startup with a sanitized reason. Inspect that cause before restarting the supervised process; preserve its S3 registrations.
    The coordinator keeps the restored registrations between attempts.
 3. Poll the private socket from the service account:
 
@@ -115,19 +116,9 @@ for later investigation. No deployment, data migration or automatic deletion is 
    restoration the scheduler starts, the coordinator logs `push-coordinator-ready`,
    and socket health returns HTTP 200 with `ready: true`.
    Inspect `transport.ready` separately to assess delivery.
-4. Monitor the socket status alongside the reverse proxy's 503 rate for
-   `POST /v000903/push-list` and supported writes to `/v000903/push`. Count methods,
-   route names and response codes only. Alert on sustained unready status, connection
-   failures, or registration 503s after the origin is healthy. A PM2 `online` process
-   can still fail these checks. For a single observation window in nginx combined
-   format, this produces the registration totals without printing individual requests:
-
-   ```sh
-   awk '$6 ~ /^"(POST|PUT|DELETE)$/ && $7 ~ /^\/v000903\/push(-list)?(\?|$)/ {
-            total++; if ($9 == 503) failed++
-        } END { printf "registrations=%d http_503=%d\n", total, failed }' "$NGINX_WINDOW"
-   ```
-
+4. Install the [recurring readiness check](#recurring-readiness-check) under the
+   operator's monitoring configuration. A PM2 `online` status alone cannot distinguish
+   a restored coordinator from one that has stopped serving registrations.
 5. On the affected older build, a failed initial restore can leave the process online
    with no socket. Once the origin and geocoder are available, the operator can restart
    the sole coordinator under the production change procedure, preserving the S3 prefix.
@@ -135,6 +126,37 @@ for later investigation. No deployment, data migration or automatic deletion is 
    a separately authorized device's registration, its receipt and tap destination,
    and deletion with a device-scoped readback. Track the XR result in
    [#2963](https://github.com/WizardFactory/TodayWeather/issues/2963).
+
+### Recurring readiness check
+
+[check-push-readiness](../../server/bin/check-push-readiness) probes the private socket
+and counts writes to `/v000903/push` and `/v000903/push-list` over the preceding five
+minutes. A connection failure, socket health other than HTTP 200 with `ready: true`,
+an unreadable log window, or any matching HTTP 503 produces a nonzero exit and an
+aggregate alert. A healthy check produces no output. On demand, `--verbose` also
+prints healthy totals. The check reads combined-format nginx logs in the current file
+and its numbered or date-suffixed rotations, including gzip. A sample exceeding its
+byte budget reports unavailable coverage; alert output omits request bodies, addresses
+and query strings.
+
+For a host using cron mail, install the following in the monitoring account's crontab
+during approved rollout. Substitute the actual absolute Node 16+ and checkout paths,
+the coordinator socket, and a verified on-call email recipient. The account needs
+permission to use the socket and read the nginx log directory and rotations.
+
+```cron
+MAILTO=replace-with-on-call-address
+PUSH_SOCKET_PATH=/run/todayweather/push.sock
+PUSH_NGINX_ACCESS_LOG=/var/log/nginx/access.log
+*/2 * * * * /absolute/path/to/node /absolute/checkout/server/bin/check-push-readiness
+```
+
+Cron mails the output once per failing check. Verify the host mail transport and
+on-call receipt during installation by pointing a one-off check at an absent test
+socket. For deployments that already run a host monitoring agent, schedule the
+same command and alert on its nonzero exit. Install this check on replacement hosts. External host
+availability monitoring covers the period while a host is stopped. To roll back the monitoring change, remove the cron
+entry or agent check.
 
 ### Local replacement rehearsal
 

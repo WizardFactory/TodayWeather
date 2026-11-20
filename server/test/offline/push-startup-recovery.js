@@ -27,11 +27,7 @@ function installFixture() {
         put: async (key, value) => objects.set(key, JSON.stringify(value))
     };
     const runtime = {
-        resolve: async location => {
-            const answer = await harness.send(Number(process.env.FIXTURE_PORT), 'GET', '/region/' + location.lat);
-            if (answer.status !== 200) throw new Error('region offline');
-            return { zones: ['local'] };
-        },
+        resolve: (location, record) => require('../../lib/pushCoordinator/region').resolveRegion(origin, location, record, 250),
         alarm: async () => ({ title: 'Fixture', text: 'Due now' }),
         send: async () => { process.send('send'); }
     };
@@ -69,7 +65,9 @@ async function until(test) {
     }
 }
 
-async function rehearse(delayed) {
+async function rehearse(mode) {
+    const delayed = mode === 'delayed';
+    const forbidden = mode === 'forbidden';
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw3066-'));
     const socket = path.join(dir, 'push.sock');
     const saved = new Map();
@@ -81,17 +79,30 @@ async function rehearse(delayed) {
     await seed.settled();
     fs.writeFileSync(path.join(dir, 'store.json'), JSON.stringify(Array.from(saved)));
     let originReady = !delayed, regionsReady = !delayed, probes = 0, goodLookups = 0, badLookups = 0, sends = 0;
+    let dripChunks = 0, dripClosed = false;
     const origin = http.createServer((req, res) => {
         if (req.url === '/health') {
             probes++;
             res.statusCode = originReady ? 200 : 503;
             res.end(originReady ? 'OK' : 'waiting');
-        } else if (req.url === '/region/2' && !regionsReady) {
+        } else if (req.url.endsWith('/2,127') && forbidden) {
             badLookups++;
-            res.writeHead(503).end();
+            res.writeHead(403).end('sensitive upstream detail');
+        } else if (req.url.endsWith('/2,127') && !regionsReady) {
+            badLookups++;
+            if (badLookups === 1) {
+                res.end(JSON.stringify({ country: 'KR' })); // Missing domestic address.
+            } else if (badLookups === 2) {
+                res.writeHead(200);
+                const timer = setInterval(() => { res.write(' '); dripChunks++; }, 20);
+                res.on('close', () => { clearInterval(timer); dripClosed = true; });
+            } else {
+                res.writeHead(503).end();
+            }
         } else {
-            if (req.url === '/region/1') goodLookups++;
-            res.end('ok');
+            if (req.url.endsWith('/1,127')) goodLookups++;
+            res.end(JSON.stringify(req.url.endsWith('/1,127') ? { country: 'US' } :
+                { country: 'KR', kmaAddress: { name1: '서울특별시', name2: '강남구' } }));
         }
     });
     origin.listen(0, '127.0.0.1');
@@ -107,6 +118,18 @@ async function rehearse(delayed) {
     child.stderr.on('data', chunk => { output += chunk; });
     child.stdout.on('data', chunk => { output += chunk; });
     try {
+        if (forbidden) {
+            await until(() => child.exitCode !== null);
+            assert.equal(badLookups, 1);
+            assert.equal(sends, 0);
+            assert(!output.includes('push-coordinator-ready'));
+            assert(!output.includes('push-restore-pending'));
+            assert(!output.includes('sensitive upstream detail'));
+            assert(output.includes('Push region lookup failed: http-403'));
+            assert(!fs.existsSync(socket));
+            console.log('Permanent upstream 403: sanitized fatal reason, one lookup, zero sends, socket released');
+            return;
+        }
         if (delayed) {
             await until(() => probes >= 2);
             assert.deepEqual(await health(socket), [503, false]);
@@ -116,11 +139,13 @@ async function rehearse(delayed) {
             assert.deepEqual(await health(socket), [503, false]);
             await assert.rejects(ipc.request(socket, { op: 'upsert', rows: [row(3)] }), /not ready/);
             assert.equal(sends, 0);
+            assert(dripClosed && dripChunks >= 2, 'total deadline aborted the active peer');
             regionsReady = true;
         }
         await until(() => output.includes('push-coordinator-ready'));
         assert.deepEqual(await health(socket), [200, true]);
         assert.equal(goodLookups, 1);
+        assert(!delayed || ['incomplete-response', 'deadline'].every(reason => output.includes(reason)));
         assert(!delayed || [30000, 60000].every(ms => output.includes('"retryMs":' + ms)));
         assert(delayed || (probes === 1 && badLookups === 0));
         assert(output.includes('"registrations":2'));
@@ -136,14 +161,14 @@ async function rehearse(delayed) {
         const [code] = await exited;
         origin.close();
         fs.rmSync(dir, { recursive: true, force: true });
-        assert.equal(code, 0, 'coordinator shutdown');
+        assert.equal(code, forbidden ? 1 : 0, 'coordinator shutdown');
     }
     console.log(delayed ? 'Delayed origin and region: 503 -> 200, same PID, two restored records, upsert/delete OK'
         : 'Healthy startup: first probe succeeded, two restored records, upsert/delete OK');
 }
 
 if (require.main === module) {
-    rehearse(true).then(() => rehearse(false)).catch(err => { console.error(err); process.exitCode = 1; });
+    rehearse('delayed').then(() => rehearse('healthy')).then(() => rehearse('forbidden')).catch(err => { console.error(err); process.exitCode = 1; });
 } else {
     installFixture();
 }

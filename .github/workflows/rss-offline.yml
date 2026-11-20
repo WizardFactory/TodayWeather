@@ -43,6 +43,7 @@ jobs:
         run: |
           node server/test/offline/push-s3.test.js
           node server/test/offline/push-startup-recovery.js
+          node server/test/offline/push-readiness-monitor.js
       - name: Scheduled alarm preparation retry regressions (#2677)
         run: node server/test/offline/push-preparation-retry.test.js
       - name: Push store (SQLite) checks (#2626)

@@ -1,6 +1,7 @@
 'use strict';
 var crypto = require('crypto');
 var EventEmitter = require('events');
+var RegionError = require('./errors').RegionError;
 var mapLimit = require('./storage').mapLimit;
 function hash(value) {
     return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -77,6 +78,8 @@ class Registry extends EventEmitter {
         this.pending = new Set();
         this.retryAt = new Map();
         this.blocked = new Set();
+        this.restoreReasons = new Set();
+        this.restoreError = null;
         this.ready = false;
         this.mappingVersion = 1;
         this.maxQueue = options.maxQueue || 256;
@@ -105,8 +108,10 @@ class Registry extends EventEmitter {
         }
         await this.settled();
         while (this.retryAt.size) {
+            if (this.restoreError) throw this.restoreError;
             if (!waitForRegionRetry) throw new Error('Push region restoration incomplete; restart after geocoder recovery');
-            await waitForRegionRetry(this.retryAt.size);
+            await waitForRegionRetry(this.retryAt.size, Array.from(this.restoreReasons).sort());
+            this.restoreReasons.clear();
             // Startup has its own backoff. Only revisit queued devices; do not repeat S3 reads or reseals.
             this.retryResolutions(Infinity);
             await this.settled();
@@ -427,7 +432,12 @@ class Registry extends EventEmitter {
                     });
                     self.emit('change', d.key);
                 })
-                .catch(function () {
+                .catch(function (error) {
+                    if (!self.ready) {
+                        var failure = error instanceof RegionError ? error : new RegionError('internal', false);
+                        self.restoreReasons.add(failure.category);
+                        if (!failure.retryable && !self.restoreError) self.restoreError = failure;
+                    }
                     self.retryAt.set(d.key, self.now() + 30000);
                     self.emit('resolutionError', d.key);
                 })
