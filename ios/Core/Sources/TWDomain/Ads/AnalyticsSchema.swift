@@ -53,7 +53,7 @@ public enum AnalyticsSchema {
     public static func validate(_ name: String, _ params: [String: AnalyticsValue]?) -> [(String, AnalyticsParameter)]? {
         guard let fields = events.first(where: { JSString.equal($0.name, name) })?.fields, let params else { return nil }
         // UMP failures are shared by formats. They cannot be reported as an impression or a creative load error.
-        if params["ad_format"] == .text("consent"), params["action"] != .text("consent_failed") { return nil }
+        if name == "ad_lifecycle", params["ad_format"] == .text("consent"), params["action"] != .text("consent_failed") { return nil }
         var safe: [(String, AnalyticsParameter)] = []
         for (key, rule) in fields {
             let value = params[key]

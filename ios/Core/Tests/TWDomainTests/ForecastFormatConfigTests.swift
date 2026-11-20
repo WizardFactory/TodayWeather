@@ -51,5 +51,7 @@ struct ForecastFormatConfigTests {
         #expect(AnalyticsSchema.validate("ad_lifecycle", ["ad_format": .text("consent"), "action": .text("consent_failed")]) != nil)
         #expect(AnalyticsSchema.validate("ad_lifecycle", ["ad_format": .text("consent"), "action": .text("impression")]) == nil)
         #expect(AnalyticsSchema.validate("ad_load_error", ["ad_format": .text("consent"), "error_code": .number(1)]) == nil)
+        #expect(AnalyticsSchema.validate("weather_load", ["outcome": .text("success"), "duration_ms": .number(12),
+                                                         "ad_format": .text("consent")])?.map(\.0) == ["outcome", "duration_ms"])
     }
 }
