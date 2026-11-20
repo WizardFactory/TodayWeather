@@ -85,7 +85,7 @@ final class ForecastInterstitial {
         do { try ad.canPresent(from: root) }
         catch {
             ready = nil
-            failed(error)
+            lifecycle("failed")
             return false
         }
         guard let id = visits.reserve(from: source, to: destination, readPastChart: readPastChart,
@@ -105,9 +105,9 @@ final class ForecastInterstitial {
                 active = nil
                 lifecycle("hide")
                 visits.finish(id, failedBeforeDisplay: false)
-            case .failed(let error):
+            case .failed:
                 active = nil
-                failed(error)
+                lifecycle("failed")
                 visits.finish(id, failedBeforeDisplay: true)
             }
         }
@@ -136,12 +136,12 @@ final class ForecastInterstitial {
                 ready = (ad, uptime())
                 lifecycle("loaded")
             case .failure(let error):
-                failed(error)
+                loadFailed(error)
             }
         }
     }
 
-    private func failed(_ error: any Error) {
+    private func loadFailed(_ error: any Error) {
         lifecycle("failed")
         let code = (error as NSError).code
         if (0...999).contains(code) {
