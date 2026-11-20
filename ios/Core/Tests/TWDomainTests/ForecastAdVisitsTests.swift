@@ -87,6 +87,25 @@ struct ForecastAdVisitsTests {
         #expect(f.reserve(relaunched) != nil)
     }
 
+    @Test func aMidnightDisplaySurvivesAStorageOutageAndRelaunch() throws {
+        let f = Fixture()
+        let visits = f.visits()
+        visits.markVisible(.dailyforecast)
+        let id = try #require(f.reserve(visits))
+        let backup = f.directory.appendingPathExtension("reserved")
+        let manager = FileManager.default
+        try manager.moveItem(at: f.directory, to: backup)
+        try Data().write(to: f.directory)
+        f.day += 1
+        visits.displayed(id)
+        visits.finish(id, failedBeforeDisplay: false)
+        try manager.removeItem(at: f.directory)
+        try manager.moveItem(at: backup, to: f.directory)
+        #expect(!f.visits().available)
+        f.day += 1
+        #expect(f.visits().available)
+    }
+
     @Test func failingTheReservationWriteLeavesNavigationWithTheCaller() throws {
         let f = Fixture()
         let manager = FileManager.default

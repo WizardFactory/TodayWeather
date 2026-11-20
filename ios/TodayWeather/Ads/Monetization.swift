@@ -46,10 +46,11 @@ final class Monetization {
     @ObservationIgnored private weak var shell: ShellModel?
 
     /// `settings` nil: no ads. `openURL` opens the policy pages (the system browser).
-    init(analytics: UsageAnalytics, settings: AdsSettings?,
+    init(analytics: UsageAnalytics, settings: AdsSettings?, interstitial: ForecastInterstitial? = nil,
          openURL: @escaping @MainActor (URL) -> Void = { UIApplication.shared.open($0) }) {
         self.analytics = analytics
         self.settings = settings
+        self.interstitial = interstitial
         self.openURL = openURL
     }
 
@@ -60,7 +61,12 @@ final class Monetization {
         let previous = launch.onShell
         launch.onShell = { [weak self] shell in
             previous(shell)
-            self?.attach(shell)
+            self?.attach(shell, observeInitialScreen: false)
+        }
+        let initial = launch.onInitialScreen
+        launch.onInitialScreen = { [weak self] shell in
+            initial(shell)
+            self?.observeScreens(shell)
         }
     }
 
@@ -86,7 +92,7 @@ final class Monetization {
     var pageScreen: @MainActor () -> String? = { nil }
 
     /// A new shell: the stored analytics choice applies, and the privacy rows and the screens connect.
-    func attach(_ shell: ShellModel) {
+    func attach(_ shell: ShellModel, observeInitialScreen: Bool = true) {
         self.shell = shell
         readVisit = nil
         shell.onForecastTap = { [weak self, weak shell] destination in
@@ -119,7 +125,7 @@ final class Monetization {
             default: previous(row)
             }
         }
-        observeScreens(shell)
+        if observeInitialScreen { observeScreens(shell) }
     }
 
     // MARK: Screens

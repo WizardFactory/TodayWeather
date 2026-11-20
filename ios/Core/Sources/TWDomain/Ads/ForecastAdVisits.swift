@@ -8,6 +8,7 @@ public final class ForecastAdVisits {
         var hourly = false
         var daily = false
         var spent = false
+        var reservation: UUID?
 
         func hasSeen(_ tab: ShellTab) -> Bool {
             switch tab {
@@ -66,9 +67,10 @@ public final class ForecastAdVisits {
         guard !presenting, readPastChart, source != destination, source == .forecast || source == .dailyforecast,
               var day = try? current(), day.hasSeen(destination), !day.spent, day.date > lastDisplayDay,
               draw() < 0.10 else { return nil }
-        day.spent = true
-        do { try save(day) } catch { return nil }
         let id = UUID()
+        day.spent = true
+        day.reservation = id
+        do { try save(day) } catch { return nil }
         pending = Presentation(id: id, reservedDate: day.date, navigate: navigate)
         return id
     }
@@ -78,19 +80,23 @@ public final class ForecastAdVisits {
         pending?.shown = true
         let date = localDay()
         lastDisplayDay = max(lastDisplayDay, date)
-        if date > active.reservedDate, var day = try? current(), !day.spent {
-            day.spent = true
-            try? save(day)
-        }
+        if date > active.reservedDate { _ = try? current() }
     }
 
     public func finish(_ id: UUID, failedBeforeDisplay: Bool) {
         guard let active = pending, active.id == id else { return }
-        pending = nil
-        if failedBeforeDisplay, !active.shown, var day = try? current(), day.date == active.reservedDate {
-            day.spent = false
+        if var day = try? storedDay(), day.reservation == id {
+            if failedBeforeDisplay && !active.shown {
+                day.spent = false
+            } else {
+                let displayDate = active.shown ? lastDisplayDay : localDay()
+                if displayDate > day.date { day = Day(date: displayDate) }
+                day.spent = true
+            }
+            day.reservation = nil
             try? save(day)
         }
+        pending = nil
         active.navigate()
     }
 
@@ -98,12 +104,25 @@ public final class ForecastAdVisits {
 
     private func current() throws -> Day? {
         let date = localDay()
+        guard let stored = try storedDay() else { return Day(date: date) }
+        guard date >= stored.date else { return nil }
+        if date == stored.date { return stored }
+        var day = Day(date: date)
+        if let reservation = stored.reservation {
+            // A crash or a failed confirmation write can leave the actual display date unknown.
+            // Charge the first later day observed. Only an active presenter can still resolve its reservation.
+            day.spent = true
+            if pending?.id == reservation { day.reservation = reservation }
+            try save(day)
+        }
+        return day
+    }
+
+    private func storedDay() throws -> Day? {
         let data: Data
         do { data = try Data(contentsOf: file) }
-        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return Day(date: date) }
-        let stored = try JSONDecoder().decode(Day.self, from: data)
-        if date < stored.date { return nil }
-        return date == stored.date ? stored : Day(date: date)
+        catch let error as CocoaError where error.code == .fileReadNoSuchFile { return nil }
+        return try JSONDecoder().decode(Day.self, from: data)
     }
 
     private func save(_ day: Day) throws {

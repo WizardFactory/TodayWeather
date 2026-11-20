@@ -70,6 +70,8 @@ final class AppLaunch {
     /// Connects the screens to a new shell (its hooks: refresh, menu rows, entry events) before the held entry events
     /// are handled. IN-08 and later set it.
     @ObservationIgnored var onShell: (ShellModel) -> Void = { _ in }
+    /// At cold start the queued widget or notification can replace the configured default before a tab is visible.
+    @ObservationIgnored var onInitialScreen: (ShellModel) -> Void = { _ in }
 
     /// What the process reads from the system: the preferred languages and the photo feed's URL (Info.plist
     /// `TWWeatherPhotosURL`, the private build input `TW_WEATHER_PHOTOS_URL`).
@@ -191,6 +193,7 @@ final class AppLaunch {
         }
         onShell(shell)
         entries.open { [weak self] event in self?.handle(event) }
+        onInitialScreen(shell)
         // O06, 500 ms after the app opened over the tabs (`showAlertInfoEvent`); after S01 when it opened there.
         alarms.scheduleIntro()
     }
