@@ -13,7 +13,7 @@ Black until you choose a different style.
 | Widget | Display and settings |
 | --- | --- |
 | Current weather | Current temperature and sky. Enlarge it for the daily range. Choose yesterday's comparison in settings. |
-| Forecast | Choose hourly or daily. The daily view can include yesterday. A wider widget fits more forecast periods. |
+| Forecast | Choose hourly or daily. The daily view can include yesterday. A wider widget fits more forecast periods. A taller widget gives text and icons more room. The shortest (50 dp) layout uses compact labels. |
 | Clock and weather | Time and current conditions. A larger widget adds the chosen forecast. The tallest supported layout displays both forecast types. |
 | Air quality | Air-quality grade and available particulate readings. More space allows ozone and the air summary. |
 
@@ -39,7 +39,19 @@ also show a settings control. If you remove a pinned place, select a new one in
 widget settings. When upgrading from a version with legacy Cordova widgets,
 add the new widget from your launcher's picker if the old widget is unavailable.
 
+The clock and date follow each widget’s selected city, including daylight-saving
+changes. Your phone controls the 12/24-hour format. If a cached overseas reading
+lacks a time zone, the clock shows a dash until a weather update provides it.
+The update stamp uses the phone’s time zone.
+
+[Seoul and New York at the same instant, on a Galaxy S21+](screenshots/place-clocks.png).
+
 ## Capture and verification
+
+For [#3062](https://github.com/WizardFactory/TodayWeather/issues/3062), a Galaxy
+S21+ displayed Seoul on November 20 at 11:20 a.m. and New York on November 19
+at 9:20 p.m. in two bound clock widgets. The wide daily and hourly forecast
+examples also show the larger labels and icons captured on this phone.
 
 Issue [#3048](https://github.com/WizardFactory/TodayWeather/issues/3048), 19 November
 2026. The current guide shows a physical Galaxy S21+ running Android 15
@@ -83,4 +95,4 @@ air widget selected Jeju at its new index 1; tapping the weather widget then
 selected Seoul at its new index 2. [Two installed widgets in the earlier layout](screenshots/android7-two-locations.png).
 
 Use the [native manual build instructions](../README.md#rebuild-and-verify) with
-this directory's JSON and PDF paths to rebuild and render the nine pages.
+this directory's JSON and PDF paths to rebuild and render the ten pages.

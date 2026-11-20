@@ -30,6 +30,7 @@ data class WeatherEntry(
     val weather: JsonObject, val loadedAt: Long, val temperatureUnit: String? = null,
     /** Original coordinate/address of a current-position request. Absent in older cache files. */
     val currentLocationKey: String? = null,
+    val timeZoneId: String? = null,
 )
 
 sealed interface LoadResult {
@@ -174,10 +175,14 @@ class WeatherRepository(
         return commits.withLock {
             if (!latest(key, request)) return@withLock LoadResult.Superseded
             val previous = cached(place)
-            val responseUnits = (parsed.getOrNull() as? JsonObject)?.get("units") as? JsonObject
+            val response = parsed.getOrNull() as? JsonObject
+            val responseUnits = response?.get("units") as? JsonObject
             val temperatureUnit = (responseUnits?.get("temperatureUnit") as? JsonPrimitive)?.contentOrNull ?: units.temperatureUnit
             val entry = WeatherEntry(merge(previous?.weather, city), clock(), temperatureUnit.takeIf { it == "C" || it == "F" },
-                currentLocationKey = location.takeIf { place.currentPosition })
+                currentLocationKey = location.takeIf { place.currentPosition }, timeZoneId = when (response?.text("source")) {
+                    "KMA" -> "Asia/Seoul"
+                    else -> knownZone((response?.get("timezone") as? JsonObject)?.text("timezoneId"))
+                })
             val updated = updatePlace(place, city)
             val newKey = key(updated)
             synchronized(this) {
@@ -202,7 +207,9 @@ class WeatherRepository(
         runCatching {
             val o = Json.parseToJsonElement(file.readText()) as JsonObject
             WeatherEntry(o["weather"] as JsonObject, (o["loadedAt"] as JsonPrimitive).content.toLong(),
-                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull, (o["currentLocationKey"] as? JsonPrimitive)?.contentOrNull)
+                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull, (o["currentLocationKey"] as? JsonPrimitive)?.contentOrNull,
+                if ("timeZoneId" in o) knownZone(o.text("timeZoneId"))
+                else "Asia/Seoul".takeIf { (o["weather"] as? JsonObject)?.text("source") == "KMA" })
         }.getOrNull()
     }
 
@@ -216,6 +223,7 @@ class WeatherRepository(
                 temp.writeText(buildJsonObject {
                     put("loadedAt", JsonPrimitive(entry.loadedAt))
                     put("weather", entry.weather)
+                    put("timeZoneId", JsonPrimitive(entry.timeZoneId))
                     entry.currentLocationKey?.let { put("currentLocationKey", JsonPrimitive(it)) }
                     entry.temperatureUnit?.let { put("temperatureUnit", JsonPrimitive(it)) }
                 }.toString())
@@ -274,6 +282,9 @@ class WeatherRepository(
             val hasLocation = own != null && own.lat != 0.0
             return if (!hasLocation && location != null && location.lat != 0.0) place.copy(location = location) else place
         }
+
+        private val zoneIds by lazy { java.util.TimeZone.getAvailableIDs().toHashSet() }
+        private fun knownZone(id: String?): String? = id?.takeIf { it in zoneIds }
 
         private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { truthy(it) }?.contentOrNull
 
