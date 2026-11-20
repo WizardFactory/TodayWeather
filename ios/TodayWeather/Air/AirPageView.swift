@@ -61,6 +61,7 @@ struct AirPageView: View {
     var actions = AirPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it).
     var scrolls = true
+    var trackingNotice: TrackingNotice?
     @Environment(\.shellInsets) private var shellInsets
 
     var body: some View {
@@ -81,6 +82,7 @@ struct AirPageView: View {
                 AirBlockView(block: block, content: content, theme: theme, actions: actions)
                 Spacer().frame(height: WeatherMetrics.gap)
             }
+            trackingNotice
         }
         Group {
             if scrolls {

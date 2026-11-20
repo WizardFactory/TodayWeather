@@ -6,6 +6,7 @@ on:
       # Sources of ios/tools/import_client_assets.py, so a change there shows up as a stale copy.
       - "client/www/img/**"
       - "client/www/locales/**"
+      - "client/resources/ios/tracking-settings/strings.json"
       - "client/www/data/town.js"
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/icon.png"
@@ -76,6 +77,7 @@ on:
       - "ios/**"
       - "client/www/img/**"
       - "client/www/locales/**"
+      - "client/resources/ios/tracking-settings/strings.json"
       - "client/www/data/town.js"
       - "client/www/fonts/MaterialIcons-Regular.ttf"
       - "client/tw.resources/icon.png"

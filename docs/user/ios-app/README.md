@@ -17,6 +17,8 @@ read-only requests to the legacy weather server; place search uses Google Places
 the capture time. Images are reduced to 720 pixels wide and a 256-color palette without replacing screen content. The
 banners are Google's test ads of a Debug build; whether one loaded varies between pages.
 
+The [tracking settings guide](tracking-settings/manual.pdf) shows where to read the tracking choice and open iOS Settings from the menu or the weather pages. Its [editable source](tracking-settings/manual.json) uses Korean controls on an iPhone 12 Pro Max.
+
 The [four main tabs](main-tabs/manual.pdf) supplement shows each tab with Seoul saved. Look for the short line above the selected tab. The line, outline icon and label share the theme’s accent color. The [editable source](main-tabs/manual.json) includes full-screen captures from an iPhone 16 simulator.
 
 The saved-place search and nationwide wind screenshots were refreshed on 18 November 2026 with fixture data. The wind screenshot uses the next larger text size.

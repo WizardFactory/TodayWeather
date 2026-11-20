@@ -73,6 +73,7 @@ struct WeatherPageView: View {
     var actions = WeatherPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it, as `HourlyChartFrame`).
     var scrolls = true
+    var trackingNotice: TrackingNotice?
     @Environment(\.shellInsets) private var shellInsets
     @Environment(\.sizeCategory) private var sizeCategory
 
@@ -93,6 +94,7 @@ struct WeatherPageView: View {
                 WeatherBlockView(block: block, content: content, theme: theme, actions: actions)
                 if block != .attribution { Spacer().frame(height: WeatherMetrics.gap) }
             }
+            trackingNotice
         }
         Group {
             if scrolls {

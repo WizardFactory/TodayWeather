@@ -62,3 +62,19 @@ Android manual (pages 24, 36, 37) and the native Android manual (all pages, reca
 
 - The EEA consent message and a device with tracking restricted (`restricted`): source and unit tests only.
 - The daily and air page ends of the iPhone run are kept locally only; the manual shows the hourly page.
+
+## Native iOS 2.0.0 (1), 2026-11-20
+
+On an iPhone 12 Pro Max running iOS 26.0.1, a Debug build of the native SwiftUI app used a separate development bundle and App Group, seeded weather and Google's public test advertising identifiers. This preserved the installed TodayWeather 1.1.2 app and its data. The test used the real iOS tracking choice for the separate bundle.
+
+1. With tracking denied, the menu read 추적 허용 설정 · 허용 안 함. Hourly, Daily and Air each displayed the notice and settings link at the end of their content.
+2. Opening the link from a weather page and from the menu brought Settings to TodayWeather's own page. The app-specific 추적 허용 switch was off on both visits.
+3. Enabling the switch and confirming the system dialog updated the menu to 추적 허용 설정 · 허용됨. On return the notices had disappeared from all three pages. The device logged the following SDK policy decision with the public test ad configuration.
+
+   ```json
+   {"component":"admob","operation":"request_policy","att_status":"authorized","personalized":true,"result":"applied"}
+   ```
+
+4. The test restored this bundle's tracking permission to off. The [native user guide](../../../user/ios-app/tracking-settings/manual.pdf) includes the menu in both states, the three page ends and the Settings shortcut destination.
+
+The iPhone 16 simulator on iOS 26.5 covered all five status values using an injected system choice, including hidden controls for restricted, not determined and unavailable. The hosted tests checked all four main tabs, both action paths, six bundled catalogs and existing ad consent and request-policy behavior. The on-device run used Korean, the default text size and a test ad configuration. A live EEA consent choice, production advertising delivery and App Store release of the native build were outside this run.

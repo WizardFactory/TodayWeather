@@ -292,7 +292,8 @@ final class WeatherScreens {
             titleAccessory: titleAccessory(content.page, colors: colors),
             actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
                                                onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
-            page: AnyView(WeatherPageView(content: content, theme: theme, actions: actions)
+            page: AnyView(WeatherPageView(content: content, theme: theme, actions: actions,
+                                          trackingNotice: trackingNotice(colors: WeatherColors.of(theme, daily: tab == .dailyforecast)))
                 .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
                 .accessibilityIdentifier("forecast-page-\(tab.rawValue)")))
     }
@@ -326,9 +327,15 @@ final class WeatherScreens {
             titleAccessory: accessory,
             actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
                                                onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
-            page: AnyView(AirPageView(content: content, theme: theme, actions: actions)
+            page: AnyView(AirPageView(content: content, theme: theme, actions: actions,
+                                      trackingNotice: trackingNotice(colors: AirColors.of(theme).page))
                 .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
                 .accessibilityIdentifier("air-page")))
+    }
+
+    private func trackingNotice(colors: WeatherColors) -> TrackingNotice? {
+        guard shell.trackingStatus == .denied else { return nil }
+        return TrackingNotice(catalog: catalog, colors: colors) { [weak shell] in shell?.chooseMenuRow(.trackingPermission) }
     }
 
     /// Inside the title: the current position's location glyph (`location_on` while location is allowed, else

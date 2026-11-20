@@ -100,6 +100,18 @@ struct ImportedClientAssetsTests {
         #expect(en.localizedString(forKey: "LOC_TODAY_THAN_YESTERDAY?", value: "<missing>", table: nil) != "<missing>")
     }
 
+    @Test func everyCatalogIncludesTheTrackingSettingsCopy() throws {
+        let keys = ["LOC_TRACKING_PERMISSION", "LOC_TRACKING_ALLOWED", "LOC_TRACKING_NOT_ALLOWED",
+                    "LOC_TRACKING_NOTICE", "LOC_TRACKING_OPEN_SETTINGS"]
+        for (code, _) in TWResources.catalogs {
+            let strings = try #require(TWResources.strings(catalog: code))
+            for key in keys {
+                let text = strings.localizedString(forKey: key, value: "<missing>", table: nil)
+                #expect(!text.isEmpty && text != "<missing>", "\(code) \(key)")
+            }
+        }
+    }
+
     @Test func townListIsAJSONList() throws {
         let url = try #require(TWResources.url("data/towns.json"))
         let towns = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [Any]

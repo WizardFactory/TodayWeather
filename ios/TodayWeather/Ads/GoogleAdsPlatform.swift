@@ -11,6 +11,8 @@ import UserMessagingPlatform
 @MainActor
 final class GoogleAdsPlatform: AdsPlatform {
     private let defaults: UserDefaults
+    /// Deliver the same system choice used by consent and ad requests to the visible privacy controls.
+    var onTrackingRead: ((TrackingStatus) -> Void)?
 
     /// `defaults` is where UMP keeps the TCF values (the standard `UserDefaults`).
     init(defaults: UserDefaults = .standard) {
@@ -78,7 +80,13 @@ final class GoogleAdsPlatform: AdsPlatform {
     /// The tracking status (never a prompt) and the TCF values UMP stored, read as the Cordova build's injected rule
     /// reads them.
     func privacyState() -> (TrackingStatus, AdConsentRecord) {
-        (TrackingStatus(raw: Int(ATTrackingManager.trackingAuthorizationStatus.rawValue)), AdConsentRecord.read(defaults))
+        let status = Self.trackingStatus
+        onTrackingRead?(status)
+        return (status, AdConsentRecord.read(defaults))
+    }
+
+    static var trackingStatus: TrackingStatus {
+        TrackingStatus(raw: Int(ATTrackingManager.trackingAuthorizationStatus.rawValue))
     }
 
     /// The error's domain and code only: UMP's messages are not logged.
