@@ -174,8 +174,9 @@ domains and overseas bulletins are outside this route's scope.
 The [provider adapter](../../server/lib/warnings/franceVigilance.js)
 shares one national map refresh among concurrent requests in each worker.
 Successful reads are reused for up to five minutes, bounded by product
-validity and a 16-hour age ceiling. Failed or regressing refreshes enter a
-one-minute cooldown and return unavailable coverage. No provider data enter
+validity and a 16-hour age ceiling. Failed or regressing refreshes and conflicting snapshot IDs with equal
+publication times enter a one-minute cooldown and return unavailable coverage.
+Malformed color and phenomenon codes leave the affected coverage unavailable. No provider data enter
 the normal weather cache. Météo-France requests have a bounded timeout and
 body size. The API key is attached to the Météo-France host only.
 

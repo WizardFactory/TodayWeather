@@ -21,7 +21,12 @@ function utc(value) {
 }
 function iso(value) { return new Date(value).toISOString(); }
 function array(value) { return Array.isArray(value) ? value : []; }
-function color(value) { return /^[1-4]$/.test(String(value)) ? Number(value) : 0; }
+function digit(value, maximum) {
+    const number = typeof value === 'string' && /^[1-9]$/.test(value) ? Number(value) : value;
+    return Number.isInteger(number) && number >= 1 && number <= maximum ? number : 0;
+}
+
+function color(value) { return digit(value, 4); }
 
 function product(body, type) {
     const p = body && body.product;
@@ -33,7 +38,7 @@ function product(body, type) {
 function parseSnapshot(body, bulletin, now) {
     const map = product(body, 'cdp_carte_externe');
     const meta = body && body.meta;
-    if (!map || !meta || !Array.isArray(map.periods)) {
+    if (!map || !meta || typeof meta.snapshot_id !== 'string' || !meta.snapshot_id || !Array.isArray(map.periods)) {
         return;
     }
     const effective = utc(meta.product_datetime);
@@ -59,9 +64,9 @@ function parseSnapshot(body, bulletin, now) {
     }
     const text = product(bulletin, 'cdp_textes');
     const textMeta = bulletin && bulletin.meta;
-    const paired = text && textMeta && meta.snapshot_id && textMeta.snapshot_id === meta.snapshot_id &&
+    const paired = text && textMeta && textMeta.snapshot_id === meta.snapshot_id &&
         utc(textMeta.product_datetime) === effective;
-    return {effective, issued, periods, validUntil, blocks: paired ? array(text.text_bloc_items) : []};
+    return {effective, issued, id: meta.snapshot_id, periods, validUntil, blocks: paired ? array(text.text_bloc_items) : []};
 }
 
 function findDescription(blocks, department, hazard, grade, start, end) {
@@ -72,7 +77,7 @@ function findDescription(blocks, department, hazard, grade, start, end) {
         }
         for (const group of array(block.bloc_items)) {
             for (const detail of array(group && group.text_items)) {
-                if (!detail || String(detail.hazard_code) !== hazard) {
+                if (!detail || digit(detail.hazard_code, 9) !== Number(hazard)) {
                     continue;
                 }
                 for (const term of array(detail.term_items)) {
@@ -117,9 +122,10 @@ function parsePeriod(snapshot, period, department, now) {
     const seen = new Set();
     let highest = 1;
     for (const item of domain.phenomenon_items) {
-        const hazard = String(item && item.phenomenon_id);
+        const code = digit(item && item.phenomenon_id, 9);
+        const hazard = String(code);
         const grade = color(item && item.phenomenon_max_color_id);
-        if (!/^[1-9]$/.test(hazard) || seen.has(hazard) || !grade || !Array.isArray(item.timelaps_items)) {
+        if (!code || seen.has(hazard) || !grade || !Array.isArray(item.timelaps_items)) {
             return;
         }
         seen.add(hazard);
@@ -151,6 +157,11 @@ function parsePeriod(snapshot, period, department, now) {
         }
     }
     return highest === color(domain.max_color_id) ? warnings : undefined;
+}
+
+function isOlderOrAmbiguous(candidate, previous) {
+    return previous && (candidate.effective < previous.effective || candidate.issued < previous.issued ||
+        (candidate.effective === previous.effective && candidate.issued === previous.issued && candidate.id !== previous.id));
 }
 
 function createVigilanceService(options) {
@@ -185,12 +196,12 @@ function createVigilanceService(options) {
         ]).then(([map, text]) => {
             const checked = now();
             const parsed = parseSnapshot(map, text, checked);
-            if (!parsed || (previous && (parsed.effective < previous.effective || parsed.issued < previous.issued))) {
+            if (!parsed || isOlderOrAmbiguous(parsed, previous)) {
                 cached = undefined;
                 nextAttempt = checked + retryMs;
                 return;
             }
-            previous = {effective: parsed.effective, issued: parsed.issued};
+            previous = {effective: parsed.effective, issued: parsed.issued, id: parsed.id};
             cached = {...parsed, freshUntil: Math.min(parsed.validUntil, checked + refreshMs)};
             return cached;
         }).finally(() => { pending = undefined; });

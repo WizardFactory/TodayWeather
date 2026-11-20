@@ -199,6 +199,14 @@ test('French Vigilance applies department membership, snapshot freshness and exa
         assert.equal(updated.json.warnings[0].description, undefined);
 
         now = Date.parse(at('15:17'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta.snapshot_id = 'ambiguous-clear';
+        Object.assign(publishedMap.product.periods[0].timelaps.domain_ids[0], {max_color_id: 1, phenomenon_items: []});
+        const conflictingClear = await get('48.85661,2.3522');
+        assert.equal(conflictingClear.json.sources[0].state, 'unavailable');
+        assert.deepEqual(conflictingClear.json.warnings, []);
+
+        now = Date.parse(at('15:19'));
         publishedMap = map;
         assert.equal((await get('48.85661,2.3522')).json.sources[0].state, 'unavailable');
         now = Date.parse(at('16:00'));
@@ -210,14 +218,49 @@ test('French Vigilance applies department membership, snapshot freshness and exa
         assert.equal(expiredInterval.json.sources[0].state, 'current');
         assert.deepEqual(expiredInterval.json.warnings, []);
         now = Date.parse(at('16:06'));
+        const verifiedClear = publishedMap;
+        publishedMap = clone(verifiedClear);
+        publishedMap.meta.snapshot_id = 'ambiguous-alert';
+        const ambiguous = publishedMap.product.periods[0].timelaps.domain_ids[0].phenomenon_items[0].timelaps_items;
+        ambiguous[0].end_time = at('17:00');
+        ambiguous[1].begin_time = at('17:00');
+        const conflictingAlert = await get('48.85661,2.3522');
+        assert.equal(conflictingAlert.json.sources[0].state, 'unavailable');
+        assert.deepEqual(conflictingAlert.json.warnings, []);
+
+        now = Date.parse(at('16:08'));
+        publishedMap = verifiedClear;
+        assert.equal((await get('48.85661,2.3522')).json.sources[0].state, 'current');
+
+        now = Date.parse(at('16:14'));
         publishedMap = clone(publishedMap);
-        publishedMap.meta = {product_datetime: at('16:05'), snapshot_id: 'snapshot-four'};
-        publishedMap.product.update_time = at('16:05');
+        publishedMap.meta = {product_datetime: at('16:13'), snapshot_id: 'snapshot-four'};
+        publishedMap.product.update_time = at('16:13');
         publishedMap.product.periods[0].timelaps.domain_ids[0].phenomenon_items[0].timelaps_items = [];
         const incomplete = await get('48.85661,2.3522');
         assert.equal(incomplete.json.sources[0].state, 'unavailable');
         assert.deepEqual(incomplete.json.warnings, []);
-        now = Date.parse(at('16:12'));
+        now = Date.parse(at('16:20'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta = {product_datetime: at('16:19'), snapshot_id: 'snapshot-five'};
+        publishedMap.product.update_time = at('16:19');
+        publishedMap.product.periods[0].timelaps.domain_ids[1].max_color_id = [1];
+        const malformedColor = await get('45.764,4.8357');
+        assert.equal(malformedColor.json.sources[0].state, 'unavailable');
+        assert.deepEqual(malformedColor.json.warnings, []);
+
+        now = Date.parse(at('16:26'));
+        publishedMap = clone(publishedMap);
+        publishedMap.meta = {product_datetime: at('16:25'), snapshot_id: 'snapshot-six'};
+        publishedMap.product.update_time = at('16:25');
+        const corruptFlood = publishedMap.product.periods[0].timelaps.domain_ids[2].phenomenon_items[0];
+        corruptFlood.phenomenon_id = ['4'];
+        corruptFlood.phenomenon_max_color_id = [3];
+        const malformedHazard = await get('48.8397,2.2397');
+        assert.equal(malformedHazard.json.sources[0].state, 'unavailable');
+        assert.deepEqual(malformedHazard.json.warnings, []);
+
+        now = Date.parse(at('16:32'));
         publishedMap = undefined;
         assert.equal((await get('48.85661,2.3522')).json.sources[0].state, 'unavailable');
         assert.equal((await get('48.8,')).status, 400);
