@@ -2,6 +2,8 @@ import {
   coordinates,
   DEFAULT_UNITS,
   normalizeWeather,
+  normalizeCoordinateAirForecast,
+  normalizeCoordinatePollenForecast,
   normalizeNation,
   normalizeWarnings,
   parseUnits,
@@ -134,7 +136,7 @@ export async function directApi(
   const route = url.pathname,
     mode = settings.mode;
   const units = parseUnits(Object.fromEntries(url.searchParams));
-  const upstream = async (p: string, options: { noStore?: boolean } = {}) => {
+  const upstream = async (p: string, options: { noStore?: boolean; singleAttempt?: boolean } = {}) => {
     // One delayed retry for gateway (502) or network failures; a CloudFront
     // 502 without CORS headers surfaces as a network failure.
     for (let attempt = 0; ; attempt++) {
@@ -156,7 +158,7 @@ export async function directApi(
       } catch {
         if (signal.aborted) throw signal.reason;
       }
-      if (attempt === 0 && (!response || response.status === 502)) {
+      if (attempt === 0 && !options.singleAttempt && (!response || response.status === 502)) {
         await response?.body?.cancel().catch(() => undefined);
         await wait(RETRY_DELAY_MS, signal);
         continue;
@@ -212,6 +214,14 @@ export async function directApi(
         noStore: true,
       }),
     );
+  }
+  if (mode === "live" && (route === "/weather/air-forecast" || route === "/weather/pollen-forecast")) {
+    const {lat, lon} = coordinates(url.searchParams.get("lat"), url.searchParams.get("lon"));
+    const type = route === "/weather/air-forecast" ? "air-forecast" : "pollen-forecast";
+    const data = await upstream(`/weather/v000903/coord/${lat},${lon}/${type}`, {
+      noStore: true, singleAttempt: true,
+    });
+    return type === "air-forecast" ? normalizeCoordinateAirForecast(data) : normalizeCoordinatePollenForecast(data);
   }
   if (route === "/weather" || route === "/locations/reverse") {
     const c = coordinates(

@@ -133,6 +133,9 @@ export type Weather = {
   hourlyDetails?: HourlyDetails[];
   daily: Point[];
   air: AirStation[];
+  coordinateAirForecastAvailable?: true;
+  coordinatePollenForecastAvailable?: true;
+  timeZoneId?: string;
   /** Provider wording only; no verified air observation time or inferred numeric grade. */
   airSummary?: string;
   availability: {
@@ -165,6 +168,97 @@ const record = (v: unknown): Row =>
 const array = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const str = (v: unknown): string =>
   typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+
+const AIR_FORECAST_POLLUTANTS = ["pm25", "pm10", "o3", "no2", "so2", "co"] as const;
+
+export type CoordinateAirForecast = {
+  source: "google" | "openweather";
+  attribution: string;
+  retrievedAt: string;
+  rows: {
+    at: string;
+    /** PM in µg/m³, gaseous pollutants in ppm. */
+    pollutants: Partial<Record<(typeof AIR_FORECAST_POLLUTANTS)[number], number>>;
+    indexes: { uaqi?: number; local?: { code: string; aqi: number }; owm?: number };
+  }[];
+};
+
+export function normalizeCoordinateAirForecast(
+  value: unknown,
+  now = Date.now(),
+): CoordinateAirForecast | undefined {
+  const data = record(value);
+  const { source, attribution, retrievedAt } = data;
+  if (
+    (source !== "google" && source !== "openweather") ||
+    typeof attribution !== "string" || !attribution.trim() ||
+    typeof retrievedAt !== "string"
+  ) return;
+  const age = now - Date.parse(retrievedAt);
+  if (!Number.isFinite(age) || age >= 60 * 60 * 1000 || age < -60_000) return;
+  const number = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+  const rows = array(data.rows).flatMap((entry) => {
+    const row = record(entry);
+    if (typeof row.at !== "string" || !(Date.parse(row.at) > now)) return [];
+    const pollutantData = record(row.pollutants);
+    const pollutants: CoordinateAirForecast["rows"][number]["pollutants"] = {};
+    for (const symbol of AIR_FORECAST_POLLUTANTS) {
+      const concentration = number(pollutantData[symbol]);
+      if (concentration !== undefined) pollutants[symbol] = concentration;
+    }
+    if (!Object.keys(pollutants).length) return [];
+    const indexData = record(row.indexes), local = record(indexData.local);
+    const indexes: CoordinateAirForecast["rows"][number]["indexes"] = {};
+    if (source === "google") {
+      const uaqi = number(indexData.uaqi), aqi = number(local.aqi);
+      if (uaqi !== undefined) indexes.uaqi = uaqi;
+      if (aqi !== undefined && typeof local.code === "string" && local.code)
+        indexes.local = { aqi, code: local.code };
+    } else {
+      const owm = number(indexData.owm);
+      if (owm !== undefined && owm >= 1 && owm <= 5 && Number.isInteger(owm)) indexes.owm = owm;
+    }
+    return [{ at: row.at, pollutants, indexes }];
+  });
+  return rows.length ? { source, attribution, retrievedAt, rows } : undefined;
+}
+type PollenEntry = { code: string; index?: number; inSeason?: boolean };
+export type CoordinatePollenForecast = {
+  source: "google";
+  attribution: string;
+  region: string;
+  retrievedAt: string;
+  days: { dateUtc: string; plants: PollenEntry[]; types: PollenEntry[] }[];
+};
+
+export function normalizeCoordinatePollenForecast(
+  value: unknown,
+  now = Date.now(),
+): CoordinatePollenForecast | undefined {
+  const data = record(value);
+  const { source, attribution, region, retrievedAt } = data;
+  if (source !== "google" || typeof attribution !== "string" || !attribution.trim() ||
+      typeof region !== "string" || !/^[A-Z]{2}$/.test(region) || typeof retrievedAt !== "string") return;
+  const age = now - Date.parse(retrievedAt);
+  if (!Number.isFinite(age) || age >= 86_400_000 || age < -60_000) return;
+  const pollenEntries = (value: unknown): PollenEntry[] => array(value).flatMap((item) => {
+    const { code, index, inSeason } = record(item);
+    if (typeof code !== "string" || !/^[A-Z][A-Z0-9_]{0,63}$/.test(code)) return [];
+    return [{
+      code,
+      ...(typeof index === "number" && Number.isInteger(index) && index >= 0 && index <= 5 ? { index } : {}),
+      ...(typeof inSeason === "boolean" ? { inSeason } : {}),
+    }];
+  });
+  const days = array(data.days).flatMap((item) => {
+    const row = record(item), dateUtc = row.dateUtc;
+    if (typeof dateUtc !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateUtc)) return [];
+    const plants = pollenEntries(row.plants), types = pollenEntries(row.types);
+    return plants.length || types.length ? [{dateUtc, plants, types}] : [];
+  });
+  return days.length ? {source, attribution, region, retrievedAt, days} : undefined;
+}
 
 export function coordinates(
   lat: unknown,
@@ -672,6 +766,11 @@ export function normalizeWeather(
       : {}),
     daily,
     air,
+    ...(!kma && raw.airForecastAvailable === true ? { coordinateAirForecastAvailable: true as const } : {}),
+    ...(raw.pollenForecastAvailable === true ? { coordinatePollenForecastAvailable: true as const } : {}),
+    ...(typeof record(raw.timezone).timezoneId === "string"
+      ? { timeZoneId: record(raw.timezone).timezoneId as string }
+      : {}),
     ...(typeof currentRaw.summaryAir === "string" &&
     currentRaw.summaryAir.trim()
       ? { airSummary: str(currentRaw.summaryAir).trim().slice(0, 500) }

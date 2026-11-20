@@ -207,7 +207,7 @@
    "caseSensitive": true,
    "layers": [
     {
-     "line": 352,
+     "line": 383,
      "kind": "route",
      "method": "GET",
      "path": "/weather/coord/:loc",
@@ -215,7 +215,7 @@
      "ignoreCase": false
     },
     {
-     "line": 353,
+     "line": 384,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000901|v000902|v000903)/coord/:loc",
@@ -223,7 +223,23 @@
      "ignoreCase": false
     },
     {
-     "line": 354,
+     "line": 386,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/:version(v000903)/coord/:loc/air-forecast",
+     "regex": "^\\/weather\\/(?:(v000903))\\/coord\\/(?:([^\\/]+?))\\/air-forecast\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 390,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/:version(v000903)/coord/:loc/pollen-forecast",
+     "regex": "^\\/weather\\/(?:(v000903))\\/coord\\/(?:([^\\/]+?))\\/pollen-forecast\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 393,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000903)/coord/:loc",
@@ -231,7 +247,7 @@
      "ignoreCase": false
     },
     {
-     "line": 355,
+     "line": 394,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000901|v000903)/addr/*",
@@ -239,7 +255,7 @@
      "ignoreCase": false
     },
     {
-     "line": 358,
+     "line": 397,
      "kind": "route",
      "method": "ALL",
      "path": "OWN_PATH",
@@ -247,7 +263,7 @@
      "ignoreCase": false
     },
     {
-     "line": 365,
+     "line": 404,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -1664,8 +1680,8 @@
   },
   {
    "path": "server/routes/gateway.js",
-   "commit": "5f8c5ddc73666b93ad1b90fcf78c4d4a903981b2",
-   "sha256": "90d772e4aa915928be66f3835db9e4db4ffcb266614016b9f903be24f49dba75"
+   "commit": "fa76b05273a267043568e2d9e28e1532db951ae3",
+   "sha256": "fb7217c62cb3b7f48188878f0d0084f823edb6b0c4e7f85fba06c059d8f03754"
   },
   {
    "path": "server/routes/v000001/index.js",

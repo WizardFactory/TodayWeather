@@ -75,6 +75,72 @@ class WeatherRepositoryTest {
     }
 
     @Test
+    fun readsCoordinateAirForecastThroughLiveWeatherWithoutPersistingIt() = runTest {
+        val dir = Files.createTempDirectory("coordinate-air").toFile()
+        try {
+            now = 1_800_000_000_000
+            val requests = mutableListOf<String>()
+            val liveBody = JsonObject(Json.parseToJsonElement(londonBody).jsonObject +
+                ("airForecastAvailable" to kotlinx.serialization.json.JsonPrimitive(true))).toString()
+            val repo = repository({ url, _ ->
+                requests += url
+                if (!url.endsWith("/air-forecast")) liveBody
+                else """{
+                    "source":"google", "attribution":"Source: Includes air quality data from Google",
+                    "retrievedAt":"2027-01-15T08:00:00.000Z",
+                    "rows":[{"at":"2027-01-15T09:00:00.000Z","pollutants":{"pm25":0},"indexes":{"uaqi":80}}]
+                }"""
+            }, dir)
+            val loaded = assertIs<LoadResult.Loaded>(repo.load(london, units, listOf("en"), true))
+            val air = repo.coordinateAirForecast(loaded, listOf("en"))
+            assertEquals("google", air?.source)
+            assertEquals("Europe/London", air?.timeZoneId)
+            assertEquals(0, air?.rows?.single()?.jsonObject?.get("pollutants")?.jsonObject?.get("pm25")?.jsonPrimitive?.int)
+            assertTrue(requests.last().endsWith("/weather/v000903/coord/51.51,-0.13/air-forecast"))
+            assertFalse(dir.listFiles()!!.single().readText().contains("airForecastAvailable"))
+            assertFalse(dir.listFiles()!!.single().readText().contains("retrievedAt"))
+            now += 3_600_000
+            assertNull(repo.coordinateAirForecast(loaded, listOf("en")))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun readsUnroundedPollenDateAndOptionalIndexFromLiveWeather() = runTest {
+        val dir = Files.createTempDirectory("coordinate-pollen").toFile()
+        try {
+            now = 1_800_000_000_000
+            val requests = mutableListOf<String>()
+            val liveBody = JsonObject(Json.parseToJsonElement(londonBody).jsonObject +
+                ("pollenForecastAvailable" to kotlinx.serialization.json.JsonPrimitive(true))).toString()
+            val repo = repository({ url, _ ->
+                requests += url
+                if (!url.endsWith("/pollen-forecast")) liveBody
+                else """{
+                    "source":"google", "attribution":"Google Maps", "region":"GB", "retrievedAt":"2027-01-15T08:00:00.000Z",
+                    "days":[{"dateUtc":"2027-01-15","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]
+                }"""
+            }, dir)
+            val loaded = assertIs<LoadResult.Loaded>(repo.load(london, units, listOf("ko"), true))
+            val pollen = repo.coordinatePollenForecast(loaded, listOf("ko"))
+            assertEquals("google", pollen?.source)
+            assertEquals("GB", pollen?.region)
+            val day = pollen?.days?.single()?.jsonObject
+            assertEquals("2027-01-15", day?.get("dateUtc")?.jsonPrimitive?.content)
+            val plants = day?.get("plants")?.jsonArray
+            assertNull(plants?.get(0)?.jsonObject?.get("index"))
+            assertEquals(0, plants?.get(1)?.jsonObject?.get("index")?.jsonPrimitive?.int)
+            assertTrue(requests.last().endsWith("/weather/v000903/coord/51.51,-0.13/pollen-forecast"))
+            assertFalse(dir.listFiles()!!.single().readText().contains("pollenForecastAvailable"))
+            now += 86_400_000
+            assertNull(repo.coordinatePollenForecast(loaded, listOf("ko")))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun widgetUsesOneWireRequestIncludingSlowRetryableResponses() = runBlocking {
         MockWebServer().use { server ->
             server.start()

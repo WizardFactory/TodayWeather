@@ -2,6 +2,10 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +15,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -31,7 +37,28 @@ data class WeatherEntry(
     /** Original coordinate/address of a current-position request. Absent in older cache files. */
     val currentLocationKey: String? = null,
     val timeZoneId: String? = null,
+    val coordinateAirForecastAvailable: Boolean = false,
+    val coordinatePollenForecastAvailable: Boolean = false,
 )
+
+/** An optional short-lived server1 response. Keep it out of the place weather cache. */
+data class CoordinateAirForecast(
+    val source: String,
+    val attribution: String,
+    val validUntilMillis: Long,
+    val timeZoneId: String?,
+    val rows: JsonArray,
+)
+
+/** Google day rows keep the reported UTC dates for the viewed coordinate. */
+data class CoordinatePollenForecast(
+    val attribution: String,
+    val region: String,
+    val days: JsonArray,
+    val validUntilMillis: Long,
+) {
+    val source: String get() = "google"
+}
 
 sealed interface LoadResult {
     /** The response applied to the place that requested it; [place] carries what the response changed in it. */
@@ -182,7 +209,10 @@ class WeatherRepository(
                 currentLocationKey = location.takeIf { place.currentPosition }, timeZoneId = when (response?.text("source")) {
                     "KMA" -> "Asia/Seoul"
                     else -> knownZone((response?.get("timezone") as? JsonObject)?.text("timezoneId"))
-                })
+                },
+                coordinateAirForecastAvailable = (response?.get("airForecastAvailable") as? JsonPrimitive)?.booleanOrNull == true,
+                coordinatePollenForecastAvailable = (response?.get("pollenForecastAvailable") as? JsonPrimitive)?.booleanOrNull == true,
+            )
             val updated = updatePlace(place, city)
             val newKey = key(updated)
             synchronized(this) {
@@ -196,6 +226,57 @@ class WeatherRepository(
             LoadResult.Loaded(key, entry, updated)
         }
     }
+
+    /** Load at the same coordinates as the displayed live weather, with one bounded request. */
+    suspend fun coordinateAirForecast(loaded: LoadResult.Loaded, languages: List<String>): CoordinateAirForecast? {
+        if (!loaded.entry.coordinateAirForecastAvailable) return null
+        val json = readCoordinateForecast(loaded, "air-forecast", languages) ?: return null
+        val source = json.text("source")?.takeIf { it == "google" || it == "openweather" } ?: return null
+        val attribution = json.text("attribution")?.takeIf(String::isNotBlank) ?: return null
+        val parser = forecastTimeParser()
+        val retrievedAt = parser.forecastTime(json.text("retrievedAt")) ?: return null
+        val now = clock()
+        if (now - retrievedAt !in -60_000L until 3_600_000L) return null
+        val received = json["rows"] as? JsonArray ?: return null
+        val futureRows = received.filter { row ->
+            val at = (row as? JsonObject)?.text("at")
+            (parser.forecastTime(at) ?: Long.MIN_VALUE) > now
+        }
+        if (futureRows.isEmpty()) return null
+        return CoordinateAirForecast(source, attribution, retrievedAt + 3_600_000L, loaded.entry.timeZoneId, JsonArray(futureRows))
+    }
+
+    suspend fun coordinatePollenForecast(loaded: LoadResult.Loaded, languages: List<String>): CoordinatePollenForecast? {
+        if (!loaded.entry.coordinatePollenForecastAvailable) return null
+        val json = readCoordinateForecast(loaded, "pollen-forecast", languages) ?: return null
+        if (json.text("source") != "google") return null
+        val attribution = json.text("attribution")?.takeIf(String::isNotBlank) ?: return null
+        val region = json.text("region")?.takeIf { it.matches(Regex("[A-Z]{2}")) } ?: return null
+        val days = (json["days"] as? JsonArray)?.takeIf { it.isNotEmpty() } ?: return null
+        val retrievedAt = forecastTimeParser().forecastTime(json.text("retrievedAt")) ?: return null
+        if (clock() - retrievedAt !in -60_000L until 86_400_000L) return null
+        return CoordinatePollenForecast(attribution, region, days, retrievedAt + 86_400_000L)
+    }
+
+    private suspend fun readCoordinateForecast(loaded: LoadResult.Loaded, product: String, languages: List<String>): JsonObject? {
+        val url = WeatherRequests.coordinateForecastUrl(baseUrl, loaded.place, product) ?: return null
+        val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages), "Cache-Control" to "no-store")
+        return try {
+            withTimeoutOrNull(2500) { NationSource.strictJson(http.getOnce(url, headers)) } as? JsonObject
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun forecastTimeParser() = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+        isLenient = false
+    }
+
+    private fun SimpleDateFormat.forecastTime(time: String?) =
+        time?.let { runCatching { parse(it)?.time }.getOrNull() }
 
     private fun latest(key: String, request: Long) = synchronized(this) { latestRequest[key] == request }
 
