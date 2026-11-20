@@ -16,7 +16,8 @@ protocol ForecastInterstitialCreative: AnyObject {
 
 @MainActor
 final class ForecastInterstitial {
-    typealias Load = (@escaping @MainActor (Result<any ForecastInterstitialCreative, any Error>) -> Void) -> Void
+    typealias Load = (@escaping @MainActor () -> Bool,
+                      @escaping @MainActor (Result<any ForecastInterstitialCreative, any Error>) -> Void) -> Void
     typealias Track = (String, [String: AnalyticsValue]) -> Void
 
     private let visits: ForecastAdVisits
@@ -32,12 +33,13 @@ final class ForecastInterstitial {
 
     convenience init(unitID: String, request: @escaping () -> Request, track: @escaping Track) {
         let folder = URL.applicationSupportDirectory.appendingPathComponent("ForecastInterstitial", isDirectory: true)
-        self.init(visits: ForecastAdVisits(directory: folder), load: { done in
-            InterstitialAd.load(with: unitID, request: request()) { ad, error in
-                Task { @MainActor in
-                    if let ad { done(.success(SDKForecastInterstitial(ad: ad))) }
-                    else { done(.failure(error ?? CocoaError(.coderValueNotFound))) }
-                }
+        self.init(visits: ForecastAdVisits(directory: folder), load: { stillAllowed, done in
+            Task { @MainActor in
+                guard stillAllowed() else { return }
+                do {
+                    let ad = try await InterstitialAd.load(with: unitID, request: request())
+                    done(.success(SDKForecastInterstitial(ad: ad)))
+                } catch { done(.failure(error)) }
             }
         }, root: {
             // A tap caught while an alert, consent form or another scene is on top does not interrupt it.
@@ -126,7 +128,7 @@ final class ForecastInterstitial {
         let id = UUID()
         loading = id
         lifecycle("request")
-        load { [weak self] result in
+        load({ [weak self] in self?.loading == id }) { [weak self] result in
             guard let self, loading == id else { return }
             loading = nil
             switch result {

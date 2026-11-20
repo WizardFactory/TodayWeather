@@ -27,7 +27,7 @@ struct ForecastInterstitialTests {
         var load: (@MainActor (Result<any ForecastInterstitialCreative, any Error>) -> Void)?
         var events: [String] = []
         var destinations: [ShellTab] = []
-        let ads = ForecastInterstitial(visits: visits, load: { load = $0 },
+        let ads = ForecastInterstitial(visits: visits, load: { _, done in load = done },
                                        root: { foreground ? root : nil }, uptime: { now }, track: { name, params in
             guard params["ad_format"] == .text("interstitial") else { Issue.record("wrong format"); return }
             if case .text(let action) = params["action"] { events.append(action) }
@@ -83,7 +83,7 @@ struct ForecastInterstitialTests {
         let visits = ForecastAdVisits(directory: directory, localDay: { 20261120 }, draw: { 0 })
         var arrivals = 0
         let creative = Creative()
-        let ads = ForecastInterstitial(visits: visits, load: { $0(.success(creative)) },
+        let ads = ForecastInterstitial(visits: visits, load: { _, done in done(.success(creative)) },
                                        root: { UIViewController() }, uptime: { 0 }, track: { _, _ in })
         ads.markVisible(.dailyforecast)
         ads.setEnabled(true)
