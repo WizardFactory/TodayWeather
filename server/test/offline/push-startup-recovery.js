@@ -35,7 +35,13 @@ function installFixture() {
     };
     const runtime = {
         resolve: (location, record) => require('../../lib/pushCoordinator/region').resolveRegion(origin, location, record, 250),
-        alarm: async () => ({ title: 'Fixture', text: 'Due now' }),
+        alarm: async record => {
+            if (process.env.FIXTURE_EXPECT_COMBINED === 'true') {
+                assert.equal(record.town.first, '전남광주통합특별시');
+                assert.equal(record.town.second, record.cityIndex === 1 ? '서구' : '무안군');
+            }
+            return { title: 'Fixture', text: 'Due now' };
+        },
         send: async () => { process.send('send'); }
     };
     const startup = require('../../lib/pushCoordinator/startup');
@@ -76,6 +82,7 @@ async function rehearse(mode) {
     const delayed = mode === 'delayed';
     const forbidden = mode === 'forbidden';
     const legacyTown = mode === 'legacy-town';
+    const combinedProvince = mode === 'combined-province';
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw3066-'));
     const socket = path.join(dir, 'push.sock');
     const saved = new Map();
@@ -109,6 +116,12 @@ async function rehearse(mode) {
             }
         } else {
             if (req.url.endsWith('/1,127')) goodLookups++;
+            if (combinedProvince) {
+                const district = req.url.endsWith('/1,127') ? '서구' : '무안군';
+                res.end(JSON.stringify({ country: 'KR',
+                    kmaAddress: { name1: '전남광주통합특별시', name2: district } }));
+                return;
+            }
             res.end(JSON.stringify(req.url.endsWith('/1,127') ? { country: 'US' } :
                 { country: 'KR', kmaAddress: { name1: '서울특별시', name2: '강남구' } }));
         }
@@ -118,7 +131,8 @@ async function rehearse(mode) {
     const child = fork(path.resolve(__dirname, '../../bin/push-coordinator'), [], {
         execArgv: ['--require', __filename], silent: true,
         env: Object.assign({}, process.env, { FIXTURE_DIR: dir, FIXTURE_PORT: origin.address().port,
-            PUSH_STORE: 's3', PUSH_SOCKET_PATH: socket, WARNING_PUSH_ENABLED: 'false' })
+            PUSH_STORE: 's3', PUSH_SOCKET_PATH: socket, WARNING_PUSH_ENABLED: 'false',
+            FIXTURE_EXPECT_COMBINED: String(combinedProvince) })
     });
     const exited = once(child, 'exit');
     child.on('message', event => { if (event === 'send') sends++; });
@@ -184,6 +198,10 @@ async function rehearse(mode) {
         console.log('Legacy town-only record: both due alarms delivered, old and new unmapped records removable, malformed write rejected');
         return;
     }
+    if (combinedProvince) {
+        console.log('Combined province: socket ready, two due alarms preserve the weather town, upsert/delete OK');
+        return;
+    }
     console.log(delayed ? 'Delayed origin and region: 503 -> 200, same PID, two restored records, upsert/delete OK'
         : 'Healthy startup: first probe succeeded, two restored records, upsert/delete OK');
 }
@@ -218,7 +236,13 @@ async function checkRegionResponses() {
 }
 
 if (require.main === module) {
-    checkRegionResponses().then(() => rehearse('delayed')).then(() => rehearse('healthy')).then(() => rehearse('forbidden')).then(() => rehearse('legacy-town')).catch(err => { console.error(err); process.exitCode = 1; });
+    checkRegionResponses()
+        .then(() => rehearse('delayed'))
+        .then(() => rehearse('healthy'))
+        .then(() => rehearse('forbidden'))
+        .then(() => rehearse('legacy-town'))
+        .then(() => rehearse('combined-province'))
+        .catch(err => { console.error(err); process.exitCode = 1; });
 } else {
     installFixture();
 }

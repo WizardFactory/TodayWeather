@@ -70,7 +70,8 @@ function memoryModel(statics) {
 
 var Situation = load('models/modelKmaSpecialWeatherSituation.js', {mongoose: fakeMongoose});
 load('models/modelKmaSpecialWeatherZone.js', {mongoose: fakeMongoose});
-var zones = load('lib/kmaWarningZones.js', {fs: fs, path: path});
+var zones = load('lib/kmaWarningZones.js', {fs: fs, path: path,
+    './gwangjuJeonnam': require('../../lib/gwangjuJeonnam')});
 var keyBox = {dongnae_forecast_keys: JSON.stringify(['NODE10%2BKEYxxxxxxxxxxxxxxxxxxxx'])};
 var Requester = load('lib/kmaWarningRequester.js', {request: function () {}, '../config/config': {keyString: keyBox}, './dataGoKrRejection': require('../../lib/dataGoKrRejection')});
 
