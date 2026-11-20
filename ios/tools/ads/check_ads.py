@@ -1,21 +1,5 @@
 #!/usr/bin/env python3
-"""Reads the consoles and measurement databases of run-ads-check.sh (IN-15, #2964) and writes <out>/summary.json.
-
-    check_ads.py <out-dir>
-
-Checks:
-- launch 1 (ATT not determined, UMP's explainer open): no request_policy line and no banner request;
-- launch 2 (ATT denied): the Ads SDK started, request_policy denied and not personalized before the first banner
-  request, a test banner loaded;
-- launch 3 (ATT allowed): request_policy authorized and personalized before the first banner request; the banner's
-  outcome is recorded (a personalized request of Google's test unit can end in no fill, code 1);
-- every launch ran with the Analytics SDK started and its debug-level messages captured (the unified log each launch
-  streams at debug level, <name>.oslog), so the event checks read the SDK's debug log (CODEX-IN15-2);
-- analytics: no "Logging event:" line of the Analytics SDK in launches 1 and 2 and no event in the SDK's database after them; after the
-  stored grant (launch 3) the debug log shows screen_view logged, so the first checks are not vacuous. The SDK stores
-  screen_view as "_vs" (recorded, not sufficient alone).
-Exit 1 when a check fails.
-"""
+"""Verify UMP request ordering, SDK outcomes and analytics consent in the three-launch simulator smoke."""
 import json
 import sqlite3
 import sys
@@ -56,24 +40,26 @@ def main():
         return next((i for i, l in enumerate(log) if text in l), None)
 
     first = logs["1-explainer"]
-    check("launch 1: no request_policy and no banner request while UMP's explainer is open",
-          find(first, '"operation":"request_policy"') is None and find(first, "banner request") is None)
+    formats = ("native", "interstitial")
+    check("launch 1: neither format may request during the UMP explainer",
+          find(first, '"operation":"request_policy"') is None
+          and all(find(first, f"{fmt} request") is None for fmt in formats))
 
     for name, status, personalized in (("2-denied", "denied", "false"), ("3-allowed-opted-in", "authorized", "true")):
-        log = logs[name]
+        # Use one chronological stream for ordering. The console and unified log can duplicate events differently.
+        log = lines(out / f"{name}.oslog")
         policy = find(log, '"operation":"request_policy"')
-        request = find(log, "banner request")
-        line = log[policy].split("[admob] ")[-1].strip() if policy is not None else None
+        expected = ('{"component":"admob","operation":"request_policy","att_status":"%s","personalized":%s,'
+                    '"result":"applied"}' % (status, personalized))
         check(f"{name}: Ads SDK started", find(log, "admob initialize ready") is not None)
-        check(f"{name}: request_policy {status}, personalized {personalized}, before the first banner request",
-              line == ('{"component":"admob","operation":"request_policy","att_status":"%s","personalized":%s,'
-                       '"result":"applied"}' % (status, personalized)) and request is not None and policy < request,
-              {"line": line, "policy_index": policy, "first_request_index": request})
-        outcome = [l.strip() for l in log if "banner loaded" in l or '"operation":"banner_load"' in l]
-        if name == "2-denied":
-            check(f"{name}: a test banner loaded", any("banner loaded" in l for l in outcome), outcome[:2])
-        else:
-            check(f"{name}: the banner request was answered", outcome, outcome[:2])
+        check(f"{name}: live consent policy", policy is not None and expected in log[policy])
+        requests = {fmt: find(log, f"{fmt} request") for fmt in formats}
+        check(f"{name}: saved places requests a native test ad after the policy; no earlier interstitial",
+              policy is not None and requests["native"] is not None
+              and all(index > policy for index in requests.values() if index is not None), requests)
+        outcome = next((event for event in ("loaded", "failed") if find(log, f"native {event}") is not None), None)
+        check(f"{name}: native SDK request received an outcome", outcome is not None, outcome)
+        check(f"{name}: no fixed banner is requested", find(log, "banner request") is None)
 
     # The SDK logs each event ("Logging event:") at the debug level of the unified log. A launch counts only when its
     # stream holds the SDK's start and at least one of its debug-level messages, so an empty event list is a reading
