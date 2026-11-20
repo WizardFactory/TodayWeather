@@ -70,6 +70,37 @@ extension HostedShellTests {
             #expect(!inventory.cache.hasSpare)
         }
 
+        @Test func twoWindowsCannotMountTheSameRegisteredView() async throws {
+            let inventory = CachedInventory(ForecastNativeCache())
+            let hourly = try #require(LayoutInventory().assignCreative(to: .forecast))
+            inventory.cache.store(hourly)
+            func window(_ shell: ShellModel) throws -> HostedView {
+                try HostedView(ShellFrame(model: shell, insets: PlacesScreenshotTests.insets, content: { tab in
+                    TabContent(page: AnyView(ScrollView { ForecastNativeSlot(tab: tab, theme: .light) }))
+                }).environment(\.forecastNativeAds, inventory), size: CGSize(width: 393, height: 798))
+            }
+            let first = ShellFixture.shell()
+            let second = ShellFixture.shell()
+            first.select(.forecast)
+            second.select(.forecast)
+            let firstWindow = try window(first)
+            defer { firstWindow.close() }
+            try await firstWindow.settle()
+            let secondWindow = try window(second)
+            defer { secondWindow.close() }
+            try await secondWindow.settle()
+            #expect(firstWindow.elements().contains { $0 === hourly.registeredView })
+            #expect(!secondWindow.elements().contains { $0 is ForecastCreativeView })
+            first.tapTab(.air)
+            try await firstWindow.settle()
+            #expect(!secondWindow.elements().contains { $0 is ForecastCreativeView })
+            second.tapTab(.dailyforecast)
+            try await secondWindow.settle()
+            second.tapTab(.forecast)
+            try await secondWindow.settle()
+            #expect(secondWindow.elements().contains { $0 === hourly.registeredView })
+        }
+
         @Test func rapidTabVisitsCoalesceLoadsAndBackOffAfterNoFill() async throws {
             var now = ContinuousClock.now
             var loaders: [AdLoader] = []
@@ -96,6 +127,31 @@ extension HostedShellTests {
             ads.setEnabled(false)
             await Task.yield()
             #expect(loaders.count == 2, "revocation cancels queued demand")
+        }
+
+        @Test func foregroundEvictsTheVisibleCardWhileItsReplacementRequestIsPending() async throws {
+            var now = ContinuousClock.now
+            var loaders: [AdLoader] = []
+            let ads = ForecastNativeAds(unitID: AdsSettings.testNativeUnit, request: { Request() },
+                                        now: { now }, send: { loader, _ in loaders.append(loader) },
+                                        track: { _, _ in true })
+            ads.setEnabled(true)
+            try #require(await AirLiveTests.wait(3) { !loaders.isEmpty })
+            ads.adLoader(loaders[0], didReceive: NativeAd())
+            let shell = ShellFixture.shell()
+            shell.select(.forecast)
+            let hosted = try HostedView(ShellFrame(model: shell, insets: PlacesScreenshotTests.insets, content: { tab in
+                TabContent(page: AnyView(ScrollView { ForecastNativeSlot(tab: tab, theme: .light) }))
+            }).environment(\.forecastNativeAds, ads), size: CGSize(width: 393, height: 798))
+            defer { hosted.close() }
+            try await hosted.settle()
+            try #require(hosted.elements().contains { $0 is ForecastCreativeView })
+            try #require(loaders.count == 2)
+            now += .seconds(55 * 60)
+            ads.prepareSpare()
+            try await hosted.settle()
+            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
+            #expect(loaders.count == 2)
         }
 
         @Test func cachedCardsExpireFromLoadTimeAndConsentClearsEveryPlacement() throws {

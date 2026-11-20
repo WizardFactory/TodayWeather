@@ -108,7 +108,8 @@ final class ForecastNativeAds: NSObject, ForecastNativeInventory, NativeAdLoader
 
     /// Coalesce demand and keep SDK construction off the synchronous view/navigation path.
     func prepareSpare() {
-        guard enabled, !queued, loader == nil, cache.needsSpare else { return }
+        // Evict expired visible cards even when an outstanding request already covers this demand.
+        guard enabled, cache.needsSpare, !queued, loader == nil else { return }
         if let retryAfter, now() < retryAfter { return }
         queued = true
         let revision = generation
@@ -182,6 +183,8 @@ struct ForecastNativeVisitHost: ViewModifier {
 
     func body(content: Content) -> some View {
         content.environment(\.nativePlacement, placement)
+            .onAppear { placement.resume() }
+            .onDisappear { placement.suspend() }
             .onChange(of: ads?.generation) { placement.discardCreative() }
     }
 }
@@ -192,23 +195,42 @@ final class ForecastNativePlacement {
     private weak var owner: (any ForecastNativeInventory)?
     private var generation: Int?
     private var tab: ShellTab?
+    private weak var selectedCreative: ForecastCreative?
+    private var hasClaim = false
 
     func reached(_ ads: (any ForecastNativeInventory)?, tab: ShellTab) {
         guard visit.decision == nil else { return }
         let creative = ads?.assignCreative(to: tab)
-        guard visit.reached(hasCreative: creative != nil), let ads else { return }
+        guard visit.reached(hasCreative: creative?.claim(for: self) == true), let ads else { return }
         owner = ads
         generation = ads.generation
         self.tab = tab
+        selectedCreative = creative
+        hasClaim = true
     }
 
     func creative(for ads: (any ForecastNativeInventory)?) -> ForecastCreative? {
-        guard let ads, ads.enabled, ads === owner, ads.generation == generation else { return nil }
-        guard let tab else { return nil }
-        return ads.assignedCreative(for: tab)
+        guard hasClaim, let ads, ads.enabled, ads === owner, ads.generation == generation else { return nil }
+        guard let tab, let creative = ads.assignedCreative(for: tab), creative.placement === self else { return nil }
+        return creative
     }
 
-    func discardCreative() { tab = nil }
+    func suspend() {
+        selectedCreative?.release(from: self)
+        hasClaim = false
+    }
+
+    func resume() {
+        guard !hasClaim, let tab, let owner, owner.enabled, owner.generation == generation,
+              let creative = owner.assignedCreative(for: tab), creative === selectedCreative else { return }
+        hasClaim = creative.claim(for: self)
+    }
+
+    func discardCreative() {
+        suspend()
+        selectedCreative = nil
+        tab = nil
+    }
 }
 
 /// A zero-height marker can measure where an omitted slot would have appeared without reserving margins.
