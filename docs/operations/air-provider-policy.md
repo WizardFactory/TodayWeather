@@ -67,3 +67,25 @@ Current air is rendered using the request's airUnit and response timezone, with 
 `source` remains the provider id. Accepted metadata includes optional plain-text `attribution`: DSF `current.arpltn`, `airInfo` and `airInfo.last`; `/ww` keeps raw `airSource`/`airAttribution`. Shared domestic arpltn also carries attribution when supplied. The client owns source labels/links and safe text display of the WAQI/original-agency attribution. This server contract does not implement client UI or approve provider terms; confirm display and operator licensing readiness before deployment.
 
 D23 response hint: when the overseas air deadline expires with work outstanding, both DSF and `/ww` add top-level `airStatus: {"state":"pending","retryAfterSeconds":3}`. It describes the cutoff state and suggests a delay; the client decides whether to request again. It guarantees neither success nor completion within three seconds. Early success and terminal no-air failures omit it. The hint is request-local, never cached, and late callbacks cannot alter it. No automatic retry or HTTP Retry-After is added.
+
+## Coordinate hourly forecast
+
+`AIR_COORDINATE_FORECAST_ENABLED` defaults to `false`. It enables the additive
+server1 v000903 coordinate air-forecast route. Google requests 24 forecast
+hours in one request. If Google returns no usable rows or admission fails,
+OpenWeather can supply up to 96 hours. This product reserves free monthly
+capacity in the existing Google or OpenWeather counters before transport.
+Reservation failure denies that provider. It never uses paid capacity,
+including when the existing observation paid phase is enabled. OpenWeather
+uses the existing approximate shared minute policy. Failures count toward the
+monthly cap and auth/quota errors set the shared down marker.
+
+Forecast payloads use `no-store` and stay out of server databases and client
+weather snapshots. The client readers check the optional product freshness.
+Google allows hourly air forecast reuse for up to one hour under its [service
+terms](https://cloud.google.com/maps-platform/terms/maps-service-terms) and
+[EEA terms](https://cloud.google.com/terms/maps-platform/eea/maps-service-terms).
+Apply [Google branding and required source text](https://developers.google.com/maps/documentation/air-quality/policies)
+or OpenWeather attribution where a display consumes this data. The default
+off setting can be reapplied to withdraw the additional route. This change
+does not set any production key, quota or deployment value.

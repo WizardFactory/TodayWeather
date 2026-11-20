@@ -87,6 +87,72 @@ See the [selection sequence](diagrams/air-forecast-selection.html),
 
 ## Public API and implemented backend
 
+### Coordinate air-quality forecast (#3072)
+
+When enabled, server1's v000903 coordinate weather response advertises
+`airForecastAvailable: true` for a non-Korean viewed location. The ordinary
+weather lookup makes no additional forecast call. WebApp (desktop and PWA) and
+the native repositories can then request the same viewed coordinates via
+`GET /weather/v000903/coord/{lat},{lon}/air-forecast`. Keep the result outside
+the saved place weather snapshot. The device country has no bearing on
+forecast applicability. The Korean station and stored forecast rules above
+continue to serve Korean coordinates.
+
+The separate response sends `Cache-Control: no-store` and either
+`{source, attribution, retrievedAt, rows}` or `{available: false}`. Each
+`row.at` is an ISO UTC forecast-valid hour. The forecast-only `pollutants`
+object holds PM2.5 and PM10 in µg/m³ and available gases in ppm. Google's
+universal and named local scales and OpenWeather's 1–5 index are represented
+separately under `indexes`. Format UTC values in the viewed weather's IANA
+time zone where known. A failed optional read leaves current weather and its
+station observation available.
+
+The read-only 2026-11-20 AWS check reported `weather/*` targeted directly to
+the server1 spot origin, `MinTTL=0`, and no cookie forwarding. The optional
+data use a distinct path, so their cache key cannot alias ordinary weather.
+The default server configuration leaves this product disabled. See the
+[request sequence](diagrams/coordinate-air-forecast.html),
+[editable source](diagrams/coordinate-air-forecast.json), and
+[provider budget and rollout](../operations/air-provider-policy.md#coordinate-hourly-forecast).
+
+### Coordinate pollen forecast (#3073)
+
+When `POLLEN_MONTHLY_REQUEST_CAP` is greater than zero, server1 can advertise
+`pollenForecastAvailable: true` on an ordinary v000903 coordinate weather reply.
+The follow-up `GET /weather/v000903/coord/{lat},{lon}/pollen-forecast` resolves the
+viewed coordinate's ISO country before a provider request. The operation uses
+the existing `GOOGLE_SECRET_KEY` with the Pollen API enabled. The allowance
+belongs to the separate Pollen SKU.
+
+The optional response uses `Cache-Control: no-store` and returns `source`,
+`attribution`, `region`, `retrievedAt`, and `days`. Each `day.date` is a civil
+date at the viewed location. Its `plants` and `types` have their source codes,
+optional season flags and optional index values 0 through 5. Missing indices
+stay absent. A Google index, measured pollen concentration and Korean KMA
+risk grade are separate. Colombia and Uruguay are absent from Google coverage.
+The Korean Google product supplies grass where available. Existing KMA
+oak, pine and weed products keep their current route, dates and scale.
+[Google's country and species table](https://developers.google.com/maps/documentation/pollen/coverage)
+
+WebApp (PWA and desktop) and the native weather repositories make the
+optional read independently of saved weather. Keep provider data out of disk
+weather snapshots and reject payloads aged 24 hours or more. An unavailable
+response is `{available: false}`; the normal forecast remains readable. The
+default cap is zero (disabled). It accepts at most 4,750 reservations per UTC
+calendar month, leaving headroom below the documented 5,000 monthly free
+usage threshold. The shared Mongo collection stores only per-month counts
+for `pollen:google:m:YYYY-MM`. A missing or invalid reservation denies the
+provider request. Normal weather and other Google billing totals have their
+own paths. External calls by other consumers of the same Google project are
+outside this local counter. [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing)
+
+Both the [standard service terms](https://cloud.google.com/maps-platform/terms/maps-service-terms)
+and the [EEA service terms](https://cloud.google.com/terms/maps-platform/eea/maps-service-terms)
+give future pollen forecasts a 24-hour storage limit. Retain [Google Maps
+attribution](https://developers.google.com/maps/documentation/pollen/policies)
+at display time. See the [request sequence](diagrams/coordinate-pollen-forecast.html)
+and its [editable source](diagrams/coordinate-pollen-forecast.json).
+
 ### Current public-origin check, 2026-11-12 (#2937)
 
 A read-only recheck found CloudFront `weather/*` and `geocode/*` targeting

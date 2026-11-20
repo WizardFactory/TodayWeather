@@ -82,6 +82,8 @@ jobs:
           node server/test/offline/kma-narrative.test.js
           node server/test/offline/gateway-geocoder.test.js
           node server/test/offline/gateway-route.test.js
+          node server/test/offline/air-coordinate-forecast.test.js
+          node server/test/offline/google-pollen-forecast.test.js
           node server/test/offline/gateway-callers.test.js
           node server/test/offline/airkorea-image.test.js
           node server/test/offline/airkorea-rejections.test.js

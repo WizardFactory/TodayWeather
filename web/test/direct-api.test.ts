@@ -68,6 +68,59 @@ describe("static browser API transport", () => {
       "/geocode/v000903/coord/37.567,126.978",
     );
   });
+  it("reads advertised coordinate air separately and preserves the original AQI scale", async () => {
+    const { api, fetchCoordinateAirForecast } = await import("../src/api");
+    const retrievedAt = new Date().toISOString();
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    fetcher
+      .mockResolvedValueOnce(json({
+        ...world.response, airForecastAvailable: true,
+        location: { lat: -34.901, long: -56.165 },
+        timezone: { timezoneId: "America/Montevideo" },
+      }))
+      .mockResolvedValueOnce(json({
+        source: "openweather", attribution: "OpenWeather", retrievedAt,
+        rows: [{ at: future, pollutants: { pm25: 0, pm10: 12, o3: 0.03 }, indexes: { owm: 2, uaqi: 23 } }],
+      }));
+    const weather = await api<Weather>("/weather?lat=-34.901&lon=-56.165&airUnit=airnow");
+    const signal = new AbortController().signal;
+    expect(weather.timeZoneId).toBe("America/Montevideo");
+    expect(await fetchCoordinateAirForecast(weather, signal)).toEqual({
+      source: "openweather", attribution: "OpenWeather", retrievedAt,
+      rows: [{ at: future, pollutants: { pm25: 0, pm10: 12, o3: 0.03 }, indexes: { owm: 2 } }],
+    });
+    expect(fetcher.mock.calls[1][0]).toContain("/weather/v000903/coord/-34.901,-56.165/air-forecast");
+    expect(fetcher.mock.calls[1][1].cache).toBe("no-store");
+    await expect(fetchCoordinateAirForecast({ ...weather, mode: "demo" }, signal)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    fetcher.mockRejectedValueOnce(new TypeError("Offline"));
+    await expect(fetchCoordinateAirForecast(weather, signal)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(weather.current.temperature).not.toBeNull();
+  });
+  it("reads a viewed pollen date without fabricating missing species levels", async () => {
+    const { api, fetchCoordinatePollenForecast } = await import("../src/api");
+    const retrievedAt = new Date().toISOString();
+    fetcher
+      .mockResolvedValueOnce(json({
+        ...world.response, pollenForecastAvailable: true,
+        location: { lat: 35.681, long: 139.767 }, country: "JP",
+      }))
+      .mockResolvedValueOnce(json({
+        source: "google", attribution: "Google Maps", region: "JP", retrievedAt,
+        days: [{date: "2026-11-21", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
+      }));
+    const weather = await api<Weather>("/weather?lat=35.681&lon=139.767&airUnit=airnow");
+    const signal = new AbortController().signal;
+    expect(await fetchCoordinatePollenForecast(weather, signal)).toEqual({
+      source: "google", attribution: "Google Maps", region: "JP", retrievedAt,
+      days: [{date: "2026-11-21", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
+    });
+    expect(fetcher.mock.calls[1][0]).toContain("/weather/v000903/coord/35.681,139.767/pollen-forecast");
+    expect(fetcher.mock.calls[1][1].cache).toBe("no-store");
+    await expect(fetchCoordinatePollenForecast({ ...weather, coordinatePollenForecastAvailable: undefined }, signal)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it("rejects invalid input and notification writes locally", async () => {
     fetcher.mockResolvedValue(json({}));
     const { api } = await import("../src/api");
