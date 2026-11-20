@@ -154,7 +154,7 @@ public final class AdsConsent {
         consentAnswered = true
         ready()
         log("admob consent ump_error retain_gate not_ready")
-        track("ad_lifecycle", ["action": .text("consent_failed"), "ad_format": .text("banner")])
+        track("ad_lifecycle", ["action": .text("consent_failed"), "ad_format": .text("consent")])
         if releaseAds || fellBack || error.isConsentDecision { return }
         fellBack = true
         // `useCustomConsentManager`: the test-unit build starts the SDK without UMP.

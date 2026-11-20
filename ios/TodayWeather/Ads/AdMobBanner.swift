@@ -40,7 +40,7 @@ final class AdMobBanner: NSObject, BannerAdapter, BannerViewDelegate {
         self.onFailed = onFailed
         view = banner
         lifecycle("request")
-        banner.load(request())
+        banner.load(platform.makeRequest())
     }
 
     func destroy() {
@@ -49,20 +49,6 @@ final class AdMobBanner: NSObject, BannerAdapter, BannerViewDelegate {
         view?.delegate = nil
         view?.removeFromSuperview()
         view = nil
-    }
-
-    /// The plugin's `setAdRequest` with the #2945 rule.
-    func request() -> Request {
-        let (status, consent) = platform.privacyState()
-        let personalized = AdRequestRule.personalized(status, consent)
-        MobileAds.shared.requestConfiguration.setPublisherFirstPartyIDEnabled(personalized)
-        let request = Request()
-        if !personalized {
-            let extras = Extras()
-            extras.additionalParameters = AdRequestRule.nonPersonalizedExtras
-            request.register(extras)
-        }
-        return request
     }
 
     // The delegate's calls come on the main actor (`NS_SWIFT_UI_ACTOR`); a banner replaced since is ignored.

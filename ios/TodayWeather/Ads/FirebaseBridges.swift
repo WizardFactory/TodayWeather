@@ -76,7 +76,8 @@ final class FirebaseBannerConfigSource: BannerConfigSource {
 
     func values() -> [String: String] {
         var values: [String: String] = [:]
-        for key in [RemoteBannerPolicy.enabledKey, RemoteBannerPolicy.delayKey] {
+        for key in [RemoteBannerPolicy.enabledKey, RemoteBannerPolicy.delayKey,
+                    RemoteBannerConfig.nativeEnabledKey, RemoteBannerConfig.interstitialEnabledKey] {
             values[key] = config.configValue(forKey: key).stringValue
         }
         return values

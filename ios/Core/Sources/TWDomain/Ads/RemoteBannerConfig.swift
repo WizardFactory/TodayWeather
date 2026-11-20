@@ -24,10 +24,15 @@ public final class RemoteBannerConfig {
     public static let fetchTimeoutSeconds: Double = 10
     public static let minimumFetchIntervalSeconds: Double = 3600
 
+    public static let nativeEnabledKey = "tw_native_enabled"
+    public static let interstitialEnabledKey = "tw_interstitial_enabled"
+    public private(set) var nativeEnabled = true
+    public private(set) var interstitialEnabled = true
+
     public private(set) var policy = BannerPolicy.default
     /// The policy is final: applied, failed or timed out (`isBannerPolicyReady`).
     public private(set) var ready = false
-    /// Runs after each change of `policy` or `ready` (`notifyPolicy`).
+    /// Publishes activated and fetched switches, policy and readiness (`notifyPolicy`).
     public var onChange: @MainActor () -> Void = {}
 
     private let source: (any BannerConfigSource)?
@@ -52,7 +57,10 @@ public final class RemoteBannerConfig {
             return
         }
         timeout = clock.after(Self.timeoutMs) { [weak self] in self?.finish("timeout") }
-        source.setDefaults(RemoteBannerPolicy.defaults) { [weak self] ok in
+        var defaults = RemoteBannerPolicy.defaults
+        defaults[Self.nativeEnabledKey] = "true"
+        defaults[Self.interstitialEnabledKey] = "true"
+        source.setDefaults(defaults) { [weak self] ok in
             guard let self, !self.closed else { return }
             guard ok else { return self.finish("bridge_or_fetch_failed") }
             source.setSettings(fetchTimeoutSeconds: Self.fetchTimeoutSeconds,
@@ -75,13 +83,15 @@ public final class RemoteBannerConfig {
         }
     }
 
-    /// A valid pair applies whole; an invalid one is ignored (`invalid_values`).
+    /// Each format has its own switch. A malformed switch disables only its format.
     private func apply(_ values: [String: String]) {
-        guard let parsed = RemoteBannerPolicy.parse(values) else {
+        nativeEnabled = values[Self.nativeEnabledKey, default: "true"] == "true"
+        interstitialEnabled = values[Self.interstitialEnabledKey, default: "true"] == "true"
+        if let parsed = RemoteBannerPolicy.parse(values) {
+            policy = parsed
+        } else {
             log("remote_config invalid_values")
-            return
         }
-        policy = parsed
         onChange()
     }
 
