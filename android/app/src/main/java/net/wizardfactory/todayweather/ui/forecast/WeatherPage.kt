@@ -52,6 +52,8 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.SpanStyle
@@ -256,7 +258,12 @@ private fun MainBox(page: ForecastPage, metrics: ChartMetrics, theme: Theme, col
             }
             ThemeImage(hero.sky, theme, metrics.bigImageSize.dp)
         }
-        Summary(hero.summary, colors, Modifier)
+        if (hero.rankedSummary) {
+            OutlinedText(hero.summary, line(21.sp, 24.sp, colors.headerText).copy(textAlign = TextAlign.Center),
+                colors.headerOutline, Modifier.clearAndSetSemantics { contentDescription = hero.summary }, maxLines = 2, fill = true)
+        } else {
+            Summary(hero.summary, colors, Modifier)
+        }
         hero.summaryAir?.let {
             Summary(it, colors, Modifier.clickable { onAction(PageAction.AirInfo("aqi")) }.testTag(ForecastTags.SUMMARY_AIR))
         }

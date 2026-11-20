@@ -17,6 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -45,6 +46,29 @@ class WeatherRepositoryTest {
     private fun currentOf(entry: WeatherEntry?) = entry!!.weather["currentWeather"]!!.jsonObject
 
     private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
+
+    @Test
+    fun datedSummaryKeepsItsRequestWhenReopeningOffline() = runTest {
+        val dir = Files.createTempDirectory("summary-cache").toFile()
+        try {
+            val body = Json.parseToJsonElement(seoulBody).jsonObject
+            val current = body.getValue("current").jsonObject + mapOf(
+                "summary" to JsonPrimitive("calendar"), "summaryForDate" to JsonPrimitive("2026-02-04"))
+            val marked = JsonObject(body + ("current" to JsonObject(current))).toString()
+            val place = seoul.copy(country = "KR")
+            val live = repository({ _, _ -> marked }, dir)
+            assertIs<LoadResult.Loaded>(live.load(place, units, listOf("ko"), true))
+            val cached = repository({ _, _ -> error("offline") }, dir).cached(place)
+            fun summary(p: Place, u: UnitSettings, lang: String) = cityRecord(p, cached,
+                WeatherRepository.summaryRequest(p, u, listOf(lang)))["currentWeather"]!!.jsonObject["summary"]
+            assertEquals(JsonPrimitive("calendar"), summary(place, units, "ko"))
+            assertNull(summary(place, units, "en"))
+            assertNull(summary(place, units.copy(temperatureUnit = "F"), "ko"))
+            assertNull(summary(london, units, "ko"))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 
     @Test
     fun storesTheProviderTimeZoneWithItsPlaceCache() = runTest {

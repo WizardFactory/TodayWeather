@@ -1689,7 +1689,16 @@ function ControllerTown24h() {
             if (!current.summaryAir) {
                 delete current.summaryAir;
             }
-            current.summary = self.makeSummary(current, current.yesterday, req.query, res);
+            var context;
+            if (req.version === 'v000903' && res.getLocale) {
+                try {
+                    context = require('../lib/solarTerms/summary').context(req, res);
+                } catch (err) {
+                    log.warn('Korean solar-term lookup unavailable', err.message);
+                }
+            }
+            current.summary = self.makeSummary(current, current.yesterday, req.query, res, context && context.rank);
+            if (context && current.summary) current.summaryForDate = context.date;
         }
         catch (err) {
             err.message += ' ' + JSON.stringify(meta);
@@ -1812,6 +1821,16 @@ function ControllerTown24h() {
         var regions = require('../lib/kmaForecastRegions');
         var office = req.result && req.result.source === 'KMA' && regions.forProvince(req.result.regionName);
         require('../lib/kmaForecastNarrativeResponse').attach(req.result, office && office.stationId, res, function () {
+            if (req.version === 'v000903') {
+                // Direct domestic requests negotiate locale through i18n (including its cookie).
+                if (res.vary) { res.vary('Accept-Language'); res.vary('Cookie'); }
+                var date = req.result && req.result.current && req.result.current.summaryForDate;
+                if (date) {
+                    var ttl = require('../lib/solarTerms/summaryCache').remainingSeconds(date, Date.now());
+                    require('../lib/kmaForecastNarrativeResponse').capCache(res, ttl);
+                    if (res.getHeader) res.setHeader('Cache-Control', res.getHeader('Cache-Control')+', must-revalidate');
+                }
+            }
             res.json(req.result);
         });
     };
@@ -1885,6 +1904,7 @@ function ControllerTown24h() {
                 }
                 self._convertWeatherData(value, req.query);
             });
+            var rangeDate = current.time === 24 ? require('../lib/history/policy').addDays(current.date, 1) : current.date;
             req.midData.dailyData.forEach(function (value, index) {
                 value.dateObj = kmaTimeLib.convertYYYYMMDDHHMMtoYYYYoMMoDD_HHoMM(value.date+"0000");
                 value.skyAm = value.skyAmIcon;
@@ -1921,10 +1941,16 @@ function ControllerTown24h() {
                 }
                 delete value.skyAmIcon;
                 delete value.skyPmIcon;
+                // Validate native Celsius before conversion, so missing values cannot become printable.
+                var validRange = req.version === 'v000903' && value.date === rangeDate &&
+                    require('../lib/midForecastPolicy').complete(value);
+                var extreme = validRange && (value.tmn <= -12 || value.tmx >= 33);
                 delete value.taMax;
                 delete value.taMin;
-
                 self._convertWeatherData(value, req.query);
+                if (validRange) {
+                    req.solarTermRange = {date:value.date, min:value.tmn, max:value.tmx, extreme:extreme};
+                }
             });
             if (req.current.hasOwnProperty('arpltn')) {
                 KecoController.recalculateValue(req.current.arpltn, req.query.airUnit);
@@ -2001,6 +2027,7 @@ function ControllerTown24h() {
                 return next(new Error('Fail to get kma address loc:'+loc));
             }
 
+            req.solarTermCountry = geoInfo.country;
             var kmaAddress = geoInfo.kmaAddress;
             req.params.region = kmaAddress.name1;
             if (kmaAddress.name2) {
@@ -2028,6 +2055,7 @@ function ControllerTown24h() {
 
         kmaSpecial.getSpecialInfo(town, stnName, function(err, list) {
             if (err) {
+                req.solarTermWarningsUnavailable = true;
                 log.error(err);
                 return next();
             }

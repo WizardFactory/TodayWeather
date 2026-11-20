@@ -236,6 +236,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/runtime"
           cp server/package.json server/package-lock.json "$RUNNER_TEMP/runtime/"
           npm ci --prefix "$RUNNER_TEMP/runtime" --no-audit --no-fund
+      - name: Korean solar-term calendar and ranked forecast
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: |
+          node server/test/offline/solar-terms.test.js
+          node server/test/offline/solar-term-summary.test.js
+          node server/test/offline/solar-term-summary-smoke.js
       - name: Credential-free Geo and Push loading on Node 16.20.2
         env:
           NODE_PATH: ${{ runner.temp }}/runtime/node_modules

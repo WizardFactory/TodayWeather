@@ -28,8 +28,10 @@ extension URLSessionGet: WeatherHTTP {
 public struct WeatherEntry: Sendable, Equatable {
     public let weather: JSONObject
     public let loadedAt: Date
+    public let summaryRequest: String?
 
-    public init(weather: JSONObject, loadedAt: Date) {
+    public init(weather: JSONObject, loadedAt: Date, summaryRequest: String? = nil) {
+        self.summaryRequest = summaryRequest
         self.weather = weather
         self.loadedAt = loadedAt
     }
@@ -97,8 +99,14 @@ public final class WeatherRepository {
     /// `canLoadCity`: a disabled place never; otherwise not loaded in this process, or more than ten minutes ago.
     public func canLoad(_ place: Place) -> Bool {
         if place.disable { return false }
-        guard let loaded = loadTimes[Self.key(place)] else { return true }
-        return clock.now.timeIntervalSince(loaded) > 600
+        let key = Self.key(place)
+        guard let loaded = loadTimes[key] else { return true }
+        let now = clock.now
+        if now.timeIntervalSince(loaded) > 600 { return true }
+        guard weather[key]?.summaryRequest != nil else { return false }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return !calendar.isDate(loaded, inSameDayAs: now)
     }
 
     /// `reloadCity`: the next gated load of `place` runs.
@@ -166,8 +174,11 @@ public final class WeatherRepository {
         case .unconvertible: return .failed(network: false, unconvertible: true)
         case .converted(let city):
             // Stored at once on the main actor, so a slower answer of an older request cannot follow a newer one.
-            let entry = WeatherEntry(weather: Self.merge(cached(place)?.weather, city), loadedAt: clock.now)
             let updated = Self.updatePlace(place, city)
+            let country = city["country"]?.stringValue ?? place.country
+            let marked = country == "KR" && city["currentWeather"]?.objectValue?.contains("summaryForDate") == true
+            let entry = WeatherEntry(weather: Self.merge(cached(place)?.weather, city), loadedAt: clock.now,
+                                     summaryRequest: marked ? Self.summaryRequest(updated, units, acceptLanguage) : nil)
             let newKey = Self.key(updated)
             loadTimes[key] = entry.loadedAt
             // A place that gets its coordinates from the response is found under its new key from now on.
@@ -211,6 +222,12 @@ public final class WeatherRepository {
             return "coord:\(Js.numberToString(location.lat)),\(Js.numberToString(location.long))"
         }
         return "addr:\(place.address ?? "")"
+    }
+
+    // Binds dated prose to the selected coordinates/address, language and units, including offline reads.
+    public nonisolated static func summaryRequest(_ place: Place, _ units: UnitSettings, _ language: String) -> String? {
+        WeatherRequests.url(base: "", lat: place.location?.lat, long: place.location?.long, address: place.address,
+                            units: UnitSettings.keys.map { ($0, units.value($0)) }).map { $0 + "\n" + language }
     }
 
     /// `updateCity`'s weather fields: the previous ones, replaced by the converted response's truthy values.
@@ -262,7 +279,7 @@ public final class WeatherRepository {
     private func readCache(_ key: String) -> WeatherEntry? {
         guard let file = cacheFile(key), let data = try? Data(contentsOf: file), let o = try? JSONValue.parse(data),
               let weather = o["weather"]?.objectValue, let at = o["loadedAt"]?.numberValue?.double else { return nil }
-        return WeatherEntry(weather: weather, loadedAt: Date(timeIntervalSince1970: at / 1000))
+        return WeatherEntry(weather: weather, loadedAt: Date(timeIntervalSince1970: at / 1000), summaryRequest: o["summaryRequest"]?.stringValue)
     }
 
     /// The whole file is replaced at once (written to a temporary file, then renamed): a reader sees the old entry or
@@ -272,6 +289,7 @@ public final class WeatherRepository {
         let record = JSONValue.object(JSONObject([
             ("loadedAt", .number((entry.loadedAt.timeIntervalSince1970 * 1000).rounded())),
             ("weather", .object(entry.weather)),
+            ("summaryRequest", entry.summaryRequest.map(JSONValue.string) ?? .null),
         ]))
         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? Data(record.jsonText.utf8).write(to: file, options: .atomic)
@@ -279,8 +297,15 @@ public final class WeatherRepository {
 }
 
 /// The weather a place shows: its entry's fields with the place's own (`cities[index]` of the Cordova app).
-public func cityRecord(_ place: Place, _ entry: WeatherEntry?) -> JSONObject {
+public func cityRecord(_ place: Place, _ entry: WeatherEntry?, summaryRequest: String? = nil) -> JSONObject {
     var fields = entry?.weather ?? JSONObject()
+    if let current = fields["currentWeather"]?.objectValue, current.contains("summaryForDate") {
+        if summaryRequest == nil || entry?.summaryRequest != summaryRequest {
+            fields["currentWeather"] = .object(current.removing("summary"))
+        } else {
+            fields["country"] = .string("KR") // Verified on the matching request; a saved place can lack a country.
+        }
+    }
     if let name = place.name { fields["name"] = .string(name) }
     if let address = place.address { fields["address"] = .string(address) }
     if let country = place.country { fields["country"] = .string(country) }

@@ -115,5 +115,9 @@ export async function readAnySnapshot(
       newestAt = Number.isNaN(time) ? -Infinity : time;
     }
   }
+  if (newest?.daySummary) {
+    const { daySummary: ignored, ...weather } = newest;
+    return weather;
+  }
   return newest;
 }
