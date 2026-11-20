@@ -133,6 +133,18 @@ struct AdsGoldenTests {
             analytics.start()
             #expect(analytics.setCollectionEnabled(true))
             let result = analytics.track(c.name, c.params.mapValues(\.analytics))
+            // #3059 adds interstitials to the iOS allowlist. The historical Cordova fixture rejected this show.
+            if c.name == "ad_lifecycle", c.params == ["ad_format": .text("interstitial"), "action": .text("show")] {
+                #expect(!c.result && c.sent == nil)
+                #expect(result)
+                let event = try #require(sdk.events.last)
+                #expect(event.name == c.name)
+                #expect(Dictionary(uniqueKeysWithValues: event.params) == [
+                    "ad_format": .text("interstitial"), "action": .text("show"),
+                    "measurement_version": .integer(1), "traffic_type": .text("production"),
+                ])
+                continue
+            }
             #expect(result == c.result, "\(c.name) \(c.params)")
             if let sent = c.sent {
                 let event = try #require(sdk.events.last)

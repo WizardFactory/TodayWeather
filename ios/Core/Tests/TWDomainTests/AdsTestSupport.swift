@@ -228,6 +228,25 @@ final class FakeRemoteConfig: BannerConfigSource {
         step("fetch", done)
     }
 
+    private(set) var formatListeners = 0
+    private var formatUpdate: (@MainActor () -> Void)?
+
+    func observeFormatUpdates(_ notify: @escaping @MainActor () -> Void) {
+        formatListeners += 1
+        formatUpdate = notify
+    }
+
+    func publish(_ values: [String: String], activationSucceeds: Bool = true) {
+        fetched = values
+        if activationSucceeds { failing.remove("activate") } else { failing.insert("activate") }
+        formatUpdate?()
+    }
+
+    func activateUpdate(done: @escaping @MainActor (Bool) -> Void) {
+        if !failing.contains("activate"), let fetched { current.merge(fetched) { $1 } }
+        step("activate", done)
+    }
+
     func values() -> [String: String] { current }
 }
 
