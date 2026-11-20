@@ -28,7 +28,7 @@
       "id": "candidate",
       "type": "backend",
       "label": "Spot candidate",
-      "sublabel": "Health + weather probes"
+      "sublabel": "Serves /health"
     },
     {
       "id": "observer",
@@ -57,7 +57,7 @@
       "from": "checker",
       "to": "candidate",
       "y": 215,
-      "label": "Guarded health + weather probes",
+      "label": "GET /health on candidate IP",
       "variant": "emphasis"
     },
     {
@@ -106,8 +106,8 @@
       "dot": "amber",
       "title": "Retained safety",
       "items": [
-        "Health alone never authorizes association.",
-        "No timeout increase or periodic recheck."
+        "Require HTTP 200 with body OK.",
+        "Recheck Fleet, AMI, IP and EIP owner."
       ]
     },
     {

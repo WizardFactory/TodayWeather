@@ -21,7 +21,7 @@ This plan defines the work; none of it is executed here.
    1. (A1) Set `GEOCODER_KAKAO_KEYS` (the 2 existing Kakao keys) and `GEOCODER_GOOGLE_KEY` (the key with fingerprint `ecd5fdb1`) on the host (OP-4).
    2. (A2) Confirm PM2 `www` runs Node ≥ 16 (`pm2 jlist`), then deploy to the service host by the patch procedure; gather and push URL changes (spec §5.2 steps 1–2); record the deployment in `docs/operations/` at this point.
    3. (A2) DO-2 first, then DO-1 and DO-3 to DO-6 (`scripts/gateway-parity.mjs --direct … --gateway … --save-baseline <file>`, which also saves the Lambda-era headers and the direct-side statuses); then OP-1 (the key-fingerprint line appears after a worker's first gateway request).
-   4. (A3) Probe path change in `AttachEIPToSpot`; new AMIs, templates and fleets; full-map `AttachEIPToSpot` update (OP-3). CloudFront 5xx alarm with a us-east-1 topic (OP-2).
+   4. (A3) Health-only readiness in `AttachEIPToSpot`; new AMIs, templates and fleets; full-map `AttachEIPToSpot` update (OP-3). CloudFront 5xx alarm with a us-east-1 topic (OP-2).
    5. (A4) Cutover with CO-1 (including the prepared RB-1 reverse edit) and CO-2; PC-1 at +5 min (`--public … --expect <file>`); RB-1 checks use `--baseline <file>`; PC-2 to PC-4 over 24 h. On failure, RB-1.
    6. Post-cutover docs PR (DOC-1).
 
@@ -35,7 +35,7 @@ This plan defines the work; none of it is executed here.
 | Change | `server/controllers/controllerTown24h.js`, `server/routes/v000903/route.geo.v000903.js`, `server/controllers/controllerPush.js`, `server/lib/kmaScraper.js` (versioned URLs) |
 | Change | `server/test/offline/run.js`, `server/test/offline/README.md`, the offline CI workflow, and the existing tests asserting the old URLs |
 | Change | `docs/rewrite/configuration-inventory.md` and the stale code statements listed in spec §7; after cutover the spec §7 topology docs |
-| Outside the repository | `AttachEIPToSpot` probe path constant (spec §4.3) |
+| AWS deployment | Reviewed `AttachEIPToSpot` health-only artifact (spec §4.3) |
 
 ## Risks and mitigations
 
@@ -43,7 +43,7 @@ This plan defines the work; none of it is executed here.
 | --- | --- |
 | A version answers differently from today | Per-version pass-through with no version branching and the Lambda's exact language, `loc` and retry rules (spec §2.3, §3.1); RT-2, RT-3, RT-5, U-16, DO-1 per version with real client queries and headers, PC-1 |
 | Geocode output drift | Goldens (U-1–U-5); DO-2 on fresh coordinates |
-| Replacement instance never receives the EIP after cutover | Probe path without geocoding (spec §4.3, DO-6, OP-3) |
+| Replacement instance never receives the EIP after cutover | Direct health-only probe (spec §4.3, DO-6, OP-3) |
 | Spot replacement starts old code | New AMIs and templates before cutover (OP-3) |
 | No alert after cutover | CloudFront 5xx alarm before cutover (OP-2) |
 | Unrelated CloudFront settings changed | CO-1 diff; targeted RB-1 |
