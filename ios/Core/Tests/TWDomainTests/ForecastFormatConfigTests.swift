@@ -47,6 +47,37 @@ struct ForecastFormatConfigTests {
         #expect(config.ready && !config.nativeEnabled && !config.interstitialEnabled)
     }
 
+    @Test func aPublishedUpdateChangesOnlyTheAffectedFormatsInAnOpenApp() {
+        let source = FakeRemoteConfig()
+        let config = RemoteBannerConfig(source: source, clock: VirtualClock())
+        config.load()
+        config.load()
+        #expect(source.formatListeners == 1)
+        var changes = 0
+        config.onChange = { changes += 1 }
+        source.publish(["tw_native_enabled": "false"])
+        #expect(config.ready && !config.nativeEnabled && config.interstitialEnabled)
+        source.publish(["tw_native_enabled": "false"])
+        source.publish(["tw_native_enabled": "true"], activationSucceeds: false)
+        #expect(!config.nativeEnabled && changes == 1)
+        source.publish(["tw_native_enabled": "true", "tw_interstitial_enabled": "false"])
+        #expect(config.nativeEnabled && !config.interstitialEnabled && changes == 2)
+    }
+
+    @Test func aNewPublicationAfterStartupTimeoutStillDisablesAds() {
+        let clock = VirtualClock()
+        let source = FakeRemoteConfig()
+        source.held = ["fetch"]
+        source.fetched = ["tw_native_enabled": "false"]
+        let config = RemoteBannerConfig(source: source, clock: clock)
+        config.load()
+        clock.advance(RemoteBannerConfig.timeoutMs)
+        source.answer("fetch", true)
+        #expect(config.ready && config.nativeEnabled)
+        source.publish(["tw_native_enabled": "false", "tw_interstitial_enabled": "true"])
+        #expect(!config.nativeEnabled && config.interstitialEnabled)
+    }
+
     @Test func aConsentFailureIsNotAnAdImpressionOrLoadError() {
         #expect(AnalyticsSchema.validate("ad_lifecycle", ["ad_format": .text("consent"), "action": .text("consent_failed")]) != nil)
         #expect(AnalyticsSchema.validate("ad_lifecycle", ["ad_format": .text("consent"), "action": .text("impression")]) == nil)
