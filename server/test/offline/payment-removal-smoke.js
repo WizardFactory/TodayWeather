@@ -63,6 +63,8 @@ const app = load('app.js', Object.assign(routers, {
     mongoose: {connect: (url, options, cb) => {calls.db++; cb(null, {name: 'offline'});}},
     './config/config': config, './lib/log': function () {return logger;},
     './controllers/controllerManager': Manager, './controllers/kma/kma.town.short.rss.controller': Manager,
+    './routes/solarTerms': require('../../routes/solarTerms'),
+    './lib/solarTerms/maintenance': {start() {}}, // No Mongo or scheduled collectors in this smoke.
     './routes/gateway': gateway, i18n: {configure() {}, init: passthrough}
 }));
 app.set('env', env.NODE_ENV);
@@ -85,6 +87,11 @@ async function request(listener, url, method, headers, payload) {
     try {
         await new Promise(resolve => listener.listen(0, '127.0.0.1', resolve));
         assert.equal(calls.db, 1); assert.equal(calls.billing, 0); assert.equal(calls.collection, 0);
+        const calendarYear = require('../../lib/solarTerms/calendar').currentYear() + 2;
+        const calendar = await request(listener, '/calendar/v1/kr/solar-terms/' + calendarYear, 'GET');
+        assert.equal(calendar.status, 200);
+        assert.equal(JSON.parse(calendar.body).terms.length, 24);
+        assert.equal(calendar.headers['set-cookie'], undefined);
         const health = await request(listener, '/health'); assert.equal(health.status, 200); assert.equal(health.body, 'OK');
         const auth = await request(listener, '/v000803', 'POST', {}, {id: 'todayweather', password: 'wizard'});
         assert.equal(auth.status, 200); assert.equal(auth.body, 'offline-token');

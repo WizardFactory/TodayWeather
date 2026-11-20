@@ -11,7 +11,7 @@ const path = require('path');
 const vm = require('vm');
 const assert = require('assert');
 const crypto = require('crypto');
-const root = process.env.TW_REPO || process.cwd();
+const root = process.env.TW_REPO || path.resolve(__dirname, '../../..');
 const outputDir = process.env.TW_SMOKE_OUTPUT_DIR || path.join(require('os').tmpdir(),'issue-2554-response-smoke-output');
 fs.mkdirSync(outputDir,{recursive:true});
 // Preserve Date/undefined values in fixtures on the Node 16 service runtime.
