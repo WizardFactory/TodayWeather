@@ -57,13 +57,13 @@ versions indefinitely. Operational lifecycle/IAM setup is not performed by this 
 1. Provision the private prefix/socket directory and verify IAM with synthetic data.
    Verify each project's FCM quota, credential project ID and controlled device delivery.
    The current capacity result uses synthetic transport; it does not establish FCM quota.
-2. Start the coordinator without warning sending. It lists/reads device objects and
-   conditionally reseals each registration with a unique nonce (16 concurrent PUTs),
-   resolves regions through a bounded queue of eight, restores checkpoints and then
-   opens its socket. Any failed initial region lookup prevents readiness. API writes
-   return 503 while the coordinator is unavailable. Later accepted location changes
-   remove old memberships immediately; unresolved new positions cannot receive warnings
-   until the 30s retry succeeds. `unresolvedDevices` exposes that condition.
+2. Start one coordinator with warning sending off. The socket exposes startup readiness.
+   After the service origin answers its health probe, the coordinator reads the device
+   objects, conditionally reseals them with unique nonces (16 concurrent PUTs), resolves
+   regions (eight concurrent lookups), and restores checkpoints. See [Spot replacement and
+   recovery](#spot-replacement-and-recovery) for the readiness and retry sequence. Later
+   accepted location changes remove old memberships immediately. Affected positions regain
+   warning eligibility after a successful lookup; `unresolvedDevices` counts pending devices.
 3. Switch API workers to S3. **AK decision, 2026-09-28: do not migrate existing MongoDB
    push registrations.** Begin with client registrations/re-registrations; do not add an
    import step to activation. Existing SQLite records are also not imported automatically.
@@ -87,6 +87,106 @@ Rollback: stop the coordinator first, change API workers back to the prior store
 then restart only the chosen old sender if authorized. S3-only registrations are not
 copied into Mongo/SQLite by rollback; users must re-register. Preserve the S3 prefix
 for later investigation. No deployment, data migration or automatic deletion is in this PR.
+
+## Spot replacement and recovery
+
+1. Verify the service Elastic IP is attached to the replacement instance. Follow the
+   [service EIP readiness procedure](service-eip-readiness.md#manual-recheck) if attachment is delayed. From that host,
+   a direct `GET` to `$SERVICE_SERVER/health` must return HTTP 200 with body `OK`.
+   Use the configured service origin hostname so this check exercises its public route.
+   During this wait, the coordinator logs `push-origin-unavailable` with the next delay,
+   which grows from one second to 30 seconds.
+2. Check the runtime geocoder with a public test coordinate, for example
+   `$API_SERVER/geocode/v000903/coord/37.5665,126.9780`. For that Seoul location
+   expect HTTP 200 and a JSON response with `country: "KR"` and a populated
+   `kmaAddress.name1`. A single success can be cached. A stored KR coordinate needs a
+   mapped warning zone. Incomplete or unmapped coordinate responses stay pending.
+   Retry delays grow from 30 seconds to five minutes, with a five-second total
+   deadline per lookup. `push-restore-pending` reports the unresolved count,
+   reason categories and next delay. Registrations remain in memory between attempts.
+   A permanent geocoder rejection such as HTTP 403 or an error applying the result
+   terminates startup with a sanitized reason. Inspect that cause before restarting
+   the supervised process and preserve its S3 registrations.
+
+   A registration with only a town name uses the bundled warning map. A valid town
+   outside the map can still receive scheduled alarms and can be deleted, with no
+   regional warning membership. Existing malformed town-only records also have no
+   warning membership and allow startup to finish. New town-only writes require
+   a nonblank string for `town.first`. Optional `second` and `third` accept strings
+   or null.
+3. Poll the private socket from the service account:
+
+   ```sh
+   curl --silent --show-error --max-time 5 --unix-socket "$PUSH_SOCKET_PATH" \
+     --write-out '\nHTTP %{http_code}\n' http://localhost/health
+   ```
+
+   A missing socket or connection error indicates the listener is unavailable. During
+   startup the listener returns HTTP 503 with `ready: false`, registration commands
+   receive 503, and the delivery scheduler stays idle. After registry and checkpoint
+   restoration the scheduler starts, the coordinator logs `push-coordinator-ready`,
+   and socket health returns HTTP 200 with `ready: true`.
+   Inspect `transport.ready` separately to assess delivery.
+4. Install the [recurring readiness check](#recurring-readiness-check) under the
+   operator's monitoring configuration. A PM2 `online` status alone cannot distinguish
+   a restored coordinator from one that has stopped serving registrations.
+5. On the affected older build, a failed initial restore can leave the process online
+   with no socket. Once the origin and geocoder are available, the operator can restart
+   the sole coordinator under the production change procedure, preserving the S3 prefix.
+   Restarting resumes normal delivery to eligible users. After readiness recovers, record
+   a separately authorized device's registration, its receipt and tap destination,
+   and deletion with a device-scoped readback. Track the XR result in
+   [#2963](https://github.com/WizardFactory/TodayWeather/issues/2963).
+
+### Recurring readiness check
+
+[check-push-readiness](../../server/bin/check-push-readiness) probes the private socket
+and counts registration writes in the preceding five minutes. Single-device `POST`,
+`PUT` and `DELETE` use `/<version>/push` in v000705, v000803, v000901, v000902
+and v000903. Bulk `POST` uses `/<version>/push-list` in v000902 and v000903.
+Both accept a trailing slash and query string. `/push` and `/push-list` have
+no unversioned mount. A connection failure, socket health other than HTTP 200 with `ready: true`,
+an unreadable log window, or any matching HTTP 503 produces a nonzero exit and an
+aggregate alert. A healthy check produces no output. On demand, `--verbose` also
+prints healthy totals. The check reads combined-format nginx logs in the current file
+and its numbered or date-suffixed rotations, including gzip. A sample exceeding its
+byte budget reports unavailable coverage; alert output omits request bodies, addresses
+and query strings.
+
+For example, a five-minute sample with a successful `PUT /v000705/push`, a
+`POST /v000902/push-list/` returning 503 and a successful `POST /v000903/push-list`
+produces this alert when the socket is ready:
+
+```json
+{"event":"push-readiness-monitor","socketReady":true,"logReadable":true,"registrations":3,"http503":1}
+```
+
+For a host using cron mail, install the following in the monitoring account's crontab
+during approved rollout. Substitute the actual absolute Node 16+ and checkout paths,
+the coordinator socket, and a verified on-call email recipient. The account needs
+permission to use the socket and read the nginx log directory and rotations.
+
+```cron
+MAILTO=replace-with-on-call-address
+PUSH_SOCKET_PATH=/run/todayweather/push.sock
+PUSH_NGINX_ACCESS_LOG=/var/log/nginx/access.log
+*/2 * * * * /absolute/path/to/node /absolute/checkout/server/bin/check-push-readiness
+```
+
+Cron mails the output once per failing check. Verify the host mail transport and
+on-call receipt during installation by pointing a one-off check at an absent test
+socket. For deployments that already run a host monitoring agent, schedule the
+same command and alert on its nonzero exit. Install this check on replacement hosts. External host
+availability monitoring covers the period while a host is stopped. To roll back the monitoring change, remove the cron
+entry or agent check.
+
+### Local replacement rehearsal
+
+Run `node server/test/offline/push-startup-recovery.js` from the repository root.
+The local fixtures hold the origin unavailable and delay a stored region lookup. Verify
+that the same coordinator moves from socket 503 to 200, starts delivery only after
+restoration, retains both registrations, and accepts a registration and deletion.
+The healthy-start control exercises the same startup path with dependencies ready.
 
 ## Delivery and failure contract
 

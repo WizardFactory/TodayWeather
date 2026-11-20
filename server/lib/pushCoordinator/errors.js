@@ -52,4 +52,12 @@ function safeReason(value, fallback) {
     }
     return fallback || 'unknown';
 }
-module.exports = { PreparationError: PreparationError, safeReason: safeReason };
+// Only locally selected categories or numeric HTTP status codes belong in operator logs.
+class RegionError extends Error {
+    constructor(category, retryable) {
+        super('Push region lookup failed: ' + category);
+        this.category = category;
+        this.retryable = retryable;
+    }
+}
+module.exports = { RegionError: RegionError, PreparationError: PreparationError, safeReason: safeReason };
