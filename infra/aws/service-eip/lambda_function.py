@@ -23,12 +23,19 @@ def http_get(ip, path):
     try:
         conn.request('GET', path, headers={'Connection': 'close'})
         response = conn.getresponse()
-        expected_length = response.length
+        lengths = response.headers.get_all('Content-Length', [])
+        encodings = response.headers.get_all('Transfer-Encoding', [])
+        if encodings and (lengths or [v.lower() for v in encodings] != ['chunked']):
+            raise ValueError('invalid-transfer-encoding')
         body = response.read(262145)
         if len(body) > 262144:
             raise ValueError('response-too-large')
-        if expected_length is not None and len(body) != expected_length:
-            raise ValueError('incomplete-response')
+        # HTTPResponse can discard an invalid length or use only the first field.
+        for field in lengths:
+            for value in field.split(','):
+                value = value.strip(' \t')
+                if not re.fullmatch(r'[0-9]+', value) or (value.lstrip('0') or '0') != str(len(body)):
+                    raise ValueError('invalid-response-length')
         return response.status, body
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)

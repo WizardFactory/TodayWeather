@@ -4,6 +4,7 @@ import http.client
 import json
 import sys
 import unittest
+from email.message import Message
 from pathlib import Path
 from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -80,6 +81,37 @@ class GuardTests(unittest.TestCase):
                 self.run_handle(ec2, checker.http_get)
         self.assertEqual('health', json.loads(str(failure.exception))['last_probe']['stage'])
         self.assertEqual([], ec2.associations)
+
+    def test_explicit_length_fields_match_the_health_body(self):
+        cases = [
+            (['invalid'], [], False),
+            (['2', '4'], [], False),
+            (['2, 4'], [], False),
+            (['2', '2'], [], True),
+            (['2, 2'], [], True),
+            (['2'], ['chunked'], False),
+            ([], ['unsupported'], False),
+            ([], ['chunked'], True),
+            ([], [], True),
+        ]
+        for lengths, encodings, accepted in cases:
+            with self.subTest(lengths=lengths, encodings=encodings):
+                headers = Message()
+                for length in lengths:
+                    headers['Content-Length'] = length
+                for encoding in encodings:
+                    headers['Transfer-Encoding'] = encoding
+                response = Mock(status=200, headers=headers)
+                response.read.return_value = b'OK'
+                ec2 = FakeEC2()
+                with patch.object(http.client, 'HTTPConnection') as connection:
+                    connection.return_value.getresponse.return_value = response
+                    if accepted:
+                        self.assertEqual({'status': 'attached'}, self.run_handle(ec2, checker.http_get))
+                    else:
+                        with self.assertRaises(checker.RetryableError):
+                            self.run_handle(ec2, checker.http_get)
+                self.assertEqual(int(accepted), len(ec2.associations))
 
     def test_eventual_success_once(self):
         ec2 = FakeEC2()
