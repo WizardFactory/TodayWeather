@@ -10,6 +10,22 @@ The per-request header chain is already documented in [client data contracts —
 - Use §2–§4 to reproduce the current selection rules, or to replace them deliberately. Proposal: every client should send an explicit, canonical language on each request whose response contains server prose. The server should then resolve that language in one documented place.
 - Resolve the §5 findings before migrating strings. That section compares files only. It does not show which strings a screen actually displays.
 
+## TodayWeather rollout scope for #2613
+
+As of 2026-11-20, TodayAir has ceased operation. The mobile rollout covers TodayWeather, including its Air tab and the air-quality line on its hourly and daily tabs. The TodayAir and legacy widget entries below document historical behavior. TodayWeather 1.1.x shipped without widgets, and both native app projects track widgets as follow-up work. The TodayWeather Cordova build and upload work in #2605 is complete. [Release scope](../operations/store-policy-evidence.md) · [Build record](https://github.com/WizardFactory/TodayWeather/issues/2605) · [Forecast header scope](https://github.com/WizardFactory/TodayWeather/issues/2613#issuecomment-7026780963)
+
+At `a5e75fd4`, the [Cordova catalogs](../../client/www/locales) and the [Android](../../android/tools/import_client_assets.py) and [iOS](../../ios/tools/import_client_assets.py) import maps still use the earlier six languages. For #2613, update the source catalogs, both import maps and both native language selectors together. Regenerate the native resources and check for obsolete Chinese resources. Verify the resolved UI language on weather, geocode, national, warning and push-list requests. Server-generated wording is tracked in [#2612](https://github.com/WizardFactory/TodayWeather/issues/2612). [Android scope](https://github.com/WizardFactory/TodayWeather/issues/2877) · [iOS scope](https://github.com/WizardFactory/TodayWeather/issues/2948)
+
+Representative acceptance cases for Cordova, Kotlin and Swift follow. These are expected results for the seven-language rollout. The region comes from the device, independently of the city whose weather is displayed. [Country and formatting rules](https://github.com/WizardFactory/TodayWeather/issues/2613#issuecomment-5851793319)
+
+| Device locale | UI and request language | Fresh-install defaults to check |
+| --- | --- | --- |
+| `fr-CA` | `fr` | Canadian units, including km/h wind and hPa pressure. Dates and decimals follow Canadian French. |
+| `zh-TW` | `en` | International units and formats, including m/s wind, a 24-hour clock and a decimal point. |
+| `it-CH` | `en` | Swiss units, including km/h wind. The unsupported language selects international date, time and decimal formats. |
+
+On upgrade, preserve previously saved units, including a user's explicit choice that differs from the device-country default. For release planning, the [21 priority countries](https://github.com/WizardFactory/TodayWeather/issues/2613#issuecomment-5851673892), [47 focus metropolitan areas](https://github.com/WizardFactory/TodayWeather/issues/2613#issuecomment-7020036485) and [17 storefront exclusions](https://github.com/WizardFactory/TodayWeather/issues/2613#issuecomment-6993422895) each have a separate decision record.
+
 ## 1. Locales per surface
 
 | Surface | Locales | Resource files | Entries per locale | Selection input | Missing or unsupported input | Source |
