@@ -1,0 +1,102 @@
+{
+  "retrievalDate": "2026-11-20",
+  "openMeteoEvaluation": [
+    {
+      "id": "London",
+      "status": 200,
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=51.51&longitude=-0.13&daily=sunshine_duration&timezone=Europe%2FLondon&forecast_days=3",
+      "timezone": "Europe/London",
+      "range": [
+        "2026-11-20",
+        "2026-11-22"
+      ],
+      "units": {
+        "time": "iso8601",
+        "sunshine_duration": "s"
+      },
+      "non_null": {
+        "sunshine_duration": 3
+      }
+    },
+    {
+      "id": "Manchester",
+      "status": 200,
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=53.48&longitude=-2.24&daily=sunshine_duration&timezone=Europe%2FLondon&forecast_days=3",
+      "timezone": "Europe/London",
+      "range": [
+        "2026-11-20",
+        "2026-11-22"
+      ],
+      "units": {
+        "time": "iso8601",
+        "sunshine_duration": "s"
+      },
+      "non_null": {
+        "sunshine_duration": 3
+      }
+    },
+    {
+      "id": "Zurich",
+      "status": 200,
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=47.38&longitude=8.54&hourly=freezing_level_height%2Cvisibility&timezone=Europe%2FZurich&forecast_days=1",
+      "timezone": "Europe/Zurich",
+      "range": [
+        "2026-11-20T00:00",
+        "2026-11-20T23:00"
+      ],
+      "units": {
+        "time": "iso8601",
+        "freezing_level_height": "m",
+        "visibility": "m"
+      },
+      "non_null": {
+        "freezing_level_height": 24,
+        "visibility": 24
+      }
+    },
+    {
+      "id": "Vienna",
+      "status": 200,
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=48.21&longitude=16.37&hourly=freezing_level_height%2Cvisibility&timezone=Europe%2FVienna&forecast_days=1",
+      "timezone": "Europe/Vienna",
+      "range": [
+        "2026-11-20T00:00",
+        "2026-11-20T23:00"
+      ],
+      "units": {
+        "time": "iso8601",
+        "freezing_level_height": "m",
+        "visibility": "m"
+      },
+      "non_null": {
+        "freezing_level_height": 24,
+        "visibility": 24
+      }
+    }
+  ],
+  "canadaForecastAreaFeatureCounts": [
+    {
+      "city": "토론토",
+      "features": 912
+    },
+    {
+      "city": "몬트리올",
+      "features": 114
+    }
+  ],
+  "bogotaArchive": {
+    "resource": "s54a-sgyg",
+    "rows": 300,
+    "distinctStations": 5,
+    "observedSpan": [
+      "2022-04-24T14:00:00.000",
+      "2022-04-25T00:00:00.000"
+    ],
+    "license": "Creative Commons Attribution | Share Alike 4.0 International"
+  },
+  "fireworkWms": {
+    "httpStatus": 200,
+    "result": "InvalidLayersParameter"
+  },
+  "montevideoTideTableDownloaded": true
+}
