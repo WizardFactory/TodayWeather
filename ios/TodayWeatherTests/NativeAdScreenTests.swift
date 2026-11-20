@@ -30,6 +30,47 @@ extension HostedShellTests {
             }
         }
 
+        @Test func reopeningSavedListDoesNotInsertALateCreative() async throws {
+            let source = LayoutInventory()
+            source.hasFreshCreative = false
+            let f = try await PlacesScreenshotTests.fixture("list", language: "ko-KR")
+            f.shell.select(.search)
+            let hosted = try HostedView(ShellFrame(model: f.shell, insets: PlacesScreenshotTests.insets,
+                content: { f.places.content($0) }).environment(\.forecastNativeAds, source),
+                size: CGSize(width: 393, height: 798))
+            defer { hosted.close() }
+            try await hosted.settle()
+            let originalVisit = f.shell.adVisit
+            f.places.modeTapped()
+            try await hosted.settle()
+            source.hasFreshCreative = true
+            f.places.modeTapped()
+            try await hosted.settle()
+            #expect(originalVisit == f.shell.adVisit)
+            #expect(source.hasFreshCreative)
+            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
+        }
+
+        @Test func readingAShortDailyDetailDoesNotRequireTheChartToDisappear() {
+            // At the bottom of a short daily forecast the chart remains 230 pt above the detail in view.
+            // Coordinates are relative to the first detail block and its first 90 pt are visible.
+            let viewport = CGRect(x: 0, y: -230, width: 393, height: 320)
+            var progress = ForecastDetailRead()
+            let visible = ForecastDetailRead.reachesDetail(height: 90, viewport: viewport)
+            let launch = progress.observeDetail(visible)
+            let horizontal = progress.drag(CGSize(width: -120, height: -6))
+            let forward = progress.drag(CGSize(width: 3, height: -40))
+            let duplicate = progress.observeDetail(visible)
+            #expect(!launch && !horizontal && forward && !duplicate)
+
+            var longer = ForecastDetailRead()
+            let beforeDetails = longer.drag(CGSize(width: 0, height: -80))
+            let stillOnChart = longer.observeDetail(ForecastDetailRead.reachesDetail(height: 120,
+                viewport: CGRect(x: 0, y: -480, width: 393, height: 320)))
+            let intoDetails = longer.observeDetail(ForecastDetailRead.reachesDetail(height: 120, viewport: viewport))
+            #expect(!beforeDetails && !stillOnChart && intoDetails)
+        }
+
         @Test func placementFollowsRenderedForecastAndAirContent() throws {
             let hourly = try WeatherScreenshotTests.content("kma-seoul-hourly")
             let daily = try WeatherScreenshotTests.content("kma-seoul-daily")

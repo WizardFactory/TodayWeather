@@ -93,7 +93,42 @@ final class ForecastNativeAds: NSObject, ForecastNativeInventory, NativeAdLoader
 
 extension EnvironmentValues {
     @Entry var forecastNativeAds: (any ForecastNativeInventory)? = nil
+    @Entry var nativePlacement: ForecastNativePlacement? = nil
     @Entry var forecastChartRead: @MainActor (ShellTab) -> Void = { _ in }
+}
+
+/// The shell keys this host by the actual tab/city visit. Searching, editing or moving an optional
+/// forecast section can remove and recreate a slot without granting it another inventory decision.
+struct ForecastNativeVisitHost: ViewModifier {
+    @State private var placement = ForecastNativePlacement()
+    @Environment(\.forecastNativeAds) private var ads
+
+    func body(content: Content) -> some View {
+        content.environment(\.nativePlacement, placement)
+            .onChange(of: ads?.generation) { placement.discardCreative() }
+    }
+}
+
+@MainActor @Observable
+final class ForecastNativePlacement {
+    private var visit = NativeAdVisit()
+    private weak var owner: (any ForecastNativeInventory)?
+    private var generation: Int?
+    private var retainedCreative: ForecastCreative?
+
+    func reached(_ ads: (any ForecastNativeInventory)?) {
+        guard visit.decision == nil, visit.reached(hasCreative: ads?.hasFreshCreative == true), let ads else { return }
+        owner = ads
+        generation = ads.generation
+        retainedCreative = ads.take()
+    }
+
+    func creative(for ads: (any ForecastNativeInventory)?) -> ForecastCreative? {
+        guard let ads, ads.enabled, ads === owner, ads.generation == generation else { return nil }
+        return retainedCreative
+    }
+
+    func discardCreative() { retainedCreative = nil }
 }
 
 /// A zero-height marker can measure where an omitted slot would have appeared without reserving margins.
@@ -102,9 +137,7 @@ struct ForecastNativeSlot: View {
     let theme: Theme
     @Environment(\.forecastNativeAds) private var ads
     @Environment(\.locale) private var locale
-    @State private var visit = NativeAdVisit()
-    @State private var creative: ForecastCreative?
-    @State private var generation = -1
+    @Environment(\.nativePlacement) private var placement
 
     var body: some View {
         VStack(spacing: 0) {
@@ -113,13 +146,9 @@ struct ForecastNativeSlot: View {
                     guard let viewport = geometry.bounds(of: .scrollView(axis: .vertical)) else { return false }
                     return viewport.maxY >= 0
                 } action: { reached in
-                    guard reached, visit.decision == nil else { return }
-                    if visit.reached(hasCreative: ads?.hasFreshCreative == true), let ads {
-                        generation = ads.generation
-                        creative = ads.take()
-                    }
+                    if reached { placement?.reached(ads) }
                 }
-            if let ads, ads.enabled, generation == ads.generation, let creative {
+            if let creative = placement?.creative(for: ads) {
                 let stacked = tab == .search
                 ForecastCreativeHost(ad: creative, stacked: stacked, theme: theme, locale: locale)
                     .padding(.horizontal, stacked ? 0 : 12)
@@ -128,6 +157,5 @@ struct ForecastNativeSlot: View {
             }
         }
         .onAppear { ads?.preload() }
-        .onChange(of: ads?.generation) { creative = nil }
     }
 }

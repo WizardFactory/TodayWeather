@@ -156,7 +156,7 @@ struct ShellFrame: View {
             VStack(spacing: 0) {
                 colors.statusBar.color.frame(height: insets.statusBar)
                 ZStack(alignment: .top) {
-                    tab.page.id(model.adVisit).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    tab.page.modifier(ForecastNativeVisitHost()).id(model.adVisit).frame(maxWidth: .infinity, maxHeight: .infinity)
                         .environment(\.shellInsets, insets)
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
                     HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, titleView: tab.titleView,

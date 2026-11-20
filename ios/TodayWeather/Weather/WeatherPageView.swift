@@ -74,6 +74,36 @@ struct WeatherPageActions {
     var perform: (PageAction) -> Void = { _ in }
 }
 
+/// One forecast visit qualifies after a deliberate forward drag and the vertical viewport reaches a detail section.
+struct ForecastDetailRead {
+    private var forwardDrag = false
+    private var reachedDetails = false
+    private var reported = false
+
+    mutating func drag(_ translation: CGSize) -> Bool {
+        if -translation.height > abs(translation.width) { forwardDrag = true }
+        return take()
+    }
+
+    /// Count a readable portion of the first actual detail block. A short Daily page can reach its
+    /// final scroll offset while much of the chart is still visible above the details.
+    static func reachesDetail(height: CGFloat, viewport: CGRect?) -> Bool {
+        guard height > 0, let viewport else { return false }
+        return viewport.maxY >= min(44, height)
+    }
+
+    mutating func observeDetail(_ reached: Bool) -> Bool {
+        reachedDetails = reached
+        return take()
+    }
+
+    private mutating func take() -> Bool {
+        guard forwardDrag, reachedDetails, !reported else { return false }
+        reported = true
+        return true
+    }
+}
+
 /// S03 (Hourly) or S04 (Daily) as tab-forecast.html and tab-dailyforecast.html draw them (#2957): the first card with
 /// the header block (photo, arrows, temperature, sky image, summary) and the chart, then the cards and the data-source
 /// notice, on the theme's page color. The shell's header bar lies over the header block's top. Port of the Android
@@ -88,33 +118,19 @@ struct WeatherPageView: View {
     @Environment(\.sizeCategory) private var sizeCategory
 
     @Environment(\.forecastChartRead) private var chartRead
-    @State private var userScrolled = false
-    @State private var reportedRead = false
-    @State private var pastChart = false
+    @State private var reading = ForecastDetailRead()
 
     private var tab: ShellTab { content.type == .short ? .forecast : .dailyforecast }
-
-    private func reportRead() {
-        guard userScrolled, pastChart, !reportedRead, content.nativeAnchor != nil else { return }
-        reportedRead = true
-        chartRead(tab)
-    }
 
     var body: some View {
         let colors = WeatherColors.of(theme, daily: content.type == .mid)
         let barHeight = ShellMetrics.headerHeight + shellInsets.top
+        let firstDetail = content.nativeAnchor == nil ? nil : content.blocks.dropFirst(2).first { $0 != .attribution }
         let stack = VStack(spacing: 0) {
             VStack(spacing: 0) {
                 WeatherBlockView(block: .header, content: content, theme: theme, actions: actions)
                 Spacer().frame(height: WeatherMetrics.gap)
                 WeatherBlockView(block: .chart, content: content, theme: theme, actions: actions)
-                    .onGeometryChange(for: Bool.self) { geometry in
-                        guard let viewport = geometry.bounds(of: .scrollView(axis: .vertical)) else { return false }
-                        return viewport.minY >= geometry.size.height
-                    } action: { value in
-                        pastChart = value
-                        reportRead()
-                    }
                 Spacer().frame(height: WeatherMetrics.cardPadding)
             }
             .background(colors.card.color)
@@ -125,6 +141,13 @@ struct WeatherPageView: View {
             }
             ForEach(content.blocks.dropFirst(2), id: \.self) { block in
                 WeatherBlockView(block: block, content: content, theme: theme, actions: actions)
+                    .onGeometryChange(for: Bool?.self) { geometry in
+                        guard block == firstDetail else { return nil }
+                        return ForecastDetailRead.reachesDetail(height: geometry.size.height,
+                            viewport: geometry.bounds(of: .scrollView(axis: .vertical)))
+                    } action: { reached in
+                        if let reached, reading.observeDetail(reached) { chartRead(tab) }
+                    }
                 if block != .attribution { Spacer().frame(height: WeatherMetrics.gap) }
                 if block == content.nativeAnchor { ForecastNativeSlot(tab: tab, theme: theme) }
             }
@@ -136,10 +159,7 @@ struct WeatherPageView: View {
                 }
                     // Keep the hero under the translucent bar and the pull indicator below it.
                     .simultaneousGesture(DragGesture(minimumDistance: 12).onChanged { drag in
-                        if -drag.translation.height > abs(drag.translation.width) {
-                            userScrolled = true
-                            reportRead()
-                        }
+                        if firstDetail != nil, reading.drag(drag.translation) { chartRead(tab) }
                     })
                     .scrollClipDisabled()
                     .padding(.top, barHeight)
@@ -149,9 +169,7 @@ struct WeatherPageView: View {
             }
         }
         .onChange(of: content.visit) {
-            userScrolled = false
-            reportedRead = false
-            pastChart = false
+            reading = ForecastDetailRead()
         }
         // Not into the safe area: the shell lays the page out under its own status bar color.
         .background(colors.page.color, ignoresSafeAreaEdges: [])
