@@ -98,5 +98,28 @@
     "httpStatus": 200,
     "result": "InvalidLayersParameter"
   },
-  "montevideoTideTableDownloaded": true
+  "montevideoTideTableDownloaded": true,
+  "greaterSydneyFireDanger": {
+    "replay": "https://www.rfs.nsw.gov.au/feeds/fdrToban.xml",
+    "regionNumber": 4,
+    "responseFields": [
+      "DangerLevelToday",
+      "DangerLevelTomorrow",
+      "FireBanToday",
+      "FireBanTomorrow"
+    ]
+  },
+  "buenosAiresHourlyArchive": {
+    "rows": 240,
+    "start": "2026-11-10 05:45",
+    "end": "2026-11-20 04:45",
+    "units": "m",
+    "utcOffsetFromCsv": null,
+    "datum": "Plano Único de Reducción de Sondajes del Río de la Plata"
+  },
+  "montevideoTideTable": {
+    "units": "cm",
+    "datum": "Chart 41 reduction plane / Montevideo port gauge zero / provisional hydrometric plane (Ex-Wharton)",
+    "printedTimeZone": "Huso +3"
+  }
 }
