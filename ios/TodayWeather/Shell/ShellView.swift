@@ -68,7 +68,10 @@ struct RootView: View {
             }
         }
         .onChange(of: phase, initial: true) { _, phase in
-            if phase == .active { Monetization.shared.refreshEligibility() }
+            if phase == .active {
+                Monetization.shared.refreshEligibility()
+                Monetization.shared.nativeAds?.prepareSpare()
+            }
         }
         .task { launch.start(); Monetization.shared.uiStarted() }
     }

@@ -12,11 +12,12 @@ extension HostedShellTests {
             var enabled = true
             let generation = 0
             var hasFreshCreative = true
-            func preload() {}
-            func take() -> ForecastCreative? {
+            private var assigned: [ShellTab: ForecastCreative] = [:]
+            func assignedCreative(for tab: ShellTab) -> ForecastCreative? { assigned[tab] }
+            func assignCreative(to tab: ShellTab) -> ForecastCreative? {
                 guard hasFreshCreative else { return nil }
                 hasFreshCreative = false
-                return ForecastCreative(headline: "Test placement", advertiser: "Sample advertiser",
+                let creative = ForecastCreative(headline: "Test placement", advertiser: "Sample advertiser",
                     body: "A sample creative for the weather guide.", action: "Learn more", icon: nil) { adView in
                     guard let media = adView.mediaView else { return }
                     let artwork = UIImageView(image: UIImage(systemName: "cloud.sun.fill"))
@@ -27,7 +28,101 @@ extension HostedShellTests {
                     artwork.autoresizingMask = [.flexibleWidth, .flexibleHeight]
                     media.addSubview(artwork)
                 }
+                assigned[tab] = creative
+                return creative
             }
+        }
+
+        private final class CachedInventory: ForecastNativeInventory {
+            let enabled = true
+            let generation = 0
+            let cache: ForecastNativeCache
+            init(_ cache: ForecastNativeCache) { self.cache = cache }
+            func assignCreative(to tab: ShellTab) -> ForecastCreative? { cache.assignCreative(to: tab) }
+            func assignedCreative(for tab: ShellTab) -> ForecastCreative? { cache.assignedCreative(for: tab) }
+        }
+
+        @Test func returningToHourlyReusesTheRegisteredViewAndLeavesTheSpareForDaily() async throws {
+            let inventory = CachedInventory(ForecastNativeCache())
+            let hourly = try #require(LayoutInventory().assignCreative(to: .forecast))
+            let daily = try #require(LayoutInventory().assignCreative(to: .dailyforecast))
+            inventory.cache.store(hourly)
+            let shell = ShellFixture.shell()
+            shell.select(.forecast)
+            let hosted = try HostedView(ShellFrame(model: shell, insets: PlacesScreenshotTests.insets, content: { tab in
+                TabContent(page: AnyView(ScrollView { ForecastNativeSlot(tab: tab, theme: .light) }))
+            }).environment(\.forecastNativeAds, inventory), size: CGSize(width: 393, height: 798))
+            defer { hosted.close() }
+            try await hosted.settle()
+            #expect(hosted.elements().contains { $0 === hourly.registeredView })
+            shell.tapTab(.air)
+            try await hosted.settle()
+            #expect(shell.selected == .air)
+            inventory.cache.store(daily)
+            #expect(!hosted.elements().contains { $0 is ForecastCreativeView })
+            shell.tapTab(.forecast)
+            try await hosted.settle()
+            #expect(hosted.elements().contains { $0 === hourly.registeredView })
+            #expect(inventory.cache.hasSpare)
+            shell.tapTab(.dailyforecast)
+            try await hosted.settle()
+            #expect(hosted.elements().contains { $0 === daily.registeredView })
+            #expect(!inventory.cache.hasSpare)
+        }
+
+        @Test func rapidTabVisitsCoalesceLoadsAndBackOffAfterNoFill() async throws {
+            var now = ContinuousClock.now
+            var loaders: [AdLoader] = []
+            let ads = ForecastNativeAds(unitID: AdsSettings.testNativeUnit, request: { Request() },
+                                        now: { now }, send: { loader, _ in loaders.append(loader) },
+                                        track: { _, _ in true })
+            ads.setEnabled(true)
+            for tab in ShellTab.allCases { #expect(ads.assignCreative(to: tab) == nil) }
+            #expect(loaders.isEmpty, "SDK requests are outside synchronous tab navigation")
+            try #require(await AirLiveTests.wait(3) { !loaders.isEmpty })
+            let first = try #require(loaders.first)
+            #expect(loaders.count == 1)
+            ads.adLoader(first, didFailToReceiveAdWithError: NSError(domain: "native-test", code: 1))
+            now += .seconds(59)
+            for tab in ShellTab.allCases { #expect(ads.assignCreative(to: tab) == nil) }
+            await Task.yield()
+            #expect(loaders.count == 1)
+            now += .seconds(1)
+            _ = ads.assignCreative(to: .dailyforecast)
+            _ = ads.assignCreative(to: .forecast)
+            #expect(await AirLiveTests.wait(3) { loaders.count == 2 })
+            ads.setEnabled(false)
+            ads.setEnabled(true)
+            ads.setEnabled(false)
+            await Task.yield()
+            #expect(loaders.count == 2, "revocation cancels queued demand")
+        }
+
+        @Test func cachedCardsExpireFromLoadTimeAndConsentClearsEveryPlacement() throws {
+            var now = ContinuousClock.now
+            let cache = ForecastNativeCache(now: { now })
+            let source = CachedInventory(cache)
+            let placement = ForecastNativePlacement()
+            for tab in ShellTab.allCases {
+                let asset = try #require(LayoutInventory().assignCreative(to: tab))
+                cache.store(asset)
+                #expect(cache.assignCreative(to: tab) === asset)
+            }
+            placement.reached(source, tab: .forecast)
+            #expect(placement.creative(for: source) != nil)
+            #expect(!cache.needsSpare)
+            now += .seconds(55 * 60 - 1)
+            #expect(cache.assignCreative(to: .forecast) != nil)
+            now += .seconds(1)
+            #expect(cache.needsSpare)
+            #expect(placement.creative(for: source) == nil, "foreground expiration also clears a retained visit")
+            #expect(cache.assignCreative(to: .forecast) == nil)
+            let fresh = try #require(LayoutInventory().assignCreative(to: .forecast))
+            cache.store(fresh)
+            #expect(cache.assignCreative(to: .forecast) === fresh)
+            cache.store(try #require(LayoutInventory().assignCreative(to: .dailyforecast)))
+            cache.clear()
+            #expect(cache.assignCreative(to: .forecast) == nil && !cache.hasSpare)
         }
 
         @Test func reopeningSavedListDoesNotInsertALateCreative() async throws {
@@ -82,7 +177,7 @@ extension HostedShellTests {
         }
 
         @Test func cardKeepsItsDisclosureAndAssetsAtNarrowWidths() throws {
-            let asset = try #require(LayoutInventory().take())
+            let asset = try #require(LayoutInventory().assignCreative(to: .forecast))
             let view = ForecastCreativeView()
             let locale = Locale(identifier: "ko_KR")
             func height(stacked: Bool, accessible: Bool) -> CGFloat {

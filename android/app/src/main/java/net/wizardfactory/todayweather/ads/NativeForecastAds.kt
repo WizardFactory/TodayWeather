@@ -2,26 +2,24 @@ package net.wizardfactory.todayweather.ads
 
 import android.app.Activity
 import android.graphics.Color
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.findRootCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -33,6 +31,7 @@ import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 import net.wizardfactory.todayweather.R
+import net.wizardfactory.todayweather.core.domain.shell.Tab
 
 /** Owns SDK creatives for one activity. The caller supplies combined consent, SDK and remote policy eligibility. */
 class NativeForecastAds(
@@ -40,19 +39,25 @@ class NativeForecastAds(
     private val unitId: String,
     private val track: (String, Map<String, Any?>) -> Boolean,
 ) {
-    private val inventory = NativeInventory<NativeAd>(::load, NativeAd::destroy, SystemClock::elapsedRealtime)
+    private val main = Handler(Looper.getMainLooper())
+    private val inventory = NativeInventory<NativeCard>(::load, NativeCard::destroy, SystemClock::elapsedRealtime) { main.post(it) }
 
     fun setEnabled(allowed: Boolean) = inventory.setEnabled(allowed && unitId.isNotBlank())
     fun destroy() = inventory.setEnabled(false)
-    internal fun open(visitKey: Any, show: (NativeAd?) -> Unit) = inventory.open(visitKey, show)
-    internal fun displayedFor(visitKey: Any) = inventory.displayedFor(visitKey)
+    fun setForeground(value: Boolean) = inventory.setForeground(value)
+    internal fun open(tab: Tab, visitKey: Any, show: (NativeCard?) -> Unit) = inventory.open(tab, visitKey, show)
     internal fun end(visitKey: Any) = inventory.end(visitKey)
 
-    private fun load(settle: (NativeAd?) -> Unit) {
+    private fun load(settle: (NativeCard?) -> Unit) {
         val loader = AdLoader.Builder(activity, unitId)
             .forNativeAd { creative ->
                 lifecycle("loaded")
-                settle(creative)
+                settle(NativeCard(register = { host, compact ->
+                    val layout = if (compact) R.layout.native_forecast_ad_compact else R.layout.native_forecast_ad
+                    val view = LayoutInflater.from(host.context).inflate(layout, host, false) as NativeAdView
+                    bindNativeCreative(view, creative)
+                    view
+                }, releaseAd = creative::destroy))
             }
             .withAdListener(object : AdListener() {
                 override fun onAdFailedToLoad(error: LoadAdError) {
@@ -73,62 +78,75 @@ class NativeForecastAds(
     }
 }
 
-private class SlotPosition {
-    var visit: NativeInventory<NativeAd>.Visit? = null
-    var belowViewport: Boolean? = null
-}
+/** The registered SDK view follows this ad across visits to its one placement. Compose owns only the wrapper. */
+internal class NativeCard(
+    private val register: (FrameLayout, Boolean) -> NativeAdView,
+    private val releaseAd: () -> Unit,
+) {
+    private var view: NativeAdView? = null
+    private var darkTheme: Boolean? = null
+    private var destroyed = false
 
-/** Keep ownership in the tab/city composition even when an overlay removes its on-screen slot. */
-@Composable
-fun rememberNativeAdSlot(ads: NativeForecastAds, compact: Boolean, dark: Boolean): @Composable () -> Unit {
-    val visitKey = remember(ads) { Any() }
-    DisposableEffect(ads, visitKey) { onDispose { ads.end(visitKey) } }
-    return { NativeAdSlot(ads, visitKey, compact, dark) }
-}
-
-/** Zero height while empty. An arriving creative may be inserted only below the reader's viewport. */
-@Composable
-private fun NativeAdSlot(ads: NativeForecastAds, visitKey: Any, compact: Boolean, dark: Boolean) {
-    var creative by remember(ads, visitKey) { mutableStateOf(ads.displayedFor(visitKey)) }
-    val position = remember(ads, visitKey) { SlotPosition() }
-    DisposableEffect(ads, visitKey) {
-        val visit = ads.open(visitKey) { creative = it }
-        position.visit = visit
-        position.belowViewport?.let(visit::position)
-        onDispose {
-            position.visit = null
-            visit.detach()
+    fun mount(host: FrameLayout, compact: Boolean, dark: Boolean) {
+        if (destroyed) return
+        val card = view ?: register(host, compact).also { view = it }
+        if (card.parent !== host) {
+            (card.parent as? ViewGroup)?.removeView(card)
+            host.removeAllViews()
+            host.addView(card)
         }
-    }
-    Box(Modifier.fillMaxWidth().onGloballyPositioned { coordinates ->
-        val below = coordinates.positionInWindow().y >= coordinates.findRootCoordinates().boundsInWindow().bottom
-        position.belowViewport = below
-        position.visit?.position(below)
-    }) {
-        creative?.let { ad ->
-            key(ad, dark, compact) {
-                AndroidView(
-                    factory = { context ->
-                        val layout = if (compact) R.layout.native_forecast_ad_compact else R.layout.native_forecast_ad
-                        val view = LayoutInflater.from(context).inflate(layout, null) as NativeAdView
-                        bindNativeCreative(view, ad, dark)
-                        view
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = if (compact) 6.dp else 12.dp).testTag("admob-native-card"),
-                    onRelease = { it.destroy() },
-                )
+        if (darkTheme != dark) {
+            darkTheme = dark
+            val text = if (dark) Color.WHITE else Color.rgb(32, 32, 32)
+            card.setBackgroundColor(if (dark) Color.rgb(30, 30, 30) else Color.WHITE)
+            for (id in listOf(R.id.ad_attribution, R.id.ad_headline, R.id.ad_advertiser, R.id.ad_body, R.id.ad_cta)) {
+                card.findViewById<TextView>(id).setTextColor(text)
             }
         }
     }
+
+    fun destroy() {
+        if (destroyed) return
+        destroyed = true
+        view?.let {
+            (it.parent as? ViewGroup)?.removeView(it)
+            it.destroy()
+        }
+        view = null
+        releaseAd()
+    }
 }
 
-private fun bindNativeCreative(view: NativeAdView, ad: NativeAd, dark: Boolean) {
-    val text = if (dark) Color.WHITE else Color.rgb(32, 32, 32)
-    view.setBackgroundColor(if (dark) Color.rgb(30, 30, 30) else Color.WHITE)
-    view.findViewById<TextView>(R.id.ad_attribution).setTextColor(text)
+/** Keep the visit in the tab/city composition. A card requested after a miss belongs to a future visit. */
+@Composable
+fun rememberNativeAdSlot(ads: NativeForecastAds, tab: Tab, dark: Boolean): @Composable () -> Unit {
+    val visitKey = remember(ads, tab) { Any() }
+    DisposableEffect(ads, visitKey) { onDispose { ads.end(visitKey) } }
+    return { NativeAdSlot(ads, tab, visitKey, dark) }
+}
+
+@Composable
+private fun NativeAdSlot(ads: NativeForecastAds, tab: Tab, visitKey: Any, dark: Boolean) {
+    var creative by remember(ads, visitKey) { mutableStateOf<NativeCard?>(null) }
+    DisposableEffect(ads, visitKey) {
+        val visit = ads.open(tab, visitKey) { creative = it }
+        onDispose { visit.detach() }
+    }
+    creative?.let { card ->
+        val compact = tab != Tab.LOCATIONS
+        AndroidView(
+            factory = { FrameLayout(it) },
+            update = { card.mount(it, compact, dark) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = if (compact) 6.dp else 12.dp)
+                .testTag("admob-native-card"),
+            onRelease = { it.removeAllViews() },
+        )
+    }
+}
+
+private fun bindNativeCreative(view: NativeAdView, ad: NativeAd) {
     fun asset(id: Int, value: String?): TextView = view.findViewById<TextView>(id).apply {
         this.text = value
-        setTextColor(text)
         visibility = if (value.isNullOrBlank()) View.GONE else View.VISIBLE
     }
     view.headlineView = asset(R.id.ad_headline, ad.headline)

@@ -10,6 +10,8 @@ final class ForecastCreative {
     let body: String?
     let action: String?
     let icon: UIImage?
+    /// A return to this placement keeps the already registered SDK view, including its media and AdChoices.
+    lazy var registeredView = ForecastCreativeView()
     let bind: (NativeAdView) -> Void
 
     init(headline: String?, advertiser: String?, body: String?, action: String?, icon: UIImage?, bind: @escaping (NativeAdView) -> Void) {
@@ -39,7 +41,7 @@ struct ForecastCreativeHost: UIViewRepresentable {
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     func makeUIView(context: Context) -> ForecastCreativeView {
-        ForecastCreativeView()
+        ad.registeredView
     }
 
     func updateUIView(_ view: ForecastCreativeView, context: Context) {

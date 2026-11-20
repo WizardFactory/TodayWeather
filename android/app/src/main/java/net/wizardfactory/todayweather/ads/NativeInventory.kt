@@ -1,120 +1,123 @@
 package net.wizardfactory.todayweather.ads
 
-/**
- * Main-thread owner of one displayed creative and one preloaded spare across tab visits.
- * A displayed slot must never jump into the reader's viewport after the weather has appeared.
- */
+import net.wizardfactory.todayweather.core.domain.shell.Tab
+
+/** Activity-owned, main-thread inventory. A tab keeps its assigned ad. Only the unused spare can change hands. */
 internal class NativeInventory<T : Any>(
     private val load: ((T?) -> Unit) -> Unit,
     private val release: (T) -> Unit,
     private val clock: () -> Long,
+    private val post: (() -> Unit) -> Unit,
 ) {
+    private data class Entry<T>(val ad: T, val loadedAt: Long)
+    private val assigned = mutableMapOf<Tab, Entry<T>>()
+    private var spare: Entry<T>? = null
     private var enabled = false
+    private var foreground = false
     private var loading = false
-    private var generation = 0
-    private var spare: T? = null
-    private var loadedAt = 0L
+    private var generation = 0L
+    private var retryAfter = 0L
     private var current: Visit? = null
 
     fun setEnabled(value: Boolean) {
         if (enabled == value) return
         enabled = value
-        if (enabled) {
-            preload()
+        if (value) {
+            prepareSpare()
         } else {
             generation++
             loading = false
-            spare?.let(release)
-            spare = null
+            retryAfter = 0L
             current?.clear()
+            assigned.values.forEach { release(it.ad) }
+            assigned.clear()
+            spare?.let { release(it.ad) }
+            spare = null
         }
     }
 
-    fun open(visitKey: Any, show: (T?) -> Unit): Visit {
-        current?.takeIf { it.key === visitKey }?.let { visit ->
-            visit.attach(show)
-            return visit
+    fun setForeground(value: Boolean) {
+        foreground = value
+        if (value) prepareSpare()
+    }
+
+    fun open(tab: Tab, key: Any, show: (T?) -> Unit): Visit {
+        discardExpired()
+        current?.takeIf { it.key === key }?.let {
+            it.attach(show)
+            return it
         }
         current?.close()
-        val visit = Visit(visitKey, show)
+        val entry = assigned[tab] ?: spare?.also {
+            assigned[tab] = it
+            spare = null
+        }
+        val visit = Visit(key, tab, entry?.ad)
         current = visit
-        visit.takeReady()
-        preload()
+        visit.attach(show)
+        prepareSpare()
         return visit
     }
 
-    fun displayedFor(visitKey: Any): T? = current?.takeIf { it.key === visitKey }?.displayed
-
-    fun end(visitKey: Any) {
-        current?.takeIf { it.key === visitKey }?.close()
+    fun end(key: Any) {
+        current?.takeIf { it.key === key }?.close()
     }
 
-    private fun preload() {
-        if (!enabled || loading || spare != null) return
+    private fun prepareSpare() {
+        if (!enabled || !foreground) return
+        discardExpired()
+        if (loading || spare != null || assigned.size == Tab.entries.size || clock() < retryAfter) return
         loading = true
         val request = ++generation
-        load { ad ->
-            if (generation != request || !loading) {
-                ad?.let(release)
-            } else {
+        post {
+            if (request != generation) return@post
+            if (!foreground) {
                 loading = false
-                spare = ad
-                loadedAt = clock()
-                if (ad != null && current?.canInsertOffscreen == true) current?.takeReady()
+                return@post
+            }
+            load { ad ->
+                if (request != generation || !loading) {
+                    ad?.let(release)
+                } else {
+                    loading = false
+                    if (ad == null) retryAfter = clock() + 60_000L
+                    else spare = Entry(ad, clock())
+                }
             }
         }
     }
 
-    inner class Visit(val key: Any, private var show: ((T?) -> Unit)?) {
-        var displayed: T? = null
-            private set
-        private var reached = false
-        var canInsertOffscreen = false
-            private set
-
-        fun position(belowViewport: Boolean) {
-            if (current !== this || show == null) return
-            if (!belowViewport) reached = true
-            canInsertOffscreen = belowViewport && !reached && displayed == null
-            if (canInsertOffscreen) takeReady()
+    private fun discardExpired() {
+        val cutoff = clock() - 55 * 60_000L
+        assigned.entries.removeAll { (tab, entry) ->
+            if (entry.loadedAt > cutoff) return@removeAll false
+            if (current?.tab == tab) current?.clear()
+            release(entry.ad)
+            true
         }
-
-        internal fun takeReady() {
-            if (displayed != null || reached) return
-            val ad = spare ?: return
+        spare?.takeIf { it.loadedAt <= cutoff }?.let {
+            release(it.ad)
             spare = null
-            if (clock() - loadedAt >= 60 * 60 * 1_000L) {
-                release(ad)
-            } else {
-                displayed = ad
-                canInsertOffscreen = false
-                show?.invoke(ad)
-            }
-            preload()
+        }
+    }
+
+    /** One decision per actual page visit. Changing a menu or search overlay only detaches its renderer. */
+    inner class Visit(val key: Any, val tab: Tab, private var creative: T?) {
+        private var render: ((T?) -> Unit)? = null
+
+        internal fun attach(show: (T?) -> Unit) {
+            render = show
+            show(creative)
         }
 
         internal fun clear() {
-            displayed?.let { ad ->
-                displayed = null
-                reached = true
-                canInsertOffscreen = false
-                show?.invoke(null)
-                release(ad)
-            }
+            creative = null
+            render?.invoke(null)
         }
 
-        // Overlays remove the view but retain the reader's progress and any displayed creative.
-        fun detach() {
-            show = null
-            canInsertOffscreen = false
-        }
+        fun detach() { render = null }
 
-        internal fun attach(render: (T?) -> Unit) {
-            show = render
-            render(displayed)
-        }
-
-        fun close() {
+        internal fun close() {
             if (current === this) current = null
             clear()
             detach()
