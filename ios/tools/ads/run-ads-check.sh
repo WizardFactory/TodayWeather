@@ -80,6 +80,17 @@ tracking() {
 }
 
 launch() {
+  # simctl bootstatus can finish before Launch Services has restored this app's record after a restart.
+  # Re-register the identical build if needed, then verify that all three launches use the seeded container.
+  if ! xcrun simctl get_app_container "$UDID" "$BUNDLE" app >/dev/null 2>&1; then
+    xcrun simctl install "$UDID" "$OUT/TodayWeather.app"
+  fi
+  DATA=$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)
+  STATE="$DATA/Library/Application Support/TodayWeather"
+  if [ "$(cat "$STATE/.ads-smoke-session" 2>/dev/null)" != "$SESSION" ]; then
+    echo "The seeded simulator app state is unavailable before $1" >&2
+    exit 1
+  fi
   log "launch $1 for $2 s"
   # The Firebase SDK logs to the unified log, not to the console: stream the app's messages (debug level) beside it.
   xcrun simctl spawn "$UDID" log stream --level debug --style compact --predicate 'process == "TodayWeather"' \
@@ -92,6 +103,12 @@ launch() {
     -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/$1.log" 2>&1 &
   CONSOLE=$!
   sleep "$2"
+  if grep -q "Simulator device failed to launch" "$OUT/$1.log"; then
+    kill "$STREAM" 2>/dev/null || true
+    wait "$STREAM" 2>/dev/null || true
+    echo "The simulator failed to launch the app for $1" >&2
+    exit 1
+  fi
   xcrun simctl io "$UDID" screenshot "$OUT/$1.png" > /dev/null 2>&1 || true
   xcrun simctl terminate "$UDID" $BUNDLE 2>/dev/null || true
   wait $CONSOLE 2>/dev/null || true
@@ -116,6 +133,8 @@ xcrun simctl install "$UDID" "$OUT/TodayWeather.app"
 DATA=$(xcrun simctl get_app_container "$UDID" $BUNDLE data)
 STATE="$DATA/Library/Application Support/TodayWeather"
 mkdir -p "$STATE"
+SESSION=$(uuidgen)
+printf '%s' "$SESSION" > "$STATE/.ads-smoke-session"
 # Keep the ad anchor below the fold during consent. These synthetic saved places need no weather requests.
 python3 - "$HERE/state.json" "$STATE/app_state.json" <<'PY'
 import json

@@ -72,10 +72,12 @@ def main():
     before = [l.strip() for n in names[:2] for l in logs[n] if "Logging event:" in l]
     check("no analytics event logged before the opt-in", not before, before[:10])
     stored = {n: events(out, n) for n in names}
-    check("no analytics event stored before the opt-in", all(not stored[n] for n in names[:2]), stored)
+    check("no analytics event stored before the opt-in", all(stored[n] == [] for n in names[:2]), stored)
     logged = [l.strip() for l in logs[names[2]] if "Logging event:" in l and "screen_view" in l]
-    check("after the opt-in, the debug log shows screen_view logged",
-          logged, {"logged": logged[:3], "stored": stored[names[2]]})
+    # Firebase also persists screen_view under its measurement event name (_vs).
+    screen_stored = bool({"screen_view", "_vs"}.intersection(stored[names[2]] or ()))
+    check("after the opt-in, Firebase records a screen_view",
+          logged or screen_stored, {"debug_log": bool(logged), "measurement_database": screen_stored})
 
     summary = {"out": str(out), "passed": all(c["ok"] for c in checks), "checks": checks, "analytics_debug_logging_on": debug}
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
