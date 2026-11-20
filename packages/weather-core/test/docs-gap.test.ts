@@ -300,3 +300,15 @@ it("QA NIT: compares air forecast times independent of T/space and seconds", () 
   ).toBe(true);
   expect(aqi.find((h) => h.at === "2026-09-23 10:00")?.forecast).toBe(true);
 });
+
+it("preserves the supplemental hourly series without changing the three-hour forecast", () => {
+  const raw = world();
+  const baseline = normalizeWeather(raw);
+  const at = "2026-09-23T08:00:00.000Z";
+  const details = { at, uvIndex: 0, windGustMps: 8, wbgtC: -3, solarEnergyMjm2: 0 };
+  raw.hourlyDetails = [details, { at, uvIndex: null, severeRisk: 101 }];
+  const weather = normalizeWeather(raw);
+  expect(weather.hourlyDetails).toEqual([details]);
+  expect(weather.hourly).toEqual(baseline.hourly);
+  expect(baseline.hourlyDetails).toBeUndefined();
+});

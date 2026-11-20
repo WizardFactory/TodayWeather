@@ -298,6 +298,29 @@ explicitly synthetic UV. A paired live Tokyo request returned queryCost 49 both
 before and after adding UV (same last1days/next7days range). Local evidence does
 not establish production rollout. [Updated request diagram](diagrams/mobile-weather-request.html).
 
+### Supplemental overseas hourly forecasts (#3071)
+
+The overseas v000903 response can include `hourlyDetails[]`. It contains
+future one-hour Visual Crossing values for the viewed location in UTC order.
+`at` is an ISO 8601 UTC timestamp. Each row has at least one available metric.
+
+| Field | Unit or definition |
+| --- | --- |
+| `uvIndex` | UV index |
+| `windGustMps` | Metres per second |
+| `wbgtC` | Modeled wet-bulb globe temperature in °C |
+| `solarRadiationWm2` | Irradiance in W/m² |
+| `solarEnergyMjm2` | Solar energy in MJ/m² |
+| `severeRisk` | Visual Crossing convective storm score on a 0–100 scale |
+
+The solar fields express radiation and energy. Official warning and
+sunshine-duration products have their own sources. Optional unavailable metrics
+are omitted. A valid zero remains zero. Pre-extension cache records remain
+readable and gain data on a normal refresh. The legacy overseas `hourly[]`
+continues to contain three-hour chart rows with existing precipitation
+totals. The desktop/PWA weather model and native iOS/Android converters expose
+the supplemental series to their data consumers. [Request diagram](diagrams/mobile-weather-request.html) · [Response example](../user/weather-api/hourly-details/manual.pdf).
+
 ### Overseas request-time air provider chain (#2628 PR 2)
 
 The active `queryTwoDaysWeatherNewForm` starts the shared [air service](../../server/lib/AQI/airFallback.js) in parallel with weather retrieval. This covers the v000901/v000902 DSF coordinate routes, v000903 (which reuses v000902), and the widget route using that query. A weather cache hit still runs the air branch. These requests no longer read/prune the old `aqi` collection or issue a second legacy WAQI request. Older collector/query methods remain for their existing callers.
