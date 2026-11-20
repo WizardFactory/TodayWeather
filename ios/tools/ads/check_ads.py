@@ -14,7 +14,8 @@ def events(out: Path, name: str):
     """Event names in the SDK's database copy after a launch (lifetime counters and unbundled events)."""
     db_path = out / f"{name}.sql"
     if not db_path.exists():
-        return None
+        marker = out / f"{name}.measurement-absent"
+        return [] if marker.is_file() and marker.stat().st_size > 0 else None
     db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     try:
         counted = [r[0] for r in db.execute("SELECT name FROM events WHERE lifetime_count > 0")]

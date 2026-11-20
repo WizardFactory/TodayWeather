@@ -51,7 +51,7 @@ OUT=$(cd "$OUT" && pwd)
 TCC="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/TCC/TCC.db"
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 
-rm -rf "$OUT/TodayWeather.app" "$OUT"/*.log "$OUT"/*.oslog "$OUT"/*.png "$OUT"/*.sql*
+rm -rf "$OUT/TodayWeather.app" "$OUT"/*.log "$OUT"/*.oslog "$OUT"/*.png "$OUT"/*.sql* "$OUT"/*.measurement-absent
 cp -R "$APP" "$OUT/TodayWeather.app"
 python3 "$HERE/../upgrade/check_upgrade.py" dummy-plist "$OUT/TodayWeather.app/GoogleService-Info.plist"
 
@@ -86,7 +86,7 @@ launch() {
     > "$OUT/$1.oslog" 2>&1 &
   STREAM=$!
   # Launch only once the stream is attached (it prints its header first), so the SDK's first lines are in it.
-  for _ in $(seq 1 120); do grep -q "^Timestamp" "$OUT/$1.oslog" 2>/dev/null && break; sleep 0.5; done
+  for _ in $(seq 1 120); do grep -Eq "^(Timestamp|Filtering the log data)" "$OUT/$1.oslog" 2>/dev/null && break; sleep 0.5; done
   sleep 3
   SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --console-pty --terminate-running-process "$UDID" $BUNDLE \
     -FIRAnalyticsDebugEnabled -FIRAnalyticsVerboseLoggingEnabled > "$OUT/$1.log" 2>&1 &
@@ -99,9 +99,14 @@ launch() {
   kill $STREAM 2>/dev/null || true
   wait $STREAM 2>/dev/null || true
   MEASUREMENT="$DATA/Library/Application Support/Google/Measurement/google-app-measurement.sql"
-  for suffix in "" -wal; do
-    if [ -f "$MEASUREMENT$suffix" ]; then cp "$MEASUREMENT$suffix" "$OUT/$1.sql$suffix"; fi
-  done
+  MEASUREMENT_DIR=$(dirname "$MEASUREMENT")
+  if [ -f "$MEASUREMENT" ]; then
+    cp "$MEASUREMENT" "$OUT/$1.sql"
+    if [ -f "$MEASUREMENT-wal" ]; then cp "$MEASUREMENT-wal" "$OUT/$1.sql-wal"; fi
+  elif [ -d "$MEASUREMENT_DIR" ] && [ -r "$MEASUREMENT_DIR" ]; then
+    # The SDK may defer creation until analytics is opted in.
+    date -u +"No measurement database in app directory after launch at %FT%TZ" > "$OUT/$1.measurement-absent"
+  fi
 }
 
 boot
@@ -124,6 +129,8 @@ Path(sys.argv[2]).write_text(json.dumps(state))
 PY
 shutdown
 debugmode
+# Repeating the smoke starts with this app's ATT state undetermined on the dedicated simulator.
+sqlite3 "$TCC" "DELETE FROM access WHERE service='kTCCServiceUserTracking' AND client='$BUNDLE';"
 boot
 
 launch 1-explainer 45
