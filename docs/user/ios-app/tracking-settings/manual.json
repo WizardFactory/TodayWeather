@@ -1,0 +1,48 @@
+{
+  "title": "TodayWeather for iOS · Tracking settings",
+  "scenario": "Review the tracking choice for TodayWeather and open the app’s page in iOS Settings. The weather pages show saved sample weather on an iPhone 12 Pro Max.",
+  "steps": [
+    {
+      "title": "Read your tracking choice",
+      "instruction": "Open the side menu and scroll past About (정보) to Tracking permission (추적 허용 설정). Tap the row to open TodayWeather in iOS Settings.",
+      "screenshot": "menu.png",
+      "caption": "The row below 광고 개인정보 선택 shows 허용 안 함 when tracking is off.",
+      "expected": "The row shows 허용됨 when tracking is allowed. It appears after iOS can report an allowed or denied choice."
+    },
+    {
+      "title": "Open Settings from Hourly weather",
+      "instruction": "Open Hourly (시간별날씨) and scroll past the forecast and its sources. With tracking off, tap 설정 열기 at the bottom.",
+      "screenshot": "forecast.png",
+      "caption": "The explanation and Open Settings button are part of the scrolling Hourly page.",
+      "expected": "iOS opens the settings for TodayWeather. Choose whether to allow tracking where iOS offers the switch."
+    },
+    {
+      "title": "Review the switch in iOS Settings",
+      "instruction": "Look for Allow Tracking (추적 허용) in the settings for TodayWeather. Choose the setting you prefer, then return to the app.",
+      "screenshot": "settings.png",
+      "caption": "The switch is off in this example. Its availability depends on the iOS tracking settings for this device.",
+      "expected": "The menu shows your current choice the next time TodayWeather is active."
+    },
+    {
+      "title": "Find the shortcut in Daily weather",
+      "instruction": "Open Daily (일별날씨) and scroll to the end of the forecast.",
+      "screenshot": "dailyforecast.png",
+      "caption": "The Daily page also offers 설정 열기 while tracking is off.",
+      "expected": "All forecast features remain available with either tracking choice."
+    },
+    {
+      "title": "Find the shortcut in Air quality",
+      "instruction": "Open Air (대기정보) and scroll to the end of the station readings and source details.",
+      "screenshot": "air.png",
+      "caption": "The same tracking choice and shortcut apply to the Air page.",
+      "expected": "After you allow tracking in Settings and reopen the app, the notice disappears from all three weather pages."
+    },
+    {
+      "title": "Confirm an allowed choice",
+      "instruction": "After allowing tracking in iOS Settings, reopen the menu in TodayWeather and read 추적 허용 설정.",
+      "screenshot": "menu-allowed.png",
+      "caption": "The permission row now reads 추적 허용 설정 · 허용됨.",
+      "expected": "The notice has disappeared from Hourly, Daily and Air. You can still reopen iOS Settings from this menu."
+    }
+  ]
+}

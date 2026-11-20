@@ -114,6 +114,7 @@ struct WeatherPageView: View {
     var actions = WeatherPageActions()
     /// False: the blocks at the top without a scroll view (the screenshot tests render it, as `HourlyChartFrame`).
     var scrolls = true
+    var trackingNotice: TrackingNotice?
     @Environment(\.shellInsets) private var shellInsets
     @Environment(\.sizeCategory) private var sizeCategory
 
@@ -151,6 +152,7 @@ struct WeatherPageView: View {
                 if block != .attribution { Spacer().frame(height: WeatherMetrics.gap) }
                 if block == content.nativeAnchor { ForecastNativeSlot(tab: tab, theme: theme) }
             }
+            trackingNotice
         }
         Group {
             if scrolls {

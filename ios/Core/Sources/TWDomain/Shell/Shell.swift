@@ -118,7 +118,7 @@ public enum RefreshInterval {
 public enum MenuRow: String, CaseIterable, Sendable {
     // index.html's order: since #2990 (client 1.1.3) the privacy blocks follow About.
     case specialWeather, nationalWeather, nationalAir, nullschoolWind, units, startupPage, refreshInterval, theme
-    case sendFeedback, rateApp, version, about, analytics, adPrivacy, privacyPolicy, terms
+    case sendFeedback, rateApp, version, about, analytics, adPrivacy, trackingPermission, privacyPolicy, terms
 
     public var textKey: String {
         switch self {
@@ -132,6 +132,7 @@ public enum MenuRow: String, CaseIterable, Sendable {
         case .theme: "LOC_THEME_SETTING"
         case .analytics: "LOC_ANALYTICS_CHOICE"
         case .adPrivacy: "LOC_AD_PRIVACY_CHOICES"
+        case .trackingPermission: "LOC_TRACKING_PERMISSION"
         case .privacyPolicy: "LOC_PRIVACY_POLICY"
         case .terms: "LOC_TERMS"
         case .sendFeedback: "LOC_SEND_FEEDBACK"
@@ -152,7 +153,7 @@ public enum MenuRow: String, CaseIterable, Sendable {
     /// `.item.button.button-block` rather than a plain `.item`.
     public var isButton: Bool {
         switch self {
-        case .analytics, .adPrivacy, .privacyPolicy, .terms: true
+        case .analytics, .adPrivacy, .trackingPermission, .privacyPolicy, .terms: true
         default: false
         }
     }
@@ -177,8 +178,10 @@ public enum MenuRow: String, CaseIterable, Sendable {
     }
 
     /// The rows shown for `region` (`Util.region`, compared by UTF-16 code units), in order.
-    public static func rows(region: String?) -> [MenuRow] {
+    public static func rows(region: String?, tracking: TrackingStatus = .unavailable) -> [MenuRow] {
         let korea = region.map { JSString.equal($0, "KR") } ?? false
-        return allCases.filter { !$0.krOnly || korea }
+        return allCases.filter { row in
+            (!row.krOnly || korea) && (row != .trackingPermission || tracking == .authorized || tracking == .denied)
+        }
     }
 }
