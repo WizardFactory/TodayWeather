@@ -12,6 +12,27 @@ import UIKit
 extension HostedShellTests {
 @MainActor
 struct ShellTests {
+    @Test func onlyAcceptedTabBarTapsCanOfferAForecastTransition() {
+        let shell = ShellFixture.shell()
+        shell.select(.forecast)
+        var attempts: [ShellTab] = []
+        shell.onForecastTap = { attempts.append($0); return true }
+        shell.onTabTap = { _ in true }
+        shell.tapTab(.dailyforecast)
+        #expect(attempts.isEmpty && shell.selected == .forecast)
+
+        shell.onTabTap = { _ in false }
+        shell.tapTab(.dailyforecast)
+        #expect(attempts == [.dailyforecast] && shell.selected == .forecast)
+        let previousVisit = shell.adVisit
+        shell.select(.dailyforecast)
+        #expect(attempts == [.dailyforecast] && shell.selected == .dailyforecast)
+        #expect(shell.adVisit != previousVisit)
+        shell.onForecastTap = { _ in false }
+        shell.tapTab(.forecast)
+        #expect(shell.selected == .forecast)
+    }
+
     @Test func tabsNavigateAndPullRefreshesOnlyWeatherPages() async throws {
         #expect(ShellTab.allCases.map { Glyphs.tab($0) } ==
                 [Glyphs.starOutline, Glyphs.clockOutline, Glyphs.calendarOutline, Glyphs.cloudOutline])

@@ -1,0 +1,151 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "TodayWeather iOS ad delivery",
+    "subtitle": "SwiftUI navigation, iOS privacy and the device-local day",
+    "output": "docs/architecture/diagrams/ios-forecast-ad-delivery.html",
+    "quality_profile": "showcase",
+    "visual_preset": "signal-flow"
+  },
+  "lanes": [
+    {
+      "id": "visits",
+      "label": "SwiftUI tab bar"
+    },
+    {
+      "id": "fullscreen",
+      "label": "Forecast presenter"
+    },
+    {
+      "id": "content",
+      "label": "In-scroll native card"
+    }
+  ],
+  "mainPath": [
+    "tap",
+    "eligibility",
+    "reserve",
+    "show",
+    "open"
+  ],
+  "nodes": [
+    {
+      "id": "tap",
+      "lane": "visits",
+      "col": 0,
+      "type": "frontend",
+      "label": "Tap forecast tab",
+      "sublabel": "Hourly or Daily",
+      "width": 156
+    },
+    {
+      "id": "eligibility",
+      "lane": "visits",
+      "col": 1,
+      "type": "security",
+      "label": "Check repeat visit",
+      "sublabel": "Read past source chart",
+      "width": 156
+    },
+    {
+      "id": "reserve",
+      "lane": "fullscreen",
+      "col": 1,
+      "type": "database",
+      "label": "Reserve local day",
+      "sublabel": "Persist shared allowance",
+      "width": 156
+    },
+    {
+      "id": "show",
+      "lane": "fullscreen",
+      "col": 2,
+      "type": "external",
+      "label": "Present ready ad",
+      "sublabel": "At most once per day",
+      "width": 156
+    },
+    {
+      "id": "open",
+      "lane": "visits",
+      "col": 3,
+      "type": "frontend",
+      "label": "Select destination",
+      "sublabel": "Record visible forecast",
+      "width": 156
+    },
+    {
+      "id": "slot",
+      "lane": "content",
+      "col": 3,
+      "type": "frontend",
+      "label": "Reach card slot",
+      "sublabel": "Scroll past core content",
+      "width": 156
+    },
+    {
+      "id": "creative",
+      "lane": "content",
+      "col": 4,
+      "type": "external",
+      "label": "Display native ad",
+      "sublabel": "Ready at insertion point",
+      "width": 156
+    }
+  ],
+  "edges": [
+    {
+      "from": "tap",
+      "to": "eligibility"
+    },
+    {
+      "from": "eligibility",
+      "to": "reserve",
+      "label": "Eligible, draw < 10%"
+    },
+    {
+      "from": "reserve",
+      "to": "show",
+      "label": "Saved"
+    },
+    {
+      "from": "show",
+      "to": "open",
+      "label": "Dismissed or failed"
+    },
+    {
+      "from": "eligibility",
+      "to": "open",
+      "label": "Pass through"
+    },
+    {
+      "from": "open",
+      "to": "slot"
+    },
+    {
+      "from": "slot",
+      "to": "creative"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Two protected first visits",
+      "items": [
+        "The first visible Hourly and Daily visits are recorded independently across cities.",
+        "Only a deliberate repeat switch past the source chart gets a 10% draw.",
+        "A saved reservation survives relaunch. Confirmed failure before display releases it."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Privacy and inventory",
+      "items": [
+        "UMP and SDK readiness precede requests. ATT and TCF determine personalization.",
+        "Independent native and interstitial switches govern loaded and pending inventory.",
+        "Hourly, Daily and Air use compact cards. Saved places uses a stacked card after the last visible row."
+      ]
+    }
+  ]
+}

@@ -307,12 +307,10 @@ final class AppLaunch {
         tab == .search ? places?.content(tab) : weather?.content(tab)
     }
 
-    /// StartCtrl's `close()` after an add (the flow stored `startVersion` and selected the new place): the banner may
-    /// show again, the shell opens Hourly whatever the startup page, and TabCtrl's `init` loads it (`reloadEvent
+    /// StartCtrl's `close()` after an add (the flow stored `startVersion` and selected the new place): the shell opens Hourly whatever the startup page, and TabCtrl's `init` loads it (`reloadEvent
     /// 'init'`).
     private func startClosed() {
         guard let shell else { return }
-        Monetization.shared.setShowAds(true)
         shell.select(.forecast)
         shell.closeStart()
         startPage = nil

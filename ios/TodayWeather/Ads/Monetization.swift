@@ -12,7 +12,7 @@ import UIKit
 /// - Usage analytics (`UsageAnalytics`) applies the stored choice when the shell is created (after the Cordova
 ///   migration, after `AnalyticsGuard` turned collection off); the menu's 선택적 이용 통계 row changes it.
 /// - The ads start when the shell first shows a tab, as TabCtrl's `TwAds.init()` (S01 comes first, IN-10): Remote
-///   Config, UMP with the Ads SDK (`AdsConsent`) and the banner (`TwAds`, `AdMobBanner`). A build without valid AdMob
+///   Config and UMP gate native cards and forecast interstitials. A build without valid AdMob
 ///   identifiers (`AdsSettings`) requests no ads.
 /// - Crashlytics collects crash reports with a configured Firebase app, independent of the analytics choice, as in
 ///   the Cordova build.
@@ -29,20 +29,21 @@ final class Monetization {
                             settings: settings)
     }()
 
-    /// The banner shows (the slot under the tab bar).
-    private(set) var bannerShown = false
-
+    private(set) var nativeAds: ForecastNativeAds?
+    @ObservationIgnored private var interstitial: ForecastInterstitial?
     @ObservationIgnored let analytics: UsageAnalytics
     @ObservationIgnored private let settings: AdsSettings?
     @ObservationIgnored private let openURL: @MainActor (URL) -> Void
     @ObservationIgnored private let clock = MainClock()
     @ObservationIgnored private let log = Logger(subsystem: "net.wizardfactory.todayweather", category: "admob")
-    @ObservationIgnored private(set) var banner: AdMobBanner?
-    @ObservationIgnored private var twAds: TwAds?
     @ObservationIgnored private var consent: AdsConsent?
-    @ObservationIgnored private var sessionStart: Int64?
-    @ObservationIgnored private var shell: ShellModel?
-    @ObservationIgnored private var width: CGFloat?
+    @ObservationIgnored private var config: RemoteBannerConfig?
+    @ObservationIgnored private var platform: GoogleAdsPlatform?
+    @ObservationIgnored private var windowStarted = false
+    @ObservationIgnored private var privacyFormOpen = false
+    @ObservationIgnored private var previousPersonalization: Bool?
+    @ObservationIgnored private var readVisit: ShellModel.AdVisit?
+    @ObservationIgnored private weak var shell: ShellModel?
 
     /// `settings` nil: no ads. `openURL` opens the policy pages (the system browser).
     init(analytics: UsageAnalytics, settings: AdsSettings?,
@@ -63,15 +64,9 @@ final class Monetization {
         }
     }
 
-    /// The app's window appeared: the session the banner delay counts from (`sessionStart` of TwAds).
     func uiStarted() {
-        if sessionStart == nil { sessionStart = clock.nowMs }
+        windowStarted = true
         startAdsIfShown()
-    }
-
-    /// A page shows or hides the banner (`TwAds.setShowAds`; IN-10's start page).
-    func setShowAds(_ show: Bool) {
-        twAds?.setShowAds(show)
     }
 
     /// An analytics event of the schema (`Monetization.track`): the weather path's `weather_fetch` and `weather_load`
@@ -81,18 +76,9 @@ final class Monetization {
         analytics.track(name, params)
     }
 
-    /// The window's width changed (a rotation or a resized window): a new banner for the width
-    /// (`orientationchange`).
-    func windowWidthChanged(_ newWidth: CGFloat) {
-        defer { width = newWidth }
-        guard let old = width, abs(old - newWidth) >= 0.5 else { return }
-        twAds?.refresh()
-    }
-
-    /// The banner for `ShellView(banner:)` while it shows.
-    var bannerView: AnyView? {
-        guard bannerShown, let banner, banner.view != nil else { return nil }
-        return AnyView(BannerSlot(banner: banner))
+    func chartRead(_ tab: ShellTab) {
+        guard let shell, shell.selected == tab, pageScreen() == nil else { return }
+        readVisit = shell.adVisit
     }
 
     /// The Cordova state name of the page over the tabs (IN-12's settings pages, IN-13's nationwide pages), nil while
@@ -102,6 +88,18 @@ final class Monetization {
     /// A new shell: the stored analytics choice applies, and the privacy rows and the screens connect.
     func attach(_ shell: ShellModel) {
         self.shell = shell
+        readVisit = nil
+        shell.onForecastTap = { [weak self, weak shell] destination in
+            guard let self, let shell, UIApplication.shared.applicationState == .active,
+                  !shell.menuOpen, shell.popups.isEmpty, self.pageScreen() == nil else { return false }
+            self.refreshEligibility()
+            let visit = shell.adVisit
+            return self.interstitial?.handleIntent(from: shell.selected, to: destination,
+                                                   readPastChart: self.readVisit == visit) { [weak shell] in
+                guard let shell, shell.adVisit == visit, self.pageScreen() == nil else { return }
+                shell.select(destination)
+            } ?? false
+        }
         if AnalyticsGuard.firebaseConfigured {
             // Crash reports, as the Cordova build's Crashlytics plugin collected them (on by default, independent of
             // the analytics choice); Crashlytics itself starts with `FirebaseApp.configure()`.
@@ -142,38 +140,62 @@ final class Monetization {
         case .tab: analytics.screen(screen.2 ?? "tab.\(screen.1.rawValue)")
         }
         startAdsIfShown()
+        if case .tab = screen.0, screen.2 == nil {
+            interstitial?.markVisible(screen.1)
+        } else {
+            readVisit = nil
+        }
     }
 
     // MARK: Ads
 
     private func startAdsIfShown() {
-        guard twAds == nil, let sessionStart, let shell, case .tab = shell.screen else { return }
-        guard let settings else {
-            log.notice("admob not_configured no_ads")
-            return
-        }
+        guard consent == nil, windowStarted, let shell, case .tab = shell.screen, let settings else { return }
         let platform = GoogleAdsPlatform()
-        let log = self.log
         let analytics = self.analytics
+        let log = self.log
         let source: (any BannerConfigSource)? = AnalyticsGuard.firebaseConfigured ? FirebaseBannerConfigSource() : nil
         let config = RemoteBannerConfig(source: source, clock: clock, log: { log.notice("\($0, privacy: .public)") })
-        let banner = AdMobBanner(unitID: settings.bannerUnit, platform: platform,
-                                 track: { name, params in analytics.track(name, params) })
-        let ads = TwAds(adapter: banner, config: config, clock: clock, sessionStart: sessionStart,
-                        track: { name, params in analytics.track(name, params) },
-                        log: { log.notice("\($0, privacy: .public)") })
-        ads.onShownChange = { [weak self] in self?.bannerShown = $0 }
+        self.platform = platform
+        self.config = config
+        let trackAd: (String, [String: AnalyticsValue]) -> Bool = { name, params in
+            if name == "ad_lifecycle", case let .text(format) = params["ad_format"],
+               case let .text(action) = params["action"] {
+                log.notice("\(format, privacy: .public) \(action, privacy: .public)")
+            }
+            return analytics.track(name, params)
+        }
+        nativeAds = ForecastNativeAds(unitID: settings.nativeUnit, request: { platform.makeRequest() },
+                                      track: trackAd)
+        interstitial = ForecastInterstitial(unitID: settings.interstitialUnit, request: { platform.makeRequest() },
+                                            track: { name, params in _ = trackAd(name, params) })
+        if pageScreen() == nil { interstitial?.markVisible(shell.selected) }
+        config.onChange = { [weak self] in self?.refreshEligibility() }
         let consent = AdsConsent(platform: platform, releaseAds: settings.releaseAds, clock: clock,
                                  track: { name, params in analytics.track(name, params) },
                                  log: { log.notice("\($0, privacy: .public)") },
-                                 onReady: { [weak ads] status in
+                                 onReady: { [weak self] status in
                                      analytics.setAdTrackingStatus(status.name)
-                                     ads?.onAdapterReady()
+                                     self?.refreshEligibility()
                                  })
-        self.banner = banner
-        twAds = ads
         self.consent = consent
+        config.load()
         consent.start()
+    }
+
+    /// A changed ATT/TCF choice invalidates previously loaded creatives even when ads remain permitted.
+    func refreshEligibility() {
+        guard let platform, let config, let consent else { return }
+        let (tracking, record) = platform.privacyState()
+        let personalized = AdRequestRule.personalized(tracking, record)
+        if previousPersonalization != personalized {
+            nativeAds?.setEnabled(false)
+            interstitial?.setEnabled(false)
+            previousPersonalization = personalized
+        }
+        let allowed = consent.permitsRequests && config.ready && !privacyFormOpen
+        nativeAds?.setEnabled(allowed && config.nativeEnabled)
+        interstitial?.setEnabled(allowed && config.interstitialEnabled)
     }
 
     // MARK: Menu rows
@@ -204,7 +226,12 @@ final class Monetization {
             log.notice("privacy ad_choices not_started form_unavailable")
             return unavailable()
         }
-        consent.openPrivacyOptions(onUnavailable: unavailable)
+        privacyFormOpen = true
+        refreshEligibility()
+        consent.openPrivacyOptions(onDismiss: { [weak self] in
+            self?.privacyFormOpen = false
+            self?.refreshEligibility()
+        }, onUnavailable: unavailable)
     }
 
     /// 개인정보처리방침 and 이용약관 in the browser, in the app's language (B13 of AN-15).

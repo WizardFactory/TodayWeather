@@ -181,11 +181,18 @@ public final class AdsConsent {
         onReady(status)
     }
 
+    /// Recheck the current UMP decision before enabling either format.
+    public var permitsRequests: Bool {
+        reported && (platform.canRequestAds || (!releaseAds && fellBack))
+    }
+
     /// 광고 개인정보 선택: UMP's privacy options form where one is required; otherwise, or when it cannot show,
     /// `onUnavailable` (`LOC_AD_PRIVACY_UNAVAILABLE`). A changed consent may allow the SDK to start.
-    public func openPrivacyOptions(onUnavailable: @escaping @MainActor () -> Void) {
+    public func openPrivacyOptions(onDismiss: @escaping @MainActor () -> Void = {},
+                                   onUnavailable: @escaping @MainActor () -> Void) {
         guard platform.privacyOptionsRequired else {
             log("privacy ad_choices not_required form_unavailable")
+            onDismiss()
             return onUnavailable()
         }
         platform.presentPrivacyOptions { [weak self] error in
@@ -195,6 +202,7 @@ public final class AdsConsent {
                 onUnavailable()
             }
             if self.initialized, self.platform.canRequestAds { self.startSdk() }
+            onDismiss()
         }
     }
 }
