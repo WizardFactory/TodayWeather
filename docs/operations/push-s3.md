@@ -99,10 +99,21 @@ for later investigation. No deployment, data migration or automatic deletion is 
 2. Check the runtime geocoder with a public test coordinate, for example
    `$API_SERVER/geocode/v000903/coord/37.5665,126.9780`. For that Seoul location
    expect HTTP 200 and a JSON response with `country: "KR"` and a populated
-   `kmaAddress.name1`. A single success can be cached. Readiness also requires resolution
-   of the stored regions. Failed lookups retry with delays from 30 seconds to five
-   minutes. `push-restore-pending` reports the unresolved device count, reason categories and next delay. Each coordinate lookup has a five-second total deadline. An incomplete domestic address stays pending. A permanent geocoder rejection such as HTTP 403 or an error applying the result terminates startup with a sanitized reason. Inspect that cause before restarting the supervised process; preserve its S3 registrations.
-   The coordinator keeps the restored registrations between attempts.
+   `kmaAddress.name1`. A single success can be cached. A stored KR coordinate needs a
+   mapped warning zone. Incomplete or unmapped coordinate responses stay pending.
+   Retry delays grow from 30 seconds to five minutes, with a five-second total
+   deadline per lookup. `push-restore-pending` reports the unresolved count,
+   reason categories and next delay. Registrations remain in memory between attempts.
+   A permanent geocoder rejection such as HTTP 403 or an error applying the result
+   terminates startup with a sanitized reason. Inspect that cause before restarting
+   the supervised process and preserve its S3 registrations.
+
+   A registration with only a town name uses the bundled warning map. A valid town
+   outside the map can still receive scheduled alarms and can be deleted, with no
+   regional warning membership. Existing malformed town-only records also have no
+   warning membership and allow startup to finish. New town-only writes require
+   a nonblank string for `town.first`. Optional `second` and `third` accept strings
+   or null.
 3. Poll the private socket from the service account:
 
    ```sh

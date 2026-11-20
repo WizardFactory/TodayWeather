@@ -42,6 +42,11 @@ async function lookup(url, timeoutMs) {
     throw new RegionError('redirect-limit', false);
 }
 
+function validTown(town) {
+    return !!town && typeof town.first === 'string' && !!town.first.trim() &&
+        [town.second, town.third].every(name => name == null || typeof name === 'string');
+}
+
 async function resolveRegion(origin, loc, record, timeoutMs = 5000) {
     var town = loc.town || record.town, country = town ? 'KR' : undefined;
     if (loc.lat !== undefined) {
@@ -56,9 +61,10 @@ async function resolveRegion(origin, loc, record, timeoutMs = 5000) {
             if (typeof town[field] === 'string') town[field] = town[field].trim();
         }
     }
-    var zoneIds = town && town.first ? zones.zonesForTown(town) : [];
-    if (country === 'KR' && !zoneIds.length) throw new RegionError('unmapped-town', loc.lat !== undefined);
+    var zoneIds = country === 'KR' && validTown(town) ? zones.zonesForTown(town) : [];
+    // Older registrations may supply only a town. An unmapped name still supports alarms and deletion.
+    if (loc.lat !== undefined && country === 'KR' && !zoneIds.length) throw new RegionError('unmapped-town', true);
     return { country: country, town: town, zones: zoneIds,
         weatherKey: JSON.stringify([record.source || 'KMA', loc.lat, loc.long, town]) };
 }
-module.exports = { resolveRegion: resolveRegion };
+module.exports = { resolveRegion: resolveRegion, validTown: validTown };

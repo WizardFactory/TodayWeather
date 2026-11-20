@@ -2,6 +2,7 @@
 var crypto = require('crypto');
 var EventEmitter = require('events');
 var RegionError = require('./errors').RegionError;
+var validTown = require('./region').validTown;
 var mapLimit = require('./storage').mapLimit;
 function hash(value) {
     return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -46,7 +47,7 @@ function validate(r) {
             Math.abs(r.location.long) > 180
         )
             throw new Error('Invalid push location');
-    } else if (!r.town || !r.town.first) throw new Error('Push location is required');
+    } else if (!validTown(r.town)) throw new Error('Invalid push town');
     ['pushTime', 'startTime', 'endTime'].forEach(function (k) {
         if (r[k] !== undefined && (!Number.isFinite(r[k]) || r[k] < 0 || r[k] >= 86400))
             throw new Error('Invalid push time');

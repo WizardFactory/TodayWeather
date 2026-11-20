@@ -17,6 +17,13 @@ function row(n) {
         location: { lat: n, long: 127 }, pushTime: 0, enable: true };
 }
 
+function townOnly(n) {
+    const registration = row(n);
+    delete registration.location;
+    registration.town = { first: 'Town outside the bundled warning map' };
+    return registration;
+}
+
 function installFixture() {
     const dir = process.env.FIXTURE_DIR;
     const origin = 'http://127.0.0.1:' + process.env.FIXTURE_PORT;
@@ -68,6 +75,7 @@ async function until(test) {
 async function rehearse(mode) {
     const delayed = mode === 'delayed';
     const forbidden = mode === 'forbidden';
+    const legacyTown = mode === 'legacy-town';
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw3066-'));
     const socket = path.join(dir, 'push.sock');
     const saved = new Map();
@@ -75,7 +83,7 @@ async function rehearse(mode) {
         put: async (key, value) => saved.set(key, JSON.stringify(value)) },
         resolve: async () => ({ zones: [] }) });
     await seed.init();
-    await seed.upsert([row(1), row(2)]);
+    await seed.upsert([row(1), legacyTown ? townOnly(2) : row(2)]);
     await seed.settled();
     fs.writeFileSync(path.join(dir, 'store.json'), JSON.stringify(Array.from(saved)));
     let originReady = !delayed, regionsReady = !delayed, probes = 0, goodLookups = 0, badLookups = 0, sends = 0;
@@ -150,7 +158,16 @@ async function rehearse(mode) {
         assert(delayed || (probes === 1 && badLookups === 0));
         assert(output.includes('"registrations":2'));
         await until(() => sends === 2);
-        await ipc.request(socket, { op: 'upsert', rows: [row(3)] });
+        if (legacyTown) {
+            const removed = await ipc.request(socket, { op: 'remove', selector: { fcmToken: 'fixture-2', cityIndex: 2 } });
+            assert.equal(removed.n, 1);
+            const malformed = townOnly(4);
+            malformed.town.second = 42;
+            await assert.rejects(ipc.request(socket, { op: 'upsert', rows: [malformed] }));
+            const absent = await ipc.request(socket, { op: 'remove', selector: { fcmToken: 'fixture-4', cityIndex: 4 } });
+            assert.equal(absent.n, 0);
+        }
+        await ipc.request(socket, { op: 'upsert', rows: [legacyTown ? townOnly(3) : row(3)] });
         const deleted = await ipc.request(socket, { op: 'remove', selector: { fcmToken: 'fixture-3', cityIndex: 3 } });
         assert.equal(deleted.n, 1);
     } catch (error) {
@@ -162,6 +179,10 @@ async function rehearse(mode) {
         origin.close();
         fs.rmSync(dir, { recursive: true, force: true });
         assert.equal(code, forbidden ? 1 : 0, 'coordinator shutdown');
+    }
+    if (legacyTown) {
+        console.log('Legacy town-only record: both due alarms delivered, old and new unmapped records removable, malformed write rejected');
+        return;
     }
     console.log(delayed ? 'Delayed origin and region: 503 -> 200, same PID, two restored records, upsert/delete OK'
         : 'Healthy startup: first probe succeeded, two restored records, upsert/delete OK');
@@ -180,6 +201,10 @@ async function checkRegionResponses() {
     try {
         const origin = 'http://127.0.0.1:' + peer.address().port;
         const get = lat => resolveRegion(origin, { lat, long: 127 }, {});
+        for (const town of [townOnly(2).town, { first: '서울특별시', second: 42 }]) {
+            const old = await resolveRegion(origin, { town }, {});
+            assert.deepEqual(old.zones, []);
+        }
         for (const lat of [1, 4]) {
             const result = await get(lat);
             assert.equal(result.town.first, '서울특별시');
@@ -193,7 +218,7 @@ async function checkRegionResponses() {
 }
 
 if (require.main === module) {
-    checkRegionResponses().then(() => rehearse('delayed')).then(() => rehearse('healthy')).then(() => rehearse('forbidden')).catch(err => { console.error(err); process.exitCode = 1; });
+    checkRegionResponses().then(() => rehearse('delayed')).then(() => rehearse('healthy')).then(() => rehearse('forbidden')).then(() => rehearse('legacy-town')).catch(err => { console.error(err); process.exitCode = 1; });
 } else {
     installFixture();
 }
