@@ -87,6 +87,28 @@ struct ForecastAdVisitsTests {
         #expect(f.reserve(relaunched) != nil)
     }
 
+    @Test func failingTheReservationWriteLeavesNavigationWithTheCaller() throws {
+        let f = Fixture()
+        let manager = FileManager.default
+        let backup = f.directory.appendingPathExtension("backup")
+        var sabotageError: (any Error)?
+        let visits = ForecastAdVisits(directory: f.directory, localDay: { f.day }, draw: {
+            // The eligibility read just succeeded. Make the following atomic write fail, even as root.
+            do {
+                try manager.moveItem(at: f.directory, to: backup)
+                try Data().write(to: f.directory)
+            } catch { sabotageError = error }
+            return 0
+        })
+        visits.markVisible(.dailyforecast)
+        #expect(f.reserve(visits) == nil)
+        #expect(sabotageError == nil)
+        #expect(!visits.presenting && f.arrivals == 0)
+        try manager.removeItem(at: f.directory)
+        try manager.moveItem(at: backup, to: f.directory)
+        #expect(f.visits().available)
+    }
+
     @Test func storageFailureNeverShowsOrReopensTheCap() throws {
         let f = Fixture()
         let visits = f.visits()
