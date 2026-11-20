@@ -66,6 +66,7 @@ public enum WeatherConverter {
             if case .object(let p) = pubDate, p.contains("VC") { out["source"] = .string("VC") }
         }
         putAir(&out, obj)
+        if let details = obj["hourlyDetails"], details.arrayValue != nil { out["hourlyDetails"] = details }
         return out
     }
 

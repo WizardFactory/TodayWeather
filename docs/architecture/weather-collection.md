@@ -294,6 +294,12 @@ provider maxima and are not substituted for missing current UV. Existing cache
 records remain valid and gain UV only on normal fetches; there is no cache purge,
 additional request or range/include change. See the [response contract](mobile-api.md#overseas-uv-2634).
 
+For #3071 the same Timeline call also requests gust, WBGT, solar radiation,
+solar energy and modeled severe risk. Optional hourly details retain the actual
+UTC valid instant in the existing DSF document. That instant stays independent
+of the local clock used to align the legacy chart, including a repeated hour
+during a fall DST transition. [Response contract](mobile-api.md#supplemental-overseas-hourly-forecasts-3071).
+
 ## Supported AirKorea observations and nation recovery (#2636)
 
 Station and city-statistics collection now uses the supported HTTPS

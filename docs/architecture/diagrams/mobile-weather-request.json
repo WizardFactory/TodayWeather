@@ -132,6 +132,7 @@
       "title": "UV / pollen response",
       "items": [
         "VC current/daily max UV: uvIndex and mobile ultrv / ultrvGrade / ultrvStr via converter, DSF/cache. Zero kept, missing omitted; rollout separate.",
+        "v000903 hourlyDetails: UTC forecast times with optional UV, gust, WBGT, solar and convective risk from the same VC request. Existing chart uses three-hour rows.",
         "KMA daily/current pollen: max pollenGrade, localized pollenStr, species grades. Absent areaNo checks up to three nearest candidates; DB errors stop reads; missing types omitted.",
         "Pollen popup: available species grades, seasonal context and precautions. Zero Low; no concentrations. V3 oak/pine/weeds; weather-core keeps UV/species grades."
       ]

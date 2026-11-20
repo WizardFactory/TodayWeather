@@ -68,6 +68,7 @@ object WeatherConverter {
                 if (pubDate is JsonObject && "VC" in pubDate) put("source", JsonPrimitive("VC"))
             }
             putAir(obj)
+            (obj["hourlyDetails"] as? JsonArray)?.let { put("hourlyDetails", it) }
         }
     }
 

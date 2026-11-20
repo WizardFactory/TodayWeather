@@ -52,6 +52,12 @@ var dsfForecastSchema = new mongoose.Schema({
                 cloud:      {type: Number, default:0},  // percentage (0 ~ 1)
                 pres:       {type: Number, default:0},  // millibar
                 uvIndex:    {type: Number}, // Optional UV; no default for pre-UV cache records.
+                forecastAtMs: Number, // Absolute UTC milliseconds, independent of the legacy local-clock carrier.
+                windGustMps: Number,
+                wbgtC: Number,
+                solarRadiationWm2: Number,
+                solarEnergyMjm2: Number,
+                severeRisk: Number,
                 oz:         {type: Number, default:0},   // dobson unit
                 icon:       {type: String, default: ''} //icon이 강수 1순위, pre_pro 2순위
             }]

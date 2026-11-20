@@ -1,6 +1,6 @@
 /* #2634: real Mongo persistence + loopback HTTP + full overseas route + web normalization.
  * Use a dedicated local Mongo process. Creates/drops ONLY uv2634_<pid>_<timestamp>.
- * NODE_PATH=<mongoose 5.1.2, async, express, typescript> TW_UV_MONGO_URL=mongodb://127.0.0.1:PORT \
+ * NODE_PATH=<mongoose 5.1.2, async, express, esbuild> TW_UV_MONGO_URL=mongodb://127.0.0.1:PORT \
  * TZ=UTC node server/test/offline/overseas-uv-smoke.js
  * Provider weather fixture is recorded; added UV values are synthetic. No paid/provider HTTP.
  */
@@ -24,6 +24,9 @@ function fixture() {
     const raw = JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/vc-tokyo-combined.json')));
     raw.currentConditions.uvindex = 0;
     raw.days.forEach(d => { d.uvindex = 7; d.hours.forEach(h => { h.uvindex = 1; }); });
+    const forecast = raw.days.flatMap(day => day.hours)
+        .find(hour => hour.datetimeEpoch === Date.parse('2026-09-26T08:00:00Z') / 1000);
+    Object.assign(forecast, {uvindex: 0, windgust: 10, wbgt: 68, solarradiation: 0, solarenergy: 0, severerisk: 42});
     return withDayBefore(raw);
 }
 // Harness clock is a Date subclass; normalize it to the plain Date production stores in Mixed paths.
@@ -44,9 +47,11 @@ const fetch = url => new Promise((resolve,reject)=>http.get(url,res=>{
     });
 }).on('error',reject));
 function webNormalize(raw) {
-    const ts = require('typescript');
+    const esbuild = require('esbuild');
     const file = path.join(root,'../packages/weather-core/src/index.ts');
-    const js = ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+    const js = esbuild.buildSync({
+        entryPoints: [file], bundle: true, write: false, platform: 'node', format: 'cjs', target: 'es2020'
+    }).outputFiles[0].text;
     const mod={exports:{}};vm.runInNewContext(js,{module:mod,exports:mod.exports,require,console,URL},{filename:file});
     return mod.exports.normalizeWeather(raw);
 }
@@ -72,17 +77,33 @@ function webNormalize(raw) {
         assert.equal(h.providerCalls.length,1,'real DB cache hit does not refetch');
         assert.equal(second.thisTime[1].uvIndex,0);
         const web=webNormalize(second);
+        const supplemental = {
+            at: '2026-09-26T08:00:00.000Z',
+            uvIndex: 0,
+            windGustMps: 4.47,
+            wbgtC: 20,
+            solarRadiationWm2: 0,
+            solarEnergyMjm2: 0,
+            severeRisk: 42
+        };
+        assert.deepStrictEqual(first.hourlyDetails[0], supplemental);
+        assert.deepStrictEqual(second.hourlyDetails, first.hourlyDetails);
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(web.hourlyDetails[0])), supplemental);
+        if (process.env.TW_UV_RESPONSE_FILE) {
+            fs.writeFileSync(process.env.TW_UV_RESPONSE_FILE, JSON.stringify(second, null, 2));
+        }
         assert(web.current.uv.includes('(0)'), 'web displays valid zero');
         assert(web.daily.length>=9);
         web.daily.forEach(d=>assert(d.uv.includes('(7)'),'web daily UV'));
         // Exercise real documents from before rollout: omit optional fields and serve cached weather.
         for (const record of stored) {
             delete record.data.current.uvIndex;
-            record.data.hourly.data.forEach(r=>delete r.uvIndex);
+            record.data.hourly.data.forEach(r=>{delete r.uvIndex; delete r.forecastAtMs;});
             record.data.daily.data.forEach(r=>delete r.uvIndex);
             await Model.collection.replaceOne({_id:record._id},record);
         }
         const old=await fetch(url);
+        assert.strictEqual(old.hourlyDetails, undefined);
         old.thisTime.concat(old.daily).forEach(row=>['uvIndex','ultrv','ultrvGrade','ultrvStr'].forEach(k=>assert(!Object.prototype.hasOwnProperty.call(row,k))));
         assert.equal(h.providerCalls.length,1,'old cache is not forcibly invalidated');
         console.log(JSON.stringify({outcome:'passed',database,storedRecords:stored.length,httpRequests:3,providerCalls:h.providerCalls.length,currentUv:0,dailyUv:7,webCurrent:web.current.uv,legacyUv:'absent',provider:'recorded weather + synthetic UV',mongoose:mongoose.version}));

@@ -132,3 +132,38 @@ test('recorded Visual Crossing Tokyo UV reaches current and every daily response
     assert.equal(result.daily.length,captured.days.length);
     result.daily.forEach((row,i)=>assert.equal(row.uvIndex,captured.days[i].uvindex));
 });
+
+test('v000903 exposes individual forecast hours without changing the three-hour chart', async () => {
+    setNow(at);
+    const provider = body();
+    const firstForecast = new Date('2026-09-26T08:00:00.000Z');
+    const firstProviderHour = provider.days.flatMap(day => day.hours)
+        .find(hour => hour.datetimeEpoch === firstForecast.getTime() / 1000);
+    Object.assign(firstProviderHour, {
+        uvindex: 0,
+        windgust: 10,
+        wbgt: 14,
+        solarradiation: 150,
+        solarenergy: 0,
+        severerisk: 42
+    });
+    const nextProviderHour = provider.days.flatMap(day => day.hours)
+        .find(hour => hour.datetimeEpoch === firstForecast.getTime() / 1000 + 3600);
+    Object.assign(nextProviderHour, {windgust: -1, wbgt: '74', severerisk: 101});
+    const h = createHarness(() => provider);
+    const result = await h.request('v000903', place, {temperatureUnit: 'F'});
+    assert(result.hourly.every(row => Number(row.time) % 3 === 0));
+    assert.deepEqual(result.hourlyDetails?.[0], {
+        at: firstForecast.toISOString(),
+        uvIndex: 0,
+        windGustMps: 4.47,
+        wbgtC: -10,
+        solarRadiationWm2: 150,
+        solarEnergyMjm2: 0,
+        severeRisk: 42
+    });
+    assert.deepEqual(result.hourlyDetails[1], {at: '2026-09-26T09:00:00.000Z', uvIndex: 1});
+    assert.deepEqual((await h.request('v000903', place, {temperatureUnit: 'C'})).hourlyDetails, result.hourlyDetails);
+    assert.equal(h.providerCalls.length, 1);
+    assert.equal((await h.request('v000902', place, {})).hourlyDetails, undefined);
+});

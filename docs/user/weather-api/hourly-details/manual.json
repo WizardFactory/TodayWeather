@@ -1,0 +1,13 @@
+{
+  "title": "Supplemental hourly weather data",
+  "scenario": "Inspect the server1 v000903 coordinate response for an overseas location. The example was captured from a local HTTP request with an isolated MongoDB and a Tokyo forecast fixture supplemented with synthetic metrics.",
+  "steps": [
+    {
+      "title": "Read the hourly forecast details",
+      "instruction": "Request /weather/v000903/coord/35.69,139.692 with the regular weather parameters. Find the optional hourlyDetails array. Read each row by its UTC at timestamp. If the field is absent, continue using the ordinary forecast.",
+      "screenshot": "server1-http.png",
+      "caption": "Selected fields from the HTTP reply after a MongoDB cache hit.",
+      "expected": "UV, gust (m/s), WBGT (Celsius), irradiance (W/m²), energy (MJ/m²) and the provider storm-risk score appear when available. The three-hour chart continues to use hourly."
+    }
+  ]
+}
