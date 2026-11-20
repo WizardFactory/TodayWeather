@@ -130,14 +130,25 @@ for later investigation. No deployment, data migration or automatic deletion is 
 ### Recurring readiness check
 
 [check-push-readiness](../../server/bin/check-push-readiness) probes the private socket
-and counts writes to `/v000903/push` and `/v000903/push-list` over the preceding five
-minutes. A connection failure, socket health other than HTTP 200 with `ready: true`,
+and counts registration writes in the preceding five minutes. Single-device `POST`,
+`PUT` and `DELETE` use `/<version>/push` in v000705, v000803, v000901, v000902
+and v000903. Bulk `POST` uses `/<version>/push-list` in v000902 and v000903.
+Both accept a trailing slash and query string. `/push` and `/push-list` have
+no unversioned mount. A connection failure, socket health other than HTTP 200 with `ready: true`,
 an unreadable log window, or any matching HTTP 503 produces a nonzero exit and an
 aggregate alert. A healthy check produces no output. On demand, `--verbose` also
 prints healthy totals. The check reads combined-format nginx logs in the current file
 and its numbered or date-suffixed rotations, including gzip. A sample exceeding its
 byte budget reports unavailable coverage; alert output omits request bodies, addresses
 and query strings.
+
+For example, a five-minute sample with a successful `PUT /v000705/push`, a
+`POST /v000902/push-list/` returning 503 and a successful `POST /v000903/push-list`
+produces this alert when the socket is ready:
+
+```json
+{"event":"push-readiness-monitor","socketReady":true,"logReadable":true,"registrations":3,"http503":1}
+```
 
 For a host using cron mail, install the following in the monitoring account's crontab
 during approved rollout. Substitute the actual absolute Node 16+ and checkout paths,

@@ -72,10 +72,15 @@ function registrations(logPath, now) {
             if (clipped && time >= windowStart) throw new Error('incomplete time window');
             clipped = false;
             if (time < windowStart || time > now) continue;
-            const request = /^(?:POST|PUT|DELETE) \/v000903\/push(?:-list)?(?:\?[^ ]*)? HTTP\/[^"]+" (\d{3}) /.exec(line.slice(ts.index + ts[0].length));
-            if (request) {
+            const request = /^(POST|PUT|DELETE) (\/[^? ]+)(?:\?[^ ]*)? HTTP\/[^"]+" (\d{3}) /.exec(line.slice(ts.index + ts[0].length));
+            if (!request) continue;
+            const [, method, target, status] = request;
+            // Version mounts in server/app.js and routes/v*/index.js.
+            const single = /^\/v(?:000705|000803|000901|000902|000903)\/push\/?$/i.test(target);
+            const bulk = method === 'POST' && /^\/v(?:000902|000903)\/push-list\/?$/i.test(target);
+            if (single || bulk) {
                 counts.registrations++;
-                if (request[1] === '503') counts.http503++;
+                if (status === '503') counts.http503++;
             }
         }
         if (clipped) throw new Error('incomplete time window');

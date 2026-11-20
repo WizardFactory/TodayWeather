@@ -87,7 +87,7 @@ async function rehearse(mode) {
             res.end(originReady ? 'OK' : 'waiting');
         } else if (req.url.endsWith('/2,127') && forbidden) {
             badLookups++;
-            res.writeHead(403).end('sensitive upstream detail');
+            res.writeHead(403).end('sensitive upstream detail'.repeat(60000));
         } else if (req.url.endsWith('/2,127') && !regionsReady) {
             badLookups++;
             if (badLookups === 1) {
@@ -167,8 +167,33 @@ async function rehearse(mode) {
         : 'Healthy startup: first probe succeeded, two restored records, upsert/delete OK');
 }
 
+async function checkRegionResponses() {
+    const resolveRegion = require('../../lib/pushCoordinator/region').resolveRegion;
+    const peer = http.createServer((req, res) => {
+        if (req.url.endsWith('/1,127')) res.end(JSON.stringify({ country: 'KR', kmaAddress: { name1: ' 서울특별시 ', name2: ' 강남구 ' } }));
+        else if (req.url.endsWith('/2,127')) res.end(JSON.stringify({ country: 'KR', kmaAddress: { name1: 'Unknown province' } }));
+        else if (req.url.endsWith('/3,127')) res.writeHead(302, { location: 'file:///unavailable' }).end();
+        else res.writeHead(302, { location: '/1,127' }).end();
+    });
+    peer.listen(0, '127.0.0.1');
+    await once(peer, 'listening');
+    try {
+        const origin = 'http://127.0.0.1:' + peer.address().port;
+        const get = lat => resolveRegion(origin, { lat, long: 127 }, {});
+        for (const lat of [1, 4]) {
+            const result = await get(lat);
+            assert.equal(result.town.first, '서울특별시');
+            assert.equal(result.town.second, '강남구');
+            assert(result.zones.length > 0);
+        }
+        await assert.rejects(get(2), e => e.category === 'unmapped-town' && e.retryable);
+        await assert.rejects(get(3), e => e.category === 'invalid-redirect' && !e.retryable);
+    } finally { peer.close(); }
+    console.log('Domestic mapping and redirect controls passed');
+}
+
 if (require.main === module) {
-    rehearse('delayed').then(() => rehearse('healthy')).then(() => rehearse('forbidden')).catch(err => { console.error(err); process.exitCode = 1; });
+    checkRegionResponses().then(() => rehearse('delayed')).then(() => rehearse('healthy')).then(() => rehearse('forbidden')).catch(err => { console.error(err); process.exitCode = 1; });
 } else {
     installFixture();
 }

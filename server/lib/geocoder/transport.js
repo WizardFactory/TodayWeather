@@ -13,7 +13,7 @@ var DEFAULT_MAX_BODY_BYTES = 1024 * 1024;
 
 /**
  * @param {string} url
- * @param {{headers?:Object, timeoutMs:number, agent?:Object, signal?:AbortSignal, maxBytes?:number}} options
+ * @param {{headers?:Object, timeoutMs:number, agent?:Object, signal?:AbortSignal, maxBytes?:number, headersOnlyOnNon200?:boolean}} options
  * @returns {Promise<{status:number, headers:Object, json:boolean, body:*, text:string}>}
  */
 function getJson(url, options) {
@@ -31,6 +31,14 @@ function getJson(url, options) {
             if (options.signal) { options.signal.removeEventListener('abort', onAbort); }
             if (req) { req.destroy(); }
             reject(err);
+        }
+
+        function succeed(value) {
+            if (settled) { return; }
+            settled = true;
+            clearTimeout(timer);
+            if (options.signal) { options.signal.removeEventListener('abort', onAbort); }
+            resolve(value);
         }
 
         function onAbort() {
@@ -52,6 +60,12 @@ function getJson(url, options) {
 
         try {
             req = lib.get(url, {headers: options.headers || {}, agent: options.agent}, function (res) {
+                if (options.headersOnlyOnNon200 && res.statusCode !== 200) {
+                    // A status or redirect is sufficient for this caller, even for an unbounded error body.
+                    succeed({status: res.statusCode, headers: res.headers, json: false, text: ''});
+                    res.destroy();
+                    return;
+                }
                 var chunks = [];
                 var size = 0;
                 res.on('data', function (chunk) {
@@ -66,9 +80,6 @@ function getJson(url, options) {
                 res.on('error', fail);
                 res.on('end', function () {
                     if (settled) { return; }
-                    settled = true;
-                    clearTimeout(timer);
-                    if (options.signal) { options.signal.removeEventListener('abort', onAbort); }
                     var text = Buffer.concat(chunks).toString('utf8');
                     var result = {status: res.statusCode, headers: res.headers, json: false, body: undefined, text: text};
                     try {
@@ -78,7 +89,7 @@ function getJson(url, options) {
                     catch (e) {
                         result.body = text;
                     }
-                    resolve(result);
+                    succeed(result);
                 });
             });
             req.on('error', fail);
