@@ -36,6 +36,17 @@ struct WeatherPageContent {
         self.photo = scope.photoTheme ? photo : nil
     }
 
+    /// Anchor follows visible optional sections in the outer vertical scroll. The chart block can exist without data.
+    var nativeAnchor: WeatherBlock? {
+        if type == .short {
+            guard hourly != nil else { return nil }
+            return page.hourlyAqi == nil ? .chart : .hourlyAqi
+        }
+        guard daily != nil else { return nil }
+        if page.dayDetails != nil { return .dayDetails }
+        return page.dailyAqi == nil ? .chart : .dailyAqi
+    }
+
     /// The blocks as the references number them: 0 the header block, 1 the chart, then each card and the attribution.
     var blocks: [WeatherBlock] {
         var list: [WeatherBlock] = [.header, .chart]
@@ -76,6 +87,19 @@ struct WeatherPageView: View {
     @Environment(\.shellInsets) private var shellInsets
     @Environment(\.sizeCategory) private var sizeCategory
 
+    @Environment(\.forecastChartRead) private var chartRead
+    @State private var userScrolled = false
+    @State private var reportedRead = false
+    @State private var pastChart = false
+
+    private var tab: ShellTab { content.type == .short ? .forecast : .dailyforecast }
+
+    private func reportRead() {
+        guard userScrolled, pastChart, !reportedRead, content.nativeAnchor != nil else { return }
+        reportedRead = true
+        chartRead(tab)
+    }
+
     var body: some View {
         let colors = WeatherColors.of(theme, daily: content.type == .mid)
         let barHeight = ShellMetrics.headerHeight + shellInsets.top
@@ -84,14 +108,25 @@ struct WeatherPageView: View {
                 WeatherBlockView(block: .header, content: content, theme: theme, actions: actions)
                 Spacer().frame(height: WeatherMetrics.gap)
                 WeatherBlockView(block: .chart, content: content, theme: theme, actions: actions)
+                    .onGeometryChange(for: Bool.self) { geometry in
+                        guard let viewport = geometry.bounds(of: .scrollView(axis: .vertical)) else { return false }
+                        return viewport.minY >= geometry.size.height
+                    } action: { value in
+                        pastChart = value
+                        reportRead()
+                    }
                 Spacer().frame(height: WeatherMetrics.cardPadding)
             }
             .background(colors.card.color)
             .cardShadow()
             Spacer().frame(height: WeatherMetrics.gap)
+            if content.nativeAnchor == .chart {
+                ForecastNativeSlot(tab: tab, theme: theme)
+            }
             ForEach(content.blocks.dropFirst(2), id: \.self) { block in
                 WeatherBlockView(block: block, content: content, theme: theme, actions: actions)
                 if block != .attribution { Spacer().frame(height: WeatherMetrics.gap) }
+                if block == content.nativeAnchor { ForecastNativeSlot(tab: tab, theme: theme) }
             }
         }
         Group {
@@ -100,12 +135,23 @@ struct WeatherPageView: View {
                     stack.padding(.top, -barHeight)
                 }
                     // Keep the hero under the translucent bar and the pull indicator below it.
+                    .simultaneousGesture(DragGesture(minimumDistance: 12).onChanged { drag in
+                        if -drag.translation.height > abs(drag.translation.width) {
+                            userScrolled = true
+                            reportRead()
+                        }
+                    })
                     .scrollClipDisabled()
                     .padding(.top, barHeight)
                     .refreshable { await actions.refresh() }
             } else {
                 stack.frame(maxHeight: .infinity, alignment: .top)
             }
+        }
+        .onChange(of: content.visit) {
+            userScrolled = false
+            reportedRead = false
+            pastChart = false
         }
         // Not into the safe area: the shell lays the page out under its own status bar color.
         .background(colors.page.color, ignoresSafeAreaEdges: [])
