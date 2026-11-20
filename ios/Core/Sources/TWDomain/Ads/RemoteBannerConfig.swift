@@ -19,7 +19,7 @@ public protocol BannerConfigSource: AnyObject {
 
 /// The banner policy of an app open (`Monetization.loadConfig`, port of the Android `RemoteBannerConfig`): the
 /// defaults, then the activated values, then a fetch; each valid pair applies. It is ready when the fetch has applied
-/// or failed, or after 12 s. Later startup answers are ignored. Newly published format switches still apply.
+/// or failed, or after 12 s. The legacy banner policy then stays fixed. Late and live format switches still apply.
 /// Without Firebase, the defaults apply immediately.
 @MainActor
 public final class RemoteBannerConfig {
@@ -72,13 +72,9 @@ public final class RemoteBannerConfig {
                 guard ok else { return self.finish("bridge_or_fetch_failed") }
                 // The activated values first, so an offline start keeps the kill switch.
                 source.loadActivated { [weak self] ok in
-                    guard let self, !self.closed else { return }
-                    guard ok else { return self.finish("bridge_or_fetch_failed") }
-                    self.apply(source.values())
+                    guard let self, self.applyStartupSnapshot(ok) else { return }
                     source.fetchAndActivate { [weak self] ok in
-                        guard let self, !self.closed else { return }
-                        guard ok else { return self.finish("bridge_or_fetch_failed") }
-                        self.apply(source.values())
+                        guard let self, self.applyStartupSnapshot(ok) else { return }
                         self.finish("applied")
                     }
                 }
@@ -86,8 +82,17 @@ public final class RemoteBannerConfig {
         }
     }
 
-    /// Each format has its own switch. A malformed switch disables only its format.
-    private func apply(_ values: [String: String]) {
+    /// A timeout finalizes startup and its legacy banner decision. A late success can still disable either ad format.
+    private func applyStartupSnapshot(_ success: Bool) -> Bool {
+        guard !closed else {
+            if success { refreshFormats() }
+            return false
+        }
+        guard success, let source else {
+            finish("bridge_or_fetch_failed")
+            return false
+        }
+        let values = source.values()
         applyFormats(values)
         if let parsed = RemoteBannerPolicy.parse(values) {
             policy = parsed
@@ -95,6 +100,7 @@ public final class RemoteBannerConfig {
             log("remote_config invalid_values")
         }
         onChange()
+        return true
     }
 
     @discardableResult
@@ -109,10 +115,13 @@ public final class RemoteBannerConfig {
 
     private func activateFormatUpdate() {
         source?.activateUpdate { [weak self] ok in
-            guard let self, ok, let source = self.source else { return }
-            // Read the latest activated snapshot, including when multiple updates completed together.
-            if self.applyFormats(source.values()) { self.onChange() }
+            if ok { self?.refreshFormats() }
         }
+    }
+
+    private func refreshFormats() {
+        // Read the current activated values when a callback arrives, including when multiple updates completed together.
+        if let source, applyFormats(source.values()) { onChange() }
     }
 
     private func finish(_ result: String) {

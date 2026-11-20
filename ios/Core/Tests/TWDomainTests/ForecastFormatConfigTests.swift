@@ -64,18 +64,25 @@ struct ForecastFormatConfigTests {
         #expect(config.nativeEnabled && !config.interstitialEnabled && changes == 2)
     }
 
-    @Test func aNewPublicationAfterStartupTimeoutStillDisablesAds() {
+    @Test(arguments: ["activated", "fetch"])
+    func lateStartupSuccessAppliesFormatSwitchesWithoutAnotherPublication(_ step: String) {
         let clock = VirtualClock()
         let source = FakeRemoteConfig()
-        source.held = ["fetch"]
-        source.fetched = ["tw_native_enabled": "false"]
+        source.held = [step]
+        let delayedValues = ["tw_native_enabled": "false", "tw_interstitial_enabled": "true",
+                             "tw_banner_enabled": "false", "tw_banner_delay_seconds": "0"]
+        if step == "activated" { source.activated = delayedValues } else { source.fetched = delayedValues }
         let config = RemoteBannerConfig(source: source, clock: clock)
         config.load()
         clock.advance(RemoteBannerConfig.timeoutMs)
-        source.answer("fetch", true)
-        #expect(config.ready && config.nativeEnabled)
-        source.publish(["tw_native_enabled": "false", "tw_interstitial_enabled": "true"])
-        #expect(!config.nativeEnabled && config.interstitialEnabled)
+        #expect(config.ready && config.nativeEnabled && config.interstitialEnabled && config.policy == .default)
+        var changes = 0
+        config.onChange = { changes += 1 }
+        source.answer(step, true)
+        #expect(!config.nativeEnabled && config.interstitialEnabled && config.policy == .default)
+        #expect(changes == 1 && source.formatListeners == 1)
+        source.publish(["tw_native_enabled": "true", "tw_interstitial_enabled": "false"])
+        #expect(config.nativeEnabled && !config.interstitialEnabled && changes == 2)
     }
 
     @Test func aConsentFailureIsNotAnAdImpressionOrLoadError() {
