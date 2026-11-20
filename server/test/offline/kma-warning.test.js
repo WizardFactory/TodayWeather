@@ -57,7 +57,7 @@ fakeMongoose.Schema.Types = {Mixed: Object};
 const tryLoad = (...args) => { try { return load(...args); } catch (err) { return {loadError: err}; } };
 const Situation = tryLoad('models/modelKmaSpecialWeatherSituation.js', {mongoose: fakeMongoose});
 const ZoneModelDef = tryLoad('models/modelKmaSpecialWeatherZone.js', {mongoose: fakeMongoose});
-const zones = tryLoad('lib/kmaWarningZones.js', {fs, path});
+const zones = tryLoad('lib/kmaWarningZones.js', {fs, path, './gwangjuJeonnam': require('../../lib/gwangjuJeonnam')});
 const situationStatics = () => ({parseSpecialText: Situation.parseSpecialText, parsePreliminaryText: Situation.parsePreliminaryText,
     TYPE_SPECIAL: 1, TYPE_PRELIMINARY_SPECIAL: 2, TYPE_WEATHER_INFORMATION: 3, TYPE_WEATHER_FLASH: 4});
 
@@ -309,6 +309,27 @@ test('town mapping: zone table, islands, metropolitan cities and split parents (
     assert.ok(names({first: '충청북도', second: '청원군', third: ''}).indexOf('청주시') !== -1, '청원군 merged into 청주시');
     assert.ok(names({first: '충청북도', second: '청원군', third: ''}).indexOf('충주시') === -1);
     assert.deepEqual(names({first: '경상북도', second: '없는군', third: ''}), ['경상북도', '전국'], 'unknown city: province-level zones only');
+});
+
+test('combined Gwangju-Jeonnam addresses retain separate warning audiences (#3078)', () => {
+    const combinedProvince = '전남광주통합특별시';
+    const cases = [
+        ['광주광역시', '서구', '', 'L1130000', 'L1050000'],
+        ['전라남도', '무안군', '', 'L1050000', 'L1130000'],
+        ['전라남도', '신안군', '흑산면', 'L1052400', 'L1130000'],
+        ['전라남도', '여수시', '삼산면', 'L1050000', 'L1130000']
+    ];
+    for (const [first, second, third, included, excluded] of cases) {
+        const legacy = plain(zones.zonesForTown({first, second, third}));
+        assert.ok(legacy.includes(included));
+        assert.ok(!legacy.includes(excluded));
+        assert.deepEqual(plain(zones.zonesForTown({first: combinedProvince, second, third})), legacy);
+    }
+    assert.deepEqual(plain(zones.zonesForTown({first: combinedProvince, second: ' 서구 '})),
+        plain(zones.zonesForTown({first: '광주광역시', second: '서구'})));
+    for (const second of [undefined, '', '없는구', '광주시']) {
+        assert.deepEqual(plain(zones.zonesForTown({first: combinedProvince, second})), []);
+    }
 });
 
 test('specialInfo from active zones (AC6, AC7)', () => {

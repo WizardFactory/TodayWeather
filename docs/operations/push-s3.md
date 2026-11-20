@@ -108,6 +108,11 @@ for later investigation. No deployment, data migration or automatic deletion is 
    terminates startup with a sanitized reason. Inspect that cause before restarting
    the supervised process and preserve its S3 registrations.
 
+   For `전남광주통합특별시`, the warning map uses the returned district to choose
+   the existing 광주광역시 or 전라남도 zones. An unrecognized district stays
+   unmapped. Check that the deployment includes the shared district module
+   alongside the warning mapper and food-poisoning code.
+
    A registration with only a town name uses the bundled warning map. A valid town
    outside the map can still receive scheduled alarms and can be deleted, with no
    regional warning membership. Existing malformed town-only records also have no

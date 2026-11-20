@@ -35,8 +35,16 @@ function installFixture() {
     };
     const runtime = {
         resolve: (location, record) => require('../../lib/pushCoordinator/region').resolveRegion(origin, location, record, 250),
-        alarm: async () => ({ title: 'Fixture', text: 'Due now' }),
-        send: async () => { process.send('send'); }
+        alarm: async record => {
+            if (process.env.FIXTURE_EXPECT_COMBINED === 'true') {
+                assert.equal(record.town.first, '전남광주통합특별시');
+                assert.equal(record.town.second, record.cityIndex === 1 ? '서구' : '무안군');
+            }
+            return { title: 'Fixture', text: 'Due now' };
+        },
+        send: async ({record}) => {
+            process.send({ event: 'send', district: record.town && record.town.second });
+        }
     };
     const startup = require('../../lib/pushCoordinator/startup');
     harness.stubModules({
@@ -76,6 +84,7 @@ async function rehearse(mode) {
     const delayed = mode === 'delayed';
     const forbidden = mode === 'forbidden';
     const legacyTown = mode === 'legacy-town';
+    const combinedProvince = mode === 'combined-province';
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tw3066-'));
     const socket = path.join(dir, 'push.sock');
     const saved = new Map();
@@ -86,7 +95,8 @@ async function rehearse(mode) {
     await seed.upsert([row(1), legacyTown ? townOnly(2) : row(2)]);
     await seed.settled();
     fs.writeFileSync(path.join(dir, 'store.json'), JSON.stringify(Array.from(saved)));
-    let originReady = !delayed, regionsReady = !delayed, probes = 0, goodLookups = 0, badLookups = 0, sends = 0;
+    let originReady = !delayed, regionsReady = !delayed, probes = 0, goodLookups = 0, badLookups = 0;
+    const sends = [];
     let dripChunks = 0, dripClosed = false;
     const origin = http.createServer((req, res) => {
         if (req.url === '/health') {
@@ -109,6 +119,12 @@ async function rehearse(mode) {
             }
         } else {
             if (req.url.endsWith('/1,127')) goodLookups++;
+            if (combinedProvince) {
+                const district = req.url.endsWith('/1,127') ? '서구' : '무안군';
+                res.end(JSON.stringify({ country: 'KR',
+                    kmaAddress: { name1: '전남광주통합특별시', name2: district } }));
+                return;
+            }
             res.end(JSON.stringify(req.url.endsWith('/1,127') ? { country: 'US' } :
                 { country: 'KR', kmaAddress: { name1: '서울특별시', name2: '강남구' } }));
         }
@@ -118,10 +134,11 @@ async function rehearse(mode) {
     const child = fork(path.resolve(__dirname, '../../bin/push-coordinator'), [], {
         execArgv: ['--require', __filename], silent: true,
         env: Object.assign({}, process.env, { FIXTURE_DIR: dir, FIXTURE_PORT: origin.address().port,
-            PUSH_STORE: 's3', PUSH_SOCKET_PATH: socket, WARNING_PUSH_ENABLED: 'false' })
+            PUSH_STORE: 's3', PUSH_SOCKET_PATH: socket, WARNING_PUSH_ENABLED: 'false',
+            FIXTURE_EXPECT_COMBINED: String(combinedProvince) })
     });
     const exited = once(child, 'exit');
-    child.on('message', event => { if (event === 'send') sends++; });
+    child.on('message', message => { if (message.event === 'send') sends.push(message.district); });
     let output = '';
     child.stderr.on('data', chunk => { output += chunk; });
     child.stdout.on('data', chunk => { output += chunk; });
@@ -129,7 +146,7 @@ async function rehearse(mode) {
         if (forbidden) {
             await until(() => child.exitCode !== null);
             assert.equal(badLookups, 1);
-            assert.equal(sends, 0);
+            assert.equal(sends.length, 0);
             assert(!output.includes('push-coordinator-ready'));
             assert(!output.includes('push-restore-pending'));
             assert(!output.includes('sensitive upstream detail'));
@@ -146,7 +163,7 @@ async function rehearse(mode) {
             await until(() => badLookups >= 3);
             assert.deepEqual(await health(socket), [503, false]);
             await assert.rejects(ipc.request(socket, { op: 'upsert', rows: [row(3)] }), /not ready/);
-            assert.equal(sends, 0);
+            assert.equal(sends.length, 0);
             assert(dripClosed && dripChunks >= 2, 'total deadline aborted the active peer');
             regionsReady = true;
         }
@@ -157,7 +174,7 @@ async function rehearse(mode) {
         assert(!delayed || [30000, 60000].every(ms => output.includes('"retryMs":' + ms)));
         assert(delayed || (probes === 1 && badLookups === 0));
         assert(output.includes('"registrations":2'));
-        await until(() => sends === 2);
+        await until(() => sends.length >= 2);
         if (legacyTown) {
             const removed = await ipc.request(socket, { op: 'remove', selector: { fcmToken: 'fixture-2', cityIndex: 2 } });
             assert.equal(removed.n, 1);
@@ -170,6 +187,8 @@ async function rehearse(mode) {
         await ipc.request(socket, { op: 'upsert', rows: [legacyTown ? townOnly(3) : row(3)] });
         const deleted = await ipc.request(socket, { op: 'remove', selector: { fcmToken: 'fixture-3', cityIndex: 3 } });
         assert.equal(deleted.n, 1);
+        assert.equal(sends.length, 2);
+        if (combinedProvince) assert.deepEqual(sends.sort(), ['무안군', '서구']);
     } catch (error) {
         console.error(output);
         throw error;
@@ -182,6 +201,10 @@ async function rehearse(mode) {
     }
     if (legacyTown) {
         console.log('Legacy town-only record: both due alarms delivered, old and new unmapped records removable, malformed write rejected');
+        return;
+    }
+    if (combinedProvince) {
+        console.log('Combined province: socket ready, two due alarms preserve the weather town, upsert/delete OK');
         return;
     }
     console.log(delayed ? 'Delayed origin and region: 503 -> 200, same PID, two restored records, upsert/delete OK'
@@ -218,7 +241,13 @@ async function checkRegionResponses() {
 }
 
 if (require.main === module) {
-    checkRegionResponses().then(() => rehearse('delayed')).then(() => rehearse('healthy')).then(() => rehearse('forbidden')).then(() => rehearse('legacy-town')).catch(err => { console.error(err); process.exitCode = 1; });
+    checkRegionResponses()
+        .then(() => rehearse('delayed'))
+        .then(() => rehearse('healthy'))
+        .then(() => rehearse('forbidden'))
+        .then(() => rehearse('legacy-town'))
+        .then(() => rehearse('combined-province'))
+        .catch(err => { console.error(err); process.exitCode = 1; });
 } else {
     installFixture();
 }
