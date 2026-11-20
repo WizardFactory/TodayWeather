@@ -112,6 +112,28 @@ class WidgetLayoutTest {
         assertTrue(clock.labels().any { it.text.toString() == readings.hours.first().label })
     }
 
+    @Test fun forecastLabelsAndIconsRemainLegibleAtLauncherSizes() {
+        for (style in WidgetStyle.entries) {
+            for (kind in listOf(Kind.CLOCK, Kind.FORECAST)) {
+                val host = render("legibility-$style-$kind", kind, display.copy(style = style), 360, 200)
+                val first = readings.hours.first()
+                val time = host.labels().single { it.text.toString() == first.label }
+                val expected = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 16f, context.resources.displayMetrics)
+                assertEquals("forecast hour size in $kind", expected, time.textSize, 0.5f)
+                val icon = host.descendants.first { it.contentDescription == first.icon && it.width == dp(if (kind == Kind.CLOCK) 31 else 38) }
+                assertEquals("square forecast icon", icon.width, icon.height)
+            }
+            for ((width, height) in listOf(245 to 50, 245 to 100, 245 to 150, 300 to 150, 172 to 180, 300 to 180, 245 to 270)) {
+                for (kind in listOf(Kind.CLOCK, Kind.FORECAST)) {
+                    for (daily in listOf(false, true)) {
+                        render("fit-$kind-$style-$width-$height-$daily", kind,
+                            display.copy(style = style, daily = daily, manualRefresh = true), width, height)
+                    }
+                }
+            }
+        }
+    }
+
     @Test fun forecastUsesFiveColumnsWhenWideAndTwoWhenNarrow() {
         for ((width, count) in listOf(360 to 5, 172 to 2)) {
             val host = render("forecast-hourly-$width", Kind.FORECAST, display, width, 224)
