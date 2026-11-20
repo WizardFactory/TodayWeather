@@ -47,6 +47,34 @@ class WeatherRepositoryTest {
     private fun repository(http: HttpGet, cache: File? = null) = WeatherRepository("https://server.test.invalid", cache, http, { now })
 
     @Test
+    fun storesTheProviderTimeZoneWithItsPlaceCache() = runTest {
+        val dir = Files.createTempDirectory("place-clock").toFile()
+        try {
+            val repo = repository({ _, _ -> londonBody }, dir)
+            assertIs<LoadResult.Loaded>(repo.load(london, units, emptyList(), true))
+            val disk = Json.parseToJsonElement(dir.listFiles()!!.single().readText()).jsonObject
+            assertEquals("Europe/London", disk["timeZoneId"]?.jsonPrimitive?.content)
+            fun offline() = repository({ _, _ -> error("offline") }, dir)
+            assertEquals("Europe/London", offline().cachedForWidget(london)?.timeZoneId)
+            val cacheFile = dir.listFiles()!!.single()
+            cacheFile.writeText(JsonObject(disk - "timeZoneId").toString())
+            assertNull(offline().cachedForWidget(london)?.timeZoneId)
+            val bad = londonBody.replace("Europe/London", "Missing/City")
+            val invalid = repository({ _, _ -> bad }, dir)
+            assertIs<LoadResult.Loaded>(invalid.load(london, units, emptyList(), true))
+            assertNull(offline().cachedForWidget(london)?.timeZoneId)
+            assertIs<LoadResult.Loaded>(repository({ _, _ -> seoulBody }, dir).load(seoul, units, emptyList(), true))
+            assertEquals("Asia/Seoul", offline().cachedForWidget(seoul)?.timeZoneId)
+            val korean = dir.listFiles()!!.single { it != cacheFile }
+            val legacy = Json.parseToJsonElement(korean.readText()).jsonObject - "timeZoneId"
+            korean.writeText(JsonObject(legacy).toString())
+            assertEquals("Asia/Seoul", offline().cachedForWidget(seoul)?.timeZoneId)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun widgetUsesOneWireRequestIncludingSlowRetryableResponses() = runBlocking {
         MockWebServer().use { server ->
             server.start()

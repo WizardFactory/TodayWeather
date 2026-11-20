@@ -38,6 +38,13 @@
       "screenshot": "screenshots/clock.png"
     },
     {
+      "title": "Read the selected city’s local clock",
+      "instruction": "Set two clock widgets to different cities. Each date changes at midnight in that city. The clock follows your phone’s 12/24-hour setting.",
+      "caption": "At the same instant it is Sunday, March 8 at 13:59 in Seoul and Saturday, March 7 at 23:59 in New York. Android widget host rendering with recorded weather.",
+      "expected": "The clock runs offline and follows local daylight-saving changes. An older overseas reading can show a dash until the next weather update supplies its time zone. The weather update stamp uses the phone’s time zone.",
+      "screenshot": "screenshots/place-clocks.png"
+    },
+    {
       "title": "Refresh a widget manually",
       "instruction": "Tap the refresh control beside the last update time. Tap elsewhere on the widget to open its place in TodayWeather.",
       "caption": "The Blue Hour clock shows the refresh control in its upper-right corner.",

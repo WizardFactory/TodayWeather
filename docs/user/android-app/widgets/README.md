@@ -39,6 +39,13 @@ also show a settings control. If you remove a pinned place, select a new one in
 widget settings. When upgrading from a version with legacy Cordova widgets,
 add the new widget from your launcher's picker if the old widget is unavailable.
 
+The clock and date follow each widget’s selected city, including daylight-saving
+changes. Your phone controls the 12/24-hour format. If a cached overseas reading
+lacks a time zone, the clock shows a dash until a weather update provides it.
+The update stamp uses the phone’s time zone.
+
+[Seoul and New York at the same instant, rendered in an Android widget host](screenshots/place-clocks.png).
+
 ## Capture and verification
 
 Issue [#3048](https://github.com/WizardFactory/TodayWeather/issues/3048), 19 November
