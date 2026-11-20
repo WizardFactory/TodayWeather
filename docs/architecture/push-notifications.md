@@ -123,6 +123,15 @@ See the [S3 design/implementation](push-s3-design.md), [interactive diagram](dia
 and [rollout/failure contract](../operations/push-s3.md). This is repository behavior,
 not evidence of deployment or actual provider delivery.
 
+### Coordinator startup after Spot replacement (#3066)
+
+The coordinator opens its private socket with registration readiness off. It waits for the
+service origin's `/health`, restores the S3 registry, retries unresolved regions with capped
+backoff, then restores the delivery checkpoints. The scheduler starts only after these
+steps succeed. During recovery, a socket health probe and valid registration commands both
+receive HTTP 503. Once ready, the socket returns HTTP 200 to health probes. The fixed-IP,
+geocoder and delivery checks are described in the [operations guide](../operations/push-s3.md#spot-replacement-and-recovery).
+
 ### Scheduled alarm preparation retry (#2677, 2026-10-04)
 
 A rejected weather fetch used to end alarm preparation as a terminal failure although

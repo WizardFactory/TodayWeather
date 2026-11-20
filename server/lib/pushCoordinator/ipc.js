@@ -38,7 +38,7 @@ function request(socketPath, command) {
         req.end(data);
     });
 }
-function listen(socketPath, registry, dispatcher) {
+function listen(socketPath, registry, dispatcher, isReady = () => registry.ready) {
     if (!socketPath || socketPath[0] !== '/')
         return Promise.reject(new Error('PUSH_SOCKET_PATH must be absolute'));
     var server = http.createServer(function (req, res) {
@@ -46,10 +46,12 @@ function listen(socketPath, registry, dispatcher) {
             res.writeHead(status, { 'content-type': 'application/json' });
             res.end(JSON.stringify(obj));
         }
+        var ready = isReady();
         if (req.method === 'GET' && req.url === '/health')
-            return reply(registry.ready ? 200 : 503, Object.assign({ ready: registry.ready },
+            return reply(ready ? 200 : 503, Object.assign({ ready: ready },
                 dispatcher ? { transport: dispatcher.health() } : {}));
         if (req.method !== 'POST' || req.url !== '/command') return reply(404, { error: 'Not found' });
+        if (!ready) return reply(503, { error: 'Push coordinator is not ready' });
         var body = '',
             tooLarge = false;
         req.on('data', function (c) {

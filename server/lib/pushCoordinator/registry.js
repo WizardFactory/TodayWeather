@@ -81,7 +81,7 @@ class Registry extends EventEmitter {
         this.mappingVersion = 1;
         this.maxQueue = options.maxQueue || 256;
     }
-    async init() {
+    async init(waitForRegionRetry) {
         var self = this,
             keys = await this.storage.list('registrations/');
         var docs = await mapLimit(keys, 16, function (k) {
@@ -104,8 +104,13 @@ class Registry extends EventEmitter {
             if (self.records.size % 256 === 0) await new Promise(setImmediate);
         }
         await this.settled();
-        if (this.retryAt.size)
-            throw new Error('Push region restoration incomplete; restart after geocoder recovery');
+        while (this.retryAt.size) {
+            if (!waitForRegionRetry) throw new Error('Push region restoration incomplete; restart after geocoder recovery');
+            await waitForRegionRetry(this.retryAt.size);
+            // Startup has its own backoff. Only revisit queued devices; do not repeat S3 reads or reseals.
+            this.retryResolutions(Infinity);
+            await this.settled();
+        }
         this.ready = true;
         return this;
     }
@@ -478,10 +483,10 @@ class Registry extends EventEmitter {
             this.resolutionHead = 0;
         }
     }
-    retryResolutions() {
+    retryResolutions(dueThrough = this.now()) {
         var self = this;
         this.retryAt.forEach(function (at, key) {
-            if (at <= self.now()) {
+            if (at <= dueThrough) {
                 self.retryAt.delete(key);
                 var d = self.devices.get(key);
                 if (d && !d.supersededBy) self.publish(d);
