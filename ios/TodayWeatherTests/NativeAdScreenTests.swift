@@ -7,6 +7,29 @@ import UIKit
 
 extension HostedShellTests {
     @MainActor struct NativeAdScreenTests {
+        /// A deterministic asset set for layout checks. The SDK never receives an impression or click from these fixtures.
+        final class LayoutInventory: ForecastNativeInventory {
+            var enabled = true
+            let generation = 0
+            var hasFreshCreative = true
+            func preload() {}
+            func take() -> ForecastCreative? {
+                guard hasFreshCreative else { return nil }
+                hasFreshCreative = false
+                return ForecastCreative(headline: "Test placement", advertiser: "Sample advertiser",
+                    body: "A sample creative for the weather guide.", action: "Learn more", icon: nil) { adView in
+                    guard let media = adView.mediaView else { return }
+                    let artwork = UIImageView(image: UIImage(systemName: "cloud.sun.fill"))
+                    artwork.tintColor = .systemIndigo
+                    artwork.backgroundColor = .systemIndigo.withAlphaComponent(0.10)
+                    artwork.contentMode = .scaleAspectFit
+                    artwork.frame = media.bounds
+                    artwork.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                    media.addSubview(artwork)
+                }
+            }
+        }
+
         @Test func placementFollowsRenderedForecastAndAirContent() throws {
             let hourly = try WeatherScreenshotTests.content("kma-seoul-hourly")
             let daily = try WeatherScreenshotTests.content("kma-seoul-daily")
@@ -17,23 +40,60 @@ extension HostedShellTests {
             #expect(try AirScreenshotTests.content("kma-jeju-no-air").nativeAnchor == nil)
         }
 
-        /// Opt-in capture of Google test inventory on this simulator. Network availability is separate from hermetic tests.
-        @Test(.enabled(if: ProcessInfo.processInfo.environment["TW_NATIVE_CAPTURE"] == "1"))
-        func captureTheFourTestAdPlacements() async throws {
-            await withCheckedContinuation { (completion: CheckedContinuation<Void, Never>) in
-                MobileAds.shared.start { _ in completion.resume() }
+        @Test func cardKeepsItsDisclosureAndAssetsAtNarrowWidths() throws {
+            let asset = try #require(LayoutInventory().take())
+            let view = ForecastCreativeView()
+            let locale = Locale(identifier: "ko_KR")
+            func height(stacked: Bool, accessible: Bool) -> CGFloat {
+                view.configure(asset, stacked: stacked, accessible: accessible, theme: .light, locale: locale)
+                return view.systemLayoutSizeFitting(CGSize(width: 320, height: 0),
+                    withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel).height
             }
-            let output = URL.temporaryDirectory.appending(path: "native-ad-screens")
+            let compact = height(stacked: false, accessible: false)
+            let stacked = height(stacked: true, accessible: false)
+            let large = height(stacked: false, accessible: true)
+            #expect(compact > 120 && compact < stacked * 0.70)
+            #expect(large > compact)
+            #expect(ForecastCreativeView.disclosure(locale) == "광고")
+            #expect(view.adChoicesView != nil && view.mediaView != nil && view.headlineView != nil)
+            #expect(view.callToActionView?.accessibilityTraits.contains(.button) == true)
+        }
+
+        /// Use TW_NATIVE_CAPTURE=1 for the deterministic layout fixture or sdk for real Google test inventory.
+        /// Both paths present the production card inside the production shell and screen hierarchy.
+        @Test(.enabled(if: ["1", "sdk"].contains(ProcessInfo.processInfo.environment["TW_NATIVE_CAPTURE"] ?? "")))
+        func captureTheFourTestAdPlacements() async throws {
+            let live = ProcessInfo.processInfo.environment["TW_NATIVE_CAPTURE"] == "sdk"
+            if live {
+                await withCheckedContinuation { (completion: CheckedContinuation<Void, Never>) in
+                    MobileAds.shared.start { _ in completion.resume() }
+                }
+            }
+            let output = URL.temporaryDirectory.appending(path: live ? "native-ad-sdk" : "native-ad-fixture")
             try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
             for tab in [ShellTab.forecast, .dailyforecast, .air, .search] {
-                let ads = ForecastNativeAds(unitID: "ca-app-pub-3940256099942544/3986624511",
-                                            request: { Request() }, track: { name, values in
-                    print("NATIVE-CAPTURE \(name) \(values)")
-                    return true
-                })
-                ads.setEnabled(true)
-                for _ in 0..<120 where !ads.hasFreshCreative { try await Task.sleep(for: .milliseconds(250)) }
-                try #require(ads.hasFreshCreative, "Google test inventory ready for \(tab)")
+                let source: any ForecastNativeInventory
+                if live {
+                    var inventory: ForecastNativeAds?
+                    for unit in ["3986624511", "2521693316"] {
+                        var failed = false
+                        let ads = ForecastNativeAds(unitID: "ca-app-pub-3940256099942544/" + unit, request: { Request() },
+                                                   track: { name, values in
+                            if name == "ad_load_error" { failed = true }
+                            print("NATIVE-CAPTURE \(name) \(values)")
+                            return true
+                        })
+                        ads.setEnabled(true)
+                        for _ in 0..<100 where !failed && !ads.hasFreshCreative {
+                            try await Task.sleep(for: .milliseconds(200))
+                        }
+                        if ads.hasFreshCreative { inventory = ads; break }
+                        ads.setEnabled(false)
+                    }
+                    source = try #require(inventory, "A ready Google test creative for \(tab)")
+                } else {
+                    source = LayoutInventory()
+                }
                 let places = try await PlacesScreenshotTests.fixture("list", language: "ko-KR")
                 let shell = places.shell
                 shell.select(tab)
@@ -50,13 +110,16 @@ extension HostedShellTests {
                 }
                 let size = CGSize(width: 393, height: 798)
                 let view = ShellFrame(model: shell, insets: PlacesScreenshotTests.insets,
-                                      content: { _ in tabContent }).environment(\.forecastNativeAds, ads)
+                                      content: { _ in tabContent }).environment(\.forecastNativeAds, source)
                     .environment(\.locale, Locale(identifier: "ko_KR"))
                 let hosted = try HostedView(view, size: size)
-                defer { hosted.close(); ads.setEnabled(false) }
+                defer { hosted.close(); (source as? ForecastNativeAds)?.setEnabled(false) }
                 try await hosted.settle()
                 let scroll = try #require(hosted.elements().compactMap { $0 as? UIScrollView }
-                    .filter { $0.bounds.height > 300 && !$0.isHidden }.max { $0.bounds.height < $1.bounds.height })
+                    .first { candidate in
+                        let frame = candidate.convert(candidate.bounds, to: hosted.window)
+                        return frame.height > 300 && frame.contains(CGPoint(x: size.width / 2, y: size.height / 2))
+                    })
                 func card() -> ForecastCreativeView? { hosted.elements().compactMap { $0 as? ForecastCreativeView }.first }
                 for _ in 0..<35 where card() == nil {
                     let end: CGFloat = max(.zero, scroll.contentSize.height - scroll.bounds.height)

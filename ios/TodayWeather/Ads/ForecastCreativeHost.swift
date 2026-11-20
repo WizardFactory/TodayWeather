@@ -2,9 +2,37 @@ import GoogleMobileAds
 import SwiftUI
 import TWDomain
 
+/// Text assets size the same UIKit hierarchy for every format. Binding registers the SDK creative after layout setup.
+@MainActor
+final class ForecastCreative {
+    let headline: String?
+    let advertiser: String?
+    let body: String?
+    let action: String?
+    let icon: UIImage?
+    let bind: (NativeAdView) -> Void
+
+    init(headline: String?, advertiser: String?, body: String?, action: String?, icon: UIImage?, bind: @escaping (NativeAdView) -> Void) {
+        self.headline = headline
+        self.advertiser = advertiser
+        self.body = body
+        self.action = action
+        self.icon = icon
+        self.bind = bind
+    }
+
+    convenience init(_ ad: NativeAd) {
+        self.init(headline: ad.headline, advertiser: ad.advertiser, body: ad.body, action: ad.callToAction, icon: ad.icon?.image) { view in
+            view.mediaView?.mediaContent = ad.mediaContent
+            ad.rootViewController = GoogleAdsPlatform.topViewController()
+            view.nativeAd = ad
+        }
+    }
+}
+
 /// The SDK owns hit testing, the media player and AdChoices. The card's padding is outside its registered assets.
 struct ForecastCreativeHost: UIViewRepresentable {
-    let ad: NativeAd
+    let ad: ForecastCreative
     let stacked: Bool
     let theme: Theme
     let locale: Locale
@@ -28,6 +56,7 @@ struct ForecastCreativeHost: UIViewRepresentable {
 }
 
 final class ForecastCreativeView: NativeAdView {
+    private weak var displayedCreative: ForecastCreative?
     private let stack = UIStackView()
     private let assets = UIStackView()
     private let details = UIStackView()
@@ -101,7 +130,7 @@ final class ForecastCreativeView: NativeAdView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(_ ad: NativeAd, stacked: Bool, accessible: Bool, theme: Theme, locale: Locale) {
+    func configure(_ ad: ForecastCreative, stacked: Bool, accessible: Bool, theme: Theme, locale: Locale) {
         overrideUserInterfaceStyle = theme == .dark ? .dark : .light
         backgroundColor = .secondarySystemGroupedBackground
         let padding: CGFloat = stacked ? 12 : 8
@@ -113,16 +142,15 @@ final class ForecastCreativeView: NativeAdView {
         mediaHeight.constant = stacked ? 180 : 120
         disclosure.text = Self.disclosure(locale)
         for (label, text) in [(headline, ad.headline), (advertiser, ad.advertiser), (copy, ad.body),
-                              (action, ad.callToAction)] {
+                              (action, ad.action)] {
             label.text = text
             label.isHidden = text?.isEmpty != false
         }
-        icon.image = ad.icon?.image
+        icon.image = ad.icon
         icon.isHidden = icon.image == nil
-        if nativeAd !== ad {
-            media.mediaContent = ad.mediaContent
-            ad.rootViewController = GoogleAdsPlatform.topViewController()
-            nativeAd = ad
+        if displayedCreative !== ad {
+            displayedCreative = ad
+            ad.bind(self)
         }
     }
 

@@ -2,9 +2,18 @@ import GoogleMobileAds
 import SwiftUI
 import TWDomain
 
+@MainActor
+protocol ForecastNativeInventory: AnyObject {
+    var enabled: Bool { get }
+    var generation: Int { get }
+    var hasFreshCreative: Bool { get }
+    func preload()
+    func take() -> ForecastCreative?
+}
+
 /// One spare creative for the next slot. A creative is handed to one mounted SDK view only.
 @MainActor @Observable
-final class ForecastNativeAds: NSObject, NativeAdLoaderDelegate, NativeAdDelegate {
+final class ForecastNativeAds: NSObject, ForecastNativeInventory, NativeAdLoaderDelegate, NativeAdDelegate {
     private let unitID: String
     private let request: () -> Request
     private let track: (String, [String: AnalyticsValue]) -> Bool
@@ -48,10 +57,10 @@ final class ForecastNativeAds: NSObject, NativeAdLoaderDelegate, NativeAdDelegat
         return Date().timeIntervalSince(loadedAt) < 55 * 60
     }
 
-    func take() -> NativeAd? {
-        guard hasFreshCreative else { return nil }
-        defer { ready = nil }
-        return ready
+    func take() -> ForecastCreative? {
+        guard hasFreshCreative, let ad = ready else { return nil }
+        ready = nil
+        return ForecastCreative(ad)
     }
 
     func adLoader(_ adLoader: AdLoader, didReceive nativeAd: NativeAd) {
@@ -83,7 +92,7 @@ final class ForecastNativeAds: NSObject, NativeAdLoaderDelegate, NativeAdDelegat
 }
 
 extension EnvironmentValues {
-    @Entry var forecastNativeAds: ForecastNativeAds? = nil
+    @Entry var forecastNativeAds: (any ForecastNativeInventory)? = nil
     @Entry var forecastChartRead: @MainActor (ShellTab) -> Void = { _ in }
 }
 
@@ -94,7 +103,7 @@ struct ForecastNativeSlot: View {
     @Environment(\.forecastNativeAds) private var ads
     @Environment(\.locale) private var locale
     @State private var visit = NativeAdVisit()
-    @State private var creative: NativeAd?
+    @State private var creative: ForecastCreative?
     @State private var generation = -1
 
     var body: some View {
