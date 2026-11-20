@@ -1,6 +1,6 @@
 # Regional weather source qualification
 
-These sources cover [#3075](https://github.com/WizardFactory/TodayWeather/issues/3075) and [#3076](https://github.com/WizardFactory/TodayWeather/issues/3076). Use the [focus market roster](../../operations/mobile-focus-cities.md) and [seasonal atlas](../../evidence/research/mobile-markets-2026-11-20/README.md) for applicable cities and seasons. Retrieval date was 2026-11-20 unless specified.
+These sources cover [#3074](https://github.com/WizardFactory/TodayWeather/issues/3074), [#3075](https://github.com/WizardFactory/TodayWeather/issues/3075) and [#3076](https://github.com/WizardFactory/TodayWeather/issues/3076). Use the [focus market roster](../../operations/mobile-focus-cities.md) and [seasonal atlas](../../evidence/research/mobile-markets-2026-11-20/README.md) for applicable cities and seasons. Retrieval date was 2026-11-20 unless specified.
 
 ## Delivery through server1
 
@@ -8,5 +8,6 @@ WebApp (desktop and PWA) and native iOS and Android use the selected forecast lo
 
 - [Environmental health and fire risk](environmental-health.md)
 - [Sunshine, terrain, rainfall and estuary levels](regional-forecasts.md)
+- [Official weather warnings and geographic matching](official-warnings.md)
 
 [Selected request and parse results](sample-checks.json) record counts and units. Provider values and credentials are excluded.
