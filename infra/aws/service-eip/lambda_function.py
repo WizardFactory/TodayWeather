@@ -1,9 +1,7 @@
 """Fail-closed service EIP automation."""
 import re
-import datetime as dt
 import ipaddress
 import json
-import math
 import http.client
 from http.client import HTTPException
 import signal
@@ -25,45 +23,24 @@ def http_get(ip, path):
     try:
         conn.request('GET', path, headers={'Connection': 'close'})
         response = conn.getresponse()
+        lengths = response.headers.get_all('Content-Length', [])
+        encodings = response.headers.get_all('Transfer-Encoding', [])
+        if encodings and (lengths or [v.lower() for v in encodings] != ['chunked']):
+            raise ValueError('invalid-transfer-encoding')
         body = response.read(262145)
         if len(body) > 262144:
             raise ValueError('response-too-large')
+        # HTTPResponse can discard an invalid length or use only the first field.
+        for field in lengths:
+            for value in field.split(','):
+                value = value.strip(' \t')
+                if not re.fullmatch(r'[0-9]+', value) or (value.lstrip('0') or '0') != str(len(body)):
+                    raise ValueError('invalid-response-length')
         return response.status, body
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous)
         conn.close()
-
-
-DATA_PATH = '/v000903/kma/coord/37.5665,126.9780'
-KST = dt.timezone(dt.timedelta(hours=9))
-
-
-def _validate_ready(ip, http, now):
-    """Read only the candidate IPv4, never the service EIP or a redirect."""
-    try:
-        address = ipaddress.ip_address(ip)
-        if address.version != 4 or not address.is_global or address.is_multicast:
-            return False
-        if http(ip, '/health') != (200, b'OK'):
-            return False
-        status, body = http(ip, DATA_PATH)
-        if status != 200:
-            return False
-        data = json.loads(body)
-        stamp = data.get('currentPubDate')
-        if not isinstance(stamp, str) or not re.fullmatch(r'[0-9]{12}', stamp):
-            return False
-        published = dt.datetime.strptime(stamp, '%Y%m%d%H%M').replace(tzinfo=KST)
-        age = (now - published).total_seconds()
-        current = data.get('current', {})
-        temp, humidity = current.get('t1h'), current.get('reh')
-        numeric = lambda x: type(x) in (float, int) and math.isfinite(x)
-        return (0 <= age <= 21600 and numeric(temp) and -50 < temp <= 60
-                and numeric(humidity) and 0 <= humidity <= 100
-                and isinstance(data.get('shortest'), list) and bool(data['shortest']))
-    except (ValueError, TypeError, AttributeError, OSError, HTTPException):
-        return False
 
 
 def safe_id(value):
@@ -74,47 +51,46 @@ def emit_event(record):
     print(json.dumps(record, separators=(',', ':'), allow_nan=False))
 
 
-def ready(ip, http, now, *, trace=None, emit=emit_event, monotonic=time.monotonic):
-    """Retain validation while reporting only bounded diagnostic fields."""
+def ready(ip, http, *, trace=None, emit=emit_event, monotonic=time.monotonic):
+    """Probe the candidate directly and report only bounded diagnostic fields."""
     ordinal = (trace or {}).get('probe')
     trace = {k: safe_id((trace or {}).get(k)) for k in
              ('candidate_id', 'event_id', 'invocation_id', 'fleet_id')}
     if type(ordinal) is int and 1 <= ordinal <= 18:
         trace['probe'] = ordinal
     overall = monotonic()
-    failed = False
-    def observed_http(address, path):
-        nonlocal failed
+    try:
+        address = ipaddress.ip_address(ip)
+        valid = address.version == 4 and address.is_global and not address.is_multicast
+    except (ValueError, TypeError):
+        valid = False
+
+    result = False
+    if valid:
         start = monotonic()
-        record = dict(trace, event='readiness.probe',
-                      stage='health' if path == '/health' else 'weather',
+        record = dict(trace, event='readiness.probe', stage='health',
                       socket_timeout_ms=2000, deadline_ms=HTTP_DEADLINE * 1000)
         try:
-            status, body = http(address, path)
-            record.update(http_status=status, reason='ok' if status == 200 else 'http-error')
-            if path == '/health' and status == 200 and body != b'OK':
+            status, body = http(ip, '/health')
+            record['http_status'] = status
+            if status != 200:
+                record['reason'] = 'http-error'
+            elif body != b'OK':
                 record['reason'] = 'invalid-response'
-            failed = record['reason'] != 'ok'
-            return status, body
+            else:
+                record['reason'] = 'ok'
+                result = True
         except (TimeoutError, socket.timeout):
-            failed = True
             record['reason'] = 'timeout'
-            raise
         except (ValueError, TypeError, AttributeError):
-            failed = True
             record['reason'] = 'invalid-response'
-            raise
         except (OSError, HTTPException):
-            failed = True
             record['reason'] = 'transport-error'
-            raise
-        finally:
-            record['elapsed_ms'] = round(max(0, monotonic() - start) * 1000, 3)
-            emit(record)
-    result = _validate_ready(ip, observed_http, now)
+        record['elapsed_ms'] = round(max(0, monotonic() - start) * 1000, 3)
+        emit(record)
+    reason = 'ready' if result else ('probe-failed' if valid else 'invalid-response')
     emit(dict(trace, event='readiness.result', stage='validation', ready=result,
-              reason='ready' if result else ('probe-failed' if failed else 'invalid-response'),
-              socket_timeout_ms=2000, deadline_ms=HTTP_DEADLINE * 1000,
+              reason=reason, socket_timeout_ms=2000, deadline_ms=HTTP_DEADLINE * 1000,
               elapsed_ms=round(max(0, monotonic() - overall) * 1000, 3)))
     return result
 
@@ -140,7 +116,6 @@ def lambda_handler(event, context):
         ec2 = boto3.client('ec2', region_name=env['AWS_REGION'], config=Config(
             connect_timeout=2, read_timeout=3, retries={'total_max_attempts': 1}))
         result = handle(event, ec2=ec2, env=env, http=http_get, sleep=time.sleep,
-                      now=lambda: dt.datetime.now(dt.timezone.utc),
                       remaining_ms=(context.get_remaining_time_in_millis if context else lambda: float('inf')),
                       invocation_id=getattr(context, 'aws_request_id', None))
         emit_event({'event': 'invocation.result', 'status': result['status'],
@@ -152,7 +127,7 @@ def lambda_handler(event, context):
         raise RetryableError('operation-failed') from None
 
 
-def handle(event, *, ec2, env, http, sleep, now, remaining_ms=lambda: float('inf'), invocation_id=None):
+def handle(event, *, ec2, env, http, sleep, remaining_ms=lambda: float('inf'), invocation_id=None):
     if env.get('ATTACH_ENABLED') != 'true' or any(not env.get(k) for k in REQUIRED):
         return {'status': 'refused'}
     if not isinstance(event, dict) or not isinstance(event.get('detail'), dict):
@@ -190,7 +165,7 @@ def handle(event, *, ec2, env, http, sleep, now, remaining_ms=lambda: float('inf
         last_probe.clear()
         if remaining_ms() < 25000:
             raise RetryableError('time-budget')
-        if ready(instance.get('PublicIpAddress'), http, now(),
+        if ready(instance.get('PublicIpAddress'), http,
                  trace=dict(trace, probe=attempt + 1), emit=record):
             break
         if attempt < 17:
