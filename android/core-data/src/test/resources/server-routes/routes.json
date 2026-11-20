@@ -231,7 +231,7 @@
      "ignoreCase": false
     },
     {
-     "line": 392,
+     "line": 390,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000903)/coord/:loc/pollen-forecast",
@@ -239,7 +239,7 @@
      "ignoreCase": false
     },
     {
-     "line": 395,
+     "line": 393,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000903)/coord/:loc",
@@ -247,7 +247,7 @@
      "ignoreCase": false
     },
     {
-     "line": 396,
+     "line": 394,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000901|v000903)/addr/*",
@@ -255,7 +255,7 @@
      "ignoreCase": false
     },
     {
-     "line": 399,
+     "line": 397,
      "kind": "route",
      "method": "ALL",
      "path": "OWN_PATH",
@@ -263,7 +263,7 @@
      "ignoreCase": false
     },
     {
-     "line": 406,
+     "line": 404,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -1680,8 +1680,8 @@
   },
   {
    "path": "server/routes/gateway.js",
-   "commit": "43b3ad67b49a736ca12d05a0a38f676af54c55ec",
-   "sha256": "a2c014d36043da3eed258dd4851ede03b968db6960076ad160b2b76f21906ae2"
+   "commit": "fa76b05273a267043568e2d9e28e1532db951ae3",
+   "sha256": "fb7217c62cb3b7f48188878f0d0084f823edb6b0c4e7f85fba06c059d8f03754"
   },
   {
    "path": "server/routes/v000001/index.js",
