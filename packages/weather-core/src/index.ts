@@ -107,6 +107,15 @@ export type AirStation = {
   forecastPublishedAt: string | null;
   pollutants: Record<Pollutant, AirMeasure>;
 };
+export type HourlyDetails = {
+  at: string;
+  uvIndex?: number;
+  windGustMps?: number;
+  wbgtC?: number;
+  solarRadiationWm2?: number;
+  solarEnergyMjm2?: number;
+  severeRisk?: number;
+};
 export type Weather = {
   schemaVersion: 1;
   source: "KMA" | "VC";
@@ -121,6 +130,7 @@ export type Weather = {
   current: Point;
   yesterday: Point | null;
   hourly: Point[];
+  hourlyDetails?: HourlyDetails[];
   daily: Point[];
   air: AirStation[];
   coordinateAirForecastAvailable?: true;
@@ -751,6 +761,9 @@ export function normalizeWeather(
     current,
     yesterday,
     hourly,
+    ...(!kma && Array.isArray(raw.hourlyDetails)
+      ? { hourlyDetails: raw.hourlyDetails.flatMap(hourlyDetail) }
+      : {}),
     daily,
     air,
     ...(!kma && raw.airForecastAvailable === true ? { coordinateAirForecastAvailable: true as const } : {}),
@@ -769,6 +782,26 @@ export function normalizeWeather(
     notices,
   };
 }
+function hourlyDetail(value: unknown): HourlyDetails[] {
+  const row = record(value);
+  if (typeof row.at !== "string" || !Number.isFinite(Date.parse(row.at))) return [];
+  const detail: HourlyDetails = { at: row.at };
+  const fields = [
+    "uvIndex", "windGustMps", "wbgtC", "solarRadiationWm2", "solarEnergyMjm2", "severeRisk",
+  ] as const;
+  for (const field of fields) {
+    const metric = row[field];
+    if (
+      typeof metric === "number" && Number.isFinite(metric) &&
+      (field === "wbgtC" || metric >= 0) &&
+      (field !== "severeRisk" || metric <= 100)
+    ) {
+      detail[field] = metric;
+    }
+  }
+  return Object.keys(detail).length > 1 ? [detail] : [];
+}
+
 export function normalizeNation(
   value: unknown,
   options: { units: Units; mode: "demo" | "live" },

@@ -112,6 +112,16 @@ class ChartSeries(json: JsonObject) : JsonView(json) {
 }
 
 /** Converted weather of one place, as `WeatherUtil.convertWeatherData` returns it. */
+class HourlyDetails(json: JsonObject) : JsonView(json) {
+    val at get() = str("at")
+    val uvIndex get() = num("uvIndex")
+    val windGustMps get() = num("windGustMps")
+    val wbgtC get() = num("wbgtC")
+    val solarRadiationWm2 get() = num("solarRadiationWm2")
+    val solarEnergyMjm2 get() = num("solarEnergyMjm2")
+    val severeRisk get() = num("severeRisk")
+}
+
 class PlaceWeather(json: JsonObject) : JsonView(json) {
     val source get() = str("source")
     val name get() = str("name")
@@ -120,6 +130,7 @@ class PlaceWeather(json: JsonObject) : JsonView(json) {
     val location get() = obj("location")?.let(::GeoPoint)
     val currentWeather get() = obj("currentWeather")?.let(::CurrentWeather)
     val timeTable get() = list("timeTable", ::WeatherPoint)
+    val hourlyDetails get() = list("hourlyDetails", ::HourlyDetails)
     val timeChart get() = list("timeChart", ::ChartSeries)
     val dayTable get() = (json["dayChart"] as? JsonArray)?.firstOrNull()?.let { it as? JsonObject }
         ?.let { (it["values"] as? JsonArray)?.mapNotNull { v -> (v as? JsonObject)?.let(::DailyForecast) } } ?: emptyList()
