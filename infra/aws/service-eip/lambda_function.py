@@ -23,9 +23,12 @@ def http_get(ip, path):
     try:
         conn.request('GET', path, headers={'Connection': 'close'})
         response = conn.getresponse()
+        expected_length = response.length
         body = response.read(262145)
         if len(body) > 262144:
             raise ValueError('response-too-large')
+        if expected_length is not None and len(body) != expected_length:
+            raise ValueError('incomplete-response')
         return response.status, body
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)

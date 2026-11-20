@@ -1,9 +1,11 @@
 import contextlib
 import io
+import http.client
 import json
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import lambda_function as checker
 
@@ -61,6 +63,23 @@ class GuardTests(unittest.TestCase):
         self.assertEqual({'status': 'attached'}, self.run_handle(ec2, health_only))
         self.assertEqual([('8.8.8.8', '/health')], requests)
         self.assertEqual(1, len(ec2.associations))
+
+    def test_truncated_health_body_cannot_attach(self):
+        ec2 = FakeEC2()
+        def response():
+            stream = io.BytesIO(b'HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\nOK')
+            sock = Mock()
+            sock.makefile.return_value = stream
+            parsed = http.client.HTTPResponse(sock)
+            parsed.begin()
+            return parsed
+
+        with patch.object(http.client, 'HTTPConnection') as connection:
+            connection.return_value.getresponse.side_effect = response
+            with self.assertRaises(checker.RetryableError) as failure:
+                self.run_handle(ec2, checker.http_get)
+        self.assertEqual('health', json.loads(str(failure.exception))['last_probe']['stage'])
+        self.assertEqual([], ec2.associations)
 
     def test_eventual_success_once(self):
         ec2 = FakeEC2()
