@@ -771,6 +771,7 @@ it("accepts only the known precipitation labels in the live smoke", async () => 
       "강수 2 mm · 관측 누적",
       "강수 약 1 mm · 1시간 예보(근사)",
       "강수 4 mm · 3시간 예보",
+      "강수 0 mm · 24시간 예보",
       "강수 3 mm · 예보",
       "강수량",
       "강수량 · 1시간 관측",

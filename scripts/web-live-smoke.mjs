@@ -54,6 +54,7 @@ export const RAIN_LABELS = [
   "관측 누적",
   "1시간 예보(근사)",
   "3시간 예보",
+  "24시간 예보",
   "예보",
 ];
 /** Weather request paths of the probed places (coordinates from PLACES). */
@@ -1083,7 +1084,7 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       async () => {
         await rendered(".temperature");
         const temperature = await temperatureText();
-        const hours = await page.locator(".chart-label").count();
+        const hours = await page.locator(".hourly-chart .chart-hour").count();
         const problems = [];
         if (!/\d/.test(temperature))
           problems.push("temperature " + JSON.stringify(temperature));
@@ -1122,17 +1123,18 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       },
       "/weather/",
     );
-    // The daily list renders with the weather data; wait for its rows.
+    // Wait for the rendered daily chart columns before checking the count.
+    const dailyColumns = ".daily-chart .chart-column";
     await visit(
       "/weather/seoul/daily",
-      ".daily-row, .empty-state:not([role=status]), .empty-state.error",
+      `${dailyColumns}, .empty-state:not([role=status]), .empty-state.error`,
     );
     await check(
       "Seoul daily view renders >=3 daily rows",
       "app",
       async () => {
         await rendered(".temperature");
-        const days = await page.locator(".daily-row").count();
+        const days = await page.locator(dailyColumns).count();
         if (days < 3)
           await renderFailure(`${days} daily rows (< 3)`, SEOUL_WEATHER);
         return `${days} daily rows`;
