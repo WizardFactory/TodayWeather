@@ -11,7 +11,7 @@ const path = require('path');
 const vm = require('vm');
 const assert = require('assert');
 const crypto = require('crypto');
-const root = process.env.TW_REPO || process.cwd();
+const root = process.env.TW_REPO || path.resolve(__dirname, '../../..');
 const outputDir = process.env.TW_SMOKE_OUTPUT_DIR || path.join(require('os').tmpdir(),'issue-2554-response-smoke-output');
 fs.mkdirSync(outputDir,{recursive:true});
 // Preserve Date/undefined values in fixtures on the Node 16 service runtime.
@@ -137,10 +137,11 @@ function createHarness(version, fixture, historyOptions = {}) {
       if(historyOptions.modules && Object.hasOwn(historyOptions.modules,id)) return historyOptions.modules[id];
       if(id==='request')return (url,opts,cb)=>{
         assert(url.startsWith('https://synthetic.invalid/geocode/v000903/coord/'));
-        cb(null,{statusCode:200},{kmaAddress:{name1:fixture.place.town.first,name2:fixture.place.town.second,name3:fixture.place.town.third}});
+        cb(null,{statusCode:200},{country:fixture.country === undefined ? 'KR' : fixture.country,kmaAddress:{name1:fixture.place.town.first,name2:fixture.place.town.second,name3:fixture.place.town.third}});
       };
       if(!id.startsWith('.'))return require(id);
       let resolved=path.resolve(path.dirname(filename),id);
+      if (resolved.endsWith('.json')) return require(resolved);
       resolved=fs.existsSync(resolved)&&fs.statSync(resolved).isDirectory()?path.join(resolved,'index.js'):resolved+(path.extname(id)==='.js'?'':'.js');
       if(resolved.endsWith('/config/config.js'))return config;
       // Air provider policy (#2628): defaults plus per-scenario overrides; the sandbox has no process.env.
@@ -195,6 +196,7 @@ function createHarness(version, fixture, historyOptions = {}) {
     const url=options.addr?'/addr/'+[t.first,t.second,t.third].map(encodeURIComponent).join('/'):'/coord/'+fixture.place.gCoord.lat+','+fixture.place.gCoord.lon;
     const req={method:'GET',url,originalUrl:'/v000903/kma'+url,baseUrl:'/v000903/kma',headers:{},query,sessionID:'synthetic-smoke'};
     const res={__:translate,status(code){this.statusCode=code;return this;},send(body){reject(new Error('Unexpected response '+this.statusCode+': '+body));},json(body){resolve({body:JSON.parse(JSON.stringify(body)),traces,queries,logs});},redirect(url){reject(new Error('Unexpected redirect '+url));},setHeader(){}};
+    if (options.locale) res.getLocale = () => options.locale;
     router.handle(req,res,err=>reject(err||new Error('No JSON response')));
   }); }
   return {request,methods,router,logs};

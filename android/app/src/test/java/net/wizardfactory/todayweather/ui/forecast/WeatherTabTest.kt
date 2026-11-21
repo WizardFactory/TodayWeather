@@ -1,5 +1,9 @@
 package net.wizardfactory.todayweather.ui.forecast
 
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.unit.dp
 import net.wizardfactory.todayweather.ui.shell.PopupTags
@@ -107,6 +111,7 @@ class WeatherTabTest {
     private fun show(
         answer: suspend (String) -> String = { url -> if ("51.51" in url) londonBody else seoulBody },
         places: List<Place>? = null,
+        languageTags: List<String> = listOf("ko-KR"),
         index: Int = 1,
         onRepeatVisit: (Tab, () -> Unit) -> Boolean = { _, _ -> false },
         install: (@Composable () -> Unit) -> Unit = rule::setContent,
@@ -116,7 +121,7 @@ class WeatherTabTest {
             units = UnitSettings.defaults("KR")))
         repository = WeatherRepository("https://server.test.invalid", null, HttpGet { url, _ -> requests += url; answer(url) },
             io = Dispatchers.Unconfined)
-        session = WeatherSession(repository, scope, memory, { listOf("ko-KR") }, { null })
+        session = WeatherSession(repository, scope, memory, { languageTags }, { null })
         // The activity's glyph: a tap with location off clears the selected place's gate, as MainActivity's does.
         val glyph = LocationGlyph(rule.activity) { memory.current().let { s -> s.places.getOrNull(s.placeIndex)?.let(repository::invalidate) } }
         install {
@@ -131,6 +136,25 @@ class WeatherTabTest {
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
+    }
+
+    @Test
+    fun markedSummaryAppearsOnceAndKeepsAirAccessible() {
+        val text = "최저 -3도, 최고 6도, 입춘"
+        val date = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString()
+        val body = Json.parseToJsonElement(seoulBody).jsonObject
+        val current = body.getValue("current").jsonObject + mapOf(
+            "summary" to JsonPrimitive(text), "summaryForDate" to JsonPrimitive(date), "summaryAir" to JsonPrimitive("대기 정보"))
+        val response = JsonObject(body + ("current" to JsonObject(current))).toString()
+        show(answer = { response }, languageTags = net.wizardfactory.todayweather.languages())
+        rule.onNodeWithContentDescription(text).assertHasNoClickAction()
+        rule.onAllNodesWithTag(ForecastTags.SUMMARY_AIR).assertCountEquals(0)
+        val image = rule.onRoot().captureToImage().asAndroidBitmap()
+        val output = File(project, "build/reports/solar-terms/forecast.png")
+        output.parentFile.mkdirs()
+        output.outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        rule.onNodeWithTag(ShellTags.tab(Tab.AIR)).performClick()
+        rule.onNodeWithTag(AirTags.PAGE).assertExists()
     }
 
     /**

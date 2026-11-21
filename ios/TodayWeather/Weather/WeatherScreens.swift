@@ -65,7 +65,9 @@ final class WeatherScreens {
         if case .start = shell.screen { return }
         switch event {
         case .launch: session.reload(.initial)
-        case .resume: session.reload(.resume)
+        case .resume:
+            if scope?.summaryExpiresAt != nil { applySelected() }
+            session.reload(.resume)
         case .notification, .link: break
         }
     }
@@ -83,6 +85,8 @@ final class WeatherScreens {
             _ = session.applies
             _ = session.retry
             _ = session.selected?.photo
+            _ = session.selected
+            _ = shell.holder.state?.units
             // The units page's air standard goes to the air visit as it is (`changeAirUnitEvent`).
             _ = shell.holder.state?.units.airUnit
         } onChange: { [weak self] in
@@ -112,6 +116,9 @@ final class WeatherScreens {
             if visitTab != tab || scope == nil {
                 openVisit(tab)
             } else if session.applies != appliedEvents {
+                applySelected()
+            } else if scope?.summaryExpiresAt != nil,
+                      selectedRecord()?["currentWeather"]?["summary"]?.stringValue != scope?.summary?.stringValue {
                 applySelected()
             } else {
                 photoLoaded()
@@ -293,6 +300,13 @@ final class WeatherScreens {
             actions: AnyView(WeatherBarActions(hasPush: content.page.hasPush, colors: colors,
                                                onBell: { [weak self] in self?.onBell() }, onShare: { [weak self] in self?.onShare() })),
             page: AnyView(WeatherPageView(content: content, theme: theme, actions: actions)
+                .task(id: scope?.summaryExpiresAt) { [weak self] in
+                    guard let expiry = self?.scope?.summaryExpiresAt else { return }
+                    do {
+                        try await Task.sleep(for: .seconds(max(0, expiry.timeIntervalSinceNow)))
+                    } catch { return }
+                    self?.applySelected()
+                }
                 .background(WindowSizeReader { [weak self] size in self?.windowChanged(size) })
                 .accessibilityIdentifier("forecast-page-\(tab.rawValue)")))
     }

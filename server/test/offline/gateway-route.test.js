@@ -571,3 +571,31 @@ test('#2635 typed backend outages preserve deadline, CORS and no-store without r
         }
     } finally { await app.close(); }
 });
+
+test('marked v000903 forecast revalidates final JSON across a solar-term correction', async () => {
+    const app = await startApp();
+    const path = '/weather/v000903/coord/37.5665,126.9780?temperatureUnit=C';
+    try {
+        reset(realGeocoder({kakao:Array(3).fill('kakao.coord.seoul')}));
+        const term = '최저 0℃, 춘분';
+        const corrected = '최저 0℃, 맑음';
+        for (const summary of [term,term,corrected]) {
+            state.backendScript.push((req,res) => res.json({current:{summary,summaryForDate:'2001-03-20'}}));
+        }
+        const headers = {'Accept-Language':'ko'};
+        const first = await request(app.port,'GET',path,headers);
+        assert.equal(first.status,200);
+        assert.equal(first.json.current.summary,term);
+        assert.equal(first.headers['cache-control'],'max-age=0, must-revalidate');
+        assert.match(first.headers.vary,/Accept-Language/i);
+        assert.ok(first.headers.etag);
+        headers['If-None-Match'] = first.headers.etag;
+        assert.equal((await request(app.port,'GET',path,headers)).status,304);
+        const refreshed = await request(app.port,'GET',path,headers);
+        assert.equal(refreshed.status,200);
+        assert.equal(refreshed.json.current.summary,corrected);
+        assert.notEqual(refreshed.headers.etag,first.headers.etag);
+    } finally {
+        await app.close();
+    }
+});

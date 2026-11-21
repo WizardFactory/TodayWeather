@@ -85,6 +85,7 @@ public struct PollenRow: Sendable, Equatable {
 public struct Hero: Sendable, Equatable {
     public let temperature: String
     public let sky: PageImage
+    public let rankedSummary: Bool
     public let summary: String
     public let summaryAir: String?
 }
@@ -344,7 +345,8 @@ public struct ForecastPage: Sendable {
             guard Js.truthy(scope.currentWeather) else { return nil }
             return Hero(temperature: collapse(scope.temp(cw?["t1h"])),
                         sky: PageImage(weather: true, name: Js.display(cw?["skyIcon"]) + ".png"),
-                        summary: collapse(Js.display(scope.summary)),
+                        rankedSummary: scope.summaryExpiresAt != nil,
+                        summary: scope.summaryExpiresAt != nil ? scope.summary?.stringValue ?? "" : collapse(Js.display(scope.summary)),
                         summaryAir: Js.truthy(scope.summaryAir) ? collapse(Js.display(scope.summaryAir)) : nil)
         }
 

@@ -138,6 +138,7 @@ export type Weather = {
   timeZoneId?: string;
   /** Provider wording only; no verified air observation time or inferred numeric grade. */
   airSummary?: string;
+  daySummary?: { date: string; text: string };
   availability: {
     weather: "available" | "partial";
     air: "available" | "unavailable";
@@ -655,6 +656,22 @@ export function normalizeAir(value: unknown): AirStation {
     pollutants,
   };
 }
+/** Validate the optional summary as one unit for both API and persisted inputs. */
+export function validDaySummary(
+  value: unknown,
+): value is { date: string; text: string } {
+  const { date, text } = record(value);
+  return (
+    typeof text === "string" &&
+    text.trim().length > 0 &&
+    text.length <= 500 &&
+    typeof date === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    Number.isFinite(Date.parse(date)) &&
+    new Date(date).toISOString().startsWith(date)
+  );
+}
+
 export function normalizeWeather(
   value: unknown,
   options: {
@@ -748,6 +765,14 @@ export function normalizeWeather(
     notices.push("어제 같은 시각의 기온을 제공하지 않습니다.");
   if (!air.length)
     notices.push("이 지역의 대기질 관측 자료를 제공하지 않습니다.");
+  // The provider has already formatted the ranked text in its response units.
+  const summaryUnitsMatch = (Object.keys(source) as (keyof Units)[]).every(
+    (key) => source[key] === target[key],
+  );
+  const daySummary = {
+    date: currentRaw.summaryForDate,
+    text: currentRaw.summary,
+  };
   return {
     schemaVersion: 1,
     source: kma ? "KMA" : "VC",
@@ -766,6 +791,12 @@ export function normalizeWeather(
       : {}),
     daily,
     air,
+    ...(kma &&
+    location.country === "KR" &&
+    summaryUnitsMatch &&
+    validDaySummary(daySummary)
+      ? { daySummary }
+      : {}),
     ...(!kma && raw.airForecastAvailable === true ? { coordinateAirForecastAvailable: true as const } : {}),
     ...(raw.pollenForecastAvailable === true ? { coordinatePollenForecastAvailable: true as const } : {}),
     ...(typeof record(raw.timezone).timezoneId === "string"

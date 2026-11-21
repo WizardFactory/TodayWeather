@@ -226,6 +226,32 @@ struct WeatherRequestTests {
         #expect(again.loading.isEmpty)
     }
 
+    @Test func datedSummaryKeepsItsRequestWhenReopeningOffline() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-summary-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let original = try #require(try JSONValue.parse(WeatherFixtures.body("kma-seoul")).objectValue)
+        let current = try #require(original["current"]?.objectValue)
+        let marked = current.setting("summary", "calendar").setting("summaryForDate", "2026-02-04")
+        let body = Data(JSONValue.object(original.setting("current", .object(marked))).jsonText.utf8)
+        let clock = VirtualClock()
+        let http = ScriptedWeatherHTTP(clock: clock) { _ in .answer(0, body) }
+        let live = WeatherRepository(baseURL: Self.server, cacheDirectory: dir, http: http, clock: clock)
+        guard case .loaded = await live.load(seoul, units: koreanUnits, acceptLanguage: "ko", force: true) else {
+            Issue.record("failed to load marked fixture"); return
+        }
+        let offline = WeatherRepository(baseURL: nil, cacheDirectory: dir, http: http, clock: clock)
+        let cached = try #require(offline.cached(seoul))
+        func summary(_ place: Place, _ units: UnitSettings, _ language: String) -> String? {
+            cityRecord(place, cached, summaryRequest: WeatherRepository.summaryRequest(place, units, language))["currentWeather"]?["summary"]?.stringValue
+        }
+        var fahrenheit = koreanUnits
+        fahrenheit.temperatureUnit = "F"
+        #expect(summary(seoul, koreanUnits, "ko") == "calendar")
+        #expect(summary(seoul, koreanUnits, "en") == nil)
+        #expect(summary(seoul, fahrenheit, "ko") == nil)
+        #expect(summary(london, koreanUnits, "ko") == nil)
+    }
+
     /// A02: fields a response leaves out keep their old value; the entry is cached and read back by a new repository (a
     /// cold start shows the last weather while it loads).
     @Test func mergeAndCache() async throws {

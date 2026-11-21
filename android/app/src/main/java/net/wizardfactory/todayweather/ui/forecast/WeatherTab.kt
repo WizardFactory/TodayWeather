@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.delay
+import net.wizardfactory.todayweather.languages
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
@@ -140,7 +142,10 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
     val place = state.places.getOrNull(index)
     LaunchedEffect(place) { place?.let { host.readCache(it) } }
     val entry = place?.let { entries[WeatherRepository.key(it)] }
-    val record = remember(place, entry) { place?.let { cityRecord(it, entry) } }
+    val languageTags = languages()
+    val record = remember(place, entry, state.units, languageTags) {
+        place?.let { cityRecord(it, entry, WeatherRepository.summaryRequest(it, state.units, languageTags)) }
+    }
     val hasPush = remember(state.push, index) { hasPushInfo(state, index) }
     // Whether the visit has opened, and whether it found no enabled place when it did.
     val opened = remember(visit) { BooleanArray(2) }
@@ -148,7 +153,8 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
     // the place as it is (`applyEvent` "loadWeatherData"), so a theme chosen on S08 shows the saved photo at once (#2915 F2).
     // A photo the feed gave the place alone is `loadWeatherPhotosEvent`: the photo, without an apply (#2915 F4).
     val weather = remember(record) { record?.let { JsonObject(it - "photo") } }
-    val applied = remember(visit, weather, hasPush, applies) {
+    var expiredAt by remember(visit) { mutableStateOf<Long?>(null) }
+    val applied = remember(visit, weather, hasPush, applies, expiredAt) {
         if (!opened[0]) {
             opened[0] = true
             opened[1] = !visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
@@ -156,6 +162,13 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
             visit.apply(record, hasPush)
         }
         Any()
+    }
+    val windowFocused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    LaunchedEffect(visit, visit.summaryExpiresAt, windowFocused) {
+        if (!windowFocused) return@LaunchedEffect
+        val expiry = visit.summaryExpiresAt ?: return@LaunchedEffect
+        delay((expiry - System.currentTimeMillis()).coerceAtLeast(0))
+        expiredAt = expiry
     }
     remember(visit, record?.get("photo")) { visit.photoLoaded(record) }
     val units = state.units

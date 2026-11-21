@@ -363,6 +363,35 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
     </>
   );
 }
+function useKoreanSummary(w: Weather) {
+  const date = w.daySummary?.date;
+  const end = date ? Date.parse(date + "T00:00:00+09:00") + 86_400_000 : 0;
+  const [, refresh] = useState(0);
+  useEffect(() => {
+    if (!end) return;
+    const update = () => refresh((value) => value + 1);
+    const remaining = end - Date.now();
+    const timer =
+      remaining > 0 && remaining <= 86_400_000
+        ? window.setTimeout(update, remaining)
+        : undefined;
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("pageshow", update);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("pageshow", update);
+    };
+  }, [end]);
+  const now = Date.now();
+  return w.source === "KMA" &&
+    w.location.country === "KR" &&
+    now >= end - 86_400_000 &&
+    now < end
+    ? w.daySummary?.text
+    : undefined;
+}
+
 function WeatherDetails({
   weather: w,
   view,
@@ -371,6 +400,7 @@ function WeatherDetails({
   view: string;
 }) {
   const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
+  const rankedSummary = useKoreanSummary(w);
   const now = w.current,
     unit = w.units.precipitationUnit,
     standard = w.units.airUnit,
@@ -472,26 +502,30 @@ function WeatherDetails({
             </div>
             <WeatherIcon icon={now.icon} size={110} />
           </div>
-          <div className="hero-bottom">
-            <span>
-              {delta === null
-                ? t("weather.yesterday.none")
-                : Number(formatValue(Math.abs(delta), deltaDigits)) === 0
-                  ? t("weather.yesterday.same")
-                  : delta > 0
-                    ? t("weather.yesterday.warmer", {
-                        delta: formatValue(delta, deltaDigits),
-                      })
-                    : t("weather.yesterday.colder", {
-                        delta: formatValue(-delta, deltaDigits),
-                      })}
-            </span>
-            <span>
-              <ArrowDown size={14} />
-              {formatValue(today?.low)}° <ArrowUp size={14} />
-              {formatValue(today?.high)}°
-            </span>
-          </div>
+          {rankedSummary ? (
+            <p className="hero-ranked-summary">{rankedSummary}</p>
+          ) : (
+            <div className="hero-bottom">
+              <span>
+                {delta === null
+                  ? t("weather.yesterday.none")
+                  : Number(formatValue(Math.abs(delta), deltaDigits)) === 0
+                    ? t("weather.yesterday.same")
+                    : delta > 0
+                      ? t("weather.yesterday.warmer", {
+                          delta: formatValue(delta, deltaDigits),
+                        })
+                      : t("weather.yesterday.colder", {
+                          delta: formatValue(-delta, deltaDigits),
+                        })}
+              </span>
+              <span>
+                <ArrowDown size={14} />
+                {formatValue(today?.low)}° <ArrowUp size={14} />
+                {formatValue(today?.high)}°
+              </span>
+            </div>
+          )}
         </section>
       </div>
       <section

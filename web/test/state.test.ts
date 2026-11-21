@@ -77,6 +77,21 @@ describe("untrusted persisted weather", () => {
         now,
       )?.airSummary,
     ).toBe("제공사 요약");
+    expect(
+      validateSnapshot(
+        {
+          ...value,
+          weather: {
+            ...w,
+            coordinateAirForecastAvailable: true,
+            coordinatePollenForecastAvailable: true,
+            daySummary: { date: "2026-02-30", text: "입춘" },
+          },
+        },
+        key,
+        now,
+      ),
+    ).toEqual(w);
     for (const savedAt of [
       undefined,
       NaN,

@@ -1,6 +1,16 @@
 # Mobile application and API calls
 
-## Entry and refresh lifecycle
+## Korean daily summary and annual solar terms
+
+For a supported Korean location, the normal v000903 forecast can return a ranked, plain-text `current.summary` and its Korean civil date in `current.summaryForDate` (`YYYY-MM-DD`). The server selects up to two messages. Distinct warnings and health risks take precedence. The bare Korean name (for example, 입춘) can occupy one slot according to the [KR grouping](../../server/config/solar-terms/kr.json). The place determines eligibility and Asia/Seoul determines the date. A Korean-language setting alone does not qualify an overseas place.
+
+The WebApp and native clients display the dated summary in the forecast hero for that place. Its validity ends at the next Korean midnight, including on resume or offline restoration. Older payloads and expired markers use the usual weather presentation. The combined text has no air-detail action.
+
+`GET /calendar/v1/kr/solar-terms/{year}` is an independent server1 resource for all 24 Korean names and dates, including terms with no hero priority. It identifies the active revision, calculation or verification status and any official date corrections. The forecast screen does not fetch this resource. Public gateway routing and deployment must be verified independently before release.
+
+See the [client flow diagram](diagrams/issue-3050-client.html), [delivery plan](../../plans/issue-3050.md), [calendar operations](../operations/solar-terms.md) and [illustrated forecast guide](../user/solar-terms/manual.pdf).
+
+## Historical Cordova entry and refresh lifecycle
 
 The main application uses Ionic/Angular controllers and services. `controller.start.js` handles initial location/weather loading; `controller.tabctrl.js` handles existing city refreshes, resume and presentation. Both call `WeatherUtil.getWeatherByGeoInfo()`.
 
