@@ -161,9 +161,14 @@ impl DirectRoutes {
             parse_path(&path_and_query, locale)
         };
         match parsed {
-            Err(outcome) => express(&method, &headers, outcome),
+            Err(outcome) => express_at(&method, &headers, outcome, self.kma.now_ms()),
             Ok(request) => {
-                return express(&method, &headers, self.native(request).await);
+                return express_at(
+                    &method,
+                    &headers,
+                    self.native(request).await,
+                    self.kma.now_ms(),
+                );
             }
         }
     }
@@ -227,6 +232,9 @@ fn split_list(value: &str) -> Vec<&str> {
 /// The Express reply of an assembly outcome (`res.json(body)`, `res.json(undefined)`,
 /// `res.status(code).send(text)`).
 pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Response {
+    express_at(method, request, outcome, crate::narrative::now_ms())
+}
+pub fn express_at(method: &Method, request: &HeaderMap, outcome: Outcome, now_ms: i64) -> Response {
     let undefined_head = *method == Method::HEAD && matches!(&outcome, Outcome::Undefined);
     // finalhandler 0.4.1 writes directly (no res.send ETag), and sets nosniff.
     let finalhandler = matches!(&outcome, Outcome::Status(code, text)
@@ -249,7 +257,11 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     };
     let narrative_age = (200..300)
         .contains(&status)
-        .then(|| crate::narrative::cache_age(&body, None, crate::narrative::now_ms()))
+        .then(|| crate::narrative::cache_age(&body, None, now_ms))
+        .flatten();
+    let solar_age = (200..300)
+        .contains(&status)
+        .then(|| crate::solar_terms::summary_cache_age(&body, narrative_age.or(Some(300)), now_ms))
         .flatten();
     let not_modified = (200..300).contains(&status) && fresh(request, tag.as_deref());
     let length = body.len();
@@ -273,7 +285,14 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     let h = response.headers_mut();
     h.insert("x-powered-by", HeaderValue::from_static("Express"));
     h.insert("access-control-allow-origin", HeaderValue::from_static("*"));
-    if let Some(age) = narrative_age {
+    if let Some(age) = solar_age {
+        h.insert(
+            "cache-control",
+            HeaderValue::from_str(&format!("max-age={age}, must-revalidate"))
+                .expect("ASCII cache age"),
+        );
+        h.insert("vary", HeaderValue::from_static("Accept-Language, Cookie"));
+    } else if let Some(age) = narrative_age {
         h.insert(
             "cache-control",
             HeaderValue::from_str(&format!("max-age={age}")).expect("ASCII cache age"),
