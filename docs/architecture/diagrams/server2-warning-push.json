@@ -9,7 +9,7 @@
     "animation": "none",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "bb774125a0087aa686075568cb3a453c5d8adfdd",
+      "revision": "7d1dcd22b966ab996f98867f60ee7ba6089e812f",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -23,8 +23,8 @@
       "sources": [
         {
           "path": "server2/src/warnings/collector.rs",
-          "line": 1,
-          "end_line": 300
+          "line": 146,
+          "end_line": 320
         }
       ]
     },
@@ -36,8 +36,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/warning_feed.rs",
-          "line": 202,
-          "end_line": 285
+          "line": 224,
+          "end_line": 320
         }
       ]
     },
@@ -49,8 +49,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/warnings.rs",
-          "line": 325,
-          "end_line": 591
+          "line": 260,
+          "end_line": 470
         }
       ]
     },
@@ -62,18 +62,18 @@
       "sources": [
         {
           "path": "server2/src/push/service.rs",
-          "line": 378,
-          "end_line": 462
+          "line": 252,
+          "end_line": 275
         },
         {
           "path": "server2/src/warnings/store.rs",
-          "line": 542,
-          "end_line": 595
+          "line": 663,
+          "end_line": 715
         },
         {
           "path": "server2/src/warnings/zones.rs",
-          "line": 306,
-          "end_line": 380
+          "line": 69,
+          "end_line": 388
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "path": "server2/src/push/deliver/ledger.rs",
           "line": 64,
-          "end_line": 125
+          "end_line": 155
         }
       ]
     },
@@ -98,8 +98,8 @@
       "sources": [
         {
           "path": "server2/src/push/deliver/fcm.rs",
-          "line": 244,
-          "end_line": 318
+          "line": 246,
+          "end_line": 380
         }
       ]
     }
