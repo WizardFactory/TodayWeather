@@ -57,6 +57,7 @@ export async function fetchWeather(
   place: Place,
   units: Units,
   signal: AbortSignal,
+  persistSnapshot = true,
 ): Promise<{
   weather: Weather;
   snapshot: boolean;
@@ -79,10 +80,10 @@ export async function fetchWeather(
       address: place.address || weather.location.address,
       country: place.country || weather.location.country,
     };
-    await writeSnapshot(key, weather);
+    if (persistSnapshot) await writeSnapshot(key, weather);
     return { weather, snapshot: false };
   } catch (error) {
-    if (signal.aborted) throw error;
+    if (signal.aborted || !persistSnapshot) throw error;
     const cached = await readAnySnapshot(key);
     if (cached) {
       const wait = (error as { retryAfterMs?: number }).retryAfterMs;

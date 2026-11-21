@@ -194,6 +194,10 @@ const ja: Catalog = {
   "public.body":
     "お気に入り地域に保存して、時間別の天気と大気質を確認しましょう。",
   "public.open": "この地域の天気を見る",
+  "link.appOption": "アプリで開く・インストール",
+  "link.dismiss": "閉じる",
+  "link.addFavorite": "お気に入りに追加",
+  "link.invalidLocation": "共有された場所を確認できません。",
   "public.notFound": "共有された地域が見つかりません",
   "welcome.kicker": "今日のための天気",
   "welcome.headline": "昨日より暖かいでしょうか？",

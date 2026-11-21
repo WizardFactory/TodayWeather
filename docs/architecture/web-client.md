@@ -28,6 +28,12 @@ The direct client requests canonical Celsius, m/s, hPa, km and mm physical units
 
 Geocode results are named like the app: `name`, else the `getShortenAddress` token rule applied to `address` (two to five space-separated tokens; `특별시`/`광역시`/`특별자치시` become `시` and `특별자치도` becomes `도`; parts joined by a space), else the full address, else `선택한 지역`. For weather responses the requested place wins: its ID, coordinates and name are kept, the response `name` is used only when the stored name is `선택한 지역`, and response `address`/`country` only fill empty stored values.
 
+## Shared weather links
+
+CloudFront and the service worker recognize `/loc`. The PWA validates coordinates, rounds them to three decimals, and accepts an optional plain-text name and a requested weather view. A saved place within `0.01°` on both axes wins over a catalog match within `0.04°`. With neither match, the regular weather screen renders a preview without persisting the place or a weather snapshot. **Add to favorites** uses the existing 30-place limit and opens the saved place on the current view. Invalid coordinates link back to the Locations page.
+
+A mobile arrival with `from=link` offers the app-open page at `link.todayweather.ai/open`. Dismissal lasts for the browser session. The catalog landing route accepts a view query, and Air keeps its selected pollutant in the URL so sharing preserves the selection. Sharing uses `link.todayweather.ai` with a catalog route when possible and otherwise emits a rounded coordinate link. See the [request sequence](diagrams/web-deeplink.html) and its [source](diagrams/web-deeplink.json), or the [browser user guide](../user/deeplink-web/manual.pdf).
+
 ## Languages
 
 `web/src/i18n/` holds one catalog per UI language — Korean (`ko.ts`, the source and key contract), English, Spanish, Japanese, German, Portuguese and French — each typed as the Korean key set, so a missing or extra key fails the build. Korean ships in the main bundle; the others are lazy chunks that the service worker precaches with the other assets. `main.tsx` loads the saved language, else the first supported browser language (primary subtag), else English, before the first render. Changing Settings → Language switches immediately and persists `settings.language` (`null` follows the browser).
