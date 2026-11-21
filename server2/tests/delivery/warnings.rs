@@ -1042,3 +1042,59 @@ async fn an_s12_error_immediately_after_claim_records_a_terminal_failure_without
         assert!(rig.google.sends().is_empty());
     }
 }
+
+#[test]
+fn seoul_subzone_warning_selection_targets_only_affected_districts() {
+    use server2::push::deliver::warnings::{Group, active, message};
+    use server2::warnings::zones::{Town, ZoneState, ZoneTable, prepare_events};
+    use server2::world::js::Val;
+
+    let now = 1_795_222_800_000_i64; // 2026-11-21T01:00:00Z
+    let events = prepare_events(&[
+        serde_json::json!({
+            "areaCode": "L1100200", "areaName": "서울동북권",
+            "warnVar": 4, "warnStress": 0, "command": "1", "cancel": "0",
+            "tmFc": 202611210900_i64, "tmSeq": 1, "endTime": 0, "allEndTime": 0
+        }),
+        serde_json::json!({
+            "areaCode": "L1100300", "areaName": "서울서남권",
+            "warnVar": 4, "warnStress": 0, "command": "1", "cancel": "0",
+            "tmFc": 202611210900_i64, "tmSeq": 1, "endTime": 0, "allEndTime": 0
+        }),
+    ]);
+    let mut state = ZoneState::default();
+    state.apply(&events);
+    let group = Group {
+        id: "202611210900|1|4|0".into(),
+        event: events[0].clone(),
+        zones: vec!["L1100200".into(), "L1100300".into()],
+        observed_at: now,
+    };
+    let table = ZoneTable::shared(now);
+    let zones_of = |second: &str, third: &str| {
+        table.zones_for_town(&Town {
+            first: "서울특별시".into(),
+            second: second.into(),
+            third: third.into(),
+        })
+    };
+    let nowon = zones_of("노원구", "상계1동");
+    let yeongdeungpo = zones_of("영등포구", "여의동");
+    let gangnam = zones_of("강남구", "역삼동");
+    let jongno = zones_of("종로구", "청운효자동");
+
+    assert!(active(&group, &nowon, &state, now));
+    assert!(active(&group, &yeongdeungpo, &state, now));
+    assert!(!active(&group, &gangnam, &state, now));
+    assert!(!active(&group, &jongno, &state, now));
+
+    let ko = Val::Str("ko".into());
+    assert_eq!(
+        message(&group, &nowon, &ko, now).text,
+        Val::Str("서울동북권".into())
+    );
+    assert_eq!(
+        message(&group, &yeongdeungpo, &ko, now).text,
+        Val::Str("서울서남권".into())
+    );
+}

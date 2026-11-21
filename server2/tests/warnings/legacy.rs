@@ -195,3 +195,453 @@ fn i18n_locale_selection() {
     assert_eq!(l(Some("ko"), Some("twcookie=xx")), "en");
     assert_eq!(l(Some("zh-CN"), None), "zh-CN");
 }
+#[test]
+fn granular_subzone_matching_and_fallbacks() {
+    let table = ZoneTable::parse(ZONE_TABLE, Some("202611210000"));
+    let names = |first: &str, second: &str, third: &str| {
+        let mut out: Vec<String> = table
+            .zones_for_town(&Town {
+                first: first.into(),
+                second: second.into(),
+                third: third.into(),
+            })
+            .into_iter()
+            .filter_map(|id| table.zone_name(&id).map(ToOwned::to_owned))
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    };
+    // Tier A: Seoul 4 zones, Busan 3, Ulsan 2, Gwangju 2 + #3078 combined province.
+    assert_eq!(
+        names("서울특별시", "강남구", "역삼동"),
+        vec!["서울동남권", "서울특별시", "전국"]
+    );
+    assert_eq!(
+        names("서울특별시", "노원구", "상계1동"),
+        vec!["서울동북권", "서울특별시", "전국"]
+    );
+    assert_eq!(
+        names("서울특별시", "영등포구", "여의동"),
+        vec!["서울서남권", "서울특별시", "전국"]
+    );
+    assert_eq!(
+        names("서울특별시", "종로구", "청운효자동"),
+        vec!["서울서북권", "서울특별시", "전국"]
+    );
+    // ECMAScript \s parity (#3085 CODEX-2): U+FEFF is JS whitespace, U+0085 is not.
+    assert_eq!(
+        names("서울특별시", "종\u{feff}로구", "청운효자동"),
+        vec!["서울서북권", "서울특별시", "전국"]
+    );
+    assert_eq!(
+        names("서울특별시", "종\u{0085}로구", "청운효자동"),
+        vec![
+            "서울동남권",
+            "서울동북권",
+            "서울서남권",
+            "서울서북권",
+            "서울특별시",
+            "전국"
+        ]
+    );
+    assert_eq!(
+        names("서울특별시", "", ""),
+        vec![
+            "서울동남권",
+            "서울동북권",
+            "서울서남권",
+            "서울서북권",
+            "서울특별시",
+            "전국"
+        ]
+    );
+    assert_eq!(
+        names("부산광역시", "해운대구", ""),
+        vec!["부산광역시", "부산동부", "전국"]
+    );
+    assert_eq!(
+        names("울산광역시", "울주군", ""),
+        vec!["울산광역시", "울산서부", "전국"]
+    );
+    assert_eq!(
+        names("광주광역시", "광산구", ""),
+        vec!["광주광역시", "광주서부", "전국"]
+    );
+    assert_eq!(
+        names("전남광주통합특별시", "광산구", ""),
+        vec!["광주광역시", "광주서부", "전국"]
+    );
+    assert_eq!(
+        names("전남광주통합특별시", "영광군", "낙월면"),
+        vec!["영광군", "영광낙월면", "전국", "전라남도"]
+    );
+    // Tier B: Incheon pre/post-2026-07-01, Sejong, 강원/경북 평지/산지, directional splits.
+    assert_eq!(
+        names("인천광역시", "영종구", ""),
+        vec!["인천광역시", "인천영종", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "중구", "영종1동"),
+        vec!["인천광역시", "인천영종", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "중구", "운서1동"),
+        vec!["인천광역시", "인천영종", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "중구", "운서2동"),
+        vec!["인천광역시", "인천영종", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "중구", "신포동"),
+        vec!["인천광역시", "인천남부", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "남구", ""),
+        vec!["인천광역시", "인천남부", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "검단구", ""),
+        vec!["인천광역시", "인천북부", "전국"]
+    );
+    assert_eq!(
+        names("세종특별자치시", "", "조치원읍"),
+        vec!["세종북부", "세종특별자치시", "전국"]
+    );
+    assert_eq!(
+        names("세종특별자치시", "", "한솔동"),
+        vec!["세종남부", "세종특별자치시", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "강릉시", "왕산면"),
+        vec!["강릉시", "강릉시산지", "강원도", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "강릉시", "주문진읍"),
+        vec!["강릉시", "강릉시평지", "강원도", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "강릉시", "미확인동"),
+        vec!["강릉시", "강릉시산지", "강릉시평지", "강원도", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "속초시", "대포동"),
+        vec!["강원도", "속초시", "속초시산지", "속초시평지", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "속초시", "노학동"),
+        vec!["강원도", "속초시", "속초시산지", "속초시평지", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "속초시", "설악동"),
+        vec!["강원도", "속초시", "속초시산지", "전국"]
+    );
+    assert_eq!(
+        names("강원특별자치도", "속초시", "조양동"),
+        vec!["강원도", "속초시", "속초시평지", "전국"]
+    );
+    assert_eq!(
+        names("경상북도", "울진군", "서면"),
+        vec!["경상북도", "울진군", "울진군산지", "전국"]
+    );
+    assert_eq!(
+        names("경기도", "용인시 수지구", ""),
+        vec!["경기도", "용인시", "용인시서북부", "전국"]
+    );
+    assert_eq!(
+        names("경기도", "파주시", "문산읍"),
+        vec!["경기도", "전국", "파주시", "파주시동북부"]
+    );
+    assert_eq!(
+        names("경기도", "파주시", "미확인동"),
+        vec![
+            "경기도",
+            "전국",
+            "파주시",
+            "파주시남부",
+            "파주시동북부",
+            "파주시서북부"
+        ]
+    );
+    assert_eq!(
+        names("충청북도", "청주시 상당구", "용담명암산성동"),
+        vec!["전국", "청주시", "청주시서부", "충청북도"]
+    );
+    // Tier C: partial splits and safe over-warn fallbacks (no blind suffix narrowing; external islands included on empty/unknown third).
+    assert_eq!(
+        names("인천광역시", "강화군", "서도면"),
+        vec!["강화군", "서해5도", "연평도.우도", "인천광역시", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "강화군", "강화읍"),
+        vec!["강화군", "인천광역시", "전국"]
+    );
+    assert_eq!(
+        names("인천광역시", "옹진군", ""),
+        vec![
+            "백령도.대청도",
+            "서해5도",
+            "연평도.우도",
+            "옹진군",
+            "인천광역시",
+            "전국"
+        ]
+    );
+    assert_eq!(
+        names("인천광역시", "옹진군", "미확인백령면"),
+        vec![
+            "백령도.대청도",
+            "서해5도",
+            "연평도.우도",
+            "옹진군",
+            "인천광역시",
+            "전국"
+        ]
+    );
+    assert_eq!(
+        names("전라남도", "신안군", ""),
+        vec!["신안군(흑산면제외)", "전국", "전라남도", "흑산도.홍도"]
+    );
+    assert_eq!(
+        names("전라남도", "신안군", "미확인흑산면"),
+        vec!["신안군(흑산면제외)", "전국", "전라남도", "흑산도.홍도"]
+    );
+    assert_eq!(
+        names("전라남도", "여수시", ""),
+        vec!["거문도.초도", "여수시", "전국", "전라남도"]
+    );
+    assert_eq!(
+        names("전라남도", "여수시", "미확인삼산면"),
+        vec!["거문도.초도", "여수시", "전국", "전라남도"]
+    );
+    assert_eq!(
+        names("전라남도", "구례군", "구례읍"),
+        vec!["구례군", "구례군평지", "전국", "전라남도"]
+    );
+    assert_eq!(
+        names("전라남도", "구례군", "토지면"),
+        vec!["구례군", "구례군산간", "구례군평지", "전국", "전라남도"]
+    );
+    assert_eq!(
+        names("충청남도", "보령시", "오천면"),
+        vec!["보령(도서제외)", "보령도서", "보령시", "전국", "충청남도"]
+    );
+    assert_eq!(
+        names("충청남도", "보령시", "대천1동"),
+        vec!["보령(도서제외)", "보령시", "전국", "충청남도"]
+    );
+    assert_eq!(
+        names("충청남도", "보령시", "미확인면"),
+        vec!["보령(도서제외)", "보령도서", "보령시", "전국", "충청남도"]
+    );
+    assert_eq!(
+        names("전북특별자치도", "군산시", "옥도면"),
+        vec![
+            "군산시",
+            "군산어청도",
+            "군산옥도면(어청도 제외)",
+            "전국",
+            "전북자치도"
+        ]
+    );
+    assert_eq!(
+        names("전라남도", "완도군", "청산면"),
+        vec![
+            "완도군",
+            "완도군(여서도 제외)",
+            "완도군여서도",
+            "전국",
+            "전라남도"
+        ]
+    );
+    assert_eq!(
+        names("제주특별자치도", "제주시", "우도면"),
+        vec!["전국", "제주도", "제주시(산지 제외)", "제주시동부"]
+    );
+    assert_eq!(
+        names("제주특별자치도", "제주시", ""),
+        vec![
+            "전국",
+            "제주도",
+            "제주도산지",
+            "제주시(산지 제외)",
+            "제주시동부",
+            "제주시북부",
+            "제주시서부",
+            "제주시중산간",
+            "추자도"
+        ]
+    );
+    assert_eq!(
+        names("제주특별자치도", "제주시", "미확인추자면"),
+        vec![
+            "전국",
+            "제주도",
+            "제주도산지",
+            "제주시(산지 제외)",
+            "제주시동부",
+            "제주시북부",
+            "제주시서부",
+            "제주시중산간",
+            "추자도"
+        ]
+    );
+    assert_eq!(
+        names("제주특별자치도", "서귀포시", "성산읍"),
+        vec![
+            "서귀포시(산지 제외)",
+            "서귀포시동부",
+            "서귀포시중산간",
+            "전국",
+            "제주도",
+            "제주도산지"
+        ]
+    );
+    // Active Seoul 건조주의보 in 서울동북권 + 서울서남권 warns 노원구/영등포구 and excludes 강남구/종로구.
+    let mut state = ZoneState::default();
+    state.apply(&prepare_events(&[
+        serde_json::json!({"areaCode":"L1100200","areaName":"서울동북권","warnVar":4,"warnStress":0,"command":"1","cancel":"0","tmFc":202611210900_i64,"tmSeq":1,"endTime":0,"allEndTime":0}),
+        serde_json::json!({"areaCode":"L1100300","areaName":"서울서남권","warnVar":4,"warnStress":0,"command":"1","cancel":"0","tmFc":202611210900_i64,"tmSeq":1,"endTime":0,"allEndTime":0}),
+    ]));
+    let nowon = special_info_for(
+        &table,
+        state.entries(),
+        &table.zones_for_town(&Town {
+            first: "서울특별시".into(),
+            second: "노원구".into(),
+            third: "상계1동".into(),
+        }),
+    );
+    assert_eq!(nowon.len(), 1);
+    assert_eq!(nowon[0].location_name, "서울동북권");
+    let gangnam = special_info_for(
+        &table,
+        state.entries(),
+        &table.zones_for_town(&Town {
+            first: "서울특별시".into(),
+            second: "강남구".into(),
+            third: "역삼동".into(),
+        }),
+    );
+    assert!(gangnam.is_empty());
+}
+#[test]
+fn subzone_table_integrity_and_split_leaf_coverage() {
+    use server2::warnings::zones::SUBZONE_TABLE;
+    use std::collections::{HashMap, HashSet};
+
+    let table = ZoneTable::parse(ZONE_TABLE, Some("202611210000"));
+    let raw: serde_json::Value = serde_json::from_str(SUBZONE_TABLE).unwrap();
+    let mut referenced = HashSet::new();
+
+    for (_province, districts) in raw["district_splits"].as_object().unwrap() {
+        for (_district, ids) in districts.as_object().unwrap() {
+            let list = ids.as_array().unwrap();
+            assert!(!list.is_empty());
+            for id in list {
+                let id = id.as_str().unwrap();
+                assert!(table.zone(id).is_some(), "unknown district REG_ID {id}");
+                referenced.insert(id.to_owned());
+            }
+        }
+    }
+    for rule in raw["township_splits"].as_array().unwrap() {
+        assert!(
+            rule.get("dong_default").is_none() && rule.get("other_default").is_none(),
+            "blind suffix defaults are forbidden"
+        );
+        let fallback = rule["fallback"].as_array().unwrap();
+        assert!(!fallback.is_empty());
+        for id in fallback {
+            let id = id.as_str().unwrap();
+            assert!(table.zone(id).is_some(), "unknown fallback REG_ID {id}");
+            referenced.insert(id.to_owned());
+        }
+        let province = rule["province"].as_str().unwrap();
+        let first_sec = rule["seconds"].as_array().unwrap()[0].as_str().unwrap();
+        for (third, ids) in rule["by_third"].as_object().unwrap() {
+            let list = ids.as_array().unwrap();
+            assert!(!list.is_empty());
+            for id in list {
+                let id = id.as_str().unwrap();
+                assert!(table.zone(id).is_some(), "unknown by_third REG_ID {id}");
+                referenced.insert(id.to_owned());
+            }
+            let resolved = table.zones_for_town(&Town {
+                first: province.into(),
+                second: first_sec.into(),
+                third: third.into(),
+            });
+            assert!(!resolved.is_empty());
+            let set: HashSet<&str> = resolved.iter().map(String::as_str).collect();
+            for id in &resolved {
+                let mut cur = table.zone(id);
+                while let Some(z) = cur {
+                    assert!(
+                        set.contains(z.id.as_str()),
+                        "missing ancestor {} for {province}/{first_sec}/{third}",
+                        z.id
+                    );
+                    cur = table.zone(&z.up);
+                }
+            }
+        }
+    }
+
+    // Every split leaf under a split parent in ZONE_TABLE must be referenced.
+    let mut children: HashMap<String, Vec<String>> = HashMap::new();
+    let mut all_ids = Vec::new();
+    for line in ZONE_TABLE.lines() {
+        if line.is_empty() || line.starts_with('#') || line.starts_with("REG_ID,") {
+            continue;
+        }
+        let f: Vec<&str> = line.split(',').collect();
+        if f.len() < 7 || f[2] < "202611210000" {
+            continue;
+        }
+        all_ids.push((f[0].to_owned(), f[4].to_owned(), f[6].to_owned()));
+        children
+            .entry(f[4].to_owned())
+            .or_default()
+            .push(f[0].to_owned());
+    }
+    let split_leaves: Vec<String> = all_ids
+        .iter()
+        .filter(|(id, up, _)| {
+            children.get(id).is_none_or(Vec::is_empty)
+                && *up != "L1000000"
+                && table.zone(up).is_some_and(|p| {
+                    p.up != "L1000000"
+                        || p.name.ends_with("특별시")
+                        || p.name.ends_with("광역시")
+                        || p.name.ends_with("특별자치시")
+                })
+        })
+        .filter(|(id, up, name)| {
+            // Exclude unsplit county/island leaves directly under metro cities (e.g. 강화군/옹진군/기장군/달성군/군위군/울주군) except where split,
+            // and check all 116 split-parent leaves match #3084 AC1.
+            let _ = (id, up, name);
+            children.get(up).is_some_and(|sibs| sibs.len() >= 2)
+                && table.zone(up).is_some_and(|p| {
+                    p.up != "L1000000"
+                        || p.name == "서울특별시"
+                        || p.name == "부산광역시"
+                        || p.name == "울산광역시"
+                        || p.name == "대구광역시"
+                        || p.name == "광주광역시"
+                        || p.name == "인천광역시"
+                        || p.name == "세종특별자치시"
+                })
+        })
+        .map(|(id, _, _)| id.clone())
+        .collect();
+    let uncovered: Vec<&String> = split_leaves
+        .iter()
+        .filter(|id| !referenced.contains(*id))
+        .collect();
+    assert!(
+        uncovered.is_empty(),
+        "uncovered split leaves: {uncovered:?}"
+    );
+}

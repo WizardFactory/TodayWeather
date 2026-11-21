@@ -10,7 +10,34 @@ use std::{
 
 /// Copy of `server/utils/data/kma_warning_zones.csv` at ca8735cf; see `data/PROVENANCE.md`.
 pub const ZONE_TABLE: &str = include_str!("data/kma_warning_zones.csv");
+/// Copy of `server/utils/data/kma_warning_subzones.json` (#3084/#3085); see `data/PROVENANCE.md`.
+pub const SUBZONE_TABLE: &str = include_str!("data/kma_warning_subzones.json");
 const ROOT_ZONE: &str = "L1000000";
+const GWANGJU_DISTRICTS: [&str; 5] = ["동구", "서구", "남구", "북구", "광산구"];
+const JEONNAM_DISTRICTS: [&str; 22] = [
+    "목포시",
+    "여수시",
+    "순천시",
+    "나주시",
+    "광양시",
+    "담양군",
+    "곡성군",
+    "구례군",
+    "고흥군",
+    "보성군",
+    "화순군",
+    "장흥군",
+    "강진군",
+    "해남군",
+    "영암군",
+    "무안군",
+    "함평군",
+    "영광군",
+    "장성군",
+    "완도군",
+    "진도군",
+    "신안군",
+];
 const ISSUE_COMMANDS: [&str; 4] = ["1", "3", "6", "7"];
 const RELEASE_COMMANDS: [&str; 2] = ["2", "8"];
 const PROVINCE_ALIASES: [(&str, &str); 4] = [
@@ -31,6 +58,111 @@ const ISLAND_ZONES: [(&str, &str, &str); 7] = [
     ("옹진", "대청", "백령도.대청도"),
     ("옹진", "연평", "연평도.우도"),
 ];
+
+#[derive(Clone, Debug, Default)]
+struct TownshipRule {
+    by_third: HashMap<String, Vec<String>>,
+    fallback: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default)]
+struct SubzoneTable {
+    district_splits: HashMap<String, HashMap<String, Vec<String>>>,
+    township_by_key: HashMap<(String, String), TownshipRule>,
+}
+
+impl SubzoneTable {
+    fn parse(text: &str) -> Self {
+        let raw: Value = serde_json::from_str(text).expect("valid embedded subzone table");
+        let mut table = Self::default();
+        if let Some(splits) = raw.get("district_splits").and_then(Value::as_object) {
+            for (province, districts) in splits {
+                let mut map = HashMap::new();
+                if let Some(obj) = districts.as_object() {
+                    for (district, ids) in obj {
+                        let list = string_list(ids);
+                        if !list.is_empty() {
+                            map.insert(district.clone(), list);
+                        }
+                    }
+                }
+                table.district_splits.insert(province.clone(), map);
+            }
+        }
+        if let Some(rules) = raw.get("township_splits").and_then(Value::as_array) {
+            for entry in rules {
+                let Some(province) = entry.get("province").and_then(Value::as_str) else {
+                    continue;
+                };
+                let mut by_third = HashMap::new();
+                if let Some(obj) = entry.get("by_third").and_then(Value::as_object) {
+                    for (third, ids) in obj {
+                        by_third.insert(third.clone(), string_list(ids));
+                    }
+                }
+                let rule = TownshipRule {
+                    by_third,
+                    fallback: entry.get("fallback").map_or_else(Vec::new, string_list),
+                };
+                if let Some(seconds) = entry.get("seconds").and_then(Value::as_array) {
+                    for sec in seconds.iter().filter_map(Value::as_str) {
+                        table
+                            .township_by_key
+                            .insert((province.to_owned(), sec.to_owned()), rule.clone());
+                    }
+                }
+            }
+        }
+        table
+    }
+
+    fn shared() -> &'static Self {
+        static SUBZONES: OnceLock<SubzoneTable> = OnceLock::new();
+        SUBZONES.get_or_init(|| Self::parse(SUBZONE_TABLE))
+    }
+
+    fn resolve(&self, province: &str, second: &str, third_base: &str) -> Option<&[String]> {
+        if let Some(rule) = self
+            .township_by_key
+            .get(&(province.to_owned(), second.to_owned()))
+        {
+            if !third_base.is_empty()
+                && let Some(ids) = rule.by_third.get(third_base)
+            {
+                return Some(ids.as_slice());
+            }
+            return (!rule.fallback.is_empty()).then_some(rule.fallback.as_slice());
+        }
+        if !second.is_empty()
+            && let Some(by_district) = self.district_splits.get(province)
+            && let Some(ids) = by_district.get(second)
+        {
+            return Some(ids.as_slice());
+        }
+        None
+    }
+}
+
+fn string_list(v: &Value) -> Vec<String> {
+    v.as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(Value::as_str)
+                .map(ToOwned::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn province_for_combined_district(district: &str) -> Option<&'static str> {
+    if GWANGJU_DISTRICTS.contains(&district) {
+        Some("광주광역시")
+    } else if JEONNAM_DISTRICTS.contains(&district) {
+        Some("전라남도")
+    } else {
+        None
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Zone {
@@ -173,13 +305,21 @@ impl ZoneTable {
     }
     /// `zonesForTown(town)`.
     pub fn zones_for_town(&self, town: &Town) -> Vec<String> {
-        if town.first.is_empty() {
+        let first = trim(&town.first);
+        if first.is_empty() {
             return vec![];
         }
-        let province_name = PROVINCE_ALIASES
+        let second = js::collapse_space(trim(&town.second), "");
+        let mut province_name = PROVINCE_ALIASES
             .iter()
-            .find(|(k, _)| *k == town.first)
-            .map_or(town.first.as_str(), |(_, v)| v);
+            .find(|(k, _)| *k == first)
+            .map_or(first, |(_, v)| v);
+        if province_name == "전남광주통합특별시" {
+            let Some(resolved) = province_for_combined_district(&second) else {
+                return vec![];
+            };
+            province_name = resolved;
+        }
         let Some(province) = self
             .first_level
             .iter()
@@ -188,7 +328,17 @@ impl ZoneTable {
         else {
             return vec![];
         };
-        let (second, third) = (town.second.as_str(), town.third.as_str());
+        let third = trim(&town.third);
+        let third_base = trim(third.split('/').next().unwrap_or(""));
+        if second.is_empty() && third_base.is_empty() {
+            return self.expand(&[province]);
+        }
+        if let Some(ids) = SubzoneTable::shared().resolve(&province.name, &second, third_base) {
+            let matched: Vec<&Zone> = ids.iter().filter_map(|id| self.by_id.get(id)).collect();
+            if !matched.is_empty() {
+                return self.expand(&matched);
+            }
+        }
         if let Some((_, _, zone)) = ISLAND_ZONES
             .iter()
             .find(|(s, t, _)| second.contains(s) && third.contains(t))
@@ -198,6 +348,7 @@ impl ZoneTable {
         if second.is_empty() {
             return self.expand(&[province]);
         }
+        let second = second.as_str();
         let mut descendants = Vec::new();
         self.descendants(province, &mut descendants);
         let lookup = LEGACY_CITIES

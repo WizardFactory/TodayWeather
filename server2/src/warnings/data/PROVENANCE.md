@@ -12,3 +12,17 @@
 
 Update both copies only through a reviewed zone-table change; legacy keeps its own copy
 during coexistence.
+
+## Sub-zone mapping table (`kma_warning_subzones.json`)
+
+`kma_warning_subzones.json` is a byte-identical copy of
+`server/utils/data/kma_warning_subzones.json` introduced for #3084 and mirrored in #3085.
+
+- SHA-256: `1cafabb2c6145f47ce9bd5f1c2101faae6744b017b5e8c7e68e8758e778c9d3b`
+- Upstream: KMA Weather Nuri (`weather.go.kr`) 특보구역 세분화 안내 붙임자료 (2026-06-01,
+  `https://www.weather.go.kr/w/resources/pdf/warning_zone_detailed_guide_2.pdf`,
+  PDF SHA-256 `eaf04636385cfc475dc2f7c6d5980ce00e8383f4c2442e6c6a5b61a9d5e38086`),
+  supplemented with Incheon's 2026-07-01 district reform names and historical township
+  aliases present in `areaNoKma.csv`. Repository MIT license applies to this copy.
+- Runtime use: `server2/src/warnings/zones.rs` embeds it with `include_str!`; server2 never
+  reads the legacy file.

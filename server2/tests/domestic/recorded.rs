@@ -228,6 +228,7 @@ pub struct RecordedStore {
     calls: Arc<[Call]>,
     next: Mutex<usize>,
     injected_history: Option<OrderedJson>,
+    expected_special_zones: Option<Vec<String>>,
 }
 impl RecordedStore {
     fn new(s: &Recorded) -> Self {
@@ -238,11 +239,17 @@ impl RecordedStore {
             calls: s.calls.clone(),
             next: Mutex::new(0),
             injected_history: None,
+            expected_special_zones: None,
         }
     }
     /// New-policy assembly tests retain the full recorded dependencies and clock.
     pub fn with_history(mut self, history: OrderedJson) -> Self {
         self.injected_history = Some(history);
+        self
+    }
+    /// #3085: replay a pre-#3084 Seoul recording while asserting the exact narrowed sub-zone query.
+    pub fn with_expected_special_zones(mut self, expected: Vec<String>) -> Self {
+        self.expected_special_zones = Some(expected);
         self
     }
     fn answer(&self, m: &str, args: Value) -> StoreResult {
@@ -363,6 +370,31 @@ impl KmaStore for RecordedStore {
         if !self.zones_recorded {
             // The oracle harness stubs the warning controller without a read when no zone rows exist.
             return Ok(OrderedJson::Array(Vec::new()));
+        }
+        if let Some(expected) = &self.expected_special_zones {
+            if area_codes != expected.as_slice() {
+                unavailable(format!(
+                    "special_zones arguments differ: expected {expected:?}, assembly {area_codes:?}"
+                ));
+            }
+            let mut next = self.next.lock().unwrap_or_else(|e| e.into_inner());
+            let index = *next;
+            let Some(call) = self.calls.get(index) else {
+                drop(next);
+                unavailable(format!(
+                    "recording has no call #{index} (special_zones); {} recorded",
+                    self.calls.len()
+                ));
+            };
+            if call.method != "special_zones" {
+                drop(next);
+                unavailable(format!(
+                    "recorded call #{index} is {}, assembly called special_zones",
+                    call.method
+                ));
+            }
+            *next += 1;
+            return call.answer.clone().map_err(StoreError);
         }
         self.answer("special_zones", json!([area_codes]))
     }
