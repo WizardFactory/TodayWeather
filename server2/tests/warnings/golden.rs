@@ -83,12 +83,12 @@ async fn special_info_golden_from_zone_seed() {
     let case = golden("domestic-special-info");
     let clock = FixedClock::at(case["clock"].as_str().unwrap());
     let service = peer.service(clock);
-    let town = Town {
+    let gangnam = Town {
         first: "서울특별시".into(),
-        second: "종로구".into(),
-        third: "청운효자동".into(),
+        second: "강남구".into(),
+        third: "역삼동".into(),
     };
-    let list = service.special_info(&town).await.unwrap();
+    let list = service.special_info(&gangnam).await.unwrap();
     let recorded = OrderedJson::parse(
         &STANDARD
             .decode(case["body_base64"].as_str().unwrap())
@@ -98,8 +98,18 @@ async fn special_info_golden_from_zone_seed() {
     let expected = recorded.get("current").unwrap().get("specialInfo").unwrap();
     assert_eq!(special_info_json(&list).to_bytes(), expected.to_bytes());
     assert_eq!(
-        server2::warnings::zones::ZoneTable::shared(0).zones_for_town(&town),
-        serde_json::from_value::<Vec<String>>(case["dependency_trace"]["zones"].clone()).unwrap()
+        server2::warnings::zones::ZoneTable::shared(0).zones_for_town(&gangnam),
+        vec!["L1100100", "L1100000", "L1000000"]
+    );
+    let jongno = Town {
+        first: "서울특별시".into(),
+        second: "종로구".into(),
+        third: "청운효자동".into(),
+    };
+    assert!(service.special_info(&jongno).await.unwrap().is_empty());
+    assert_eq!(
+        server2::warnings::zones::ZoneTable::shared(0).zones_for_town(&jongno),
+        vec!["L1100400", "L1100000", "L1000000"]
     );
     // A town without zones keeps the legacy empty result (S15 omits the field).
     let none = Town {

@@ -64,12 +64,18 @@ async fn mongoexport_files_convert_and_import_as_served_seeds() {
         String::from_utf8(a[1].to_bytes()).unwrap(),
         r#"{"announcement":"2026-09-20T00:10:00.000Z","type":2,"situationList":[{"weather":0,"weatherStr":"없음","level":0,"levelStr":"","info":[]}],"comment":"<예비특보> \n\no 당초","name":"예비특보"}"#
     );
-    let town = server2::warnings::Town {
+    let gangnam = server2::warnings::Town {
+        first: "서울특별시".into(),
+        second: "강남구".into(),
+        third: String::new(),
+    };
+    assert_eq!(service.special_info(&gangnam).await.unwrap().len(), 1);
+    let jongno = server2::warnings::Town {
         first: "서울특별시".into(),
         second: "종로구".into(),
         third: String::new(),
     };
-    assert_eq!(service.special_info(&town).await.unwrap().len(), 1);
+    assert!(service.special_info(&jongno).await.unwrap().is_empty());
     let _ = std::fs::remove_dir_all(dir);
 }
 #[test]

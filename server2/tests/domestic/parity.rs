@@ -19,6 +19,9 @@ fn first_difference(a: &str, b: &str) -> String {
 }
 pub fn run(sc: &serde_json::Value) -> Result<(), String> {
     let id = sc["id"].as_str().unwrap();
+    if matches!(id, "domestic-special-info" | "warning-two-zones") {
+        return run_narrowed_seoul_warning_scenario(sc);
+    }
     let store = replay(sc);
     let outcome = assemble(
         &request(sc),
@@ -71,6 +74,88 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
     }
     if let Some(reason) = store.unconsumed() {
         return Err(format!("{id}: {reason}"));
+    }
+    Ok(())
+}
+
+/// #3085: the pinned S02/S15 recordings for `domestic-special-info` and `warning-two-zones`
+/// query `서울특별시/종로구/청운효자동` against pre-#3084 legacy (all 4 Seoul sub-zones).
+/// Under #3084/#3085, 종로구 narrows to `서울서북권` (`L1100400`) plus `L1100000`/`L1000000`
+/// and excludes sibling `서울동남권` (`L1100100`) warnings while keeping every other field equal.
+fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), String> {
+    let id = sc["id"].as_str().unwrap();
+    let store = replay(sc).with_expected_special_zones(vec![
+        "L1100400".into(),
+        "L1100000".into(),
+        "L1000000".into(),
+    ]);
+    let outcome = assemble(
+        &request(sc),
+        &store,
+        clock_ms(sc["clock"].as_str().unwrap()),
+        oracle_config(),
+    );
+    let actual = match outcome {
+        Outcome::Json(json) => String::from_utf8(json.to_bytes()).unwrap(),
+        other => return Err(format!("{id}: unexpected outcome {other:?}")),
+    };
+    if let Some(reason) = store.unconsumed() {
+        return Err(format!("{id}: {reason}"));
+    }
+    let mut actual_json: serde_json::Value = serde_json::from_str(&actual).unwrap();
+    let mut expected_json: serde_json::Value =
+        serde_json::from_str(sc["body"].as_str().unwrap()).unwrap();
+    let cur = actual_json["current"].as_object().unwrap();
+    match id {
+        "domestic-special-info" => {
+            if cur.contains_key("specialInfo") {
+                return Err(format!(
+                    "{id}: 종로구 must exclude L1100100 (서울동남권), got {:?}",
+                    cur.get("specialInfo")
+                ));
+            }
+            for field in ["summaryWeather", "summary"] {
+                let text = cur.get(field).and_then(|v| v.as_str()).unwrap_or("");
+                if text.contains("한파경보") {
+                    return Err(format!(
+                        "{id}: {field} must not include L1100100 warning: {text}"
+                    ));
+                }
+            }
+        }
+        "warning-two-zones" => {
+            let expected_info = serde_json::json!([{
+                "weather": 9,
+                "weatherStr": "한파",
+                "level": 1,
+                "levelStr": "주의보",
+                "locationName": "서울서북권"
+            }]);
+            if cur.get("specialInfo") != Some(&expected_info) {
+                return Err(format!(
+                    "{id}: 종로구 must keep only L1100400 (서울서북권), got {:?}",
+                    cur.get("specialInfo")
+                ));
+            }
+            for field in ["summaryWeather", "summary"] {
+                let text = cur.get(field).and_then(|v| v.as_str()).unwrap_or("");
+                if text != "한파주의보, Similar to yesterday" {
+                    return Err(format!("{id}: unexpected {field}: {text}"));
+                }
+            }
+        }
+        _ => unreachable!(),
+    }
+    for obj in [&mut actual_json, &mut expected_json] {
+        let map = obj["current"].as_object_mut().unwrap();
+        map.remove("specialInfo");
+        map.remove("summaryWeather");
+        map.remove("summary");
+    }
+    if actual_json != expected_json {
+        return Err(format!(
+            "{id}: non-warning fields diverged from recorded legacy body"
+        ));
     }
     Ok(())
 }
