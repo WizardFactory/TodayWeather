@@ -132,6 +132,23 @@
       }
     },
     {
+      "id": "place-unknown-catalog-slug",
+      "description": "Syntactic place target redirects normally and resolves to no city in the shared catalog",
+      "url": "https://link.todayweather.ai/place/not-in-catalog?view=daily",
+      "native": {
+        "kind": "place",
+        "slug": "not-in-catalog",
+        "view": "daily",
+        "pollutant": null
+      },
+      "catalogResolved": false,
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/weather/not-in-catalog/daily?from=link"
+      }
+    },
+    {
       "id": "place-invalid-slug-uppercase",
       "description": "Invalid slug characters are rejected",
       "url": "https://link.todayweather.ai/place/Seoul_KR",
@@ -374,6 +391,13 @@
         "status": 200,
         "uri": "/.well-known/assetlinks.json"
       }
+    },
+    {
+      "id": "double-slash-is-not-root",
+      "description": "A second slash is an unknown path, not the app-open root",
+      "url": "https://link.todayweather.ai//",
+      "native": null,
+      "edge": { "action": "error", "status": 404 }
     },
     {
       "id": "unknown-path",

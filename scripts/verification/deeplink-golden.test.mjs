@@ -117,7 +117,7 @@ function referenceParseNative(rawUrl) {
       ? decodedPath.slice(0, -1)
       : decodedPath;
 
-  if (trimmed === "/" || trimmed === "/open") {
+  if (decodedPath === "/" || trimmed === "/open") {
     const rawLang = parsed.searchParams.get("lang")?.trim().toLowerCase() || null;
     const lang = rawLang && /^[a-z]{2,3}$/.test(rawLang) ? rawLang : null;
     return { kind: "open", lang };
@@ -182,7 +182,7 @@ function referenceRouteEdge(method, rawUrl) {
       ? decodedPath.slice(0, -1)
       : decodedPath;
 
-  if (trimmed === "/" || trimmed === "/open") {
+  if (decodedPath === "/" || trimmed === "/open") {
     return { action: "rewrite", status: 200, uri: "/open.html" };
   }
 
@@ -346,11 +346,16 @@ test("golden vector IDs are unique and contain no legacy Branch URLs or secrets"
 
 test("every parseCase matches the reference native parser and edge router", () => {
   for (const tc of golden.parseCases) {
+    const target = referenceParseNative(tc.url);
     assert.deepEqual(
-      referenceParseNative(tc.url),
+      target,
       tc.native,
       `native mismatch on case ${tc.id}`,
     );
+    if (tc.catalogResolved !== undefined) {
+      assert.equal(target?.kind, "place", `catalog resolution requires a place on ${tc.id}`);
+      assert.equal(catalog.some(({ id }) => id === target.slug), tc.catalogResolved, tc.id);
+    }
     if (tc.edge !== null) {
       assert.deepEqual(
         referenceRouteEdge("GET", tc.url),

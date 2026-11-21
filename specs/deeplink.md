@@ -18,7 +18,7 @@ All HTTPS deep links use scheme `https` and host `link.todayweather.ai` (case-in
 | Route | Canonical URL (`https://link.todayweather.ai`) | Query parameters | Native app target | Browser / PWA fallback (`https://app.todayweather.ai`) |
 | --- | --- | --- | --- | --- |
 | App open (Branch replacement) | `/` or `/open` | `lang` (optional BCP-47 primary tag, e.g. `ko`, `en`) | Open app (preserve active/default startup tab) | Static smart fallback HTML at `link.todayweather.ai` (App Store + Google Play buttons + "Open in Web" link to `https://app.todayweather.ai/`) |
-| Catalog place weather | `/place/{slug}` | `view` = `hourly` (default) \| `daily` \| `air`; `pollutant` (used when `view=air`) | Resolve catalog slug; open matching saved place or ephemeral preview on requested tab | `302` to `/weather/{slug}/{view}?from=link` (`hourly` default or `daily`) or `/air/{slug}[?pollutant=...]&from=link` when `view=air` |
+| Catalog place weather | `/place/{slug}` | `view` = `hourly` (default) \| `daily` \| `air`; `pollutant` (used when `view=air`) | Resolve catalog slug; open matching saved place or ephemeral preview on requested tab | `302` to `/weather/{slug}/{view}?from=link` (`hourly` default or `daily`) or `/air/{slug}?from=link` with optional `pollutant` when reading the inbound alias `?view=air` |
 | Arbitrary coordinate weather | `/loc` | `lat` (required), `lon` (required), `name` (optional), `view` = `hourly` (default) \| `daily` \| `air`, `pollutant` (optional) | Validate coordinates; match nearby saved place or open ephemeral preview on requested tab | `302` to `https://app.todayweather.ai/loc?lat={lat}&lon={lon}[&name=...][&view=...][&pollutant=...]` |
 | Catalog air detail | `/air/{slug}` | `pollutant` = `aqi` \| `pm25` \| `pm10` \| `o3` \| `no2` \| `so2` \| `co` (optional, default `aqi`) | Resolve catalog slug; open Air tab (`S05`) with selected pollutant | `302` to `https://app.todayweather.ai/air/{slug}[?pollutant=...]` |
 | Nationwide weather | `/nation/weather` | none | Open Nationwide Weather overlay (`S10`) | `302` to `https://app.todayweather.ai/nation/weather` |
@@ -27,7 +27,7 @@ All HTTPS deep links use scheme `https` and host `link.todayweather.ai` (case-in
 
 ### 2.1 Validation, rounding, and privacy rules
 
-1. **Slug (`{slug}`):** ASCII `[a-z0-9-]{1,64}` matching the shared `PLACES` catalog IDs in `packages/weather-core` (mirrored in native catalog lookup tables). Unknown slugs fail gracefully (edge: `302` to `app.todayweather.ai/place/{slug}` which renders its built-in not-found state, or native: safe no-op to default screen with no crash).
+1. **Slug (`{slug}`):** ASCII `[a-z0-9-]{1,64}`. The edge maps syntactically valid slugs to the requested `/weather/{slug}/{view}` or `/air/{slug}` PWA route. The PWA and native navigation resolve the slug using their shared or mirrored `PLACES` catalog from `packages/weather-core`. If it is unknown, the PWA shows its not-found state and native navigation stays on the current or startup screen without saving a place.
 2. **Coordinates (`lat`, `lon`):**
    - Must parse as finite decimal numbers with `lat ∈ [-90, 90]` and `lon ∈ [-180, 180]`. `0` is valid (must not use truthiness checks).
    - **Wire order:** always explicit named query keys `lat` and `lon` (never ambiguous comma arrays).
@@ -149,7 +149,7 @@ Modeled on [infra/web/static/stack.json](../infra/web/static/stack.json): privat
 3. **Dismissible "Open in app / Install" banner (`?from=link`):**
    - When the visitor arrives from `link.todayweather.ai` (`from=link` on mobile user agents, especially in-app browsers), display a slim, dismissible top banner offering "앱에서 열기 / 설치" (linking to `https://link.todayweather.ai/open` or store/Android intent fallback) without blocking the weather content. Strip `from=link` cleanly from history after reading or keep dismissal in `sessionStorage`.
 4. **Unified share URL generation ([web/src/Weather.tsx](../web/src/Weather.tsx)):**
-   - Sharing a catalog city generates `https://link.todayweather.ai/place/{slug}` (with `?view=...` when on daily/air).
+   - Sharing a catalog city generates the view-specific URL defined in §7, including `/air/{slug}` from the Air tab.
    - Sharing a non-catalog place generates `https://link.todayweather.ai/loc?lat={roundedLat}&lon={roundedLon}&name={encodedName}` (using 3-decimal coordinate rounding; current GPS location applies the privacy rule in §2.1).
 
 ## 6. Native iOS and Android behavior
@@ -179,7 +179,7 @@ When a valid `DeepLinkTarget` arrives (cold start or warm start, after Cordova m
      - **If unmatched (ephemeral preview):** open the target weather/air screen in an **ephemeral preview state** (not written to persisted `places[]`), displaying a prominent non-blocking **"즐겨찾기 추가" (Add to favorites)** bar/button. Tapping "Add" persists the place (respecting the existing 30-place limit and showing the existing limit message if full) and promotes the preview to a normal saved place. Navigating away via the Locations tab or swiping to another saved place clears the ephemeral preview cleanly.
 3. **Onboarding gate (`S01`) bypass on location deep link:**
    - If the app starts in `S01` (`startShows == true`, zero saved places) and a valid `place` or `coordinate` deep link is queued:
-     - Automatically save the deep-linked location as the user's first place (marking `startVersion` complete, matching the normal `StartFlow` add path) and open directly to its requested tab, bypassing `S01`.
+     - Temporarily bypass `S01` and open the requested tab in an ephemeral preview. Keep the saved list empty and onboarding pending until the user explicitly taps Add to favorites. A successful Add uses the existing first-place completion path. Leaving the preview without adding returns to `S01`.
    - For `open` or non-location deep links (`nation*`, `warnings`) while `S01` is active: keep `S01` visible and defer or ignore until onboarding completes.
 4. **Platform-specific guards:**
    - **iOS ([AppScenes.swift](../ios/TodayWeather/AppScenes.swift)):** accept `userActivity` only when `activityType == NSUserActivityTypeBrowsingWeb` and `webpageURL != nil`, submitting into `AppLaunch.shared.entries`.
@@ -190,9 +190,9 @@ When a valid `DeepLinkTarget` arrives (cold start or warm start, after Cordova m
 Both iOS ([ShareMessage.swift](../ios/Core/Sources/TWDomain/Share/ShareMessage.swift)) and Android ([ShareMessage.kt](../android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/share/ShareMessage.kt)) replace the hard-coded Branch links (`https://twa.app.link/wgVmUTfVoM`, `https://twa.app.link/II1JstpVoM`) immediately with `https://link.todayweather.ai/...`:
 
 1. **URL selection per shared place:**
-   - If the shared place matches a curated catalog city (within `0.04°` or exact ID) → `https://link.todayweather.ai/place/{slug}` (add `?view=daily` or `?view=air` when shared from S04/S05 if view-aware sharing is passed, otherwise omit for compact default URL).
-   - Else if the shared place has valid finite `lat`/`lon` → `https://link.todayweather.ai/loc?lat={roundedLat}&lon={roundedLon}&name={encodedDisplayName}` (coordinates rounded to 3 decimal places; `name` omitted if empty).
-   - Else (fallback when location metadata is missing/unusable) → `https://link.todayweather.ai/open` (append `?lang=ko` or omit since language is auto-detected).
+   - If the shared place matches a curated catalog city (within `0.04°` or exact ID) → `https://link.todayweather.ai/place/{slug}` for Hourly, `/place/{slug}?view=daily` for Daily, or `/air/{slug}` for Air. For Air, append `?pollutant=...` only when the selected pollutant differs from `aqi`. Accept inbound `/place/{slug}?view=air` as an alias.
+   - Else if the shared place has valid finite `lat`/`lon` → `https://link.todayweather.ai/loc?lat={roundedLat}&lon={roundedLon}&name={encodedDisplayName}` (coordinates rounded to 3 decimal places; omit empty `name`, default Hourly view, and default AQI pollutant). Append `view=daily` or `view=air` when selected and a non-default `pollutant` only for Air.
+   - Else (fallback when location metadata is missing/unusable) → `https://link.todayweather.ai/open` (language is auto-detected).
 2. **Message text preservation:**
    - Preserve the existing multi-line weather summary format (`cityName`, current temperature + emoji, high/low, weather/air summary, blank line, `{appName} {url}`) so existing user expectations stay intact while replacing only the URL portion.
 3. **Parity and golden test updates:**
@@ -215,6 +215,7 @@ Required vector categories:
 - Valid `/loc?lat=37.566&lon=126.978&name=%EC%84%9C%EC%9A%B8&view=hourly`, equator/prime meridian `lat=0&lon=0`, negative southern/western hemispheres,
 - Invalid coordinates (`lat=91`, `lon=-181`, `lat=NaN`, missing `lon`), control chars & >80-char truncation in `name`,
 - Nationwide `/nation/weather`, `/nation/air`, `/warnings`,
+- Unknown catalog slug (syntactic parse succeeds, catalog lookup fails; edge redirects to the matching PWA route),
 - Unknown paths (`/unknown`, `/mobile/privacy.html` on `link.todayweather.ai`), path traversal (`/../etc/passwd`, `%00`),
 - Non-matching hosts (`https://todayweather.ai/mobile/privacy.html`, `https://app.todayweather.ai/weather/seoul/hourly`) → rejected by native deep-link parser,
 - Legacy custom schemes (`todayweather://widget?place=...`, `todayweather://2`, bare `todayweather://`).
@@ -230,8 +231,8 @@ Required vector categories:
 | AC5 | Browser `GET https://link.todayweather.ai/` and `/open` return HTTP `200` static fallback HTML with App Store, Google Play, Web PWA links, OG metadata, and zero CSP violations. |
 | AC6 | Browser `GET` to `/place/*`, `/loc?...`, `/air/*`, `/nation/*`, `/warnings` returns `302` to the exact mapped `https://app.todayweather.ai/...` path; unknown paths return `404`. |
 | AC7 | Web PWA renders `/loc?lat=...&lon=...` in ephemeral preview with "Add to favorites", matches existing saved places when nearby, shows dismissible app banner on `from=link`, and shares `https://link.todayweather.ai/...`. |
-| AC8 | iOS real device opens `link.todayweather.ai` Universal Links directly in app (cold and warm start), routes tabs/overlays/ephemeral preview, bypasses `S01` on location link, and keeps `todayweather://widget?...` working. |
-| AC9 | Android real device reports `verified` via `adb shell pm get-app-links net.wizardfactory.todayweather`, opens `link.todayweather.ai` App Links directly (cold and warm start), ignores history replay, bypasses `S01` on location link, and keeps `todayweather://N` working. |
+| AC8 | iOS real device opens `link.todayweather.ai` Universal Links directly in app (cold and warm start), routes tabs/overlays/ephemeral preview, temporarily bypasses `S01` without saving until explicitly requested, and keeps `todayweather://widget?...` working. |
+| AC9 | Android real device reports `verified` via `adb shell pm get-app-links net.wizardfactory.todayweather`, opens `link.todayweather.ai` App Links directly (cold and warm start), ignores history replay, temporarily bypasses `S01` without saving until explicitly requested, and keeps `todayweather://N` working. |
 | AC10 | Opening `https://todayweather.ai/mobile/privacy.html`, `support.html`, `terms.html`, and `https://app.todayweather.ai/` from inside the native app or browser NEVER triggers Universal Links or App Links. |
 | AC11 | iOS and Android share buttons emit `https://link.todayweather.ai/...` (zero `twa.app.link` URLs in active share output) with 3-decimal rounded coordinates and updated golden/parity records (`D35`). |
 | AC12 | Korean in-app browser smoke (e.g., KakaoTalk) renders weather cleanly on fallback and provides a working "Open in app / Install" action. |
