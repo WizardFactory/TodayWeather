@@ -144,7 +144,7 @@ impl DirectRoutes {
                 .is_some_and(|p| p.eq_ignore_ascii_case("KR"));
             return express(&method, &headers, nation.outcome_for(base, national).await);
         }
-        let Some((version, _, rest)) = split_mount(&path_and_query) else {
+        let Some((version, mount, rest)) = split_mount(&path_and_query) else {
             return express(
                 &method,
                 &headers,
@@ -160,14 +160,18 @@ impl DirectRoutes {
         } else {
             parse_path(&path_and_query, locale)
         };
+        // Match controllerTown24h.js: `req.version = req.baseUrl.split('/')[1]` (dropped unless
+        // starting with lowercase `v`), then `if (req.version === 'v000903')` sets Vary unconditionally.
+        let vary_locale = mount.split('/').nth(1) == Some("v000903");
         match parsed {
             Err(outcome) => express_at(&method, &headers, outcome, self.kma.now_ms()),
             Ok(request) => {
-                return express_at(
+                return express_with_vary(
                     &method,
                     &headers,
                     self.native(request).await,
                     self.kma.now_ms(),
+                    vary_locale,
                 );
             }
         }
@@ -235,6 +239,15 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     express_at(method, request, outcome, crate::narrative::now_ms())
 }
 pub fn express_at(method: &Method, request: &HeaderMap, outcome: Outcome, now_ms: i64) -> Response {
+    express_with_vary(method, request, outcome, now_ms, false)
+}
+fn express_with_vary(
+    method: &Method,
+    request: &HeaderMap,
+    outcome: Outcome,
+    now_ms: i64,
+    vary_locale: bool,
+) -> Response {
     let undefined_head = *method == Method::HEAD && matches!(&outcome, Outcome::Undefined);
     // finalhandler 0.4.1 writes directly (no res.send ETag), and sets nosniff.
     let finalhandler = matches!(&outcome, Outcome::Status(code, text)
@@ -255,15 +268,14 @@ pub fn express_at(method: &Method, request: &HeaderMap, outcome: Outcome, now_ms
         Outcome::Defect(_) => unreachable!("defects are rejected by the backend"),
         Outcome::Legacy(_) => unreachable!("forwarded outcomes are not answered natively"),
     };
-    let narrative_age = (200..300)
-        .contains(&status)
+    let success = (200..300).contains(&status);
+    let narrative_age = success
         .then(|| crate::narrative::cache_age(&body, None, now_ms))
         .flatten();
-    let solar_age = (200..300)
-        .contains(&status)
+    let solar_age = success
         .then(|| crate::solar_terms::summary_cache_age(&body, narrative_age.or(Some(300)), now_ms))
         .flatten();
-    let not_modified = (200..300).contains(&status) && fresh(request, tag.as_deref());
+    let not_modified = success && fresh(request, tag.as_deref());
     let length = body.len();
     let empty = not_modified || *method == Method::HEAD;
     let mut response = Response::new(if undefined_head && !not_modified {
@@ -291,12 +303,14 @@ pub fn express_at(method: &Method, request: &HeaderMap, outcome: Outcome, now_ms
             HeaderValue::from_str(&format!("max-age={age}, must-revalidate"))
                 .expect("ASCII cache age"),
         );
-        h.insert("vary", HeaderValue::from_static("Accept-Language, Cookie"));
     } else if let Some(age) = narrative_age {
         h.insert(
             "cache-control",
             HeaderValue::from_str(&format!("max-age={age}")).expect("ASCII cache age"),
         );
+    }
+    if success && (vary_locale || solar_age.is_some()) {
+        h.insert("vary", HeaderValue::from_static("Accept-Language, Cookie"));
     }
     if finalhandler {
         h.insert(

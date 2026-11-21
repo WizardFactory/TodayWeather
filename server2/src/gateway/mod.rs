@@ -278,6 +278,7 @@ impl Gateway {
                 None,
                 tag,
                 (self.inner.clock)(),
+                true,
             ),
             Ok(Err(error)) => response::error(&method, &headers, error),
             Err(_) => response::error(&method, &headers, GatewayError::Provider),

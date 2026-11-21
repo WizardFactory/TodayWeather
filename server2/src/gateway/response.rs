@@ -442,6 +442,7 @@ pub(crate) fn send_tagged(
         retry,
         tag,
         crate::narrative::now_ms(),
+        false,
     )
 }
 #[allow(clippy::too_many_arguments)]
@@ -454,6 +455,7 @@ pub(crate) fn send_tagged_at(
     retry: Option<u64>,
     tag: String,
     now_ms: i64,
+    vary_accept_language: bool,
 ) -> Response {
     let (max_age, dated_summary) = if status.is_success() && max_age.is_some() {
         let base = crate::narrative::cache_age(&body, max_age, now_ms).or(max_age);
@@ -506,7 +508,7 @@ pub(crate) fn send_tagged_at(
         })
         .expect("ASCII cache directive"),
     );
-    if dated_summary {
+    if status.is_success() && max_age.is_some() && (vary_accept_language || dated_summary) {
         headers.insert("vary", HeaderValue::from_static("Accept-Language"));
     }
     if !fresh {

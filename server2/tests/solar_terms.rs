@@ -1556,14 +1556,14 @@ fn domestic_v000903_assembly_matches_server1_solar_term_contract() {
             .contains("입춘")
     );
 
-    // 6. Direct Express headers on dated summary set must-revalidate and Vary: Accept-Language, Cookie
+    // 6. Direct Express helper headers on dated summary set must-revalidate and Vary: Accept-Language, Cookie
     let direct_resp =
         server2::api::express(&Method::GET, &HeaderMap::new(), Outcome::Json(body.clone()));
     let cc = direct_resp.headers()["cache-control"].to_str().unwrap();
     assert!(cc.contains("must-revalidate"), "got {cc}");
     assert_eq!(direct_resp.headers()["vary"], "Accept-Language, Cookie");
 
-    // Direct Express headers without summaryForDate remain unchanged
+    // Plain Express helper without v000903 mount context or summaryForDate omits Cache-Control and Vary
     let plain_resp = server2::api::express(
         &Method::GET,
         &HeaderMap::new(),
@@ -1572,7 +1572,9 @@ fn domestic_v000903_assembly_matches_server1_solar_term_contract() {
     assert!(plain_resp.headers().get("cache-control").is_none());
     assert!(plain_resp.headers().get("vary").is_none());
 
-    // Gateway headers on dated summary add must-revalidate and Vary: Accept-Language
+    // Low-level response::send on dated summary adds must-revalidate and Vary: Accept-Language
+    // (real Gateway::handle always sets Vary: Accept-Language on JSON replies; verified in
+    // cross_implementation_server1_parity_through_gateway_and_direct_routes below).
     let gw_dated = server2::gateway::response::send(
         &Method::GET,
         &HeaderMap::new(),
@@ -1585,7 +1587,7 @@ fn domestic_v000903_assembly_matches_server1_solar_term_contract() {
     assert!(gw_cc.contains("must-revalidate"), "got {gw_cc}");
     assert_eq!(gw_dated.headers()["vary"], "Accept-Language");
 
-    // Gateway headers without summaryForDate preserve max-age=300 without Vary
+    // Non-gateway callers of response::send (e.g. /v000903/kma/special) keep max-age=300 without Vary
     let gw_plain = server2::gateway::response::send(
         &Method::GET,
         &HeaderMap::new(),
@@ -2368,7 +2370,8 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
         .await;
     assert_eq!(dir_304.status(), StatusCode::NOT_MODIFIED);
 
-    // Non-Korean locale through real Gateway matches server1-parity
+    // Non-Korean locale through real Gateway and DirectRoutes still carries summaryForDate
+    // (ranked KR summary without solar-term name) and emits Vary on both paths.
     let en_resp = gw
         .handle(
             Request::get("/weather/v000903/coord/37.566,126.978")
@@ -2378,6 +2381,13 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
         )
         .await;
     assert_eq!(en_resp.status(), StatusCode::OK);
+    assert!(
+        en_resp.headers()["cache-control"]
+            .to_str()
+            .unwrap()
+            .contains("must-revalidate")
+    );
+    assert_eq!(en_resp.headers()["vary"], "Accept-Language");
     let en_bytes = axum::body::to_bytes(en_resp.into_body(), 1_000_000)
         .await
         .unwrap();
@@ -2391,24 +2401,61 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
         cases["nonKoreanEn"]["summaryForDate"]
     );
 
-    // Older KMA version (v000901) control through real Gateway and DirectRoutes
-    let v901_gw = gw
+    // Older KMA version (v000901) & default unversioned gateway routes emit Vary: Accept-Language
+    // (matching server/routes/gateway.js::sendJson) while omitting must-revalidate and summaryForDate.
+    for path in [
+        "/weather/v000901/coord/37.566,126.978",
+        "/weather/coord/37.566,126.978",
+    ] {
+        let v901_gw = gw
+            .handle(
+                Request::get(path)
+                    .header("accept-language", "ko-KR")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert_eq!(v901_gw.status(), StatusCode::OK, "{path}");
+        assert_eq!(v901_gw.headers()["cache-control"], "max-age=300", "{path}");
+        assert_eq!(v901_gw.headers()["vary"], "Accept-Language", "{path}");
+        let v901_bytes = axum::body::to_bytes(v901_gw.into_body(), 1_000_000)
+            .await
+            .unwrap();
+        let v901_json: serde_json::Value = serde_json::from_slice(&v901_bytes).unwrap();
+        assert!(
+            v901_json["current"].get("summaryForDate").is_none(),
+            "{path}"
+        );
+    }
+
+    // Geocode JSON responses through Gateway also emit Vary: Accept-Language without must-revalidate.
+    let geo_gw = gw
         .handle(
-            Request::get("/weather/v000901/coord/37.566,126.978")
+            Request::get("/geocode/v000903/coord/37.566,126.978")
                 .header("accept-language", "ko-KR")
                 .body(Body::empty())
                 .unwrap(),
         )
         .await;
-    assert_eq!(v901_gw.status(), StatusCode::OK);
-    assert_eq!(v901_gw.headers()["cache-control"], "max-age=300");
-    assert!(v901_gw.headers().get("vary").is_none());
-    let v901_bytes = axum::body::to_bytes(v901_gw.into_body(), 1_000_000)
-        .await
-        .unwrap();
-    let v901_json: serde_json::Value = serde_json::from_slice(&v901_bytes).unwrap();
-    assert!(v901_json["current"].get("summaryForDate").is_none());
+    assert_eq!(geo_gw.status(), StatusCode::OK);
+    assert_eq!(geo_gw.headers()["cache-control"], "max-age=2592000");
+    assert_eq!(geo_gw.headers()["vary"], "Accept-Language");
 
+    // Gateway error responses (sendError) keep Cache-Control: no-store without Vary.
+    let bad_gw = gw
+        .handle(
+            Request::get("/weather/coord/not-a-coordinate")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(bad_gw.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(bad_gw.headers()["cache-control"], "no-store");
+    assert!(bad_gw.headers().get("vary").is_none());
+
+    // Direct v000901 omits Vary, while direct v000903 ALWAYS emits Vary: Accept-Language, Cookie
+    // even when solar_terms is absent (undated v000903 response, 200 and 304).
     let v901_dir = direct
         .handle(
             Request::get("/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99")
@@ -2420,7 +2467,101 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
     assert_eq!(v901_dir.status(), StatusCode::OK);
     assert!(v901_dir.headers().get("vary").is_none());
 
-    // Overseas (US / DSF) control through real Gateway
+    let plain_kma = Arc::new(KmaBackend::new(
+        Arc::new(FixedKmaSource(FixtureKmaStore::calm("20270204"))),
+        Arc::new(move || fixed_now_ms as f64),
+        AssemblyConfig::default(),
+    ));
+    let plain_dispatcher = BackendDispatcher::native_only();
+    plain_kma.register_version(&plain_dispatcher, Version::V000903);
+    KmaBackend::select_version(&plain_dispatcher, Version::V000903, BackendMode::Native).unwrap();
+    let plain_gw = Arc::new(
+        Gateway::with_limits(
+            Arc::new(StubGeocoder),
+            plain_dispatcher.clone(),
+            16,
+            Duration::from_secs(5),
+        )
+        .unwrap()
+        .with_clock(Arc::new(move || fixed_now_ms)),
+    );
+    let plain_direct = Arc::new(DirectRoutes::new(
+        plain_kma,
+        DirectFamilies {
+            kma_v000903: true,
+            kma_v000901: true,
+            town: false,
+        },
+        plain_dispatcher,
+    ));
+
+    let plain_gw_resp = plain_gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(plain_gw_resp.status(), StatusCode::OK);
+    assert_eq!(plain_gw_resp.headers()["cache-control"], "max-age=300");
+    assert_eq!(plain_gw_resp.headers()["vary"], "Accept-Language");
+
+    let plain_dir_200 = plain_direct
+        .handle(
+            Request::get(direct_path)
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(plain_dir_200.status(), StatusCode::OK);
+    assert!(plain_dir_200.headers().get("cache-control").is_none());
+    assert_eq!(plain_dir_200.headers()["vary"], "Accept-Language, Cookie");
+    let plain_dir_etag = plain_dir_200.headers()["etag"].to_str().unwrap().to_owned();
+    let plain_dir_bytes = axum::body::to_bytes(plain_dir_200.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    let plain_dir_json: serde_json::Value = serde_json::from_slice(&plain_dir_bytes).unwrap();
+    assert!(plain_dir_json["current"].get("summaryForDate").is_none());
+
+    let plain_dir_304 = plain_direct
+        .handle(
+            Request::get(direct_path)
+                .header("accept-language", "ko-KR")
+                .header("if-none-match", &plain_dir_etag)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(plain_dir_304.status(), StatusCode::NOT_MODIFIED);
+    assert!(plain_dir_304.headers().get("cache-control").is_none());
+    assert_eq!(plain_dir_304.headers()["vary"], "Accept-Language, Cookie");
+
+    // Uppercase /V000903/ drops req.version in controllerTown24h.js and omits Vary; 404 omits Vary.
+    let upper_dir = plain_direct
+        .handle(
+            Request::get("/V000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(upper_dir.status(), StatusCode::OK);
+    assert!(upper_dir.headers().get("vary").is_none());
+
+    let err_dir = plain_direct
+        .handle(
+            Request::get("/v000903/kma/addr/a/b/c/d")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(err_dir.status(), StatusCode::NOT_FOUND);
+    assert!(err_dir.headers().get("vary").is_none());
+
+    // Overseas (US / DSF) control through real Gateway: Vary: Accept-Language, max-age=300 without must-revalidate.
     let us_resp = gw
         .handle(
             Request::get("/weather/v000903/coord/37.77,-122.42")
@@ -2431,7 +2572,7 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
         .await;
     assert_eq!(us_resp.status(), StatusCode::OK);
     assert_eq!(us_resp.headers()["cache-control"], "max-age=300");
-    assert!(us_resp.headers().get("vary").is_none());
+    assert_eq!(us_resp.headers()["vary"], "Accept-Language");
 
     // 2. Hazardous 입춘 through real Gateway matches server1-parity
     let mut haz_store = FixtureKmaStore::calm("20270204");
