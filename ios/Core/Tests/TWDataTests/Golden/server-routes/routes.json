@@ -207,7 +207,7 @@
    "caseSensitive": true,
    "layers": [
     {
-     "line": 396,
+     "line": 398,
      "kind": "route",
      "method": "GET",
      "path": "/weather/coord/:loc",
@@ -215,7 +215,7 @@
      "ignoreCase": false
     },
     {
-     "line": 397,
+     "line": 399,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000901|v000902|v000903)/coord/:loc",
@@ -223,7 +223,7 @@
      "ignoreCase": false
     },
     {
-     "line": 399,
+     "line": 401,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000903)/coord/:loc/air-forecast",
@@ -231,7 +231,7 @@
      "ignoreCase": false
     },
     {
-     "line": 403,
+     "line": 405,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000903)/coord/:loc/pollen-forecast",
@@ -239,7 +239,7 @@
      "ignoreCase": false
     },
     {
-     "line": 407,
+     "line": 409,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000903)/coord/:loc/warnings",
@@ -247,7 +247,7 @@
      "ignoreCase": false
     },
     {
-     "line": 419,
+     "line": 427,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000903)/coord/:loc",
@@ -255,7 +255,7 @@
      "ignoreCase": false
     },
     {
-     "line": 420,
+     "line": 428,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000901|v000903)/addr/*",
@@ -263,7 +263,7 @@
      "ignoreCase": false
     },
     {
-     "line": 423,
+     "line": 431,
      "kind": "route",
      "method": "ALL",
      "path": "OWN_PATH",
@@ -271,7 +271,7 @@
      "ignoreCase": false
     },
     {
-     "line": 430,
+     "line": 438,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -1688,8 +1688,8 @@
   },
   {
    "path": "server/routes/gateway.js",
-   "commit": "cabb43a50fa0b7a9221f142939c70b4995de6fe6",
-   "sha256": "51768f3210499169f113b3694a5f3c307f2326a40831e3700c53b63589624bcb"
+   "commit": "43954563b74a82801d69d0add1f6b920fcae5db4",
+   "sha256": "08ff6da828436b9af64eda3a85b256a8de09b88af8e6451fc3450ef36f9490bb"
   },
   {
    "path": "server/routes/v000001/index.js",
