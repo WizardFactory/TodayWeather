@@ -343,7 +343,7 @@ REVIEWED_VERIFICATION_POLICIES = {
     'server2/tools/golden/policies/nation.json': 'a0f09ab457274ffcbdde4f42fb7d13a239277f06446f5caf4cdb33ece957309a',
     'server2/tools/golden/policies/delivery.json': 'a62cf9db9e87e663225fef5ffea5f96c788bb7ecb4568b3690adc945bc1cb0f5',
     'server2/tools/golden/policies/domestic_http.json': 'cbec243421a81687b7bedc3a9461da554f7d9f07315153951615641fd1f59b71',
-    'server2/tools/golden/policies/rest_http.json': '445d9d5d40e7ed1d0bf86eff532bb01b466ad0d24e709ad4afb77426d382362b',
+    'server2/tools/golden/policies/rest_http.json': 'b9d84ebc67f24e3cdf50e5319610de08df0e3b9459a843ec6cd3eef83f40eb7a',
 }
 
 

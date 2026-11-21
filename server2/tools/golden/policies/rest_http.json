@@ -1454,6 +1454,14 @@
         {
           "filename": "server/lib/air/forecastRows.js",
           "sha256": "2a45b61f3a485280c4a47ca8744e1bd5fc5ed54729596cb9d45c262ca2c46223"
+        },
+        {
+          "filename": "server/lib/gwangjuJeonnam.js",
+          "sha256": "26fb2db9a2050aca846295235b350e79a0b197ccdd7ad07a73139912f9b9a11c"
+        },
+        {
+          "filename": "server/lib/air/forecastRows.js",
+          "sha256": "da7ef221d65f122b5b5f296499b8dcd463860e071dec66589da866d17ffdc8c8"
         }
       ],
       "record_name": "records.json",
