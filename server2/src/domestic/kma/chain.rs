@@ -15,6 +15,8 @@ pub enum Flow {
 pub type Middleware = fn(&mut Cx) -> Flow;
 
 pub struct Cx<'a> {
+    /// Original requested province before `list_region` rewrote `region`.
+    pub requested_region: Option<String>,
     /// The Express `req` object.
     pub req: V,
     pub locale: Locale,
@@ -25,8 +27,6 @@ pub struct Cx<'a> {
     pub towns: Option<Arr>,
     /// S16: a JSON copy of the `_getDaySummaryList` rows `getPastMid` merged.
     pub past_days: Option<Vec<crate::gateway::OrderedJson>>,
-    /// Original requested province before `list_region` rewrote `region`.
-    pub requested_region: Option<String>,
 }
 impl Cx<'_> {
     pub fn r(&self, key: &str) -> V {
@@ -477,6 +477,7 @@ pub fn run_capturing(
         ("originalUrl", V::from(request.original_url.as_str())),
     ]);
     let mut cx = Cx {
+        requested_region: request.requested_region.clone(),
         req: V::Obj(req),
         locale: request.locale,
         store,
@@ -484,7 +485,6 @@ pub fn run_capturing(
         config,
         towns: None,
         past_days: None,
-        requested_region: request.requested_region.clone(),
     };
     let Some(steps) = chain(&request.version, request.part.as_deref()) else {
         return (Outcome::Status(404, "Not Found\n".into()), None);
