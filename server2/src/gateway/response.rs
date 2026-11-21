@@ -433,10 +433,15 @@ pub(crate) fn send_tagged(
     retry: Option<u64>,
     tag: String,
 ) -> Response {
-    let max_age = if status.is_success() && max_age.is_some() {
-        crate::narrative::cache_age(&body, max_age, crate::narrative::now_ms()).or(max_age)
+    let now_ms = crate::narrative::now_ms();
+    let (max_age, dated_summary) = if status.is_success() && max_age.is_some() {
+        let base = crate::narrative::cache_age(&body, max_age, now_ms).or(max_age);
+        match crate::solar_terms::summary_cache_age(&body, base, now_ms) {
+            Some(capped) => (Some(capped), true),
+            None => (base, false),
+        }
     } else {
-        max_age
+        (max_age, false)
     };
     let fresh = status.is_success()
         && !request
@@ -473,11 +478,16 @@ pub(crate) fn send_tagged(
     headers.insert("etag", HeaderValue::from_str(&tag).expect("ASCII digest"));
     headers.insert(
         "cache-control",
-        HeaderValue::from_str(
-            &max_age.map_or_else(|| "no-store".into(), |v| format!("max-age={v}")),
-        )
+        HeaderValue::from_str(&match (max_age, dated_summary) {
+            (Some(v), true) => format!("max-age={v}, must-revalidate"),
+            (Some(v), false) => format!("max-age={v}"),
+            (None, _) => "no-store".into(),
+        })
         .expect("ASCII cache directive"),
     );
+    if dated_summary {
+        headers.insert("vary", HeaderValue::from_static("Accept-Language"));
+    }
     if !fresh {
         headers.insert(
             "content-type",

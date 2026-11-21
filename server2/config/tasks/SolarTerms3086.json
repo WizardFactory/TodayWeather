@@ -1,0 +1,39 @@
+{
+  "task": "SolarTerms3086",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3086",
+  "scope": "Port Korea 24 solar-term calendar, S3 official almanac reconciliation, and v000903 domestic ranked summary parity into server2",
+  "server2_paths": [
+    "server2/.env.example",
+    "server2/Cargo.toml",
+    "server2/config/tasks/SolarTerms3086.json",
+    "server2/examples/loopback_server.rs",
+    "server2/src/api/mod.rs",
+    "server2/src/domestic/kma/backend.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/locales.json",
+    "server2/src/domestic/kma/mod.rs",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/gateway/response.rs",
+    "server2/src/gateway/runtime.rs",
+    "server2/src/lib.rs",
+    "server2/src/process.rs",
+    "server2/src/runtime_services.rs",
+    "server2/src/solar_terms/",
+    "server2/tests/runtime_services/common.rs",
+    "server2/tests/solar_terms.rs",
+    "server2/tests/solar_terms/",
+    "server2/tools/solar_term_almanac.rs"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Record server2 Korean solar-term calendar route, S3 raw/v2+index/v2 persistence, and domestic v000903 summary parity"
+    },
+    {
+      "path": "docs/operations/solar-terms.md",
+      "category": "documentation",
+      "reason": "Document server2 S3 reconciliation, pure-Rust PDF extraction, and operator verification CLI alongside server1"
+    }
+  ]
+}

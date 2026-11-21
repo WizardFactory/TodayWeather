@@ -1,7 +1,9 @@
 //! Native v000903 KMA backend for the S10 dispatcher (`Family::Kma`). Registration keeps legacy
 //! selected during coexistence. Selected native routes resolve unknown towns and KR remaps
 //! through their source; storage failures, compatibility markers and port defects never forward.
-use super::{AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble, assemble_capturing};
+use super::{
+    AssemblyConfig, KmaRequest, KmaStore, Outcome, assemble, assemble_capturing_with_solar_terms,
+};
 use crate::gateway::{
     BackendDispatcher, BackendHandler, BackendMode, BoxFuture, Family, GatewayError, OrderedJson,
     Version, backend::Native,
@@ -85,10 +87,21 @@ pub fn select_native_versions_with_narrative(
     summaries: Option<Arc<dyn crate::summary::SummarySink>>,
     narrative: Option<Arc<dyn crate::narrative::Read>>,
 ) -> Result<Arc<KmaBackend>, GatewayError> {
+    select_native_versions_with_services(dispatcher, source, versions, summaries, narrative, None)
+}
+pub fn select_native_versions_with_services(
+    dispatcher: &BackendDispatcher,
+    source: Arc<dyn KmaSource>,
+    versions: &[Version],
+    summaries: Option<Arc<dyn crate::summary::SummarySink>>,
+    narrative: Option<Arc<dyn crate::narrative::Read>>,
+    solar_terms: Option<Arc<dyn crate::solar_terms::TermLookup>>,
+) -> Result<Arc<KmaBackend>, GatewayError> {
     let backend = Arc::new(
         KmaBackend::new(source, system_clock(), AssemblyConfig::default())
             .with_summaries(summaries)
-            .with_narrative(narrative),
+            .with_narrative(narrative)
+            .with_solar_terms(solar_terms),
     );
     for version in versions {
         backend.register_version(dispatcher, *version);
@@ -115,6 +128,7 @@ pub struct KmaBackend {
     /// S16: receives the summary inputs of natively served responses.
     summaries: Option<Arc<dyn crate::summary::SummarySink>>,
     narrative: Option<Arc<dyn crate::narrative::Read>>,
+    solar_terms: Option<Arc<dyn crate::solar_terms::TermLookup>>,
 }
 impl KmaBackend {
     pub fn new(source: Arc<dyn KmaSource>, clock: Clock, config: AssemblyConfig) -> Self {
@@ -125,6 +139,7 @@ impl KmaBackend {
             cpu: Arc::new(Semaphore::new(2)),
             summaries: None,
             narrative: None,
+            solar_terms: None,
         }
     }
     /// Record S16 summaries after natively served responses (None: no recording).
@@ -134,6 +149,13 @@ impl KmaBackend {
     }
     pub fn with_narrative(mut self, reader: Option<Arc<dyn crate::narrative::Read>>) -> Self {
         self.narrative = reader;
+        self
+    }
+    pub fn with_solar_terms(
+        mut self,
+        lookup: Option<Arc<dyn crate::solar_terms::TermLookup>>,
+    ) -> Self {
+        self.solar_terms = lookup;
         self
     }
     /// Register for v000903 (legacy stays selected).
@@ -244,9 +266,16 @@ impl KmaBackend {
             .await
             .map_err(|_| GatewayError::Provider)?
             .map_err(|_| GatewayError::Provider)?;
+        let solar_terms = self.solar_terms.clone();
         let (mut outcome, past_days) = match crate::observability::spawn_blocking(move || {
             let _permit = permit;
-            assemble_capturing(&request, store.as_ref(), now, config)
+            assemble_capturing_with_solar_terms(
+                &request,
+                store.as_ref(),
+                now,
+                config,
+                solar_terms.as_deref(),
+            )
         })
         .await
         {

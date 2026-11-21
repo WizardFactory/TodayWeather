@@ -242,6 +242,16 @@ pub fn assemble(
 ) -> Outcome {
     assemble_capturing(request, store, now_ms, config).0
 }
+/// [`assemble`] with an active Korean solar-term calendar lookup (for v000903 ranked summaries).
+pub fn assemble_with_solar_terms(
+    request: &KmaRequest,
+    store: &dyn KmaStore,
+    now_ms: f64,
+    config: AssemblyConfig,
+    solar_terms: Option<&dyn crate::solar_terms::TermLookup>,
+) -> Outcome {
+    assemble_capturing_with_solar_terms(request, store, now_ms, config, solar_terms).0
+}
 /// [`assemble`], also returning a JSON copy of the `_getDaySummaryList` rows `getPastMid`
 /// merged (S16 grid summaries), or None when that step merged none.
 pub fn assemble_capturing(
@@ -250,7 +260,18 @@ pub fn assemble_capturing(
     now_ms: f64,
     config: AssemblyConfig,
 ) -> (Outcome, Option<Vec<OrderedJson>>) {
-    let (outcome, past) = chain::run_capturing(request, store, now_ms, config);
+    assemble_capturing_with_solar_terms(request, store, now_ms, config, None)
+}
+/// [`assemble_capturing`] with an optional Korean solar-term lookup.
+pub fn assemble_capturing_with_solar_terms(
+    request: &KmaRequest,
+    store: &dyn KmaStore,
+    now_ms: f64,
+    config: AssemblyConfig,
+    solar_terms: Option<&dyn crate::solar_terms::TermLookup>,
+) -> (Outcome, Option<Vec<OrderedJson>>) {
+    let (outcome, past) =
+        chain::run_capturing_with_solar_terms(request, store, now_ms, config, solar_terms);
     match (&outcome, store.unconsumed()) {
         (Outcome::Legacy(_) | Outcome::Defect(_), _) | (_, None) => (outcome, past),
         // An Express 5xx ends the reply early (an escaped exception): later inputs go unused.
