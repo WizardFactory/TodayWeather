@@ -16,6 +16,8 @@
     "server2/tests/domestic/fixtures/s3-rich-response.json.gz",
     "server2/tests/domestic/fixtures/towns-oracle.json.gz",
     "server2/tests/golden/records.json",
+    "server2/tests/integration/fixtures/kma-replay.json",
+    "server2/tests/integration/fixtures/kma-rich-replay.json",
     "server2/tests/legacy_versions/fixtures/kma-older.json.gz",
     "server2/tests/legacy_versions/fixtures/kma-town.json.gz",
     "server2/tests/nation/oracle.json",

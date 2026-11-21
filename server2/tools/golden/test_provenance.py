@@ -21,6 +21,15 @@ NODE = shutil.which('node')
 
 
 class Formats(unittest.TestCase):
+    def test_domestic_replay_manifests_pin_the_registered_oracles(self):
+        digests = {fixture['path']: fixture['sha256'] for fixture in REGISTRY['fixtures']}
+        for family, filename in (('kma', 's3-response.json.gz'), ('kma-rich', 's3-rich-response.json.gz')):
+            with self.subTest(family=family):
+                manifest = ROOT / 'server2/tests/integration/fixtures' / f'{family}-replay.json'
+                path = f'tests/domestic/fixtures/{filename}'
+                expected = {'path': path, 'sha256': digests[f'server2/{path}']}
+                self.assertEqual(json.loads(manifest.read_text())['oracle'], expected)
+
     def test_explicit_registry_has_exact_current_coverage(self):
         registry = p.validate_registry(deepcopy(REGISTRY), DECLARATION)
         self.assertEqual(sum(len(f['maps']) for f in registry['fixtures']), 23)
