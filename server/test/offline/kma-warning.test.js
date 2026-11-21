@@ -319,6 +319,8 @@ test('town mapping: zone table, islands, metropolitan cities and granular sub-zo
     assert.deepEqual(names({first: '인천광역시', second: '제물포구', third: ''}), ['인천광역시', '인천남부', '전국']);
     assert.deepEqual(names({first: '인천광역시', second: '영종구', third: ''}), ['인천광역시', '인천영종', '전국']);
     assert.deepEqual(names({first: '인천광역시', second: '중구', third: '영종1동'}), ['인천광역시', '인천영종', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '중구', third: '운서1동'}), ['인천광역시', '인천영종', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '중구', third: '운서2동'}), ['인천광역시', '인천영종', '전국']);
     assert.deepEqual(names({first: '인천광역시', second: '중구', third: '신포동'}), ['인천광역시', '인천남부', '전국']);
     assert.deepEqual(names({first: '인천광역시', second: '중구', third: ''}), ['인천광역시', '인천남부', '인천영종', '전국']);
     assert.deepEqual(names({first: '인천광역시', second: '부평구', third: ''}), ['인천광역시', '인천북부', '전국']);
@@ -328,20 +330,30 @@ test('town mapping: zone table, islands, metropolitan cities and granular sub-zo
     assert.deepEqual(names({first: '인천광역시', second: '강화군', third: '서도면'}), ['강화군', '서해5도', '연평도.우도', '인천광역시', '전국']);
     assert.ok(names({first: '인천광역시', second: '강화군', third: ''}).indexOf('강화군') !== -1);
     assert.ok(names({first: '인천광역시', second: '옹진군', third: '백령면'}).indexOf('백령도.대청도') !== -1);
+    // CODEX-4: empty/unknown third includes external-subtree island codes (never under-warn).
+    assert.deepEqual(names({first: '인천광역시', second: '옹진군', third: ''}), ['백령도.대청도', '서해5도', '연평도.우도', '옹진군', '인천광역시', '전국']);
+    assert.deepEqual(names({first: '전라남도', second: '신안군', third: ''}), ['신안군(흑산면제외)', '전국', '전라남도', '흑산도.홍도']);
+    assert.deepEqual(names({first: '전라남도', second: '여수시', third: ''}), ['거문도.초도', '여수시', '전국', '전라남도']);
+    assert.ok(names({first: '제주특별자치도', second: '제주시', third: ''}).indexOf('추자도') !== -1);
     // Tier B: Sejong (both empty second from geocoder and explicit second).
     assert.deepEqual(names({first: '세종특별자치시', second: '', third: '조치원읍'}), ['세종북부', '세종특별자치시', '전국']);
     assert.deepEqual(names({first: '세종특별자치시', second: '', third: '한솔동'}), ['세종남부', '세종특별자치시', '전국']);
     assert.deepEqual(names({first: '세종특별자치시', second: '세종특별자치시', third: '부강면'}), ['세종남부', '세종특별자치시', '전국']);
     assert.deepEqual(names({first: '세종특별자치시', second: '', third: ''}), ['세종남부', '세종북부', '세종특별자치시', '전국']);
-    // Tier B: 강원/경북 평지 vs 산지, 속초시 대포동 법정동 straddle, and historical township aliases.
+    // Tier B: 강원/경북 평지 vs 산지, 속초시 노학동/대포동 법정동 straddles (CODEX-2), and historical aliases.
     assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: '왕산면'}), ['강릉시', '강릉시산지', '강원도', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: '주문진읍'}), ['강릉시', '강릉시평지', '강원도', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: ''}), ['강릉시', '강릉시산지', '강릉시평지', '강원도', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '동해시', third: '삼화동'}), ['강원도', '동해시', '동해시산지', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '동해시', third: '천곡동'}), ['강원도', '동해시', '동해시평지', '전국']);
-    assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '노학동'}), ['강원도', '속초시', '속초시산지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '설악동'}), ['강원도', '속초시', '속초시산지', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '조양동'}), ['강원도', '속초시', '속초시평지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '노학동'}), ['강원도', '속초시', '속초시산지', '속초시평지', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '대포동'}), ['강원도', '속초시', '속초시산지', '속초시평지', '전국']);
+    // CODEX-3: unrecognized township/dong strings never narrow by suffix; they fall back conservatively.
+    assert.deepEqual(names({first: '충청남도', second: '보령시', third: '미확인면'}), ['보령(도서제외)', '보령도서', '보령시', '전국', '충청남도']);
+    assert.deepEqual(names({first: '경기도', second: '파주시', third: '미확인동'}), ['경기도', '전국', '파주시', '파주시남부', '파주시동북부', '파주시서북부']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: '미확인동'}), ['강릉시', '강릉시산지', '강릉시평지', '강원도', '전국']);
     assert.deepEqual(names({first: '강원도', second: '양구군', third: '남면'}), ['강원도', '양구군', '양구군평지', '전국']);
     assert.deepEqual(names({first: '강원특별자치도', second: '양구군', third: '해안면'}), ['강원도', '양구군', '양구군산지', '전국']);
     assert.deepEqual(names({first: '경상북도', second: '울진군', third: '서면'}), ['경상북도', '울진군', '울진군산지', '전국']);
@@ -392,41 +404,61 @@ test('town mapping: zone table, islands, metropolitan cities and granular sub-zo
     assert.deepEqual(names({first: '경상북도', second: '없는군', third: ''}), ['경상북도', '전국'], 'unknown city: province-level zones only');
 });
 
-test('subzone table integrity and full areaNoKma.csv coverage (#3084 AC1)', () => {
+test('subzone table integrity, split-leaf coverage, and full areaNoKma.csv closure (#3084 AC1, CODEX-5)', () => {
     const serverDir = path.join(__dirname, '../..');
     const sub = JSON.parse(fs.readFileSync(path.join(serverDir, 'utils/data/kma_warning_subzones.json'), 'utf8'));
+    const csvTable = zones.parseZoneTable(fs.readFileSync(path.join(serverDir, 'utils/data/kma_warning_zones.csv'), 'utf8'), '202611210000');
     assert.ok(sub.provenance && sub.provenance.pdf_sha256, 'provenance metadata present');
     const seen = new Set();
     Object.values(sub.district_splits).forEach(dmap => {
         Object.values(dmap).forEach(ids => ids.forEach(id => {
-            assert.ok(zones.zoneName(id), 'district_splits zone exists: ' + id);
+            assert.ok(csvTable.byId[id], 'district_splits zone exists: ' + id);
             seen.add(id);
         }));
     });
     sub.township_splits.forEach(rule => {
-        ['dong_default', 'other_default', 'fallback'].forEach(k => {
-            (rule[k] || []).forEach(id => {
-                assert.ok(zones.zoneName(id), 'township_splits ' + k + ' zone exists: ' + id);
-                seen.add(id);
-            });
+        assert.equal(rule.dong_default, undefined, 'no blind dong_default suffix narrowing');
+        assert.equal(rule.other_default, undefined, 'no blind other_default suffix narrowing');
+        (rule.fallback || []).forEach(id => {
+            assert.ok(csvTable.byId[id], 'township_splits fallback zone exists: ' + id);
+            seen.add(id);
         });
         Object.values(rule.by_third || {}).forEach(ids => ids.forEach(id => {
-            assert.ok(zones.zoneName(id), 'township_splits by_third zone exists: ' + id);
+            assert.ok(csvTable.byId[id], 'township_splits by_third zone exists: ' + id);
             seen.add(id);
         }));
     });
+    // Every leaf under every split city/county/metropolitan parent in kma_warning_zones.csv is covered.
+    const uncoveredLeaves = [];
+    Object.keys(csvTable.children).forEach(pid => {
+        if (pid === '0' || pid === 'L1000000') return;
+        const parent = csvTable.byId[pid];
+        const kids = csvTable.children[pid];
+        if (kids.length <= 1) return;
+        if (parent.up === 'L1000000' && !/(특별시|광역시|특별자치시)$/.test(parent.name)) return;
+        kids.forEach(child => {
+            if (csvTable.children[child.id] && csvTable.children[child.id].length > 0) return;
+            if (!seen.has(child.id)) uncoveredLeaves.push(parent.name + ':' + child.id + ':' + child.name);
+        });
+    });
+    assert.deepEqual(uncoveredLeaves, [], 'every split leaf in kma_warning_zones.csv is covered');
+
     const rows = fs.readFileSync(path.join(serverDir, 'utils/data/areaNoKma.csv'), 'utf8').split(/\r?\n/).slice(2).filter(Boolean);
-    assert.ok(rows.length > 3500, 'full areaNoKma.csv loaded');
-    let checked = 0;
+    assert.equal(rows.length, 3687, 'exact 3,687 data rows in areaNoKma.csv');
     for (const line of rows) {
         const [first, second, third] = line.split(',');
-        if (!first) continue;
+        assert.ok(first, 'row has first');
         const codes = plain(zones.zonesForTown({first, second: second || '', third: third || ''}));
         assert.ok(codes.length > 0, 'non-empty zones for ' + first + '/' + second + '/' + third);
-        assert.ok(codes.indexOf('L1000000') !== -1, 'nationwide ancestor kept for ' + first + '/' + second + '/' + third);
-        checked++;
+        const set = new Set(codes);
+        assert.ok(set.has('L1000000'), 'nationwide ancestor kept for ' + first + '/' + second + '/' + third);
+        for (const code of codes) {
+            assert.ok(csvTable.byId[code], 'valid CSV code ' + code);
+            for (let up = csvTable.byId[csvTable.byId[code].up]; up; up = csvTable.byId[up.up]) {
+                assert.ok(set.has(up.id), 'ancestor closure missing ' + up.id + ' for ' + code);
+            }
+        }
     }
-    assert.ok(checked > 3500);
 });
 
 test('combined Gwangju-Jeonnam addresses retain separate warning audiences (#3078)', () => {

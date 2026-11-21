@@ -175,15 +175,27 @@ async function main() {
     ]);
     assert.deepEqual(nowonBody.current.specialInfo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName), ['건조주의보@서울동북권']);
     assert.ok(nowonBody.current.summaryWeather.indexOf('건조주의보') !== -1);
+    assert.ok(nowonBody.current.summary.indexOf('건조주의보') !== -1);
     assert.deepEqual(ydpBody.current.specialInfo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName), ['건조주의보@서울서남권']);
     assert.ok(ydpBody.current.summaryWeather.indexOf('건조주의보') !== -1);
+    assert.ok(ydpBody.current.summary.indexOf('건조주의보') !== -1);
     assert.equal(gangnamBody.current.specialInfo, undefined, '서울동남권 excludes 서울동북권/서울서남권');
+    assert.equal(gangnamBody.current.summaryWeather.indexOf('건조주의보'), -1);
+    assert.equal(gangnamBody.current.summary.indexOf('건조주의보'), -1);
     assert.equal(jongnoBody.current.specialInfo, undefined, '서울서북권 excludes 서울동북권/서울서남권');
+    assert.equal(jongnoBody.current.summaryWeather.indexOf('건조주의보'), -1);
+    assert.equal(jongnoBody.current.summary.indexOf('건조주의보'), -1);
     const { resolveRegion } = require('../../lib/pushCoordinator/region');
-    const nowonReg = await resolveRegion('http://127.0.0.1:1', { town: nowon.town }, { source: 'KMA' });
-    const gangnamReg = await resolveRegion('http://127.0.0.1:1', { town: gangnam.town }, { source: 'KMA' });
-    assert.ok(nowonReg.zones.includes('L1100200') && !nowonReg.zones.includes('L1100100'), 'push region 노원구 maps to 서울동북권 only');
-    assert.ok(gangnamReg.zones.includes('L1100100') && !gangnamReg.zones.includes('L1100200') && !gangnamReg.zones.includes('L1100300'), 'push region 강남구 excludes 서울동북권/서울서남권');
+    const [nowonReg, ydpReg, gangnamReg, jongnoReg] = await Promise.all([
+        resolveRegion('http://127.0.0.1:1', { town: nowon.town }, { source: 'KMA' }),
+        resolveRegion('http://127.0.0.1:1', { town: yeongdeungpo.town }, { source: 'KMA' }),
+        resolveRegion('http://127.0.0.1:1', { town: gangnam.town }, { source: 'KMA' }),
+        resolveRegion('http://127.0.0.1:1', { town: jongno.town }, { source: 'KMA' })
+    ]);
+    assert.deepEqual(nowonReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100200']);
+    assert.deepEqual(ydpReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100300']);
+    assert.deepEqual(gangnamReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100100']);
+    assert.deepEqual(jongnoReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100400']);
 
     fs.writeFileSync(path.join(outputDir, 'town-seogwipo.json'), JSON.stringify(town, null, 1));
 

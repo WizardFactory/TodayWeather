@@ -97,17 +97,8 @@ function resolveSubzoneIds(provinceName, second, thirdBase) {
     var sub = getSubzoneTable();
     var rule = sub.townshipByKey[provinceName + '|' + second];
     if (rule) {
-        if (thirdBase) {
-            if (rule.by_third && Object.prototype.hasOwnProperty.call(rule.by_third, thirdBase)) {
-                return rule.by_third[thirdBase];
-            }
-            var lastChar = thirdBase.charAt(thirdBase.length - 1);
-            if (lastChar === '동' && rule.dong_default) {
-                return rule.dong_default;
-            }
-            if ((lastChar === '읍' || lastChar === '면' || lastChar === '동') && rule.other_default) {
-                return rule.other_default;
-            }
+        if (thirdBase && rule.by_third && Object.prototype.hasOwnProperty.call(rule.by_third, thirdBase)) {
+            return rule.by_third[thirdBase];
         }
         return rule.fallback || null;
     }
