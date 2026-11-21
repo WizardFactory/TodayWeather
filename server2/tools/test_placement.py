@@ -296,8 +296,8 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.assertTrue(self.errors())
 
     def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
-        workflow = Path(__file__).resolve().parents[2] / '.github/workflows/server2.yml'
-        body = workflow.read_text()
+        body = (placement.PARALLEL_WORKFLOW_PREFIX + placement.VERIFIED_UPLOAD
+                + placement.GOLDEN_JOB)
         self.assertIn('needs: [placement, python, rust, gnu]', body)
         self.assertEqual([], placement.audit_workflow(body))
         for bad in (
