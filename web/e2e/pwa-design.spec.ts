@@ -512,3 +512,170 @@ for (const width of [320, 402])
       });
     expect(windCollisions).toEqual([]);
   });
+
+test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const raw: any = structuredClone(fixture.response);
+  const p = raw.current;
+  raw.short = Array.from({ length: 32 }, (_, i) => {
+    const day = 21 + Math.floor((i * 3) / 24);
+    const hour = (i * 3) % 24;
+    return {
+      ...p,
+      date: `202609${String(day).padStart(2, "0")}`,
+      time: String(hour * 100).padStart(4, "0"),
+      t3h: 10 + (i % 8),
+      t1h: undefined,
+      pop: 0,
+      vec: 270,
+      wsd: 3.2,
+      r06: 0,
+    };
+  });
+  raw.shortest = Array.from({ length: 6 }, (_, h) => ({
+    ...p,
+    date: "20260923",
+    time: String(h * 100).padStart(4, "0"),
+    t1h: 12 + h,
+    pop: 0,
+    vec: 300,
+    wsd: 2.1,
+    rn1: 0,
+  }));
+  // Off-hour observation (00:15) with no pop should borrow 0% and not blow up chart width.
+  raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
+  await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+  await page.goto("/weather/seoul/hourly");
+  const scroll = page.locator(".hourly-chart");
+  await expect(scroll).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const metrics = await scroll.evaluate((el) => ({
+    scrollW: el.scrollWidth,
+    clientW: el.clientWidth,
+    scrollLeft: el.scrollLeft,
+  }));
+  expect(metrics.scrollW).toBeLessThan(5000);
+  expect(metrics.scrollW).toBeGreaterThan(metrics.clientW);
+
+  // Current off-hour column borrows rain probability (0%, not —).
+  await expect(
+    page.locator(".hourly-columns .current-column .chart-probability"),
+  ).toHaveText("0%");
+
+  // Pinned Y-axis ticks stay visible inside the chart wrapper even after scrolling.
+  await scroll.evaluate((el) => {
+    el.scrollLeft += 400;
+  });
+  const ticksVisible = await page.locator(".chart-plot-wrap").evaluate((wrap) => {
+    const wb = wrap.getBoundingClientRect();
+    const ticks = [...wrap.querySelectorAll(".chart-y-tick")];
+    return (
+      ticks.length === 3 &&
+      ticks.every((t) => {
+        const r = t.getBoundingClientRect();
+        return r.left >= wb.left - 1 && r.right <= wb.right + 1 && r.width > 0;
+      })
+    );
+  });
+  expect(ticksVisible).toBe(true);
+
+  // Remember a column currently in viewport before expanding wind/humidity.
+  const visibleBefore = await scroll.evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    const cols = [...el.querySelectorAll(".hourly-columns .chart-column")];
+    return cols.findIndex((c) => {
+      const r = c.getBoundingClientRect();
+      return r.left >= sb.left + 40 && r.right <= sb.right - 10;
+    });
+  });
+  expect(visibleBefore).toBeGreaterThanOrEqual(0);
+
+  await page.getByRole("button", { name: "바람·습도 보기", exact: true }).click();
+  await expect(page.locator(".chart-extras")).toBeVisible();
+
+  // The previously visible column remains inside the scroll viewport after expansion.
+  const stillVisible = await scroll.evaluate((el, idx) => {
+    const sb = el.getBoundingClientRect();
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
+    const r = col.getBoundingClientRect();
+    return r.right > sb.left && r.left < sb.right;
+  }, visibleBefore);
+  expect(stillVisible).toBe(true);
+
+  // Wind direction arrows keep natural size (not stretched to 100% column width).
+  const maxArrowWidth = await page
+    .locator(".chart-extras .chart-wind-direction svg")
+    .evaluateAll((els) =>
+      Math.max(...els.map((e) => e.getBoundingClientRect().width)),
+    );
+  expect(maxArrowWidth).toBeLessThan(30);
+
+  // Clicking an SVG hit target updates data-cursor.
+  const targetIdx = Math.max(0, visibleBefore);
+  await scroll.locator("svg g .chart-hit").nth(targetIdx).click({ force: true });
+  await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
+});
+
+for (const lang of ["ko", "fr"] as const)
+  test(`daily chart keeps Today unclipped at 390px (${lang}, 100% & 130%) and updates cursor on SVG bar click (#3114)`, async ({
+    page,
+  }) => {
+    await page.addInitScript((language) => {
+      localStorage.setItem(
+        "tw.web.v1.preferences",
+        JSON.stringify({
+          version: 1,
+          places: [],
+          selectedId: null,
+          settings: { startup: "hourly", language },
+        }),
+      );
+    }, lang);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const raw: any = structuredClone(fixture.response);
+    raw.current = { ...raw.current, date: "20260922", time: "0900", t1h: 20 };
+    raw.midData.dailyData = Array.from({ length: 17 }, (_, i) => ({
+      ...raw.midData.dailyData[0],
+      date: `202609${String(15 + i).padStart(2, "0")}`,
+      time: "0000",
+      tmn: 10 + (i % 5),
+      tmx: 22 + (i % 5),
+      skyAm: "sun",
+      skyPm: i === 7 ? "rain" : "sun",
+      pop: i === 8 ? 60 : 0,
+      r06: i === 8 ? 14.5 : 0,
+    }));
+    await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+    await page.goto("/weather/seoul/daily");
+    const daily = page.locator(".daily-chart");
+    await expect(daily).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    for (const scale of ["1", "1.3"]) {
+      await page.evaluate((s) => {
+        document.documentElement.style.setProperty("--tw-text-scale", s);
+        window.dispatchEvent(new Event("resize"));
+      }, scale);
+      await page.waitForTimeout(100);
+      const todayBounds = await daily.evaluate((el) => {
+        const sb = el.getBoundingClientRect();
+        const today = el.querySelector(".today-column")!.getBoundingClientRect();
+        return {
+          sLeft: sb.left,
+          sRight: sb.right,
+          tLeft: today.left,
+          tRight: today.right,
+        };
+      });
+      expect(todayBounds.tLeft).toBeGreaterThanOrEqual(todayBounds.sLeft - 2);
+      expect(todayBounds.tRight).toBeLessThanOrEqual(todayBounds.sRight + 2);
+    }
+
+    // Clicking SVG hit target for day index 8 (Tomorrow) updates cursor and readout.
+    await daily.locator("svg g .chart-hit").nth(8).click({ force: true });
+    await expect(daily).toHaveAttribute("data-cursor", "8");
+    await expect(page.locator(".daily-chart-panel .cursor-readout")).toContainText("60%");
+  });

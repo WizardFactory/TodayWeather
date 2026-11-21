@@ -639,15 +639,6 @@ main:focus {
 .chart-legend .muted {
   background: var(--tw-bg-surface-sunken);
 }
-.chart-scroll {
-  overflow: auto;
-  margin: 0 -6px;
-}
-.chart-scroll svg {
-  display: block;
-  width: 100%;
-  max-height: 245px;
-}
 .chart-value {
   fill: var(--text);
   font-size: max(var(--tw-type-label-size), var(--font-floor));
@@ -2322,6 +2313,32 @@ textarea {
   border-radius: var(--tw-radius-md);
   background: var(--tw-border-subtle);
 }
+.chart-plot-wrap {
+  position: relative;
+}
+.chart-y-axis {
+  position: absolute;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.chart-y-tick {
+  position: absolute;
+  left: var(--tw-space-1);
+  transform: translateY(-50%);
+  padding: 0 var(--tw-space-1);
+  border-radius: var(--tw-radius-sm);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--tw-text-secondary);
+  font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
+  line-height: var(--tw-type-chart-axis-leading);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chart-hit {
+  fill: transparent;
+  cursor: pointer;
+}
 .chart-scroll {
   overflow-x: auto;
   overflow-y: hidden;
@@ -2339,7 +2356,10 @@ textarea {
   height: 9rem;
 }
 .daily-columns {
-  height: 10rem;
+  height: 11.25rem;
+}
+.daily-columns.merged-only {
+  height: 9.75rem;
 }
 .chart-column {
   position: absolute;
@@ -2349,9 +2369,19 @@ textarea {
   justify-content: flex-start;
   gap: var(--tw-space-2);
   text-align: center;
-  padding: var(--tw-space-2);
+  padding: var(--tw-space-2) var(--tw-space-1);
   font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
   line-height: var(--tw-type-chart-axis-leading);
+}
+.chart-day-primary {
+  font-weight: var(--tw-type-label-weight);
+}
+.chart-day-date {
+  font-size: max(var(--tw-type-caption-size), var(--font-floor));
+  color: var(--tw-text-secondary);
+}
+.today-column .chart-day-date {
+  color: inherit;
 }
 .chart-column > span {
   max-width: 100%;
@@ -2426,6 +2456,11 @@ textarea {
   fill: var(--tw-chart-now);
   stroke: var(--tw-bg-surface);
   stroke-width: 2;
+}
+.hourly-chart .now {
+  fill: none;
+  stroke: var(--tw-chart-now);
+  stroke-width: 2.5;
 }
 .now-line {
   stroke: var(--tw-chart-now);
@@ -2587,6 +2622,10 @@ textarea {
   .yesterday-point,
   .now {
     fill: CanvasText;
+  }
+  .hourly-chart .now {
+    fill: none;
+    stroke: CanvasText;
   }
   .hero-card {
     background: Canvas;
