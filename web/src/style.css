@@ -2460,6 +2460,12 @@ textarea {
   stroke: var(--tw-chart-now);
   stroke-width: 2.5;
 }
+.hourly-chart .today-value {
+  fill: var(--tw-chart-today-on);
+}
+.hourly-chart .yesterday-value {
+  fill: var(--tw-chart-yesterday-on);
+}
 .now-line {
   stroke: var(--tw-chart-now);
   stroke-width: 1;
@@ -2733,13 +2739,6 @@ textarea {
 .bar-chart:focus-visible {
   outline: 3px solid var(--tw-focus-ring);
   outline-offset: 3px;
-}
-
-.hourly-chart .today-value {
-  fill: var(--tw-chart-today-on);
-}
-.hourly-chart .yesterday-value {
-  fill: var(--tw-chart-yesterday-on);
 }
 
 .chart-icon-placeholder {

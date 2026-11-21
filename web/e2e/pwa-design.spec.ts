@@ -615,7 +615,7 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
 
   // Refetch with updated observedAt preserves the user's scrolled anchor position.
   await page.getByRole("button", { name: "새로고침" }).click();
-  await expect.poll(() => fetchCount).toBeGreaterThanOrEqual(2);
+  await expect(page.locator(".data-footer")).toContainText("00:25");
   const leftAfterRefetch = await scroll.evaluate((el, idx) => {
     const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
     return col.getBoundingClientRect().left;
@@ -637,19 +637,33 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   await hourlyHit.click();
   await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
 
-  // Forced-colors keeps current-dot text legible against the filled dot (PR1-R1).
-  await page.emulateMedia({ forcedColors: "active" });
-  const forcedFills = await scroll.evaluate((el) => {
-    const pt = el.querySelector(".today-point");
-    const txt = el.querySelector(".today-value");
-    return {
-      pt: pt ? getComputedStyle(pt).fill : "",
-      txt: txt ? getComputedStyle(txt).fill : "",
-    };
-  });
-  expect(forcedFills.pt).not.toBe("");
-  expect(forcedFills.txt).not.toBe("");
-  expect(forcedFills.txt).not.toBe(forcedFills.pt);
+  // Forced-colors (including dark high-contrast) resolves dot value fills to Canvas (PR1-R1).
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ forcedColors: "active", colorScheme });
+    const forcedFills = await scroll.evaluate((el) => {
+      const svg = el.querySelector("svg")!;
+      const probe = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      probe.style.fill = "Canvas";
+      svg.appendChild(probe);
+      const canvasBg = getComputedStyle(probe).fill;
+      probe.remove();
+      const canvasText = getComputedStyle(document.body).color;
+      const pt = el.querySelector(".today-point");
+      const todayTxt = el.querySelector(".today-value");
+      const yestTxt = el.querySelector(".yesterday-value");
+      return {
+        canvasBg,
+        canvasText,
+        pt: pt ? getComputedStyle(pt).fill : "",
+        todayTxt: todayTxt ? getComputedStyle(todayTxt).fill : "",
+        yestTxt: yestTxt ? getComputedStyle(yestTxt).fill : "",
+      };
+    });
+    expect(forcedFills.canvasBg).not.toBe(forcedFills.canvasText);
+    expect(forcedFills.pt).toBe(forcedFills.canvasText);
+    expect(forcedFills.todayTxt).toBe(forcedFills.canvasBg);
+    expect(forcedFills.yestTxt).toBe(forcedFills.canvasBg);
+  }
 });
 
 for (const lang of ["ko", "fr"] as const)
