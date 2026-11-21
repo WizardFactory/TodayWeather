@@ -169,6 +169,50 @@ attribution](https://developers.google.com/maps/documentation/pollen/policies)
 at display time. See the [request sequence](diagrams/coordinate-pollen-forecast.html)
 and its [editable source](diagrams/coordinate-pollen-forecast.json).
 
+### Météo-France Vigilance by coordinate
+
+`GET /weather/v000903/coord/{lat},{lon}/warnings` is a separate `no-store`
+read for metropolitan land departments. Enable it with
+`METEOFRANCE_VIGILANCE_ENABLED=true` and configure
+`METEOFRANCE_VIGILANCE_API_KEY` on server1. The code defaults to disabled.
+The coordinate is validated without rounding and the official French
+[administrative API](https://geo.api.gouv.fr/decoupage-administratif/communes)
+resolves the containing municipality and department. Points with no match
+include ocean and points outside the territory. Four-digit coastal product
+domains and overseas bulletins are outside this route's scope.
+
+The [provider adapter](../../server/lib/warnings/franceVigilance.js)
+shares one national map refresh among concurrent requests in each worker.
+Successful reads are reused for up to five minutes, bounded by product
+validity and a 16-hour age ceiling. Failed or regressing refreshes and conflicting snapshot IDs with equal
+publication times enter a one-minute cooldown and return unavailable coverage.
+Malformed color and phenomenon codes leave the affected coverage unavailable. No provider data enter
+the normal weather cache. Météo-France requests have a bounded timeout and
+body size. The API key is attached to the Météo-France host only.
+
+The response is `{location, checkedAt, sources, warnings}`. A matching
+department sets `location.country` to `FR`; the source reports the actual
+department code and, where available, publication and freshness times.
+A current source and empty warnings are a successful clear result for the
+covered scope. Unsupported and unavailable coverage are explicit. One
+incomplete period can produce unavailable coverage alongside independently
+validated intervals from another period.
+
+The map provides department-specific warning intervals in UTC. Upcoming
+intervals carry their actual onset while `effectiveAt` records the source
+product's effective time. For un-timed river-flood maxima, `timing` is
+`period-maximum` and `periodStartsAt` and `expiresAt` bound the reported
+window. These are summary values without a known hazard onset. French
+bulletin text is optional and must match the map snapshot, department,
+hazard, severity and validity. Render issuer text as text and show the
+official source and publication time.
+
+See the [request sequence](diagrams/france-vigilance.html),
+[editable source](diagrams/france-vigilance.json), and
+[illustrated API examples](../user/weather-api/france-vigilance/manual.pdf).
+The [issuer record](../reference/regional-weather/official-warnings.md#direct-france-sample)
+documents the earlier report, product reference and territory resolution.
+
 ### Current public-origin check, 2026-11-12 (#2937)
 
 A read-only recheck found CloudFront `weather/*` and `geocode/*` targeting
