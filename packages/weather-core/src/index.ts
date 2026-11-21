@@ -41,6 +41,8 @@ export type Place = {
   lat: number;
   lon: number;
   current?: boolean;
+  /** Unrounded search or GPS point. Ordinary weather and its cache retain the existing coordinates. */
+  warningLocation?: {lat: number; lon: number};
 };
 export type Point = {
   at: string;

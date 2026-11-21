@@ -113,10 +113,14 @@ test('shared gateway serves exact coordinates, selected issuer, and no-store cov
         assert.equal(fetches, 2, 'one index and archive for concurrent lookups');
         assert.equal(JSON.parse((await check('48.85,2.35')).body).sources[0].issuer, 'France test router');
         assert.equal((await check('91,0')).status, 400);
+        now = Date.parse(until);
+        const frozen = JSON.parse((await check('40.4168,-3.7038')).body);
+        assert.equal(frozen.sources[0].state, 'unavailable', 'a frozen archive cannot renew expired zone coverage');
+        assert.deepEqual(frozen.warnings, []);
         offline = true;
         now += 300_000;
         assert.equal(JSON.parse((await check('40.4168,-3.7038')).body).sources[0].state, 'unavailable');
-        assert.equal(fetches, 3);
+        assert.equal(fetches, 5);
     } finally {
         server.closeIdleConnections?.();
         await new Promise(resolve => server.close(resolve));

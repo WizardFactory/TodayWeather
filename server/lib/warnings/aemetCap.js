@@ -204,12 +204,22 @@ async function readSnapshot(buffer, known = new Set(getZones().map(([code]) => c
     if (coverage.size !== known.size) throw new Error('Incomplete AEMET area coverage');
     const sorted = [...messages].sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
     const retired = new Set(sorted.flatMap(([, record]) => record.references));
-    const records = sorted.filter(([key]) => !retired.has(key)).flatMap(([, record]) => {
-        const variants = record.variants.filter(v => v.severity !== 'Minor' && v.expiresAt > v.effectiveAt);
-        return record.type !== 'Cancel' && variants.length ? [{id: record.id, sentAt: record.sentAt, variants}] : [];
-    });
+    const liveMessages = sorted.filter(([key, record]) => !retired.has(key) && record.type !== 'Cancel');
+    const coverageUntil = new Map();
+    const records = [];
+    for (const [, record] of liveMessages) {
+        const valid = record.variants.filter(v => v.expiresAt > v.effectiveAt);
+        for (const variant of valid) {
+            const end = Date.parse(variant.expiresAt);
+            for (const code of variant.codes) {
+                coverageUntil.set(code, Math.max(coverageUntil.get(code) || 0, end));
+            }
+        }
+        const variants = valid.filter(v => v.severity !== 'Minor');
+        if (variants.length) records.push({id: record.id, sentAt: record.sentAt, variants});
+    }
     const fingerprint = crypto.createHash('sha256').update(JSON.stringify(sorted)).digest('hex');
-    return {records, fingerprint};
+    return {records, coverageUntil, fingerprint};
 }
 
 function pickVariant(variants, locale) {
@@ -226,10 +236,12 @@ function response(point, zone, checkedAt, snapshot, locale) {
     const warnings = [];
     if (zone) source.state = 'unavailable';
     if (zone && !zone.ambiguous) source.area = zone;
-    if (snapshot) {
+    // A successful HTTP revalidation does not extend the publisher's coverage horizon.
+    const freshUntil = snapshot && Math.min(snapshot.freshUntil, snapshot.coverageUntil.get(zone.code) || 0);
+    if (freshUntil > Date.parse(checkedAt)) {
         source.state = 'current';
         source.asOf = snapshot.updatedAt;
-        source.freshUntil = new Date(snapshot.freshUntil).toISOString();
+        source.freshUntil = new Date(freshUntil).toISOString();
         for (const record of snapshot.records) {
             const active = record.variants.filter(v =>
                 v.codes.includes(zone.code) && v.effectiveAt <= checkedAt && checkedAt < v.expiresAt);

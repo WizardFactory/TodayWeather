@@ -214,3 +214,31 @@ it("loads warnings for the viewed coordinates and expires source coverage on rea
   expect(warningsAt(result!, now + 60000).warnings).toEqual([]);
   expect(await fetchCoordinateWarnings({...place, lat: 40.4168}, new AbortController().signal)).toBeUndefined();
 });
+
+it("keeps exact warning coordinates through search, GPS and saved place restore", async () => {
+  const { api, fetchCoordinateWarnings } = await import("../src/api");
+  const { defaultState, restoreState } = await import("../src/state");
+  const point = {lat: 41.2342678, lon: 1.5947185};
+  const view = {address: "Catalonia", country: "ES", location: {lat: point.lat, long: point.lon}};
+  const snapshot = {
+    location: {...point, country: "ES"},
+    checkedAt: new Date().toISOString(),
+    sources: [{issuer: "AEMET", state: "unavailable"}],
+    warnings: [],
+  };
+  fetcher.mockResolvedValueOnce(json(view)).mockResolvedValueOnce(json({
+    ...view, location: {lat: 41.234, long: 1.595},
+  })).mockResolvedValueOnce(json(snapshot)).mockResolvedValueOnce(json(snapshot));
+  const resolved = await api<import("@todayweather/core").Place>("/locations/resolve?q=Catalonia");
+  const gps = await api<import("@todayweather/core").Place>(`/locations/reverse?lat=${point.lat}&lon=${point.lon}`);
+  expect(resolved.lat).toBe(41.234);
+  expect(gps.lon).toBe(1.595);
+  for (const place of [resolved, gps]) {
+    const state = restoreState({getItem: () => JSON.stringify({...defaultState(), places: [place]})});
+    const result = await fetchCoordinateWarnings(state.places[0], new AbortController().signal);
+    expect(result?.location).toMatchObject(point);
+  }
+  for (const [url] of fetcher.mock.calls.slice(2)) {
+    expect(new URL(url).pathname).toBe("/weather/v000903/coord/41.2342678,1.5947185/warnings");
+  }
+});

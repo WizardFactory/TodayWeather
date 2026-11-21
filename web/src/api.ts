@@ -54,8 +54,9 @@ export function fetchCoordinatePollenForecast(weather: Weather, signal: AbortSig
   return fetchCoordinateForecast<CoordinatePollenForecast>(weather, signal, "pollen-forecast", weather.coordinatePollenForecastAvailable);
 }
 export async function fetchCoordinateWarnings(place: Place, signal: AbortSignal): Promise<CoordinateWarnings | undefined> {
+  const {lat, lon} = place.warningLocation ?? place;
   try {
-    return await api<CoordinateWarnings | undefined>(`/weather/warnings?lat=${place.lat}&lon=${place.lon}`, signal);
+    return await api<CoordinateWarnings | undefined>(`/weather/warnings?lat=${lat}&lon=${lon}`, signal);
   } catch (error) {
     if (signal.aborted) throw error;
     return undefined;

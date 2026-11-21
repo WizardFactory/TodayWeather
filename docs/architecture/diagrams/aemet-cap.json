@@ -177,14 +177,14 @@
       "title": "Failure and expiry",
       "items": [
         "An unqualified point is unsupported. A failed or unverified expected source is unavailable.",
-        "The previously verified response expires when its source lease or warning validity ends."
+        "The source lease ends no later than the issuer’s coverage expiry for the selected point."
       ]
     },
     {
       "dot": "orange",
       "title": "Radar qualification",
       "items": [
-        "Madrid, Almer\u00eda and Barcelona imagery has a separate contract and rollout.",
+        "Madrid, Almería and Barcelona imagery has a separate contract and rollout.",
         "The warning flow uses the direct AEMET CAP source."
       ]
     }
