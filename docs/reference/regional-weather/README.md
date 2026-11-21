@@ -9,5 +9,6 @@ WebApp (desktop and PWA) and native iOS and Android use the selected forecast lo
 - [Environmental health and fire risk](environmental-health.md)
 - [Sunshine, terrain, rainfall and estuary levels](regional-forecasts.md)
 - [Official weather warnings and geographic matching](official-warnings.md)
+- [AEMET regional radar source qualification](aemet-regional-radar.md)
 
 [Selected request and parse results](sample-checks.json) record counts and units. Provider values and credentials are excluded.

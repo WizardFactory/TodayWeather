@@ -1,0 +1,198 @@
+{
+  "source": "AEMET OpenData",
+  "issue": 3104,
+  "observations": [
+    {
+      "observedAt": "2026-11-21T11:05:36+00:00",
+      "products": {
+        "ma": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 16426,
+          "imageSha256": "09099fe72af0824a20a09772373e91c9d15ba302003f57d334ac9f8757815cb7",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "am": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 8196,
+          "imageSha256": "c9a8b08788a5f0ad4f5a8cb5e125bec518080007052e9141333b29acc3aa0da5",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "10:50",
+          "timezoneVerified": false
+        },
+        "ba": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 10340,
+          "imageSha256": "955c6f2d049bae68e5425b61ec8fae9ab464b67830fe55bfc02ce089d5052cab",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "10:50",
+          "timezoneVerified": false
+        },
+        "national": {
+          "httpStatus": 200,
+          "providerStatus": 404,
+          "image": null
+        }
+      }
+    },
+    {
+      "observedAt": "2026-11-21T11:07:28+00:00",
+      "products": {
+        "ma": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 16426,
+          "imageSha256": "09099fe72af0824a20a09772373e91c9d15ba302003f57d334ac9f8757815cb7",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "am": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 8210,
+          "imageSha256": "f7ea8e1c45ebe9fae3aa5fe837d04f592607e66346669818e0d59832edca628a",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "ba": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 10521,
+          "imageSha256": "d9168148bb19998843d36fb0d5855fd4c95d891528ccd1af537812b21d0a0b22",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "national": {
+          "httpStatus": 200,
+          "providerStatus": 404,
+          "image": null
+        }
+      }
+    },
+    {
+      "observedAt": "2026-11-21T11:11:42+00:00",
+      "products": {
+        "ma": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 16426,
+          "imageSha256": "09099fe72af0824a20a09772373e91c9d15ba302003f57d334ac9f8757815cb7",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "am": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 8210,
+          "imageSha256": "f7ea8e1c45ebe9fae3aa5fe837d04f592607e66346669818e0d59832edca628a",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "ba": {
+          "httpStatus": 200,
+          "providerStatus": 200,
+          "imageHttpStatus": 200,
+          "imageBytes": 10521,
+          "imageSha256": "d9168148bb19998843d36fb0d5855fd4c95d891528ccd1af537812b21d0a0b22",
+          "mediaType": "image/gif",
+          "gifSignature": true,
+          "dimensions": [
+            480,
+            530
+          ],
+          "lastModified": null,
+          "metadataHttpStatus": 200,
+          "metadataMediaType": "text/plain",
+          "imageLabel": "11:00",
+          "timezoneVerified": false
+        },
+        "national": {
+          "httpStatus": 200,
+          "providerStatus": 404,
+          "image": null
+        }
+      }
+    }
+  ]
+}
