@@ -109,6 +109,33 @@ function makeDist(dir: string) {
   writeFileSync(join(dir, "sw.js"), 'const VERSION="abc";');
   writeFileSync(join(dir, "release.json"), JSON.stringify(release));
 }
+it("uploads only the emitted Pretendard license as revalidated plain text", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tw-static-license-"));
+  try {
+    makeDist(dir);
+    const options = { dir, bucket: "test-static-bucket", distribution: "D123" };
+    writeFileSync(join(dir, "assets/Pretendard-OFL.txt"), "Open Font License");
+    const commands = await planUpload(options);
+    const license = commands.find(
+      (command: string[]) =>
+        command[3] === "s3://test-static-bucket/assets/Pretendard-OFL.txt",
+    );
+    expect(license?.slice(4)).toEqual([
+      "--content-type",
+      "text/plain; charset=utf-8",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors",
+    ]);
+    writeFileSync(join(dir, "assets/unrecognized.txt"), "unexpected");
+    await expect(planUpload(options)).rejects.toThrow(
+      "Unexpected artifact: assets/unrecognized.txt",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 it("previews uploads without AWS execution, orders assets first, retains old files and rejects demo builds", async () => {
   const dir = mkdtempSync(join(tmpdir(), "tw-static-upload-"));
   try {
