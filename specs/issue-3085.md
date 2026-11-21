@@ -1,6 +1,6 @@
 # Spec: server2 granular KMA weather warning zone matching — issue 3085
 
-Revision 1, 2026-11-21. Consumes [intent/issue-3085.md](../intent/issue-3085.md) r1 and mirrors `#3084` (`specs/issue-3084.md`) under the `server2` placement contract ([server2.md](../docs/architecture/server2.md#implementation-placement)).
+Revision 2, 2026-11-21. Consumes [intent/issue-3085.md](../intent/issue-3085.md) r1 and mirrors `#3084` (`specs/issue-3084.md`) under the `server2` placement contract ([server2.md](../docs/architecture/server2.md#implementation-placement)).
 
 ## Placement declaration
 
@@ -17,7 +17,7 @@ Declared in `server2/config/tasks/Issue3085.json`:
 
 - Mirrors `specs/issue-3084.md` R2/R3 step-for-step:
   1. Trim `first`, apply `PROVINCE_ALIASES`, and classify `전남광주통합특별시` into `광주광역시` or `전라남도` using the exact district table ported from `#3078` (unrecognized/empty returns `vec![]`).
-  2. Trim `second` and strip ASCII/Unicode whitespace (`second.split_whitespace().collect::<String>()`), trim `third`, extract `third_base = third.split('/').next().unwrap_or("").trim()`.
+  2. Trim `second` and strip ECMAScript `\s` whitespace (`js::collapse_space(trim(&town.second), "")`, matching JS `trim().replace(/\s+/g, '')` so `U+FEFF` is removed and `U+0085` is preserved), trim `third`, extract `third_base = third.split('/').next().unwrap_or("").trim()`.
   3. If `second.is_empty() && third_base.is_empty()`, return `self.expand(&[province])`.
   4. Resolve `(province.name, second, third_base)` against `SubzoneTable::shared()` (`township_splits` first — exact `by_third` lookup only, falling back to `fallback` for empty or unrecognized `third_base` with no blind suffix narrowing and before substring `ISLAND_ZONES`, including external island sub-zones on empty/unrecognized `third_base` for 제주시/옹진군/신안군/여수시 — else `district_splits`). Expand matched zone IDs via `self.expand(&matched)`.
   5. Else apply `ISLAND_ZONES` (`울릉` -> `울릉도.독도`, plus legacy non-canonical second fallbacks).

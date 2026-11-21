@@ -309,7 +309,7 @@ impl ZoneTable {
         if first.is_empty() {
             return vec![];
         }
-        let second: String = trim(&town.second).split_whitespace().collect::<String>();
+        let second = js::collapse_space(trim(&town.second), "");
         let mut province_name = PROVINCE_ALIASES
             .iter()
             .find(|(k, _)| *k == first)

@@ -229,6 +229,22 @@ fn granular_subzone_matching_and_fallbacks() {
         names("서울특별시", "종로구", "청운효자동"),
         vec!["서울서북권", "서울특별시", "전국"]
     );
+    // ECMAScript \s parity (#3085 CODEX-2): U+FEFF is JS whitespace, U+0085 is not.
+    assert_eq!(
+        names("서울특별시", "종\u{feff}로구", "청운효자동"),
+        vec!["서울서북권", "서울특별시", "전국"]
+    );
+    assert_eq!(
+        names("서울특별시", "종\u{0085}로구", "청운효자동"),
+        vec![
+            "서울동남권",
+            "서울동북권",
+            "서울서남권",
+            "서울서북권",
+            "서울특별시",
+            "전국"
+        ]
+    );
     assert_eq!(
         names("서울특별시", "", ""),
         vec![
