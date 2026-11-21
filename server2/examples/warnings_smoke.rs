@@ -214,13 +214,20 @@ async fn main() {
             .as_u16(),
         404
     );
+    // Seeded active warning is L1100100 (서울동남권): 강남구 matches, 종로구 (서울서북권) does not (#3085).
     let town = server2::warnings::Town {
+        first: "서울특별시".into(),
+        second: "강남구".into(),
+        third: "역삼동".into(),
+    };
+    let info = svc.special_info(&town).await.unwrap();
+    assert_eq!(info.len(), 1);
+    let other_seoul = server2::warnings::Town {
         first: "서울특별시".into(),
         second: "종로구".into(),
         third: "청운효자동".into(),
     };
-    let info = svc.special_info(&town).await.unwrap();
-    assert_eq!(info.len(), 1);
+    assert!(svc.special_info(&other_seoul).await.unwrap().is_empty());
 
     // 4. A rejected catalog commit is not acknowledged; the acknowledged latest stays served.
     let newer = vec![Member {

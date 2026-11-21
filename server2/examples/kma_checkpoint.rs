@@ -22,8 +22,9 @@ fn main() {
     let started = Instant::now();
     for _ in 0..rounds {
         for sc in scenarios {
+            let id = sc["id"].as_str().unwrap();
             // Store snapshots are built outside the timed assembly, as a source would hand them over.
-            let store = support::replay(sc);
+            let store = support::replay_for_scenario(sc);
             let request = support::request(sc);
             let now = support::clock_ms(sc["clock"].as_str().unwrap());
             let t = Instant::now();
@@ -34,7 +35,6 @@ fn main() {
                 Outcome::Undefined => Vec::new(),
                 Outcome::Legacy(reason) => {
                     // Declared forwards (legacy answers them) are timed but have no native body.
-                    let id = sc["id"].as_str().unwrap();
                     assert!(
                         support::FORWARDED
                             .iter()
@@ -44,15 +44,21 @@ fn main() {
                     samples.push(t.elapsed().as_secs_f64() * 1e6);
                     continue;
                 }
-                Outcome::Defect(reason) => panic!("{}: defect {reason}", sc["id"]),
+                Outcome::Defect(reason) => panic!("{id}: defect {reason}"),
             };
             samples.push(t.elapsed().as_secs_f64() * 1e6);
-            assert_eq!(
-                body,
-                sc["body"].as_str().unwrap().as_bytes(),
-                "{}",
-                sc["id"]
-            );
+            if support::is_narrowed_seoul_warning_scenario(id) {
+                let (expected, expected_etag) =
+                    support::expected_narrowed_seoul_body_and_etag(sc).unwrap();
+                assert_eq!(body, expected.as_bytes(), "{id}");
+                assert_eq!(
+                    server2::gateway::response::etag(&body),
+                    expected_etag,
+                    "{id}"
+                );
+            } else {
+                assert_eq!(body, sc["body"].as_str().unwrap().as_bytes(), "{id}");
+            }
             bytes += body.len();
         }
     }

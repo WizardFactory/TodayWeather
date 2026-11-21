@@ -15,7 +15,10 @@
     "server2/tests/warnings/fixtures/PROVENANCE.md",
     "server2/tests/delivery/warnings.rs",
     "server2/tests/domestic/parity.rs",
-    "server2/tests/domestic/recorded.rs"
+    "server2/tests/domestic/recorded.rs",
+    "server2/tests/domestic/support.rs",
+    "server2/examples/kma_checkpoint.rs",
+    "server2/examples/warnings_smoke.rs"
   ],
   "outside": [
     {

@@ -84,38 +84,12 @@ pub fn run(sc: &serde_json::Value) -> Result<(), String> {
 /// and excludes sibling `서울동남권` (`L1100100`) warnings while keeping every other field,
 /// key order, HTTP status, and derived Express ETag byte-for-byte identical.
 fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), String> {
-    use server2::gateway::OrderedJson;
-
-    fn utf16(s: &str) -> Vec<u16> {
-        s.encode_utf16().collect()
-    }
-    fn ostr(s: &str) -> OrderedJson {
-        OrderedJson::String(utf16(s))
-    }
-    fn replace_field(
-        entries: &mut [(Vec<u16>, OrderedJson)],
-        name: &str,
-        value: OrderedJson,
-    ) -> Result<(), String> {
-        let key = utf16(name);
-        let (_, slot) = entries
-            .iter_mut()
-            .find(|(k, _)| *k == key)
-            .ok_or_else(|| format!("missing expected field `{name}` in recorded fixture"))?;
-        *slot = value;
-        Ok(())
-    }
-
     let id = sc["id"].as_str().unwrap();
     let status = sc["status"].as_u64().unwrap() as u16;
     if status != 200 {
         return Err(format!("{id}: expected recorded status 200, got {status}"));
     }
-    let store = replay(sc).with_expected_special_zones(vec![
-        "L1100400".into(),
-        "L1100000".into(),
-        "L1000000".into(),
-    ]);
+    let store = replay_for_scenario(sc);
     let outcome = assemble(
         &request(sc),
         &store,
@@ -127,58 +101,7 @@ fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), Str
         Outcome::Status(code, _) => return Err(format!("{id}: native {code}, legacy {status}")),
         other => return Err(format!("{id}: unexpected outcome {other:?}")),
     };
-    let mut expected_ordered = OrderedJson::parse(sc["body"].as_str().unwrap().as_bytes())
-        .map_err(|e| format!("{id}: failed to parse recorded body as OrderedJson: {e:?}"))?;
-    let current_key = utf16("current");
-    let OrderedJson::Object(top_entries) = &mut expected_ordered else {
-        return Err(format!("{id}: recorded body is not a JSON object"));
-    };
-    let (_, OrderedJson::Object(cur_entries)) = top_entries
-        .iter_mut()
-        .find(|(k, _)| *k == current_key)
-        .ok_or_else(|| format!("{id}: missing `current` in recorded body"))?
-    else {
-        return Err(format!("{id}: recorded `current` is not a JSON object"));
-    };
-    let expected_etag = match id {
-        "domestic-special-info" => {
-            let special_key = utf16("specialInfo");
-            let before = cur_entries.len();
-            cur_entries.retain(|(k, _)| *k != special_key);
-            if cur_entries.len() == before {
-                return Err(format!("{id}: recorded fixture missing `specialInfo`"));
-            }
-            replace_field(cur_entries, "summaryWeather", ostr("어제와 비슷, 맑음"))?;
-            replace_field(cur_entries, "summary", ostr("어제와 비슷, 맑음"))?;
-            // Independently computed Express weak ETag (byte length 32986, base64-no-pad MD5).
-            r#"W/"80da-22VAYrzbo8ML076i4eBQ4A""#
-        }
-        "warning-two-zones" => {
-            let narrowed_info = OrderedJson::Array(vec![OrderedJson::Object(vec![
-                (utf16("weather"), OrderedJson::Number(9.0)),
-                (utf16("weatherStr"), ostr("한파")),
-                (utf16("level"), OrderedJson::Number(1.0)),
-                (utf16("levelStr"), ostr("주의보")),
-                (utf16("locationName"), ostr("서울서북권")),
-            ])]);
-            replace_field(cur_entries, "specialInfo", narrowed_info)?;
-            replace_field(
-                cur_entries,
-                "summaryWeather",
-                ostr("한파주의보, Similar to yesterday"),
-            )?;
-            replace_field(
-                cur_entries,
-                "summary",
-                ostr("한파주의보, Similar to yesterday"),
-            )?;
-            // Independently computed Express weak ETag (byte length 32436, base64-no-pad MD5).
-            r#"W/"7eb4-SiEkTe4NsbB3Y9uLpE7rXQ""#
-        }
-        _ => unreachable!(),
-    };
-    let expected_bytes = expected_ordered.to_bytes();
-    let expected = String::from_utf8(expected_bytes).unwrap();
+    let (expected, expected_etag) = expected_narrowed_seoul_body_and_etag(sc)?;
     if actual != expected {
         return Err(format!(
             "{id}: body differs {}",
