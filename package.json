@@ -40,6 +40,6 @@
     "prettier": "3.9.9",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
-    "vitest": "5.0.1"
+    "vitest": "5.0.5"
   }
 }
