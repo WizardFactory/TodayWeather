@@ -259,17 +259,33 @@ impl Locations for ApiLocations {
             let Val::Obj(town) = town else {
                 return Ok(Vec::new());
             };
-            let text = |v: &Val| {
-                if v.is_nullish() {
-                    String::new()
-                } else {
-                    to_string(v)
+            fn field(v: &Val) -> Option<Option<&str>> {
+                match v {
+                    Val::Str(s) => Some(Some(s.as_str())),
+                    Val::Null | Val::Undef => Some(None),
+                    _ => None,
                 }
+            }
+            let Some(Some(first)) = field(town.get("first")) else {
+                return Ok(Vec::new());
+            };
+            let Some(second_opt) = field(town.get("second")) else {
+                return Ok(Vec::new());
+            };
+            let Some(third_opt) = field(town.get("third")) else {
+                return Ok(Vec::new());
+            };
+            let combined = crate::warnings::js::trim(first)
+                == crate::warnings::zones::COMBINED_GWANGJU_JEONNAM;
+            let second = match second_opt {
+                Some(s) => s.to_owned(),
+                None if combined => return Ok(Vec::new()),
+                None => to_string(town.get("second")),
             };
             let town = Town {
-                first: text(town.get("first")),
-                second: text(town.get("second")),
-                third: text(town.get("third")),
+                first: first.to_owned(),
+                second,
+                third: third_opt.unwrap_or_default().to_owned(),
             };
             Ok(ZoneTable::shared(now).zones_for_town(&town))
         })

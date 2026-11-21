@@ -3222,6 +3222,12 @@ An acquisition that finishes after the bound serves the next request. If no zone
 yet, `forecast_zone` answers `[]`. If the warning state cannot be read, `special_zones` returns the
 legacy store error, and `getSpecialInfo` skips the section.
 
+For `전남광주통합특별시`, the weather response and warning push resolve the address against the
+existing Gwangju and Jeonnam warning zones. The district classifier strips whitespace and accepts
+the five Gwangju districts and 22 Jeonnam cities or counties. Unknown or missing districts have no
+warning zones. Island subzones use the whitespace-normalized town. The weather response preserves
+the requested `regionName`, and warning lookup leaves the push registration address intact.
+
 **Keys and quota.** The acquisitions use the process data.go.kr acquirer of S15b-2: legacy
 `DONGNAE_SECRET_KEYS`, one S08 quota owner per key and KST day, with built-in 10,000 units (per key
 and API since S15b-4q). Its key

@@ -414,8 +414,16 @@ pub fn get_special_info(cx: &mut Cx) -> Flow {
             to_str(v)
         }
     };
+    let first = cx
+        .requested_region
+        .as_deref()
+        .filter(|r| {
+            crate::warnings::js::trim(r) == crate::warnings::zones::COMBINED_GWANGJU_JEONNAM
+        })
+        .map(str::to_owned)
+        .unwrap_or_else(|| text(&town.0));
     let town = crate::warnings::zones::Town {
-        first: text(&town.0),
+        first,
         second: text(&town.1),
         third: text(&town.2),
     };

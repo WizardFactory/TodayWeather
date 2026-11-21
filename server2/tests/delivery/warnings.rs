@@ -1068,6 +1068,30 @@ impl server2::push::deliver::Fetch for CombinedProvinceGeocode {
                     "country": "KR",
                     "kmaAddress": {"name1": "전남광주통합특별시", "name2": "없는구", "name3": ""}
                 })
+            } else if url.ends_with("/geocode/v000903/coord/35.11,126.81") {
+                // Non-string name2 must not be coerced to "서구" (CODEX-2).
+                serde_json::json!({
+                    "country": "KR",
+                    "kmaAddress": {"name1": "전남광주통합특별시", "name2": ["서구"], "name3": ""}
+                })
+            } else if url.ends_with("/geocode/v000903/coord/35.12,126.82") {
+                // Omitted kmaAddress must not fall back to stored town (CODEX-4).
+                serde_json::json!({"country": "KR"})
+            } else if url.ends_with("/geocode/v000903/coord/35.13,126.83") {
+                // Null kmaAddress must not fall back to stored town (CODEX-4).
+                serde_json::json!({"country": "KR", "kmaAddress": null})
+            } else if url.ends_with("/geocode/v000903/coord/35.14,126.84") {
+                // Omitted name2 under combined province must stay unmapped (CODEX-4).
+                serde_json::json!({
+                    "country": "KR",
+                    "kmaAddress": {"name1": "전남광주통합특별시"}
+                })
+            } else if url.ends_with("/geocode/v000903/coord/35.15,126.85") {
+                // Null name2 under combined province must stay unmapped (CODEX-4).
+                serde_json::json!({
+                    "country": "KR",
+                    "kmaAddress": {"name1": "전남광주통합특별시", "name2": null, "name3": null}
+                })
             } else {
                 return Err(format!("unexpected url {url}"));
             };
@@ -1098,11 +1122,43 @@ async fn combined_province_warning_delivery_routes_by_district_without_leakage()
     let gwangju = coord_reg(1, "synthetic-gwangju-coord-token", 126.85, 35.16);
     let jeonnam = coord_reg(2, "synthetic-jeonnam-coord-token", 126.46, 34.81);
     let unknown = coord_reg(3, "synthetic-unknown-coord-token", 126.7, 35.0);
+    // Boundary registrations (CODEX-2 & CODEX-4): non-string array name2, omitted/null
+    // kmaAddress or name2 with a stored Gwangju town, and legacy Jeonnam with second: null.
+    let mut stored_gwangju_town = Obj::new();
+    stored_gwangju_town.set("first", "전남광주통합특별시");
+    stored_gwangju_town.set("second", "서구");
+    let coord_with_town = |n: u8, token: &str, lon: f64, lat: f64| {
+        let mut r = coord_reg(n, token, lon, lat);
+        r.doc.set("town", Val::Obj(stored_gwangju_town.clone()));
+        r
+    };
+    let array_name2 = coord_reg(5, "synthetic-array-name2-token", 126.81, 35.11);
+    let omitted_addr = coord_with_town(6, "synthetic-omitted-addr-token", 126.82, 35.12);
+    let null_addr = coord_with_town(7, "synthetic-null-addr-token", 126.83, 35.13);
+    let omitted_name2 = coord_with_town(8, "synthetic-omitted-name2-token", 126.84, 35.14);
+    let null_name2 = coord_with_town(9, "synthetic-null-name2-token", 126.85, 35.15);
+    let mut legacy_jeonnam_null_second = registration(10);
+    legacy_jeonnam_null_second
+        .doc
+        .set("fcmToken", "synthetic-legacy-jeonnam-null-token");
+    let mut legacy_town = Obj::new();
+    legacy_town.set("first", "전라남도");
+    legacy_town.set("second", Val::Null);
+    legacy_jeonnam_null_second
+        .doc
+        .set("town", Val::Obj(legacy_town));
+
     let initial_docs = [
         gwangju.doc.clone(),
         jeonnam.doc.clone(),
         unknown.doc.clone(),
         town_only.doc.clone(),
+        array_name2.doc.clone(),
+        omitted_addr.doc.clone(),
+        null_addr.doc.clone(),
+        omitted_name2.doc.clone(),
+        null_name2.doc.clone(),
+        legacy_jeonnam_null_second.doc.clone(),
     ];
 
     let rig = rig(
@@ -1113,6 +1169,12 @@ async fn combined_province_warning_delivery_routes_by_district_without_leakage()
             (Coll::Alert, jeonnam),
             (Coll::Alert, unknown),
             (Coll::Alert, town_only),
+            (Coll::Alert, array_name2),
+            (Coll::Alert, omitted_addr),
+            (Coll::Alert, null_addr),
+            (Coll::Alert, omitted_name2),
+            (Coll::Alert, null_name2),
+            (Coll::Alert, legacy_jeonnam_null_second),
         ],
         None,
     )

@@ -55,13 +55,13 @@ fn elevations() -> &'static HashMap<Key, [f64; 3]> {
 /// The town list and the region table keep the names from before these changes, and the geocoder
 /// answers the new ones.
 pub(super) fn listed_first<'a>(first: &'a str, second: &str) -> &'a str {
-    match first {
+    match crate::warnings::js::trim(first) {
         "강원특별자치도" => "강원도",
         "전북특별자치도" => "전라북도",
         crate::warnings::zones::COMBINED_GWANGJU_JEONNAM => {
             crate::warnings::zones::gwangju_jeonnam_province(second).unwrap_or(first)
         }
-        other => other,
+        _ => first,
     }
 }
 fn serves(first: &str, second: &str, station: &str) -> bool {

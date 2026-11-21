@@ -219,7 +219,8 @@ impl ZoneTable {
             .find(|(k, _)| *k == town.first)
             .map_or(town.first.as_str(), |(_, v)| v);
         let normalized_second;
-        let second = if trim(province_name) == COMBINED_GWANGJU_JEONNAM {
+        let normalized_third;
+        let (second, third) = if trim(province_name) == COMBINED_GWANGJU_JEONNAM {
             normalized_second = town
                 .second
                 .chars()
@@ -229,9 +230,14 @@ impl ZoneTable {
                 return vec![];
             };
             province_name = resolved;
-            normalized_second.as_str()
+            normalized_third = town
+                .third
+                .chars()
+                .filter(|c| !js::is_space(*c))
+                .collect::<String>();
+            (normalized_second.as_str(), normalized_third.as_str())
         } else {
-            town.second.as_str()
+            (town.second.as_str(), town.third.as_str())
         };
         let Some(province) = self
             .first_level
@@ -241,7 +247,6 @@ impl ZoneTable {
         else {
             return vec![];
         };
-        let third = town.third.as_str();
         if let Some((_, _, zone)) = ISLAND_ZONES
             .iter()
             .find(|(s, t, _)| second.contains(s) && third.contains(t))

@@ -127,24 +127,84 @@ fn combined_gwangju_jeonnam_zones_match_legacy_and_reject_unknown() {
             "jeonnam {district} must exclude Gwangju zones: {combined:?}"
         );
     }
-    for (second, third, legacy_first, legacy_second) in [
-        (" 서구 ", "치평동", "광주광역시", "서구"),
-        (" 무안군 ", "삼향읍", "전라남도", "무안군"),
-        (" 신안군 ", "흑산면", "전라남도", "신안군"),
-        (" 여수시 ", "삼산면", "전라남도", "여수시"),
+    for (first, second, third, legacy_first, legacy_second, legacy_third) in [
+        (
+            "전남광주통합특별시",
+            " 서구 ",
+            "치평동",
+            "광주광역시",
+            "서구",
+            "치평동",
+        ),
+        (
+            " 전남광주통합특별시 ",
+            " 서구 ",
+            "치평동",
+            "광주광역시",
+            "서구",
+            "치평동",
+        ),
+        (
+            "전남광주통합특별시",
+            " 무안군 ",
+            "삼향읍",
+            "전라남도",
+            "무안군",
+            "삼향읍",
+        ),
+        (
+            " 전남광주통합특별시 ",
+            " 무안군 ",
+            "삼향읍",
+            "전라남도",
+            "무안군",
+            "삼향읍",
+        ),
+        (
+            "전남광주통합특별시",
+            " 신안군 ",
+            "흑산면",
+            "전라남도",
+            "신안군",
+            "흑산면",
+        ),
+        (
+            "전남광주통합특별시",
+            " 신안군 ",
+            "흑 산면",
+            "전라남도",
+            "신안군",
+            "흑산면",
+        ),
+        (
+            "전남광주통합특별시",
+            " 여수시 ",
+            "삼산면",
+            "전라남도",
+            "여수시",
+            "삼산면",
+        ),
+        (
+            "전남광주통합특별시",
+            " 여수시 ",
+            "삼 산면",
+            "전라남도",
+            "여수시",
+            "삼산면",
+        ),
     ] {
         let combined = table.zones_for_town(&Town {
-            first: "전남광주통합특별시".into(),
+            first: first.into(),
             second: second.into(),
             third: third.into(),
         });
         let legacy = table.zones_for_town(&Town {
             first: legacy_first.into(),
             second: legacy_second.into(),
-            third: third.into(),
+            third: legacy_third.into(),
         });
-        assert!(!legacy.is_empty(), "{second} {third}");
-        assert_eq!(combined, legacy, "trimmed/island {second} {third}");
+        assert!(!legacy.is_empty(), "{first} {second} {third}");
+        assert_eq!(combined, legacy, "trimmed/island {first} {second} {third}");
     }
     for bad in ["", "   ", "없는구", "강남구"] {
         assert!(
