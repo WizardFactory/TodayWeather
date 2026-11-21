@@ -621,3 +621,58 @@ test("precipitation forecast section shows upcoming rows instead of past days (#
   await expect(precipPanel).not.toContainText("그제");
   await expect(precipPanel).not.toContainText("어제");
 });
+
+test("sidebar keeps single aria-current across routes, removes live-dot, normalizes -0, and aligns air bars (#3116)", async ({
+  page,
+}) => {
+  const raw = structuredClone(fixture.response) as any;
+  raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: -0.04 };
+  await page.route(API + "/weather/**", (route) => route.fulfill({ json: raw }));
+
+  // /start without saved places marks only 날씨 active (never both 날씨 & 미세먼지).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/start");
+  const activeLinks = page.locator('.sidebar nav [aria-current="page"]');
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+
+  // /weather/seoul/hourly: single active 날씨, no .live-dot, -0.04 formatted as 0° (not -0°).
+  await page.goto("/weather/seoul/hourly");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+  await expect(page.locator(".live-dot")).toHaveCount(0);
+  await expect(page.locator(".hero-card .temperature")).toHaveText("0°C");
+
+  // /weather/seoul/daily still marks 날씨 active.
+  await page.goto("/weather/seoul/daily");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+
+  // /air/seoul marks only 미세먼지 active, keeps bar labels single-line, and scrolls observed bar into view on 390px.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/air/seoul");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("미세먼지");
+
+  const barCheck = await page.locator(".bar-chart").evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    const bars = [...el.querySelectorAll(":scope > div")];
+    const labels = [...el.querySelectorAll("small")].filter((s) =>
+      s.textContent?.trim(),
+    );
+    const wrapped = labels.some((s) => {
+      const lh = parseFloat(getComputedStyle(s).lineHeight) || 18;
+      return s.getBoundingClientRect().height > lh * 1.6;
+    });
+    const observed = bars[12]?.getBoundingClientRect();
+    return {
+      count: bars.length,
+      wrapped,
+      observedInView:
+        !!observed && observed.left >= sb.left - 2 && observed.right <= sb.right + 2,
+    };
+  });
+  expect(barCheck.count).toBe(24);
+  expect(barCheck.wrapped).toBe(false);
+  expect(barCheck.observedInView).toBe(true);
+});

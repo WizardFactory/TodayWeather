@@ -431,6 +431,10 @@ export default function App() {
         selected.id,
       )
     : "/start";
+  const weatherNavActive =
+    location.pathname.startsWith("/weather/") ||
+    (!selected && (location.pathname === "/" || location.pathname === "/start"));
+  const airNavActive = location.pathname.startsWith("/air/");
   return (
     <AppContext.Provider
       value={{
@@ -479,20 +483,20 @@ export default function App() {
           </button>
           <div className="sidebar-label">{t("shell.myWeather")}</div>
           <nav>
-            <NavLink
+            <Link
               to={navWeather}
-              className={({ isActive }) =>
-                isActive ? "nav-item active" : "nav-item"
-              }
+              className={weatherNavActive ? "nav-item active" : "nav-item"}
+              aria-current={weatherNavActive ? "page" : undefined}
             >
               <CloudSun size={19} /> {t("nav.weather")}
-            </NavLink>
-            <NavLink
+            </Link>
+            <Link
               to={selected ? "/air/" + selected.id : "/start"}
-              className="nav-item"
+              className={airNavActive ? "nav-item active" : "nav-item"}
+              aria-current={airNavActive ? "page" : undefined}
             >
               <Wind size={19} /> {t("nav.air")}
-            </NavLink>
+            </Link>
             <NavLink to="/locations" className="nav-item">
               <MapPin size={19} /> {t("nav.locations")}
             </NavLink>

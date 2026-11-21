@@ -3,10 +3,12 @@ import {
   coordinates,
   convertValue,
   DEFAULT_UNITS,
+  formatValue,
   normalizeWeather,
   normalizeNation,
   numberValue,
   rowTime,
+  setNumberLocale,
 } from "../src/index";
 import kma from "../../../docs/rewrite/examples/client-kma-response.json";
 import world from "../../../docs/rewrite/examples/client-world-response.json";
@@ -191,5 +193,23 @@ describe("national city identity", () => {
       { units: DEFAULT_UNITS, mode: "live" },
     );
     expect(data.weather.map((r) => r.name)).toEqual(["춘천시", "강릉시"]);
+  });
+});
+
+describe("number formatting", () => {
+  it("normalizes negative zero and near-zero negative values across locales (#3116)", () => {
+    expect(formatValue(-0, 0)).toBe("0");
+    expect(formatValue(-0.04, 0)).toBe("0");
+    expect(formatValue(-0.49, 0)).toBe("0");
+    expect(formatValue(-0.5, 0)).toBe("-1");
+    expect(formatValue(-0.04, 1)).toBe("0");
+    expect(formatValue(-0.05, 1)).toBe("-0.1");
+    try {
+      setNumberLocale("de-DE");
+      expect(formatValue(-0.04, 0)).toBe("0");
+      expect(formatValue(-0.5, 0)).toBe("-1");
+    } finally {
+      setNumberLocale("ko-KR");
+    }
   });
 });
