@@ -1,0 +1,628 @@
+{
+  "schemaVersion": 1,
+  "contract": {
+    "canonicalOrigin": "https://link.todayweather.ai",
+    "canonicalHost": "link.todayweather.ai",
+    "pwaOrigin": "https://app.todayweather.ai",
+    "excludedHosts": ["todayweather.ai", "app.todayweather.ai"],
+    "legacyScheme": "todayweather",
+    "coordinateDecimals": 3,
+    "catalogMatchDegrees": 0.04,
+    "savedPlaceMatchDegrees": 0.01,
+    "maxNameLength": 80,
+    "validViews": ["hourly", "daily", "air"],
+    "validPollutants": ["aqi", "pm25", "pm10", "o3", "no2", "so2", "co"],
+    "slugPattern": "^[a-z0-9-]{1,64}$"
+  },
+  "catalog": [
+    { "id": "seoul", "lat": 37.567, "lon": 126.978 },
+    { "id": "busan", "lat": 35.179, "lon": 129.076 },
+    { "id": "incheon", "lat": 37.456, "lon": 126.705 },
+    { "id": "daegu", "lat": 35.871, "lon": 128.601 },
+    { "id": "daejeon", "lat": 36.35, "lon": 127.385 },
+    { "id": "gwangju", "lat": 35.16, "lon": 126.852 },
+    { "id": "ulsan", "lat": 35.539, "lon": 129.311 },
+    { "id": "jeju", "lat": 33.499, "lon": 126.531 },
+    { "id": "gangneung", "lat": 37.752, "lon": 128.876 },
+    { "id": "suwon", "lat": 37.263, "lon": 127.029 },
+    { "id": "chuncheon", "lat": 37.881, "lon": 127.73 },
+    { "id": "cheongju", "lat": 36.642, "lon": 127.489 },
+    { "id": "jeonju", "lat": 35.824, "lon": 127.148 },
+    { "id": "pohang", "lat": 36.019, "lon": 129.343 },
+    { "id": "mokpo", "lat": 34.811, "lon": 126.392 },
+    { "id": "yeosu", "lat": 34.761, "lon": 127.662 },
+    { "id": "andong", "lat": 36.569, "lon": 128.729 },
+    { "id": "tokyo", "lat": 35.69, "lon": 139.692 },
+    { "id": "london", "lat": 51.507, "lon": -0.128 },
+    { "id": "new-york", "lat": 40.713, "lon": -74.006 },
+    { "id": "berlin", "lat": 52.52, "lon": 13.405 },
+    { "id": "singapore", "lat": 1.352, "lon": 103.82 }
+  ],
+  "edgeMethodCases": [
+    { "method": "GET", "uri": "/open", "status": 200 },
+    { "method": "HEAD", "uri": "/open", "status": 200 },
+    { "method": "POST", "uri": "/open", "status": 405 },
+    { "method": "PUT", "uri": "/place/seoul", "status": 405 },
+    { "method": "DELETE", "uri": "/warnings", "status": 405 }
+  ],
+  "parseCases": [
+    {
+      "id": "open-root",
+      "description": "Root path opens app and rewrites to /open.html at edge",
+      "url": "https://link.todayweather.ai/",
+      "native": { "kind": "open", "lang": null },
+      "edge": { "action": "rewrite", "status": 200, "uri": "/open.html" }
+    },
+    {
+      "id": "open-explicit",
+      "description": "Explicit /open with optional lang and ignored campaign params",
+      "url": "https://link.todayweather.ai/open?lang=ko&utm_source=kakao",
+      "native": { "kind": "open", "lang": "ko" },
+      "edge": { "action": "rewrite", "status": 200, "uri": "/open.html" }
+    },
+    {
+      "id": "open-trailing-slash-mixed-host",
+      "description": "Case-insensitive host and trailing slash tolerated on /open/",
+      "url": "https://LINK.TodayWeather.AI/open/?lang=EN",
+      "native": { "kind": "open", "lang": "en" },
+      "edge": { "action": "rewrite", "status": 200, "uri": "/open.html" }
+    },
+    {
+      "id": "place-default-hourly",
+      "description": "Catalog slug defaults to hourly view",
+      "url": "https://link.todayweather.ai/place/seoul",
+      "native": {
+        "kind": "place",
+        "slug": "seoul",
+        "view": "hourly",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/weather/seoul/hourly?from=link"
+      }
+    },
+    {
+      "id": "place-daily-trailing-slash",
+      "description": "Catalog slug with daily view and trailing slash",
+      "url": "https://link.todayweather.ai/place/tokyo/?view=daily",
+      "native": {
+        "kind": "place",
+        "slug": "tokyo",
+        "view": "daily",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/weather/tokyo/daily?from=link"
+      }
+    },
+    {
+      "id": "place-hyphen-slug-air-pollutant",
+      "description": "Hyphenated catalog slug with air view and pm25 pollutant",
+      "url": "https://link.todayweather.ai/place/new-york?view=air&pollutant=pm25",
+      "native": {
+        "kind": "place",
+        "slug": "new-york",
+        "view": "air",
+        "pollutant": "pm25"
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/air/new-york?pollutant=pm25&from=link"
+      }
+    },
+    {
+      "id": "place-unknown-view-defaults-hourly",
+      "description": "Unknown view parameter falls back safely to hourly",
+      "url": "https://link.todayweather.ai/place/busan?view=radar",
+      "native": {
+        "kind": "place",
+        "slug": "busan",
+        "view": "hourly",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/weather/busan/hourly?from=link"
+      }
+    },
+    {
+      "id": "place-invalid-slug-uppercase",
+      "description": "Invalid slug characters are rejected",
+      "url": "https://link.todayweather.ai/place/Seoul_KR",
+      "native": null,
+      "edge": { "action": "error", "status": 404 }
+    },
+    {
+      "id": "air-default-pollutant",
+      "description": "Catalog air route defaults pollutant to aqi",
+      "url": "https://link.todayweather.ai/air/seoul",
+      "native": {
+        "kind": "place",
+        "slug": "seoul",
+        "view": "air",
+        "pollutant": "aqi"
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/air/seoul?from=link"
+      }
+    },
+    {
+      "id": "air-explicit-pollutant",
+      "description": "Catalog air route preserves valid pollutant query",
+      "url": "https://link.todayweather.ai/air/jeju?pollutant=o3",
+      "native": {
+        "kind": "place",
+        "slug": "jeju",
+        "view": "air",
+        "pollutant": "o3"
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/air/jeju?pollutant=o3&from=link"
+      }
+    },
+    {
+      "id": "air-unknown-pollutant-defaults-aqi",
+      "description": "Unknown pollutant falls back to aqi and omits invalid query at edge",
+      "url": "https://link.todayweather.ai/air/seoul?pollutant=unknown",
+      "native": {
+        "kind": "place",
+        "slug": "seoul",
+        "view": "air",
+        "pollutant": "aqi"
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/air/seoul?from=link"
+      }
+    },
+    {
+      "id": "loc-korean-neighborhood",
+      "description": "Valid coordinate route with UTF-8 Korean display name",
+      "url": "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EC%84%B1%EB%82%A8%EC%8B%9C%20%EB%B6%84%EB%8B%B9%EA%B5%AC&view=hourly",
+      "native": {
+        "kind": "coordinate",
+        "lat": 37.383,
+        "lon": 127.119,
+        "name": "성남시 분당구",
+        "view": "hourly",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EC%84%B1%EB%82%A8%EC%8B%9C%20%EB%B6%84%EB%8B%B9%EA%B5%AC&from=link"
+      }
+    },
+    {
+      "id": "loc-equator-prime-meridian",
+      "description": "Zero coordinates (0, 0) are valid and never treated as falsy",
+      "url": "https://link.todayweather.ai/loc?lat=0&lon=0",
+      "native": {
+        "kind": "coordinate",
+        "lat": 0,
+        "lon": 0,
+        "name": null,
+        "view": "hourly",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/loc?lat=0&lon=0&from=link"
+      }
+    },
+    {
+      "id": "loc-southern-western-daily",
+      "description": "Negative coordinates in southern/western hemispheres with daily view",
+      "url": "https://link.todayweather.ai/loc?lat=-33.8688&lon=-70.6693&name=Santiago&view=daily",
+      "native": {
+        "kind": "coordinate",
+        "lat": -33.869,
+        "lon": -70.669,
+        "name": "Santiago",
+        "view": "daily",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/loc?lat=-33.869&lon=-70.669&name=Santiago&view=daily&from=link"
+      }
+    },
+    {
+      "id": "loc-air-view-pollutant",
+      "description": "Coordinate route with air view and pm10 pollutant",
+      "url": "https://link.todayweather.ai/loc?lat=37.556&lon=126.979&view=air&pollutant=pm10",
+      "native": {
+        "kind": "coordinate",
+        "lat": 37.556,
+        "lon": 126.979,
+        "name": null,
+        "view": "air",
+        "pollutant": "pm10"
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/loc?lat=37.556&lon=126.979&view=air&pollutant=pm10&from=link"
+      }
+    },
+    {
+      "id": "loc-name-sanitized-and-truncated",
+      "description": "Control characters are stripped and display name is capped at 80 scalar values",
+      "url": "https://link.todayweather.ai/loc?lat=37.567&lon=126.978&name=%20%0A%09aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBBBB%07%20",
+      "native": {
+        "kind": "coordinate",
+        "lat": 37.567,
+        "lon": 126.978,
+        "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "view": "hourly",
+        "pollutant": null
+      },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/loc?lat=37.567&lon=126.978&name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&from=link"
+      }
+    },
+    {
+      "id": "loc-invalid-lat-out-of-range",
+      "description": "Latitude > 90 is rejected by native and redirected to /open at edge",
+      "url": "https://link.todayweather.ai/loc?lat=91&lon=126.978",
+      "native": null,
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://link.todayweather.ai/open"
+      }
+    },
+    {
+      "id": "loc-invalid-lon-out-of-range",
+      "description": "Longitude < -180 is rejected by native and redirected to /open at edge",
+      "url": "https://link.todayweather.ai/loc?lat=37.567&lon=-181",
+      "native": null,
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://link.todayweather.ai/open"
+      }
+    },
+    {
+      "id": "loc-invalid-nan-and-missing",
+      "description": "NaN latitude is rejected by native and redirected to /open at edge",
+      "url": "https://link.todayweather.ai/loc?lat=NaN&lon=126.978",
+      "native": null,
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://link.todayweather.ai/open"
+      }
+    },
+    {
+      "id": "loc-missing-lon",
+      "description": "Missing longitude is rejected by native and redirected to /open at edge",
+      "url": "https://link.todayweather.ai/loc?lat=37.567",
+      "native": null,
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://link.todayweather.ai/open"
+      }
+    },
+    {
+      "id": "nation-weather",
+      "description": "Nationwide weather overlay",
+      "url": "https://link.todayweather.ai/nation/weather",
+      "native": { "kind": "nationWeather" },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/nation/weather?from=link"
+      }
+    },
+    {
+      "id": "nation-air-trailing-slash",
+      "description": "Nationwide air overlay with trailing slash",
+      "url": "https://link.todayweather.ai/nation/air/",
+      "native": { "kind": "nationAir" },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/nation/air?from=link"
+      }
+    },
+    {
+      "id": "warnings",
+      "description": "Korean special weather warnings overlay",
+      "url": "https://link.todayweather.ai/warnings",
+      "native": { "kind": "warnings" },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/warnings?from=link"
+      }
+    },
+    {
+      "id": "well-known-aasa",
+      "description": "iOS Universal Links AASA passes straight through to S3 with 200",
+      "url": "https://link.todayweather.ai/.well-known/apple-app-site-association",
+      "native": null,
+      "edge": {
+        "action": "passthrough",
+        "status": 200,
+        "uri": "/.well-known/apple-app-site-association"
+      }
+    },
+    {
+      "id": "well-known-assetlinks",
+      "description": "Android App Links assetlinks.json passes straight through to S3 with 200",
+      "url": "https://link.todayweather.ai/.well-known/assetlinks.json",
+      "native": null,
+      "edge": {
+        "action": "passthrough",
+        "status": 200,
+        "uri": "/.well-known/assetlinks.json"
+      }
+    },
+    {
+      "id": "unknown-path",
+      "description": "Unknown path returns 404 at edge and null in native parser",
+      "url": "https://link.todayweather.ai/unknown/path",
+      "native": null,
+      "edge": { "action": "error", "status": 404 }
+    },
+    {
+      "id": "policy-path-on-link-host",
+      "description": "Policy paths are never served on link.todayweather.ai",
+      "url": "https://link.todayweather.ai/mobile/privacy.html",
+      "native": null,
+      "edge": { "action": "error", "status": 404 }
+    },
+    {
+      "id": "path-traversal-dotdot",
+      "description": "Encoded path traversal returns 400 at edge and null in native parser",
+      "url": "https://link.todayweather.ai/place/%2e%2e/etc/passwd",
+      "native": null,
+      "edge": { "action": "error", "status": 400 }
+    },
+    {
+      "id": "path-null-byte",
+      "description": "Encoded NUL byte returns 400 at edge and null in native parser",
+      "url": "https://link.todayweather.ai/place/seoul%00",
+      "native": null,
+      "edge": { "action": "error", "status": 400 }
+    },
+    {
+      "id": "path-malformed-percent",
+      "description": "Malformed percent-encoding returns 400 at edge and null in native parser",
+      "url": "https://link.todayweather.ai/place/%E0%A4%A",
+      "native": null,
+      "edge": { "action": "error", "status": 400 }
+    },
+    {
+      "id": "wrong-host-root-policy",
+      "description": "Root domain policy URL must never be captured by native deep-link parser",
+      "url": "https://todayweather.ai/mobile/privacy.html",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "wrong-host-pwa",
+      "description": "PWA origin URL must never be captured by native deep-link parser",
+      "url": "https://app.todayweather.ai/weather/seoul/hourly",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "wrong-scheme-http",
+      "description": "Insecure HTTP link is rejected by native parser",
+      "url": "http://link.todayweather.ai/place/seoul",
+      "native": null,
+      "edge": null
+    },
+    {
+      "id": "legacy-ios-widget",
+      "description": "Legacy iOS widget link preserves place query identifier",
+      "url": "todayweather://widget?place=place-seoul",
+      "legacyPlatform": "ios",
+      "native": { "kind": "legacyWidget", "placeId": "place-seoul" },
+      "edge": null
+    },
+    {
+      "id": "legacy-android-widget-index",
+      "description": "Legacy Android widget numeric index link remains supported",
+      "url": "todayweather://2",
+      "legacyPlatform": "android",
+      "native": { "kind": "legacyWidgetIndex", "index": 2 },
+      "edge": null
+    },
+    {
+      "id": "legacy-bare-scheme",
+      "description": "Bare custom scheme without target is ignored safely",
+      "url": "todayweather://",
+      "native": null,
+      "edge": null
+    }
+  ],
+  "shareBuildCases": [
+    {
+      "id": "share-catalog-id-default",
+      "description": "Exact catalog ID with default hourly view produces compact /place/{slug}",
+      "input": {
+        "placeId": "seoul",
+        "lat": 37.567,
+        "lon": 126.978,
+        "name": "서울",
+        "view": "hourly",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/place/seoul"
+    },
+    {
+      "id": "share-catalog-id-daily",
+      "description": "Catalog ID on daily tab appends ?view=daily",
+      "input": {
+        "placeId": "tokyo",
+        "lat": 35.69,
+        "lon": 139.692,
+        "name": "도쿄",
+        "view": "daily",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/place/tokyo?view=daily"
+    },
+    {
+      "id": "share-catalog-id-air-pollutant",
+      "description": "Catalog ID on air tab with pm25 uses /air/{slug}?pollutant=pm25",
+      "input": {
+        "placeId": "seoul",
+        "lat": 37.567,
+        "lon": 126.978,
+        "name": "서울",
+        "view": "air",
+        "pollutant": "pm25",
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/air/seoul?pollutant=pm25"
+    },
+    {
+      "id": "share-catalog-id-air-default-aqi",
+      "description": "Catalog ID on air tab with default aqi omits redundant pollutant parameter",
+      "input": {
+        "placeId": "seoul",
+        "lat": 37.567,
+        "lon": 126.978,
+        "name": "서울",
+        "view": "air",
+        "pollutant": "aqi",
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/air/seoul"
+    },
+    {
+      "id": "share-nearby-catalog-match",
+      "description": "Place within 0.04 degrees of a catalog city maps to that catalog slug",
+      "input": {
+        "placeId": null,
+        "lat": 37.5563,
+        "lon": 126.9791,
+        "name": "서울시 회현동",
+        "view": "hourly",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/place/seoul"
+    },
+    {
+      "id": "share-current-gps-nearby-catalog",
+      "description": "Current GPS position within 0.04 degrees of catalog city prefers catalog slug over exact coordinates",
+      "input": {
+        "placeId": "current",
+        "lat": 35.18214,
+        "lon": 129.07192,
+        "name": "부산시 중구",
+        "view": "hourly",
+        "pollutant": null,
+        "current": true
+      },
+      "url": "https://link.todayweather.ai/place/busan"
+    },
+    {
+      "id": "share-arbitrary-korean-neighborhood",
+      "description": "Non-catalog Korean neighborhood emits 3-decimal rounded /loc URL with encoded name",
+      "input": {
+        "placeId": null,
+        "lat": 37.38274,
+        "lon": 127.11891,
+        "name": "성남시 분당구",
+        "view": "hourly",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EC%84%B1%EB%82%A8%EC%8B%9C%20%EB%B6%84%EB%8B%B9%EA%B5%AC"
+    },
+    {
+      "id": "share-arbitrary-overseas-daily",
+      "description": "Non-catalog overseas place with negative longitude and daily view",
+      "input": {
+        "placeId": null,
+        "lat": 37.77493,
+        "lon": -122.41942,
+        "name": "San Francisco",
+        "view": "daily",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/loc?lat=37.775&lon=-122.419&name=San%20Francisco&view=daily"
+    },
+    {
+      "id": "share-zero-coordinates-and-negative-zero",
+      "description": "Zero coordinates are valid and -0.0001 normalizes to 0 without minus sign",
+      "input": {
+        "placeId": null,
+        "lat": -0.0001,
+        "lon": 0,
+        "name": "",
+        "view": "hourly",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/loc?lat=0&lon=0"
+    },
+    {
+      "id": "share-current-gps-non-catalog-rounded",
+      "description": "Current GPS position outside catalog emits 3-decimal rounded coordinates",
+      "input": {
+        "placeId": "current",
+        "lat": 37.38274,
+        "lon": 127.11891,
+        "name": "분당구",
+        "view": "hourly",
+        "pollutant": null,
+        "current": true
+      },
+      "url": "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EB%B6%84%EB%8B%B9%EA%B5%AC"
+    },
+    {
+      "id": "share-missing-coordinates-fallback-open",
+      "description": "Missing coordinates fall back safely to https://link.todayweather.ai/open",
+      "input": {
+        "placeId": null,
+        "lat": null,
+        "lon": null,
+        "name": "알 수 없음",
+        "view": "hourly",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/open"
+    },
+    {
+      "id": "share-out-of-range-coordinates-fallback-open",
+      "description": "Out-of-range coordinates fall back safely to https://link.todayweather.ai/open",
+      "input": {
+        "placeId": null,
+        "lat": 95.1,
+        "lon": 127.0,
+        "name": "Invalid",
+        "view": "hourly",
+        "pollutant": null,
+        "current": false
+      },
+      "url": "https://link.todayweather.ai/open"
+    }
+  ]
+}
