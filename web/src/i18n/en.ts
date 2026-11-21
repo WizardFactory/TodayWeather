@@ -195,8 +195,11 @@ const en: Catalog = {
   "public.body":
     "Save it to your locations to check hourly weather and air quality.",
   "public.open": "View weather here",
-  "link.appOption": "Open or install the app",
+  "link.appOption": "Open in app",
   "link.dismiss": "Dismiss",
+  "link.qrTitle": "Mobile app",
+  "link.qrBody": "Scan with your phone camera to open the app or store.",
+  "link.qrAlt": "QR code to open the TodayWeather app or visit the app store",
   "link.addFavorite": "Add to favorites",
   "link.invalidLocation": "This shared location is invalid.",
   "public.notFound": "Shared location not found",

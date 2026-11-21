@@ -12,7 +12,9 @@
     "maxNameLength": 80,
     "validViews": ["hourly", "daily", "air"],
     "validPollutants": ["aqi", "pm25", "pm10", "o3", "no2", "so2", "co"],
-    "slugPattern": "^[a-z0-9-]{1,64}$"
+    "slugPattern": "^[a-z0-9-]{1,64}$",
+    "appStoreUrl": "https://apps.apple.com/app/id1041700694",
+    "playStoreUrl": "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather"
   },
   "catalog": [
     { "id": "seoul", "lat": 37.567, "lon": 126.978 },
@@ -39,33 +41,122 @@
     { "id": "singapore", "lat": 1.352, "lon": 103.82 }
   ],
   "edgeMethodCases": [
-    { "method": "GET", "uri": "/open", "status": 200 },
-    { "method": "HEAD", "uri": "/open", "status": 200 },
+    { "method": "GET", "uri": "/open", "status": 302 },
+    { "method": "HEAD", "uri": "/open", "status": 302 },
     { "method": "POST", "uri": "/open", "status": 405 },
     { "method": "PUT", "uri": "/place/seoul", "status": 405 },
     { "method": "DELETE", "uri": "/warnings", "status": 405 }
   ],
+  "edgeStoreFallbackCases": [
+    {
+      "id": "store-fallback-open-ios",
+      "url": "https://link.todayweather.ai/open?fallback=store",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://apps.apple.com/app/id1041700694",
+        "vary": "User-Agent"
+      }
+    },
+    {
+      "id": "store-fallback-open-android",
+      "url": "https://link.todayweather.ai/open?fallback=store",
+      "userAgent": "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather",
+        "vary": "User-Agent"
+      }
+    },
+    {
+      "id": "store-fallback-place-ios",
+      "url": "https://link.todayweather.ai/place/seoul?view=daily&fallback=store",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://apps.apple.com/app/id1041700694",
+        "vary": "User-Agent"
+      }
+    },
+    {
+      "id": "store-fallback-ipados-desktop-ua-hint",
+      "url": "https://link.todayweather.ai/loc?lat=37.567&lon=126.978&fallback=store&store=ios",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://apps.apple.com/app/id1041700694",
+        "vary": "User-Agent"
+      }
+    },
+    {
+      "id": "store-fallback-open-desktop-pwa",
+      "url": "https://link.todayweather.ai/open?fallback=store",
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/",
+        "vary": "User-Agent"
+      }
+    },
+    {
+      "id": "store-fallback-unknown-path-stays-404",
+      "url": "https://link.todayweather.ai/unknown?fallback=store",
+      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+      "edge": {
+        "action": "error",
+        "status": 404
+      }
+    }
+  ],
   "parseCases": [
     {
       "id": "open-root",
-      "description": "Root path opens app and rewrites to /open.html at edge",
+      "description": "Root path opens app and redirects directly to WebApp at edge",
       "url": "https://link.todayweather.ai/",
       "native": { "kind": "open", "lang": null },
-      "edge": { "action": "rewrite", "status": 200, "uri": "/open.html" }
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/"
+      }
     },
     {
       "id": "open-explicit",
       "description": "Explicit /open with optional lang and ignored campaign params",
       "url": "https://link.todayweather.ai/open?lang=ko&utm_source=kakao",
       "native": { "kind": "open", "lang": "ko" },
-      "edge": { "action": "rewrite", "status": 200, "uri": "/open.html" }
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/"
+      }
     },
     {
       "id": "open-trailing-slash-mixed-host",
       "description": "Case-insensitive host and trailing slash tolerated on /open/",
       "url": "https://LINK.TodayWeather.AI/open/?lang=EN",
       "native": { "kind": "open", "lang": "en" },
-      "edge": { "action": "rewrite", "status": 200, "uri": "/open.html" }
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/"
+      }
+    },
+    {
+      "id": "open-store-fallback-ignored-by-native",
+      "description": "Unknown fallback=store query parameter is ignored by native and redirects desktop/default UA to WebApp",
+      "url": "https://link.todayweather.ai/open?fallback=store",
+      "native": { "kind": "open", "lang": null },
+      "edge": {
+        "action": "redirect",
+        "status": 302,
+        "location": "https://app.todayweather.ai/"
+      }
     },
     {
       "id": "place-default-hourly",
@@ -295,46 +386,46 @@
     },
     {
       "id": "loc-invalid-lat-out-of-range",
-      "description": "Latitude > 90 is rejected by native and redirected to /open at edge",
+      "description": "Latitude > 90 is rejected by native and redirected to WebApp root at edge",
       "url": "https://link.todayweather.ai/loc?lat=91&lon=126.978",
       "native": null,
       "edge": {
         "action": "redirect",
         "status": 302,
-        "location": "https://link.todayweather.ai/open"
+        "location": "https://app.todayweather.ai/"
       }
     },
     {
       "id": "loc-invalid-lon-out-of-range",
-      "description": "Longitude < -180 is rejected by native and redirected to /open at edge",
+      "description": "Longitude < -180 is rejected by native and redirected to WebApp root at edge",
       "url": "https://link.todayweather.ai/loc?lat=37.567&lon=-181",
       "native": null,
       "edge": {
         "action": "redirect",
         "status": 302,
-        "location": "https://link.todayweather.ai/open"
+        "location": "https://app.todayweather.ai/"
       }
     },
     {
       "id": "loc-invalid-nan-and-missing",
-      "description": "NaN latitude is rejected by native and redirected to /open at edge",
+      "description": "NaN latitude is rejected by native and redirected to WebApp root at edge",
       "url": "https://link.todayweather.ai/loc?lat=NaN&lon=126.978",
       "native": null,
       "edge": {
         "action": "redirect",
         "status": 302,
-        "location": "https://link.todayweather.ai/open"
+        "location": "https://app.todayweather.ai/"
       }
     },
     {
       "id": "loc-missing-lon",
-      "description": "Missing longitude is rejected by native and redirected to /open at edge",
+      "description": "Missing longitude is rejected by native and redirected to WebApp root at edge",
       "url": "https://link.todayweather.ai/loc?lat=37.567",
       "native": null,
       "edge": {
         "action": "redirect",
         "status": 302,
-        "location": "https://link.todayweather.ai/open"
+        "location": "https://app.todayweather.ai/"
       }
     },
     {

@@ -234,6 +234,37 @@ small {
   margin-top: auto;
   padding-top: 30px;
 }
+.app-qr-card {
+  background: var(--tw-accent-subtle);
+  border: 1px solid var(--tw-border-strong);
+  border-radius: var(--tw-radius-md);
+  padding: 15px;
+  margin-top: 20px;
+  color: var(--tw-text-secondary);
+  text-align: center;
+}
+.app-qr-frame {
+  display: inline-flex;
+  overflow: hidden;
+  border-radius: var(--tw-radius-sm);
+  border: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.app-qr-svg {
+  display: block;
+  width: 112px;
+  height: 112px;
+}
+.app-qr-card strong {
+  font-size: max(var(--tw-type-label-size), var(--font-floor));
+  display: block;
+  color: var(--tw-text-secondary);
+}
+.app-qr-card p {
+  font-size: max(var(--tw-type-caption-size), var(--font-floor));
+  color: var(--tw-text-secondary);
+  margin: 4px 0 0;
+}
 .install-card {
   background: linear-gradient(
     130deg,
@@ -754,9 +785,17 @@ th {
 .notice.link-arrival {
   justify-content: space-between;
   flex-wrap: wrap;
+  background: var(--tw-accent-subtle);
+  color: var(--tw-text-secondary);
+  border-color: var(--tw-border-strong);
 }
 .link-arrival a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: var(--tw-type-label-weight);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .link-arrival button {
   color: inherit;

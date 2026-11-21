@@ -199,8 +199,11 @@ const fr: Catalog = {
   "public.body":
     "Enregistrez ce lieu et consultez la météo heure par heure et la qualité de l'air.",
   "public.open": "Voir la météo de ce lieu",
-  "link.appOption": "Ouvrir ou installer l’application",
+  "link.appOption": "Ouvrir dans l’app",
   "link.dismiss": "Fermer",
+  "link.qrTitle": "Application mobile",
+  "link.qrBody": "Scannez avec la caméra pour ouvrir l’app ou le store.",
+  "link.qrAlt": "Code QR pour ouvrir l’application TodayWeather ou le store",
   "link.addFavorite": "Ajouter aux favoris",
   "link.invalidLocation": "Ce lieu partagé est invalide.",
   "public.notFound": "Lieu partagé introuvable",

@@ -8,13 +8,26 @@ const golden = JSON.parse(read("../../specs/deeplink.golden.json"));
 const routeSource = read("../../infra/deeplink/route-request.js");
 const handler = runInNewContext(routeSource + "\nhandler");
 
-function request(uri, method = "GET", query = "") {
+function request(uri, method = "GET", query = "", userAgent = "") {
   const querystring = Object.create(null);
   for (const pair of query ? query.split("&") : []) {
     const [key, ...value] = pair.split("=");
     querystring[key] ??= { value: value.join("=") };
   }
-  return handler({ request: { uri, method, querystring } });
+  const headers = userAgent ? { "user-agent": { value: userAgent } } : {};
+  return handler({ request: { uri, method, querystring, headers } });
+}
+
+function summarize(uri, result, includeVary = false) {
+  const status = result.statusCode ?? 200;
+  if (status === 302) {
+    const out = { action: "redirect", status, location: result.headers.location.value };
+    if (includeVary && result.headers.vary?.value) out.vary = result.headers.vary.value;
+    return out;
+  }
+  return status === 200
+    ? { action: result.uri === uri ? "passthrough" : "rewrite", status, uri: result.uri }
+    : { action: "error", status };
 }
 
 test("the CloudFront handler follows the golden routing vectors", () => {
@@ -23,21 +36,21 @@ test("the CloudFront handler follows the golden routing vectors", () => {
     const [, path, query] = /^https:\/\/[^/?]+([^?]*)(?:\?(.*))?$/i.exec(url);
     const uri = path || "/";
     const result = request(uri, "GET", query);
-    const status = result.statusCode ?? 200;
-    const actual = status === 302
-      ? { action: "redirect", status, location: result.headers.location.value }
-      : status === 200
-        ? { action: result.uri === uri ? "passthrough" : "rewrite", status, uri: result.uri }
-        : { action: "error", status };
-    assert.deepEqual(actual, edge, id);
+    assert.deepEqual(summarize(uri, result), edge, id);
+  }
+  for (const { id, url, userAgent, edge } of golden.edgeStoreFallbackCases) {
+    const [, path, query] = /^https:\/\/[^/?]+([^?]*)(?:\?(.*))?$/i.exec(url);
+    const uri = path || "/";
+    const result = request(uri, "GET", query, userAgent);
+    assert.deepEqual(summarize(uri, result, true), edge, id);
   }
   for (const { method, uri, status } of golden.edgeMethodCases) {
     assert.equal(request(uri, method).statusCode ?? 200, status, `${method} ${uri}`);
   }
 });
 
-test("unknown paths and unregistered assets return 404", () => {
-  for (const uri of ["//", "/open//", "/assets/missing.png", "/.well-known/other"]) {
+test("unknown paths and removed fallback assets return 404", () => {
+  for (const uri of ["//", "/open//", "/open.html", "/assets/preview.png", "/assets/open.js", "/.well-known/other"]) {
     assert.equal(request(uri).statusCode, 404, uri);
   }
 });

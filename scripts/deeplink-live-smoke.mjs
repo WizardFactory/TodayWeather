@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { AASA, ASSET_LINKS, CSP, LINK_HOST, associations } from "./deploy-deeplink-static.mjs";
+import { AASA, ASSET_LINKS, LINK_HOST, associations } from "./deploy-deeplink-static.mjs";
 
 const base = `https://${LINK_HOST}`;
 const pwa = "https://app.todayweather.ai";
+const appStore = "https://apps.apple.com/app/id1041700694";
+const playStore = "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather";
+const iosUa = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1";
+const androidUa = "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36";
+const desktopUa = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36";
 
 export async function smoke(identity, fetcher = fetch) {
   const expected = associations(identity);
-  async function request(path, status, method = "GET") {
+  async function request(path, status, method = "GET", headers = {}) {
     const result = await fetcher(base + path, {
       method,
+      headers,
       redirect: "manual",
       signal: AbortSignal.timeout(10000),
     });
@@ -24,25 +30,16 @@ export async function smoke(identity, fetcher = fetch) {
     assert.equal(result.headers.get("cache-control"), "public, max-age=3600", key);
     assert.ok(isDeepStrictEqual(await result.json(), expected[key]), `${key} did not match configured identity and routes`);
   }
-  for (const path of ["/", "/open", "/open/"]) {
-    const result = await request(path, 200);
-    assert.equal(result.headers.get("content-security-policy"), CSP, path);
-    assert.match(result.headers.get("content-type") ?? "", /^text\/html(?:\s*;|$)/i, path);
-    const html = await result.text();
-    for (const marker of ["https://app.todayweather.ai/", "https://apps.apple.com/app/id1041700694",
-      "https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather",
-      "og:title", "og:description", "og:image", "apple-itunes-app"]) {
-      assert.ok(html.includes(marker), `${path} is missing ${marker}`);
-    }
-  }
-  const image = await request("/assets/preview.png", 200, "HEAD");
-  assert.equal(image.headers.get("content-type"), "image/png");
+
   const redirects = [
+    ["/", pwa + "/"],
+    ["/open", pwa + "/"],
+    ["/open/", pwa + "/"],
     ["/place/seoul", pwa + "/weather/seoul/hourly?from=link"],
     ["/place/seoul/?view=daily&utm_source=test", pwa + "/weather/seoul/daily?from=link"],
     ["/place/seoul?view=air&pollutant=pm25", pwa + "/air/seoul?pollutant=pm25&from=link"],
     ["/loc?lat=0&lon=0", pwa + "/loc?lat=0&lon=0&from=link"],
-    ["/loc?lat=91&lon=0", base + "/open"],
+    ["/loc?lat=91&lon=0", pwa + "/"],
     ["/air/seoul?pollutant=o3", pwa + "/air/seoul?pollutant=o3&from=link"],
     ["/nation/weather", pwa + "/nation/weather?from=link"],
     ["/nation/air", pwa + "/nation/air?from=link"],
@@ -53,7 +50,21 @@ export async function smoke(identity, fetcher = fetch) {
     assert.equal(result.headers.get("location"), location, path);
     await result.body?.cancel();
   }
-  for (const path of ["/not-a-deep-link", "/mobile/privacy.html", "//", "/assets/missing.png"]) {
+
+  const storeChecks = [
+    ["/open?fallback=store", iosUa, appStore],
+    ["/open?fallback=store", androidUa, playStore],
+    ["/place/seoul?fallback=store", iosUa, appStore],
+    ["/open?fallback=store", desktopUa, pwa + "/"],
+  ];
+  for (const [path, ua, location] of storeChecks) {
+    const result = await request(path, 302, "GET", { "user-agent": ua });
+    assert.equal(result.headers.get("location"), location, `${path} (${ua})`);
+    assert.equal(result.headers.get("cache-control"), "no-store", path);
+    await result.body?.cancel();
+  }
+
+  for (const path of ["/open.html", "/assets/preview.png", "/not-a-deep-link", "/mobile/privacy.html", "//"]) {
     const result = await request(path, 404);
     await result.body?.cancel();
   }

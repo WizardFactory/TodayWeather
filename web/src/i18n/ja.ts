@@ -194,8 +194,11 @@ const ja: Catalog = {
   "public.body":
     "お気に入り地域に保存して、時間別の天気と大気質を確認しましょう。",
   "public.open": "この地域の天気を見る",
-  "link.appOption": "アプリで開く・インストール",
+  "link.appOption": "アプリで見る",
   "link.dismiss": "閉じる",
+  "link.qrTitle": "モバイルアプリ",
+  "link.qrBody": "カメラで読み取ってアプリを開くかストアへ移動できます。",
+  "link.qrAlt": "TodayWeatherアプリを開く・ストアへ移動するQRコード",
   "link.addFavorite": "お気に入りに追加",
   "link.invalidLocation": "共有された場所を確認できません。",
   "public.notFound": "共有された地域が見つかりません",

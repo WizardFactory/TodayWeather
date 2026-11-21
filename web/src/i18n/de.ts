@@ -199,8 +199,11 @@ const de: Catalog = {
   "public.body":
     "Speichern Sie den Ort, um das stündliche Wetter und die Luftqualität zu sehen.",
   "public.open": "Wetter für diesen Ort",
-  "link.appOption": "App öffnen oder installieren",
+  "link.appOption": "In der App öffnen",
   "link.dismiss": "Schließen",
+  "link.qrTitle": "Mobile App",
+  "link.qrBody": "Mit der Kamera scannen, um App oder Store zu öffnen.",
+  "link.qrAlt": "QR-Code zum Öffnen der TodayWeather-App oder des Stores",
   "link.addFavorite": "Zu Favoriten hinzufügen",
   "link.invalidLocation": "Dieser geteilte Ort ist ungültig.",
   "public.notFound": "Geteilter Ort nicht gefunden",

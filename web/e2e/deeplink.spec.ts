@@ -23,8 +23,12 @@ test.describe("shared location", () => {
       );
     expect(await places()).toEqual([]);
     await expect(
-      page.getByRole("link", { name: "앱에서 열기 또는 설치" }),
-    ).toHaveAttribute("href", "https://link.todayweather.ai/open");
+      page.getByRole("link", { name: "앱에서 보기" }),
+    ).toHaveAttribute(
+      "href",
+      "https://link.todayweather.ai/loc?lat=0&lon=0&name=%EC%A0%81%EB%8F%84&view=daily&fallback=store",
+    );
+    await expect(page.locator(".app-qr-card")).toHaveCount(0);
     await page.locator(".topbar").scrollIntoViewIfNeeded();
     await info.attach("coordinate-preview", {
       body: await page.screenshot(),
@@ -105,5 +109,56 @@ test.describe("shared location", () => {
     await expect
       .poll(() => page.evaluate(() => navigator.clipboard.readText()))
       .toBe("https://link.todayweather.ai/air/seoul?pollutant=pm10");
+  });
+
+  test("mobile Android uses intent URI preserving the current place and Play Store fallback", async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      userAgent:
+        "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",
+    });
+    const page = await context.newPage();
+    await page.goto("/weather/seoul/daily");
+    await expect(
+      page.getByRole("link", { name: "앱에서 보기" }),
+    ).toHaveAttribute(
+      "href",
+      "intent://link.todayweather.ai/place/seoul?view=daily#Intent;scheme=https;package=net.wizardfactory.todayweather;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dnet.wizardfactory.todayweather;end",
+    );
+    await expect(
+      page.locator('meta[name="apple-itunes-app"]'),
+    ).toHaveAttribute(
+      "content",
+      "app-id=1041700694, app-argument=https://link.todayweather.ai/place/seoul?view=daily",
+    );
+    await context.close();
+  });
+});
+
+test.describe("desktop QR and default link preview metadata", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test("shows fixed QR card on desktop, hides mobile banner, and exposes OG tags", async ({
+    page,
+  }) => {
+    await page.goto("/weather/seoul/hourly");
+    await expect(page.locator(".link-arrival")).toHaveCount(0);
+    const qrCard = page.locator(".app-qr-card");
+    await expect(qrCard).toBeVisible();
+    await expect(
+      qrCard.getByRole("img", {
+        name: "오늘날씨 모바일 앱 열기 및 스토어 이동 QR 코드",
+      }),
+    ).toBeVisible();
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      "https://app.todayweather.ai/icons/icon-512.png",
+    );
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+      "content",
+      "오늘날씨 · TodayWeather",
+    );
   });
 });
