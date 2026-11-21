@@ -905,9 +905,14 @@ function AirDetails({
     }
     const bar = el.children[observedBarIndex] as HTMLElement | undefined;
     if (!bar) return;
+    const offset =
+      bar.getBoundingClientRect().left -
+      el.getBoundingClientRect().left -
+      el.clientLeft +
+      el.scrollLeft;
     el.scrollLeft = Math.max(
       0,
-      bar.offsetLeft - (el.clientWidth - bar.offsetWidth) / 2,
+      offset - (el.clientWidth - bar.offsetWidth) / 2,
     );
   }, [w.location.id, stationIndex, code, observedBarIndex]);
   if (!station || !p)

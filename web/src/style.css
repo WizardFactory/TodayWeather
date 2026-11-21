@@ -701,6 +701,7 @@ th {
   gap: var(--tw-space-2);
   flex-wrap: wrap;
   background: var(--soft);
+  border: 1px solid transparent;
   border-radius: var(--tw-radius-md);
   padding: var(--tw-space-3);
   font-size: max(var(--tw-type-caption-size), var(--font-floor));
@@ -715,12 +716,12 @@ th {
 .detail-grid svg {
   color: var(--tw-text-secondary);
 }
-.precip-grid > div {
+.detail-grid.precip-grid > div {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--tw-space-1);
 }
-.precip-grid > div > span:first-child {
+.detail-grid.precip-grid > div > span:first-child {
   color: var(--text);
   font-weight: var(--tw-type-label-weight);
 }
@@ -1142,6 +1143,7 @@ th {
   max-width: 100%;
 }
 .bar-chart {
+  position: relative;
   display: flex;
   gap: var(--tw-space-3);
   align-items: flex-end;

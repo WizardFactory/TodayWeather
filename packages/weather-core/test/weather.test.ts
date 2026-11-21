@@ -198,7 +198,10 @@ describe("national city identity", () => {
 
 describe("number formatting", () => {
   it("normalizes negative zero and near-zero negative values across locales (#3116)", () => {
+    expect(formatValue(0, 0)).toBe("0");
     expect(formatValue(-0, 0)).toBe("0");
+    expect(formatValue(-0, 1)).toBe("0");
+    expect(formatValue(0.04, 0)).toBe("0");
     expect(formatValue(-0.04, 0)).toBe("0");
     expect(formatValue(-0.49, 0)).toBe("0");
     expect(formatValue(-0.5, 0)).toBe("-1");

@@ -431,10 +431,11 @@ export default function App() {
         selected.id,
       )
     : "/start";
+  const cleanPath = location.pathname.replace(/\/+$/, "") || "/";
   const weatherNavActive =
-    location.pathname.startsWith("/weather/") ||
-    (!selected && (location.pathname === "/" || location.pathname === "/start"));
-  const airNavActive = location.pathname.startsWith("/air/");
+    cleanPath.startsWith("/weather/") ||
+    (!selected && (cleanPath === "/" || cleanPath === "/start"));
+  const airNavActive = cleanPath.startsWith("/air/");
   return (
     <AppContext.Provider
       value={{

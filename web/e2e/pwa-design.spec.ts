@@ -627,6 +627,11 @@ test("sidebar keeps single aria-current across routes, removes live-dot, normali
 }) => {
   const raw = structuredClone(fixture.response) as any;
   raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: -0.04 };
+  if (raw.airInfoList?.[0]?.pollutants?.aqi) {
+    raw.airInfoList[0].pollutants.pm10 = structuredClone(
+      raw.airInfoList[0].pollutants.aqi,
+    );
+  }
   await page.route(API + "/weather/**", (route) => route.fulfill({ json: raw }));
 
   // /start without saved places marks only 날씨 active (never both 날씨 & 미세먼지).
@@ -648,31 +653,61 @@ test("sidebar keeps single aria-current across routes, removes live-dot, normali
   await expect(activeLinks).toHaveCount(1);
   await expect(activeLinks).toContainText("날씨");
 
-  // /air/seoul marks only 미세먼지 active, keeps bar labels single-line, and scrolls observed bar into view on 390px.
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/air/seoul");
-  await expect(activeLinks).toHaveCount(1);
-  await expect(activeLinks).toContainText("미세먼지");
+  // /air/seoul marks only 미세먼지 active, keeps bar labels single-line, and centers observed bar across viewports.
+  for (const vp of [
+    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page.goto("/air/seoul");
+    await expect(activeLinks).toHaveCount(1);
+    await expect(activeLinks).toContainText("미세먼지");
 
-  const barCheck = await page.locator(".bar-chart").evaluate((el) => {
-    const sb = el.getBoundingClientRect();
-    const bars = [...el.querySelectorAll(":scope > div")];
-    const labels = [...el.querySelectorAll("small")].filter((s) =>
-      s.textContent?.trim(),
-    );
-    const wrapped = labels.some((s) => {
-      const lh = parseFloat(getComputedStyle(s).lineHeight) || 18;
-      return s.getBoundingClientRect().height > lh * 1.6;
-    });
-    const observed = bars[12]?.getBoundingClientRect();
-    return {
-      count: bars.length,
-      wrapped,
-      observedInView:
-        !!observed && observed.left >= sb.left - 2 && observed.right <= sb.right + 2,
-    };
-  });
-  expect(barCheck.count).toBe(24);
-  expect(barCheck.wrapped).toBe(false);
-  expect(barCheck.observedInView).toBe(true);
+    const checkCentered = () =>
+      page.locator(".bar-chart").evaluate((el) => {
+        const sb = el.getBoundingClientRect();
+        const bars = [...el.querySelectorAll(":scope > div")];
+        const labels = [...el.querySelectorAll("small")].filter((s) =>
+          s.textContent?.trim(),
+        );
+        const wrapped = labels.some((s) => {
+          const lh = parseFloat(getComputedStyle(s).lineHeight) || 18;
+          return s.getBoundingClientRect().height > lh * 1.6;
+        });
+        const obs = bars[12]!.getBoundingClientRect();
+        const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+        const clamped = el.scrollLeft <= 1 || el.scrollLeft >= maxScroll - 1;
+        const centerDiff = Math.abs(
+          (obs.left + obs.right) / 2 - (sb.left + sb.right) / 2,
+        );
+        return {
+          count: bars.length,
+          wrapped,
+          inView: obs.left >= sb.left - 2 && obs.right <= sb.right + 2,
+          clamped,
+          centerDiff,
+        };
+      });
+
+    const initial = await checkCentered();
+    expect(initial.count).toBe(24);
+    expect(initial.wrapped).toBe(false);
+    expect(initial.inView).toBe(true);
+    if (!initial.clamped) expect(initial.centerDiff).toBeLessThanOrEqual(2);
+
+    if (vp.width === 768) {
+      // Scrolling away then switching pollutant re-centers the observed bar cleanly.
+      await page.locator(".bar-chart").evaluate((el) => {
+        el.scrollLeft = 0;
+      });
+      const pm10Radio = page.getByRole("radio", { name: /^미세먼지/ });
+      await pm10Radio.click();
+      await expect(pm10Radio).toHaveAttribute("aria-checked", "true");
+      const afterSwitch = await checkCentered();
+      expect(afterSwitch.inView).toBe(true);
+      if (!afterSwitch.clamped)
+        expect(afterSwitch.centerDiff).toBeLessThanOrEqual(2);
+    }
+  }
 });
