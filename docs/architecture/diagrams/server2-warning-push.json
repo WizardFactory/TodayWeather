@@ -24,7 +24,7 @@
         {
           "path": "server2/src/warnings/collector.rs",
           "line": 146,
-          "end_line": 320
+          "end_line": 508
         }
       ]
     },
@@ -37,7 +37,7 @@
         {
           "path": "server2/src/push/deliver/warning_feed.rs",
           "line": 224,
-          "end_line": 320
+          "end_line": 327
         }
       ]
     },
@@ -50,7 +50,7 @@
         {
           "path": "server2/src/push/deliver/warnings.rs",
           "line": 260,
-          "end_line": 470
+          "end_line": 712
         }
       ]
     },
@@ -63,17 +63,17 @@
         {
           "path": "server2/src/push/service.rs",
           "line": 252,
-          "end_line": 275
+          "end_line": 273
         },
         {
           "path": "server2/src/warnings/store.rs",
           "line": 663,
-          "end_line": 715
+          "end_line": 714
         },
         {
           "path": "server2/src/warnings/zones.rs",
           "line": 69,
-          "end_line": 388
+          "end_line": 404
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "path": "server2/src/push/deliver/ledger.rs",
           "line": 64,
-          "end_line": 155
+          "end_line": 176
         }
       ]
     },
@@ -99,7 +99,7 @@
         {
           "path": "server2/src/push/deliver/fcm.rs",
           "line": 246,
-          "end_line": 380
+          "end_line": 429
         }
       ]
     }
