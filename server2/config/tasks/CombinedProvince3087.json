@@ -1,0 +1,35 @@
+{
+  "task": "CombinedProvince3087",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3087",
+  "scope": "Resolve combined-province warning zones for weather and push, reuse the district classifier for representative town and food-poisoning lookups, and verify the routing with isolated tests and HTTP smoke.",
+  "server2_paths": [
+    "server2/config/tasks/CombinedProvince3087.json",
+    "server2/src/warnings/zones.rs",
+    "server2/src/domestic/kma/air.rs",
+    "server2/src/domestic/kma/chain.rs",
+    "server2/src/domestic/kma/present.rs",
+    "server2/src/domestic/kma/source/representative.rs",
+    "server2/src/push/deliver/warnings.rs",
+    "server2/tests/warnings/legacy.rs",
+    "server2/tests/delivery/warnings.rs",
+    "server2/tests/domestic/full_response.rs",
+    "server2/tools/kma_smoke.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/architecture/server2.md",
+      "category": "documentation",
+      "reason": "Document combined-province weather and warning routing."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-push.json",
+      "category": "documentation",
+      "reason": "Record district-based alert selection in the maintained sequence."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-warning-push.html",
+      "category": "documentation",
+      "reason": "Regenerate the maintained warning-push sequence from its JSON source."
+    }
+  ]
+}
