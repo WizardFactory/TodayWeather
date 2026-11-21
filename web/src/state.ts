@@ -190,8 +190,17 @@ export function addPlace(state: SavedState, place: Place): SavedState {
         places: state.places.map((p) => (p === found ? place : p)),
         selectedId: place.id,
       };
-    if (!place.current || found.current)
-      return { ...state, selectedId: found.id };
+    if (!place.current) return { ...state, selectedId: found.id };
+    if (found.current) {
+      const warningLocation = place.warningLocation;
+      return {
+        ...state,
+        selectedId: found.id,
+        places: warningLocation
+          ? state.places.map((p) => (p === found ? {...p, warningLocation} : p))
+          : state.places,
+      };
+    }
     // A new fix on a saved favorite: keep the favorite as is and retire the
     // stale current-location entry instead of converting or duplicating it.
     return {
