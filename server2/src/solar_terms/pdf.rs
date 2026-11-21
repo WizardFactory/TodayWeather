@@ -487,19 +487,25 @@ struct CMap {
     two_byte: bool,
 }
 
+fn charge_cmap_work(total_entries: &mut usize, count: usize) -> Result<(), PdfError> {
+    let next = total_entries
+        .checked_add(count)
+        .ok_or_else(|| PdfError("CMap entry count exceeds limit".into()))?;
+    if next > MAX_TOTAL_CMAP_ENTRIES {
+        return Err(PdfError("CMap entry count exceeds limit".into()));
+    }
+    *total_entries = next;
+    Ok(())
+}
+
 fn insert_cmap_entry(
     map: &mut HashMap<u32, String>,
-    total_entries: &mut usize,
     code: u32,
     value: String,
 ) -> Result<(), PdfError> {
     if value.len() > MAX_CMAP_STR_BYTES {
         return Err(PdfError("CMap glyph string exceeds limit".into()));
     }
-    if *total_entries >= MAX_TOTAL_CMAP_ENTRIES {
-        return Err(PdfError("CMap entry count exceeds limit".into()));
-    }
-    *total_entries += 1;
     if !map.contains_key(&code) && map.len() >= MAX_CMAP_ENTRIES {
         return Err(PdfError("CMap entry count exceeds limit".into()));
     }
@@ -519,13 +525,14 @@ fn parse_cmap(bytes: &[u8], total_entries: &mut usize) -> Result<CMap, PdfError>
     for section in sections(&text, "beginbfchar", "endbfchar") {
         let tokens = hex_tokens(section);
         for pair in tokens.as_chunks::<2>().0 {
+            charge_cmap_work(total_entries, 1)?;
             if pair[0].len() >= 4 {
                 two_byte = true;
             }
             if let Ok(code) = u32::from_str_radix(&pair[0], 16)
                 && let Some(decoded) = decode_utf16be_hex(&pair[1])
             {
-                insert_cmap_entry(&mut map, total_entries, code, decoded)?;
+                insert_cmap_entry(&mut map, code, decoded)?;
             }
         }
     }
@@ -639,6 +646,10 @@ fn parse_bfrange(
             };
             let base = u32::from_str_radix(&base_hex, 16)
                 .map_err(|_| PdfError("invalid CMap bfrange base".into()))?;
+            let count = (span as usize)
+                .checked_add(1)
+                .ok_or_else(|| PdfError("CMap entry count exceeds limit".into()))?;
+            charge_cmap_work(total_entries, count)?;
             for offset in 0..=span {
                 let code = start
                     .checked_add(offset)
@@ -647,7 +658,7 @@ fn parse_bfrange(
                     .checked_add(offset)
                     .ok_or_else(|| PdfError("CMap bfrange target overflow".into()))?;
                 if let Some(ch) = char::from_u32(target) {
-                    insert_cmap_entry(map, total_entries, code, ch.to_string())?;
+                    insert_cmap_entry(map, code, ch.to_string())?;
                 }
             }
         } else if bytes.get(i) == Some(&b'[') {
@@ -667,11 +678,12 @@ fn parse_bfrange(
                     if idx > span {
                         return Err(PdfError("CMap bfrange array exceeds range bounds".into()));
                     }
+                    charge_cmap_work(total_entries, 1)?;
                     let code = start
                         .checked_add(idx)
                         .ok_or_else(|| PdfError("CMap bfrange code overflow".into()))?;
                     if let Some(decoded) = decode_utf16be_hex(&val_hex) {
-                        insert_cmap_entry(map, total_entries, code, decoded)?;
+                        insert_cmap_entry(map, code, decoded)?;
                     }
                     idx = idx
                         .checked_add(1)

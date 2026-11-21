@@ -1821,6 +1821,32 @@ async fn malformed_pdf_bounds_shared_streams_and_worker_continuation() {
         "got {overlap_err}"
     );
 
+    // Invalid Unicode scalar bfrange targets (e.g., UTF-16 surrogates 0xD800..) still charge the CMap work budget (CODEX-13)
+    let mut invalid_scalar_cmap =
+        String::from("begincodespacerange <0000> <FFFF> endcodespacerange\n");
+    for _ in 0..35 {
+        invalid_scalar_cmap.push_str("beginbfrange <0000> <0FFF> <D800> endbfrange\n");
+    }
+    let invalid_scalar_obj = stream_obj(
+        format!("<< /Length {} >>", invalid_scalar_cmap.len()).as_bytes(),
+        invalid_scalar_cmap.as_bytes(),
+    );
+    let invalid_scalar_pdf = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 6 0 R >>"#,
+        br#"<< /Type /Font /Subtype /Type0 /ToUnicode 5 0 R >>"#,
+        &invalid_scalar_obj,
+        &tj_obj2,
+    ]);
+    let invalid_scalar_err = pdf::extract_text(&invalid_scalar_pdf).unwrap_err();
+    assert!(
+        invalid_scalar_err
+            .0
+            .contains("CMap entry count exceeds limit"),
+        "got {invalid_scalar_err}"
+    );
+
     // 6. Shared content stream referenced by multiple pages decodes cleanly via StreamCache
     let shared_stream = b"BT /F1 10 Tf 1 0 0 1 72 720 Tm (HelloShared) Tj ET";
     let mut shared_enc = ZlibEncoder::new(Vec::new(), Compression::default());
