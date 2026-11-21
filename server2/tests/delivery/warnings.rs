@@ -1042,3 +1042,155 @@ async fn an_s12_error_immediately_after_claim_records_a_terminal_failure_without
         assert!(rig.google.sends().is_empty());
     }
 }
+
+struct CombinedProvinceGeocode;
+impl server2::push::deliver::Fetch for CombinedProvinceGeocode {
+    fn get(
+        &self,
+        url: String,
+        _accept_language: Option<String>,
+    ) -> BoxFuture<'_, Result<(u16, Vec<u8>), String>> {
+        Box::pin(async move {
+            let body = if url.ends_with("/geocode/v000903/coord/35.16,126.85") {
+                serde_json::json!({
+                    "country": "KR",
+                    "kmaAddress": {"name1": "전남광주통합특별시", "name2": "서구", "name3": "치평동"}
+                })
+            } else if url.ends_with("/geocode/v000903/coord/34.81,126.46") {
+                serde_json::json!({
+                    "country": "KR",
+                    "kmaAddress": {"name1": "전남광주통합특별시", "name2": "무안군", "name3": "삼향읍"}
+                })
+            } else if url.ends_with("/geocode/v000903/coord/35,126.7")
+                || url.ends_with("/geocode/v000903/coord/35.0,126.7")
+            {
+                serde_json::json!({
+                    "country": "KR",
+                    "kmaAddress": {"name1": "전남광주통합특별시", "name2": "없는구", "name3": ""}
+                })
+            } else {
+                return Err(format!("unexpected url {url}"));
+            };
+            Ok((200, serde_json::to_vec(&body).unwrap()))
+        })
+    }
+}
+
+#[tokio::test]
+async fn combined_province_warning_delivery_routes_by_district_without_leakage() {
+    use server2::push::deliver::{Servers, warnings::ApiLocations};
+    let coord_reg = |n: u8, token: &str, lon: f64, lat: f64| {
+        let mut r = registration(n);
+        r.doc.set("fcmToken", token);
+        r.doc
+            .set("geo", Val::Arr(vec![Val::Num(lon), Val::Num(lat)]));
+        r
+    };
+    let mut town_only = registration(4);
+    town_only
+        .doc
+        .set("fcmToken", "synthetic-gwangju-town-token");
+    let mut town = Obj::new();
+    town.set("first", "전남광주통합특별시");
+    town.set("second", "광산구");
+    town_only.doc.set("town", Val::Obj(town));
+
+    let gwangju = coord_reg(1, "synthetic-gwangju-coord-token", 126.85, 35.16);
+    let jeonnam = coord_reg(2, "synthetic-jeonnam-coord-token", 126.46, 34.81);
+    let unknown = coord_reg(3, "synthetic-unknown-coord-token", 126.7, 35.0);
+    let initial_docs = [
+        gwangju.doc.clone(),
+        jeonnam.doc.clone(),
+        unknown.doc.clone(),
+        town_only.doc.clone(),
+    ];
+
+    let rig = rig(
+        "warning-combined-province",
+        "2026-10-16T01:02:00Z",
+        &[
+            (Coll::Alert, gwangju),
+            (Coll::Alert, jeonnam),
+            (Coll::Alert, unknown),
+            (Coll::Alert, town_only),
+        ],
+        None,
+    )
+    .await;
+    let feed = Arc::new(WarningFeed::new(
+        Arc::new(rig.s3.clone()),
+        rig.clock.clone(),
+    ));
+    feed.publish(&[]).await.unwrap();
+    let zones = Arc::new(Zones::default());
+    let locations = Arc::new(ApiLocations::new(
+        Arc::new(CombinedProvinceGeocode),
+        Servers {
+            service: "http://server2.internal".into(),
+            api: "http://server2.internal".into(),
+        },
+    ));
+    let w = worker(
+        &rig,
+        rig.push.clone(),
+        feed.clone(),
+        zones.clone(),
+        locations,
+    );
+    assert_eq!(w.poll().await.unwrap().attempted, 0);
+
+    // 1. Gwangju warning (L1130110 광주서부) must reach only the two Gwangju devices.
+    let mut gwangju_rows = rows();
+    gwangju_rows[0]["areaCode"] = serde_json::json!("L1130110");
+    gwangju_rows[0]["areaName"] = serde_json::json!("광주서부");
+    publish(&feed, &zones, gwangju_rows).await;
+    let first = w.poll().await.unwrap();
+    assert_eq!(
+        first.accepted, 2,
+        "both Gwangju registrations receive alert"
+    );
+    let first_tokens: std::collections::HashSet<String> = rig
+        .google
+        .sends()
+        .into_iter()
+        .map(|s| {
+            let v: serde_json::Value = serde_json::from_str(&s.body).unwrap();
+            v["message"]["token"].as_str().unwrap().to_owned()
+        })
+        .collect();
+    assert_eq!(
+        first_tokens,
+        std::collections::HashSet::from([
+            "synthetic-gwangju-coord-token".to_owned(),
+            "synthetic-gwangju-town-token".to_owned(),
+        ])
+    );
+
+    // 2. Jeonnam warning (L1053410 무안군북부) must reach only the Jeonnam device.
+    let mut jeonnam_rows = rows();
+    jeonnam_rows[0]["areaCode"] = serde_json::json!("L1053410");
+    jeonnam_rows[0]["areaName"] = serde_json::json!("무안군북부");
+    jeonnam_rows[0]["tmSeq"] = serde_json::json!(2);
+    publish(&feed, &zones, jeonnam_rows).await;
+    let second = w.poll().await.unwrap();
+    assert_eq!(
+        second.accepted, 1,
+        "only Jeonnam registration receives alert"
+    );
+    let all_sends = rig.google.sends();
+    assert_eq!(all_sends.len(), 3);
+    let latest: serde_json::Value = serde_json::from_str(&all_sends[2].body).unwrap();
+    assert_eq!(latest["message"]["token"], "synthetic-jeonnam-coord-token");
+
+    // 3. Stored registration documents remain untouched.
+    let stored: Vec<Obj> = rig
+        .push
+        .state()
+        .read()
+        .unwrap()
+        .coll(Coll::Alert)
+        .iter()
+        .map(|entry| entry.unwrap().1.doc)
+        .collect();
+    assert_eq!(stored, initial_docs);
+}

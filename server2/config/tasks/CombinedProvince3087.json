@@ -1,0 +1,16 @@
+{
+  "task": "CombinedProvince3087",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3087",
+  "scope": "Resolve 전남광주통합특별시 to 광주광역시 or 전라남도 by explicit 5-district/22-city-county classification in server2 warning zones, food-poisoning region lookup, and representative town-list mapping, with warning-delivery isolation tests; no outside-path changes, no legacy reads, no merge or deployment.",
+  "server2_paths": [
+    "server2/config/tasks/CombinedProvince3087.json",
+    "server2/src/warnings/zones.rs",
+    "server2/src/domestic/kma/air.rs",
+    "server2/src/domestic/kma/source/representative.rs",
+    "server2/src/push/deliver/warnings.rs",
+    "server2/tests/warnings/legacy.rs",
+    "server2/tests/delivery/warnings.rs",
+    "server2/tests/domestic/full_response.rs"
+  ],
+  "outside": []
+}

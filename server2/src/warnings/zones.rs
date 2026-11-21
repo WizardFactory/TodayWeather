@@ -19,6 +19,44 @@ const PROVINCE_ALIASES: [(&str, &str); 4] = [
     ("전라북도", "전북자치도"),
     ("제주특별자치도", "제주도"),
 ];
+pub const COMBINED_GWANGJU_JEONNAM: &str = "전남광주통합특별시";
+const GWANGJU_DISTRICTS: [&str; 5] = ["동구", "서구", "남구", "북구", "광산구"];
+const JEONNAM_DISTRICTS: [&str; 22] = [
+    "목포시",
+    "여수시",
+    "순천시",
+    "나주시",
+    "광양시",
+    "담양군",
+    "곡성군",
+    "구례군",
+    "고흥군",
+    "보성군",
+    "화순군",
+    "장흥군",
+    "강진군",
+    "해남군",
+    "영암군",
+    "무안군",
+    "함평군",
+    "영광군",
+    "장성군",
+    "완도군",
+    "진도군",
+    "신안군",
+];
+/// Classify a district under `전남광주통합특별시` into its legacy province (`광주광역시` or
+/// `전라남도`). Returns `None` for empty or unrecognized districts so callers never misroute.
+pub fn gwangju_jeonnam_province(district: &str) -> Option<&'static str> {
+    let clean: String = district.chars().filter(|c| !js::is_space(*c)).collect();
+    if GWANGJU_DISTRICTS.contains(&clean.as_str()) {
+        Some("광주광역시")
+    } else if JEONNAM_DISTRICTS.contains(&clean.as_str()) {
+        Some("전라남도")
+    } else {
+        None
+    }
+}
 const LEGACY_CITIES: [(&str, &str); 1] = [("청원군", "청주시")];
 const SHARED_ZONES: [(&str, &[&str], &str); 1] =
     [("제주도", &["제주시", "서귀포시"], "제주도산지")];
@@ -176,10 +214,25 @@ impl ZoneTable {
         if town.first.is_empty() {
             return vec![];
         }
-        let province_name = PROVINCE_ALIASES
+        let mut province_name = PROVINCE_ALIASES
             .iter()
             .find(|(k, _)| *k == town.first)
             .map_or(town.first.as_str(), |(_, v)| v);
+        let normalized_second;
+        let second = if trim(province_name) == COMBINED_GWANGJU_JEONNAM {
+            normalized_second = town
+                .second
+                .chars()
+                .filter(|c| !js::is_space(*c))
+                .collect::<String>();
+            let Some(resolved) = gwangju_jeonnam_province(&normalized_second) else {
+                return vec![];
+            };
+            province_name = resolved;
+            normalized_second.as_str()
+        } else {
+            town.second.as_str()
+        };
         let Some(province) = self
             .first_level
             .iter()
@@ -188,7 +241,7 @@ impl ZoneTable {
         else {
             return vec![];
         };
-        let (second, third) = (town.second.as_str(), town.third.as_str());
+        let third = town.third.as_str();
         if let Some((_, _, zone)) = ISLAND_ZONES
             .iter()
             .find(|(s, t, _)| second.contains(s) && third.contains(t))

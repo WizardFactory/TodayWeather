@@ -259,10 +259,17 @@ impl Locations for ApiLocations {
             let Val::Obj(town) = town else {
                 return Ok(Vec::new());
             };
+            let text = |v: &Val| {
+                if v.is_nullish() {
+                    String::new()
+                } else {
+                    to_string(v)
+                }
+            };
             let town = Town {
-                first: to_string(town.get("first")),
-                second: to_string(town.get("second")),
-                third: to_string(town.get("third")),
+                first: text(town.get("first")),
+                second: text(town.get("second")),
+                third: text(town.get("third")),
             };
             Ok(ZoneTable::shared(now).zones_for_town(&town))
         })
