@@ -151,11 +151,11 @@ Node16.20.2 SHA256 `83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f383
 
 All prior fixture bytes, histories, failure receipts and the complete world-driver code fence are preserved. Post-adoption freshness/native validation is required separately; these recordings alone do not establish G1 PASS, current CI, independent PR review or final candidate placement.
 
-## Current G1 qualification boundary
+## October 20 G1 qualification boundary
 
-The registry contains 22 fixtures and 23 explicit source-map pointers. Its two
-identity domains are 187 tracked product/reference files and 33 verification
-exports. The unchanged Node reader returns 190 keys: the 187 product files plus
+At the October 20 checkpoint the registry contained 22 fixtures and 23 explicit source-map pointers. Its two
+identity domains were 187 tracked product/reference files and 33 verification
+exports. At that checkpoint the Node reader returned 190 keys: the 187 product files plus
 three declared exports. Python hashes the other 30 referenced exports with
 regular-file, symlink and byte limits. Export permission is the exact
 intersection of declarations and actual map references; a directory prefix does
@@ -304,6 +304,10 @@ The locked recorder dependency trees omit astronomy-engine. These comparisons
 cover the historical corpus. Active calendar parity requires the separately
 pinned product dependency and native verification tracked in
 [PR #3112](https://github.com/WizardFactory/TodayWeather/pull/3112#issuecomment-7065994755).
+
+The November candidate covers 195 product/reference files and 33 verification
+exports across 1,183 source references. Its reader returns 198 keys, including
+three exports. The local freshness check reports 22 current fixtures.
 
 The other eight fixtures use the existing towns, nation, delivery, life, and
 warning recorders. The life driver and its seven modules were reconstructed
