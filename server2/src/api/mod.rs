@@ -161,9 +161,14 @@ impl DirectRoutes {
             parse_path(&path_and_query, locale)
         };
         match parsed {
-            Err(outcome) => express(&method, &headers, outcome),
+            Err(outcome) => express_at(&method, &headers, outcome, self.kma.now_ms()),
             Ok(request) => {
-                return express(&method, &headers, self.native(request).await);
+                return express_at(
+                    &method,
+                    &headers,
+                    self.native(request).await,
+                    self.kma.now_ms(),
+                );
             }
         }
     }
@@ -227,6 +232,9 @@ fn split_list(value: &str) -> Vec<&str> {
 /// The Express reply of an assembly outcome (`res.json(body)`, `res.json(undefined)`,
 /// `res.status(code).send(text)`).
 pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Response {
+    express_at(method, request, outcome, crate::narrative::now_ms())
+}
+pub fn express_at(method: &Method, request: &HeaderMap, outcome: Outcome, now_ms: i64) -> Response {
     let undefined_head = *method == Method::HEAD && matches!(&outcome, Outcome::Undefined);
     // finalhandler 0.4.1 writes directly (no res.send ETag), and sets nosniff.
     let finalhandler = matches!(&outcome, Outcome::Status(code, text)
@@ -247,7 +255,6 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
         Outcome::Defect(_) => unreachable!("defects are rejected by the backend"),
         Outcome::Legacy(_) => unreachable!("forwarded outcomes are not answered natively"),
     };
-    let now_ms = crate::narrative::now_ms();
     let narrative_age = (200..300)
         .contains(&status)
         .then(|| crate::narrative::cache_age(&body, None, now_ms))

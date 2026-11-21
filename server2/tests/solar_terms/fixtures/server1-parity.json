@@ -5,6 +5,8 @@
   "cases": {
     "fixedNowUtc": "2027-02-04T01:30:00.000Z",
     "fixedNowMs": 1801704600000,
+    "nearMidnightUtc": "2027-02-04T14:59:15.000Z",
+    "nearMidnightMs": 1801753155000,
     "summaryForDate": "2027-02-04",
     "remainingSecondsAtFixedNow": 48600,
     "remainingSecondsNearMidnight": 45,
@@ -23,6 +25,24 @@
     "nonKoreanEn": {
       "summary": "Today Lowest 18℃, Highest 28℃, Clear",
       "summaryForDate": "2027-02-04"
+    },
+    "spareGyeongchipCalmNoRangeKo": {
+      "date": "2027-03-06",
+      "summary": "맑음, 경칩"
+    },
+    "spareGyeongchipWithRangeKo": {
+      "date": "2027-03-06",
+      "summary": "오늘 최저 18℃, 최고 28℃, 맑음"
+    },
+    "calendarOnlyGoguKo": {
+      "date": "2027-04-20",
+      "summary": "맑음"
+    },
+    "heavyRainWarningPlusThunderstormKo": {
+      "summary": "호우주의보, 천둥번개"
+    },
+    "heavyRainWarningPlusHailKo": {
+      "summary": "호우주의보, 우박"
     }
   },
   "astroYears": {

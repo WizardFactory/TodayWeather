@@ -496,11 +496,12 @@ fn insert_cmap_entry(
     if value.len() > MAX_CMAP_STR_BYTES {
         return Err(PdfError("CMap glyph string exceeds limit".into()));
     }
-    if !map.contains_key(&code) {
-        if map.len() >= MAX_CMAP_ENTRIES || *total_entries >= MAX_TOTAL_CMAP_ENTRIES {
-            return Err(PdfError("CMap entry count exceeds limit".into()));
-        }
-        *total_entries += 1;
+    if *total_entries >= MAX_TOTAL_CMAP_ENTRIES {
+        return Err(PdfError("CMap entry count exceeds limit".into()));
+    }
+    *total_entries += 1;
+    if !map.contains_key(&code) && map.len() >= MAX_CMAP_ENTRIES {
+        return Err(PdfError("CMap entry count exceeds limit".into()));
     }
     map.insert(code, value);
     Ok(())

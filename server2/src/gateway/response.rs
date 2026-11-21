@@ -433,7 +433,28 @@ pub(crate) fn send_tagged(
     retry: Option<u64>,
     tag: String,
 ) -> Response {
-    let now_ms = crate::narrative::now_ms();
+    send_tagged_at(
+        method,
+        request,
+        status,
+        body,
+        max_age,
+        retry,
+        tag,
+        crate::narrative::now_ms(),
+    )
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn send_tagged_at(
+    method: &Method,
+    request: &HeaderMap,
+    status: StatusCode,
+    body: Vec<u8>,
+    max_age: Option<u32>,
+    retry: Option<u64>,
+    tag: String,
+    now_ms: i64,
+) -> Response {
     let (max_age, dated_summary) = if status.is_success() && max_age.is_some() {
         let base = crate::narrative::cache_age(&body, max_age, now_ms).or(max_age);
         match crate::solar_terms::summary_cache_age(&body, base, now_ms) {

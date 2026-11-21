@@ -1798,6 +1798,29 @@ async fn malformed_pdf_bounds_shared_streams_and_worker_continuation() {
     ]);
     assert!(pdf::extract_text(&ov_pdf).is_err());
 
+    // Overlapping bfrange entries exceeding document-wide CMap work budget fail promptly (CODEX-11)
+    let mut overlap_cmap = String::from("begincodespacerange <0000> <FFFF> endcodespacerange\n");
+    for _ in 0..35 {
+        overlap_cmap.push_str("beginbfrange <0000> <0FFF> <0041> endbfrange\n");
+    }
+    let overlap_obj = stream_obj(
+        format!("<< /Length {} >>", overlap_cmap.len()).as_bytes(),
+        overlap_cmap.as_bytes(),
+    );
+    let overlap_pdf = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 6 0 R >>"#,
+        br#"<< /Type /Font /Subtype /Type0 /ToUnicode 5 0 R >>"#,
+        &overlap_obj,
+        &tj_obj2,
+    ]);
+    let overlap_err = pdf::extract_text(&overlap_pdf).unwrap_err();
+    assert!(
+        overlap_err.0.contains("CMap entry count exceeds limit"),
+        "got {overlap_err}"
+    );
+
     // 6. Shared content stream referenced by multiple pages decodes cleanly via StreamCache
     let shared_stream = b"BT /F1 10 Tf 1 0 0 1 72 720 Tm (HelloShared) Tj ET";
     let mut shared_enc = ZlibEncoder::new(Vec::new(), Compression::default());
@@ -2193,11 +2216,11 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
     let lookup: Arc<dyn server2::solar_terms::TermLookup> =
         Arc::new(MemoryLookup::new(cal, Policy::bundled().unwrap()));
 
-    let build_pair = |store: FixtureKmaStore| {
+    let build_pair_at = |store: FixtureKmaStore, now_ms: i64| {
         let kma = Arc::new(
             KmaBackend::new(
                 Arc::new(FixedKmaSource(store)),
-                Arc::new(move || fixed_now_ms as f64),
+                Arc::new(move || now_ms as f64),
                 AssemblyConfig::default(),
             )
             .with_solar_terms(Some(lookup.clone())),
@@ -2218,7 +2241,8 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
                 16,
                 Duration::from_secs(5),
             )
-            .unwrap(),
+            .unwrap()
+            .with_clock(Arc::new(move || now_ms)),
         );
         let direct = Arc::new(DirectRoutes::new(
             kma,
@@ -2231,6 +2255,7 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
         ));
         (gw, direct)
     };
+    let build_pair = |store: FixtureKmaStore| build_pair_at(store, fixed_now_ms);
 
     // 1. Calm 입춘 through real Gateway and real DirectRoutes
     let (gw, direct) = build_pair(FixtureKmaStore::calm("20270204"));
@@ -2417,5 +2442,271 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
     assert_eq!(
         haz_json["current"]["summaryForDate"],
         cases["hazardousIpchunKo"]["summaryForDate"]
+    );
+
+    // 3. Exact KST-midnight max-age=45 on BOTH 200 and 304 through real Gateway and DirectRoutes (CODEX-10)
+    let near_midnight_ms = cases["nearMidnightMs"].as_i64().unwrap();
+    let (nm_gw, nm_direct) = build_pair_at(FixtureKmaStore::calm("20270204"), near_midnight_ms);
+
+    let nm_gw_200 = nm_gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(nm_gw_200.status(), StatusCode::OK);
+    assert_eq!(
+        nm_gw_200.headers()["cache-control"],
+        "max-age=45, must-revalidate"
+    );
+    assert_eq!(nm_gw_200.headers()["vary"], "Accept-Language");
+    let nm_gw_etag = nm_gw_200.headers()["etag"].to_str().unwrap().to_owned();
+
+    let nm_gw_304 = nm_gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .header("if-none-match", &nm_gw_etag)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(nm_gw_304.status(), StatusCode::NOT_MODIFIED);
+    assert_eq!(
+        nm_gw_304.headers()["cache-control"],
+        "max-age=45, must-revalidate"
+    );
+    assert_eq!(nm_gw_304.headers()["vary"], "Accept-Language");
+
+    let nm_dir_200 = nm_direct
+        .handle(
+            Request::get(direct_path)
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(nm_dir_200.status(), StatusCode::OK);
+    assert_eq!(
+        nm_dir_200.headers()["cache-control"],
+        "max-age=45, must-revalidate"
+    );
+    assert_eq!(nm_dir_200.headers()["vary"], "Accept-Language, Cookie");
+    let nm_dir_etag = nm_dir_200.headers()["etag"].to_str().unwrap().to_owned();
+
+    let nm_dir_304 = nm_direct
+        .handle(
+            Request::get(direct_path)
+                .header("accept-language", "ko-KR")
+                .header("if-none-match", &nm_dir_etag)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(nm_dir_304.status(), StatusCode::NOT_MODIFIED);
+    assert_eq!(
+        nm_dir_304.headers()["cache-control"],
+        "max-age=45, must-revalidate"
+    );
+    assert_eq!(nm_dir_304.headers()["vary"], "Accept-Language, Cookie");
+
+    // 4. Spare (경칩), calendar-only (곡우), and heavy-rain warning + thunderstorm/hail parity (CODEX-10)
+    let policy = Policy::bundled().unwrap();
+    let labels = Labels {
+        temp: "기온".into(),
+        today: "오늘".into(),
+        lowest: "최저".into(),
+        highest: "최고".into(),
+    };
+    let gyeongchip = lookup.term_for_date("2027-03-06").unwrap();
+    let gogu = lookup.term_for_date("2027-04-20").unwrap();
+    let ipchun = lookup.term_for_date("2027-02-04").unwrap();
+
+    // Spare without daily range enters slot 2; with daily range, range + weather beat spare
+    let calm_no_air_items = vec![SummaryItem {
+        kind: ItemKind::Weather,
+        text: "맑음".into(),
+        grade: 1.0,
+    }];
+    let calm_snap = CurrentSnapshot {
+        weather_type: Some(1),
+        pty: Some(0),
+        rn1: Some(0.0),
+        ultrv_grade: None,
+        wsd_grade: Some(0),
+        dspls_grade: None,
+        sensorytem: None,
+        heat_index_grade: None,
+        t1h: Some(12.0),
+        t1h_text: Some("12".into()),
+        temp_unit_f: false,
+        warnings: vec![],
+        gases: vec![],
+    };
+    assert_eq!(
+        select(
+            &policy,
+            &calm_no_air_items,
+            &calm_snap,
+            Some(&gyeongchip),
+            None,
+            &labels
+        ),
+        cases["spareGyeongchipCalmNoRangeKo"]["summary"]
+            .as_str()
+            .unwrap()
+    );
+    let gyeongchip_range = DailyRange {
+        date: "20270306".into(),
+        min: "18".into(),
+        max: "28".into(),
+        extreme: false,
+    };
+    assert_eq!(
+        select(
+            &policy,
+            &calm_no_air_items,
+            &calm_snap,
+            Some(&gyeongchip),
+            Some(&gyeongchip_range),
+            &labels
+        ),
+        cases["spareGyeongchipWithRangeKo"]["summary"]
+            .as_str()
+            .unwrap()
+    );
+    // Calendar-only (곡우) never enters summary even on calm day without daily range
+    assert_eq!(
+        select(
+            &policy,
+            &calm_no_air_items,
+            &calm_snap,
+            Some(&gogu),
+            None,
+            &labels
+        ),
+        cases["calendarOnlyGoguKo"]["summary"].as_str().unwrap()
+    );
+
+    // Real Gateway check on spare (경칩 with range -> range wins) and calendar-only (곡우 -> omitted)
+    let gyeongchip_ms = utc_ms("2027-03-06T01:30:00Z");
+    let (sp_gw, _) = build_pair_at(FixtureKmaStore::calm("20270306"), gyeongchip_ms);
+    let sp_resp = sp_gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(sp_resp.status(), StatusCode::OK);
+    let sp_json: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(sp_resp.into_body(), 1_000_000)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        sp_json["current"]["summary"],
+        cases["spareGyeongchipWithRangeKo"]["summary"]
+    );
+    assert_eq!(sp_json["current"]["summaryForDate"], "2027-03-06");
+
+    let gogu_ms = utc_ms("2027-04-20T01:30:00Z");
+    let (go_gw, _) = build_pair_at(FixtureKmaStore::calm("20270420"), gogu_ms);
+    let go_resp = go_gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(go_resp.status(), StatusCode::OK);
+    let go_json: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(go_resp.into_body(), 1_000_000)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(
+        !go_json["current"]["summary"]
+            .as_str()
+            .unwrap()
+            .contains("곡우")
+    );
+    assert_eq!(go_json["current"]["summaryForDate"], "2027-04-20");
+
+    // Heavy-rain warning + thunderstorm (weatherType=50) and heavy-rain warning + hail (weatherType=49)
+    let rain_warning = WarningItem {
+        weather: 3,
+        level: 1,
+        text: "호우주의보".into(),
+    };
+    let ipchun_range = DailyRange {
+        date: "20270204".into(),
+        min: "18".into(),
+        max: "28".into(),
+        extreme: false,
+    };
+    let mut thunder_snap = calm_snap.clone();
+    thunder_snap.weather_type = Some(50);
+    thunder_snap.pty = Some(1);
+    thunder_snap.rn1 = Some(12.0);
+    thunder_snap.warnings = vec![rain_warning.clone()];
+    let thunder_items = vec![
+        SummaryItem {
+            kind: ItemKind::Weather,
+            text: "천둥번개".into(),
+            grade: 1.0,
+        },
+        SummaryItem {
+            kind: ItemKind::Wind,
+            text: "약한 바람".into(),
+            grade: 1.0,
+        },
+    ];
+    assert_eq!(
+        select(
+            &policy,
+            &thunder_items,
+            &thunder_snap,
+            Some(&ipchun),
+            Some(&ipchun_range),
+            &labels
+        ),
+        cases["heavyRainWarningPlusThunderstormKo"]["summary"]
+            .as_str()
+            .unwrap()
+    );
+
+    let mut hail_snap = thunder_snap;
+    hail_snap.weather_type = Some(49);
+    let hail_items = vec![
+        SummaryItem {
+            kind: ItemKind::Weather,
+            text: "우박".into(),
+            grade: 1.0,
+        },
+        SummaryItem {
+            kind: ItemKind::Wind,
+            text: "약한 바람".into(),
+            grade: 1.0,
+        },
+    ];
+    assert_eq!(
+        select(
+            &policy,
+            &hail_items,
+            &hail_snap,
+            Some(&ipchun),
+            Some(&ipchun_range),
+            &labels
+        ),
+        cases["heavyRainWarningPlusHailKo"]["summary"]
+            .as_str()
+            .unwrap()
     );
 }

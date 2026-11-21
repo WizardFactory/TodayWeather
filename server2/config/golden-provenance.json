@@ -1669,6 +1669,7 @@
     "server2/tests/providers/fixtures/gateway-30.json",
     "server2/tests/providers/fixtures/pollen-v3-live-20261001.json",
     "server2/tests/providers/fixtures/uv-idx-v5.json",
+    "server2/tests/solar_terms/fixtures/server1-parity.json",
     "server2/tests/state/fixtures/export-alertpushes.json",
     "server2/tests/summary/fixtures/asos-daily-108-20251012-20251018.json",
     "server2/tests/warnings/fixtures/brk-news.json",

@@ -185,6 +185,9 @@ impl KmaBackend {
     pub fn request_budget(&self) -> std::time::Duration {
         self.source.request_budget()
     }
+    pub fn now_ms(&self) -> i64 {
+        (self.clock)() as i64
+    }
     async fn serve(
         &self,
         path: String,
