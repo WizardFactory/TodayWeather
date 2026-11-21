@@ -551,6 +551,7 @@ export function validateSnapshot(
       !["available", "unavailable"].includes(w.availability.air)
     )
       return;
+    const snapshot = withoutLiveForecastCapabilities(w as Weather);
     // A damaged optional summary must not discard a usable offline forecast.
     if (
       w.daySummary !== undefined &&
@@ -558,11 +559,10 @@ export function validateSnapshot(
         w.location.country !== "KR" ||
         !validDaySummary(w.daySummary))
     ) {
-      const { daySummary: ignored, ...rest } = w;
-      return rest as Weather;
+      delete snapshot.daySummary;
     }
     // Older normalization revisions use different cache keys and never reach here.
-    return withoutLiveForecastCapabilities(w as Weather);
+    return snapshot;
   } catch {
     return;
   }

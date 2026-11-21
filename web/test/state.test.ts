@@ -83,6 +83,8 @@ describe("untrusted persisted weather", () => {
           ...value,
           weather: {
             ...w,
+            coordinateAirForecastAvailable: true,
+            coordinatePollenForecastAvailable: true,
             daySummary: { date: "2026-02-30", text: "입춘" },
           },
         },
