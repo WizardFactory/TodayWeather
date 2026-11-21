@@ -546,7 +546,15 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   }));
   // Off-hour observation (00:15) with no pop should borrow 0% and not blow up chart width.
   raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
-  await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+  let fetchCount = 0;
+  await page.route(API + "/weather/**", (r) => {
+    fetchCount++;
+    const payload = structuredClone(raw);
+    if (fetchCount > 1) {
+      payload.current.stnDateTime = "2026.09.23.00:25";
+    }
+    return r.fulfill({ json: payload });
+  });
   await page.goto("/weather/seoul/hourly");
   const scroll = page.locator(".hourly-chart");
   await expect(scroll).toBeVisible();
@@ -588,7 +596,7 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
     const cols = [...el.querySelectorAll(".hourly-columns .chart-column")];
     return cols.findIndex((c) => {
       const r = c.getBoundingClientRect();
-      return r.left >= sb.left + 40 && r.right <= sb.right - 10;
+      return r.left >= sb.left + 48 && r.right <= sb.right - 10;
     });
   });
   expect(visibleBefore).toBeGreaterThanOrEqual(0);
@@ -597,13 +605,22 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   await expect(page.locator(".chart-extras")).toBeVisible();
 
   // The previously visible column remains inside the scroll viewport after expansion.
-  const stillVisible = await scroll.evaluate((el, idx) => {
+  const leftAfterExpand = await scroll.evaluate((el, idx) => {
     const sb = el.getBoundingClientRect();
     const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
     const r = col.getBoundingClientRect();
-    return r.right > sb.left && r.left < sb.right;
+    return { inView: r.right > sb.left && r.left < sb.right, left: r.left };
   }, visibleBefore);
-  expect(stillVisible).toBe(true);
+  expect(leftAfterExpand.inView).toBe(true);
+
+  // Refetch with updated observedAt preserves the user's scrolled anchor position.
+  await page.getByRole("button", { name: "새로고침" }).click();
+  await expect.poll(() => fetchCount).toBeGreaterThanOrEqual(2);
+  const leftAfterRefetch = await scroll.evaluate((el, idx) => {
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
+    return col.getBoundingClientRect().left;
+  }, visibleBefore);
+  expect(Math.abs(leftAfterRefetch - leftAfterExpand.left)).toBeLessThan(20);
 
   // Wind direction arrows keep natural size (not stretched to 100% column width).
   const maxArrowWidth = await page
@@ -613,10 +630,26 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
     );
   expect(maxArrowWidth).toBeLessThan(30);
 
-  // Clicking an SVG hit target updates data-cursor.
+  // Clicking an SVG hit target (without force) updates data-cursor.
   const targetIdx = Math.max(0, visibleBefore);
-  await scroll.locator("svg g .chart-hit").nth(targetIdx).click({ force: true });
+  const hourlyHit = scroll.locator("svg g .chart-hit").nth(targetIdx);
+  await hourlyHit.scrollIntoViewIfNeeded();
+  await hourlyHit.click();
   await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
+
+  // Forced-colors keeps current-dot text legible against the filled dot (PR1-R1).
+  await page.emulateMedia({ forcedColors: "active" });
+  const forcedFills = await scroll.evaluate((el) => {
+    const pt = el.querySelector(".today-point");
+    const txt = el.querySelector(".today-value");
+    return {
+      pt: pt ? getComputedStyle(pt).fill : "",
+      txt: txt ? getComputedStyle(txt).fill : "",
+    };
+  });
+  expect(forcedFills.pt).not.toBe("");
+  expect(forcedFills.txt).not.toBe("");
+  expect(forcedFills.txt).not.toBe(forcedFills.pt);
 });
 
 for (const lang of ["ko", "fr"] as const)
@@ -659,23 +692,25 @@ for (const lang of ["ko", "fr"] as const)
         document.documentElement.style.setProperty("--tw-text-scale", s);
         window.dispatchEvent(new Event("resize"));
       }, scale);
-      await page.waitForTimeout(100);
-      const todayBounds = await daily.evaluate((el) => {
-        const sb = el.getBoundingClientRect();
-        const today = el.querySelector(".today-column")!.getBoundingClientRect();
-        return {
-          sLeft: sb.left,
-          sRight: sb.right,
-          tLeft: today.left,
-          tRight: today.right,
-        };
-      });
-      expect(todayBounds.tLeft).toBeGreaterThanOrEqual(todayBounds.sLeft - 2);
-      expect(todayBounds.tRight).toBeLessThanOrEqual(todayBounds.sRight + 2);
+      await expect
+        .poll(async () =>
+          daily.evaluate((el) => {
+            const sb = el.getBoundingClientRect();
+            const today = el
+              .querySelector(".today-column")!
+              .getBoundingClientRect();
+            return (
+              today.left >= sb.left - 2 && today.right <= sb.right + 2
+            );
+          }),
+        )
+        .toBe(true);
     }
 
-    // Clicking SVG hit target for day index 8 (Tomorrow) updates cursor and readout.
-    await daily.locator("svg g .chart-hit").nth(8).click({ force: true });
+    // Scroll Tomorrow (index 8) into view and click its SVG group without force.
+    const tomorrowGroup = daily.locator("svg > g").nth(8);
+    await tomorrowGroup.scrollIntoViewIfNeeded();
+    await tomorrowGroup.click();
     await expect(daily).toHaveAttribute("data-cursor", "8");
     await expect(page.locator(".daily-chart-panel .cursor-readout")).toContainText("60%");
   });

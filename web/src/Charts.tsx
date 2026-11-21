@@ -228,7 +228,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
     r.yesterday?.temperature !== undefined &&
     r.point.temperature !== null &&
     Math.abs(y(r.yesterday.temperature) - y(r.point.temperature)) <
-      dotRadius * 2.15;
+      dotRadius * 2 + rem * 0.35;
   const { cursor, setCursor, keyDown } = useCursor(
     n,
     x,
@@ -305,7 +305,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
         <div
           className="chart-y-axis"
           aria-hidden="true"
-          style={{ top: rem * 9, height }}
+          style={{ height }}
         >
           {ticks.map((v, i) => (
             <span className="chart-y-tick" key={i} style={{ top: y(v) }}>

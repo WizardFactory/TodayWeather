@@ -2315,9 +2315,11 @@ textarea {
 }
 .chart-plot-wrap {
   position: relative;
+  --hourly-columns-h: 9rem;
 }
 .chart-y-axis {
   position: absolute;
+  top: var(--hourly-columns-h);
   left: 0;
   pointer-events: none;
   z-index: 1;
@@ -2353,7 +2355,7 @@ textarea {
   display: block;
 }
 .hourly-columns {
-  height: 9rem;
+  height: var(--hourly-columns-h);
 }
 .daily-columns {
   height: 11.25rem;
@@ -2447,10 +2449,6 @@ textarea {
   font-size: max(var(--tw-type-chart-value-size), var(--font-floor));
   fill: var(--tw-text-primary);
   font-weight: var(--tw-type-chart-value-weight);
-}
-.chart-axis {
-  font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
-  fill: var(--tw-text-secondary);
 }
 .now {
   fill: var(--tw-chart-now);
@@ -2627,6 +2625,10 @@ textarea {
     fill: none;
     stroke: CanvasText;
   }
+  .hourly-chart .today-value,
+  .hourly-chart .yesterday-value {
+    fill: Canvas;
+  }
   .hero-card {
     background: Canvas;
     color: CanvasText;
@@ -2738,9 +2740,6 @@ textarea {
 }
 .hourly-chart .yesterday-value {
   fill: var(--tw-chart-yesterday-on);
-}
-.hourly-chart .current-value {
-  fill: var(--tw-text-primary);
 }
 
 .chart-icon-placeholder {

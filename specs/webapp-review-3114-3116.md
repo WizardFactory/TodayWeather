@@ -32,7 +32,7 @@ The following two documented behaviors are deliberately amended by this work and
     - `dt > 3 * HOUR`: `column * 1.5`
   - `xs[0] = pad`, `xs[i] = xs[i - 1] + segmentWidth(dt, column)`.
   - `width = Math.max(viewport, (xs[n - 1] ?? pad) + pad)`.
-  - Returns `{ xs, width, gapAfter }`.
+  - Returns `{ xs, width, gapBefore }`.
 - **`linePath(values, x, y, breakBefore?)`**:
   - Optional 4th parameter `breakBefore?: (index: number) => boolean` starts a new subpath (`M`) whenever `breakBefore(i)` is true (used in `HourlyChart` when `rows[i].time - rows[i - 1].time > 3 * HOUR`). Backward-compatible with existing 3-argument callers.
 
@@ -40,7 +40,7 @@ The following two documented behaviors are deliberately amended by this work and
 - **`useMetrics(ref, active)`**: Includes `active` (`Boolean(n)`) in `useLayoutEffect` deps and returns `{ rem, width, measured }`.
 - **Expanded column width**: When `display.chartExpanded` is true, measure `windText(r.point.windDirection)` plus `rem * 1.5` (for `<ArrowUp size="1em" />` + gap) so `.chart-wind-direction` never overlaps across columns at 100% or 130% scale.
 - **Pinned Y-axis overlay**: Wrap `.chart-scroll` in `.chart-plot-wrap` (`position: relative`). Render `.chart-y-axis` (`aria-hidden="true"`, `pointer-events: none`, `position: absolute; left: 0;`) outside `.chart-scroll` aligned to the SVG plot top offset (`hourly-columns` height) and exact `y(v)` coordinates, with translucent `--panel` pill background. Include Y-axis clearance (`yAxisPad = rem * 2.75`) in `pad`, initial scroll offset, and `useCursor` left bound.
-- **Current marker & yesterday values**: Render current temperature inside the blue `.today-point` circle (`today-value` white text, WCAG AA), ringed by `<circle className="now" r={dotRadius + 3} />` (`fill: none`). Show yesterday dot + value whenever vertical clearance `Math.abs(y(yest) - y(today)) >= dotRadius * 1.9` (else small dot `r={rem * 0.25}` with no overlapping text).
+- **Current marker & yesterday values**: Render current temperature inside the blue `.today-point` circle (`today-value` white text, WCAG AA, `fill: Canvas` under `forced-colors: active`), ringed by `<circle className="now" r={dotRadius + 3} />` (`fill: none`). Show yesterday dot + value whenever vertical clearance `Math.abs(y(yest) - y(today)) >= dotRadius * 2 + rem * 0.35` (else small dot `r={rem * 0.25}` with no overlapping text).
 - **Column 0 preserved**: Keep `i > 0` for icon/probability/amount per `specs/design-system.md:294` and `pwa-design.spec.ts:487`.
 - **Hit rects & interaction**: Each hourly `<g>` begins with `<rect className="chart-hit" x={left} y={0} width={right - left} height={height} />` (midpoint-to-midpoint) followed by `<title>`, with `onClick={() => setCursor(i)}` and `onPointerEnter={(e) => { if (e.pointerType === "mouse") setCursor(i); }}`.
 - **Scroll preservation**: Track `anchorTimeRef` on `onScroll` (timestamp of column nearest viewport left + `yAxisPad`). Reset `anchorTimeRef.current = null` only when `(w.location.id, lang, unitKey)` changes (NOT on `w.observedAt` refetch). In `useLayoutEffect`, once `measured` is true: if `anchorTimeRef.current === null`, scroll to `Math.max(0, x(model.startIndex) - yAxisPad - column * 0.55)` and store its anchor time; otherwise re-apply scroll to keep `anchorTimeRef.current` at the same offset when `column`/`rem`/`viewport` change.
