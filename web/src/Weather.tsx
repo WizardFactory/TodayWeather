@@ -192,7 +192,9 @@ export default function WeatherPage({
     view === "daily" ? data?.daily.length : data?.hourly.length,
   );
   const pendingContentFocus = useRef(false);
-  const wasHourlyError = useRef(false);
+  const pendingErrorFocus = useRef(false);
+  const recoverMainFocus = useRef(false);
+  const pendingPreviewPopFocus = useRef(false);
   const prevPreviewView = useRef(view);
   useEffect(() => {
     pendingContentFocus.current = view === "daily";
@@ -238,25 +240,32 @@ export default function WeatherPage({
   ]);
   useEffect(() => {
     if (view === "daily") {
-      wasHourlyError.current = false;
+      pendingErrorFocus.current = false;
+      recoverMainFocus.current = false;
       return;
     }
     if (query.isError && !data) {
-      wasHourlyError.current = true;
-      if (!contentInert) {
-        const main = document.getElementById("main-content");
-        if (main && !main.contains(document.activeElement))
-          main.focus({ preventScroll: true });
-      }
+      pendingErrorFocus.current = true;
+      recoverMainFocus.current = true;
+    }
+  }, [route.key, view, query.isError, !!data, place?.id]);
+  useEffect(() => {
+    if (contentInert || view === "daily") return;
+    if (query.isError && !data && pendingErrorFocus.current) {
+      pendingErrorFocus.current = false;
+      const main = document.getElementById("main-content");
+      if (main && !main.contains(document.activeElement))
+        main.focus({ preventScroll: true });
       return;
     }
-    if (data && wasHourlyError.current && !contentInert) {
-      wasHourlyError.current = false;
-      // Error -> Retry on hourly/overview unmounts ErrorState; restore focus
-      // to #main-content without scrolling the hero out of view.
+    if (data && recoverMainFocus.current) {
+      recoverMainFocus.current = false;
+      pendingErrorFocus.current = false;
+      // Error -> Retry on non-daily views (hourly/overview/air) unmounts
+      // ErrorState; restore focus to #main-content without scrolling away from top.
       document.getElementById("main-content")?.focus({ preventScroll: true });
     }
-  }, [view, query.isError, !!data, contentInert, place?.id]);
+  }, [view, query.isError, !!data, contentInert]);
   useEffect(() => {
     const previous = prevPreviewView.current;
     prevPreviewView.current = view;
@@ -264,9 +273,14 @@ export default function WeatherPage({
     // Coordinate preview changes ?view= on the same /loc pathname, so App's
     // pathname effect does not run when returning from daily to hourly/air.
     window.scrollTo(0, 0);
-    if (navigationType === "POP" && !contentInert)
+    if (navigationType === "POP") pendingPreviewPopFocus.current = true;
+  }, [preview, view, route.key, navigationType]);
+  useEffect(() => {
+    if (!contentInert && pendingPreviewPopFocus.current) {
+      pendingPreviewPopFocus.current = false;
       document.getElementById("main-content")?.focus({ preventScroll: true });
-  }, [preview, view, route.key, navigationType, contentInert]);
+    }
+  }, [contentInert, view, route.key]);
   if (!place)
     return (
       <Empty title={t(catalogOnly ? "public.notFound" : "weather.selectFirst")}>

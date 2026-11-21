@@ -543,6 +543,17 @@ test("hourly entry keeps Hero visible and error Retry restores focus to main wit
   await expect(hero).toBeVisible();
   await expect(page.locator("#main-content")).toBeFocused();
   await expect(hero).toBeInViewport();
+
+  // Overview route also keeps Hero visible at top.
+  await page.goto("/weather/seoul/overview");
+  await expect(hero).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Initial PWA launch at "/" with a saved city redirects without hijacking focus (PR2-O4).
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
+  await expect(hero).toBeInViewport();
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
 });
 
 test("coordinate preview /loc scrolls back to top when switching from daily to hourly (#3115)", async ({
@@ -561,6 +572,16 @@ test("coordinate preview /loc scrolls back to top when switching from daily to h
   await expect(page.locator(".daily-chart")).toBeFocused();
   await expect(page.locator(".daily-chart")).toBeInViewport();
 
+  // History Back (POP) from daily -> hourly returns to top and focuses #main-content.
+  await page.goBack();
+  await expect(page).toHaveURL(/view=hourly/);
+  await expect(hero).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator("#main-content")).toBeFocused();
+
+  // Tab click from daily -> hourly also returns to top.
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(page.locator(".daily-chart")).toBeFocused();
   await page.getByRole("button", { name: "시간별", exact: true }).click();
   await expect(page).toHaveURL(/view=hourly/);
   await expect(hero).toBeInViewport();

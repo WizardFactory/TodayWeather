@@ -170,6 +170,7 @@ export default function App() {
     menuButton = useRef<HTMLButtonElement>(null),
     mainRef = useRef<HTMLElement>(null),
     firstRoute = useRef(true),
+    initialRootRedirect = useRef(false),
     returnFocus = useRef(false),
     focusMain = useRef(false);
   const queryClient = useQueryClient();
@@ -272,8 +273,17 @@ export default function App() {
     const keep =
       navigationType !== "POP" &&
       (location.state as { keepFocus?: boolean } | null)?.keepFocus;
-    if (firstRoute.current) firstRoute.current = false;
-    else if (!keep) focusMain.current = true;
+    if (firstRoute.current) {
+      firstRoute.current = false;
+      initialRootRedirect.current = location.pathname === "/";
+    } else if (initialRootRedirect.current && navigationType === "REPLACE") {
+      // Initial start_url "/" redirecting via <Navigate replace> is part of
+      // first load and should not hijack focus on launch.
+      initialRootRedirect.current = false;
+    } else {
+      initialRootRedirect.current = false;
+      if (!keep) focusMain.current = true;
+    }
   }, [location.pathname]);
   useEffect(() => {
     // Wait for the render that removed `inert` after closing the menu.

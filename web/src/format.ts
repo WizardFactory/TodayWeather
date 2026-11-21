@@ -196,9 +196,9 @@ export function windText(direction: string) {
 }
 
 /**
- * Upcoming precipitation rows starting from the source's current time/date,
- * keeping any in-progress partial observation slot and falling back to the
- * latest 8 rows when all supplied points are in the past.
+ * Upcoming precipitation rows starting from the source's current time/date
+ * (which already includes any in-progress KMA 3h partial slot with at > current.at),
+ * falling back to the latest 8 rows when all supplied points are in the past.
  */
 export function upcomingPrecipitation(
   weather: Pick<Weather, "current" | "hourly" | "daily">,
@@ -206,22 +206,18 @@ export function upcomingPrecipitation(
 ): Point[] {
   if (view === "daily") {
     const today = wallTime(weather.current.at.slice(0, 10) + "T00:00");
-    if (today === null) return weather.daily.slice(0, 8);
+    if (!Number.isFinite(today)) return weather.daily.slice(0, 8);
     const upcoming = weather.daily.filter((p) => {
       const t = wallTime(p.at.slice(0, 10) + "T00:00");
-      return t !== null && t >= today;
+      return Number.isFinite(t) && t >= today;
     });
     return (upcoming.length ? upcoming : weather.daily.slice(-8)).slice(0, 8);
   }
   const now = wallTime(weather.current.at);
-  if (now === null) return weather.hourly.slice(0, 8);
+  if (!Number.isFinite(now)) return weather.hourly.slice(0, 8);
   const upcoming = weather.hourly.filter((p) => {
     const t = wallTime(p.at);
-    return (
-      t !== null &&
-      (t >= now ||
-        (p.precipitationBasis === "partial" && t + 3 * 3_600_000 > now))
-    );
+    return Number.isFinite(t) && t >= now;
   });
   return (upcoming.length ? upcoming : weather.hourly.slice(-8)).slice(0, 8);
 }

@@ -174,14 +174,14 @@ describe("display formatting", () => {
       discomfort: "",
       ...extra,
     });
-    const current = pt("2026-09-23T09:00");
+    const current = pt("2026-09-23T10:00");
     const hourly = [
       pt("2026-09-21T00:00"),
       pt("2026-09-22T18:00"),
       pt("2026-09-23T06:00"),
-      pt("2026-09-23T08:00", { precipitationBasis: "partial", precipitationHours: null }),
       pt("2026-09-23T09:00"),
-      pt("2026-09-23T12:00"),
+      pt("2026-09-23T10:00"),
+      pt("2026-09-23T12:00", { precipitationBasis: "partial", precipitationHours: null }),
       pt("2026-09-23T15:00"),
       pt("2026-09-23T18:00"),
       pt("2026-09-23T21:00"),
@@ -203,23 +203,23 @@ describe("display formatting", () => {
       pt("2026-09-30T00:00"),
       pt("2026-10-01T00:00"),
     ];
-    // Hourly keeps in-progress partial slot + current/future rows, capped at 8.
+    // Hourly keeps current + in-progress partial slot (at > current.at) + future rows, capped at 8.
     expect(
       upcomingPrecipitation({ current, hourly, daily }, "hourly").map((p) => p.at),
     ).toEqual([
-      "2026-09-23T08:00",
-      "2026-09-23T09:00",
+      "2026-09-23T10:00",
       "2026-09-23T12:00",
       "2026-09-23T15:00",
       "2026-09-23T18:00",
       "2026-09-23T21:00",
       "2026-09-24T00:00",
       "2026-09-24T03:00",
+      "2026-09-24T06:00",
     ]);
     // Overview uses the same hourly filter.
     expect(
       upcomingPrecipitation({ current, hourly, daily }, "overview")[0]?.at,
-    ).toBe("2026-09-23T08:00");
+    ).toBe("2026-09-23T10:00");
     // Daily starts at today and caps at 8.
     expect(
       upcomingPrecipitation({ current, hourly, daily }, "daily").map((p) => p.at),
@@ -247,5 +247,13 @@ describe("display formatting", () => {
         (p) => p.at,
       ),
     ).toEqual(daily.slice(0, 3).map((p) => p.at));
+    // Unparseable current.at falls back safely to the first 8 rows (PR2-R2).
+    const invalid = pt("bad");
+    expect(
+      upcomingPrecipitation({ current: invalid, hourly, daily }, "hourly").map((p) => p.at),
+    ).toEqual(hourly.slice(0, 8).map((p) => p.at));
+    expect(
+      upcomingPrecipitation({ current: invalid, hourly, daily }, "daily").map((p) => p.at),
+    ).toEqual(daily.slice(0, 8).map((p) => p.at));
   });
 });
