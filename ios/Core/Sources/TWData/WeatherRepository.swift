@@ -257,12 +257,22 @@ public final class WeatherRepository {
                                        validUntil: retrieved.addingTimeInterval(86400))
     }
 
-    private func readCoordinateForecast(_ place: Place, _ product: String, _ acceptLanguage: String) async -> JSONValue? {
+    /// Official warnings follow the place being viewed. The place weather cache does not own this response.
+    public func coordinateWarnings(place: Place, acceptLanguage: String) async -> CoordinateWarnings? {
+        guard let point = place.location,
+              let json = await readCoordinateForecast(place, "warnings", acceptLanguage, timeout: .seconds(8)),
+              !Task.isCancelled
+        else { return nil }
+        return CoordinateWarnings.decode(json, lat: point.lat, lon: point.long, parser: forecastTimeParser())?.current(at: clock.now)
+    }
+
+    private func readCoordinateForecast(_ place: Place, _ product: String, _ acceptLanguage: String,
+                                        timeout: Duration = .milliseconds(2500)) async -> JSONValue? {
         guard let baseURL, let location = place.location,
               let url = WeatherRequests.coordinateForecastURL(base: baseURL, lat: location.lat, long: location.long, product: product)
         else { return nil }
         let http = self.http, clock = self.clock
-        let response = await firstSettled(attempts: 1, gap: .zero, timeout: .milliseconds(2500), clock: clock) {
+        let response = await firstSettled(attempts: 1, gap: .zero, timeout: timeout, clock: clock) {
             try await http.get(url, headers: ["Accept-Language": acceptLanguage, "Cache-Control": "no-store"])
         }
         guard case .success(let data) = response else { return nil }

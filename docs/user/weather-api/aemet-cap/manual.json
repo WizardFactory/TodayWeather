@@ -1,0 +1,20 @@
+{
+  "title": "Spain's official AEMET warnings",
+  "scenario": "Read Spain's official warnings for a viewed coordinate on an isolated server1 instance. The screenshots show live HTTP responses for the November 21, 2026, 10:36:33 UTC AEMET revision.",
+  "steps": [
+    {
+      "title": "Check for current coverage with no warnings",
+      "instruction": "With AEMET_WARNINGS_ENABLED=true, request GET /weather/v000903/coord/40.4168,-3.7038/warnings. Compare sources.state with the warnings array.",
+      "screenshot": "madrid.png",
+      "caption": "Madrid matched Meteoalerta zone 722802. This current snapshot had no warnings at the viewed point.",
+      "expected": "Use current coverage and an empty list together to identify a checked point with no warnings."
+    },
+    {
+      "title": "Read the applicable official warning",
+      "instruction": "Request GET /weather/v000903/coord/41.3874,2.1686/warnings. Check the issuer, matched zone and effective, onset and expiry times.",
+      "screenshot": "barcelona.png",
+      "caption": "Barcelona matched Meteoalerta zone 690804 and returned one official warning in this snapshot.",
+      "expected": "Keep issuer credit and timing with the warning. A future onset can be shown as upcoming after the warning becomes effective. Reevaluate source freshness on read."
+    }
+  ]
+}
