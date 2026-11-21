@@ -1,5 +1,11 @@
 # Static web client
 
+## Korean daily forecast summary
+
+The PWA and desktop current-weather cards share the server-ranked daily summary. Weather-core accepts a complete text/date pair for Korean KMA forecasts. Snapshots keep that pair with their place, unit settings and language. A fallback to another language omits the localized summary. The card switches back to its usual weather details at midnight in Seoul, including while offline. The full term calendar has a separate annual API.
+
+See the [forecast contract](mobile-api.md#korean-daily-summary-and-annual-solar-terms) and [illustrated forecast guide](../user/solar-terms/manual.pdf).
+
 Repository evidence: local web implementation prepared 2026-09-24 for [#2558](https://github.com/WizardFactory/TodayWeather/issues/2558), with display, state, privacy and deploy-preflight corrections merged in `23a61491` (PR #2582, 2026-09-26) and the PWA audit fixes on this branch (`webapp-pwa-audit-fixes`, based on `b8a3c504`, 2026-09-26). This document describes executable source and a prepared hosting topology; it does not claim the web app has been released. Issue [#2646](https://github.com/WizardFactory/TodayWeather/issues/2646) changes the canonical destination to `app.todayweather.ai` and prepares reuse of existing hosting, with operator-provided resource identifiers and separate production authorization. There is no isolated staging path: the build and uploader are fixed to `app.todayweather.ai` ([release gaps](../webapp/implementation.md#release-gaps)).
 
 The new root npm workspace contains `web` and `packages/weather-core`. It does not reuse Cordova startup or import `server/app.js`; running local web tooling does not start historical gather/scrape jobs. The [implemented diagram](../webapp/diagrams/webapp-implementation.html) has [editable source](../webapp/diagrams/webapp-implementation.json). The [technical design](../webapp/technical-design.md) records the same static-only runtime and future parity boundaries.

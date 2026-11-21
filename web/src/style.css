@@ -2697,3 +2697,11 @@ textarea {
   width: 1.5rem;
   height: 1.5rem;
 }
+
+.hero-ranked-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+}

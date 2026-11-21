@@ -690,7 +690,7 @@ private fun screenName(route: String): String = when {
 }
 
 /** The device's languages for `Accept-Language`, as the WebView sent them. */
-private fun languages(): List<String> = LocaleListCompat.getAdjustedDefault().toLanguageTags().split(",").filter { it.isNotEmpty() }
+internal fun languages(): List<String> = LocaleListCompat.getAdjustedDefault().toLanguageTags().split(",").filter { it.isNotEmpty() }
 
 /** O06 of an app open: [due] once, then its answer (OK enables the migrated alerts). */
 interface AlertIntro {

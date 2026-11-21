@@ -13,6 +13,34 @@ import world from "../../../docs/rewrite/examples/client-world-response.json";
 import full from "../../../docs/rewrite/examples/screenshot-weather.json";
 
 describe("source adapters preserve meteorological meaning", () => {
+  it("exposes only dated Korean summaries, preserving punctuation", () => {
+    const current = {
+      ...kma.response.current,
+      summary: "최고 6도, 입춘",
+      summaryForDate: "2026-02-04",
+    };
+    const weather = (country: string, summaryForDate: string) =>
+      normalizeWeather({
+        ...kma.response,
+        country,
+        current: { ...current, summaryForDate },
+      });
+    expect(weather("KR", "2026-02-04").daySummary).toEqual({
+      date: "2026-02-04",
+      text: current.summary,
+    });
+    expect(weather("KR", "invalid").daySummary).toBeUndefined();
+    expect(weather("JP", "2026-02-04").daySummary).toBeUndefined();
+    expect(normalizeWeather(kma.response).daySummary).toBeUndefined();
+    expect(
+      normalizeWeather(
+        { ...kma.response, current },
+        {
+          units: { ...DEFAULT_UNITS, temperatureUnit: "F" },
+        },
+      ).daySummary,
+    ).toBeUndefined();
+  });
   it("normalizes KMA, including observed zero rain and yesterday", () => {
     const result = normalizeWeather(kma.response, {
       fetchedAt: "2026-09-24T00:00:00Z",

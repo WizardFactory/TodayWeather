@@ -1,0 +1,27 @@
+{
+  "title": "Reading the daily solar-term summary",
+  "scenario": "For a Korean forecast, the service ranks daily weather and solar terms. The screens below use synthetic weather data.",
+  "steps": [
+    {
+      "title": "Read today’s forecast on a phone",
+      "instruction": "Open the weather forecast for a Korean location. Look below the current temperature for the daily summary.",
+      "screenshot": "pwa.png",
+      "caption": "In this example the summary gives the daily temperature range and names Chubun.",
+      "expected": "On a day with more urgent air or weather conditions, those messages can occupy both slots."
+    },
+    {
+      "title": "Read the same forecast on desktop",
+      "instruction": "Open the same location in the desktop WebApp. The daily summary appears in the current-weather card.",
+      "screenshot": "desktop.png",
+      "caption": "Both layouts show the summary selected by the weather service. The display does not require a calendar request.",
+      "expected": "After midnight in Korea, the previous day’s solar-term summary expires, including when viewing a saved forecast."
+    },
+    {
+      "title": "Read the forecast on Android",
+      "instruction": "Open the Korean place in the forecast tab. Read the summary below the current conditions.",
+      "screenshot": "android.png",
+      "caption": "The example ends with the name 입춘. The temperature range and the term share the same summary.",
+      "expected": "Open the separate air-quality card to see air details."
+    }
+  ]
+}

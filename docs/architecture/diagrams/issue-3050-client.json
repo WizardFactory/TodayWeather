@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Proposed Korean solar-term delivery on server1",
+    "output": "docs/architecture/diagrams/issue-3050-client.html",
+    "viewBox": [
+      1030,
+      610
+    ],
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "b3b31011bb4e9a3aa5f839727dcf41cd35ee0831"
+    }
+  },
+  "participants": [
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "TodayWeather clients",
+      "sublabel": "WebApp · iOS · Android",
+      "sources": [
+        {
+          "path": "ios/Core/Sources/TWDomain/WeatherConverter.swift",
+          "line": 20,
+          "end_line": 60
+        },
+        {
+          "path": "packages/weather-core/src/index.ts",
+          "line": 662,
+          "end_line": 665
+        },
+        {
+          "path": "android/core-domain/src/main/kotlin/net/wizardfactory/todayweather/core/domain/forecast/ForecastScope.kt",
+          "line": 150,
+          "end_line": 157
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Weather gateway",
+      "sublabel": "Country routing",
+      "sources": [
+        {
+          "path": "server/routes/gateway.js",
+          "line": 110,
+          "end_line": 124
+        }
+      ]
+    },
+    {
+      "id": "weather",
+      "type": "backend",
+      "label": "Server1 forecast",
+      "sublabel": "Domestic summary",
+      "sources": [
+        {
+          "path": "server/controllers/controllerTown24h.js",
+          "line": 1686,
+          "end_line": 1692
+        },
+        {
+          "path": "server/controllers/controllerTown.js",
+          "line": 2286,
+          "end_line": 2306
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "type": "database",
+      "label": "Calendar catalog",
+      "sublabel": "Proposed immutable years"
+    }
+  ],
+  "segments": [
+    {
+      "from": 145,
+      "to": 345,
+      "label": "Korean forecast"
+    },
+    {
+      "from": 360,
+      "to": 500,
+      "label": "Year lookup"
+    }
+  ],
+  "messages": [
+    {
+      "id": "step-0",
+      "from": "app",
+      "to": "api",
+      "label": "Normal weather GET",
+      "y": 165,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-1",
+      "from": "api",
+      "to": "weather",
+      "label": "Domestic forecast",
+      "y": 196,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-2",
+      "from": "weather",
+      "to": "catalog",
+      "label": "Read KST date and KR group",
+      "y": 226,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-3",
+      "from": "catalog",
+      "to": "weather",
+      "label": "Eligible name or none",
+      "y": 257,
+      "variant": "return"
+    },
+    {
+      "id": "step-4",
+      "from": "weather",
+      "to": "api",
+      "label": "Ranked current.summary",
+      "y": 289,
+      "variant": "return"
+    },
+    {
+      "id": "step-5",
+      "from": "api",
+      "to": "app",
+      "label": "Weather with summary text",
+      "y": 325,
+      "variant": "return"
+    },
+    {
+      "id": "step-6",
+      "from": "app",
+      "to": "api",
+      "label": "Request Korean calendar year",
+      "y": 379,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-7",
+      "from": "api",
+      "to": "catalog",
+      "label": "Read complete snapshot",
+      "y": 409,
+      "variant": "emphasis"
+    },
+    {
+      "id": "step-8",
+      "from": "catalog",
+      "to": "api",
+      "label": "24 dates and provenance",
+      "y": 440,
+      "variant": "return"
+    },
+    {
+      "id": "step-9",
+      "from": "api",
+      "to": "app",
+      "label": "Year or 304 if unchanged",
+      "y": 473,
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Country policy",
+      "items": [
+        "WebApp (PWA and desktop), native iOS and Android use the KR forecast policy.",
+        "Korean displays the term name alone."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Today’s priorities",
+      "items": [
+        "Warnings and actionable weather take precedence.",
+        "The KR group controls whether a term can enter the summary."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Year lookup",
+      "items": [
+        "Publish complete years atomically after validation.",
+        "Official Korean corrections apply only to Korean dates.",
+        "The future Rust server2 port preserves both public responses."
+      ]
+    }
+  ]
+}

@@ -205,7 +205,16 @@ function createGatewayRouter(deps) {
     }
 
     function sendJson(res, body, maxAge) {
-        res.set('Cache-Control', maxAge === undefined ? 'no-store' : 'max-age=' + maxAge);
+        res.vary('Accept-Language');
+        // Date- or edition-sensitive summaries must revalidate, including at KST midnight.
+        // Express calculates the ETag from the final JSON after geo fields have been merged.
+        var cacheControl = 'no-store';
+        if (maxAge !== undefined) {
+            var marked = body && body.current && body.current.summaryForDate;
+            var ttl = marked ? Math.min(maxAge, require('../lib/solarTerms/summaryCache').remainingSeconds(marked, Date.now())) : maxAge;
+            cacheControl = 'max-age=' + ttl + (marked ? ', must-revalidate' : '');
+        }
+        res.set('Cache-Control', cacheControl);
         res.json(body);
     }
 
