@@ -17,7 +17,6 @@ pub type Middleware = fn(&mut Cx) -> Flow;
 pub struct Cx<'a> {
     /// The Express `req` object.
     pub req: V,
-    pub version: String,
     pub locale: Locale,
     pub store: &'a dyn KmaStore,
     pub now: f64,
@@ -484,7 +483,6 @@ pub fn run_capturing_with_solar_terms(
     ]);
     let mut cx = Cx {
         req: V::Obj(req),
-        version: request.version.clone(),
         locale: request.locale,
         store,
         now,

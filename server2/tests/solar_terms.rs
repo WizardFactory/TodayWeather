@@ -2369,6 +2369,30 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
         )
         .await;
     assert_eq!(dir_304.status(), StatusCode::NOT_MODIFIED);
+    assert_eq!(dir_304.headers()["vary"], "Accept-Language, Cookie");
+
+    let dir_head = direct
+        .handle(
+            Request::head(direct_path)
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(dir_head.status(), StatusCode::OK);
+    assert!(
+        dir_head.headers()["cache-control"]
+            .to_str()
+            .unwrap()
+            .contains("must-revalidate")
+    );
+    assert_eq!(dir_head.headers()["vary"], "Accept-Language, Cookie");
+    assert!(
+        axum::body::to_bytes(dir_head.into_body(), 1_000_000)
+            .await
+            .unwrap()
+            .is_empty()
+    );
 
     // Non-Korean locale through real Gateway and DirectRoutes still carries summaryForDate
     // (ranked KR summary without solar-term name) and emits Vary on both paths.
@@ -2538,17 +2562,45 @@ async fn cross_implementation_server1_parity_through_gateway_and_direct_routes()
     assert!(plain_dir_304.headers().get("cache-control").is_none());
     assert_eq!(plain_dir_304.headers()["vary"], "Accept-Language, Cookie");
 
-    // Uppercase /V000903/ drops req.version in controllerTown24h.js and omits Vary; 404 omits Vary.
-    let upper_dir = plain_direct
+    let plain_dir_head = plain_direct
         .handle(
-            Request::get("/V000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99")
+            Request::head(direct_path)
                 .header("accept-language", "ko-KR")
                 .body(Body::empty())
                 .unwrap(),
         )
         .await;
-    assert_eq!(upper_dir.status(), StatusCode::OK);
-    assert!(upper_dir.headers().get("vary").is_none());
+    assert_eq!(plain_dir_head.status(), StatusCode::OK);
+    assert!(plain_dir_head.headers().get("cache-control").is_none());
+    assert_eq!(plain_dir_head.headers()["vary"], "Accept-Language, Cookie");
+    assert!(
+        axum::body::to_bytes(plain_dir_head.into_body(), 1_000_000)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    // Uppercase /V000903/ drops req.version in controllerTown24h.js and omits summaryForDate,
+    // must-revalidate, and Vary even when solar terms are enabled; 404 also omits Vary.
+    let upper_path = "/V000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99";
+    for router in [&direct, &plain_direct] {
+        let upper_dir = router
+            .handle(
+                Request::get(upper_path)
+                    .header("accept-language", "ko-KR")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+        assert_eq!(upper_dir.status(), StatusCode::OK);
+        assert!(upper_dir.headers().get("cache-control").is_none());
+        assert!(upper_dir.headers().get("vary").is_none());
+        let upper_bytes = axum::body::to_bytes(upper_dir.into_body(), 1_000_000)
+            .await
+            .unwrap();
+        let upper_json: serde_json::Value = serde_json::from_slice(&upper_bytes).unwrap();
+        assert!(upper_json["current"].get("summaryForDate").is_none());
+    }
 
     let err_dir = plain_direct
         .handle(
