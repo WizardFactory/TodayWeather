@@ -140,7 +140,7 @@ fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), Str
     else {
         return Err(format!("{id}: recorded `current` is not a JSON object"));
     };
-    match id {
+    let expected_etag = match id {
         "domestic-special-info" => {
             let special_key = utf16("specialInfo");
             let before = cur_entries.len();
@@ -150,6 +150,8 @@ fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), Str
             }
             replace_field(cur_entries, "summaryWeather", ostr("어제와 비슷, 맑음"))?;
             replace_field(cur_entries, "summary", ostr("어제와 비슷, 맑음"))?;
+            // Independently computed Express weak ETag (byte length 32986, base64-no-pad MD5).
+            r#"W/"80da-22VAYrzbo8ML076i4eBQ4A""#
         }
         "warning-two-zones" => {
             let narrowed_info = OrderedJson::Array(vec![OrderedJson::Object(vec![
@@ -170,9 +172,11 @@ fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), Str
                 "summary",
                 ostr("한파주의보, Similar to yesterday"),
             )?;
+            // Independently computed Express weak ETag (byte length 32436, base64-no-pad MD5).
+            r#"W/"7eb4-SiEkTe4NsbB3Y9uLpE7rXQ""#
         }
         _ => unreachable!(),
-    }
+    };
     let expected_bytes = expected_ordered.to_bytes();
     let expected = String::from_utf8(expected_bytes).unwrap();
     if actual != expected {
@@ -182,14 +186,8 @@ fn run_narrowed_seoul_warning_scenario(sc: &serde_json::Value) -> Result<(), Str
         ));
     }
     let actual_etag = server2::gateway::response::etag(actual.as_bytes());
-    let expected_etag = server2::gateway::response::etag(expected.as_bytes());
     if actual_etag != expected_etag {
         return Err(format!("{id}: ETag {actual_etag} vs {expected_etag}"));
-    }
-    if sc["etag"].as_str() == Some(actual_etag.as_str()) {
-        return Err(format!(
-            "{id}: ETag unexpectedly unchanged from pre-#3084 recording ({actual_etag})"
-        ));
     }
     if let Some(reason) = store.unconsumed() {
         return Err(format!("{id}: {reason}"));

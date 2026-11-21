@@ -7,10 +7,6 @@
     "quality_profile": "showcase",
     "column_fit": "spread",
     "animation": "none",
-    "viewBox": [
-      1080,
-      680
-    ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
       "revision": "bb774125a0087aa686075568cb3a453c5d8adfdd",
@@ -73,6 +69,11 @@
           "path": "server2/src/warnings/store.rs",
           "line": 542,
           "end_line": 595
+        },
+        {
+          "path": "server2/src/warnings/zones.rs",
+          "line": 306,
+          "end_line": 380
         }
       ]
     },
@@ -108,55 +109,55 @@
       "id": "warning-step-0",
       "from": "collector",
       "to": "s3",
-      "y": 170,
+      "y": 160,
       "label": "Publish raw + catalog",
       "variant": "security",
-      "note": "Every source page/day must succeed before the feed hook."
+      "note": "Raw + catalog first."
     },
     {
       "id": "warning-step-1",
       "from": "collector",
       "to": "feed",
-      "y": 206,
+      "y": 204,
       "label": "Pass persisted rows",
       "variant": "default",
-      "note": "S18b-3 hook; first durable feed is a silent baseline."
+      "note": "First feed is silent."
     },
     {
       "id": "warning-step-2",
       "from": "feed",
       "to": "s3",
-      "y": 242,
+      "y": 248,
       "label": "Events then CAS head",
       "variant": "security",
-      "note": "An event without an acknowledged head is not visible."
+      "note": "CAS head makes visible."
     },
     {
       "id": "warning-step-3",
       "from": "worker",
       "to": "feed",
-      "y": 278,
+      "y": 292,
       "label": "Read new feed",
       "variant": "default",
-      "note": "First worker read is silent; no startup replay."
+      "note": "No startup replay."
     },
     {
       "id": "warning-step-4",
       "from": "worker",
       "to": "state",
-      "y": 314,
+      "y": 336,
       "label": "Select eligible alerts",
       "variant": "default",
-      "note": "Zone + inclusive time window; deduplicate package/token."
+      "note": "235-zone + window."
     },
     {
       "id": "warning-step-5",
       "from": "worker",
       "to": "s3",
-      "y": 350,
+      "y": 380,
       "label": "Claim endpoint",
       "variant": "security",
-      "note": "Stop if claim is unavailable or already taken."
+      "note": "Stop if already taken."
     },
     {
       "id": "warning-auth",
@@ -164,8 +165,8 @@
       "to": "fcm",
       "label": "Prepare OAuth",
       "variant": "default",
-      "note": "No FCM POST before final guard.",
-      "y": 386
+      "note": "No POST before guard.",
+      "y": 424
     },
     {
       "id": "warning-guard",
@@ -173,35 +174,35 @@
       "to": "state",
       "label": "Recheck durable state",
       "variant": "security",
-      "note": "Catch up S3 registration journal and read active S12 zones; error/timeout/expiry stops POST.",
-      "y": 422
+      "note": "Check journal + S12 zones.",
+      "y": 468
     },
     {
       "id": "warning-step-6",
       "from": "worker",
       "to": "fcm",
-      "y": 458,
+      "y": 512,
       "label": "Submit once",
       "variant": "emphasis",
-      "note": "Current active warning only; no hidden retry."
+      "note": "Active only; no retry."
     },
     {
       "id": "warning-step-7",
       "from": "fcm",
       "to": "worker",
-      "y": 494,
+      "y": 556,
       "label": "Outcome or unknown",
       "variant": "return",
-      "note": "A lost response never authorizes a second submission."
+      "note": "Never retries on loss."
     },
     {
       "id": "warning-step-8",
       "from": "worker",
       "to": "s3",
-      "y": 530,
+      "y": 600,
       "label": "Record sanitized result",
       "variant": "dashed",
-      "note": "Claim survives missing result, cancellation and restart."
+      "note": "Claim survives restart."
     }
   ],
   "cards": [
@@ -210,7 +211,7 @@
       "title": "Legacy source contract",
       "items": [
         "First durable feed is silent; later new source events must be less than five minutes old.",
-        "Release, expiry, active announcement, alert time window and zone govern selection."
+        "Release, expiry, active announcement, alert time window and granular KMA 235-zone sub-zone matching (embedded kma_warning_subzones.json, safe over-warn fallback on empty/unknown third; shared with current.specialInfo and summaries) govern selection."
       ]
     },
     {

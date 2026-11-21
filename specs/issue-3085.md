@@ -1,12 +1,12 @@
 # Spec: server2 granular KMA weather warning zone matching — issue 3085
 
-Revision 2, 2026-11-21. Consumes [intent/issue-3085.md](../intent/issue-3085.md) r1 and mirrors `#3084` (`specs/issue-3084.md`) under the `server2` placement contract ([server2.md](../docs/architecture/server2.md#implementation-placement)).
+Revision 3, 2026-11-21. Consumes [intent/issue-3085.md](../intent/issue-3085.md) r1 and mirrors `#3084` (`specs/issue-3084.md`) under the `server2` placement contract ([server2.md](../docs/architecture/server2.md#implementation-placement)).
 
 ## Placement declaration
 
 Declared in `server2/config/tasks/Issue3085.json`:
 - `server2/` paths: `server2/config/tasks/Issue3085.json`, `server2/src/warnings/data/kma_warning_subzones.json`, `server2/src/warnings/data/PROVENANCE.md`, `server2/src/warnings/zones.rs`, `server2/tests/warnings/legacy.rs`, `server2/tests/warnings/golden.rs`, `server2/tests/warnings/recovery.rs`, `server2/tests/warnings/seed.rs`, `server2/tests/warnings/fixtures/oracle-expected.json`, `server2/tests/warnings/fixtures/PROVENANCE.md`, `server2/tests/delivery/warnings.rs`, `server2/tests/domestic/parity.rs`, `server2/tests/domestic/recorded.rs`.
-- Outside paths (documentation only): `intent/issue-3085.md`, `specs/issue-3085.md`, `plans/issue-3085.md`.
+- Outside paths (documentation only): `intent/issue-3085.md`, `specs/issue-3085.md`, `plans/issue-3085.md`, `docs/architecture/server2.md`, `docs/architecture/diagrams/server2-warning-push.json`, `docs/architecture/diagrams/server2-warning-push.html`.
 - Zero runtime imports, includes, symlinks, or file reads into `server/`.
 
 ## R1 Embedded sub-zone data (`server2/src/warnings/data/kma_warning_subzones.json`)

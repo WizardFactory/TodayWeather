@@ -815,6 +815,22 @@ collected documents use the S02 seed key order, which S19 shadow comparison must
 confirm against production bytes; the Express session cookie and the shared S08
 classification of status-200 JSON gateway envelopes are recorded differences.
 
+Granular KMA 2026-06-01 235-zone sub-zone matching ([#3085](https://github.com/WizardFactory/TodayWeather/issues/3085),
+[spec](../../specs/issue-3085.md), mirroring legacy [#3084](https://github.com/WizardFactory/TodayWeather/issues/3084)):
+`ZoneTable::zones_for_town` in `server2/src/warnings/zones.rs` embeds its own provenance-recorded
+copy of the KMA sub-zone table (`server2/src/warnings/data/kma_warning_subzones.json`,
+`include_str!`, zero runtime reads into `server/`). It classifies `전남광주통합특별시` into
+`광주광역시` or `전라남도` (#3078 parity), strips ECMAScript `\s` whitespace from `town.second`
+via `js::collapse_space`, and resolves `SubzoneTable::shared()` (`township_splits` exact `by_third`
+before `district_splits` and before substring `ISLAND_ZONES`) with conservative over-warn
+`fallback` sets on empty or unrecognized `third` (including external island sub-zones and mixed
+administrative/legal boundaries, with no blind suffix narrowing). Both domestic `current.specialInfo`
+(and the derived `current.summaryWeather`/`current.summary` warning prefix) and warning push
+recipient selection (`server2/src/push/deliver/warnings.rs`, [warning push diagram](diagrams/server2-warning-push.html))
+consume `ZoneTable::zones_for_town`, so split metropolitan districts (e.g., Seoul 4 sub-zones,
+Busan/Ulsan/Gwangju/Incheon/Sejong) and split plain/mountain/directional townships receive only
+their matching sub-zone warnings plus ancestor zones.
+
 Daily weather summaries are the authorized derived-weather exception; D04
 geocoding cache projections below do not permit normalized weather views. Preserve grid's
 legacy input sources/00:00 rule and >=18 valid hours, ASOS ordered valid min/max
