@@ -5,6 +5,7 @@ import {
   useNavigate,
   useSearchParams,
   useLocation,
+  useNavigationType,
   Link,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -62,6 +63,7 @@ import {
   amount,
   precipitationAmount,
   forecastAmount,
+  upcomingPrecipitation,
   weatherStaleTime,
   windText,
 } from "./format";
@@ -139,6 +141,7 @@ export default function WeatherPage({
   const { state, setState, notify, contentInert } = useApp();
   const navigate = useNavigate();
   const route = useLocation();
+  const navigationType = useNavigationType();
   const linkPlaceKind = route.state?.linkPlaceKind;
   // A catalog deep link must never open an unrelated favorite with the same ID.
   const catalogOnly =
@@ -189,8 +192,10 @@ export default function WeatherPage({
     view === "daily" ? data?.daily.length : data?.hourly.length,
   );
   const pendingContentFocus = useRef(false);
+  const wasHourlyError = useRef(false);
+  const prevPreviewView = useRef(view);
   useEffect(() => {
-    pendingContentFocus.current = view === "hourly" || view === "daily";
+    pendingContentFocus.current = view === "daily";
   }, [
     route.key,
     view,
@@ -231,6 +236,37 @@ export default function WeatherPage({
     hasChartRows,
     query.isPending,
   ]);
+  useEffect(() => {
+    if (view === "daily") {
+      wasHourlyError.current = false;
+      return;
+    }
+    if (query.isError && !data) {
+      wasHourlyError.current = true;
+      if (!contentInert) {
+        const main = document.getElementById("main-content");
+        if (main && !main.contains(document.activeElement))
+          main.focus({ preventScroll: true });
+      }
+      return;
+    }
+    if (data && wasHourlyError.current && !contentInert) {
+      wasHourlyError.current = false;
+      // Error -> Retry on hourly/overview unmounts ErrorState; restore focus
+      // to #main-content without scrolling the hero out of view.
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+    }
+  }, [view, query.isError, !!data, contentInert, place?.id]);
+  useEffect(() => {
+    const previous = prevPreviewView.current;
+    prevPreviewView.current = view;
+    if (!preview || previous === view || view === "daily") return;
+    // Coordinate preview changes ?view= on the same /loc pathname, so App's
+    // pathname effect does not run when returning from daily to hourly/air.
+    window.scrollTo(0, 0);
+    if (navigationType === "POP" && !contentInert)
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+  }, [preview, view, route.key, navigationType, contentInert]);
   if (!place)
     return (
       <Empty title={t(catalogOnly ? "public.notFound" : "weather.selectFirst")}>
@@ -475,7 +511,7 @@ function WeatherDetails({
   // Mobile rounds the yesterday difference in °F and keeps one decimal in °C.
   const deltaDigits = w.units.temperatureUnit === "F" ? 0 : 1;
   const today = w.daily.find((p) => p.at.slice(0, 10) === now.at.slice(0, 10));
-  const hourly = w.hourly;
+  const precipRows = upcomingPrecipitation(w, view);
   const snowLabel = t(
     w.source === "KMA" ? "metric.snowDepth" : "metric.snowfall",
   );
@@ -748,7 +784,7 @@ function WeatherDetails({
       <section className="panel">
         <SectionHead title={t("weather.precipitation.title")} />
         <div className="detail-grid">
-          {(view === "daily" ? w.daily : hourly).slice(0, 8).map((p) => (
+          {precipRows.map((p) => (
             <div key={p.at}>
               <span>
                 {dayLabel(p.at, now.at)} {view !== "daily" && hourText(p.at)}

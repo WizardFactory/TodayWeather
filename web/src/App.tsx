@@ -258,8 +258,9 @@ export default function App() {
   }, []);
   useEffect(() => {
     setMenuOpen(false);
-    // Weather owns chart-route scroll/focus once its data has rendered.
-    if (/^\/weather\/[^/]+\/(hourly|daily)$/.test(location.pathname)) {
+    // Weather owns daily chart scroll/focus once its data has rendered;
+    // hourly/overview keep the hero visible at the top of the page.
+    if (/^\/weather\/[^/]+\/daily$/.test(location.pathname)) {
       firstRoute.current = false;
       focusMain.current = false;
       return;

@@ -1,4 +1,10 @@
-import { COMPASS_POINTS, formatValue, type Point } from "@todayweather/core";
+import {
+  COMPASS_POINTS,
+  formatValue,
+  wallTime,
+  type Point,
+  type Weather,
+} from "@todayweather/core";
 import { language, t, type MessageKey } from "./i18n";
 import { placeName } from "./places";
 import { dateText } from "./locale";
@@ -187,4 +193,35 @@ export function windText(direction: string) {
   return (COMPASS_POINTS as readonly string[]).includes(direction)
     ? t(`wind.${direction}` as MessageKey)
     : direction;
+}
+
+/**
+ * Upcoming precipitation rows starting from the source's current time/date,
+ * keeping any in-progress partial observation slot and falling back to the
+ * latest 8 rows when all supplied points are in the past.
+ */
+export function upcomingPrecipitation(
+  weather: Pick<Weather, "current" | "hourly" | "daily">,
+  view: string,
+): Point[] {
+  if (view === "daily") {
+    const today = wallTime(weather.current.at.slice(0, 10) + "T00:00");
+    if (today === null) return weather.daily.slice(0, 8);
+    const upcoming = weather.daily.filter((p) => {
+      const t = wallTime(p.at.slice(0, 10) + "T00:00");
+      return t !== null && t >= today;
+    });
+    return (upcoming.length ? upcoming : weather.daily.slice(-8)).slice(0, 8);
+  }
+  const now = wallTime(weather.current.at);
+  if (now === null) return weather.hourly.slice(0, 8);
+  const upcoming = weather.hourly.filter((p) => {
+    const t = wallTime(p.at);
+    return (
+      t !== null &&
+      (t >= now ||
+        (p.precipitationBasis === "partial" && t + 3 * 3_600_000 > now))
+    );
+  });
+  return (upcoming.length ? upcoming : weather.hourly.slice(-8)).slice(0, 8);
 }
