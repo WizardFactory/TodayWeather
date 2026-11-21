@@ -25,7 +25,7 @@ node scripts/deploy-deeplink-static.mjs --execute \
 node scripts/deeplink-live-smoke.mjs
 ```
 
-The uploader checks the deployed alias and routing, exact LIVE function code, cache and header policies, OAC and bucket protection before writing. It uploads only the fallback assets and generated association objects, verifies each object's metadata, then waits for its CloudFront invalidation. The bucket grants CloudFront only `s3:GetObject`. The distribution accepts the standard CloudFront method set so the viewer-request function can return `405` with `Allow: GET, HEAD` before a write method reaches the origin.
+The uploader resolves the selected bucket region via `s3:GetBucketLocation` and requires an exact regional S3 origin match. It also checks the deployed alias and routing, exact LIVE function code, cache and header policies, OAC and bucket protection before writing. It uploads only the fallback assets and generated association objects, verifies each object's metadata, then waits for its CloudFront invalidation. The bucket grants CloudFront only `s3:GetObject`. The distribution accepts the standard CloudFront method set so the viewer-request function can return `405` with `Allow: GET, HEAD` before a write method reaches the origin.
 
 The live smoke uses the same identity inputs. It checks direct association responses, HTML and CSP, the preview image, content redirects, missing paths and method rejection. Complete the physical-device checks in [DL-06](https://github.com/WizardFactory/TodayWeather/issues/3098) after the PWA is deployed. On iOS, use the Safari Smart App Banner from the fallback page. Android browsers that support intent links offer an explicit app-open action. In-app browsers can still require the user to open the system browser.
 

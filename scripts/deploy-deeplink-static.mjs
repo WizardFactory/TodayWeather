@@ -73,7 +73,11 @@ export function preflight(run, { bucket, distribution }, directory) {
       config.Aliases?.Items?.length !== 1 || config.Aliases.Items[0] !== LINK_HOST) {
     throw Error(`Expected a deployed distribution dedicated to ${LINK_HOST}`);
   }
-  if (!origin?.DomainName?.startsWith(bucket + ".s3.") ||
+  const { LocationConstraint: location } = getJson(run, ["s3api", "get-bucket-location", "--bucket", bucket]);
+  // S3 reports null for us-east-1 and the legacy value EU for eu-west-1.
+  const region = location === "EU" ? "eu-west-1" : (location ?? "us-east-1");
+  const originDomain = `${bucket}.s3.${region}.amazonaws.com`;
+  if (origin?.DomainName !== originDomain ||
       !origin.S3OriginConfig || origin.S3OriginConfig.OriginAccessIdentity ||
       !origin.OriginAccessControlId || origin.OriginPath) {
     throw Error("CloudFront must point to the selected S3 bucket root using OAC");

@@ -9,6 +9,8 @@ on:
       - "tsconfig.json"
       - "*config.ts"
       - "infra/web/**"
+      - "infra/deeplink/**"
+      - "specs/deeplink.golden.json"
       - "docs/rewrite/examples/**"
       - "docs/user/images/**"
       - ".github/workflows/web.yml"
@@ -24,6 +26,8 @@ on:
       - "tsconfig.json"
       - "*config.ts"
       - "infra/web/**"
+      - "infra/deeplink/**"
+      - "specs/deeplink.golden.json"
       - "docs/rewrite/examples/**"
       - "docs/user/images/**"
       - ".github/workflows/web.yml"
@@ -45,6 +49,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm test
+      - name: Check deep-link contract and edge offline
+        run: node --test scripts/verification/deeplink-golden.test.mjs scripts/verification/deeplink-edge.test.mjs scripts/verification/deeplink-deploy.test.mjs
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

@@ -35,7 +35,7 @@ test("association objects contain only the declared app identities and routes", 
 
 function fakeAws(change = () => {}) {
   const origin = {
-    Id: "static", DomainName: target.bucket + ".s3.example", OriginAccessControlId: "fixture",
+    Id: "static", DomainName: target.bucket + ".s3.us-east-1.amazonaws.com", OriginAccessControlId: "fixture",
     S3OriginConfig: { OriginAccessIdentity: "" },
   };
   const config = {
@@ -64,6 +64,7 @@ function fakeAws(change = () => {}) {
       BlockPublicAcls: true, IgnorePublicAcls: true, BlockPublicPolicy: true, RestrictPublicBuckets: true,
     } },
     "get-bucket-versioning": { Status: "Enabled" },
+    "get-bucket-location": { LocationConstraint: null },
     "create-invalidation": { Invalidation: { Id: "fixture-invalidation" } },
   };
   const state = { origin, config, oac, csp, source: route, corruptHead: false, responses };
@@ -102,6 +103,12 @@ function fakeAws(change = () => {}) {
 const failedPreflights = [
   ["wrong alias", ({ config }) => { config.Aliases.Items.push("todayweather.ai"); }, /dedicated/],
   ["wrong bucket", ({ origin }) => { origin.DomainName = "another.s3.example"; }, /selected S3 bucket/],
+  ["different bucket with overlapping DNS prefix", ({ origin }) => {
+    origin.DomainName = target.bucket + ".s3.other.s3.us-east-1.amazonaws.com";
+  }, /selected S3 bucket/],
+  ["different region for the selected bucket", ({ origin }) => {
+    origin.DomainName = target.bucket + ".s3.eu-west-1.amazonaws.com";
+  }, /selected S3 bucket/],
   ["missing OAC", ({ origin }) => { delete origin.OriginAccessControlId; }, /using OAC/],
   ["unsigned OAC", ({ oac }) => { oac.SigningBehavior = "never"; }, /SigV4/],
   ["origin path", ({ origin }) => { origin.OriginPath = "/production"; }, /bucket root/],
