@@ -1,0 +1,19 @@
+{
+  "task": "GoldenQualification3091",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3087",
+  "scope": "Run the eight offline legacy HTTP recorder pairs on a dedicated Apple Silicon verification branch.",
+  "server2_paths": [
+    "server2/config/tasks/GoldenQualification3091.json",
+    "server2/tools/golden/qualify_macos.py",
+    "server2/tools/golden/policies/domestic_http.json",
+    "server2/tools/golden/policies/rest_http.json",
+    "server2/tools/check_placement.py"
+  ],
+  "outside": [
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Start a branch-scoped read-only macOS job. Existing pull request checks retain their commands."
+    }
+  ]
+}

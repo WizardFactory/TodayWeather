@@ -1,5 +1,7 @@
 name: Server2
 on:
+  push:
+    branches: [verify/3091-macos-golden]
   pull_request:
     paths:
       - "server2/**"
@@ -8,6 +10,7 @@ permissions:
   contents: read
 jobs:
   foundation:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     defaults:
@@ -25,6 +28,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   goldens:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -41,3 +45,24 @@ jobs:
         with:
           python-version: '3.11'
       - run: python tools/golden/ci.py --install
+  qualification:
+    if: github.event_name == 'push'
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16.20.2'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python server2/tools/golden/qualify_macos.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mac-golden-qualification
+          path: reports/mac-qualification/
+          retention-days: 7

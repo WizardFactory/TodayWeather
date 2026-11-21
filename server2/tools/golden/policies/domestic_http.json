@@ -65,15 +65,15 @@
         "server/test/offline/oracle-provenance/domestic-http/record-kma.js": "2f6fb09a6e9a963d3e3a0db106e5f25ef46eb84a270e2d416dd2f5014ba5f3de"
       },
       "sources": {
-        "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
-        "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",
+        "server/app.js": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f",
+        "server/config/air.js": "53450999717edb3cfd41e8ba67b81999b716697876c78c987b79ed0fab658f62",
         "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
         "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
         "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
-        "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
-        "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+        "server/controllers/controllerTown.js": "53d07bcf04c2ee2d834cc8ac198bf52a3acaf675179b0a62c4751b4955047206",
+        "server/controllers/controllerTown24h.js": "a5f7a6ee755baef29e422473eec81352d28242ad14d215b55af03a8ab107ee5d",
         "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
-        "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
+        "server/controllers/kma.specialweather.controller.js": "6cb83307a1ffd04cefcec41bf9fb681103b07622a59b6a6278f599ce35febaa9",
         "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
         "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
         "server/controllers/kma/kma.town.short.controller.js": "2a6b06b5047b6e20a1184e18124517a43ce6e370a9c14bf944f342f829bafe1b",
@@ -84,15 +84,15 @@
         "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
         "server/lib/air/httpClient.js": "187be46f5f57bb59c2f3edfc77e73023feb13c6be25dbb7e7cda5dc1dda45270",
         "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
-        "server/lib/air/providerBudget.js": "2fc221ab84be73bef38f1a53b691984d8177a27900197bd2bf1fe8e554e0e653",
+        "server/lib/air/providerBudget.js": "4379d03303d5d59b084f4b33bc2a958bd0b93eb3afe6eca30a1a66914a10499b",
         "server/lib/air/providerChain.js": "15dcb72f2fad8956492ee9bfb4b5e4b991df4723243ca931de5813ac84325f2e",
-        "server/lib/air/providers/google.js": "00c7f985a9ca38c6de19b87841a23d0897d4f217d1af159f3de3edb983b4dbcc",
+        "server/lib/air/providers/google.js": "a0f8bdf62f18c40f8bf3d64b84bb24bc98979b80522e12492a7a0ef83a3b0b8c",
         "server/lib/air/providers/index.js": "ac3c9c23e8e02907af2f55caf6bc3b04157fc589cc9a14a72445af9ba9808b6d",
-        "server/lib/air/providers/openweather.js": "5c123ba47b959271f41d24f92e856f1da1c4d59ff2140c8a74b6f150c3d506cc",
+        "server/lib/air/providers/openweather.js": "7cfd23233df72c44062bfc0b76640c59a178023c91e22875946135d90095d9f2",
         "server/lib/air/providers/visualcrossing.js": "515e409716ed7b6be9aadb810ee0d136f9d8c2fed87afed79a455dac63d1c4d5",
         "server/lib/air/providers/waqi.js": "27e47ecee1db4a803017e43ac0ee3064cb0463f0b179395e9efe8fb410e8465f",
         "server/lib/aqi.converter.js": "75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73",
-        "server/lib/foodPoisoning.js": "8814417c9a35b19319e9026b42c3ac01019061a75b82f9354298d0af88b14e33",
+        "server/lib/foodPoisoning.js": "f00d3883014255b88b56a7e73613bd60184b33e241a3f2ad88160eb7b24cd054",
         "server/lib/history/observations.js": "4cf30adbe28680a7432a05e6dc6e476d1403e0653ca00183a37b7ea3a152f5e9",
         "server/lib/history/policy.js": "9bb355477fc057470fef43edebd30ae3fc11eae3a708545aaa916511f1da516d",
         "server/lib/history/provider.js": "eb3d3d34672e2d38ad2141d50bae1b747c7334472c43f7c081b0c148e848631d",
@@ -102,7 +102,7 @@
         "server/lib/history/store.js": "7892f529d0fe7a0d6db47b72b99795b8b7845be562907c7200887583d0179cd5",
         "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
         "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
-        "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
+        "server/lib/kmaWarningZones.js": "a44226b92a127f1fddf5c1ef8d0b8af23ecd6815195dcb5df154bfdc3f7f439a",
         "server/lib/midForecastPolicy.js": "31e440ca678afc33639564e38aead4be4e05fe87c0df2748460c5eebd4c8a51b",
         "server/lib/sunRiseSet.js": "0a304339c2f44596f1fc646ced3b6602639d33b59bf624ce295a55a6989fa569",
         "server/lib/unitConverter.js": "f52aa2503ba18aa1236cbd91e1a11f4f9fdbc5e61bc82411378e37e9cc84570b",
@@ -113,11 +113,13 @@
         "server/locales/zh-CN.json": "68967b6063ecafb3b086fae485579216444c289c15cdbf271ac256480f7aa703",
         "server/locales/zh-TW.json": "bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda",
         "server/routes/v000903/route.kma.v000903.js": "b7b7d8ea661783ad51f764a379fafa642ae5072f57e3fba14620b44ad43070eb",
-        "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
+        "server/test/offline/rss-response-smoke.js": "cee8271b134f948b8ae56b53b848596df24b77ef1a2c98319fc60537b4f3bcf8",
         "server/utils/data/kma_warning_zones.csv": "c796c7d22d3c336b8d21172998b54788c6cf46c0c1df34ec6a66810421074ed2",
         "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
-        "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
-        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e"
+        "server/lib/kmaForecastNarrativeResponse.js": "96b0178e580586f83a5b6bb34ece544d67d923043afd8e8c75328b017ed51ed4",
+        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+        "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
+        "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484"
       },
       "source_paths": [
         "server/app.js",
@@ -137,6 +139,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -148,6 +151,7 @@
         "server/lib/air/providers/waqi.js",
         "server/lib/aqi.converter.js",
         "server/lib/foodPoisoning.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -207,6 +211,8 @@
         "server/lib/AQI/airFallback",
         "server/lib/AQI/waqiStationName",
         "server/lib/PastConditionGather",
+        "server/lib/air/forecastRows",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient",
         "server/lib/air/observation",
         "server/lib/air/providerBudget",
@@ -223,6 +229,8 @@
         "server/lib/foodPoisoning",
         "server/lib/forecastGridCollection",
         "server/lib/forecastTraffic",
+        "server/lib/gwangjuJeonnam",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations",
         "server/lib/history/policy",
         "server/lib/history/provider",
@@ -442,6 +450,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -453,6 +462,7 @@
         "server/lib/air/providers/waqi.js",
         "server/lib/aqi.converter.js",
         "server/lib/foodPoisoning.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -2758,11 +2768,11 @@
       "vm_entries": [
         {
           "filename": "server/app.js",
-          "sha256": "287e08ac6c15430bf29e8208175e1297b29793bca6b6cca4f63f4368626e3470"
+          "sha256": "070482694633c1513e3551f2e085025f10014d39caecff21ba50532dc7b8dea9"
         },
         {
           "filename": "server/config/air.js",
-          "sha256": "f7a37c3ba7373808f24f6e3ac151b1bf87f33e70b859364cc401581ffc936053"
+          "sha256": "926a075a6e2dcd3dfba0b481dc9599c0c2b79f9d752a89c29d3125dac31337de"
         },
         {
           "filename": "server/controllers/controller.weather.desc.js",
@@ -2778,11 +2788,11 @@
         },
         {
           "filename": "server/controllers/controllerTown.js",
-          "sha256": "dcb3a6e99d0a03c91b20f6be86d40aeeaf88e64983f1614cfbf7ed8f8a9c4df3"
+          "sha256": "126e0924fc7689ef379d4eb86a350962eb4792fc8c0f7640656022c8ba2e860c"
         },
         {
           "filename": "server/controllers/controllerTown24h.js",
-          "sha256": "4212abd3aad3db64098f4c95a82ce576dcb84c29673bc494945c724d4db56a76"
+          "sha256": "1a1f94d3f07ff086f06b15d2e421cfc38abf6297df1af63d91ceb8a93eedc526"
         },
         {
           "filename": "server/controllers/kecoController.js",
@@ -2790,7 +2800,7 @@
         },
         {
           "filename": "server/controllers/kma.specialweather.controller.js",
-          "sha256": "fdc26a8e39e5b42e9e40313ae1f9543bc0aa0089bfd962422a8998d1bc24ac4c"
+          "sha256": "ae39caad5f13f8d1cfc6e0bca80bf8767dbb751fb8a01397e0e1158f7babb893"
         },
         {
           "filename": "server/controllers/kma/kma.town.current.controller.js",
@@ -2834,7 +2844,7 @@
         },
         {
           "filename": "server/lib/air/providerBudget.js",
-          "sha256": "87b320a266d60bf5ed49198bd9110204f54a7d626b953b59c05c5e786ad2c3a8"
+          "sha256": "671d438d0a9a551e4c1550c9fe6ab3982cf0f685b51fbaafce4d7e1ccf22d04d"
         },
         {
           "filename": "server/lib/air/providerChain.js",
@@ -2842,7 +2852,7 @@
         },
         {
           "filename": "server/lib/air/providers/google.js",
-          "sha256": "804724b35570d7a5521cf4dfb887856c7e5314919a34dab5ef25e1e2d5bdf026"
+          "sha256": "69328f9d5d095c71027eb224f46947accbd84b4cfbc875a62f5a6029f3e2300a"
         },
         {
           "filename": "server/lib/air/providers/index.js",
@@ -2850,7 +2860,7 @@
         },
         {
           "filename": "server/lib/air/providers/openweather.js",
-          "sha256": "06cc5c2f18f414a0f98813718797698189473f347211b66ec98b9459ada5177c"
+          "sha256": "68b61f2ee6d9dc6367b93e387ab16694038663653c297daf86a38d462c4037a7"
         },
         {
           "filename": "server/lib/air/providers/visualcrossing.js",
@@ -2866,7 +2876,7 @@
         },
         {
           "filename": "server/lib/foodPoisoning.js",
-          "sha256": "07271e58bf730d3ea4ed41396ce957c63dff51d7a650de215d501627078cd9c1"
+          "sha256": "7bd04b294a9600fc7be7e8b72533adea04bdf69e1709cfe9410f56f124a3b9b7"
         },
         {
           "filename": "server/lib/history/observations.js",
@@ -2906,7 +2916,7 @@
         },
         {
           "filename": "server/lib/kmaWarningZones.js",
-          "sha256": "0c51a9fcb072aafbe967bc09a9b3f232fdc7007feb9694e5cccf720354c0ceb2"
+          "sha256": "4ce206e4049c0a7c27a38ea004ef8ae5376fdfb5d182631989c6f80ab6666e75"
         },
         {
           "filename": "server/lib/midForecastPolicy.js",
@@ -2930,7 +2940,7 @@
         },
         {
           "filename": "server/lib/kmaForecastNarrativeResponse.js",
-          "sha256": "306e60a2aa55569f6dfa00302ac2c4e056e359c37bd8d9447642fe32fb86ec03"
+          "sha256": "98ccbb6c6819bd9a5ada2e8c33202fbbbb53f57ec33712e14e364950f3ccc858"
         },
         {
           "filename": "server/lib/kmaForecastNarrative.js",
@@ -2938,7 +2948,7 @@
         },
         {
           "filename": "server/test/offline/rss-response-smoke.js",
-          "sha256": "bee5b8bf925fbec383e7a39857c1429c39ca134cc44e70f59d5bcc22368ee12a"
+          "sha256": "06de6130c72f5a431ce759007eb5d6f291e9a946ca7811a1df70cc54365b9dd9"
         },
         {
           "filename": null,
@@ -2983,6 +2993,14 @@
         {
           "filename": "structured-stack",
           "sha256": "74624fddc8f672961098f19cb2afcbff94c92d21ceb1540c96eaba77d9479b51"
+        },
+        {
+          "filename": "server/lib/gwangjuJeonnam.js",
+          "sha256": "68dbd9210c1f7e40710aaf6232dbce9be7d404358848d45294d706245dbb47e3"
+        },
+        {
+          "filename": "server/lib/air/forecastRows.js",
+          "sha256": "2a45b61f3a485280c4a47ca8744e1bd5fc5ed54729596cb9d45c262ca2c46223"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
@@ -2993,15 +3011,15 @@
         "server/test/offline/oracle-provenance/domestic-http/record-older.js": "a6ca68cddb86bdee227465de6bd7fe3c0f33e60fe3cd84034305d98d671b0c2c"
       },
       "sources": {
-        "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
-        "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",
+        "server/app.js": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f",
+        "server/config/air.js": "53450999717edb3cfd41e8ba67b81999b716697876c78c987b79ed0fab658f62",
         "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
         "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
         "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
-        "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
-        "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+        "server/controllers/controllerTown.js": "53d07bcf04c2ee2d834cc8ac198bf52a3acaf675179b0a62c4751b4955047206",
+        "server/controllers/controllerTown24h.js": "a5f7a6ee755baef29e422473eec81352d28242ad14d215b55af03a8ab107ee5d",
         "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
-        "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
+        "server/controllers/kma.specialweather.controller.js": "6cb83307a1ffd04cefcec41bf9fb681103b07622a59b6a6278f599ce35febaa9",
         "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
         "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
         "server/controllers/kma/kma.town.short.controller.js": "2a6b06b5047b6e20a1184e18124517a43ce6e370a9c14bf944f342f829bafe1b",
@@ -3012,15 +3030,15 @@
         "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
         "server/lib/air/httpClient.js": "187be46f5f57bb59c2f3edfc77e73023feb13c6be25dbb7e7cda5dc1dda45270",
         "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
-        "server/lib/air/providerBudget.js": "2fc221ab84be73bef38f1a53b691984d8177a27900197bd2bf1fe8e554e0e653",
+        "server/lib/air/providerBudget.js": "4379d03303d5d59b084f4b33bc2a958bd0b93eb3afe6eca30a1a66914a10499b",
         "server/lib/air/providerChain.js": "15dcb72f2fad8956492ee9bfb4b5e4b991df4723243ca931de5813ac84325f2e",
-        "server/lib/air/providers/google.js": "00c7f985a9ca38c6de19b87841a23d0897d4f217d1af159f3de3edb983b4dbcc",
+        "server/lib/air/providers/google.js": "a0f8bdf62f18c40f8bf3d64b84bb24bc98979b80522e12492a7a0ef83a3b0b8c",
         "server/lib/air/providers/index.js": "ac3c9c23e8e02907af2f55caf6bc3b04157fc589cc9a14a72445af9ba9808b6d",
-        "server/lib/air/providers/openweather.js": "5c123ba47b959271f41d24f92e856f1da1c4d59ff2140c8a74b6f150c3d506cc",
+        "server/lib/air/providers/openweather.js": "7cfd23233df72c44062bfc0b76640c59a178023c91e22875946135d90095d9f2",
         "server/lib/air/providers/visualcrossing.js": "515e409716ed7b6be9aadb810ee0d136f9d8c2fed87afed79a455dac63d1c4d5",
         "server/lib/air/providers/waqi.js": "27e47ecee1db4a803017e43ac0ee3064cb0463f0b179395e9efe8fb410e8465f",
         "server/lib/aqi.converter.js": "75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73",
-        "server/lib/foodPoisoning.js": "8814417c9a35b19319e9026b42c3ac01019061a75b82f9354298d0af88b14e33",
+        "server/lib/foodPoisoning.js": "f00d3883014255b88b56a7e73613bd60184b33e241a3f2ad88160eb7b24cd054",
         "server/lib/history/observations.js": "4cf30adbe28680a7432a05e6dc6e476d1403e0653ca00183a37b7ea3a152f5e9",
         "server/lib/history/policy.js": "9bb355477fc057470fef43edebd30ae3fc11eae3a708545aaa916511f1da516d",
         "server/lib/history/provider.js": "eb3d3d34672e2d38ad2141d50bae1b747c7334472c43f7c081b0c148e848631d",
@@ -3030,7 +3048,7 @@
         "server/lib/history/store.js": "7892f529d0fe7a0d6db47b72b99795b8b7845be562907c7200887583d0179cd5",
         "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
         "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
-        "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
+        "server/lib/kmaWarningZones.js": "a44226b92a127f1fddf5c1ef8d0b8af23ecd6815195dcb5df154bfdc3f7f439a",
         "server/lib/midForecastPolicy.js": "31e440ca678afc33639564e38aead4be4e05fe87c0df2748460c5eebd4c8a51b",
         "server/lib/sunRiseSet.js": "0a304339c2f44596f1fc646ced3b6602639d33b59bf624ce295a55a6989fa569",
         "server/lib/unitConverter.js": "f52aa2503ba18aa1236cbd91e1a11f4f9fdbc5e61bc82411378e37e9cc84570b",
@@ -3042,11 +3060,13 @@
         "server/locales/zh-TW.json": "bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda",
         "server/routes/v000901/route.kma.addr.js": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8",
         "server/routes/v000902/route.kma.v000902.js": "b883df033ea670e62fd2a7ba3f38a51b2b688c2ef3928562296804ec2c1a81a6",
-        "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
+        "server/test/offline/rss-response-smoke.js": "cee8271b134f948b8ae56b53b848596df24b77ef1a2c98319fc60537b4f3bcf8",
         "server/utils/data/kma_warning_zones.csv": "c796c7d22d3c336b8d21172998b54788c6cf46c0c1df34ec6a66810421074ed2",
         "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
-        "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
-        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e"
+        "server/lib/kmaForecastNarrativeResponse.js": "96b0178e580586f83a5b6bb34ece544d67d923043afd8e8c75328b017ed51ed4",
+        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+        "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
+        "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484"
       },
       "source_paths": [
         "server/app.js",
@@ -3066,6 +3086,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -3077,6 +3098,7 @@
         "server/lib/air/providers/waqi.js",
         "server/lib/aqi.converter.js",
         "server/lib/foodPoisoning.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -3137,6 +3159,8 @@
         "server/lib/AQI/airFallback",
         "server/lib/AQI/waqiStationName",
         "server/lib/PastConditionGather",
+        "server/lib/air/forecastRows",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient",
         "server/lib/air/observation",
         "server/lib/air/providerBudget",
@@ -3153,6 +3177,8 @@
         "server/lib/foodPoisoning",
         "server/lib/forecastGridCollection",
         "server/lib/forecastTraffic",
+        "server/lib/gwangjuJeonnam",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations",
         "server/lib/history/policy",
         "server/lib/history/provider",
@@ -3373,6 +3399,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -3384,6 +3411,7 @@
         "server/lib/air/providers/waqi.js",
         "server/lib/aqi.converter.js",
         "server/lib/foodPoisoning.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -6391,11 +6419,11 @@
       "vm_entries": [
         {
           "filename": "server/app.js",
-          "sha256": "287e08ac6c15430bf29e8208175e1297b29793bca6b6cca4f63f4368626e3470"
+          "sha256": "070482694633c1513e3551f2e085025f10014d39caecff21ba50532dc7b8dea9"
         },
         {
           "filename": "server/config/air.js",
-          "sha256": "f7a37c3ba7373808f24f6e3ac151b1bf87f33e70b859364cc401581ffc936053"
+          "sha256": "926a075a6e2dcd3dfba0b481dc9599c0c2b79f9d752a89c29d3125dac31337de"
         },
         {
           "filename": "server/controllers/controller.weather.desc.js",
@@ -6411,11 +6439,11 @@
         },
         {
           "filename": "server/controllers/controllerTown.js",
-          "sha256": "dcb3a6e99d0a03c91b20f6be86d40aeeaf88e64983f1614cfbf7ed8f8a9c4df3"
+          "sha256": "126e0924fc7689ef379d4eb86a350962eb4792fc8c0f7640656022c8ba2e860c"
         },
         {
           "filename": "server/controllers/controllerTown24h.js",
-          "sha256": "4212abd3aad3db64098f4c95a82ce576dcb84c29673bc494945c724d4db56a76"
+          "sha256": "1a1f94d3f07ff086f06b15d2e421cfc38abf6297df1af63d91ceb8a93eedc526"
         },
         {
           "filename": "server/controllers/kecoController.js",
@@ -6423,7 +6451,7 @@
         },
         {
           "filename": "server/controllers/kma.specialweather.controller.js",
-          "sha256": "fdc26a8e39e5b42e9e40313ae1f9543bc0aa0089bfd962422a8998d1bc24ac4c"
+          "sha256": "ae39caad5f13f8d1cfc6e0bca80bf8767dbb751fb8a01397e0e1158f7babb893"
         },
         {
           "filename": "server/controllers/kma/kma.town.current.controller.js",
@@ -6467,7 +6495,7 @@
         },
         {
           "filename": "server/lib/air/providerBudget.js",
-          "sha256": "87b320a266d60bf5ed49198bd9110204f54a7d626b953b59c05c5e786ad2c3a8"
+          "sha256": "671d438d0a9a551e4c1550c9fe6ab3982cf0f685b51fbaafce4d7e1ccf22d04d"
         },
         {
           "filename": "server/lib/air/providerChain.js",
@@ -6475,7 +6503,7 @@
         },
         {
           "filename": "server/lib/air/providers/google.js",
-          "sha256": "804724b35570d7a5521cf4dfb887856c7e5314919a34dab5ef25e1e2d5bdf026"
+          "sha256": "69328f9d5d095c71027eb224f46947accbd84b4cfbc875a62f5a6029f3e2300a"
         },
         {
           "filename": "server/lib/air/providers/index.js",
@@ -6483,7 +6511,7 @@
         },
         {
           "filename": "server/lib/air/providers/openweather.js",
-          "sha256": "06cc5c2f18f414a0f98813718797698189473f347211b66ec98b9459ada5177c"
+          "sha256": "68b61f2ee6d9dc6367b93e387ab16694038663653c297daf86a38d462c4037a7"
         },
         {
           "filename": "server/lib/air/providers/visualcrossing.js",
@@ -6499,7 +6527,7 @@
         },
         {
           "filename": "server/lib/foodPoisoning.js",
-          "sha256": "07271e58bf730d3ea4ed41396ce957c63dff51d7a650de215d501627078cd9c1"
+          "sha256": "7bd04b294a9600fc7be7e8b72533adea04bdf69e1709cfe9410f56f124a3b9b7"
         },
         {
           "filename": "server/lib/history/observations.js",
@@ -6539,7 +6567,7 @@
         },
         {
           "filename": "server/lib/kmaWarningZones.js",
-          "sha256": "0c51a9fcb072aafbe967bc09a9b3f232fdc7007feb9694e5cccf720354c0ceb2"
+          "sha256": "4ce206e4049c0a7c27a38ea004ef8ae5376fdfb5d182631989c6f80ab6666e75"
         },
         {
           "filename": "server/lib/midForecastPolicy.js",
@@ -6567,7 +6595,7 @@
         },
         {
           "filename": "server/lib/kmaForecastNarrativeResponse.js",
-          "sha256": "306e60a2aa55569f6dfa00302ac2c4e056e359c37bd8d9447642fe32fb86ec03"
+          "sha256": "98ccbb6c6819bd9a5ada2e8c33202fbbbb53f57ec33712e14e364950f3ccc858"
         },
         {
           "filename": "server/lib/kmaForecastNarrative.js",
@@ -6575,7 +6603,7 @@
         },
         {
           "filename": "server/test/offline/rss-response-smoke.js",
-          "sha256": "bee5b8bf925fbec383e7a39857c1429c39ca134cc44e70f59d5bcc22368ee12a"
+          "sha256": "06de6130c72f5a431ce759007eb5d6f291e9a946ca7811a1df70cc54365b9dd9"
         },
         {
           "filename": null,
@@ -6620,6 +6648,14 @@
         {
           "filename": "structured-stack",
           "sha256": "74624fddc8f672961098f19cb2afcbff94c92d21ceb1540c96eaba77d9479b51"
+        },
+        {
+          "filename": "server/lib/gwangjuJeonnam.js",
+          "sha256": "68dbd9210c1f7e40710aaf6232dbce9be7d404358848d45294d706245dbb47e3"
+        },
+        {
+          "filename": "server/lib/air/forecastRows.js",
+          "sha256": "2a45b61f3a485280c4a47ca8744e1bd5fc5ed54729596cb9d45c262ca2c46223"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
@@ -6630,15 +6666,15 @@
         "server/test/offline/oracle-provenance/domestic-http/record-town.js": "b3bac9dc6a13cc9bb12338b5c248b893a2520ef38e947dee8de5b5b468cc90fd"
       },
       "sources": {
-        "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
-        "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",
+        "server/app.js": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f",
+        "server/config/air.js": "53450999717edb3cfd41e8ba67b81999b716697876c78c987b79ed0fab658f62",
         "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
         "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
         "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
-        "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
-        "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+        "server/controllers/controllerTown.js": "53d07bcf04c2ee2d834cc8ac198bf52a3acaf675179b0a62c4751b4955047206",
+        "server/controllers/controllerTown24h.js": "a5f7a6ee755baef29e422473eec81352d28242ad14d215b55af03a8ab107ee5d",
         "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
-        "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
+        "server/controllers/kma.specialweather.controller.js": "6cb83307a1ffd04cefcec41bf9fb681103b07622a59b6a6278f599ce35febaa9",
         "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
         "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
         "server/controllers/kma/kma.town.short.controller.js": "2a6b06b5047b6e20a1184e18124517a43ce6e370a9c14bf944f342f829bafe1b",
@@ -6649,15 +6685,15 @@
         "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
         "server/lib/air/httpClient.js": "187be46f5f57bb59c2f3edfc77e73023feb13c6be25dbb7e7cda5dc1dda45270",
         "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
-        "server/lib/air/providerBudget.js": "2fc221ab84be73bef38f1a53b691984d8177a27900197bd2bf1fe8e554e0e653",
+        "server/lib/air/providerBudget.js": "4379d03303d5d59b084f4b33bc2a958bd0b93eb3afe6eca30a1a66914a10499b",
         "server/lib/air/providerChain.js": "15dcb72f2fad8956492ee9bfb4b5e4b991df4723243ca931de5813ac84325f2e",
-        "server/lib/air/providers/google.js": "00c7f985a9ca38c6de19b87841a23d0897d4f217d1af159f3de3edb983b4dbcc",
+        "server/lib/air/providers/google.js": "a0f8bdf62f18c40f8bf3d64b84bb24bc98979b80522e12492a7a0ef83a3b0b8c",
         "server/lib/air/providers/index.js": "ac3c9c23e8e02907af2f55caf6bc3b04157fc589cc9a14a72445af9ba9808b6d",
-        "server/lib/air/providers/openweather.js": "5c123ba47b959271f41d24f92e856f1da1c4d59ff2140c8a74b6f150c3d506cc",
+        "server/lib/air/providers/openweather.js": "7cfd23233df72c44062bfc0b76640c59a178023c91e22875946135d90095d9f2",
         "server/lib/air/providers/visualcrossing.js": "515e409716ed7b6be9aadb810ee0d136f9d8c2fed87afed79a455dac63d1c4d5",
         "server/lib/air/providers/waqi.js": "27e47ecee1db4a803017e43ac0ee3064cb0463f0b179395e9efe8fb410e8465f",
         "server/lib/aqi.converter.js": "75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73",
-        "server/lib/foodPoisoning.js": "8814417c9a35b19319e9026b42c3ac01019061a75b82f9354298d0af88b14e33",
+        "server/lib/foodPoisoning.js": "f00d3883014255b88b56a7e73613bd60184b33e241a3f2ad88160eb7b24cd054",
         "server/lib/history/observations.js": "4cf30adbe28680a7432a05e6dc6e476d1403e0653ca00183a37b7ea3a152f5e9",
         "server/lib/history/policy.js": "9bb355477fc057470fef43edebd30ae3fc11eae3a708545aaa916511f1da516d",
         "server/lib/history/provider.js": "eb3d3d34672e2d38ad2141d50bae1b747c7334472c43f7c081b0c148e848631d",
@@ -6667,7 +6703,7 @@
         "server/lib/history/store.js": "7892f529d0fe7a0d6db47b72b99795b8b7845be562907c7200887583d0179cd5",
         "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
         "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
-        "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
+        "server/lib/kmaWarningZones.js": "a44226b92a127f1fddf5c1ef8d0b8af23ecd6815195dcb5df154bfdc3f7f439a",
         "server/lib/midForecastPolicy.js": "31e440ca678afc33639564e38aead4be4e05fe87c0df2748460c5eebd4c8a51b",
         "server/lib/sunRiseSet.js": "0a304339c2f44596f1fc646ced3b6602639d33b59bf624ce295a55a6989fa569",
         "server/lib/unitConverter.js": "f52aa2503ba18aa1236cbd91e1a11f4f9fdbc5e61bc82411378e37e9cc84570b",
@@ -6680,11 +6716,13 @@
         "server/routes/v000705/routeTownForecast.js": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599",
         "server/routes/v000803/routeTownForecast.js": "26e1fcdba3e3b85e64376dbcc18a7f1c718317c0e0f9b35c44f6d9cc76f890fe",
         "server/routes/v000901/route.kma.addr.js": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8",
-        "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
+        "server/test/offline/rss-response-smoke.js": "cee8271b134f948b8ae56b53b848596df24b77ef1a2c98319fc60537b4f3bcf8",
         "server/utils/data/kma_warning_zones.csv": "c796c7d22d3c336b8d21172998b54788c6cf46c0c1df34ec6a66810421074ed2",
         "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
-        "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
-        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e"
+        "server/lib/kmaForecastNarrativeResponse.js": "96b0178e580586f83a5b6bb34ece544d67d923043afd8e8c75328b017ed51ed4",
+        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+        "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
+        "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484"
       },
       "source_paths": [
         "server/app.js",
@@ -6704,6 +6742,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -6715,6 +6754,7 @@
         "server/lib/air/providers/waqi.js",
         "server/lib/aqi.converter.js",
         "server/lib/foodPoisoning.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -6776,6 +6816,8 @@
         "server/lib/AQI/airFallback",
         "server/lib/AQI/waqiStationName",
         "server/lib/PastConditionGather",
+        "server/lib/air/forecastRows",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient",
         "server/lib/air/observation",
         "server/lib/air/providerBudget",
@@ -6792,6 +6834,8 @@
         "server/lib/foodPoisoning",
         "server/lib/forecastGridCollection",
         "server/lib/forecastTraffic",
+        "server/lib/gwangjuJeonnam",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations",
         "server/lib/history/policy",
         "server/lib/history/provider",
@@ -7013,6 +7057,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -7024,6 +7069,7 @@
         "server/lib/air/providers/waqi.js",
         "server/lib/aqi.converter.js",
         "server/lib/foodPoisoning.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -9489,11 +9535,11 @@
       "vm_entries": [
         {
           "filename": "server/app.js",
-          "sha256": "287e08ac6c15430bf29e8208175e1297b29793bca6b6cca4f63f4368626e3470"
+          "sha256": "070482694633c1513e3551f2e085025f10014d39caecff21ba50532dc7b8dea9"
         },
         {
           "filename": "server/config/air.js",
-          "sha256": "f7a37c3ba7373808f24f6e3ac151b1bf87f33e70b859364cc401581ffc936053"
+          "sha256": "926a075a6e2dcd3dfba0b481dc9599c0c2b79f9d752a89c29d3125dac31337de"
         },
         {
           "filename": "server/controllers/controller.weather.desc.js",
@@ -9509,11 +9555,11 @@
         },
         {
           "filename": "server/controllers/controllerTown.js",
-          "sha256": "dcb3a6e99d0a03c91b20f6be86d40aeeaf88e64983f1614cfbf7ed8f8a9c4df3"
+          "sha256": "126e0924fc7689ef379d4eb86a350962eb4792fc8c0f7640656022c8ba2e860c"
         },
         {
           "filename": "server/controllers/controllerTown24h.js",
-          "sha256": "4212abd3aad3db64098f4c95a82ce576dcb84c29673bc494945c724d4db56a76"
+          "sha256": "1a1f94d3f07ff086f06b15d2e421cfc38abf6297df1af63d91ceb8a93eedc526"
         },
         {
           "filename": "server/controllers/kecoController.js",
@@ -9521,7 +9567,7 @@
         },
         {
           "filename": "server/controllers/kma.specialweather.controller.js",
-          "sha256": "fdc26a8e39e5b42e9e40313ae1f9543bc0aa0089bfd962422a8998d1bc24ac4c"
+          "sha256": "ae39caad5f13f8d1cfc6e0bca80bf8767dbb751fb8a01397e0e1158f7babb893"
         },
         {
           "filename": "server/controllers/kma/kma.town.current.controller.js",
@@ -9565,7 +9611,7 @@
         },
         {
           "filename": "server/lib/air/providerBudget.js",
-          "sha256": "87b320a266d60bf5ed49198bd9110204f54a7d626b953b59c05c5e786ad2c3a8"
+          "sha256": "671d438d0a9a551e4c1550c9fe6ab3982cf0f685b51fbaafce4d7e1ccf22d04d"
         },
         {
           "filename": "server/lib/air/providerChain.js",
@@ -9573,7 +9619,7 @@
         },
         {
           "filename": "server/lib/air/providers/google.js",
-          "sha256": "804724b35570d7a5521cf4dfb887856c7e5314919a34dab5ef25e1e2d5bdf026"
+          "sha256": "69328f9d5d095c71027eb224f46947accbd84b4cfbc875a62f5a6029f3e2300a"
         },
         {
           "filename": "server/lib/air/providers/index.js",
@@ -9581,7 +9627,7 @@
         },
         {
           "filename": "server/lib/air/providers/openweather.js",
-          "sha256": "06cc5c2f18f414a0f98813718797698189473f347211b66ec98b9459ada5177c"
+          "sha256": "68b61f2ee6d9dc6367b93e387ab16694038663653c297daf86a38d462c4037a7"
         },
         {
           "filename": "server/lib/air/providers/visualcrossing.js",
@@ -9597,7 +9643,7 @@
         },
         {
           "filename": "server/lib/foodPoisoning.js",
-          "sha256": "07271e58bf730d3ea4ed41396ce957c63dff51d7a650de215d501627078cd9c1"
+          "sha256": "7bd04b294a9600fc7be7e8b72533adea04bdf69e1709cfe9410f56f124a3b9b7"
         },
         {
           "filename": "server/lib/history/observations.js",
@@ -9637,7 +9683,7 @@
         },
         {
           "filename": "server/lib/kmaWarningZones.js",
-          "sha256": "0c51a9fcb072aafbe967bc09a9b3f232fdc7007feb9694e5cccf720354c0ceb2"
+          "sha256": "4ce206e4049c0a7c27a38ea004ef8ae5376fdfb5d182631989c6f80ab6666e75"
         },
         {
           "filename": "server/lib/midForecastPolicy.js",
@@ -9669,7 +9715,7 @@
         },
         {
           "filename": "server/lib/kmaForecastNarrativeResponse.js",
-          "sha256": "306e60a2aa55569f6dfa00302ac2c4e056e359c37bd8d9447642fe32fb86ec03"
+          "sha256": "98ccbb6c6819bd9a5ada2e8c33202fbbbb53f57ec33712e14e364950f3ccc858"
         },
         {
           "filename": "server/lib/kmaForecastNarrative.js",
@@ -9677,7 +9723,7 @@
         },
         {
           "filename": "server/test/offline/rss-response-smoke.js",
-          "sha256": "bee5b8bf925fbec383e7a39857c1429c39ca134cc44e70f59d5bcc22368ee12a"
+          "sha256": "06de6130c72f5a431ce759007eb5d6f291e9a946ca7811a1df70cc54365b9dd9"
         },
         {
           "filename": null,
@@ -9722,6 +9768,14 @@
         {
           "filename": "structured-stack",
           "sha256": "74624fddc8f672961098f19cb2afcbff94c92d21ceb1540c96eaba77d9479b51"
+        },
+        {
+          "filename": "server/lib/gwangjuJeonnam.js",
+          "sha256": "68dbd9210c1f7e40710aaf6232dbce9be7d404358848d45294d706245dbb47e3"
+        },
+        {
+          "filename": "server/lib/air/forecastRows.js",
+          "sha256": "2a45b61f3a485280c4a47ca8744e1bd5fc5ed54729596cb9d45c262ca2c46223"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
@@ -9739,15 +9793,15 @@
         "server/test/offline/oracle-provenance/core/sections.js": "da8d4826a6bee5553aef38525448da227c1969113adf5b79d72f76ff95969902"
       },
       "sources": {
-        "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
-        "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",
+        "server/app.js": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f",
+        "server/config/air.js": "53450999717edb3cfd41e8ba67b81999b716697876c78c987b79ed0fab658f62",
         "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
         "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
         "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
-        "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
-        "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+        "server/controllers/controllerTown.js": "53d07bcf04c2ee2d834cc8ac198bf52a3acaf675179b0a62c4751b4955047206",
+        "server/controllers/controllerTown24h.js": "a5f7a6ee755baef29e422473eec81352d28242ad14d215b55af03a8ab107ee5d",
         "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
-        "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
+        "server/controllers/kma.specialweather.controller.js": "6cb83307a1ffd04cefcec41bf9fb681103b07622a59b6a6278f599ce35febaa9",
         "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
         "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
         "server/controllers/kma/kma.town.short.controller.js": "2a6b06b5047b6e20a1184e18124517a43ce6e370a9c14bf944f342f829bafe1b",
@@ -9758,17 +9812,17 @@
         "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
         "server/lib/air/httpClient.js": "187be46f5f57bb59c2f3edfc77e73023feb13c6be25dbb7e7cda5dc1dda45270",
         "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
-        "server/lib/air/providerBudget.js": "2fc221ab84be73bef38f1a53b691984d8177a27900197bd2bf1fe8e554e0e653",
+        "server/lib/air/providerBudget.js": "4379d03303d5d59b084f4b33bc2a958bd0b93eb3afe6eca30a1a66914a10499b",
         "server/lib/air/providerChain.js": "15dcb72f2fad8956492ee9bfb4b5e4b991df4723243ca931de5813ac84325f2e",
-        "server/lib/air/providers/google.js": "00c7f985a9ca38c6de19b87841a23d0897d4f217d1af159f3de3edb983b4dbcc",
+        "server/lib/air/providers/google.js": "a0f8bdf62f18c40f8bf3d64b84bb24bc98979b80522e12492a7a0ef83a3b0b8c",
         "server/lib/air/providers/index.js": "ac3c9c23e8e02907af2f55caf6bc3b04157fc589cc9a14a72445af9ba9808b6d",
-        "server/lib/air/providers/openweather.js": "5c123ba47b959271f41d24f92e856f1da1c4d59ff2140c8a74b6f150c3d506cc",
+        "server/lib/air/providers/openweather.js": "7cfd23233df72c44062bfc0b76640c59a178023c91e22875946135d90095d9f2",
         "server/lib/air/providers/visualcrossing.js": "515e409716ed7b6be9aadb810ee0d136f9d8c2fed87afed79a455dac63d1c4d5",
         "server/lib/air/providers/waqi.js": "27e47ecee1db4a803017e43ac0ee3064cb0463f0b179395e9efe8fb410e8465f",
         "server/lib/aqi.converter.js": "75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73",
         "server/lib/collectTownForecast.js": "e96add659263efba43d9a05bc3620ece2ec1f8f1f5bd96b69c749e4a43f59f64",
         "server/lib/dataGoKrRejection.js": "2653085c198bfaf5f3eedebdd7e05069256fd8e495e8e504de40d3872e62ee2a",
-        "server/lib/foodPoisoning.js": "8814417c9a35b19319e9026b42c3ac01019061a75b82f9354298d0af88b14e33",
+        "server/lib/foodPoisoning.js": "f00d3883014255b88b56a7e73613bd60184b33e241a3f2ad88160eb7b24cd054",
         "server/lib/forecastGridCollection.js": "059d53064767168ee76c858a38a5b023fa13f480e4d9517eae33cd8b2692abf0",
         "server/lib/history/observations.js": "4cf30adbe28680a7432a05e6dc6e476d1403e0653ca00183a37b7ea3a152f5e9",
         "server/lib/history/policy.js": "9bb355477fc057470fef43edebd30ae3fc11eae3a708545aaa916511f1da516d",
@@ -9779,7 +9833,7 @@
         "server/lib/history/store.js": "7892f529d0fe7a0d6db47b72b99795b8b7845be562907c7200887583d0179cd5",
         "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
         "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
-        "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
+        "server/lib/kmaWarningZones.js": "a44226b92a127f1fddf5c1ef8d0b8af23ecd6815195dcb5df154bfdc3f7f439a",
         "server/lib/midForecastPolicy.js": "31e440ca678afc33639564e38aead4be4e05fe87c0df2748460c5eebd4c8a51b",
         "server/lib/sunRiseSet.js": "0a304339c2f44596f1fc646ced3b6602639d33b59bf624ce295a55a6989fa569",
         "server/lib/unitConverter.js": "f52aa2503ba18aa1236cbd91e1a11f4f9fdbc5e61bc82411378e37e9cc84570b",
@@ -9803,7 +9857,7 @@
         "server/routes/v000803/routeTownForecast.js": "26e1fcdba3e3b85e64376dbcc18a7f1c718317c0e0f9b35c44f6d9cc76f890fe",
         "server/routes/v000901/route.kma.addr.js": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8",
         "server/routes/v000903/route.kma.v000903.js": "b7b7d8ea661783ad51f764a379fafa642ae5072f57e3fba14620b44ad43070eb",
-        "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
+        "server/test/offline/rss-response-smoke.js": "cee8271b134f948b8ae56b53b848596df24b77ef1a2c98319fc60537b4f3bcf8",
         "server/utils/coordinate2xy.js": "76b5aa683c0fdd5cefc577c87f9284026c18d562682109b38d2976a5c39fe3ba",
         "server/utils/data/base.csv": "4964458e67add7e2051f481868edd29ad097f73a97525346a533d0e7b0965db6",
         "server/utils/data/kma_warning_zones.csv": "c796c7d22d3c336b8d21172998b54788c6cf46c0c1df34ec6a66810421074ed2",
@@ -9811,8 +9865,10 @@
         "server/utils/initTownDataToMongo.js": "31f4164e9863f69cdc897218646db597ac2f7202cf9840eef08895ced2250741",
         "server/utils/updateTownDataToMongo.js": "08e55dd8c17f9401d936073b11d8f9c87b2b58477bdce3ce7bcbf9c93743bb28",
         "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
-        "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
-        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e"
+        "server/lib/kmaForecastNarrativeResponse.js": "96b0178e580586f83a5b6bb34ece544d67d923043afd8e8c75328b017ed51ed4",
+        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+        "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
+        "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484"
       },
       "source_paths": [
         "server/app.js",
@@ -9832,6 +9888,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -9846,6 +9903,7 @@
         "server/lib/dataGoKrRejection.js",
         "server/lib/foodPoisoning.js",
         "server/lib/forecastGridCollection.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -9925,6 +9983,8 @@
         "server/lib/AQI/airFallback",
         "server/lib/AQI/waqiStationName",
         "server/lib/PastConditionGather",
+        "server/lib/air/forecastRows",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient",
         "server/lib/air/observation",
         "server/lib/air/providerBudget",
@@ -9943,6 +10003,8 @@
         "server/lib/foodPoisoning",
         "server/lib/forecastGridCollection",
         "server/lib/forecastTraffic",
+        "server/lib/gwangjuJeonnam",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations",
         "server/lib/history/policy",
         "server/lib/history/provider",
@@ -10198,6 +10260,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -10212,6 +10275,7 @@
         "server/lib/dataGoKrRejection.js",
         "server/lib/foodPoisoning.js",
         "server/lib/forecastGridCollection.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -11566,11 +11630,11 @@
       "vm_entries": [
         {
           "filename": "server/app.js",
-          "sha256": "287e08ac6c15430bf29e8208175e1297b29793bca6b6cca4f63f4368626e3470"
+          "sha256": "070482694633c1513e3551f2e085025f10014d39caecff21ba50532dc7b8dea9"
         },
         {
           "filename": "server/config/air.js",
-          "sha256": "f7a37c3ba7373808f24f6e3ac151b1bf87f33e70b859364cc401581ffc936053"
+          "sha256": "926a075a6e2dcd3dfba0b481dc9599c0c2b79f9d752a89c29d3125dac31337de"
         },
         {
           "filename": "server/controllers/controller.weather.desc.js",
@@ -11586,11 +11650,11 @@
         },
         {
           "filename": "server/controllers/controllerTown.js",
-          "sha256": "dcb3a6e99d0a03c91b20f6be86d40aeeaf88e64983f1614cfbf7ed8f8a9c4df3"
+          "sha256": "126e0924fc7689ef379d4eb86a350962eb4792fc8c0f7640656022c8ba2e860c"
         },
         {
           "filename": "server/controllers/controllerTown24h.js",
-          "sha256": "4212abd3aad3db64098f4c95a82ce576dcb84c29673bc494945c724d4db56a76"
+          "sha256": "1a1f94d3f07ff086f06b15d2e421cfc38abf6297df1af63d91ceb8a93eedc526"
         },
         {
           "filename": "server/controllers/kecoController.js",
@@ -11598,7 +11662,7 @@
         },
         {
           "filename": "server/controllers/kma.specialweather.controller.js",
-          "sha256": "fdc26a8e39e5b42e9e40313ae1f9543bc0aa0089bfd962422a8998d1bc24ac4c"
+          "sha256": "ae39caad5f13f8d1cfc6e0bca80bf8767dbb751fb8a01397e0e1158f7babb893"
         },
         {
           "filename": "server/controllers/kma/kma.town.current.controller.js",
@@ -11642,7 +11706,7 @@
         },
         {
           "filename": "server/lib/air/providerBudget.js",
-          "sha256": "87b320a266d60bf5ed49198bd9110204f54a7d626b953b59c05c5e786ad2c3a8"
+          "sha256": "671d438d0a9a551e4c1550c9fe6ab3982cf0f685b51fbaafce4d7e1ccf22d04d"
         },
         {
           "filename": "server/lib/air/providerChain.js",
@@ -11650,7 +11714,7 @@
         },
         {
           "filename": "server/lib/air/providers/google.js",
-          "sha256": "804724b35570d7a5521cf4dfb887856c7e5314919a34dab5ef25e1e2d5bdf026"
+          "sha256": "69328f9d5d095c71027eb224f46947accbd84b4cfbc875a62f5a6029f3e2300a"
         },
         {
           "filename": "server/lib/air/providers/index.js",
@@ -11658,7 +11722,7 @@
         },
         {
           "filename": "server/lib/air/providers/openweather.js",
-          "sha256": "06cc5c2f18f414a0f98813718797698189473f347211b66ec98b9459ada5177c"
+          "sha256": "68b61f2ee6d9dc6367b93e387ab16694038663653c297daf86a38d462c4037a7"
         },
         {
           "filename": "server/lib/air/providers/visualcrossing.js",
@@ -11682,7 +11746,7 @@
         },
         {
           "filename": "server/lib/foodPoisoning.js",
-          "sha256": "07271e58bf730d3ea4ed41396ce957c63dff51d7a650de215d501627078cd9c1"
+          "sha256": "7bd04b294a9600fc7be7e8b72533adea04bdf69e1709cfe9410f56f124a3b9b7"
         },
         {
           "filename": "server/lib/forecastGridCollection.js",
@@ -11726,7 +11790,7 @@
         },
         {
           "filename": "server/lib/kmaWarningZones.js",
-          "sha256": "0c51a9fcb072aafbe967bc09a9b3f232fdc7007feb9694e5cccf720354c0ceb2"
+          "sha256": "4ce206e4049c0a7c27a38ea004ef8ae5376fdfb5d182631989c6f80ab6666e75"
         },
         {
           "filename": "server/lib/midForecastPolicy.js",
@@ -11814,7 +11878,7 @@
         },
         {
           "filename": "server/lib/kmaForecastNarrativeResponse.js",
-          "sha256": "306e60a2aa55569f6dfa00302ac2c4e056e359c37bd8d9447642fe32fb86ec03"
+          "sha256": "98ccbb6c6819bd9a5ada2e8c33202fbbbb53f57ec33712e14e364950f3ccc858"
         },
         {
           "filename": "server/lib/kmaForecastNarrative.js",
@@ -11822,7 +11886,7 @@
         },
         {
           "filename": "server/test/offline/rss-response-smoke.js",
-          "sha256": "2aeba6fdcad82f329c262be38e0d6401dbd839a33472defc1db47d491c8c3840"
+          "sha256": "036851e265b05add75a2d1f9a32481565a8a78bc3af30836dd158921809d5cdf"
         },
         {
           "filename": null,
@@ -11875,6 +11939,14 @@
         {
           "filename": "structured-stack",
           "sha256": "74624fddc8f672961098f19cb2afcbff94c92d21ceb1540c96eaba77d9479b51"
+        },
+        {
+          "filename": "server/lib/gwangjuJeonnam.js",
+          "sha256": "68dbd9210c1f7e40710aaf6232dbce9be7d404358848d45294d706245dbb47e3"
+        },
+        {
+          "filename": "server/lib/air/forecastRows.js",
+          "sha256": "2a45b61f3a485280c4a47ca8744e1bd5fc5ed54729596cb9d45c262ca2c46223"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
@@ -11908,23 +11980,23 @@
         "server/test/offline/oracle-provenance/rich/station-fixtures.js": "91145680847fe6f5a16475b81d227eca63fc994b4c8a36104f9ccc97a8d6b8e3"
       },
       "sources": {
-        "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
-        "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",
+        "server/app.js": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f",
+        "server/config/air.js": "53450999717edb3cfd41e8ba67b81999b716697876c78c987b79ed0fab658f62",
         "server/config/gather.js": "f0f454a9b63e83f39f92c9f894127acaa86eee72e8a02e2176726d9f60ac3a37",
         "server/controllers/airkorea.dust.image.controller.js": "2ae64ea3ae7ce5c4c9bcf03f3df09285dbffd603c57cf67adcf43536a20b524a",
         "server/controllers/airkorea.hourly.forecast.controller.js": "d18c7e99d807be929af352e434c05004b12e2da467f219307d1a09f2fa6d9bdf",
         "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
         "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
         "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
-        "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
-        "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+        "server/controllers/controllerTown.js": "53d07bcf04c2ee2d834cc8ac198bf52a3acaf675179b0a62c4751b4955047206",
+        "server/controllers/controllerTown24h.js": "a5f7a6ee755baef29e422473eec81352d28242ad14d215b55af03a8ab107ee5d",
         "server/controllers/img.hourly.forecast.controller.js": "1c343d20e535179487db98f93fd9e15f2d30a2f1535ec8a3370c4466c9bf0c9a",
         "server/controllers/kaq.hourly.forecast.controller.js": "6b00707ade62b23b6c539fc81aaf3a8867b15d8e263de5dafab67de5d524449a",
         "server/controllers/kaq.modelimg.case.controller.js": "3e179a663c604007f7183200c88c31a0975283bf5bfe475191f093b7e462cecf",
         "server/controllers/kaq.modelimg.controller.js": "7745c6b5de529969a8d34c4ad1525b6b14492428bbf889b671a705af174af513",
         "server/controllers/kasi.riseset.controller.js": "65b4ca5e8637c0df24cb14552a8ff62282232dee0d7188979235df6fb66ca49f",
         "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
-        "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
+        "server/controllers/kma.specialweather.controller.js": "6cb83307a1ffd04cefcec41bf9fb681103b07622a59b6a6278f599ce35febaa9",
         "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
         "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
         "server/controllers/kma/kma.town.short.controller.js": "2a6b06b5047b6e20a1184e18124517a43ce6e370a9c14bf944f342f829bafe1b",
@@ -11935,11 +12007,11 @@
         "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
         "server/lib/air/httpClient.js": "187be46f5f57bb59c2f3edfc77e73023feb13c6be25dbb7e7cda5dc1dda45270",
         "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
-        "server/lib/air/providerBudget.js": "2fc221ab84be73bef38f1a53b691984d8177a27900197bd2bf1fe8e554e0e653",
+        "server/lib/air/providerBudget.js": "4379d03303d5d59b084f4b33bc2a958bd0b93eb3afe6eca30a1a66914a10499b",
         "server/lib/air/providerChain.js": "15dcb72f2fad8956492ee9bfb4b5e4b991df4723243ca931de5813ac84325f2e",
-        "server/lib/air/providers/google.js": "00c7f985a9ca38c6de19b87841a23d0897d4f217d1af159f3de3edb983b4dbcc",
+        "server/lib/air/providers/google.js": "a0f8bdf62f18c40f8bf3d64b84bb24bc98979b80522e12492a7a0ef83a3b0b8c",
         "server/lib/air/providers/index.js": "ac3c9c23e8e02907af2f55caf6bc3b04157fc589cc9a14a72445af9ba9808b6d",
-        "server/lib/air/providers/openweather.js": "5c123ba47b959271f41d24f92e856f1da1c4d59ff2140c8a74b6f150c3d506cc",
+        "server/lib/air/providers/openweather.js": "7cfd23233df72c44062bfc0b76640c59a178023c91e22875946135d90095d9f2",
         "server/lib/air/providers/visualcrossing.js": "515e409716ed7b6be9aadb810ee0d136f9d8c2fed87afed79a455dac63d1c4d5",
         "server/lib/air/providers/waqi.js": "27e47ecee1db4a803017e43ac0ee3064cb0463f0b179395e9efe8fb410e8465f",
         "server/lib/airkorea.finedust.image.parser.js": "341254133c009169e4bf2d8582b53d12a2472c29dddcf9715ef89a79f3b0915b",
@@ -11950,7 +12022,7 @@
         "server/lib/dataGoKrKeys.js": "1ac873a927c02b2a3f36d346037eadbdeed118147927b90a3ffbabc0b851b721",
         "server/lib/dataGoKrRejection.js": "2653085c198bfaf5f3eedebdd7e05069256fd8e495e8e504de40d3872e62ee2a",
         "server/lib/diffcolor.ciede2000.js": "80db88c02b90d4e1f7573c99ae66a0d34405c804c31cc9289f9de96765f77c37",
-        "server/lib/foodPoisoning.js": "8814417c9a35b19319e9026b42c3ac01019061a75b82f9354298d0af88b14e33",
+        "server/lib/foodPoisoning.js": "f00d3883014255b88b56a7e73613bd60184b33e241a3f2ad88160eb7b24cd054",
         "server/lib/forecastGridCollection.js": "059d53064767168ee76c858a38a5b023fa13f480e4d9517eae33cd8b2692abf0",
         "server/lib/geocoder/cache.js": "07daeef8f66b8b7e97e264d49b9ebd083bfbe27d5b46cf45c413d5672ece5d5d",
         "server/lib/geocoder/format.js": "6fd658169916d1cce8b9c43e2749426f75ea69e982219e0333a4e3f860618df6",
@@ -11958,7 +12030,7 @@
         "server/lib/geocoder/index.js": "8f8dcb874dea2c40558d16ccdd06639fe1aa44435000f68f0dcc8bf262abee3f",
         "server/lib/geocoder/kakao.js": "c7c907277dcb3347ba8c17b16ca8c675103f623a6f5e0f4a5f3e284632a0968e",
         "server/lib/geocoder/keys.js": "3e9287cd5b8a2abd386ba2aad75fd28f59a49f371c7ba9f0be0648ea922acdc2",
-        "server/lib/geocoder/transport.js": "d8a1fb310f7d8a586a111fd01028ce80ec30ec5a01ea2421b17a31019f11d8c0",
+        "server/lib/geocoder/transport.js": "351bbb5c170ca4a1bcdb0fb4a850ebe264302bbe60e6189128129e4f9cd13ee6",
         "server/lib/history/observations.js": "4cf30adbe28680a7432a05e6dc6e476d1403e0653ca00183a37b7ea3a152f5e9",
         "server/lib/history/policy.js": "9bb355477fc057470fef43edebd30ae3fc11eae3a708545aaa916511f1da516d",
         "server/lib/history/provider.js": "eb3d3d34672e2d38ad2141d50bae1b747c7334472c43f7c081b0c148e848631d",
@@ -11971,7 +12043,7 @@
         "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
         "server/lib/kmaScraper.js": "9d56bf6e57d189ebe99ba7a8590a4d10350af2c180250c5377cc58a6bb95d945",
         "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
-        "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
+        "server/lib/kmaWarningZones.js": "a44226b92a127f1fddf5c1ef8d0b8af23ecd6815195dcb5df154bfdc3f7f439a",
         "server/lib/lifeIndexKmaRequester.js": "dd1582abd7a04347d4af5dbc4c0f231638062f2d445baef6216b8c07dbf0ffdc",
         "server/lib/midForecastPolicy.js": "31e440ca678afc33639564e38aead4be4e05fe87c0df2748460c5eebd4c8a51b",
         "server/lib/sunRiseSet.js": "0a304339c2f44596f1fc646ced3b6602639d33b59bf624ce295a55a6989fa569",
@@ -12017,13 +12089,13 @@
         "server/models/town.js": "242931f3f5e624536ef63de3b596d5cb8d3bba30c7937b5ac05ef38229fb4d4c",
         "server/models/worldWeather/vc.fetch.lock.model.js": "83087cfac336709ea32e4faba41903dc60e2dd118732eebebb7dd5a11413a31d",
         "server/models/worldWeather/vc.usage.model.js": "f21ea7e4d53ab2c4c25c8cc8404f71841967c4514fd09503467e85e4783e077a",
-        "server/routes/gateway.js": "90d772e4aa915928be66f3835db9e4db4ffcb266614016b9f903be24f49dba75",
+        "server/routes/gateway.js": "b464184861028b330b213d27661b77007d7f0047d33c786b98bb7d477f3723d5",
         "server/routes/v000705/routeTownForecast.js": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599",
         "server/routes/v000803/routeTownForecast.js": "26e1fcdba3e3b85e64376dbcc18a7f1c718317c0e0f9b35c44f6d9cc76f890fe",
         "server/routes/v000901/route.kma.addr.js": "b1aa8e3fbe3bf9eb0ab5e70587630270a59c97c41ed5c94e235320bfaf1fabf8",
         "server/routes/v000903/route.kma.v000903.js": "b7b7d8ea661783ad51f764a379fafa642ae5072f57e3fba14620b44ad43070eb",
         "server/s3/controller.s3.js": "a93fd6000a834df68d831fd900a7ab63c23e8942dbc14e6280c33a64315af774",
-        "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
+        "server/test/offline/rss-response-smoke.js": "cee8271b134f948b8ae56b53b848596df24b77ef1a2c98319fc60537b4f3bcf8",
         "server/utils/convertGeocode.js": "3d3297c22ca4f610d4dcd82b5a337b42e94f50e5d4d462a95b9b17056060744c",
         "server/utils/coordinate2xy.js": "76b5aa683c0fdd5cefc577c87f9284026c18d562682109b38d2976a5c39fe3ba",
         "server/utils/data/20160704_AreaNoResutl": "3ec05e31b76d76fa3dc1222ee014179f6a25715357e7c70426c532e30a7964d5",
@@ -12036,8 +12108,10 @@
         "server/utils/update.areano.to.db.js": "de91dea341e9554e269689ebef5e4846cf7abc47399c83ade98aba2b6c23f03f",
         "server/utils/updateTownDataToMongo.js": "08e55dd8c17f9401d936073b11d8f9c87b2b58477bdce3ce7bcbf9c93743bb28",
         "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
-        "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
-        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e"
+        "server/lib/kmaForecastNarrativeResponse.js": "96b0178e580586f83a5b6bb34ece544d67d923043afd8e8c75328b017ed51ed4",
+        "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
+        "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
+        "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484"
       },
       "source_paths": [
         "server/app.js",
@@ -12065,6 +12139,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -12091,6 +12166,7 @@
         "server/lib/geocoder/kakao.js",
         "server/lib/geocoder/keys.js",
         "server/lib/geocoder/transport.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -12217,6 +12293,8 @@
         "server/lib/AQI/airFallback",
         "server/lib/AQI/waqiStationName",
         "server/lib/PastConditionGather",
+        "server/lib/air/forecastRows",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient",
         "server/lib/air/observation",
         "server/lib/air/providerBudget",
@@ -12246,6 +12324,8 @@
         "server/lib/geocoder/kakao",
         "server/lib/geocoder/keys",
         "server/lib/geocoder/transport",
+        "server/lib/gwangjuJeonnam",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations",
         "server/lib/history/policy",
         "server/lib/history/provider",
@@ -12603,6 +12683,7 @@
         "server/controllers/lifeIndexKmaController.js",
         "server/lib/AQI/airFallback.js",
         "server/lib/AQI/waqiStationName.js",
+        "server/lib/air/forecastRows.js",
         "server/lib/air/httpClient.js",
         "server/lib/air/observation.js",
         "server/lib/air/providerBudget.js",
@@ -12629,6 +12710,7 @@
         "server/lib/geocoder/kakao.js",
         "server/lib/geocoder/keys.js",
         "server/lib/geocoder/transport.js",
+        "server/lib/gwangjuJeonnam.js",
         "server/lib/history/observations.js",
         "server/lib/history/policy.js",
         "server/lib/history/provider.js",
@@ -16459,11 +16541,11 @@
       "vm_entries": [
         {
           "filename": "server/app.js",
-          "sha256": "287e08ac6c15430bf29e8208175e1297b29793bca6b6cca4f63f4368626e3470"
+          "sha256": "070482694633c1513e3551f2e085025f10014d39caecff21ba50532dc7b8dea9"
         },
         {
           "filename": "server/config/air.js",
-          "sha256": "f7a37c3ba7373808f24f6e3ac151b1bf87f33e70b859364cc401581ffc936053"
+          "sha256": "926a075a6e2dcd3dfba0b481dc9599c0c2b79f9d752a89c29d3125dac31337de"
         },
         {
           "filename": "server/config/gather.js",
@@ -16491,11 +16573,11 @@
         },
         {
           "filename": "server/controllers/controllerTown.js",
-          "sha256": "dcb3a6e99d0a03c91b20f6be86d40aeeaf88e64983f1614cfbf7ed8f8a9c4df3"
+          "sha256": "126e0924fc7689ef379d4eb86a350962eb4792fc8c0f7640656022c8ba2e860c"
         },
         {
           "filename": "server/controllers/controllerTown24h.js",
-          "sha256": "4212abd3aad3db64098f4c95a82ce576dcb84c29673bc494945c724d4db56a76"
+          "sha256": "1a1f94d3f07ff086f06b15d2e421cfc38abf6297df1af63d91ceb8a93eedc526"
         },
         {
           "filename": "server/controllers/img.hourly.forecast.controller.js",
@@ -16523,7 +16605,7 @@
         },
         {
           "filename": "server/controllers/kma.specialweather.controller.js",
-          "sha256": "fdc26a8e39e5b42e9e40313ae1f9543bc0aa0089bfd962422a8998d1bc24ac4c"
+          "sha256": "ae39caad5f13f8d1cfc6e0bca80bf8767dbb751fb8a01397e0e1158f7babb893"
         },
         {
           "filename": "server/controllers/kma/kma.town.current.controller.js",
@@ -16567,7 +16649,7 @@
         },
         {
           "filename": "server/lib/air/providerBudget.js",
-          "sha256": "87b320a266d60bf5ed49198bd9110204f54a7d626b953b59c05c5e786ad2c3a8"
+          "sha256": "671d438d0a9a551e4c1550c9fe6ab3982cf0f685b51fbaafce4d7e1ccf22d04d"
         },
         {
           "filename": "server/lib/air/providerChain.js",
@@ -16575,7 +16657,7 @@
         },
         {
           "filename": "server/lib/air/providers/google.js",
-          "sha256": "804724b35570d7a5521cf4dfb887856c7e5314919a34dab5ef25e1e2d5bdf026"
+          "sha256": "69328f9d5d095c71027eb224f46947accbd84b4cfbc875a62f5a6029f3e2300a"
         },
         {
           "filename": "server/lib/air/providers/index.js",
@@ -16583,7 +16665,7 @@
         },
         {
           "filename": "server/lib/air/providers/openweather.js",
-          "sha256": "06cc5c2f18f414a0f98813718797698189473f347211b66ec98b9459ada5177c"
+          "sha256": "68b61f2ee6d9dc6367b93e387ab16694038663653c297daf86a38d462c4037a7"
         },
         {
           "filename": "server/lib/air/providers/visualcrossing.js",
@@ -16627,7 +16709,7 @@
         },
         {
           "filename": "server/lib/foodPoisoning.js",
-          "sha256": "07271e58bf730d3ea4ed41396ce957c63dff51d7a650de215d501627078cd9c1"
+          "sha256": "7bd04b294a9600fc7be7e8b72533adea04bdf69e1709cfe9410f56f124a3b9b7"
         },
         {
           "filename": "server/lib/forecastGridCollection.js",
@@ -16659,7 +16741,7 @@
         },
         {
           "filename": "server/lib/geocoder/transport.js",
-          "sha256": "3a5fdd9e8b0eca7544d4054088848107359b3af96a1f6ce0563080dada80e61b"
+          "sha256": "011fee4253f08d3d2e78225b086d7960115b9f1dcc043625f4fe8d7da418ac68"
         },
         {
           "filename": "server/lib/history/observations.js",
@@ -16711,7 +16793,7 @@
         },
         {
           "filename": "server/lib/kmaWarningZones.js",
-          "sha256": "0c51a9fcb072aafbe967bc09a9b3f232fdc7007feb9694e5cccf720354c0ceb2"
+          "sha256": "4ce206e4049c0a7c27a38ea004ef8ae5376fdfb5d182631989c6f80ab6666e75"
         },
         {
           "filename": "server/lib/lifeIndexKmaRequester.js",
@@ -16871,7 +16953,7 @@
         },
         {
           "filename": "server/routes/gateway.js",
-          "sha256": "813e4a204d0bf59cadabd42130d7d65c064f90171b7927d5f1398b24ab130c8c"
+          "sha256": "8a425aecea206f6a60efaa7c726bfcbeacf479a976a104e5efef6e19eecd3135"
         },
         {
           "filename": "server/routes/v000705/routeTownForecast.js",
@@ -16919,7 +17001,7 @@
         },
         {
           "filename": "server/lib/kmaForecastNarrativeResponse.js",
-          "sha256": "306e60a2aa55569f6dfa00302ac2c4e056e359c37bd8d9447642fe32fb86ec03"
+          "sha256": "98ccbb6c6819bd9a5ada2e8c33202fbbbb53f57ec33712e14e364950f3ccc858"
         },
         {
           "filename": "server/lib/kmaForecastNarrative.js",
@@ -16927,7 +17009,7 @@
         },
         {
           "filename": "server/test/offline/rss-response-smoke.js",
-          "sha256": "65eb191c82e70ff16c6c905cf0965e17b5a378d2421f439a045469b355a88bc4"
+          "sha256": "cb6f8c7dad3c9fb0bf2d824db7729bcae42fc20dbbba2da33850e5dd2dfd98c2"
         },
         {
           "filename": null,
@@ -16980,6 +17062,14 @@
         {
           "filename": "structured-stack",
           "sha256": "74624fddc8f672961098f19cb2afcbff94c92d21ceb1540c96eaba77d9479b51"
+        },
+        {
+          "filename": "server/lib/gwangjuJeonnam.js",
+          "sha256": "68dbd9210c1f7e40710aaf6232dbce9be7d404358848d45294d706245dbb47e3"
+        },
+        {
+          "filename": "server/lib/air/forecastRows.js",
+          "sha256": "2a45b61f3a485280c4a47ca8744e1bd5fc5ed54729596cb9d45c262ca2c46223"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
