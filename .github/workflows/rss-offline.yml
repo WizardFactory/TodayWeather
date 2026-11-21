@@ -119,6 +119,7 @@ jobs:
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: |
           node server/test/offline/vc-weather.test.js
+          node server/test/offline/overseas-uv.test.js
           node server/test/offline/vc-weather-smoke.js
           TZ=Asia/Seoul node server/test/offline/vc-weather.test.js
           TZ=Asia/Seoul node server/test/offline/vc-weather-smoke.js

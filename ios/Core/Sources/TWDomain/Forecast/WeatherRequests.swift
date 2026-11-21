@@ -50,6 +50,10 @@ public enum WeatherRequests {
         return query + "&airForecastSource=kaq"
     }
 
+    public static func coordinateForecastURL(base: String, lat: Double, long: Double, product: String) -> URL? {
+        requestURL("\(base)/weather/\(version)/coord/\(Js.numberToString(lat)),\(Js.numberToString(long))/\(product)")
+    }
+
     /// The URL WebKit requests for `text`, which `$http` passes as written: the path and query keep their characters
     /// except those WebKit's URL parser (the WHATWG percent-encode sets) encodes as UTF-8: controls, spaces, `"`, `<`,
     /// `>` and every non-ASCII character, `` ` ``, `{` and `}` in the path, `'` in the query. A `#` starts the

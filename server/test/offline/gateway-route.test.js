@@ -131,6 +131,110 @@ function assertErrorResponse(res, status) {
     assert.doesNotMatch(res.text, /<html|http|\.net|\.com|key/i);
 }
 
+test('coordinate air forecast is separately requested, never stored by HTTP caches, and skips Korea', async () => {
+    const calls = [];
+    const forecast = {source: 'openweather', attribution: 'OpenWeather',
+        retrievedAt: '2026-11-20T14:50:00.000Z', rows: [{
+        at: '2026-11-20T15:00:00.000Z', pollutants: {pm25: 9, pm10: 12, o3: 0.02}, indexes: {owm: 2}
+    }]};
+    const app = await startApp({
+        geocoder: () => ({
+            coord: async loc => ({
+                country: loc[0] > 0 ? 'KR' : 'UY', location: {lat: loc[0], long: loc[1]},
+                kmaAddress: {name1: 'Seoul', name2: 'Jung-gu'}
+            })
+        }),
+        loopback: async () => ({status: 200, json: true, body: {}}),
+        airForecast: (location, country, now, callback) => {
+            calls.push({location, country});
+            callback(location.lon === -56.165 ? forecast : undefined);
+        }
+    });
+    try {
+        const weather = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.165');
+        assert.equal(weather.json.airForecastAvailable, true);
+        assert.equal(weather.json.rows, undefined);
+        assert.equal(weather.headers['cache-control'], 'max-age=300');
+        assert.deepEqual(calls, []);
+
+        const response = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.165/air-forecast');
+        assert.equal(response.status, 200);
+        assert.equal(response.headers['cache-control'], 'no-store');
+        assert.equal(response.headers['access-control-allow-origin'], '*');
+        assert.deepEqual(response.json, forecast);
+        if (process.env.TW_AIR_FORECAST_CAPTURE) {
+            fs.writeFileSync(process.env.TW_AIR_FORECAST_CAPTURE, JSON.stringify({
+                path: '/weather/v000903/coord/-34.901,-56.165/air-forecast',
+                status: response.status,
+                cacheControl: response.headers['cache-control'],
+                body: response.json
+            }, null, 2) + '\n');
+        }
+        assert.deepEqual(calls, [{location: {lat: -34.901, lon: -56.165}, country: 'UY'}]);
+
+        const unavailable = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.166/air-forecast');
+        assert.deepEqual(unavailable.json, {available: false});
+        assert.equal(unavailable.headers['cache-control'], 'no-store');
+        assert.equal(calls.length, 2);
+
+        const korea = await request(app.port, 'GET', '/weather/v000903/coord/37.567,126.978');
+        assert.equal(korea.json.airForecastAvailable, undefined);
+        const koreanForecast = await request(app.port, 'GET', '/weather/v000903/coord/37.567,126.978/air-forecast');
+        assert.deepEqual(koreanForecast.json, {available: false});
+        assert.equal(calls.length, 2);
+    } finally {
+        await app.close();
+    }
+});
+
+test('pollen forecast uses viewed ISO country, leaving Korea and unsupported ordinary weather intact', async () => {
+    const fetched = [];
+    const app = await startApp({
+        geocoder: () => ({
+            coord: async loc => ({
+                country: loc[0] > 36 ? 'KR' : loc[0] > 0 ? 'JP' : 'UY',
+                location: {lat: loc[0], long: loc[1]}, kmaAddress: {name1: 'Seoul'}
+            })
+        }),
+        loopback: async () => ({status: 200, json: true, body: {current: {pollenGrade: 1}}}),
+        pollenForecast: {
+            supports: country => country === 'KR' || country === 'JP',
+            fetch: (coordinate, country, now, callback) => {
+                fetched.push({coordinate, country});
+                callback(country === 'JP' ? {source: 'google', attribution: 'Google Maps', region: 'JP',
+                    retrievedAt: '2026-11-20T15:56:10.000Z',
+                    days: [{dateUtc: '2026-11-20', plants: [{code: 'JAPANESE_CEDAR'}], types: []}]} : undefined);
+            }
+        }
+    });
+    try {
+        const weather = await request(app.port, 'GET', '/weather/v000903/coord/35.681,139.767', {'Accept-Language': 'ko-KR'});
+        assert.equal(weather.json.pollenForecastAvailable, true);
+        assert.equal(weather.json.days, undefined);
+        assert.equal(weather.headers['cache-control'], 'max-age=300');
+        assert.deepEqual(fetched, []);
+        const forecast = await request(app.port, 'GET', '/weather/v000903/coord/35.681,139.767/pollen-forecast', {'Accept-Language': 'ko-KR'});
+        assert.equal(forecast.status, 200);
+        assert.equal(forecast.headers['cache-control'], 'no-store');
+        assert.equal(forecast.json.region, 'JP');
+        assert.equal(forecast.json.days[0].dateUtc, '2026-11-20');
+        if (process.env.TW_POLLEN_FORECAST_CAPTURE) {
+            fs.writeFileSync(process.env.TW_POLLEN_FORECAST_CAPTURE, JSON.stringify({
+                path: '/weather/v000903/coord/35.681,139.767/pollen-forecast',
+                status: forecast.status, cacheControl: forecast.headers['cache-control'], body: forecast.json
+            }, null, 2) + '\n');
+        }
+        assert.deepEqual(fetched, [{coordinate: {lat: 35.681, lon: 139.767}, country: 'JP'}]);
+        const korea = await request(app.port, 'GET', '/weather/v000903/coord/37.567,126.978');
+        assert.equal(korea.json.current.pollenGrade, 1);
+        const uy = await request(app.port, 'GET', '/weather/v000903/coord/-34.901,-56.165');
+        assert.equal(uy.json.pollenForecastAvailable, undefined);
+        assert.equal(uy.status, 200);
+    } finally {
+        await app.close();
+    }
+});
+
 function queryPairs(url) {
     const q = url.indexOf('?') < 0 ? '' : url.slice(url.indexOf('?') + 1);
     return q ? q.split('&').map(p => p.split('=').map(decodeURIComponent)) : [];

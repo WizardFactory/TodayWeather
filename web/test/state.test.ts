@@ -65,6 +65,11 @@ describe("untrusted persisted weather", () => {
     const key = weatherKey(w.location, w.units),
       value = { weather: w, savedAt: now };
     expect(validateSnapshot(value, key, now)).toEqual(w);
+    expect(validateSnapshot(
+      { ...value, weather: { ...w, coordinateAirForecastAvailable: true, coordinatePollenForecastAvailable: true } },
+      key,
+      now,
+    )).toEqual(w);
     expect(
       validateSnapshot(
         { ...value, weather: { ...w, airSummary: "제공사 요약" } },

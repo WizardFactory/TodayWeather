@@ -1,4 +1,4 @@
-import { type Place, type Units, type Weather } from "@todayweather/core";
+import { type CoordinateAirForecast, type CoordinatePollenForecast, type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
 import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
@@ -28,6 +28,31 @@ export async function api<T>(
 }
 export const unitQuery = (units: Units) =>
   new URLSearchParams(units).toString();
+
+/** Load only for live weather that advertised coordinate forecast availability. */
+async function fetchCoordinateForecast<Forecast>(
+  weather: Weather,
+  signal: AbortSignal,
+  product: "air-forecast" | "pollen-forecast",
+  available?: true,
+): Promise<Forecast | undefined> {
+  if (weather.mode !== "live" || !available) return;
+  const { lat, lon } = weather.location;
+  try {
+    return await api<Forecast | undefined>(`/weather/${product}?lat=${lat}&lon=${lon}`, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return undefined;
+  }
+}
+
+export function fetchCoordinateAirForecast(weather: Weather, signal: AbortSignal) {
+  return fetchCoordinateForecast<CoordinateAirForecast>(weather, signal, "air-forecast", weather.coordinateAirForecastAvailable);
+}
+
+export function fetchCoordinatePollenForecast(weather: Weather, signal: AbortSignal) {
+  return fetchCoordinateForecast<CoordinatePollenForecast>(weather, signal, "pollen-forecast", weather.coordinatePollenForecastAvailable);
+}
 export async function fetchWeather(
   place: Place,
   units: Units,

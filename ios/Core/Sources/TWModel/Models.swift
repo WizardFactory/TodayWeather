@@ -159,6 +159,18 @@ public struct ChartSeries: JSONView {
 }
 
 /// Converted weather of one place, as `WeatherUtil.convertWeatherData` returns it.
+public struct HourlyDetails: JSONView {
+    public let json: JSONObject
+    public init(json: JSONObject) { self.json = json }
+    public var at: String? { str("at") }
+    public var uvIndex: Double? { num("uvIndex") }
+    public var windGustMps: Double? { num("windGustMps") }
+    public var wbgtC: Double? { num("wbgtC") }
+    public var solarRadiationWm2: Double? { num("solarRadiationWm2") }
+    public var solarEnergyMjm2: Double? { num("solarEnergyMjm2") }
+    public var severeRisk: Double? { num("severeRisk") }
+}
+
 public struct PlaceWeather: JSONView {
     public let json: JSONObject
     public init(json: JSONObject) { self.json = json }
@@ -169,6 +181,7 @@ public struct PlaceWeather: JSONView {
     public var location: GeoPoint? { obj("location").map(GeoPoint.init(json:)) }
     public var currentWeather: CurrentWeather? { obj("currentWeather").map(CurrentWeather.init(json:)) }
     public var timeTable: [WeatherPoint] { list("timeTable", WeatherPoint.init(json:)) }
+    public var hourlyDetails: [HourlyDetails] { list("hourlyDetails", HourlyDetails.init(json:)) }
     public var timeChart: [ChartSeries] { list("timeChart", ChartSeries.init(json:)) }
     private var firstDayChart: JSONObject? { json["dayChart"]?.arrayValue?.first?.objectValue }
     public var dayTable: [DailyForecast] {

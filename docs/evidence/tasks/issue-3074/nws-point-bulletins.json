@@ -1,0 +1,146 @@
+{
+  "miami": {
+    "sourceUrl": "https://api.weather.gov/alerts/active?point=25.76,-80.19",
+    "retrievedAt": "2026-11-20T08:17:59Z",
+    "updated": "2026-11-20T08:15:40+00:00",
+    "features": [
+      {
+        "id": "urn:oid:2.49.0.1.840.0.3ede6dce89d6f4197a74fd5c6cd0722f2918dbce.002.1",
+        "sender": "w-nws.webmaster@noaa.gov",
+        "senderName": "NWS Miami FL",
+        "messageType": "Update",
+        "status": "Actual",
+        "event": "Rip Current Statement",
+        "sent": "2026-11-20T00:37:00-05:00",
+        "effective": "2026-11-20T00:37:00-05:00",
+        "onset": "2026-11-20T00:37:00-05:00",
+        "expires": "2026-11-20T09:00:00-05:00",
+        "ends": "2026-11-20T19:00:00-05:00",
+        "severity": "Moderate",
+        "certainty": "Likely",
+        "urgency": "Expected",
+        "areaDesc": "Coastal Broward County; Coastal Miami Dade County",
+        "geocode": {
+          "SAME": [
+            "012011",
+            "012086"
+          ],
+          "UGC": [
+            "FLZ172",
+            "FLZ173"
+          ]
+        },
+        "references": [
+          {
+            "id": "urn:oid:2.49.0.1.840.0.d06c58932df914a93d44b1e5e0b6eae372011ec8.001.2",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-11-19T16:52:00-05:00"
+          },
+          {
+            "id": "urn:oid:2.49.0.1.840.0.d06c58932df914a93d44b1e5e0b6eae372011ec8.003.1",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-11-19T16:52:00-05:00"
+          }
+        ],
+        "geometry": null
+      },
+      {
+        "id": "urn:oid:2.49.0.1.840.0.1b7044468976ba620b25b82bd61a3e69832af899.001.1",
+        "sender": "w-nws.webmaster@noaa.gov",
+        "senderName": "NWS Miami FL",
+        "messageType": "Update",
+        "status": "Actual",
+        "event": "Flood Watch",
+        "sent": "2026-11-19T15:18:00-05:00",
+        "effective": "2026-11-19T15:18:00-05:00",
+        "onset": "2026-11-19T15:18:00-05:00",
+        "expires": "2026-11-20T07:00:00-05:00",
+        "ends": "2026-11-20T07:00:00-05:00",
+        "severity": "Severe",
+        "certainty": "Possible",
+        "urgency": "Future",
+        "areaDesc": "Inland Palm Beach County; Metro Palm Beach County; Inland Broward County; Metro Broward County; Inland Miami-Dade County; Metropolitan Miami Dade; Coastal Palm Beach County; Coastal Broward County; Coastal Miami Dade County; Far South Miami-Dade County",
+        "geocode": {
+          "SAME": [
+            "012099",
+            "012011",
+            "012086"
+          ],
+          "UGC": [
+            "FLZ067",
+            "FLZ068",
+            "FLZ071",
+            "FLZ072",
+            "FLZ073",
+            "FLZ074",
+            "FLZ168",
+            "FLZ172",
+            "FLZ173",
+            "FLZ174"
+          ]
+        },
+        "references": [
+          {
+            "id": "urn:oid:2.49.0.1.840.0.e137ee0c26e3ff14d4b275565ab4c6d285721595.001.1",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-11-19T02:51:00-05:00"
+          }
+        ],
+        "geometry": null
+      }
+    ]
+  },
+  "newYork": {
+    "sourceUrl": "https://api.weather.gov/alerts/active?point=40.71,-74.01",
+    "retrievedAt": "2026-11-20T08:17:58Z",
+    "updated": "2026-11-20T08:15:40+00:00",
+    "features": []
+  },
+  "previousFloodWatch": {
+    "sourceUrl": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e137ee0c26e3ff14d4b275565ab4c6d285721595.001.1",
+    "feature": {
+      "id": "urn:oid:2.49.0.1.840.0.e137ee0c26e3ff14d4b275565ab4c6d285721595.001.1",
+      "sender": "w-nws.webmaster@noaa.gov",
+      "senderName": "NWS Miami FL",
+      "messageType": "Update",
+      "status": "Actual",
+      "event": "Flood Watch",
+      "sent": "2026-11-19T02:51:00-05:00",
+      "effective": "2026-11-19T02:51:00-05:00",
+      "onset": "2026-11-19T02:51:00-05:00",
+      "expires": "2026-11-19T19:00:00-05:00",
+      "ends": "2026-11-19T19:00:00-05:00",
+      "severity": "Severe",
+      "certainty": "Possible",
+      "urgency": "Future",
+      "areaDesc": "Inland Palm Beach County; Metro Palm Beach County; Inland Broward County; Metro Broward County; Inland Miami-Dade County; Metropolitan Miami Dade; Coastal Palm Beach County; Coastal Broward County; Coastal Miami Dade County; Far South Miami-Dade County",
+      "geocode": {
+        "SAME": [
+          "012099",
+          "012011",
+          "012086"
+        ],
+        "UGC": [
+          "FLZ067",
+          "FLZ068",
+          "FLZ071",
+          "FLZ072",
+          "FLZ073",
+          "FLZ074",
+          "FLZ168",
+          "FLZ172",
+          "FLZ173",
+          "FLZ174"
+        ]
+      },
+      "references": [
+        {
+          "id": "urn:oid:2.49.0.1.840.0.996f2b2710c35828265887809d90336a5516f695.001.1",
+          "sender": "w-nws.webmaster@noaa.gov",
+          "sent": "2026-11-18T12:50:00-05:00"
+        }
+      ],
+      "geometry": null
+    }
+  }
+}

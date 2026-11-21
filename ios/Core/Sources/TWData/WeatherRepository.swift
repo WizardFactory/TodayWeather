@@ -29,12 +29,38 @@ public struct WeatherEntry: Sendable, Equatable {
     public let weather: JSONObject
     public let loadedAt: Date
     public let summaryRequest: String?
+    public let coordinateAirForecastAvailable: Bool
+    public let coordinatePollenForecastAvailable: Bool
+    public let timeZoneId: String?
 
-    public init(weather: JSONObject, loadedAt: Date, summaryRequest: String? = nil) {
+    public init(weather: JSONObject, loadedAt: Date, coordinateAirForecastAvailable: Bool = false,
+                coordinatePollenForecastAvailable: Bool = false, timeZoneId: String? = nil,
+                summaryRequest: String? = nil) {
         self.summaryRequest = summaryRequest
         self.weather = weather
         self.loadedAt = loadedAt
+        self.coordinateAirForecastAvailable = coordinateAirForecastAvailable
+        self.coordinatePollenForecastAvailable = coordinatePollenForecastAvailable
+        self.timeZoneId = timeZoneId
     }
+}
+
+/// A short-lived response that is never written to the place weather cache.
+public struct CoordinateAirForecast: Sendable {
+    public let source: String
+    public let attribution: String
+    public let validUntil: Date
+    public let timeZoneId: String?
+    public let rows: [JSONValue]
+}
+
+/// Optional Google day rows retain the reported UTC dates for the viewed coordinate.
+public struct CoordinatePollenForecast: Sendable {
+    public let source = "google"
+    public let attribution: String
+    public let region: String
+    public let days: [JSONValue]
+    public let validUntil: Date
 }
 
 public enum LoadResult: Sendable {
@@ -160,7 +186,9 @@ public final class WeatherRepository {
             // when it cannot.
             guard let json = try? JSONValue.parse(data) else { return .network }
             guard let converted = try? WeatherConverter.convert(json) else { return .unconvertible }
-            return .converted(converted)
+            return .converted(converted, json["airForecastAvailable"]?.boolValue == true,
+                              json["pollenForecastAvailable"]?.boolValue == true,
+                              json["timezone"]?["timezoneId"]?.stringValue)
         }.value
         if latestRequest[key] == request { loading.remove(key) }
         // `getWeatherByGeoInfo` reports each request once `$http` settled: a body parsed as JSON is a success, also
@@ -172,12 +200,14 @@ public final class WeatherRepository {
         switch outcome {
         case .network: return .failed(network: true, unconvertible: false)
         case .unconvertible: return .failed(network: false, unconvertible: true)
-        case .converted(let city):
+        case .converted(let city, let airForecastAvailable, let pollenForecastAvailable, let timeZoneId):
             // Stored at once on the main actor, so a slower answer of an older request cannot follow a newer one.
             let updated = Self.updatePlace(place, city)
             let country = city["country"]?.stringValue ?? place.country
             let marked = country == "KR" && city["currentWeather"]?.objectValue?.contains("summaryForDate") == true
             let entry = WeatherEntry(weather: Self.merge(cached(place)?.weather, city), loadedAt: clock.now,
+                                     coordinateAirForecastAvailable: airForecastAvailable,
+                                     coordinatePollenForecastAvailable: pollenForecastAvailable, timeZoneId: timeZoneId,
                                      summaryRequest: marked ? Self.summaryRequest(updated, units, acceptLanguage) : nil)
             let newKey = Self.key(updated)
             loadTimes[key] = entry.loadedAt
@@ -192,6 +222,59 @@ public final class WeatherRepository {
         }
     }
 
+    /// Fetch for the viewed live place only when server1 advertises support.
+    public func coordinateAirForecast(_ entry: WeatherEntry, place: Place, acceptLanguage: String) async -> CoordinateAirForecast? {
+        guard entry.coordinateAirForecastAvailable,
+              let json = await readCoordinateForecast(place, "air-forecast", acceptLanguage),
+              let source = json["source"]?.stringValue, source == "google" || source == "openweather",
+              let attribution = json["attribution"]?.stringValue, !attribution.isEmpty
+        else { return nil }
+        let parser = forecastTimeParser()
+        let now = clock.now
+        guard let retrieved = json["retrievedAt"]?.stringValue.flatMap(parser.date(from:)),
+              (-60..<3600).contains(now.timeIntervalSince(retrieved)),
+              let items = json["rows"]?.arrayValue
+        else { return nil }
+        let rows = items.filter { ($0["at"]?.stringValue.flatMap(parser.date(from:)) ?? .distantPast) > now }
+        guard !rows.isEmpty else { return nil }
+        return CoordinateAirForecast(source: source, attribution: attribution, validUntil: retrieved.addingTimeInterval(3600),
+                                     timeZoneId: entry.timeZoneId, rows: rows)
+    }
+
+    public func coordinatePollenForecast(_ entry: WeatherEntry, place: Place, acceptLanguage: String) async -> CoordinatePollenForecast? {
+        guard entry.coordinatePollenForecastAvailable,
+              let json = await readCoordinateForecast(place, "pollen-forecast", acceptLanguage),
+              json["source"]?.stringValue == "google",
+              let attribution = json["attribution"]?.stringValue, !attribution.isEmpty,
+              let region = json["region"]?.stringValue, region.range(of: "^[A-Z]{2}$", options: .regularExpression) != nil,
+              let days = json["days"]?.arrayValue, !days.isEmpty
+        else { return nil }
+        let parser = forecastTimeParser()
+        guard let retrieved = json["retrievedAt"]?.stringValue.flatMap(parser.date(from:)),
+              (-60..<86400).contains(clock.now.timeIntervalSince(retrieved))
+        else { return nil }
+        return CoordinatePollenForecast(attribution: attribution, region: region, days: days,
+                                       validUntil: retrieved.addingTimeInterval(86400))
+    }
+
+    private func readCoordinateForecast(_ place: Place, _ product: String, _ acceptLanguage: String) async -> JSONValue? {
+        guard let baseURL, let location = place.location,
+              let url = WeatherRequests.coordinateForecastURL(base: baseURL, lat: location.lat, long: location.long, product: product)
+        else { return nil }
+        let http = self.http, clock = self.clock
+        let response = await firstSettled(attempts: 1, gap: .zero, timeout: .milliseconds(2500), clock: clock) {
+            try await http.get(url, headers: ["Accept-Language": acceptLanguage, "Cache-Control": "no-store"])
+        }
+        guard case .success(let data) = response else { return nil }
+        return try? JSONValue.parse(data)
+    }
+
+    private func forecastTimeParser() -> ISO8601DateFormatter {
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return parser
+    }
+
     /// `Monetization.track('weather_fetch', …)` with the time since `started` on the clock.
     private func fetched(_ outcome: String, since started: Date) {
         telemetry?("weather_fetch", ["outcome": .text(outcome),
@@ -200,7 +283,7 @@ public final class WeatherRepository {
 
     private enum Outcome: Sendable {
         case network, unconvertible
-        case converted(JSONObject)
+        case converted(JSONObject, Bool, Bool, String?)
 
         var isNetwork: Bool { if case .network = self { true } else { false } }
 
