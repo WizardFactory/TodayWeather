@@ -191,3 +191,26 @@ describe("static browser API transport", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+it("loads warnings for the viewed coordinates and expires source coverage on read", async () => {
+  const { fetchCoordinateWarnings } = await import("../src/api");
+  const { warningsAt } = await import("@todayweather/core");
+  const now = Date.now();
+  const stamp = (offset: number) => new Date(now + offset).toISOString();
+  const place = { id: "barcelona", name: "Barcelona", address: "", country: "ES", lat: 41.3874, lon: 2.1686 };
+  const snapshot = {
+    location: {lat: place.lat, lon: place.lon, country: "ES"},
+    checkedAt: stamp(0),
+    sources: [{issuer: "AEMET", state: "current", asOf: stamp(-1000), freshUntil: stamp(60000)}],
+    warnings: [{issuer: "AEMET", id: "warning", event: "Lluvia", effectiveAt: stamp(-1000), expiresAt: stamp(90000)}],
+  };
+  fetcher.mockResolvedValueOnce(json(snapshot)).mockResolvedValueOnce(json(snapshot));
+  const result = await fetchCoordinateWarnings(place, new AbortController().signal);
+  expect(result?.warnings[0]?.id).toBe("warning");
+  const [url, init] = fetcher.mock.calls[0];
+  expect(new URL(url).pathname).toBe("/weather/v000903/coord/41.3874,2.1686/warnings");
+  expect(init.cache).toBe("no-store");
+  expect(warningsAt(result!, now + 60000).sources[0].state).toBe("unavailable");
+  expect(warningsAt(result!, now + 60000).warnings).toEqual([]);
+  expect(await fetchCoordinateWarnings({...place, lat: 40.4168}, new AbortController().signal)).toBeUndefined();
+});

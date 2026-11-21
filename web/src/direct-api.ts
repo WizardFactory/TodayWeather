@@ -1,5 +1,8 @@
 import {
   coordinates,
+  exactCoordinates,
+  decodeCoordinateWarnings,
+  warningsAt,
   DEFAULT_UNITS,
   normalizeWeather,
   normalizeCoordinateAirForecast,
@@ -214,6 +217,15 @@ export async function directApi(
         noStore: true,
       }),
     );
+  }
+  if (route === "/weather/warnings") {
+    if (mode !== "live") return undefined;
+    const point = exactCoordinates(url.searchParams.get("lat"), url.searchParams.get("lon"));
+    const data = await upstream(`/weather/v000903/coord/${point.lat},${point.lon}/warnings`, {
+      noStore: true, singleAttempt: true,
+    });
+    const warnings = decodeCoordinateWarnings(data, point);
+    return warnings ? warningsAt(warnings) : undefined;
   }
   if (mode === "live" && (route === "/weather/air-forecast" || route === "/weather/pollen-forecast")) {
     const {lat, lon} = coordinates(url.searchParams.get("lat"), url.searchParams.get("lon"));

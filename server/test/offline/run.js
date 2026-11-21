@@ -68,6 +68,7 @@ var commands = [
     [path.join(__dirname, 'overseas-uv.test.js')],
     [path.join(__dirname, 'gateway-geocoder.test.js')],
     [path.join(__dirname, 'gateway-route.test.js')],
+    [path.join(__dirname, 'aemet-cap.test.js')],
     [path.join(__dirname, 'weather-unavailable-smoke.js')],
     [path.join(__dirname, 'gateway-callers.test.js')],
     [path.join(__dirname, 'kma-warning.test.js')],

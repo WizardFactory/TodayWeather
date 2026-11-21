@@ -1,4 +1,4 @@
-import { type CoordinateAirForecast, type CoordinatePollenForecast, type Place, type Units, type Weather } from "@todayweather/core";
+import { type CoordinateAirForecast, type CoordinatePollenForecast, type CoordinateWarnings, type Place, type Units, type Weather } from "@todayweather/core";
 import { readSnapshot, weatherKey, writeSnapshot } from "./state";
 import { directApi } from "./direct-api";
 import { readTransportSettings } from "./transport-config";
@@ -52,6 +52,14 @@ export function fetchCoordinateAirForecast(weather: Weather, signal: AbortSignal
 
 export function fetchCoordinatePollenForecast(weather: Weather, signal: AbortSignal) {
   return fetchCoordinateForecast<CoordinatePollenForecast>(weather, signal, "pollen-forecast", weather.coordinatePollenForecastAvailable);
+}
+export async function fetchCoordinateWarnings(place: Place, signal: AbortSignal): Promise<CoordinateWarnings | undefined> {
+  try {
+    return await api<CoordinateWarnings | undefined>(`/weather/warnings?lat=${place.lat}&lon=${place.lon}`, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return undefined;
+  }
 }
 export async function fetchWeather(
   place: Place,
