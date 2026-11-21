@@ -121,7 +121,8 @@
         "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
         "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484",
         "server/lib/solarTerms/summary.js": "8e0b079f9cff8c1639e0e05b666741e833d7128a31ec4bfd47a8a311e0977110",
-        "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605"
+        "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605",
+        "server/lib/solarTerms/calendar.js": "929a268361e85e95361821ff0ec8896ed3465e8d160aa69b90ad94f3234b2632"
       },
       "source_paths": [
         "server/app.js",
@@ -169,6 +170,7 @@
         "server/lib/kmaTimeLib.js",
         "server/lib/kmaWarningZones.js",
         "server/lib/midForecastPolicy.js",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet.js",
         "server/lib/unitConverter.js",
@@ -255,6 +257,8 @@
         "server/lib/log",
         "server/lib/midForecastPolicy",
         "server/lib/midRssKmaRequester",
+        "server/lib/solarTerms/calendar",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet",
@@ -484,6 +488,7 @@
         "server/lib/kmaTimeLib.js",
         "server/lib/kmaWarningZones.js",
         "server/lib/midForecastPolicy.js",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet.js",
         "server/lib/unitConverter.js",
@@ -3013,6 +3018,10 @@
         {
           "filename": "server/lib/solarTerms/summary.js",
           "sha256": "ad9c37fba44c4df18281a4a1ea1abe8922e80ee155bef3192758a05b82d8d220"
+        },
+        {
+          "filename": "server/lib/solarTerms/calendar.js",
+          "sha256": "c389ea9cd575606dbbb11a08f8077363e07bf3592fb2247576bd0508b8b2a9c9"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
@@ -9882,7 +9891,8 @@
         "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
         "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484",
         "server/lib/solarTerms/summary.js": "8e0b079f9cff8c1639e0e05b666741e833d7128a31ec4bfd47a8a311e0977110",
-        "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605"
+        "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605",
+        "server/lib/solarTerms/calendar.js": "929a268361e85e95361821ff0ec8896ed3465e8d160aa69b90ad94f3234b2632"
       },
       "source_paths": [
         "server/app.js",
@@ -9933,6 +9943,7 @@
         "server/lib/kmaTimeLib.js",
         "server/lib/kmaWarningZones.js",
         "server/lib/midForecastPolicy.js",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet.js",
         "server/lib/unitConverter.js",
@@ -10041,6 +10052,8 @@
         "server/lib/log",
         "server/lib/midForecastPolicy",
         "server/lib/midRssKmaRequester",
+        "server/lib/solarTerms/calendar",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet",
@@ -10309,6 +10322,7 @@
         "server/lib/kmaTimeLib.js",
         "server/lib/kmaWarningZones.js",
         "server/lib/midForecastPolicy.js",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet.js",
         "server/lib/unitConverter.js",
@@ -11971,6 +11985,10 @@
         {
           "filename": "server/lib/solarTerms/summary.js",
           "sha256": "ad9c37fba44c4df18281a4a1ea1abe8922e80ee155bef3192758a05b82d8d220"
+        },
+        {
+          "filename": "server/lib/solarTerms/calendar.js",
+          "sha256": "c389ea9cd575606dbbb11a08f8077363e07bf3592fb2247576bd0508b8b2a9c9"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
@@ -12137,7 +12155,8 @@
         "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
         "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484",
         "server/lib/solarTerms/summary.js": "8e0b079f9cff8c1639e0e05b666741e833d7128a31ec4bfd47a8a311e0977110",
-        "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605"
+        "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605",
+        "server/lib/solarTerms/calendar.js": "929a268361e85e95361821ff0ec8896ed3465e8d160aa69b90ad94f3234b2632"
       },
       "source_paths": [
         "server/app.js",
@@ -12212,6 +12231,7 @@
         "server/lib/kmaWarningZones.js",
         "server/lib/lifeIndexKmaRequester.js",
         "server/lib/midForecastPolicy.js",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet.js",
         "server/lib/unitConverter.js",
@@ -12376,6 +12396,8 @@
         "server/lib/log",
         "server/lib/midForecastPolicy",
         "server/lib/midRssKmaRequester",
+        "server/lib/solarTerms/calendar",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet",
@@ -12760,6 +12782,7 @@
         "server/lib/kmaWarningZones.js",
         "server/lib/lifeIndexKmaRequester.js",
         "server/lib/midForecastPolicy.js",
+        "server/lib/solarTerms/calendar.js",
         "server/lib/solarTerms/summary.js",
         "server/lib/sunRiseSet.js",
         "server/lib/unitConverter.js",
@@ -17106,6 +17129,10 @@
         {
           "filename": "server/lib/solarTerms/summary.js",
           "sha256": "ad9c37fba44c4df18281a4a1ea1abe8922e80ee155bef3192758a05b82d8d220"
+        },
+        {
+          "filename": "server/lib/solarTerms/calendar.js",
+          "sha256": "c389ea9cd575606dbbb11a08f8077363e07bf3592fb2247576bd0508b8b2a9c9"
         }
       ],
       "clock_contract": "Preserve original driver/VM/global Date and TW_SMOKE_NOW assignments and deletion; never suppress narrative model calls."
