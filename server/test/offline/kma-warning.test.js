@@ -279,28 +279,109 @@ test('replay: order, dedupe, cancel, change-issue, idempotence and late rows (AC
 });
 
 // ---------------------------------------------------------------------------------------------
-test('town mapping: zone table, islands, metropolitan cities and split parents (decision 8)', () => {
-    const names = town => plain(zones.zonesForTown(town).map(code => zones.zoneName(code))).sort();
+test('town mapping: zone table, islands, metropolitan cities and granular sub-zones (#3084)', () => {
+    const names = town => Array.from(new Set(plain(zones.zonesForTown(town).map(code => zones.zoneName(code))))).sort();
+    // Jeju: horizontal sub-zone separated, altitude-mixed 중산간+제주도산지 retained conservatively; 우도면 is coastal-only.
     const seogwipo = names({first: '제주특별자치도', second: '서귀포시', third: '성산읍'});
-    assert.deepEqual(seogwipo, ['서귀포시(산지 제외)', '서귀포시남부', '서귀포시동부', '서귀포시서부', '서귀포시중산간', '전국', '제주도', '제주도산지'].sort());
-    // AK decision (2026-09-27, verification F2): the shared mountain zone reaches both cities.
-    assert.ok(names({first: '제주특별자치도', second: '제주시', third: '노형동'}).indexOf('제주도산지') !== -1);
-    assert.ok(names({first: '제주특별자치도', second: '제주시', third: '노형동'}).indexOf('서귀포시동부') === -1);
+    assert.deepEqual(seogwipo, ['서귀포시(산지 제외)', '서귀포시동부', '서귀포시중산간', '전국', '제주도', '제주도산지'].sort());
+    assert.deepEqual(names({first: '제주특별자치도', second: '서귀포시', third: ''}),
+        ['서귀포시(산지 제외)', '서귀포시남부', '서귀포시동부', '서귀포시서부', '서귀포시중산간', '전국', '제주도', '제주도산지'].sort());
+    assert.deepEqual(names({first: '제주특별자치도', second: '서귀포시', third: '대정읍/마라도포함'}),
+        ['서귀포시(산지 제외)', '서귀포시서부', '서귀포시중산간', '전국', '제주도', '제주도산지'].sort());
+    // AK decision (2026-09-27, verification F2): the shared mountain zone reaches both cities' altitude-mixed towns.
+    const nohyeong = names({first: '제주특별자치도', second: '제주시', third: '노형동'});
+    assert.deepEqual(nohyeong, ['전국', '제주도', '제주도산지', '제주시(산지 제외)', '제주시북부', '제주시중산간'].sort());
+    assert.deepEqual(names({first: '제주특별자치도', second: '제주시', third: '우도면'}),
+        ['전국', '제주도', '제주시(산지 제외)', '제주시동부'].sort());
     assert.deepEqual(names({first: '제주특별자치도', second: '제주시', third: '추자면'}), ['전국', '제주도', '추자도']);
     assert.ok(names({first: '경기도', second: '수원시장안구', third: '파장동'}).indexOf('수원시') !== -1);
-    assert.deepEqual(names({first: '경기도', second: '파주시', third: '문산읍'}).filter(n => n.indexOf('파주') === 0), ['파주시', '파주시남부', '파주시동북부', '파주시서북부']);
-    assert.deepEqual(names({first: '서울특별시', second: '강남구', third: '역삼동'}).filter(n => n.indexOf('서울') === 0), ['서울동남권', '서울동북권', '서울서남권', '서울서북권', '서울특별시']);
-    const incheon = names({first: '인천광역시', second: '남동구', third: '구월동'});
-    assert.ok(incheon.indexOf('강화군') === -1 && incheon.indexOf('옹진군') === -1 && incheon.indexOf('인천광역시') !== -1);
+    assert.deepEqual(names({first: '경기도', second: '파주시', third: '문산읍'}).filter(n => n.indexOf('파주') === 0), ['파주시', '파주시동북부']);
+    assert.deepEqual(names({first: '경기도', second: '파주시', third: '금촌1동'}).filter(n => n.indexOf('파주') === 0), ['파주시', '파주시남부']);
+    assert.deepEqual(names({first: '경기도', second: '파주시', third: ''}).filter(n => n.indexOf('파주') === 0), ['파주시', '파주시남부', '파주시동북부', '파주시서북부']);
+    // Tier A: Seoul 4 zones separated by autonomous district; city-level/unknown district falls back safely.
+    assert.deepEqual(names({first: '서울특별시', second: '강남구', third: '역삼동'}).filter(n => n.indexOf('서울') === 0), ['서울동남권', '서울특별시']);
+    assert.deepEqual(names({first: '서울특별시', second: '노원구', third: '상계1동'}).filter(n => n.indexOf('서울') === 0), ['서울동북권', '서울특별시']);
+    assert.deepEqual(names({first: '서울특별시', second: '영등포구', third: '여의동'}).filter(n => n.indexOf('서울') === 0), ['서울서남권', '서울특별시']);
+    assert.deepEqual(names({first: '서울특별시', second: '종로구', third: '청운효자동'}).filter(n => n.indexOf('서울') === 0), ['서울서북권', '서울특별시']);
+    assert.deepEqual(names({first: '서울특별시', second: '', third: ''}).filter(n => n.indexOf('서울') === 0), ['서울동남권', '서울동북권', '서울서남권', '서울서북권', '서울특별시']);
+    assert.deepEqual(names({first: '서울특별시', second: '없는구', third: ''}).filter(n => n.indexOf('서울') === 0), ['서울동남권', '서울동북권', '서울서남권', '서울서북권', '서울특별시']);
+    // Tier A: Busan 3 zones, Ulsan 2 zones, Gwangju 2 zones.
+    assert.deepEqual(names({first: '부산광역시', second: '해운대구', third: ''}), ['부산광역시', '부산동부', '전국']);
+    assert.deepEqual(names({first: '부산광역시', second: '부산진구', third: ''}), ['부산광역시', '부산중부', '전국']);
+    assert.deepEqual(names({first: '부산광역시', second: '사하구', third: ''}), ['부산광역시', '부산서부', '전국']);
+    assert.deepEqual(names({first: '울산광역시', second: '남구', third: ''}), ['울산광역시', '울산동부', '전국']);
+    assert.deepEqual(names({first: '울산광역시', second: '울주군', third: ''}), ['울산광역시', '울산서부', '전국']);
+    assert.deepEqual(names({first: '광주광역시', second: '광산구', third: ''}), ['광주광역시', '광주서부', '전국']);
+    assert.deepEqual(names({first: '광주광역시', second: '서구', third: ''}), ['광주광역시', '광주동부', '전국']);
+    // Tier B: Incheon pre/post-2026-07-01 district names and 강화군 서도면 straddle.
+    assert.deepEqual(names({first: '인천광역시', second: '남동구', third: '구월동'}), ['인천광역시', '인천남부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '남구', third: ''}), ['인천광역시', '인천남부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '제물포구', third: ''}), ['인천광역시', '인천남부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '영종구', third: ''}), ['인천광역시', '인천영종', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '중구', third: '영종1동'}), ['인천광역시', '인천영종', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '중구', third: '신포동'}), ['인천광역시', '인천남부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '중구', third: ''}), ['인천광역시', '인천남부', '인천영종', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '부평구', third: ''}), ['인천광역시', '인천북부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '검단구', third: ''}), ['인천광역시', '인천북부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '서해구', third: ''}), ['인천광역시', '인천북부', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '강화군', third: '강화읍'}), ['강화군', '인천광역시', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '강화군', third: '서도면'}), ['강화군', '서해5도', '연평도.우도', '인천광역시', '전국']);
     assert.ok(names({first: '인천광역시', second: '강화군', third: ''}).indexOf('강화군') !== -1);
     assert.ok(names({first: '인천광역시', second: '옹진군', third: '백령면'}).indexOf('백령도.대청도') !== -1);
+    // Tier B: Sejong (both empty second from geocoder and explicit second).
+    assert.deepEqual(names({first: '세종특별자치시', second: '', third: '조치원읍'}), ['세종북부', '세종특별자치시', '전국']);
+    assert.deepEqual(names({first: '세종특별자치시', second: '', third: '한솔동'}), ['세종남부', '세종특별자치시', '전국']);
+    assert.deepEqual(names({first: '세종특별자치시', second: '세종특별자치시', third: '부강면'}), ['세종남부', '세종특별자치시', '전국']);
+    assert.deepEqual(names({first: '세종특별자치시', second: '', third: ''}), ['세종남부', '세종북부', '세종특별자치시', '전국']);
+    // Tier B: 강원/경북 평지 vs 산지, 속초시 대포동 법정동 straddle, and historical township aliases.
+    assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: '왕산면'}), ['강릉시', '강릉시산지', '강원도', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: '주문진읍'}), ['강릉시', '강릉시평지', '강원도', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '강릉시', third: ''}), ['강릉시', '강릉시산지', '강릉시평지', '강원도', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '동해시', third: '삼화동'}), ['강원도', '동해시', '동해시산지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '동해시', third: '천곡동'}), ['강원도', '동해시', '동해시평지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '노학동'}), ['강원도', '속초시', '속초시산지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '조양동'}), ['강원도', '속초시', '속초시평지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '속초시', third: '대포동'}), ['강원도', '속초시', '속초시산지', '속초시평지', '전국']);
+    assert.deepEqual(names({first: '강원도', second: '양구군', third: '남면'}), ['강원도', '양구군', '양구군평지', '전국']);
+    assert.deepEqual(names({first: '강원특별자치도', second: '양구군', third: '해안면'}), ['강원도', '양구군', '양구군산지', '전국']);
+    assert.deepEqual(names({first: '경상북도', second: '울진군', third: '서면'}), ['경상북도', '울진군', '울진군산지', '전국']);
+    assert.deepEqual(names({first: '경상북도', second: '울진군', third: '금강송면'}), ['경상북도', '울진군', '울진군산지', '전국']);
+    assert.deepEqual(names({first: '경상북도', second: '울진군', third: '울진읍'}), ['경상북도', '울진군', '울진군평지', '전국']);
+    assert.deepEqual(names({first: '경상북도', second: '봉화군', third: '석포면'}), ['경상북도', '봉화군', '봉화군산지', '전국']);
+    assert.deepEqual(names({first: '경상북도', second: '영양군', third: '영양읍'}), ['경상북도', '영양군', '영양군평지', '전국']);
+    // Tier B: directional splits & historical aliases (용인, 청주, 여주, 경주, 하동, 달성군, 영광낙월면, 부안위도면).
+    assert.deepEqual(names({first: '경기도', second: '용인시 수지구', third: ''}), ['경기도', '용인시', '용인시서북부', '전국']);
+    assert.deepEqual(names({first: '경기도', second: '용인시처인구', third: '모현면'}), ['경기도', '용인시', '용인시동북부', '전국']);
+    assert.deepEqual(names({first: '경기도', second: '용인시처인구', third: '남사면'}), ['경기도', '용인시', '용인시남부', '전국']);
+    assert.deepEqual(names({first: '경기도', second: '용인시처인구', third: ''}), ['경기도', '용인시', '용인시남부', '용인시동북부', '전국']);
+    assert.deepEqual(names({first: '경기도', second: '여주시', third: '능서면'}), ['경기도', '여주시', '여주시서부', '전국']);
+    assert.deepEqual(names({first: '충청북도', second: '청주시상당구', third: '미원면'}), ['전국', '청주시', '청주시동부', '충청북도']);
+    assert.deepEqual(names({first: '충청북도', second: '청주시상당구', third: '용암1동'}), ['전국', '청주시', '청주시서부', '충청북도']);
+    assert.deepEqual(names({first: '충청북도', second: '청주시흥덕구', third: ''}), ['전국', '청주시', '청주시서부', '충청북도']);
+    assert.deepEqual(names({first: '경상북도', second: '경주시', third: '양북면'}), ['경상북도', '경주시', '경주시동부', '전국']);
+    assert.deepEqual(names({first: '경상남도', second: '하동군', third: '화개면'}), ['경상남도', '전국', '하동군', '하동군북부']);
+    assert.deepEqual(names({first: '경상남도', second: '하동군', third: '옥종면'}), ['경상남도', '전국', '하동군', '하동군남부']);
+    assert.deepEqual(names({first: '대구광역시', second: '달성군', third: '다사읍'}), ['달성군', '달성군북부', '대구광역시', '전국']);
+    assert.deepEqual(names({first: '대구광역시', second: '달성군', third: '옥포면'}), ['달성군', '달성군남부', '대구광역시', '전국']);
+    assert.deepEqual(names({first: '전라남도', second: '영광군', third: '낙월면'}), ['영광군', '영광낙월면', '전국', '전라남도']);
+    assert.deepEqual(names({first: '전라남도', second: '영광군', third: '영광읍'}), ['영광군', '영광군(낙월면 제외)', '전국', '전라남도']);
+    assert.deepEqual(names({first: '전북특별자치도', second: '부안군', third: '위도면'}), ['부안군', '부안위도면', '전국', '전북자치도']);
+    assert.deepEqual(names({first: '전북특별자치도', second: '부안군', third: '부안읍'}), ['부안군', '부안군(위도면 제외)', '전국', '전북자치도']);
+    // Tier C: partial splits with safe over-warn on mixed-boundary townships.
+    assert.deepEqual(names({first: '전라남도', second: '구례군', third: '구례읍'}), ['구례군', '구례군평지', '전국', '전라남도']);
+    assert.deepEqual(names({first: '전라남도', second: '구례군', third: '토지면'}), ['구례군', '구례군산간', '구례군평지', '전국', '전라남도']);
+    assert.deepEqual(names({first: '충청남도', second: '보령시', third: '대천1동'}), ['보령(도서제외)', '보령시', '전국', '충청남도']);
+    assert.deepEqual(names({first: '충청남도', second: '보령시', third: '오천면'}), ['보령(도서제외)', '보령도서', '보령시', '전국', '충청남도']);
+    assert.deepEqual(names({first: '전북특별자치도', second: '군산시', third: '중앙동'}), ['군산시', '군산시(옥도면 제외)', '전국', '전북자치도']);
+    assert.deepEqual(names({first: '전북특별자치도', second: '군산시', third: '옥도면'}), ['군산시', '군산어청도', '군산옥도면(어청도 제외)', '전국', '전북자치도']);
+    assert.deepEqual(names({first: '전라남도', second: '완도군', third: '완도읍'}), ['완도군', '완도군(여서도 제외)', '전국', '전라남도']);
+    assert.deepEqual(names({first: '전라남도', second: '완도군', third: '청산면'}), ['완도군', '완도군(여서도 제외)', '완도군여서도', '전국', '전라남도']);
     const daegu = names({first: '대구광역시', second: '중구', third: ''});
     assert.ok(daegu.indexOf('대구중부') !== -1 && daegu.indexOf('군위군') === -1 && daegu.indexOf('달성군') === -1);
     assert.ok(names({first: '대구광역시', second: '군위군', third: ''}).indexOf('군위군') !== -1);
     assert.ok(names({first: '경상북도', second: '울릉군', third: '울릉읍'}).indexOf('울릉도.독도') !== -1);
     assert.ok(names({first: '전라남도', second: '신안군', third: '흑산면'}).indexOf('흑산도.홍도') !== -1);
     assert.ok(names({first: '전라남도', second: '여수시', third: '삼산면'}).indexOf('거문도.초도') !== -1);
-    assert.ok(names({first: '강원특별자치도', second: '강릉시', third: ''}).indexOf('강릉시산지') !== -1);
     assert.ok(names({first: '전북특별자치도', second: '군산시', third: ''}).indexOf('군산어청도') !== -1);
     assert.ok(names({first: '경상남도', second: '', third: ''}).indexOf('창원시') !== -1, 'region-level request covers the province');
     assert.deepEqual(plain(zones.zonesForTown({first: '', second: '', third: ''})), []);
@@ -309,6 +390,43 @@ test('town mapping: zone table, islands, metropolitan cities and split parents (
     assert.ok(names({first: '충청북도', second: '청원군', third: ''}).indexOf('청주시') !== -1, '청원군 merged into 청주시');
     assert.ok(names({first: '충청북도', second: '청원군', third: ''}).indexOf('충주시') === -1);
     assert.deepEqual(names({first: '경상북도', second: '없는군', third: ''}), ['경상북도', '전국'], 'unknown city: province-level zones only');
+});
+
+test('subzone table integrity and full areaNoKma.csv coverage (#3084 AC1)', () => {
+    const serverDir = path.join(__dirname, '../..');
+    const sub = JSON.parse(fs.readFileSync(path.join(serverDir, 'utils/data/kma_warning_subzones.json'), 'utf8'));
+    assert.ok(sub.provenance && sub.provenance.pdf_sha256, 'provenance metadata present');
+    const seen = new Set();
+    Object.values(sub.district_splits).forEach(dmap => {
+        Object.values(dmap).forEach(ids => ids.forEach(id => {
+            assert.ok(zones.zoneName(id), 'district_splits zone exists: ' + id);
+            seen.add(id);
+        }));
+    });
+    sub.township_splits.forEach(rule => {
+        ['dong_default', 'other_default', 'fallback'].forEach(k => {
+            (rule[k] || []).forEach(id => {
+                assert.ok(zones.zoneName(id), 'township_splits ' + k + ' zone exists: ' + id);
+                seen.add(id);
+            });
+        });
+        Object.values(rule.by_third || {}).forEach(ids => ids.forEach(id => {
+            assert.ok(zones.zoneName(id), 'township_splits by_third zone exists: ' + id);
+            seen.add(id);
+        }));
+    });
+    const rows = fs.readFileSync(path.join(serverDir, 'utils/data/areaNoKma.csv'), 'utf8').split(/\r?\n/).slice(2).filter(Boolean);
+    assert.ok(rows.length > 3500, 'full areaNoKma.csv loaded');
+    let checked = 0;
+    for (const line of rows) {
+        const [first, second, third] = line.split(',');
+        if (!first) continue;
+        const codes = plain(zones.zonesForTown({first, second: second || '', third: third || ''}));
+        assert.ok(codes.length > 0, 'non-empty zones for ' + first + '/' + second + '/' + third);
+        assert.ok(codes.indexOf('L1000000') !== -1, 'nationwide ancestor kept for ' + first + '/' + second + '/' + third);
+        checked++;
+    }
+    assert.ok(checked > 3500);
 });
 
 test('combined Gwangju-Jeonnam addresses retain separate warning audiences (#3078)', () => {
@@ -332,13 +450,17 @@ test('combined Gwangju-Jeonnam addresses retain separate warning audiences (#307
     }
 });
 
-test('specialInfo from active zones (AC6, AC7)', () => {
+test('specialInfo from active zones (AC6, AC7, #3084)', () => {
     const entry = (areaCode, areaName, warnVar, warnStress) => ({areaCode, areaName, warnVar, warnStress, active: true});
     const active = [entry('L1091430', '서귀포시동부', 2, 1), entry('L1090500', '제주도산지', 2, 1), entry('L1091420', '서귀포시남부', 13, 0),
         entry('L1091410', '서귀포시서부', 2, 2), entry('L1091420', '서귀포시남부', 2, 1)];
     const town = {first: '제주특별자치도', second: '서귀포시', third: '성산읍'};
     const info = plain(zones.specialInfoFor(active, zones.zonesForTown(town)));
     assert.deepEqual(info, [
+        {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시동부'},
+        {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '제주도산지'}]);
+    const cityWide = plain(zones.specialInfoFor(active, zones.zonesForTown({first: '제주특별자치도', second: '서귀포시', third: ''})));
+    assert.deepEqual(cityWide, [
         {weather: 13, weatherStr: '열대야', level: 1, levelStr: '주의보', locationName: '서귀포시남부'},
         {weather: 3, weatherStr: '호우', level: 4, levelStr: '중대경보', locationName: '서귀포시서부'},
         {weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '서귀포시남부'},
@@ -347,6 +469,14 @@ test('specialInfo from active zones (AC6, AC7)', () => {
     assert.equal(plain(zones.specialInfoFor([entry('L1091430', '서귀\ufffd\ufffd동부', 2, 0)], zones.zonesForTown(town)))[0].locationName, '서귀포시동부', 'zone table name over a garbled provider name');
     const jeju = plain(zones.specialInfoFor(active, zones.zonesForTown({first: '제주특별자치도', second: '제주시', third: '노형동'})));
     assert.deepEqual(jeju, [{weather: 3, weatherStr: '호우', level: 2, levelStr: '경보', locationName: '제주도산지'}], '서귀포 sub-zones do not reach 제주시; the mountain zone does');
+    // Seoul 건조주의보 active only in 서울동북권 (L1100200) and 서울서남권 (L1100300).
+    const seoulDry = [entry('L1100200', '서울동북권', 4, 0), entry('L1100300', '서울서남권', 4, 0)];
+    assert.deepEqual(plain(zones.specialInfoFor(seoulDry, zones.zonesForTown({first: '서울특별시', second: '노원구', third: '상계1동'}))),
+        [{weather: 5, weatherStr: '건조', level: 1, levelStr: '주의보', locationName: '서울동북권'}]);
+    assert.deepEqual(plain(zones.specialInfoFor(seoulDry, zones.zonesForTown({first: '서울특별시', second: '영등포구', third: '여의동'}))),
+        [{weather: 5, weatherStr: '건조', level: 1, levelStr: '주의보', locationName: '서울서남권'}]);
+    assert.deepEqual(plain(zones.specialInfoFor(seoulDry, zones.zonesForTown({first: '서울특별시', second: '강남구', third: '역삼동'}))), []);
+    assert.deepEqual(plain(zones.specialInfoFor(seoulDry, zones.zonesForTown({first: '서울특별시', second: '종로구', third: '청운효자동'}))), []);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -521,7 +651,10 @@ test('controller getSpecialInfo reads active zones for the town (AC6, AC8)', asy
     const info = town => new Promise((resolve, reject) => new Controller().getSpecialInfo(town, '서귀포', (err, l) => err ? reject(err) : resolve(plain(l))));
     const seogwipo = await info({first: '제주특별자치도', second: '서귀포시', third: '성산읍'});
     assert.deepEqual(seogwipo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName),
-        ['호우경보@제주도산지', '호우주의보@서귀포시남부', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
+        ['호우경보@제주도산지', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
+    const seogwipoSouth = await info({first: '제주특별자치도', second: '서귀포시', third: '안덕면'});
+    assert.deepEqual(seogwipoSouth.map(s => s.weatherStr + s.levelStr + '@' + s.locationName),
+        ['호우경보@제주도산지', '호우주의보@서귀포시남부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
     assert.deepEqual(await info({first: '서울특별시', second: '강남구', third: '역삼동'}), []);
     // After the 12:00 release (t6 "o 없 음") the state is empty.
     const later = makeCollector({handler: routes({getPwnStatus: () => ({body: fixture('pwn-status')}),

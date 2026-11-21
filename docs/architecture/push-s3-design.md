@@ -121,7 +121,7 @@ After the campaign expires, do not send its old warning just because someone lat
 
 ### Region precision
 
-Reuse #2609's `zonesForTown` and versioned KMA table. It includes ancestors/shared zones and conservative matches; some metropolitan towns map to multiple subzones. Therefore “affected region” initially means that mapping's region set, not exact GPS polygon membership. Record mapping quality (`exact-code`, `town-table`, `ambiguous`, `unresolved`); disclose ambiguous-zone over-targeting in activation review. A requirement for precise subzone recipients needs an authoritative finer mapping dataset. Never match by substring of bulletin text or send unknown positions nationwide.
+Reuse `zonesForTown` with the versioned KMA 2026-06-01 table and sub-zone mapping (#2609, refined in #3084). Unambiguous metropolitan districts (서울 4권역, 부산 3권역, 울산 2권역, 광주 2권역, 인천, 대구) and administrative 읍·면·동 splits (세종, 강원/경북 평지·산지, directional city/county splits, named island townships) resolve to their specific sub-zone plus parent ancestors. Conservative over-warn fallback remains only for empty-`third` lookups, unrecognized names, 법정동/행정동 straddling (`속초시 대포동`), altitude-mixed zones (`구례군` mountain townships, 제주 `중산간`/`제주도산지`), and 리-level island townships (`강화군 서도면`, `보령시 오천면`, `군산시 옥도면`, `완도군 청산면`); full elimination of those remaining overlaps would require GPS polygon/DEM altitude membership. Never match by substring of bulletin text or send unknown positions nationwide.
 
 ## 6. Scheduled and conditional delivery
 
