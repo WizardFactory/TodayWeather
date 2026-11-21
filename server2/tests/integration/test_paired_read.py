@@ -13,6 +13,7 @@ import threading
 import time
 import unittest
 from unittest.mock import patch
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools' / 'shadow'))
@@ -93,6 +94,25 @@ class PairedReadTests(unittest.TestCase):
         ledger = capture.Ledger(state, self.identity(m), False)
         self.addCleanup(ledger.close)
         return ledger
+
+    def test_segmented_town_paths_are_limited_to_the_four_public_mounts(self):
+        address = quote('서울특별시/종로구/청운효자동')
+        mounts = ('/v000901/kma/addr', '/v000903/kma/addr', '/v000705/town', '/v000803/town')
+
+        def validate_path(path):
+            m = manifest()
+            m['cases'][0]['path'] = path
+            return capture.validate(m, 'http://127.0.0.1:80', capture.PRODUCTION)
+
+        for mount in mounts:
+            with self.subTest(mount=mount):
+                self.assertEqual(validate_path(f'{mount}/{address}')['cases'], 1)
+                self.assertEqual(validate_path(f'{mount}/' + quote('서울특별시 종로구 송월동'))['cases'], 1)
+
+        for other in (f'/geocode/v000903/addr/{address}', f'/v000902/kma/addr/{address}',
+                      f'/v000903/kma/addr/{address}/current', '/v000903/kma/addr/' + quote('서울특별시/종로구/가회동')):
+            with self.subTest(path=other), self.assertRaisesRegex(ValueError, 'outside fixed public inventory'):
+                validate_path(other)
 
     def test_manifest_rejects_routes_methods_types_and_caps(self):
         for mutation in (

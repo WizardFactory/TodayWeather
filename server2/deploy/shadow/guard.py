@@ -19,7 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from state import validate_cost_policy, estimate_cost
+from state import Journal, validate_cost_policy, estimate_cost
 
 GiB = 1024**3
 INTERVAL = 10
@@ -99,8 +99,8 @@ def validate(manifest):
     unit = 'server2-shadow-'+manifest['run_id']+'-candidate.service'
     require(manifest['cgroup']=='/system.slice/'+unit,'cgroup')
     allowance = manifest['allowance']
-    require(type(allowance) is dict and set(allowance)=={'reads','writes','put_bytes'},'allowance')
-    for field,cap in [('reads',900000),('writes',900000),('put_bytes',2*GiB)]:
+    require(type(allowance) is dict and set(allowance)==Journal.CAPS.keys(),'allowance')
+    for field,cap in Journal.CAPS.items():
         require(integer(allowance[field],1,cap),'allowance_'+field)
     validate_cost_policy(manifest['cost_policy'],manifest['epoch'])
     # Paid provider prices (USD per runtime unit) of the frozen paid policy, by the server's
