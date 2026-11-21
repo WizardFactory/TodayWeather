@@ -341,9 +341,9 @@ def inert_golden_identities(tree):
 REVIEWED_VERIFICATION_POLICIES = {
     'server2/tools/golden/policies/air.json': '801d6dd66979e57b79fba98bf979a35d0911fce5ce2ea1538d1bb93d6a444c25',
     'server2/tools/golden/policies/nation.json': 'a0f09ab457274ffcbdde4f42fb7d13a239277f06446f5caf4cdb33ece957309a',
-    'server2/tools/golden/policies/delivery.json': 'a62cf9db9e87e663225fef5ffea5f96c788bb7ecb4568b3690adc945bc1cb0f5',
-    'server2/tools/golden/policies/domestic_http.json': 'dd8b921a92b98f158b55032e563c94d7bf3b67adf0379c3a1ebc8a5fe28f8bf8',
-    'server2/tools/golden/policies/rest_http.json': '00aa4df69d8bb3d4e7c534ecdc4bad214d0319459e7d9603119ea00ccc44fa7f',
+    'server2/tools/golden/policies/delivery.json': '29c6d50720b8f42a1dcfb901cd5cce253a1823bf9a37e21dc9edc93889655bc5',
+    'server2/tools/golden/policies/domestic_http.json': '1a84e14cdc78776efeabd2514e4cdaf0691c20fb28952e52a2ab51da469c1e28',
+    'server2/tools/golden/policies/rest_http.json': 'c09eeb641f56af4594181207e6d96b251a0e929ba842a35c6c2e306eefca04c7',
 }
 
 
@@ -355,7 +355,7 @@ def inert_provenance_registry(tree):
             not isinstance(tree['reader_sha256'], str) or not re.fullmatch('[0-9a-f]{64}', tree['reader_sha256'])):
         raise ValueError('invalid fingerprint registry schema/reader')
     sources = tree['legacy_sources']
-    if (not isinstance(sources, list) or len(sources) != 187 or
+    if (not isinstance(sources, list) or len(sources) != 195 or
             not all(isinstance(p, str) and p.startswith('server/') and clean(p) and '\\' not in p for p in sources) or
             sources != sorted(set(sources))):
         raise ValueError('invalid fingerprint source identities')

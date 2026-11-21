@@ -278,3 +278,40 @@ not relabel them. `SOURCE_CURRENT` still means freshness, not semantic
 equivalence. G1 integration does not close the parent issue's other work or the
 real-host, seven-day shadow, quota and complete rollback-bundle gates in the
 [cutover guide](server2-cutover.md).
+
+## November 21 current-source recordings (candidate)
+
+PR #3091 exposed legacy-source drift also present on its base. The product tree
+used here is `e1e6d20322aec3256d8aaa918e65fbe2a1e02d0a`. The
+[Apple Silicon qualification](https://github.com/WizardFactory/TodayWeather/actions/runs/44926187889)
+ran all eight HTTP profiles twice with the pinned Node executable above.
+Every pair matched byte for byte, with no guard violations or outstanding
+sockets or ports. The job reports REVIEW_REQUIRED for S02, core, and rich
+because their responses changed. Its artifacts contain the raw pairs and
+typed comparisons. The recording branch is separate from the product PR.
+
+| Profile | Differences relative to the previous fixture outside the source map |
+| --- | --- |
+| S02 | 31 responses gained Vary. Five cases changed 12 middleware implementation hash entries. |
+| Core domestic S3 | 14 responses gained Vary. |
+| Rich domestic S3 | 16 responses gained Vary. |
+| KMA, older KMA, town, world, widget | None. |
+
+Of the 61 recorded header changes, 44 set `Vary: Accept-Language, Cookie`
+on direct domestic requests and 17 set `Vary: Accept-Language` on gateway
+responses. No recorded status, response body, or Date header changed.
+The locked recorder dependency trees omit astronomy-engine. These comparisons
+cover the historical corpus. Active calendar parity requires the separately
+pinned product dependency and native verification tracked in
+[PR #3112](https://github.com/WizardFactory/TodayWeather/pull/3112#issuecomment-7065994755).
+
+The other eight fixtures use the existing towns, nation, delivery, life, and
+warning recorders. The life driver and its seven modules were reconstructed
+from the exact SHA-256-pinned code in LIFE-PROVENANCE. The four delivery
+variants used the new S02 input and its exact digest. The warning recorder
+now identifies five additional loaded legacy files. These are verification
+dependencies of the existing on-disk recorder, observed during two
+instrumented executions. Response comparisons exclude no changed fields.
+The source-map, runtime labels, and the packaging of raw JSON are distinct
+from HTTP behavior. The complete selected captures and failure receipts
+are retained in the operator's ignored verification evidence.
