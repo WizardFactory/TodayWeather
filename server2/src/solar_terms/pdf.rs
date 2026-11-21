@@ -2,14 +2,26 @@
 //!
 //! Decodes FlateDecode content streams and `/ToUnicode` CMaps using `flate2`,
 //! reconstructing reading-order lines from positioned `BT..ET` text operators
-//! without spawning `pdftotext`.
+//! without spawning `pdftotext`. All parsing is strictly bounded in memory,
+//! recursion depth, token count, CMap expansion, and output size.
 
 use flate2::read::ZlibDecoder;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
+use std::sync::Arc;
 
 pub const MAX_PDF_BYTES: usize = 5 * 1024 * 1024;
 const MAX_DECOMPRESSED_STREAM: usize = 5 * 1024 * 1024;
+const MAX_TOTAL_DECOMPRESSED: usize = 16 * 1024 * 1024;
+const MAX_TREE_DEPTH: usize = 32;
+const MAX_PAGES: usize = 256;
+const MAX_ARRAY_DEPTH: usize = 32;
+const MAX_TOKENS: usize = 200_000;
+const MAX_CMAP_ENTRIES: usize = 65_536;
+const MAX_TOTAL_CMAP_ENTRIES: usize = 131_072;
+const MAX_CMAP_RANGE: u32 = 4096;
+const MAX_CMAP_STR_BYTES: usize = 64;
+const MAX_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PdfError(pub String);
@@ -22,6 +34,29 @@ impl std::fmt::Display for PdfError {
 
 impl std::error::Error for PdfError {}
 
+struct StreamCache {
+    decoded: HashMap<u32, Option<Arc<[u8]>>>,
+    total_inflated: usize,
+}
+
+impl StreamCache {
+    fn new() -> Self {
+        Self {
+            decoded: HashMap::new(),
+            total_inflated: 0,
+        }
+    }
+
+    fn get_or_decode(&mut self, oid: u32, obj: &[u8]) -> Result<Option<Arc<[u8]>>, PdfError> {
+        if let Some(cached) = self.decoded.get(&oid) {
+            return Ok(cached.clone());
+        }
+        let decoded = decode_stream(obj, &mut self.total_inflated)?.map(Arc::<[u8]>::from);
+        self.decoded.insert(oid, decoded.clone());
+        Ok(decoded)
+    }
+}
+
 pub fn extract_text(pdf: &[u8]) -> Result<String, PdfError> {
     if pdf.len() > MAX_PDF_BYTES || !pdf.starts_with(b"%PDF-") {
         return Err(PdfError("invalid gazette PDF".into()));
@@ -31,22 +66,37 @@ pub fn extract_text(pdf: &[u8]) -> Result<String, PdfError> {
         return Err(PdfError("no PDF objects found".into()));
     }
 
-    let mut font_cmaps: HashMap<u32, CMap> = HashMap::new();
+    let mut streams = StreamCache::new();
+    let mut parsed_cmaps: HashMap<u32, Arc<CMap>> = HashMap::new();
+    let mut font_cmaps: HashMap<u32, Arc<CMap>> = HashMap::new();
+    let mut total_cmap_entries = 0usize;
+
     for (&oid, body) in &objects {
-        if let Some(cmap_id) = find_ref(body, b"/ToUnicode")
-            && let Some(cmap_obj) = objects.get(&cmap_id)
-            && let Some(stream) = decode_stream(cmap_obj)?
-        {
-            font_cmaps.insert(oid, parse_cmap(&stream));
+        if let Some(cmap_id) = find_ref(body, b"/ToUnicode") {
+            if let Some(existing) = parsed_cmaps.get(&cmap_id) {
+                font_cmaps.insert(oid, Arc::clone(existing));
+                continue;
+            }
+            if let Some(cmap_obj) = objects.get(&cmap_id)
+                && let Some(stream) = streams.get_or_decode(cmap_id, cmap_obj)?
+            {
+                let cmap = Arc::new(parse_cmap(&stream, &mut total_cmap_entries)?);
+                parsed_cmaps.insert(cmap_id, Arc::clone(&cmap));
+                font_cmaps.insert(oid, cmap);
+            }
         }
     }
 
-    let pages = ordered_pages(&objects);
+    let pages = ordered_pages(&objects)?;
     if pages.is_empty() {
         return Err(PdfError("no PDF pages found".into()));
     }
 
     let mut lines = Vec::new();
+    let mut token_count = 0usize;
+    let mut output_bytes = 0usize;
+    let mut total_page_stream_bytes = 0usize;
+
     for page_id in pages {
         let Some(page_obj) = objects.get(&page_id) else {
             continue;
@@ -56,20 +106,35 @@ pub fn extract_text(pdf: &[u8]) -> Result<String, PdfError> {
         let mut combined = Vec::new();
         for cid in content_ids {
             if let Some(cobj) = objects.get(&cid)
-                && let Some(bytes) = decode_stream(cobj)?
+                && let Some(bytes) = streams.get_or_decode(cid, cobj)?
             {
-                if combined.len() + bytes.len() > MAX_DECOMPRESSED_STREAM {
+                if combined.len().saturating_add(bytes.len()) > MAX_DECOMPRESSED_STREAM {
                     return Err(PdfError("decompressed PDF content exceeds limit".into()));
+                }
+                total_page_stream_bytes = total_page_stream_bytes.saturating_add(bytes.len());
+                if total_page_stream_bytes > MAX_TOTAL_DECOMPRESSED {
+                    return Err(PdfError("total PDF content exceeds limit".into()));
                 }
                 combined.extend_from_slice(&bytes);
                 combined.push(b'\n');
             }
         }
-        extract_page_lines(&combined, &font_map, &mut lines);
+        extract_page_lines(
+            &combined,
+            &font_map,
+            &mut token_count,
+            &mut output_bytes,
+            &mut lines,
+        )?;
     }
 
     if lines.is_empty() {
         return Err(PdfError("failed to extract almanac table".into()));
+    }
+    let joined_len: usize =
+        lines.iter().map(String::len).sum::<usize>() + lines.len().saturating_sub(1);
+    if joined_len > MAX_OUTPUT_BYTES {
+        return Err(PdfError("extracted PDF text exceeds limit".into()));
     }
     Ok(lines.join("\n"))
 }
@@ -163,7 +228,7 @@ fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|w| w == needle)
 }
 
-fn decode_stream(obj: &[u8]) -> Result<Option<Vec<u8>>, PdfError> {
+fn decode_stream(obj: &[u8], total_inflated: &mut usize) -> Result<Option<Vec<u8>>, PdfError> {
     let Some(spos) = find_subslice(obj, b"stream") else {
         return Ok(None);
     };
@@ -195,13 +260,24 @@ fn decode_stream(obj: &[u8]) -> Result<Option<Vec<u8>>, PdfError> {
             if n == 0 {
                 break;
             }
-            if out.len() + n > MAX_DECOMPRESSED_STREAM {
+            if out.len().saturating_add(n) > MAX_DECOMPRESSED_STREAM {
                 return Err(PdfError("decompressed PDF stream exceeds limit".into()));
             }
+            if total_inflated.saturating_add(n) > MAX_TOTAL_DECOMPRESSED {
+                return Err(PdfError("total decompressed PDF bytes exceed limit".into()));
+            }
+            *total_inflated += n;
             out.extend_from_slice(&buf[..n]);
         }
         Ok(Some(out))
     } else {
+        if raw.len() > MAX_DECOMPRESSED_STREAM {
+            return Err(PdfError("PDF stream exceeds limit".into()));
+        }
+        if total_inflated.saturating_add(raw.len()) > MAX_TOTAL_DECOMPRESSED {
+            return Err(PdfError("total decompressed PDF bytes exceed limit".into()));
+        }
+        *total_inflated += raw.len();
         Ok(Some(raw.to_vec()))
     }
 }
@@ -280,7 +356,7 @@ fn find_refs_in_array(data: &[u8], key: &[u8]) -> Vec<u32> {
     out
 }
 
-fn ordered_pages(objects: &BTreeMap<u32, &[u8]>) -> Vec<u32> {
+fn ordered_pages(objects: &BTreeMap<u32, &[u8]>) -> Result<Vec<u32>, PdfError> {
     let root = objects.iter().find_map(|(_, body)| {
         (find_subslice(body, b"/Type").is_some() && find_subslice(body, b"/Catalog").is_some())
             .then(|| find_ref(body, b"/Pages"))
@@ -289,15 +365,21 @@ fn ordered_pages(objects: &BTreeMap<u32, &[u8]>) -> Vec<u32> {
     if let Some(root_id) = root {
         let mut out = Vec::new();
         let mut visited = HashMap::new();
-        collect_page_tree(root_id, objects, &mut visited, &mut out);
+        collect_page_tree(root_id, objects, &mut visited, &mut out, 0)?;
         if !out.is_empty() {
-            return out;
+            return Ok(out);
         }
     }
-    objects
-        .iter()
-        .filter_map(|(&oid, body)| is_page_object(body).then_some(oid))
-        .collect()
+    let mut fallback = Vec::new();
+    for (&oid, body) in objects {
+        if is_page_object(body) {
+            if fallback.len() >= MAX_PAGES {
+                return Err(PdfError("PDF page count exceeds limit".into()));
+            }
+            fallback.push(oid);
+        }
+    }
+    Ok(fallback)
 }
 
 fn is_page_object(body: &[u8]) -> bool {
@@ -317,23 +399,31 @@ fn collect_page_tree(
     objects: &BTreeMap<u32, &[u8]>,
     visited: &mut HashMap<u32, ()>,
     out: &mut Vec<u32>,
-) {
+    depth: usize,
+) -> Result<(), PdfError> {
+    if depth > MAX_TREE_DEPTH {
+        return Err(PdfError("PDF page tree nesting exceeds limit".into()));
+    }
     if visited.insert(oid, ()).is_some() {
-        return;
+        return Ok(());
     }
     let Some(body) = objects.get(&oid) else {
-        return;
+        return Ok(());
     };
     if find_subslice(body, b"/Pages").is_some() {
         let kids = find_refs_in_array(body, b"/Kids");
         if !kids.is_empty() {
             for kid in kids {
-                collect_page_tree(kid, objects, visited, out);
+                collect_page_tree(kid, objects, visited, out, depth + 1)?;
             }
-            return;
+            return Ok(());
         }
     }
+    if out.len() >= MAX_PAGES {
+        return Err(PdfError("PDF page count exceeds limit".into()));
+    }
     out.push(oid);
+    Ok(())
 }
 
 fn collect_contents(page_obj: &[u8]) -> Vec<u32> {
@@ -347,7 +437,7 @@ fn collect_contents(page_obj: &[u8]) -> Vec<u32> {
 fn collect_font_map<'a>(
     page_obj: &[u8],
     objects: &BTreeMap<u32, &[u8]>,
-    font_cmaps: &'a HashMap<u32, CMap>,
+    font_cmaps: &'a HashMap<u32, Arc<CMap>>,
 ) -> HashMap<String, &'a CMap> {
     let mut res = page_obj;
     if let Some(rid) = find_ref(page_obj, b"/Resources")
@@ -380,7 +470,7 @@ fn collect_font_map<'a>(
                     if let Some(cmap) = font_cmaps.get(&rid)
                         && let Ok(name) = std::str::from_utf8(&res[nstart..nend])
                     {
-                        out.insert(name.to_owned(), cmap);
+                        out.insert(name.to_owned(), cmap.as_ref());
                     }
                     p = next;
                     continue;
@@ -397,7 +487,26 @@ struct CMap {
     two_byte: bool,
 }
 
-fn parse_cmap(bytes: &[u8]) -> CMap {
+fn insert_cmap_entry(
+    map: &mut HashMap<u32, String>,
+    total_entries: &mut usize,
+    code: u32,
+    value: String,
+) -> Result<(), PdfError> {
+    if value.len() > MAX_CMAP_STR_BYTES {
+        return Err(PdfError("CMap glyph string exceeds limit".into()));
+    }
+    if !map.contains_key(&code) {
+        if map.len() >= MAX_CMAP_ENTRIES || *total_entries >= MAX_TOTAL_CMAP_ENTRIES {
+            return Err(PdfError("CMap entry count exceeds limit".into()));
+        }
+        *total_entries += 1;
+    }
+    map.insert(code, value);
+    Ok(())
+}
+
+fn parse_cmap(bytes: &[u8], total_entries: &mut usize) -> Result<CMap, PdfError> {
     let text = String::from_utf8_lossy(bytes);
     let mut map = HashMap::new();
     let mut two_byte = false;
@@ -415,17 +524,17 @@ fn parse_cmap(bytes: &[u8]) -> CMap {
             if let Ok(code) = u32::from_str_radix(&pair[0], 16)
                 && let Some(decoded) = decode_utf16be_hex(&pair[1])
             {
-                map.insert(code, decoded);
+                insert_cmap_entry(&mut map, total_entries, code, decoded)?;
             }
         }
     }
     for section in sections(&text, "beginbfrange", "endbfrange") {
-        parse_bfrange(section, &mut map);
+        parse_bfrange(section, &mut map, total_entries)?;
     }
     if map.keys().any(|&k| k > 255) {
         two_byte = true;
     }
-    CMap { map, two_byte }
+    Ok(CMap { map, two_byte })
 }
 
 fn sections<'a>(text: &'a str, start_kw: &str, end_kw: &str) -> Vec<&'a str> {
@@ -468,7 +577,11 @@ fn hex_tokens(s: &str) -> Vec<String> {
     out
 }
 
-fn parse_bfrange(section: &str, map: &mut HashMap<u32, String>) {
+fn parse_bfrange(
+    section: &str,
+    map: &mut HashMap<u32, String>,
+    total_entries: &mut usize,
+) -> Result<(), PdfError> {
     let bytes = section.as_bytes();
     let mut i = 0;
     let read_hex = |pos: &mut usize| -> Option<String> {
@@ -507,42 +620,71 @@ fn parse_bfrange(section: &str, map: &mut HashMap<u32, String>) {
             u32::from_str_radix(&s_hex, 16),
             u32::from_str_radix(&e_hex, 16),
         ) else {
-            continue;
+            return Err(PdfError("invalid CMap bfrange bounds".into()));
         };
+        if start > end {
+            return Err(PdfError("inverted CMap bfrange bounds".into()));
+        }
+        let span = end - start;
+        if span > MAX_CMAP_RANGE {
+            return Err(PdfError("CMap bfrange span exceeds limit".into()));
+        }
         while i < bytes.len() && bytes[i].is_ascii_whitespace() {
             i += 1;
         }
         if bytes.get(i) == Some(&b'<') {
-            if let Some(base_hex) = read_hex(&mut i)
-                && let Ok(base) = u32::from_str_radix(&base_hex, 16)
-            {
-                let count = end.saturating_sub(start).min(4096);
-                for offset in 0..=count {
-                    if let Some(ch) = char::from_u32(base + offset) {
-                        map.insert(start + offset, ch.to_string());
-                    }
+            let Some(base_hex) = read_hex(&mut i) else {
+                return Err(PdfError("unterminated CMap bfrange base".into()));
+            };
+            let base = u32::from_str_radix(&base_hex, 16)
+                .map_err(|_| PdfError("invalid CMap bfrange base".into()))?;
+            for offset in 0..=span {
+                let code = start
+                    .checked_add(offset)
+                    .ok_or_else(|| PdfError("CMap bfrange code overflow".into()))?;
+                let target = base
+                    .checked_add(offset)
+                    .ok_or_else(|| PdfError("CMap bfrange target overflow".into()))?;
+                if let Some(ch) = char::from_u32(target) {
+                    insert_cmap_entry(map, total_entries, code, ch.to_string())?;
                 }
             }
         } else if bytes.get(i) == Some(&b'[') {
             i += 1;
             let mut idx = 0u32;
-            while i < bytes.len() && bytes[i] != b']' {
-                if bytes[i] == b'<'
-                    && let Some(val_hex) = read_hex(&mut i)
-                {
-                    if let Some(decoded) = decode_utf16be_hex(&val_hex) {
-                        map.insert(start + idx, decoded);
+            let mut closed = false;
+            while i < bytes.len() {
+                if bytes[i] == b']' {
+                    closed = true;
+                    i += 1;
+                    break;
+                }
+                if bytes[i] == b'<' {
+                    let Some(val_hex) = read_hex(&mut i) else {
+                        return Err(PdfError("unterminated CMap bfrange array hex".into()));
+                    };
+                    if idx > span {
+                        return Err(PdfError("CMap bfrange array exceeds range bounds".into()));
                     }
-                    idx += 1;
+                    let code = start
+                        .checked_add(idx)
+                        .ok_or_else(|| PdfError("CMap bfrange code overflow".into()))?;
+                    if let Some(decoded) = decode_utf16be_hex(&val_hex) {
+                        insert_cmap_entry(map, total_entries, code, decoded)?;
+                    }
+                    idx = idx
+                        .checked_add(1)
+                        .ok_or_else(|| PdfError("CMap bfrange index overflow".into()))?;
                     continue;
                 }
                 i += 1;
             }
-            if i < bytes.len() {
-                i += 1;
+            if !closed {
+                return Err(PdfError("unterminated CMap bfrange array".into()));
             }
         }
     }
+    Ok(())
 }
 
 fn decode_utf16be_hex(hex: &str) -> Option<String> {
@@ -595,7 +737,27 @@ enum Token {
     Op(String),
 }
 
-fn tokenize_content(data: &[u8]) -> Vec<Token> {
+fn push_token(
+    tokens: &mut Vec<Token>,
+    token_count: &mut usize,
+    tok: Token,
+) -> Result<(), PdfError> {
+    if *token_count >= MAX_TOKENS {
+        return Err(PdfError("PDF token count exceeds limit".into()));
+    }
+    *token_count += 1;
+    tokens.push(tok);
+    Ok(())
+}
+
+fn tokenize_content(
+    data: &[u8],
+    nesting_depth: usize,
+    token_count: &mut usize,
+) -> Result<Vec<Token>, PdfError> {
+    if nesting_depth > MAX_ARRAY_DEPTH {
+        return Err(PdfError("PDF array nesting exceeds limit".into()));
+    }
     let mut tokens = Vec::new();
     let mut i = 0;
     while i < data.len() {
@@ -622,9 +784,11 @@ fn tokenize_content(data: &[u8]) -> Vec<Token> {
             {
                 i += 1;
             }
-            tokens.push(Token::Name(
-                String::from_utf8_lossy(&data[start..i]).into_owned(),
-            ));
+            push_token(
+                &mut tokens,
+                token_count,
+                Token::Name(String::from_utf8_lossy(&data[start..i]).into_owned()),
+            )?;
             continue;
         }
         if b == b'<' {
@@ -637,20 +801,21 @@ fn tokenize_content(data: &[u8]) -> Vec<Token> {
             while i < data.len() && data[i] != b'>' {
                 i += 1;
             }
-            let hex = String::from_utf8_lossy(&data[start..i]);
-            tokens.push(Token::Hex(hex_to_bytes(&hex)));
-            if i < data.len() {
-                i += 1;
+            if i >= data.len() {
+                return Err(PdfError("unterminated PDF hex string".into()));
             }
+            let hex = String::from_utf8_lossy(&data[start..i]);
+            push_token(&mut tokens, token_count, Token::Hex(hex_to_bytes(&hex)))?;
+            i += 1;
             continue;
         }
-        if b == b'>' {
+        if matches!(b, b'>' | b']' | b')') {
             i += 1;
             continue;
         }
         if b == b'(' {
-            let (lit, next) = read_literal_string(data, i);
-            tokens.push(Token::Lit(lit));
+            let (lit, next) = read_literal_string(data, i)?;
+            push_token(&mut tokens, token_count, Token::Lit(lit))?;
             i = next;
             continue;
         }
@@ -661,11 +826,19 @@ fn tokenize_content(data: &[u8]) -> Vec<Token> {
             while i < data.len() && depth > 0 {
                 match data[i] {
                     b'(' => {
-                        let (_, next) = read_literal_string(data, i);
+                        let (_, next) = read_literal_string(data, i)?;
                         i = next;
+                    }
+                    b'%' => {
+                        while i < data.len() && data[i] != b'\n' && data[i] != b'\r' {
+                            i += 1;
+                        }
                     }
                     b'[' => {
                         depth += 1;
+                        if depth > MAX_ARRAY_DEPTH {
+                            return Err(PdfError("PDF array nesting exceeds limit".into()));
+                        }
                         i += 1;
                     }
                     b']' => {
@@ -675,8 +848,12 @@ fn tokenize_content(data: &[u8]) -> Vec<Token> {
                     _ => i += 1,
                 }
             }
-            let end = i.saturating_sub(1);
-            tokens.push(Token::Array(tokenize_content(&data[start..end])));
+            if depth != 0 || i <= start {
+                return Err(PdfError("unterminated PDF array".into()));
+            }
+            let end = i - 1;
+            let inner = tokenize_content(&data[start..end], nesting_depth + 1, token_count)?;
+            push_token(&mut tokens, token_count, Token::Array(inner))?;
             continue;
         }
         let start = i;
@@ -689,17 +866,22 @@ fn tokenize_content(data: &[u8]) -> Vec<Token> {
         {
             i += 1;
         }
-        let word = String::from_utf8_lossy(&data[start..i]);
-        if let Ok(num) = word.parse::<f64>() {
-            tokens.push(Token::Number(num));
-        } else {
-            tokens.push(Token::Op(word.into_owned()));
+        if i == start {
+            i += 1;
+            continue;
         }
+        let word = String::from_utf8_lossy(&data[start..i]);
+        let tok = if let Ok(num) = word.parse::<f64>() {
+            Token::Number(num)
+        } else {
+            Token::Op(word.into_owned())
+        };
+        push_token(&mut tokens, token_count, tok)?;
     }
-    tokens
+    Ok(tokens)
 }
 
-fn read_literal_string(data: &[u8], mut i: usize) -> (Vec<u8>, usize) {
+fn read_literal_string(data: &[u8], mut i: usize) -> Result<(Vec<u8>, usize), PdfError> {
     i += 1; // skip '('
     let mut out = Vec::new();
     let mut depth = 1usize;
@@ -762,6 +944,9 @@ fn read_literal_string(data: &[u8], mut i: usize) -> (Vec<u8>, usize) {
             }
             b'(' => {
                 depth += 1;
+                if depth > MAX_ARRAY_DEPTH {
+                    return Err(PdfError("PDF literal string nesting exceeds limit".into()));
+                }
                 out.push(b'(');
                 i += 1;
             }
@@ -777,42 +962,77 @@ fn read_literal_string(data: &[u8], mut i: usize) -> (Vec<u8>, usize) {
                 i += 1;
             }
         }
+        if out.len() > MAX_DECOMPRESSED_STREAM {
+            return Err(PdfError("PDF literal string exceeds limit".into()));
+        }
     }
-    (out, i)
+    if depth != 0 {
+        return Err(PdfError("unterminated PDF literal string".into()));
+    }
+    Ok((out, i))
 }
 
-fn decode_text(raw: &[u8], cmap: Option<&CMap>) -> String {
+fn push_bounded(out: &mut String, output_bytes: &mut usize, s: &str) -> Result<(), PdfError> {
+    if output_bytes.saturating_add(s.len()) > MAX_OUTPUT_BYTES {
+        return Err(PdfError("extracted PDF text exceeds limit".into()));
+    }
+    *output_bytes += s.len();
+    out.push_str(s);
+    Ok(())
+}
+
+fn decode_text(
+    raw: &[u8],
+    cmap: Option<&CMap>,
+    output_bytes: &mut usize,
+) -> Result<String, PdfError> {
+    let mut out = String::new();
     if let Some(cmap) = cmap {
-        let mut out = String::new();
         if cmap.two_byte && raw.len().is_multiple_of(2) {
             for pair in raw.as_chunks::<2>().0 {
                 let code = u32::from(u16::from_be_bytes([pair[0], pair[1]]));
                 if let Some(s) = cmap.map.get(&code) {
-                    out.push_str(s);
+                    push_bounded(&mut out, output_bytes, s)?;
                 }
             }
         } else {
             for &b in raw {
                 if let Some(s) = cmap.map.get(&u32::from(b)) {
-                    out.push_str(s);
+                    push_bounded(&mut out, output_bytes, s)?;
                 } else if (32..127).contains(&b) {
-                    out.push(char::from(b));
+                    let mut buf = [0u8; 1];
+                    buf[0] = b;
+                    push_bounded(
+                        &mut out,
+                        output_bytes,
+                        std::str::from_utf8(&buf).unwrap_or(""),
+                    )?;
                 }
             }
         }
-        return out;
+        return Ok(out);
     }
-    raw.iter()
-        .filter_map(|&b| (32..127).contains(&b).then_some(char::from(b)))
-        .collect()
+    for &b in raw {
+        if (32..127).contains(&b) {
+            let buf = [b];
+            push_bounded(
+                &mut out,
+                output_bytes,
+                std::str::from_utf8(&buf).unwrap_or(""),
+            )?;
+        }
+    }
+    Ok(out)
 }
 
 fn extract_page_lines(
     stream: &[u8],
     font_map: &HashMap<String, &CMap>,
+    token_count: &mut usize,
+    output_bytes: &mut usize,
     out_lines: &mut Vec<String>,
-) {
-    let tokens = tokenize_content(stream);
+) -> Result<(), PdfError> {
+    let tokens = tokenize_content(stream, 0, token_count)?;
     let mut operands: Vec<&Token> = Vec::new();
     let mut in_text = false;
     let mut cur_font: Option<String> = None;
@@ -878,7 +1098,7 @@ fn extract_page_lines(
                             .as_deref()
                             .and_then(|name| font_map.get(name).copied());
                         let txt = match operands[operands.len() - 1] {
-                            Token::Hex(b) | Token::Lit(b) => decode_text(b, cmap),
+                            Token::Hex(b) | Token::Lit(b) => decode_text(b, cmap, output_bytes)?,
                             _ => String::new(),
                         };
                         if !txt.is_empty() {
@@ -894,9 +1114,11 @@ fn extract_page_lines(
                             for item in items {
                                 match item {
                                     Token::Hex(b) | Token::Lit(b) => {
-                                        txt.push_str(&decode_text(b, cmap));
+                                        txt.push_str(&decode_text(b, cmap, output_bytes)?);
                                     }
-                                    Token::Number(adj) if *adj < -180.0 => txt.push(' '),
+                                    Token::Number(adj) if *adj < -180.0 => {
+                                        push_bounded(&mut txt, output_bytes, " ")?;
+                                    }
                                     _ => {}
                                 }
                             }
@@ -944,4 +1166,5 @@ fn extract_page_lines(
         }
         out_lines.push(line);
     }
+    Ok(())
 }

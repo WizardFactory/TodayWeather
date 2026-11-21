@@ -477,6 +477,21 @@ impl Calendar {
         Ok(())
     }
 
+    /// Validate `edition` and reject any same-`(year, order)` conflict against currently loaded
+    /// editions (including bundled cold-start seeds) without mutating calendar state.
+    pub fn check_edition(&self, edition: &EditionRecord) -> Result<(), CalendarError> {
+        validate_edition(edition)?;
+        let guard = self.state.read().expect("calendar lock");
+        if let Some(record) = guard.records.get(&edition.year)
+            && let Some(prev) = &record.edition
+            && edition.order == prev.order
+            && (edition.source_digest != prev.source_digest || edition.dates != prev.dates)
+        {
+            return Err(CalendarError("Conflicting same-version almanac".into()));
+        }
+        Ok(())
+    }
+
     pub fn apply(&self, edition: EditionRecord) -> Result<(), CalendarError> {
         validate_edition(&edition)?;
         let mut guard = self.state.write().expect("calendar lock");

@@ -57,6 +57,7 @@ pub struct ReqwestFetcher {
 impl ReqwestFetcher {
     pub fn new() -> Result<Self, CalendarError> {
         let client = crate::dns::client()
+            .redirect(reqwest::redirect::Policy::none())
             .timeout(FETCH_TIMEOUT)
             .user_agent("TodayWeather/1.0")
             .build()
@@ -177,8 +178,15 @@ impl<F: HttpFetcher + 'static> OfficialSource for GazetteSource<F> {
                 )
                 .await?;
             let digest = sha256_hex(&pdf);
-            let text = pdf::extract_text(&pdf)
-                .map_err(|e| CalendarError(format!("Failed to extract almanac table: {e}")))?;
+            let pdf_for_parse = pdf.clone();
+            let text = tokio::time::timeout_at(
+                deadline,
+                crate::observability::spawn_blocking(move || pdf::extract_text(&pdf_for_parse)),
+            )
+            .await
+            .map_err(|_| CalendarError("Official PDF extraction timed out".into()))?
+            .map_err(|_| CalendarError("Official PDF extraction task failed".into()))?
+            .map_err(|e| CalendarError(format!("Failed to extract almanac table: {e}")))?;
             let edition = parse_edition(year, &located.source_url, &digest, &text)?;
             Ok(FetchedEdition { edition, pdf })
         })

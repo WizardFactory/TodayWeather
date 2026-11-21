@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "f6b69e8387b491bc2afc93129570a13272c66edb"
+      "revision": "afbc53f7c0d1755867c9bf7cb0005677a303dec5"
     }
   },
   "components": [
@@ -223,6 +223,37 @@
           "end_line": 318
         }
       ]
+    },
+    {
+      "id": "solar-terms",
+      "type": "backend",
+      "label": "Solar terms GET / OPTIONS",
+      "sublabel": "kma calendar + 60s S3/almanac worker",
+      "pos": [
+        40,
+        480
+      ],
+      "size": [
+        240,
+        110
+      ],
+      "sources": [
+        {
+          "path": "server2/src/solar_terms/api.rs",
+          "line": 17,
+          "end_line": 42
+        },
+        {
+          "path": "server2/src/solar_terms/store.rs",
+          "line": 283,
+          "end_line": 395
+        },
+        {
+          "path": "server2/src/process.rs",
+          "line": 176,
+          "end_line": 180
+        }
+      ]
     }
   ],
   "connections": [
@@ -289,6 +320,18 @@
       "from": "warning-api",
       "to": "s3",
       "label": "read warning data"
+    },
+    {
+      "id": "process-solar",
+      "from": "process",
+      "to": "solar-terms",
+      "label": "kma calendar + 60s worker"
+    },
+    {
+      "id": "solar-s3",
+      "from": "solar-terms",
+      "to": "s3",
+      "label": "restore / publish raw+index v2"
     }
   ],
   "cards": [
@@ -357,6 +400,15 @@
         "Alarm or alert failures cannot release live warning work; one JoinSet owns the jobs.",
         "A pending regular tick may run after completion; stop still blocks new scheduling.",
         "Original task failure stays incomplete; no failed / unknown send replay or state rewind."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Solar-term calendar & restore guard",
+      "items": [
+        "Explicit kma mounts /calendar/v1/kr/solar-terms/{year} (GET/HEAD/OPTIONS) and 60s worker.",
+        "Persists validated official PDFs under raw/v2 and index/v2 within tw-server2-runtime IAM prefixes.",
+        "Current and next KST years return 503 until initial S3 restore succeeds without seed conflict."
       ]
     }
   ]

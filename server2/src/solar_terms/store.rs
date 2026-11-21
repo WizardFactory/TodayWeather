@@ -281,13 +281,25 @@ impl<T: IndexListing + Clone> Store<T> {
     }
 
     /// Refresh current and next KST years from S3 into `calendar`, then clear the restart `503` guard.
+    ///
+    /// Any conflict between stored S3 editions and bundled seeds aborts the refresh while keeping
+    /// the restart `503` guard active so an inconsistent state is never silently served.
     pub async fn refresh(&self, calendar: &Calendar, deadline: Instant) -> Result<(), StoreError> {
         let first = calendar.current_year();
+        let mut loaded = Vec::new();
         for year in [first, first + 1] {
             let editions = self.load_year_editions(year, deadline).await?;
-            for edition in editions {
-                let _ = calendar.apply(edition);
+            for edition in &editions {
+                calendar
+                    .check_edition(edition)
+                    .map_err(|e| StoreError::Conflict(e.0))?;
             }
+            loaded.extend(editions);
+        }
+        for edition in loaded {
+            calendar
+                .apply(edition)
+                .map_err(|e| StoreError::Conflict(e.0))?;
         }
         calendar.finish_restore();
         Ok(())
@@ -373,6 +385,10 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Service<T> {
             let fetch_deadline = Instant::now() + FETCH_OP_TIMEOUT;
             match source.fetch_edition(year, fetch_deadline).await {
                 Ok(fetched) => {
+                    if let Err(err) = self.calendar.check_edition(&fetched.edition) {
+                        eprintln!("solar-terms conflict {year} before S3 publish: {err}");
+                        continue;
+                    }
                     let pub_deadline = Instant::now() + STORE_OP_TIMEOUT;
                     if let Err(err) = self.store.publish(&fetched, now_ms, pub_deadline).await {
                         eprintln!("solar-terms publish {year} failed: {err}");

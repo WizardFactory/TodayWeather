@@ -1,7 +1,8 @@
 //! Pure-Rust port of CosineKitty Astronomy Engine 2.1.19 `SearchSunLongitude`.
 //!
-//! Upstream: https://github.com/cosinekitty/astronomy
-//! License: MIT License, Copyright (c) 2019-2025 Don Cross <cosinekitty@gmail.com>
+//! Upstream: https://github.com/cosinekitty/astronomy (tag `v2.1.19`)
+//! License: MIT License, Copyright (c) 2019-2023 Don Cross <cosinekitty@gmail.com>
+//! Full upstream license text preserved in `server2/src/solar_terms/data/ASTRONOMY_ENGINE_LICENSE.txt`.
 //!
 //! Computes the instant when the Sun's apparent geocentric ecliptic longitude
 //! (corrected for light travel time, precession, and IAU 2000B nutation on the

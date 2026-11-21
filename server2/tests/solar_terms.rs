@@ -39,6 +39,7 @@ use tower::ServiceExt;
 
 const FIXTURE_2024: &str = include_str!("solar_terms/fixtures/2024.txt");
 const FIXTURE_2027: &str = include_str!("solar_terms/fixtures/2027.txt");
+const PARITY_FIXTURE: &str = include_str!("solar_terms/fixtures/server1-parity.json");
 const URL_2024: &str = "https://www.gwanbo.go.kr/ezpdf/customLayout.jsp?contentId=I0000000000000001687328191439000&tocId=I0000000000000001686831567351000&isTocOrder=N";
 const URL_2027: &str = "https://www.gwanbo.go.kr/ezpdf/customLayout.jsp?contentId=I0000000000000001782374733940000&tocId=I0000000000000001782199865342000&isTocOrder=N";
 
@@ -727,16 +728,8 @@ async fn s3_reconciliation_http_contract_restart_guard_and_outage_resilience() {
 
     // Simulated restart with official source offline recovers corrected 2027 from S3
     let offline_source = Arc::new(StubOfficialSource(Mutex::new(BTreeMap::new())));
-    let restarted = Arc::new(
-        Service::new(
-            s3.clone(),
-            clock.clone(),
-            20,
-            &bundled_seeds().unwrap(),
-            Some(offline_source),
-        )
-        .unwrap(),
-    );
+    let restarted =
+        Arc::new(Service::new(s3.clone(), clock.clone(), 20, &[], Some(offline_source)).unwrap());
     // Guard holds before initial S3 restore so bundled 2027 seed never masks S3 correction
     assert!(restarted.calendar().read_year(2027).is_none());
     restarted.reconcile_once().await;
@@ -1090,6 +1083,7 @@ fn summary_ranking_policy_validation_and_kst_midnight_cache_parity() {
 
 // ---- Full domestic KMA v000903 assembly parity tests ----
 
+#[derive(Clone)]
 struct FixtureKmaStore {
     date: String,
     t1h: f64,
@@ -1660,4 +1654,768 @@ fn domestic_v000903_assembly_matches_server1_solar_term_contract() {
     assert_eq!(vc["current"]["summary"], "오늘 최저 18℃, 최고 28℃, 입춘");
     assert_eq!(vc["current"]["summaryForDate"], "2027-02-05");
     let _ = NAMES;
+}
+
+#[test]
+fn astronomy_utc_instants_match_server1_boundary_and_midnight_adjacent_terms() {
+    let parity: serde_json::Value = serde_json::from_str(PARITY_FIXTURE).unwrap();
+    for year_str in ["2026", "2027", "2076"] {
+        let year: i32 = year_str.parse().unwrap();
+        let computed = calculate(year).unwrap();
+        let expected = parity["astroYears"][year_str].as_array().unwrap();
+        assert_eq!(computed.len(), expected.len());
+        for (got, exp) in computed.iter().zip(expected.iter()) {
+            assert_eq!(got.id, exp["id"].as_str().unwrap());
+            assert_eq!(got.name_ko, exp["nameKo"].as_str().unwrap());
+            assert_eq!(got.date, exp["date"].as_str().unwrap());
+            let exp_ms = exp["utcMs"].as_i64().unwrap();
+            let diff_ms = (got.utc_ms - exp_ms).abs();
+            assert!(
+                diff_ms <= 2_000,
+                "year {year} {} UTC drift {diff_ms}ms (got {}, exp {exp_ms})",
+                got.id,
+                got.utc_ms
+            );
+        }
+    }
+
+    let midnight = parity["midnightAdjacent"].as_array().unwrap();
+    assert!(!midnight.is_empty());
+    let mut cache: BTreeMap<i32, Vec<server2::solar_terms::calendar::CalculatedTerm>> =
+        BTreeMap::new();
+    for entry in midnight {
+        let year = entry["year"].as_i64().unwrap() as i32;
+        let rows = cache
+            .entry(year)
+            .or_insert_with(|| calculate(year).unwrap());
+        let id = entry["id"].as_str().unwrap();
+        let got = rows.iter().find(|r| r.id == id).unwrap();
+        assert_eq!(got.date, entry["date"].as_str().unwrap());
+        let exp_ms = entry["utcMs"].as_i64().unwrap();
+        let diff_ms = (got.utc_ms - exp_ms).abs();
+        assert!(
+            diff_ms <= 2_000,
+            "midnight-adjacent {year} {id} UTC drift {diff_ms}ms"
+        );
+    }
+}
+
+#[tokio::test]
+async fn malformed_pdf_bounds_shared_streams_and_worker_continuation() {
+    fn raw_pdf(objs: &[&[u8]]) -> Vec<u8> {
+        let mut out = b"%PDF-1.4\n".to_vec();
+        for (i, body) in objs.iter().enumerate() {
+            out.extend_from_slice(format!("{} 0 obj\n", i + 1).as_bytes());
+            out.extend_from_slice(body);
+            out.extend_from_slice(b"\nendobj\n");
+        }
+        out.extend_from_slice(b"%%EOF\n");
+        out
+    }
+
+    fn stream_obj(dict: &[u8], body: &[u8]) -> Vec<u8> {
+        let mut out = dict.to_vec();
+        out.extend_from_slice(b"\nstream\n");
+        out.extend_from_slice(body);
+        out.extend_from_slice(b"\nendstream");
+        out
+    }
+
+    // 1. Stray closing delimiters (']', ')', '>') must not loop forever or panic
+    let stray_obj = stream_obj(b"<< /Length 12 >>", b"BT ] ) > >> ET");
+    let stray = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>"#,
+        &stray_obj,
+    ]);
+    assert!(pdf::extract_text(&stray).is_err());
+
+    // 2. Unterminated '[' at EOF must return Err instead of panicking on slice bounds
+    let unclosed_obj = stream_obj(b"<< /Length 4 >>", b"BT [");
+    let unclosed_arr = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>"#,
+        &unclosed_obj,
+    ]);
+    assert!(pdf::extract_text(&unclosed_arr).is_err());
+
+    // 3. Deeply nested arrays exceeding depth limit return Err
+    let deep_stream = format!("{} {} {}", "[".repeat(40), "1", "]".repeat(40));
+    let mut deep_obj = format!("<< /Length {} >>", deep_stream.len()).into_bytes();
+    deep_obj.extend_from_slice(b"\nstream\n");
+    deep_obj.extend_from_slice(deep_stream.as_bytes());
+    deep_obj.extend_from_slice(b"\nendstream");
+    let deep_arr = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>"#,
+        &deep_obj,
+    ]);
+    assert!(pdf::extract_text(&deep_arr).is_err());
+
+    // 4. Deeply nested /Pages tree exceeding depth limit returns Err
+    let mut tree_objs: Vec<Vec<u8>> = vec![br#"<< /Type /Catalog /Pages 2 0 R >>"#.to_vec()];
+    for idx in 2..=40 {
+        let s = format!("<< /Type /Pages /Kids [{} 0 R] /Count 1 >>", idx + 1);
+        tree_objs.push(s.into_bytes());
+    }
+    tree_objs.push(br#"<< /Type /Page /Parent 40 0 R >>"#.to_vec());
+    let tree_refs: Vec<&[u8]> = tree_objs.iter().map(Vec::as_slice).collect();
+    assert!(pdf::extract_text(&raw_pdf(&tree_refs)).is_err());
+
+    // 5. Malformed CMap bfrange (inverted bounds / array overflow / huge span) returns Err
+    let bad_cmap = b"begincodespacerange <0000> <FFFF> endcodespacerange beginbfrange <0010> <0005> <0041> endbfrange";
+    let mut bad_cmap_obj = format!("<< /Length {} >>", bad_cmap.len()).into_bytes();
+    bad_cmap_obj.extend_from_slice(b"\nstream\n");
+    bad_cmap_obj.extend_from_slice(bad_cmap);
+    bad_cmap_obj.extend_from_slice(b"\nendstream");
+    let tj_obj = stream_obj(b"<< /Length 22 >>", b"BT /F1 10 Tf <0010> Tj ET");
+    let bad_cmap_pdf = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 6 0 R >>"#,
+        br#"<< /Type /Font /Subtype /Type0 /ToUnicode 5 0 R >>"#,
+        &bad_cmap_obj,
+        &tj_obj,
+    ]);
+    assert!(pdf::extract_text(&bad_cmap_pdf).is_err());
+
+    let overflow_bfrange = b"begincodespacerange <0000> <FFFF> endcodespacerange beginbfrange <FFFFFFFF> <FFFFFFFF> [<0041> <0042>] endbfrange";
+    let mut ov_obj = format!("<< /Length {} >>", overflow_bfrange.len()).into_bytes();
+    ov_obj.extend_from_slice(b"\nstream\n");
+    ov_obj.extend_from_slice(overflow_bfrange);
+    ov_obj.extend_from_slice(b"\nendstream");
+    let tj_obj2 = stream_obj(b"<< /Length 22 >>", b"BT /F1 10 Tf <0001> Tj ET");
+    let ov_pdf = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R] /Count 1 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 6 0 R >>"#,
+        br#"<< /Type /Font /Subtype /Type0 /ToUnicode 5 0 R >>"#,
+        &ov_obj,
+        &tj_obj2,
+    ]);
+    assert!(pdf::extract_text(&ov_pdf).is_err());
+
+    // 6. Shared content stream referenced by multiple pages decodes cleanly via StreamCache
+    let shared_stream = b"BT /F1 10 Tf 1 0 0 1 72 720 Tm (HelloShared) Tj ET";
+    let mut shared_enc = ZlibEncoder::new(Vec::new(), Compression::default());
+    shared_enc.write_all(shared_stream).unwrap();
+    let shared_z = shared_enc.finish().unwrap();
+    let mut shared_obj =
+        format!("<< /Filter /FlateDecode /Length {} >>", shared_z.len()).into_bytes();
+    shared_obj.extend_from_slice(b"\nstream\n");
+    shared_obj.extend_from_slice(&shared_z);
+    shared_obj.extend_from_slice(b"\nendstream");
+    let shared_pdf = raw_pdf(&[
+        br#"<< /Type /Catalog /Pages 2 0 R >>"#,
+        br#"<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>"#,
+        br#"<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>"#,
+        &shared_obj,
+    ]);
+    let shared_text = pdf::extract_text(&shared_pdf).unwrap();
+    assert_eq!(shared_text.matches("HelloShared").count(), 2);
+
+    // 7. Worker continues to next KST day tick cleanly after malformed PDF error from official source
+    struct MalformedThenValid {
+        attempt: Mutex<u32>,
+        bad_pdf: Vec<u8>,
+        good: FetchedEdition,
+    }
+    impl OfficialSource for MalformedThenValid {
+        fn fetch_edition(
+            &self,
+            year: i32,
+            _deadline: Instant,
+        ) -> BoxFuture<'_, Result<FetchedEdition, CalendarError>> {
+            if year != 2027 {
+                return Box::pin(async { Err(CalendarError("not target year".into())) });
+            }
+            let n = {
+                let mut g = self.attempt.lock().unwrap();
+                *g += 1;
+                *g
+            };
+            let bad = self.bad_pdf.clone();
+            let good = self.good.clone();
+            Box::pin(async move {
+                if n == 1 {
+                    pdf::extract_text(&bad).map_err(|e| CalendarError(e.0))?;
+                    unreachable!()
+                }
+                Ok(good)
+            })
+        }
+    }
+
+    let pdf_2027 = build_synthetic_gazette_pdf(FIXTURE_2027);
+    let mut ed_2027 = parse_edition(2027, URL_2027, &sha256_hex(&pdf_2027), FIXTURE_2027).unwrap();
+    ed_2027.id = "2026-0095".into();
+    ed_2027.publication_date = "2026-07-05".into();
+    ed_2027.order = "2026-07-05/000000095".into();
+    ed_2027.dates[2] = "2027-02-05".into();
+    let s3 = MemS3::default();
+    let now_cell = Arc::new(Mutex::new(utc_ms("2026-07-05T02:00:00Z")));
+    let clock_cell = Arc::clone(&now_cell);
+    let source = Arc::new(MalformedThenValid {
+        attempt: Mutex::new(0),
+        bad_pdf: stray,
+        good: FetchedEdition {
+            edition: ed_2027,
+            pdf: pdf_2027,
+        },
+    });
+    let svc = Service::new(
+        s3,
+        Arc::new(move || *clock_cell.lock().unwrap()),
+        20,
+        &[],
+        Some(source),
+    )
+    .unwrap();
+    svc.reconcile_once().await;
+    assert_eq!(
+        svc.calendar().read_year(2027).unwrap().status,
+        Status::Calculated
+    );
+    // Next KST day succeeds cleanly
+    *now_cell.lock().unwrap() = utc_ms("2026-07-06T02:00:00Z");
+    svc.reconcile_once().await;
+    let recovered = svc.calendar().read_year(2027).unwrap();
+    assert_eq!(recovered.status, Status::Verified);
+    assert_eq!(recovered.terms[2].date, "2027-02-05");
+}
+
+#[tokio::test]
+async fn official_fetcher_rejects_cross_origin_redirects() {
+    use axum::routing::get;
+    let target_app = axum::Router::new().route("/ok", get(|| async { "should not follow" }));
+    let target_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let target_addr = target_listener.local_addr().unwrap();
+    let target_handle = tokio::spawn(async move {
+        let _ = axum::serve(target_listener, target_app).await;
+    });
+
+    let redirect_to = format!("http://{target_addr}/ok");
+    let redir_app = axum::Router::new().route(
+        "/almanac",
+        get(move || {
+            let loc = redirect_to.clone();
+            async move {
+                axum::response::Response::builder()
+                    .status(StatusCode::FOUND)
+                    .header("location", loc)
+                    .body(Body::empty())
+                    .unwrap()
+            }
+        }),
+    );
+    let redir_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let redir_addr = redir_listener.local_addr().unwrap();
+    let redir_handle = tokio::spawn(async move {
+        let _ = axum::serve(redir_listener, redir_app).await;
+    });
+
+    let fetcher = server2::solar_terms::official::ReqwestFetcher::new().unwrap();
+    let err = fetcher
+        .get_bytes(
+            &format!("http://{redir_addr}/almanac"),
+            Instant::now() + Duration::from_secs(5),
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        err.0.contains("302"),
+        "expected HTTP 302 rejection, got: {err}"
+    );
+    redir_handle.abort();
+    target_handle.abort();
+}
+
+#[tokio::test]
+async fn seed_conflict_rejected_before_s3_write_and_cors_preflight_works() {
+    // 1. Empty S3 + conflicting edition at bundled 2027 seed's exact (year, order)
+    let seeds = bundled_seeds().unwrap();
+    let s3 = MemS3::default();
+    let now_cell = Arc::new(Mutex::new(utc_ms("2026-07-01T02:00:00Z")));
+    let clock_cell = Arc::clone(&now_cell);
+
+    let bad_pdf = b"%PDF-1.4 tampered".to_vec();
+    let mut bad_ed = seeds[1].clone(); // 2027 bundled seed order: 2026-06-29/000000078
+    bad_ed.source_digest = sha256_hex(&bad_pdf);
+    bad_ed.dates[2] = "2027-02-05".into();
+
+    let good_pdf = build_synthetic_gazette_pdf(FIXTURE_2027);
+    let mut good_ed = seeds[1].clone();
+    good_ed.source_digest = sha256_hex(&good_pdf);
+    // Use custom seeds whose 2027 seed matches good_pdf digest so valid retry converges cleanly
+    let custom_seeds = vec![seeds[0].clone(), good_ed.clone()];
+
+    let stub = Arc::new(StubOfficialSource(Mutex::new(BTreeMap::from([(
+        2027,
+        Ok(FetchedEdition {
+            edition: bad_ed.clone(),
+            pdf: bad_pdf.clone(),
+        }),
+    )]))));
+
+    let svc = Arc::new(
+        Service::new(
+            s3.clone(),
+            Arc::new(move || *clock_cell.lock().unwrap()),
+            20,
+            &custom_seeds,
+            Some(stub.clone()),
+        )
+        .unwrap(),
+    );
+
+    // First attempt: conflicting edition at bundled seed order is rejected BEFORE writing to S3
+    svc.reconcile_once().await;
+    assert!(
+        s3.all_keys().is_empty(),
+        "conflicting edition must NOT be persisted to S3; keys={:?}",
+        s3.all_keys()
+    );
+
+    // Next KST day: valid original succeeds and publishes cleanly to S3
+    stub.0.lock().unwrap().insert(
+        2027,
+        Ok(FetchedEdition {
+            edition: good_ed.clone(),
+            pdf: good_pdf.clone(),
+        }),
+    );
+    *now_cell.lock().unwrap() = utc_ms("2026-07-02T02:00:00Z");
+    svc.reconcile_once().await;
+    assert!(!s3.all_keys().is_empty());
+
+    // Restart recovers cleanly from S3
+    let clock_cell2 = Arc::clone(&now_cell);
+    let restarted = Arc::new(
+        Service::new(
+            s3.clone(),
+            Arc::new(move || *clock_cell2.lock().unwrap()),
+            20,
+            &custom_seeds,
+            None,
+        )
+        .unwrap(),
+    );
+    restarted.reconcile_once().await;
+    assert_eq!(restarted.read_year(2027).unwrap().status, Status::Verified);
+
+    // If S3 already holds a conflicting edition at bundled seed's order, refresh fails and keeps 503 guard active
+    let poisoned_s3 = MemS3::default();
+    let poisoned_store = Store::new(poisoned_s3.clone()).unwrap();
+    poisoned_store
+        .publish(
+            &FetchedEdition {
+                edition: bad_ed,
+                pdf: bad_pdf,
+            },
+            utc_ms("2026-07-01T00:00:00Z"),
+            Instant::now() + Duration::from_secs(5),
+        )
+        .await
+        .unwrap();
+    let clock_cell3 = Arc::clone(&now_cell);
+    let guarded = Arc::new(
+        Service::new(
+            poisoned_s3,
+            Arc::new(move || *clock_cell3.lock().unwrap()),
+            20,
+            &custom_seeds,
+            None,
+        )
+        .unwrap(),
+    );
+    guarded.reconcile_once().await;
+    assert!(
+        guarded.read_year(2027).is_none(),
+        "503 restore guard must stay active when S3 conflicts with bundled seed"
+    );
+
+    // 2. Public router CORS OPTIONS preflight + conditional GET 304 (CODEX-5)
+    let state = Arc::new(server2::SharedState::new(&server2::Config::default()));
+    let public = server2::public_router_with_routes(state, router(restarted.clone()));
+
+    let (st, hdrs, body) = send_req(
+        &public,
+        Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/calendar/v1/kr/solar-terms/2027")
+            .header("origin", "https://app.todayweather.ai")
+            .header("access-control-request-method", "GET")
+            .header("access-control-request-headers", "if-none-match")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(st, StatusCode::NO_CONTENT);
+    assert!(body.is_empty());
+    assert_eq!(hdrs["access-control-allow-origin"], "*");
+    assert_eq!(hdrs["access-control-allow-methods"], "GET,HEAD,OPTIONS");
+    assert_eq!(hdrs["access-control-allow-headers"], "if-none-match");
+    assert_eq!(hdrs["vary"], "Access-Control-Request-Headers");
+
+    let (st, hdrs, _) = send_req(
+        &public,
+        Request::get("/calendar/v1/kr/solar-terms/2027")
+            .header("origin", "https://app.todayweather.ai")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(st, StatusCode::OK);
+    let etag = hdrs["etag"].to_str().unwrap().to_owned();
+
+    let (st, _, empty) = send_req(
+        &public,
+        Request::get("/calendar/v1/kr/solar-terms/2027")
+            .header("origin", "https://app.todayweather.ai")
+            .header("if-none-match", &etag)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(st, StatusCode::NOT_MODIFIED);
+    assert!(empty.is_empty());
+}
+
+#[tokio::test]
+async fn cross_implementation_server1_parity_through_gateway_and_direct_routes() {
+    use server2::api::{DirectFamilies, DirectRoutes};
+    use server2::domestic::kma::backend::{KmaBackend, KmaSource, SourceAnswer};
+    use server2::gateway::{
+        BackendDispatcher, BackendHandler, BackendMode, Family, Gateway, GatewayError, Geocoder,
+        Version,
+    };
+    use server2::geocode::{GeoClient, KmaAddress, Location};
+
+    let parity: serde_json::Value = serde_json::from_str(PARITY_FIXTURE).unwrap();
+    let cases = &parity["cases"];
+    let fixed_now_ms = cases["fixedNowMs"].as_i64().unwrap();
+    assert_eq!(
+        remaining_seconds("2027-02-04", fixed_now_ms),
+        cases["remainingSecondsAtFixedNow"].as_u64().unwrap() as u32
+    );
+    assert_eq!(
+        remaining_seconds("2027-02-04", utc_ms("2027-02-04T14:59:15Z")),
+        cases["remainingSecondsNearMidnight"].as_u64().unwrap() as u32
+    );
+
+    struct FixedKmaSource(FixtureKmaStore);
+    impl KmaSource for FixedKmaSource {
+        fn snapshot(
+            &self,
+            _request: &KmaRequest,
+            _deadline: Instant,
+        ) -> BoxFuture<'_, SourceAnswer> {
+            let s: Box<dyn KmaStore + Send> = Box::new(self.0.clone());
+            Box::pin(async move { SourceAnswer::Snapshot(s) })
+        }
+    }
+
+    struct StubGeocoder;
+    impl Geocoder for StubGeocoder {
+        fn coord(
+            &self,
+            loc: [f64; 2],
+            _lang: String,
+        ) -> BoxFuture<'_, Result<GeoClient, GatewayError>> {
+            Box::pin(async move {
+                if loc[0] > 35.0 && loc[1] > 120.0 {
+                    Ok(GeoClient {
+                        name: Some("청운효자동".into()),
+                        country: Some("KR".into()),
+                        address: Some("서울특별시 종로구 청운효자동".into()),
+                        location: Some(Location {
+                            lat: loc[0],
+                            long: loc[1],
+                        }),
+                        kma_address: Some(KmaAddress {
+                            name1: "서울특별시".into(),
+                            name2: Some("종로구".into()),
+                            name3: Some("청운효자동".into()),
+                        }),
+                    })
+                } else {
+                    Ok(GeoClient {
+                        name: Some("San Francisco".into()),
+                        country: Some("US".into()),
+                        address: Some("San Francisco, CA, USA".into()),
+                        location: Some(Location {
+                            lat: loc[0],
+                            long: loc[1],
+                        }),
+                        kma_address: None,
+                    })
+                }
+            })
+        }
+        fn addr(
+            &self,
+            _address: String,
+            _lang: String,
+        ) -> BoxFuture<'_, Result<GeoClient, GatewayError>> {
+            Box::pin(async { Err(GatewayError::NotFound) })
+        }
+    }
+
+    struct StubWorldBackend;
+    impl BackendHandler for StubWorldBackend {
+        fn fetch(
+            &self,
+            _path: String,
+            _lang: String,
+            _deadline: Instant,
+        ) -> BoxFuture<'_, Result<OrderedJson, GatewayError>> {
+            Box::pin(async {
+                Ok(OrderedJson::parse(
+                    br#"{"source":"DSF","thisTime":[{"dateObj":"2027.02.04 10:30","summary":"Clear"}]}"#,
+                )
+                .unwrap())
+            })
+        }
+    }
+
+    let cal = Arc::new(
+        Calendar::new(
+            Arc::new(move || fixed_now_ms),
+            20,
+            &bundled_seeds().unwrap(),
+        )
+        .unwrap(),
+    );
+    let lookup: Arc<dyn server2::solar_terms::TermLookup> =
+        Arc::new(MemoryLookup::new(cal, Policy::bundled().unwrap()));
+
+    let build_pair = |store: FixtureKmaStore| {
+        let kma = Arc::new(
+            KmaBackend::new(
+                Arc::new(FixedKmaSource(store)),
+                Arc::new(move || fixed_now_ms as f64),
+                AssemblyConfig::default(),
+            )
+            .with_solar_terms(Some(lookup.clone())),
+        );
+        let dispatcher = BackendDispatcher::native_only();
+        for v in [Version::V000903, Version::V000901] {
+            kma.register_version(&dispatcher, v);
+            KmaBackend::select_version(&dispatcher, v, BackendMode::Native).unwrap();
+        }
+        dispatcher.register_native(Version::V000903, Family::Dsf, Arc::new(StubWorldBackend));
+        dispatcher
+            .set_backend(Version::V000903, Family::Dsf, BackendMode::Native)
+            .unwrap();
+        let gw = Arc::new(
+            Gateway::with_limits(
+                Arc::new(StubGeocoder),
+                dispatcher.clone(),
+                16,
+                Duration::from_secs(5),
+            )
+            .unwrap(),
+        );
+        let direct = Arc::new(DirectRoutes::new(
+            kma,
+            DirectFamilies {
+                kma_v000903: true,
+                kma_v000901: true,
+                town: false,
+            },
+            dispatcher,
+        ));
+        (gw, direct)
+    };
+
+    // 1. Calm 입춘 through real Gateway and real DirectRoutes
+    let (gw, direct) = build_pair(FixtureKmaStore::calm("20270204"));
+    let gw_resp = gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(gw_resp.status(), StatusCode::OK);
+    let gw_cc = gw_resp.headers()["cache-control"]
+        .to_str()
+        .unwrap()
+        .to_owned();
+    assert!(gw_cc.contains("must-revalidate"), "got {gw_cc}");
+    assert_eq!(gw_resp.headers()["vary"], "Accept-Language");
+    let gw_etag = gw_resp.headers()["etag"].to_str().unwrap().to_owned();
+    let gw_bytes = axum::body::to_bytes(gw_resp.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    let gw_json: serde_json::Value = serde_json::from_slice(&gw_bytes).unwrap();
+    assert_eq!(
+        gw_json["current"]["summary"],
+        cases["calmIpchunKo"]["summary"]
+    );
+    assert_eq!(
+        gw_json["current"]["summaryForDate"],
+        cases["calmIpchunKo"]["summaryForDate"]
+    );
+
+    // Gateway ETag 304 revalidation
+    let gw_304 = gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .header("if-none-match", &gw_etag)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(gw_304.status(), StatusCode::NOT_MODIFIED);
+
+    // Direct v000903 route matches server1-parity + Vary: Accept-Language, Cookie + ETag 304
+    let direct_path = "/v000903/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99";
+    let dir_resp = direct
+        .handle(
+            Request::get(direct_path)
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(dir_resp.status(), StatusCode::OK);
+    let dir_cc = dir_resp.headers()["cache-control"]
+        .to_str()
+        .unwrap()
+        .to_owned();
+    assert!(dir_cc.contains("must-revalidate"), "got {dir_cc}");
+    assert_eq!(dir_resp.headers()["vary"], "Accept-Language, Cookie");
+    let dir_etag = dir_resp.headers()["etag"].to_str().unwrap().to_owned();
+    let dir_bytes = axum::body::to_bytes(dir_resp.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    let dir_json: serde_json::Value = serde_json::from_slice(&dir_bytes).unwrap();
+    assert_eq!(
+        dir_json["current"]["summary"],
+        cases["calmIpchunKo"]["summary"]
+    );
+    assert_eq!(
+        dir_json["current"]["summaryForDate"],
+        cases["calmIpchunKo"]["summaryForDate"]
+    );
+
+    let dir_304 = direct
+        .handle(
+            Request::get(direct_path)
+                .header("accept-language", "ko-KR")
+                .header("if-none-match", &dir_etag)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(dir_304.status(), StatusCode::NOT_MODIFIED);
+
+    // Non-Korean locale through real Gateway matches server1-parity
+    let en_resp = gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "en-US")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(en_resp.status(), StatusCode::OK);
+    let en_bytes = axum::body::to_bytes(en_resp.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    let en_json: serde_json::Value = serde_json::from_slice(&en_bytes).unwrap();
+    assert_eq!(
+        en_json["current"]["summary"],
+        cases["nonKoreanEn"]["summary"]
+    );
+    assert_eq!(
+        en_json["current"]["summaryForDate"],
+        cases["nonKoreanEn"]["summaryForDate"]
+    );
+
+    // Older KMA version (v000901) control through real Gateway and DirectRoutes
+    let v901_gw = gw
+        .handle(
+            Request::get("/weather/v000901/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(v901_gw.status(), StatusCode::OK);
+    assert_eq!(v901_gw.headers()["cache-control"], "max-age=300");
+    assert!(v901_gw.headers().get("vary").is_none());
+    let v901_bytes = axum::body::to_bytes(v901_gw.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    let v901_json: serde_json::Value = serde_json::from_slice(&v901_bytes).unwrap();
+    assert!(v901_json["current"].get("summaryForDate").is_none());
+
+    let v901_dir = direct
+        .handle(
+            Request::get("/v000901/kma/addr/%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C/%EC%A2%85%EB%A1%9C%EA%B5%AC/%EC%B2%AD%EC%9A%B4%ED%9A%A8%EC%9E%90%EB%8F%99")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(v901_dir.status(), StatusCode::OK);
+    assert!(v901_dir.headers().get("vary").is_none());
+
+    // Overseas (US / DSF) control through real Gateway
+    let us_resp = gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.77,-122.42")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(us_resp.status(), StatusCode::OK);
+    assert_eq!(us_resp.headers()["cache-control"], "max-age=300");
+    assert!(us_resp.headers().get("vary").is_none());
+
+    // 2. Hazardous 입춘 through real Gateway matches server1-parity
+    let mut haz_store = FixtureKmaStore::calm("20270204");
+    haz_store.pm25_grade = Some(4);
+    haz_store.warnings = Ok(serde_json::json!([{
+        "areaCode": "L1100400",
+        "areaName": "서울서북권",
+        "warnVar": 3,
+        "warnStress": 0,
+        "active": true,
+        "command": "1",
+        "eventTmFc": 202702040900_i64,
+        "eventTmSeq": 1,
+        "eventRank": 1
+    }]));
+    let (haz_gw, _) = build_pair(haz_store);
+    let haz_resp = haz_gw
+        .handle(
+            Request::get("/weather/v000903/coord/37.566,126.978")
+                .header("accept-language", "ko-KR")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(haz_resp.status(), StatusCode::OK);
+    let haz_bytes = axum::body::to_bytes(haz_resp.into_body(), 1_000_000)
+        .await
+        .unwrap();
+    let haz_json: serde_json::Value = serde_json::from_slice(&haz_bytes).unwrap();
+    assert_eq!(
+        haz_json["current"]["summary"],
+        cases["hazardousIpchunKo"]["summary"]
+    );
+    assert_eq!(
+        haz_json["current"]["summaryForDate"],
+        cases["hazardousIpchunKo"]["summaryForDate"]
+    );
 }

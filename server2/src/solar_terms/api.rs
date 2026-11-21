@@ -16,8 +16,31 @@ pub trait CalendarApi: Send + Sync {
 
 pub fn router(api: Arc<dyn CalendarApi>) -> Router {
     Router::new()
-        .route("/calendar/v1/kr/solar-terms/{year}", get(handle))
+        .route(
+            "/calendar/v1/kr/solar-terms/{year}",
+            get(handle).options(preflight),
+        )
         .with_state(api)
+}
+
+async fn preflight(headers: HeaderMap) -> Response {
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::NO_CONTENT;
+    let h = response.headers_mut();
+    h.insert("access-control-allow-origin", HeaderValue::from_static("*"));
+    h.insert(
+        "access-control-allow-methods",
+        HeaderValue::from_static("GET,HEAD,OPTIONS"),
+    );
+    h.insert(
+        "vary",
+        HeaderValue::from_static("Access-Control-Request-Headers"),
+    );
+    h.insert("content-length", HeaderValue::from_static("0"));
+    if let Some(req_headers) = headers.get("access-control-request-headers") {
+        h.insert("access-control-allow-headers", req_headers.clone());
+    }
+    response
 }
 
 async fn handle(

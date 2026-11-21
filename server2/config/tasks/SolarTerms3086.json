@@ -26,6 +26,16 @@
   ],
   "outside": [
     {
+      "path": "docs/architecture/diagrams/server2-runtime-services.html",
+      "category": "documentation",
+      "reason": "Regenerated Archify runtime services diagram reflecting the kma solar-terms calendar route, 60s worker, and S3 restore/publish path"
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-runtime-services.json",
+      "category": "documentation",
+      "reason": "Update Archify runtime services source specification with the kma solar-terms calendar route, 60s worker, and S3 restore/publish path"
+    },
+    {
       "path": "docs/architecture/server2.md",
       "category": "documentation",
       "reason": "Record server2 Korean solar-term calendar route, S3 raw/v2+index/v2 persistence, and domestic v000903 summary parity"
