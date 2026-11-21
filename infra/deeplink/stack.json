@@ -1,0 +1,378 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "TodayWeather link.todayweather.ai verification and static browser fallback.",
+  "Parameters": {
+    "CertificateArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-f0-9-]+",
+      "Description": "Issued ACM certificate in us-east-1 covering link.todayweather.ai"
+    },
+    "HostedZoneId": {
+      "Type": "String",
+      "Default": "",
+      "Description": "Optional public Route 53 zone containing link.todayweather.ai"
+    },
+    "LinkDomainName": {
+      "Type": "String",
+      "Default": "link.todayweather.ai",
+      "AllowedValues": [
+        "link.todayweather.ai"
+      ]
+    }
+  },
+  "Conditions": {
+    "ManageDNS": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "HostedZoneId"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "Assets": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "OriginAccess": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": {
+        "OriginAccessControlConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-assets"
+          },
+          "OriginAccessControlOriginType": "s3",
+          "SigningBehavior": "always",
+          "SigningProtocol": "sigv4"
+        }
+      }
+    },
+    "Navigation": {
+      "Type": "AWS::CloudFront::Function",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-navigation"
+        },
+        "AutoPublish": true,
+        "FunctionConfig": {
+          "Comment": "TodayWeather link routing for the dedicated host",
+          "Runtime": "cloudfront-js-2.0"
+        },
+        "FunctionCode": "// CloudFront Function (cloudfront-js-2.0) for link.todayweather.ai.\n// Serves .well-known verification files and /open.html from S3; redirects known\n// content deep links to https://app.todayweather.ai/... for browser fallback.\nfunction handler(event) {\n  var request = event.request;\n  if (request.method !== \"GET\" && request.method !== \"HEAD\") {\n    return {\n      statusCode: 405,\n      statusDescription: \"Method Not Allowed\",\n      headers: { allow: { value: \"GET, HEAD\" } },\n    };\n  }\n\n  var uri;\n  try {\n    uri = decodeURIComponent(request.uri);\n  } catch (_) {\n    return { statusCode: 400, statusDescription: \"Bad Request\" };\n  }\n\n  if (\n    uri.indexOf(\"..\") !== -1 ||\n    uri.indexOf(\"\\\\\") !== -1 ||\n    uri.indexOf(\"\\u0000\") !== -1\n  ) {\n    return { statusCode: 400, statusDescription: \"Bad Request\" };\n  }\n\n  if (\n    uri === \"/.well-known/apple-app-site-association\" ||\n    uri === \"/.well-known/assetlinks.json\" ||\n    uri === \"/open.html\" ||\n    /^\\/assets\\/(?:icon\\.svg|preview\\.png|open\\.(?:css|js))$/.test(uri)\n  ) {\n    request.uri = uri;\n    return request;\n  }\n\n  var trimmed = uri.length > 1 && uri.charAt(uri.length - 1) === \"/\" ? uri.slice(0, -1) : uri;\n  if (uri === \"/\" || trimmed === \"/open\") {\n    request.uri = \"/open.html\";\n    return request;\n  }\n\n  var PWA_ORIGIN = \"https://app.todayweather.ai\";\n  var LINK_ORIGIN = \"https://link.todayweather.ai\";\n  var qs = request.querystring || {};\n\n  function getParam(key) {\n    var entry = qs[key];\n    if (!entry || typeof entry.value !== \"string\") return null;\n    try {\n      return decodeURIComponent(entry.value.replace(/\\+/g, \" \"));\n    } catch (_) {\n      return entry.value;\n    }\n  }\n\n  function normalizeView(raw) {\n    if (raw === \"daily\" || raw === \"air\" || raw === \"hourly\") return raw;\n    return \"hourly\";\n  }\n\n  function normalizePollutant(raw) {\n    if (\n      raw === \"aqi\" ||\n      raw === \"pm25\" ||\n      raw === \"pm10\" ||\n      raw === \"o3\" ||\n      raw === \"no2\" ||\n      raw === \"so2\" ||\n      raw === \"co\"\n    ) {\n      return raw;\n    }\n    return \"aqi\";\n  }\n\n  function parseCoord(raw, min, max) {\n    if (raw === null || raw === \"\") return null;\n    var s = raw.trim();\n    if (!/^-?(?:\\d+\\.?\\d*|\\.\\d+)$/.test(s)) return null;\n    var n = Number(s);\n    if (!isFinite(n) || n < min || n > max) return null;\n    var rounded = Math.round(n * 1000) / 1000;\n    return rounded === 0 ? 0 : rounded;\n  }\n\n  function sanitizeName(raw) {\n    if (raw === null) return null;\n    var cleaned = raw.replace(/[\\u0000-\\u001f\\u007f]/g, \"\").trim();\n    if (!cleaned) return null;\n    // Truncate to at most 80 Unicode scalar values without splitting surrogate pairs.\n    var out = \"\";\n    var count = 0;\n    for (var i = 0; i < cleaned.length && count < 80; i++) {\n      var code = cleaned.charCodeAt(i);\n      if (code >= 0xd800 && code <= 0xdbff && i + 1 < cleaned.length) {\n        var next = cleaned.charCodeAt(i + 1);\n        if (next >= 0xdc00 && next <= 0xdfff) {\n          out += cleaned.slice(i, i + 2);\n          i++;\n          count++;\n          continue;\n        }\n      }\n      out += cleaned.charAt(i);\n      count++;\n    }\n    return out;\n  }\n\n  function redirect302(location) {\n    return {\n      statusCode: 302,\n      statusDescription: \"Found\",\n      headers: {\n        location: { value: location },\n        \"cache-control\": { value: \"no-store\" },\n      },\n    };\n  }\n\n  if (trimmed === \"/nation/weather\") {\n    return redirect302(PWA_ORIGIN + \"/nation/weather?from=link\");\n  }\n  if (trimmed === \"/nation/air\") {\n    return redirect302(PWA_ORIGIN + \"/nation/air?from=link\");\n  }\n  if (trimmed === \"/warnings\") {\n    return redirect302(PWA_ORIGIN + \"/warnings?from=link\");\n  }\n\n  var SLUG_RE = /^[a-z0-9-]{1,64}$/;\n\n  if (trimmed.indexOf(\"/place/\") === 0) {\n    var placeSlug = trimmed.slice(7);\n    if (!SLUG_RE.test(placeSlug)) {\n      return { statusCode: 404, statusDescription: \"Not Found\" };\n    }\n    var placeView = normalizeView(getParam(\"view\"));\n    if (placeView === \"air\") {\n      var placePollutant = normalizePollutant(getParam(\"pollutant\"));\n      var placeAirQ =\n        placePollutant !== \"aqi\"\n          ? \"pollutant=\" + placePollutant + \"&from=link\"\n          : \"from=link\";\n      return redirect302(PWA_ORIGIN + \"/air/\" + placeSlug + \"?\" + placeAirQ);\n    }\n    return redirect302(\n      PWA_ORIGIN + \"/weather/\" + placeSlug + \"/\" + placeView + \"?from=link\",\n    );\n  }\n\n  if (trimmed.indexOf(\"/air/\") === 0) {\n    var airSlug = trimmed.slice(5);\n    if (!SLUG_RE.test(airSlug)) {\n      return { statusCode: 404, statusDescription: \"Not Found\" };\n    }\n    var airPollutant = normalizePollutant(getParam(\"pollutant\"));\n    var airQ =\n      airPollutant !== \"aqi\"\n        ? \"pollutant=\" + airPollutant + \"&from=link\"\n        : \"from=link\";\n    return redirect302(PWA_ORIGIN + \"/air/\" + airSlug + \"?\" + airQ);\n  }\n\n  if (trimmed === \"/loc\") {\n    var lat = parseCoord(getParam(\"lat\"), -90, 90);\n    var lon = parseCoord(getParam(\"lon\"), -180, 180);\n    if (lat === null || lon === null) {\n      return redirect302(LINK_ORIGIN + \"/open\");\n    }\n    var name = sanitizeName(getParam(\"name\"));\n    var locView = normalizeView(getParam(\"view\"));\n    var locPollutant = locView === \"air\" ? normalizePollutant(getParam(\"pollutant\")) : null;\n    var parts = [\"lat=\" + lat, \"lon=\" + lon];\n    if (name) parts.push(\"name=\" + encodeURIComponent(name));\n    if (locView !== \"hourly\") parts.push(\"view=\" + locView);\n    if (locView === \"air\" && locPollutant && locPollutant !== \"aqi\") {\n      parts.push(\"pollutant=\" + locPollutant);\n    }\n    parts.push(\"from=link\");\n    return redirect302(PWA_ORIGIN + \"/loc?\" + parts.join(\"&\"));\n  }\n\n  return { statusCode: 404, statusDescription: \"Not Found\" };\n}\n"
+      }
+    },
+    "Cache": {
+      "Type": "AWS::CloudFront::CachePolicy",
+      "Properties": {
+        "CachePolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-static"
+          },
+          "MinTTL": 0,
+          "DefaultTTL": 0,
+          "MaxTTL": 31536000,
+          "ParametersInCacheKeyAndForwardedToOrigin": {
+            "CookiesConfig": {
+              "CookieBehavior": "none"
+            },
+            "HeadersConfig": {
+              "HeaderBehavior": "none"
+            },
+            "QueryStringsConfig": {
+              "QueryStringBehavior": "none"
+            },
+            "EnableAcceptEncodingGzip": true,
+            "EnableAcceptEncodingBrotli": true
+          }
+        }
+      }
+    },
+    "Headers": {
+      "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+      "Properties": {
+        "ResponseHeadersPolicyConfig": {
+          "Name": {
+            "Fn::Sub": "${AWS::StackName}-headers"
+          },
+          "SecurityHeadersConfig": {
+            "ContentSecurityPolicy": {
+              "Override": true,
+              "ContentSecurityPolicy": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'none'"
+            },
+            "ContentTypeOptions": {
+              "Override": true
+            },
+            "FrameOptions": {
+              "FrameOption": "DENY",
+              "Override": true
+            },
+            "ReferrerPolicy": {
+              "ReferrerPolicy": "no-referrer",
+              "Override": true
+            },
+            "StrictTransportSecurity": {
+              "AccessControlMaxAgeSec": 31536000,
+              "IncludeSubdomains": false,
+              "Preload": false,
+              "Override": true
+            }
+          },
+          "CustomHeadersConfig": {
+            "Items": [
+              {
+                "Header": "Permissions-Policy",
+                "Value": "geolocation=(), camera=(), microphone=()",
+                "Override": true
+              }
+            ]
+          }
+        }
+      }
+    },
+    "Distribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Enabled": true,
+          "Comment": "TodayWeather deep link verification and fallback",
+          "Aliases": [
+            {
+              "Ref": "LinkDomainName"
+            }
+          ],
+          "IPV6Enabled": true,
+          "HttpVersion": "http2and3",
+          "Origins": [
+            {
+              "Id": "static-assets",
+              "DomainName": {
+                "Fn::GetAtt": [
+                  "Assets",
+                  "RegionalDomainName"
+                ]
+              },
+              "OriginAccessControlId": {
+                "Fn::GetAtt": [
+                  "OriginAccess",
+                  "Id"
+                ]
+              },
+              "S3OriginConfig": {
+                "OriginAccessIdentity": ""
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "static-assets",
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "AllowedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS",
+              "PUT",
+              "POST",
+              "PATCH",
+              "DELETE"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "Compress": true,
+            "CachePolicyId": {
+              "Ref": "Cache"
+            },
+            "ResponseHeadersPolicyId": {
+              "Ref": "Headers"
+            },
+            "FunctionAssociations": [
+              {
+                "EventType": "viewer-request",
+                "FunctionARN": {
+                  "Fn::GetAtt": [
+                    "Navigation",
+                    "FunctionMetadata.FunctionARN"
+                  ]
+                }
+              }
+            ]
+          },
+          "ViewerCertificate": {
+            "AcmCertificateArn": {
+              "Ref": "CertificateArn"
+            },
+            "SslSupportMethod": "sni-only",
+            "MinimumProtocolVersion": "TLSv1.2_2021"
+          },
+          "CustomErrorResponses": [
+            {
+              "ErrorCode": 403,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 404,
+              "ErrorCachingMinTTL": 0
+            }
+          ]
+        }
+      }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "Assets"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "CloudFrontRead",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": {
+                "Fn::Sub": "${Assets.Arn}/*"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "DenyInsecureTransport",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Assets",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${Assets.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "DnsA": {
+      "Type": "AWS::Route53::RecordSet",
+      "Condition": "ManageDNS",
+      "Properties": {
+        "HostedZoneId": {
+          "Ref": "HostedZoneId"
+        },
+        "Name": {
+          "Ref": "LinkDomainName"
+        },
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": {
+            "Fn::GetAtt": [
+              "Distribution",
+              "DomainName"
+            ]
+          },
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "EvaluateTargetHealth": false
+        }
+      }
+    },
+    "DnsAAAA": {
+      "Type": "AWS::Route53::RecordSet",
+      "Condition": "ManageDNS",
+      "Properties": {
+        "HostedZoneId": {
+          "Ref": "HostedZoneId"
+        },
+        "Name": {
+          "Ref": "LinkDomainName"
+        },
+        "Type": "AAAA",
+        "AliasTarget": {
+          "DNSName": {
+            "Fn::GetAtt": [
+              "Distribution",
+              "DomainName"
+            ]
+          },
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "EvaluateTargetHealth": false
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "BucketName": {
+      "Value": {
+        "Ref": "Assets"
+      }
+    },
+    "DistributionId": {
+      "Value": {
+        "Ref": "Distribution"
+      }
+    },
+    "DistributionDomain": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Distribution",
+          "DomainName"
+        ]
+      }
+    },
+    "SiteUrl": {
+      "Value": {
+        "Fn::Sub": "https://${LinkDomainName}"
+      }
+    }
+  }
+}
