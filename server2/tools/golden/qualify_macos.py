@@ -118,6 +118,15 @@ def replay(group, spec, variant, node, deps):
             if (out / name).is_file():
                 shutil.copyfile(out / name, capture / name)
         if result.returncode:
+            # Retain just the declared source inventory of any rejected record as a diagnostic.
+            # Rejected records cannot enter the pair or supply a baseline.
+            for failed in [*sorted(out.glob('failed-*')), out / entry['record_name']]:
+                try:
+                    source = read_json(failed)['source']['files']
+                except (ValueError, KeyError, EOFError, OSError):
+                    continue
+                if isinstance(source, dict):
+                    (capture / 'unqualified-source-names.json').write_text(json.dumps(sorted(source)))
             print('Unqualified', run, flush=True)
             return False
         output = out / ('record.json.gz' if variant == 'widget' else entry['record_name'])
