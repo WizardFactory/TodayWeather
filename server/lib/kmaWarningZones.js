@@ -211,13 +211,6 @@ function zonesForTown(town) {
     var third = toText(town.third);
     var thirdBase = third.split('/')[0].trim();
 
-    var island = ISLAND_ZONES.filter(function (rule) {
-        return second.indexOf(rule.second) !== -1 && third.indexOf(rule.third) !== -1;
-    })[0];
-    if (island) {
-        return expand(table, zonesNamed(table, island.zone));
-    }
-
     if (second.length === 0 && thirdBase.length === 0) {
         return expand(table, [province]);
     }
@@ -230,6 +223,13 @@ function zonesForTown(town) {
         if (matchedZones.length > 0) {
             return expand(table, matchedZones);
         }
+    }
+
+    var island = ISLAND_ZONES.filter(function (rule) {
+        return second.indexOf(rule.second) !== -1 && third.indexOf(rule.third) !== -1;
+    })[0];
+    if (island) {
+        return expand(table, zonesNamed(table, island.zone));
     }
 
     if (second.length === 0) {

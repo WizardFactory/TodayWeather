@@ -330,11 +330,18 @@ test('town mapping: zone table, islands, metropolitan cities and granular sub-zo
     assert.deepEqual(names({first: '인천광역시', second: '강화군', third: '서도면'}), ['강화군', '서해5도', '연평도.우도', '인천광역시', '전국']);
     assert.ok(names({first: '인천광역시', second: '강화군', third: ''}).indexOf('강화군') !== -1);
     assert.ok(names({first: '인천광역시', second: '옹진군', third: '백령면'}).indexOf('백령도.대청도') !== -1);
-    // CODEX-4: empty/unknown third includes external-subtree island codes (never under-warn).
+    // CODEX-4: empty/unknown third (including island-substring unknowns) includes all candidate & external-subtree island codes.
     assert.deepEqual(names({first: '인천광역시', second: '옹진군', third: ''}), ['백령도.대청도', '서해5도', '연평도.우도', '옹진군', '인천광역시', '전국']);
+    assert.deepEqual(names({first: '인천광역시', second: '옹진군', third: '미확인백령면'}), ['백령도.대청도', '서해5도', '연평도.우도', '옹진군', '인천광역시', '전국']);
     assert.deepEqual(names({first: '전라남도', second: '신안군', third: ''}), ['신안군(흑산면제외)', '전국', '전라남도', '흑산도.홍도']);
+    assert.deepEqual(names({first: '전라남도', second: '신안군', third: '미확인흑산면'}), ['신안군(흑산면제외)', '전국', '전라남도', '흑산도.홍도']);
     assert.deepEqual(names({first: '전라남도', second: '여수시', third: ''}), ['거문도.초도', '여수시', '전국', '전라남도']);
+    assert.deepEqual(names({first: '전라남도', second: '여수시', third: '미확인삼산면'}), ['거문도.초도', '여수시', '전국', '전라남도']);
     assert.ok(names({first: '제주특별자치도', second: '제주시', third: ''}).indexOf('추자도') !== -1);
+    assert.deepEqual(names({first: '제주특별자치도', second: '제주시', third: '미확인추자면'}), ['전국', '제주도', '제주도산지', '제주시(산지 제외)', '제주시동부', '제주시북부', '제주시서부', '제주시중산간', '추자도']);
+    // CODEX-8: official 청주시 상당구 용담명암산성동 alias (without dots) matches 청주시서부 alongside CSV 용담.명암.산성동.
+    assert.deepEqual(names({first: '충청북도', second: '청주시 상당구', third: '용담명암산성동'}), ['전국', '청주시', '청주시서부', '충청북도']);
+    assert.deepEqual(names({first: '충청북도', second: '청주시 상당구', third: '용담.명암.산성동'}), ['전국', '청주시', '청주시서부', '충청북도']);
     // Tier B: Sejong (both empty second from geocoder and explicit second).
     assert.deepEqual(names({first: '세종특별자치시', second: '', third: '조치원읍'}), ['세종북부', '세종특별자치시', '전국']);
     assert.deepEqual(names({first: '세종특별자치시', second: '', third: '한솔동'}), ['세종남부', '세종특별자치시', '전국']);

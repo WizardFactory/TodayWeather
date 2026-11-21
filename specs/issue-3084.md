@@ -16,13 +16,13 @@ Revision 1, 2026-11-21. Consumes [intent/issue-3084.md](../intent/issue-3084.md)
 Given `town = { first, second, third }`:
 1. Normalize `provinceName` via `PROVINCE_ALIASES`, and for `전남광주통합특별시` classify via `gwangjuJeonnam.js` (`#3078`), returning `[]` if unclassified.
 2. Normalize `second = toText(town.second).replace(/\s+/g, '')`, `third = toText(town.third)`, `thirdBase = third.split('/')[0].trim()`.
-3. Preserve `ISLAND_ZONES` overrides (`울릉`, `신안`+`흑산`, `제주시`+`추자`, `여수`+`삼산`, `옹진`+`백령`/`대청`/`연평`) unchanged.
-4. If `second.length === 0 && thirdBase.length === 0`, return `expand(table, [province])` (province-level lookup).
-5. Look up `township_splits` by `(province.name, second)` (note: `세종특별자치시` accepts `second` in `["", "세종", "세종특별자치시"]` so `{first: '세종특별자치시', second: '', third: '조치원읍'}` resolves to `세종북부`). When matched:
+3. If `second.length === 0 && thirdBase.length === 0`, return `expand(table, [province])` (province-level lookup).
+4. Look up `township_splits` by `(province.name, second)` (note: `세종특별자치시` accepts `second` in `["", "세종", "세종특별자치시"]` so `{first: '세종특별자치시', second: '', third: '조치원읍'}` resolves to `세종북부`). When matched:
    - If `thirdBase` is an explicit own property of `by_third`, select `by_third[thirdBase]`.
-   - Otherwise (empty or unrecognized `thirdBase`) select `fallback` (conservative over-warn across all candidate child zones, including external-subtree island codes such as `추자도`, `백령도.대청도`, `연평도.우도`, `흑산도.홍도`, and `거문도.초도`).
+   - Otherwise (empty or unrecognized `thirdBase`, even when `third` contains an island substring such as `미확인백령면`) select `fallback` (conservative over-warn across all candidate child zones, including external-subtree island codes such as `추자도`, `백령도.대청도`, `연평도.우도`, `흑산도.홍도`, and `거문도.초도`).
    - Map selected IDs through `table.byId` and return `expand(table, zones)`.
-6. Else look up `district_splits[province.name][second]`. When matched, map IDs through `table.byId` and return `expand(table, zones)`.
+5. Else look up `district_splits[province.name][second]`. When matched, map IDs through `table.byId` and return `expand(table, zones)`.
+6. Else check `ISLAND_ZONES` (`울릉` -> `울릉도.독도`, plus legacy non-canonical second fallbacks).
 7. Else run the existing `second.length === 0` / `cityZones` + `SHARED_ZONES` / cross-province / metropolitan fallback logic unchanged.
 
 ## R3 Safe over-warn invariants (zero under-warning)
