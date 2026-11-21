@@ -150,12 +150,53 @@ async function main() {
     };
     const town = await townResponse(seogwipo, zoneRows);
     assert.deepEqual(town.current.specialInfo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName),
-        ['호우경보@제주도산지', '호우주의보@서귀포시남부', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
+        ['호우경보@제주도산지', '호우주의보@서귀포시동부', '호우주의보@서귀포시중산간', '강풍주의보@서귀포시동부', '강풍주의보@서귀포시중산간', '강풍주의보@제주도산지']);
     // The 제주도산지 호우경보 reaches 서귀포시 towns (AK decision 2026-09-27) and leads the summary.
     assert.ok(town.current.summaryWeather.indexOf('호우경보') !== -1, 'summaryWeather: ' + town.current.summaryWeather);
     assert.ok(town.current.summary.indexOf('호우경보') !== -1, 'summary: ' + town.current.summary);
     const seoul = await townResponse(locations[0], zoneRows);
     assert.equal(seoul.current.specialInfo, undefined, 'no Seoul warning');
+
+    // S5 (#3084): active 건조주의보 in 서울동북권 (L1100200) and 서울서남권 (L1100300) reaches
+    // 노원구 and 영등포구 in town weather responses and push region resolution, and excludes 강남구 and 종로구.
+    const seoulDryRows = [
+        {areaCode: 'L1100200', areaName: '서울동북권', warnVar: 4, warnStress: 0, active: true, command: '1', eventTmFc: 202611210900, eventTmSeq: 1, eventRank: 1},
+        {areaCode: 'L1100300', areaName: '서울서남권', warnVar: 4, warnStress: 0, active: true, command: '1', eventTmFc: 202611210900, eventTmSeq: 1, eventRank: 1}
+    ];
+    const nowon = {name: 'Seoul', town: {first: '서울특별시', second: '노원구', third: '상계1동'}, mCoord: {mx: 61, my: 129}, gCoord: {lat: 37.6542, lon: 127.0568}};
+    const yeongdeungpo = {name: 'Seoul', town: {first: '서울특별시', second: '영등포구', third: '여의동'}, mCoord: {mx: 58, my: 126}, gCoord: {lat: 37.5264, lon: 126.9242}};
+    const gangnam = {name: 'Seoul', town: {first: '서울특별시', second: '강남구', third: '역삼동'}, mCoord: {mx: 61, my: 125}, gCoord: {lat: 37.4999, lon: 127.0365}};
+    const jongno = {name: 'Seoul', town: {first: '서울특별시', second: '종로구', third: '청운효자동'}, mCoord: {mx: 60, my: 127}, gCoord: {lat: 37.5840, lon: 126.9706}};
+    const [nowonBody, ydpBody, gangnamBody, jongnoBody] = await Promise.all([
+        townResponse(nowon, seoulDryRows),
+        townResponse(yeongdeungpo, seoulDryRows),
+        townResponse(gangnam, seoulDryRows),
+        townResponse(jongno, seoulDryRows)
+    ]);
+    assert.deepEqual(nowonBody.current.specialInfo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName), ['건조주의보@서울동북권']);
+    assert.ok(nowonBody.current.summaryWeather.indexOf('건조주의보') !== -1);
+    assert.ok(nowonBody.current.summary.indexOf('건조주의보') !== -1);
+    assert.deepEqual(ydpBody.current.specialInfo.map(s => s.weatherStr + s.levelStr + '@' + s.locationName), ['건조주의보@서울서남권']);
+    assert.ok(ydpBody.current.summaryWeather.indexOf('건조주의보') !== -1);
+    assert.ok(ydpBody.current.summary.indexOf('건조주의보') !== -1);
+    assert.equal(gangnamBody.current.specialInfo, undefined, '서울동남권 excludes 서울동북권/서울서남권');
+    assert.equal(gangnamBody.current.summaryWeather.indexOf('건조주의보'), -1);
+    assert.equal(gangnamBody.current.summary.indexOf('건조주의보'), -1);
+    assert.equal(jongnoBody.current.specialInfo, undefined, '서울서북권 excludes 서울동북권/서울서남권');
+    assert.equal(jongnoBody.current.summaryWeather.indexOf('건조주의보'), -1);
+    assert.equal(jongnoBody.current.summary.indexOf('건조주의보'), -1);
+    const { resolveRegion } = require('../../lib/pushCoordinator/region');
+    const [nowonReg, ydpReg, gangnamReg, jongnoReg] = await Promise.all([
+        resolveRegion('http://127.0.0.1:1', { town: nowon.town }, { source: 'KMA' }),
+        resolveRegion('http://127.0.0.1:1', { town: yeongdeungpo.town }, { source: 'KMA' }),
+        resolveRegion('http://127.0.0.1:1', { town: gangnam.town }, { source: 'KMA' }),
+        resolveRegion('http://127.0.0.1:1', { town: jongno.town }, { source: 'KMA' })
+    ]);
+    assert.deepEqual(nowonReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100200']);
+    assert.deepEqual(ydpReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100300']);
+    assert.deepEqual(gangnamReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100100']);
+    assert.deepEqual(jongnoReg.zones.slice().sort(), ['L1000000', 'L1100000', 'L1100400']);
+
     fs.writeFileSync(path.join(outputDir, 'town-seogwipo.json'), JSON.stringify(town, null, 1));
 
     app.get('/weather/v000903/coord/:loc', (req, res) => res.json(town));

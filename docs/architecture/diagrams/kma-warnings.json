@@ -11,7 +11,7 @@
     "title": "KMA warnings and weather forecast narratives",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "e69b175a6972b878f7d18dadb019caa875b97651",
+      "revision": "4cb913c864700786054aebe0546ca354587d88ba",
       "provider": "github",
       "link_mode": "local-only"
     },
@@ -85,7 +85,7 @@
       "id": "special",
       "type": "backend",
       "label": "Warning readers",
-      "sublabel": "Special API and town warnings",
+      "sublabel": "Special API & sub-zone match",
       "pos": [
         1020,
         70
@@ -99,7 +99,10 @@
           "path": "server/controllers/kma.specialweather.controller.js"
         },
         {
-          "path": "server/routes/v000903/route.kma.v000903.js"
+          "path": "server/lib/kmaWarningZones.js"
+        },
+        {
+          "path": "server/utils/data/kma_warning_subzones.json"
         }
       ]
     },
@@ -265,10 +268,11 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Warning areas",
+      "title": "Warning areas (#3084)",
       "items": [
-        "Combined Gwangju–Jeonnam addresses resolve by district.",
-        "Narratives never drive wn/wr warning or push state."
+        "Verified district and 읍·면·동 splits use KMA 2026-06-01 sub-zones.",
+        "Empty, unknown, straddling, altitude or 리-island towns over-warn safely.",
+        "Combined Gwangju–Jeonnam resolves by district; narratives stay separate."
       ]
     },
     {

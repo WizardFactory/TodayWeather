@@ -85,6 +85,13 @@ var state = {};
 zones.applyEvents(state, zones.prepareEvents(rows));
 assert.equal(Object.keys(state).filter(function (k) { return state[k].active && state[k].warnVar > 0; }).length, 0);
 assert.ok(zones.zonesForTown({first: '제주특별자치도', second: '서귀포시', third: '성산읍'}).indexOf('L1091430') !== -1);
+assert.equal(zones.zonesForTown({first: '제주특별자치도', second: '서귀포시', third: '성산읍'}).indexOf('L1091420'), -1);
+assert.deepEqual(zones.zonesForTown({first: '서울특별시', second: '노원구', third: '상계1동'}).map(zones.zoneName).sort(),
+    ['서울동북권', '서울특별시', '전국']);
+assert.deepEqual(zones.zonesForTown({first: '서울특별시', second: '강남구', third: '역삼동'}).map(zones.zoneName).sort(),
+    ['서울동남권', '서울특별시', '전국']);
+assert.deepEqual(zones.zonesForTown({first: '강원특별자치도', second: '강릉시', third: '왕산면'}).map(zones.zoneName).sort(),
+    ['강릉시', '강릉시산지', '강원도', '전국']);
 
 // Controller order on Node 10's unstable sort (independent verification F3): 경보 first, then zone name.
 (function () {
@@ -158,10 +165,15 @@ collector.gather(function (err) {
         controller.getSpecialInfo({first: '제주특별자치도', second: '서귀포시', third: '성산읍'}, '', function (err, info) {
             assert.ifError(err);
             assert.deepEqual(info.map(function (s) { return s.weatherStr + s.levelStr + '@' + s.locationName; }).slice(0, 2),
-                ['호우경보@제주도산지', '호우주의보@서귀포시남부']);
-            collector.gather(function (err) {
-                assert.equal(err, 'skip');
-                console.log('kma warning Node ' + process.version + ' check passed');
+                ['호우경보@제주도산지', '호우주의보@서귀포시동부']);
+            controller.getSpecialInfo({first: '제주특별자치도', second: '서귀포시', third: '안덕면'}, '', function (err, southInfo) {
+                assert.ifError(err);
+                assert.deepEqual(southInfo.map(function (s) { return s.weatherStr + s.levelStr + '@' + s.locationName; }).slice(0, 2),
+                    ['호우경보@제주도산지', '호우주의보@서귀포시남부']);
+                collector.gather(function (err) {
+                    assert.equal(err, 'skip');
+                    console.log('kma warning Node ' + process.version + ' check passed');
+                });
             });
         });
     });
