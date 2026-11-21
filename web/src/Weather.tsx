@@ -31,10 +31,12 @@ import {
   type Pollutant,
   type Weather,
   type Point,
+  type Place,
 } from "@todayweather/core";
 import { useApp } from "./context";
 import { fetchWeather, readStoredWeather } from "./api";
 import { weatherKey, resolvePlace } from "./state";
+import { linkPollutant, shareLink } from "./deeplink";
 import {
   WeatherIcon,
   Stamp,
@@ -120,35 +122,57 @@ function airValue(value: number | null, code: string) {
   );
   return value === null || !unit ? text : `${text} ${unit}`;
 }
-export default function WeatherPage({ view: fixedView }: { view?: string }) {
+export default function WeatherPage({
+  view: fixedView,
+  preview,
+  savePreview,
+}: {
+  view?: string;
+  preview?: Place;
+  savePreview?: () => void;
+}) {
   useLanguage();
-  const [search] = useSearchParams();
-  const linkedPollutant = POLLUTANTS.find((c) => c === search.get("pollutant"));
+  const [search, setSearch] = useSearchParams();
+  const linkedPollutant = linkPollutant(search.get("pollutant"));
   const { locationId, view: paramView } = useParams(),
     view = fixedView ?? paramView ?? "hourly";
   const { state, setState, notify, contentInert } = useApp();
   const navigate = useNavigate();
-  const place = resolvePlace(state, locationId);
+  const route = useLocation();
+  const linkPlaceKind = route.state?.linkPlaceKind;
+  // A catalog deep link must never open an unrelated favorite with the same ID.
+  const catalogOnly =
+    linkPlaceKind === "catalog" ||
+    (search.get("from") === "link" && linkPlaceKind !== "saved");
+  const place =
+    preview ??
+    (catalogOnly
+      ? PLACES.find((p) => p.id === locationId)
+      : resolvePlace(state, locationId));
   useEffect(() => {
     if (
+      !preview &&
+      !catalogOnly &&
       place &&
       state.places.some((p) => p.id === place.id) &&
       state.selectedId !== place.id
     )
       setState((s) => ({ ...s, selectedId: place.id }));
-  }, [place?.id]);
+  }, [place?.id, catalogOnly]);
   const units = state.settings.units;
   const key = place ? weatherKey(place, units) : "none";
   // Render a valid stored snapshot immediately while the network request runs.
   const stored = useQuery({
     queryKey: ["stored-weather", key],
     queryFn: () => readStoredWeather(key),
-    enabled: !!place,
+    enabled: !!place && !preview,
     staleTime: Infinity,
   });
   const query = useQuery({
-    queryKey: ["weather", key],
-    queryFn: ({ signal }) => fetchWeather(place!, units, signal),
+    queryKey: preview
+      ? ["weather-preview", key, preview.name]
+      : ["weather", key],
+    queryFn: ({ signal }) => fetchWeather(place!, units, signal, !preview),
     enabled: !!place,
     staleTime: (q) => weatherStaleTime(q.state.data, q.state.dataUpdatedAt),
     refetchOnWindowFocus: true,
@@ -158,9 +182,8 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
     refetchIntervalInBackground: false,
   });
   const live = query.data;
-  const showStored = !live && query.isPending && !!stored.data;
+  const showStored = !preview && !live && query.isPending && !!stored.data;
   const data = live?.weather ?? (showStored ? stored.data! : undefined);
-  const route = useLocation();
   // Stored and live data can differ between an empty section and a chart.
   const hasChartRows = Boolean(
     view === "daily" ? data?.daily.length : data?.hourly.length,
@@ -210,26 +233,40 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
   ]);
   if (!place)
     return (
-      <Empty title={t("weather.selectFirst")}>
+      <Empty title={t(catalogOnly ? "public.notFound" : "weather.selectFirst")}>
         <Link to="/locations">{t("weather.manageLocations")}</Link>
       </Empty>
     );
-  async function share() {
-    const publicPlace = PLACES.find(
-      (p) =>
-        p.id === place!.id ||
-        (Math.abs(p.lat - place!.lat) < 0.04 &&
-          Math.abs(p.lon - place!.lon) < 0.04),
-    );
-    if (!publicPlace) {
-      notify(t("weather.share.pickCity"));
-      return;
+  const headerPlace = preview && data ? data.location : place;
+  const locationLabel = [
+    headerPlace.country === "KR" ? t("country.KR") : headerPlace.country,
+    placeArea(headerPlace),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  function viewPath(tab: string) {
+    const params = preview
+      ? new URLSearchParams(search)
+      : new URLSearchParams();
+    if (search.get("from") === "link") params.set("from", "link");
+    if (tab === "air" && view === "air" && linkedPollutant !== "aqi")
+      params.set("pollutant", linkedPollutant);
+    else params.delete("pollutant");
+    if (preview) {
+      params.set("view", tab);
+      return "/loc?" + params;
     }
-    const url = new URL("/place/" + publicPlace.id, location.origin).href;
+    const segment = encodeURIComponent(place!.id);
+    const path =
+      tab === "air" ? `/air/${segment}` : `/weather/${segment}/${tab}`;
+    return params.size ? path + "?" + params : path;
+  }
+  async function share() {
     try {
+      const url = shareLink(place!, view, linkedPollutant);
       if (navigator.share)
         await navigator.share({
-          title: t("weather.share.title", { name: placeName(publicPlace) }),
+          title: t("weather.share.title", { name: placeName(place!) }),
           url,
         });
       else {
@@ -246,9 +283,7 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
       <div className="weather-page-head">
         <div>
           <div className="eyebrow">
-            <MapPin size={13} />{" "}
-            {place.country === "KR" ? t("country.KR") : place.country} ·{" "}
-            {placeArea(place)}
+            <MapPin size={13} /> {locationLabel}
           </div>
           <h1>
             {(() => {
@@ -282,33 +317,42 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
           >
             <Share2 size={18} />
           </button>
-          <Link
-            className="icon-button"
-            aria-label={t("weather.notifications")}
-            to={"/notifications/" + place.id}
-          >
-            <Bell size={18} />
-          </Link>
+          {preview ? (
+            <button
+              className="button primary"
+              type="button"
+              onClick={savePreview}
+            >
+              {t("link.addFavorite")}
+            </button>
+          ) : (
+            <Link
+              className="icon-button"
+              aria-label={t("weather.notifications")}
+              to={"/notifications/" + place.id}
+            >
+              <Bell size={18} />
+            </Link>
+          )}
         </div>
       </div>
       <nav className="view-tabs" aria-label={t("weather.tabs")}>
-        {(["hourly", "daily", "air", "overview"] as const).map((id) => (
-          <button
-            key={id}
-            className={view === id ? "active" : ""}
-            aria-pressed={view === id}
-            onClick={() =>
-              navigate(
-                id === "air"
-                  ? `/air/${place.id}`
-                  : `/weather/${place.id}/${id}`,
-                { state: { keepFocus: true } },
-              )
-            }
-          >
-            {t(`weather.tab.${id}`)}
-          </button>
-        ))}
+        {(["hourly", "daily", "air", "overview"] as const)
+          .filter((id) => !preview || id !== "overview")
+          .map((id) => (
+            <button
+              key={id}
+              className={view === id ? "active" : ""}
+              aria-pressed={view === id}
+              onClick={() =>
+                navigate(viewPath(id), {
+                  state: { linkPlaceKind, keepFocus: true },
+                })
+              }
+            >
+              {t(`weather.tab.${id}`)}
+            </button>
+          ))}
       </nav>
       {!data && query.isPending ? (
         <Loading />
@@ -327,10 +371,24 @@ export default function WeatherPage({ view: fixedView }: { view?: string }) {
             <AirDetails
               key={data.location.id}
               weather={data}
-              initialCode={linkedPollutant}
+              code={linkedPollutant}
+              setCode={(code) => {
+                const params = new URLSearchParams(search);
+                if (code === "aqi") params.delete("pollutant");
+                else params.set("pollutant", code);
+                setSearch(params, {
+                  replace: true,
+                  state: { linkPlaceKind, keepFocus: true },
+                });
+              }}
             />
           ) : (
-            <WeatherDetails weather={data} view={view} />
+            <WeatherDetails
+              weather={data}
+              view={view}
+              airPath={viewPath("air")}
+              linkPlaceKind={linkPlaceKind}
+            />
           )}
           <footer className="data-footer">
             <span>
@@ -395,9 +453,13 @@ function useKoreanSummary(w: Weather) {
 function WeatherDetails({
   weather: w,
   view,
+  airPath,
+  linkPlaceKind,
 }: {
   weather: Weather;
   view: string;
+  airPath: string;
+  linkPlaceKind?: "catalog" | "saved";
 }) {
   const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
   const rankedSummary = useKoreanSummary(w);
@@ -577,7 +639,8 @@ function WeatherDetails({
           aside={
             <Link
               aria-label={t("weather.air.more")}
-              to={"/air/" + w.location.id}
+              to={airPath}
+              state={{ linkPlaceKind }}
             >
               <ArrowUpRight size={18} />
             </Link>
@@ -769,13 +832,14 @@ function AirAttribution({
 }
 function AirDetails({
   weather: w,
-  initialCode,
+  code,
+  setCode,
 }: {
   weather: Weather;
-  initialCode?: Pollutant;
+  code: Pollutant;
+  setCode: (code: Pollutant) => void;
 }) {
-  const [stationIndex, setStationIndex] = useState(0),
-    [code, setCode] = useState<Pollutant>(initialCode ?? "aqi");
+  const [stationIndex, setStationIndex] = useState(0);
   const standard = w.units.airUnit;
   const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
   const station = w.air[stationIndex] ?? w.air[0];

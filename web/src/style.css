@@ -754,6 +754,17 @@ th {
   flex-wrap: wrap;
   border: 1px solid transparent;
 }
+.notice.link-arrival {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.link-arrival a {
+  text-decoration: underline;
+}
+.link-arrival button {
+  color: inherit;
+  padding: 0.25rem 0.5rem;
+}
 .notice.demo {
   background: var(--tw-accent-subtle);
   color: var(--tw-text-secondary);
