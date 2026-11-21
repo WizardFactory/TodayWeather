@@ -745,7 +745,7 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
             }
             // Validate native Celsius min/max before conversion, matching server1's midForecastPolicy.
             let row_date = to_str(&v.get("date"));
-            let valid_range = cx.version == "v000903"
+            let valid_range = super::js::strict_eq(&cx.r("version"), &V::s("v000903"))
                 && range_date.as_deref() == Some(row_date.as_str())
                 && valid_celsius_range(&v.get("taMin"), &v.get("taMax"));
             let extreme = valid_range
@@ -1372,7 +1372,7 @@ fn ranked_kr_summary(cx: &Cx<'_>, current: &V, units: &V, l: Locale) -> Option<(
     };
 
     let lookup = cx.solar_terms?;
-    if cx.version != "v000903" || !cx.r("gCoord").truthy() {
+    if !super::js::strict_eq(&cx.r("version"), &V::s("v000903")) || !cx.r("gCoord").truthy() {
         return None;
     }
     let region = to_str(&cx.param("region"));

@@ -171,7 +171,7 @@ impl DirectRoutes {
                     &headers,
                     self.native(request).await,
                     self.kma.now_ms(),
-                    vary_locale,
+                    Some(vary_locale),
                 );
             }
         }
@@ -239,14 +239,14 @@ pub fn express(method: &Method, request: &HeaderMap, outcome: Outcome) -> Respon
     express_at(method, request, outcome, crate::narrative::now_ms())
 }
 pub fn express_at(method: &Method, request: &HeaderMap, outcome: Outcome, now_ms: i64) -> Response {
-    express_with_vary(method, request, outcome, now_ms, false)
+    express_with_vary(method, request, outcome, now_ms, None)
 }
 fn express_with_vary(
     method: &Method,
     request: &HeaderMap,
     outcome: Outcome,
     now_ms: i64,
-    vary_locale: bool,
+    vary_locale: Option<bool>,
 ) -> Response {
     let undefined_head = *method == Method::HEAD && matches!(&outcome, Outcome::Undefined);
     // finalhandler 0.4.1 writes directly (no res.send ETag), and sets nosniff.
@@ -272,7 +272,8 @@ fn express_with_vary(
     let narrative_age = success
         .then(|| crate::narrative::cache_age(&body, None, now_ms))
         .flatten();
-    let solar_age = success
+    let allow_v000903 = vary_locale != Some(false);
+    let solar_age = (success && allow_v000903)
         .then(|| crate::solar_terms::summary_cache_age(&body, narrative_age.or(Some(300)), now_ms))
         .flatten();
     let not_modified = success && fresh(request, tag.as_deref());
@@ -309,7 +310,7 @@ fn express_with_vary(
             HeaderValue::from_str(&format!("max-age={age}")).expect("ASCII cache age"),
         );
     }
-    if success && (vary_locale || solar_age.is_some()) {
+    if success && (vary_locale == Some(true) || (vary_locale.is_none() && solar_age.is_some())) {
         h.insert("vary", HeaderValue::from_static("Accept-Language, Cookie"));
     }
     if finalhandler {
