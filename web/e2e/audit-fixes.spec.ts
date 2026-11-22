@@ -256,7 +256,7 @@ test("an overseas 501 text response shows Korean guidance without retrying (G2)"
   expect(calls).toBe(1);
 });
 
-test("sharing uses public city links only and the link opens the place (G7)", async ({
+test("sharing uses canonical city and coordinate links (G7)", async ({
   page,
   context,
 }) => {
@@ -267,8 +267,8 @@ test("sharing uses public city links only and the link opens the place (G7)", as
   await page.goto("/weather/seoul/hourly");
   await page.getByRole("button", { name: "지역 공유" }).click();
   await expect(page.locator(".toast")).toContainText("링크를 복사했습니다");
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(
-    /\/place\/seoul$/,
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "https://link.todayweather.ai/place/seoul",
   );
   await page.goto("/place/seoul");
   await expect(
@@ -278,7 +278,15 @@ test("sharing uses public city links only and the link opens the place (G7)", as
   await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
   await page.goto("/weather/p_33.1_125.1/hourly");
   await page.getByRole("button", { name: "지역 공유" }).click();
-  await expect(page.locator(".toast")).toContainText("추천 도시");
+  await expect(page.locator(".toast")).toContainText("링크를 복사했습니다");
+  const coordinateLink = new URL(
+    await page.evaluate(() => navigator.clipboard.readText()),
+  );
+  expect(coordinateLink.origin + coordinateLink.pathname).toBe(
+    "https://link.todayweather.ai/loc",
+  );
+  expect(coordinateLink.searchParams.get("lat")).toBe("33.1");
+  expect(coordinateLink.searchParams.get("lon")).toBe("125.1");
 });
 
 test("unavailable browser storage is explained and weather still loads (G8)", async ({

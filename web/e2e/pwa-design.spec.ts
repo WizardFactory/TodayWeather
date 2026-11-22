@@ -152,14 +152,15 @@ test("chart route navigation scrolls and focuses on click, direct load and histo
 }) => {
   await page.setViewportSize({ width: 402, height: 874 });
   await page.goto("/weather/seoul/hourly");
-  const hourly = page.locator(".hourly-chart"),
+  const hero = page.locator(".hero-card"),
     daily = page.locator(".daily-chart");
-  await expect(hourly).toBeFocused();
+  await expect(hero).toBeInViewport();
   await page.getByRole("button", { name: "일별", exact: true }).click();
   await expect(daily).toBeFocused();
   await expect(daily).toBeInViewport();
   await page.goBack();
-  await expect(hourly).toBeFocused();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(hero).toBeInViewport();
   await page.goForward();
   await expect(daily).toBeFocused();
   await page.reload();
@@ -511,4 +512,418 @@ for (const width of [320, 402])
         );
       });
     expect(windCollisions).toEqual([]);
+  });
+
+test("hourly entry keeps Hero visible and error Retry restores focus to main without hiding Hero (#3115)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  let fail = false;
+  await page.route(API + "/weather/**", (route) =>
+    fail
+      ? route.fulfill({ status: 501, body: "Fixture unavailable" })
+      : route.fulfill({ json: dailyFixture() }),
+  );
+  // City selection from "/" lands on /weather/seoul/hourly with Hero visible at top.
+  await page.goto("/");
+  await page.getByRole("button", { name: /서울/ }).first().click();
+  await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
+  const hero = page.locator(".hero-card");
+  await expect(hero).toBeVisible();
+  await expect(hero).toBeInViewport();
+  const scrollY = await page.evaluate(() => window.scrollY);
+  expect(scrollY).toBe(0);
+
+  // Direct load error -> Retry on an uncached hourly route focuses #main-content and keeps Hero visible.
+  fail = true;
+  await page.goto("/weather/busan/hourly");
+  await expect(page.getByRole("alert")).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(hero).toBeVisible();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(hero).toBeInViewport();
+
+  // Overview route also keeps Hero visible at top.
+  await page.goto("/weather/seoul/overview");
+  await expect(hero).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Initial PWA launch at "/" with a saved city redirects without hijacking focus (PR2-O4).
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
+  await expect(hero).toBeInViewport();
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
+});
+
+test("coordinate preview /loc scrolls back to top when switching from daily to hourly (#3115)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(API + "/weather/**", (route) =>
+    route.fulfill({ json: dailyFixture() }),
+  );
+  await page.goto("/loc?lat=36.123&lon=128.456&name=PreviewCity&view=hourly");
+  const hero = page.locator(".hero-card");
+  await expect(hero).toBeInViewport();
+
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(page).toHaveURL(/view=daily/);
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  await expect(page.locator(".daily-chart")).toBeInViewport();
+
+  // History Back (POP) from daily -> hourly returns to top and focuses #main-content.
+  await page.goBack();
+  await expect(page).toHaveURL(/view=hourly/);
+  await expect(hero).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator("#main-content")).toBeFocused();
+
+  // Tab click from daily -> hourly also returns to top.
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  await page.getByRole("button", { name: "시간별", exact: true }).click();
+  await expect(page).toHaveURL(/view=hourly/);
+  await expect(hero).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test("precipitation forecast section shows upcoming rows instead of past days (#3115)", async ({
+  page,
+}) => {
+  const raw = structuredClone(fixture.response) as any;
+  raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: 20 };
+  raw.short = [
+    { ...raw.current, date: "20260921", time: "0000", t3h: 15, r06: 0, pop: 10 },
+    { ...raw.current, date: "20260922", time: "1200", t3h: 17, r06: 0, pop: 15 },
+    { ...raw.current, date: "20260923", time: "0900", t3h: 20, r06: 1, pop: 30 },
+    { ...raw.current, date: "20260923", time: "1200", t3h: 22, r06: 3, pop: 60 },
+  ];
+  raw.shortest = [];
+  raw.midData.dailyData = [
+    { ...raw.midData.dailyData[0], date: "20260921", time: "0000", r06: 0, pop: 0 },
+    { ...raw.midData.dailyData[0], date: "20260922", time: "0000", r06: 0, pop: 0 },
+    { ...raw.midData.dailyData[0], date: "20260923", time: "0000", r06: 2, pop: 40 },
+    { ...raw.midData.dailyData[0], date: "20260924", time: "0000", r06: 8, pop: 70 },
+  ];
+  await page.route(API + "/weather/**", (route) => route.fulfill({ json: raw }));
+  await page.goto("/weather/seoul/hourly");
+  const precipPanel = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
+  });
+  await expect(precipPanel).toContainText("오늘");
+  await expect(precipPanel).not.toContainText("그제");
+  await expect(precipPanel).not.toContainText("어제");
+
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(precipPanel).toContainText("오늘");
+  await expect(precipPanel).toContainText("내일");
+  await expect(precipPanel).not.toContainText("그제");
+  await expect(precipPanel).not.toContainText("어제");
+});
+
+test("sidebar keeps single aria-current across routes, removes live-dot, normalizes -0, and aligns air bars (#3116)", async ({
+  page,
+}) => {
+  const raw = structuredClone(fixture.response) as any;
+  raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: -0.04 };
+  if (raw.airInfoList?.[0]?.pollutants?.aqi) {
+    raw.airInfoList[0].pollutants.pm10 = structuredClone(
+      raw.airInfoList[0].pollutants.aqi,
+    );
+  }
+  await page.route(API + "/weather/**", (route) => route.fulfill({ json: raw }));
+
+  // /start without saved places marks only 날씨 active (never both 날씨 & 미세먼지).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/start");
+  const activeLinks = page.locator('.sidebar nav [aria-current="page"]');
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+
+  // /weather/seoul/hourly: single active 날씨, no .live-dot, -0.04 formatted as 0° (not -0°).
+  await page.goto("/weather/seoul/hourly");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+  await expect(page.locator(".live-dot")).toHaveCount(0);
+  await expect(page.locator(".hero-card .temperature")).toHaveText("0°C");
+
+  // /weather/seoul/daily still marks 날씨 active.
+  await page.goto("/weather/seoul/daily");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+
+  // /air/seoul marks only 미세먼지 active, keeps bar labels single-line, and centers observed bar across viewports.
+  for (const vp of [
+    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page.goto("/air/seoul");
+    await expect(activeLinks).toHaveCount(1);
+    await expect(activeLinks).toContainText("미세먼지");
+
+    const checkCentered = () =>
+      page.locator(".bar-chart").evaluate((el) => {
+        const sb = el.getBoundingClientRect();
+        const bars = [...el.querySelectorAll(":scope > div")];
+        const labels = [...el.querySelectorAll("small")].filter((s) =>
+          s.textContent?.trim(),
+        );
+        const wrapped = labels.some((s) => {
+          const lh = parseFloat(getComputedStyle(s).lineHeight) || 18;
+          return s.getBoundingClientRect().height > lh * 1.6;
+        });
+        const obs = bars[12]!.getBoundingClientRect();
+        const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+        const clamped = el.scrollLeft <= 1 || el.scrollLeft >= maxScroll - 1;
+        const centerDiff = Math.abs(
+          (obs.left + obs.right) / 2 - (sb.left + sb.right) / 2,
+        );
+        return {
+          count: bars.length,
+          wrapped,
+          inView: obs.left >= sb.left - 2 && obs.right <= sb.right + 2,
+          clamped,
+          centerDiff,
+        };
+      });
+
+    const initial = await checkCentered();
+    expect(initial.count).toBe(24);
+    expect(initial.wrapped).toBe(false);
+    expect(initial.inView).toBe(true);
+    if (!initial.clamped) expect(initial.centerDiff).toBeLessThanOrEqual(2);
+
+    if (vp.width === 768) {
+      // Scrolling away then switching pollutant re-centers the observed bar cleanly.
+      await page.locator(".bar-chart").evaluate((el) => {
+        el.scrollLeft = 0;
+      });
+      const pm10Radio = page.getByRole("radio", { name: /^미세먼지/ });
+      await pm10Radio.click();
+      await expect(pm10Radio).toHaveAttribute("aria-checked", "true");
+      const afterSwitch = await checkCentered();
+      expect(afterSwitch.inView).toBe(true);
+      if (!afterSwitch.clamped)
+        expect(afterSwitch.centerDiff).toBeLessThanOrEqual(2);
+    }
+  }
+});
+
+test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const raw: any = structuredClone(fixture.response);
+  const p = raw.current;
+  raw.short = Array.from({ length: 32 }, (_, i) => {
+    const day = 21 + Math.floor((i * 3) / 24);
+    const hour = (i * 3) % 24;
+    return {
+      ...p,
+      date: `202609${String(day).padStart(2, "0")}`,
+      time: String(hour * 100).padStart(4, "0"),
+      t3h: 10 + (i % 8),
+      t1h: undefined,
+      pop: 0,
+      vec: 270,
+      wsd: 3.2,
+      r06: 0,
+    };
+  });
+  raw.shortest = Array.from({ length: 6 }, (_, h) => ({
+    ...p,
+    date: "20260923",
+    time: String(h * 100).padStart(4, "0"),
+    t1h: 12 + h,
+    pop: 0,
+    vec: 300,
+    wsd: 2.1,
+    rn1: 0,
+  }));
+  // Off-hour observation (00:15) with no pop should borrow 0% and not blow up chart width.
+  raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
+  let fetchCount = 0;
+  await page.route(API + "/weather/**", (r) => {
+    fetchCount++;
+    const payload = structuredClone(raw);
+    if (fetchCount > 1) {
+      payload.current.stnDateTime = "2026.09.23.00:25";
+    }
+    return r.fulfill({ json: payload });
+  });
+  await page.goto("/weather/seoul/hourly");
+  const scroll = page.locator(".hourly-chart");
+  await expect(scroll).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const metrics = await scroll.evaluate((el) => ({
+    scrollW: el.scrollWidth,
+    clientW: el.clientWidth,
+    scrollLeft: el.scrollLeft,
+  }));
+  expect(metrics.scrollW).toBeLessThan(5000);
+  expect(metrics.scrollW).toBeGreaterThan(metrics.clientW);
+
+  // Current off-hour column borrows rain probability (0%, not —).
+  await expect(
+    page.locator(".hourly-columns .current-column .chart-probability"),
+  ).toHaveText("0%");
+
+  // Pinned Y-axis ticks stay visible inside the chart wrapper even after scrolling.
+  await scroll.evaluate((el) => {
+    el.scrollLeft += 400;
+  });
+  const ticksVisible = await page.locator(".chart-plot-wrap").evaluate((wrap) => {
+    const wb = wrap.getBoundingClientRect();
+    const ticks = [...wrap.querySelectorAll(".chart-y-tick")];
+    return (
+      ticks.length === 3 &&
+      ticks.every((t) => {
+        const r = t.getBoundingClientRect();
+        return r.left >= wb.left - 1 && r.right <= wb.right + 1 && r.width > 0;
+      })
+    );
+  });
+  expect(ticksVisible).toBe(true);
+
+  // Remember a column currently in viewport before expanding wind/humidity.
+  const visibleBefore = await scroll.evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    const cols = [...el.querySelectorAll(".hourly-columns .chart-column")];
+    return cols.findIndex((c) => {
+      const r = c.getBoundingClientRect();
+      return r.left >= sb.left + 48 && r.right <= sb.right - 10;
+    });
+  });
+  expect(visibleBefore).toBeGreaterThanOrEqual(0);
+
+  await page.getByRole("button", { name: "바람·습도 보기", exact: true }).click();
+  await expect(page.locator(".chart-extras")).toBeVisible();
+
+  // The previously visible column remains inside the scroll viewport after expansion.
+  const leftAfterExpand = await scroll.evaluate((el, idx) => {
+    const sb = el.getBoundingClientRect();
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
+    const r = col.getBoundingClientRect();
+    return { inView: r.right > sb.left && r.left < sb.right, left: r.left };
+  }, visibleBefore);
+  expect(leftAfterExpand.inView).toBe(true);
+
+  // Refetch with updated observedAt preserves the user's scrolled anchor position.
+  await page.getByRole("button", { name: "새로고침" }).click();
+  await expect(page.locator(".data-footer")).toContainText("00:25");
+  const leftAfterRefetch = await scroll.evaluate((el, idx) => {
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
+    return col.getBoundingClientRect().left;
+  }, visibleBefore);
+  expect(Math.abs(leftAfterRefetch - leftAfterExpand.left)).toBeLessThan(20);
+
+  // Wind direction arrows keep natural size (not stretched to 100% column width).
+  const maxArrowWidth = await page
+    .locator(".chart-extras .chart-wind-direction svg")
+    .evaluateAll((els) =>
+      Math.max(...els.map((e) => e.getBoundingClientRect().width)),
+    );
+  expect(maxArrowWidth).toBeLessThan(30);
+
+  // Clicking an SVG hit target (without force) updates data-cursor.
+  const targetIdx = Math.max(0, visibleBefore);
+  const hourlyHit = scroll.locator("svg g .chart-hit").nth(targetIdx);
+  await hourlyHit.scrollIntoViewIfNeeded();
+  await hourlyHit.click();
+  await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
+
+  // Forced-colors (including dark high-contrast) resolves dot value fills to Canvas (PR1-R1).
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ forcedColors: "active", colorScheme });
+    const forcedFills = await scroll.evaluate((el) => {
+      const svg = el.querySelector("svg")!;
+      const probe = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      probe.style.fill = "Canvas";
+      svg.appendChild(probe);
+      const canvasBg = getComputedStyle(probe).fill;
+      probe.remove();
+      const canvasText = getComputedStyle(document.body).color;
+      const pt = el.querySelector(".today-point");
+      const todayTxt = el.querySelector(".today-value");
+      const yestTxt = el.querySelector(".yesterday-value");
+      return {
+        canvasBg,
+        canvasText,
+        pt: pt ? getComputedStyle(pt).fill : "",
+        todayTxt: todayTxt ? getComputedStyle(todayTxt).fill : "",
+        yestTxt: yestTxt ? getComputedStyle(yestTxt).fill : "",
+      };
+    });
+    expect(forcedFills.canvasBg).not.toBe(forcedFills.canvasText);
+    expect(forcedFills.pt).toBe(forcedFills.canvasText);
+    expect(forcedFills.todayTxt).toBe(forcedFills.canvasBg);
+    expect(forcedFills.yestTxt).toBe(forcedFills.canvasBg);
+  }
+});
+
+for (const lang of ["ko", "fr"] as const)
+  test(`daily chart keeps Today unclipped at 390px (${lang}, 100% & 130%) and updates cursor on SVG bar click (#3114)`, async ({
+    page,
+  }) => {
+    await page.addInitScript((language) => {
+      localStorage.setItem(
+        "tw.web.v1.preferences",
+        JSON.stringify({
+          version: 1,
+          places: [],
+          selectedId: null,
+          settings: { startup: "hourly", language },
+        }),
+      );
+    }, lang);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const raw: any = structuredClone(fixture.response);
+    raw.current = { ...raw.current, date: "20260922", time: "0900", t1h: 20 };
+    raw.midData.dailyData = Array.from({ length: 17 }, (_, i) => ({
+      ...raw.midData.dailyData[0],
+      date: `202609${String(15 + i).padStart(2, "0")}`,
+      time: "0000",
+      tmn: 10 + (i % 5),
+      tmx: 22 + (i % 5),
+      skyAm: "sun",
+      skyPm: i === 7 ? "rain" : "sun",
+      pop: i === 8 ? 60 : 0,
+      r06: i === 8 ? 14.5 : 0,
+    }));
+    await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+    await page.goto("/weather/seoul/daily");
+    const daily = page.locator(".daily-chart");
+    await expect(daily).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    for (const scale of ["1", "1.3"]) {
+      await page.evaluate((s) => {
+        document.documentElement.style.setProperty("--tw-text-scale", s);
+        window.dispatchEvent(new Event("resize"));
+      }, scale);
+      await expect
+        .poll(async () =>
+          daily.evaluate((el) => {
+            const sb = el.getBoundingClientRect();
+            const today = el
+              .querySelector(".today-column")!
+              .getBoundingClientRect();
+            return (
+              today.left >= sb.left - 2 && today.right <= sb.right + 2
+            );
+          }),
+        )
+        .toBe(true);
+    }
+
+    // Scroll Tomorrow (index 8) into view and click its SVG group without force.
+    const tomorrowGroup = daily.locator("svg > g").nth(8);
+    await tomorrowGroup.scrollIntoViewIfNeeded();
+    await tomorrowGroup.click();
+    await expect(daily).toHaveAttribute("data-cursor", "8");
+    await expect(page.locator(".daily-chart-panel .cursor-readout")).toContainText("60%");
   });

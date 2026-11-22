@@ -1,0 +1,11 @@
+{
+  "task": "CiMergeBase3090",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3090",
+  "scope": "Compare PR placement against the first parent of the verified GitHub test merge checkout.",
+  "server2_paths": [
+    "server2/config/tasks/CiMergeBase3090.json",
+    "server2/tools/ci.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": []
+}

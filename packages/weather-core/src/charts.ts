@@ -22,6 +22,119 @@ export type HourRow = {
   yesterday: Point | null;
   current: boolean;
 };
+const HOUR_MS = 3_600_000;
+const MAX_CONNECTED_GAP_MS = 3 * HOUR_MS;
+
+function mergeCurrentPoint(
+  existing: Point | undefined,
+  current: Point,
+  supplied: Map<number, Point>,
+  times: number[],
+  now: number,
+): Point {
+  if (existing) {
+    return {
+      ...existing,
+      at: current.at,
+      temperature: current.temperature,
+      low: current.low ?? existing.low,
+      high: current.high ?? existing.high,
+      humidity: current.humidity ?? existing.humidity,
+      wind: current.wind ?? existing.wind,
+      windDirection: current.windDirection || existing.windDirection,
+      windDegrees: current.windDegrees ?? existing.windDegrees,
+      pressure: current.pressure ?? existing.pressure,
+      visibility: current.visibility ?? existing.visibility,
+      rainProbability: current.rainProbability ?? existing.rainProbability,
+      feelsLike: current.feelsLike ?? existing.feelsLike,
+      icon: current.icon || existing.icon,
+      iconPm: current.iconPm || existing.iconPm,
+      description: current.description || existing.description,
+      sunrise: current.sunrise || existing.sunrise,
+      sunset: current.sunset || existing.sunset,
+      uv: current.uv || existing.uv,
+      discomfort: current.discomfort || existing.discomfort,
+      ...(current.precipitation !== null
+        ? {
+            precipitation: current.precipitation,
+            precipitationHours: current.precipitationHours,
+            precipitationBasis: current.precipitationBasis,
+            precipitationApprox: current.precipitationApprox,
+          }
+        : {}),
+      ...(current.snowfall !== null
+        ? {
+            snowfall: current.snowfall,
+            snowfallHours: current.snowfallHours,
+            snowfallBasis: current.snowfallBasis,
+            snowfallApprox: current.snowfallApprox,
+          }
+        : {}),
+      ...(current.uvIndex !== undefined ? { uvIndex: current.uvIndex } : {}),
+      ...(current.pollenOak !== undefined ? { pollenOak: current.pollenOak } : {}),
+      ...(current.pollenPine !== undefined ? { pollenPine: current.pollenPine } : {}),
+      ...(current.pollenWeeds !== undefined ? { pollenWeeds: current.pollenWeeds } : {}),
+    };
+  }
+  if (current.rainProbability !== null) return current;
+  // Borrow rainProbability from the enclosing supplied forecast slot within 3h.
+  let borrowed: number | null = null;
+  for (let i = times.length - 1; i >= 0; i--) {
+    const t = times[i];
+    if (t <= now && now - t <= MAX_CONNECTED_GAP_MS) {
+      const p = supplied.get(t);
+      if (p && p.rainProbability !== null) {
+        borrowed = p.rainProbability;
+        break;
+      }
+    }
+  }
+  if (borrowed === null) {
+    for (let i = 0; i < times.length; i++) {
+      const t = times[i];
+      if (t > now && t - now <= MAX_CONNECTED_GAP_MS) {
+        const p = supplied.get(t);
+        if (p && p.rainProbability !== null) {
+          borrowed = p.rainProbability;
+          break;
+        }
+      }
+    }
+  }
+  return borrowed === null ? current : { ...current, rainProbability: borrowed };
+}
+
+/** Bounded chronological x-coordinates for mixed 1h/3h/off-hour hourly timelines. */
+export function hourlyXPositions(
+  times: number[],
+  column: number,
+  pad: number,
+  viewport: number,
+): { xs: number[]; width: number; gapBefore: boolean[] } {
+  const n = times.length;
+  if (!n) return { xs: [], width: viewport, gapBefore: [] };
+  const xs = new Array<number>(n);
+  const gapBefore = new Array<boolean>(n).fill(false);
+  xs[0] = pad;
+  for (let i = 1; i < n; i++) {
+    const dt = Math.max(0, times[i] - times[i - 1]);
+    const isGap = dt > MAX_CONNECTED_GAP_MS;
+    gapBefore[i] = isGap;
+    const factor =
+      dt <= HOUR_MS
+        ? 1
+        : dt <= MAX_CONNECTED_GAP_MS
+          ? 1 + 0.35 * ((dt - HOUR_MS) / (2 * HOUR_MS))
+          : 1.5;
+    xs[i] = xs[i - 1] + column * factor;
+  }
+  return {
+    xs,
+    width: Math.max(viewport, xs[n - 1] + pad),
+    gapBefore,
+  };
+}
+
 export function hourlyChart(
   weather: Pick<Weather, "hourly" | "current" | "yesterday">,
 ) {
@@ -37,10 +150,10 @@ export function hourlyChart(
   const inRange =
     times.length > 0 && now >= times[0] && now <= times[times.length - 1];
   if (inRange && finite(weather.current.temperature))
-    timeline.set(now, {
-      ...(timeline.get(now) ?? weather.current),
-      ...weather.current,
-    });
+    timeline.set(
+      now,
+      mergeCurrentPoint(timeline.get(now), weather.current, supplied, times, now),
+    );
   const yesterdayTime = weather.yesterday
     ? wallTime(weather.yesterday.at)
     : NaN;
@@ -107,10 +220,12 @@ export function linePath(
   values: (number | null | undefined)[],
   x: (i: number) => number,
   y: (value: number) => number,
+  breakBefore?: (i: number) => boolean,
 ): string {
   let connected = false;
   return values
     .map((value, i) => {
+      if (breakBefore?.(i)) connected = false;
       if (!finite(value)) {
         connected = false;
         return "";

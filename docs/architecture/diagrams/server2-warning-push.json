@@ -13,7 +13,7 @@
     ],
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "bb774125a0087aa686075568cb3a453c5d8adfdd",
+      "revision": "8ce3dbe5f8534d72bded7cfb2a92537a58d5940a",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -49,12 +49,17 @@
       "id": "worker",
       "type": "backend",
       "label": "Warning worker",
-      "sublabel": "library, not started",
+      "sublabel": "selects eligible alerts",
       "sources": [
         {
           "path": "server2/src/push/deliver/warnings.rs",
           "line": 325,
           "end_line": 591
+        },
+        {
+          "path": "server2/src/warnings/zones.rs",
+          "line": 213,
+          "end_line": 257
         }
       ]
     },
@@ -110,8 +115,7 @@
       "to": "s3",
       "y": 170,
       "label": "Publish raw + catalog",
-      "variant": "security",
-      "note": "Every source page/day must succeed before the feed hook."
+      "variant": "security"
     },
     {
       "id": "warning-step-1",
@@ -119,8 +123,7 @@
       "to": "feed",
       "y": 206,
       "label": "Pass persisted rows",
-      "variant": "default",
-      "note": "S18b-3 hook; first durable feed is a silent baseline."
+      "variant": "default"
     },
     {
       "id": "warning-step-2",
@@ -128,8 +131,7 @@
       "to": "s3",
       "y": 242,
       "label": "Events then CAS head",
-      "variant": "security",
-      "note": "An event without an acknowledged head is not visible."
+      "variant": "security"
     },
     {
       "id": "warning-step-3",
@@ -137,8 +139,7 @@
       "to": "feed",
       "y": 278,
       "label": "Read new feed",
-      "variant": "default",
-      "note": "First worker read is silent; no startup replay."
+      "variant": "default"
     },
     {
       "id": "warning-step-4",
@@ -146,8 +147,7 @@
       "to": "state",
       "y": 314,
       "label": "Select eligible alerts",
-      "variant": "default",
-      "note": "Zone + inclusive time window; deduplicate package/token."
+      "variant": "default"
     },
     {
       "id": "warning-step-5",
@@ -155,8 +155,7 @@
       "to": "s3",
       "y": 350,
       "label": "Claim endpoint",
-      "variant": "security",
-      "note": "Stop if claim is unavailable or already taken."
+      "variant": "security"
     },
     {
       "id": "warning-auth",
@@ -164,7 +163,6 @@
       "to": "fcm",
       "label": "Prepare OAuth",
       "variant": "default",
-      "note": "No FCM POST before final guard.",
       "y": 386
     },
     {
@@ -173,7 +171,6 @@
       "to": "state",
       "label": "Recheck durable state",
       "variant": "security",
-      "note": "Catch up S3 registration journal and read active S12 zones; error/timeout/expiry stops POST.",
       "y": 422
     },
     {
@@ -182,8 +179,7 @@
       "to": "fcm",
       "y": 458,
       "label": "Submit once",
-      "variant": "emphasis",
-      "note": "Current active warning only; no hidden retry."
+      "variant": "emphasis"
     },
     {
       "id": "warning-step-7",
@@ -191,8 +187,7 @@
       "to": "worker",
       "y": 494,
       "label": "Outcome or unknown",
-      "variant": "return",
-      "note": "A lost response never authorizes a second submission."
+      "variant": "return"
     },
     {
       "id": "warning-step-8",
@@ -200,25 +195,26 @@
       "to": "s3",
       "y": 530,
       "label": "Record sanitized result",
-      "variant": "dashed",
-      "note": "Claim survives missing result, cancellation and restart."
+      "variant": "dashed"
     }
   ],
   "cards": [
     {
       "dot": "emerald",
-      "title": "Legacy source contract",
+      "title": "Source and district selection",
       "items": [
-        "First durable feed is silent; later new source events must be less than five minutes old.",
-        "Release, expiry, active announcement, alert time window and zone govern selection."
+        "The collector publishes every source page and its catalog before the feed hook. Only an acknowledged head makes events visible.",
+        "The first feed and worker reads are silent. Later events must be less than five minutes old.",
+        "For 전남광주통합특별시, resolve Gwangju and Jeonnam by district and skip unmapped districts. Apply the inclusive alert window and deduplicate package/token."
       ]
     },
     {
       "dot": "rose",
-      "title": "One-shot implementation",
+      "title": "One-shot delivery",
       "items": [
-        "Endpoint claim before one submission; failed or unknown work is never retried.",
-        "Startup baseline consumes old feed without broadcasting or resuming delivery."
+        "Stop when an endpoint claim is unavailable or already taken. Prepare OAuth before the final guard.",
+        "Check the latest registration journal and active warning state before FCM POST. Error, timeout, expiry or release prevents the send.",
+        "A lost response never authorizes a resend. The claim survives missing results, cancellation and restart."
       ]
     },
     {
