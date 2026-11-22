@@ -154,9 +154,10 @@ def write_manifest(args, stage, files, display, density, release):
         "screens": ["comparison", "expanded hourly weather", "daily forecast", "air quality",
                     "home-screen widgets (Play: forecast and clock, then current weather and air quality)"],
         "devices": {
-            "android": f"Dedicated Android {release} emulator, display {display[0]}x{display[1]} at density {density} for the run",
-            "ios_iphone": "Dedicated iPhone 17 Pro Max simulator, iOS 26.5",
-            "ios_ipad": "Dedicated iPad Pro 13-inch (M5) simulator, iOS 26.5",
+            "android": f"Disposable Android {release} AVD created by the run, display {display[0]}x{display[1]} at "
+                       f"density {density}, freshly booted in each locale's system language",
+            "ios_iphone": "iPhone 17 Pro Max simulator created by the run (Korean), iOS 26.5",
+            "ios_ipad": "iPad Pro 13-inch (M5) simulator created by the run (Korean), iOS 26.5",
         },
         "composition": {
             "android": f"HTML marketing frame (screenshot-frame.html) around the actual screen with the status bar "

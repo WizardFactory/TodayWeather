@@ -93,7 +93,7 @@
  },
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "32984d522c0718cac391eb54b7b8bdb98bc5327c2c7b2848157cb141acb469a0",
-  "ios/tools/manual/run-manual-capture.sh": "cad4bce6f0185ba2912bac4301bb7774539fd9f7355cf432bd100ddf45a37f94",
+  "ios/tools/manual/run-manual-capture.sh": "5712ca11bbaed8e1eb82e91dd7630e78a4d2d60263cb0cbbdb97171a94385c92",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
  },
  "manual_sha256": "974ed6a8bb04a8600fe83b8e0edc2e4f37b8d4edbc8c4e058c5c15f24ed68fe2",
@@ -113,6 +113,11 @@
    "date": "2026-11-22",
    "source": "ios/tools/manual/run-manual-capture.sh",
    "change": "after the capture (review finding CODEX-3124-15) --store runs on a disposable clone of the given simulator; the manual mode is unchanged, so the manual screenshots stand"
+  },
+  {
+   "date": "2026-11-22",
+   "source": "ios/tools/manual/run-manual-capture.sh",
+   "change": "after the capture (review round 7) --store creates its own simulator from the given one's device type and runtime and deletes it on exit, replacing the clone; the manual mode is unchanged, so the manual screenshots stand"
   }
  ]
 }
