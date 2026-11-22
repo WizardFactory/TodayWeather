@@ -152,14 +152,15 @@ test("chart route navigation scrolls and focuses on click, direct load and histo
 }) => {
   await page.setViewportSize({ width: 402, height: 874 });
   await page.goto("/weather/seoul/hourly");
-  const hourly = page.locator(".hourly-chart"),
+  const hero = page.locator(".hero-card"),
     daily = page.locator(".daily-chart");
-  await expect(hourly).toBeFocused();
+  await expect(hero).toBeInViewport();
   await page.getByRole("button", { name: "일별", exact: true }).click();
   await expect(daily).toBeFocused();
   await expect(daily).toBeInViewport();
   await page.goBack();
-  await expect(hourly).toBeFocused();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(hero).toBeInViewport();
   await page.goForward();
   await expect(daily).toBeFocused();
   await page.reload();
@@ -512,6 +513,114 @@ for (const width of [320, 402])
       });
     expect(windCollisions).toEqual([]);
   });
+
+test("hourly entry keeps Hero visible and error Retry restores focus to main without hiding Hero (#3115)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  let fail = false;
+  await page.route(API + "/weather/**", (route) =>
+    fail
+      ? route.fulfill({ status: 501, body: "Fixture unavailable" })
+      : route.fulfill({ json: dailyFixture() }),
+  );
+  // City selection from "/" lands on /weather/seoul/hourly with Hero visible at top.
+  await page.goto("/");
+  await page.getByRole("button", { name: /서울/ }).first().click();
+  await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
+  const hero = page.locator(".hero-card");
+  await expect(hero).toBeVisible();
+  await expect(hero).toBeInViewport();
+  const scrollY = await page.evaluate(() => window.scrollY);
+  expect(scrollY).toBe(0);
+
+  // Direct load error -> Retry on an uncached hourly route focuses #main-content and keeps Hero visible.
+  fail = true;
+  await page.goto("/weather/busan/hourly");
+  await expect(page.getByRole("alert")).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(hero).toBeVisible();
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(hero).toBeInViewport();
+
+  // Overview route also keeps Hero visible at top.
+  await page.goto("/weather/seoul/overview");
+  await expect(hero).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // Initial PWA launch at "/" with a saved city redirects without hijacking focus (PR2-O4).
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/weather\/seoul\/hourly$/);
+  await expect(hero).toBeInViewport();
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
+});
+
+test("coordinate preview /loc scrolls back to top when switching from daily to hourly (#3115)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(API + "/weather/**", (route) =>
+    route.fulfill({ json: dailyFixture() }),
+  );
+  await page.goto("/loc?lat=36.123&lon=128.456&name=PreviewCity&view=hourly");
+  const hero = page.locator(".hero-card");
+  await expect(hero).toBeInViewport();
+
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(page).toHaveURL(/view=daily/);
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  await expect(page.locator(".daily-chart")).toBeInViewport();
+
+  // History Back (POP) from daily -> hourly returns to top and focuses #main-content.
+  await page.goBack();
+  await expect(page).toHaveURL(/view=hourly/);
+  await expect(hero).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator("#main-content")).toBeFocused();
+
+  // Tab click from daily -> hourly also returns to top.
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(page.locator(".daily-chart")).toBeFocused();
+  await page.getByRole("button", { name: "시간별", exact: true }).click();
+  await expect(page).toHaveURL(/view=hourly/);
+  await expect(hero).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test("precipitation forecast section shows upcoming rows instead of past days (#3115)", async ({
+  page,
+}) => {
+  const raw = structuredClone(fixture.response) as any;
+  raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: 20 };
+  raw.short = [
+    { ...raw.current, date: "20260921", time: "0000", t3h: 15, r06: 0, pop: 10 },
+    { ...raw.current, date: "20260922", time: "1200", t3h: 17, r06: 0, pop: 15 },
+    { ...raw.current, date: "20260923", time: "0900", t3h: 20, r06: 1, pop: 30 },
+    { ...raw.current, date: "20260923", time: "1200", t3h: 22, r06: 3, pop: 60 },
+  ];
+  raw.shortest = [];
+  raw.midData.dailyData = [
+    { ...raw.midData.dailyData[0], date: "20260921", time: "0000", r06: 0, pop: 0 },
+    { ...raw.midData.dailyData[0], date: "20260922", time: "0000", r06: 0, pop: 0 },
+    { ...raw.midData.dailyData[0], date: "20260923", time: "0000", r06: 2, pop: 40 },
+    { ...raw.midData.dailyData[0], date: "20260924", time: "0000", r06: 8, pop: 70 },
+  ];
+  await page.route(API + "/weather/**", (route) => route.fulfill({ json: raw }));
+  await page.goto("/weather/seoul/hourly");
+  const precipPanel = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
+  });
+  await expect(precipPanel).toContainText("오늘");
+  await expect(precipPanel).not.toContainText("그제");
+  await expect(precipPanel).not.toContainText("어제");
+
+  await page.getByRole("button", { name: "일별", exact: true }).click();
+  await expect(precipPanel).toContainText("오늘");
+  await expect(precipPanel).toContainText("내일");
+  await expect(precipPanel).not.toContainText("그제");
+  await expect(precipPanel).not.toContainText("어제");
+});
 
 test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
   page,

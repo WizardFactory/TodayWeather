@@ -381,7 +381,7 @@ Both charts keep the Cordova information model and reading order. The design sys
 ### 5.3 Placement per tier
 | Tier | Placement |
 | --- | --- |
-| Mobile | Hero → hourly chart card → daily chart card → air summary → details. This is the Cordova order with daily visible without a tab switch. The bottom nav Hourly/Daily items scroll to and focus the chart. |
+| Mobile | Hero → hourly chart card → daily chart card → air summary → details. This is the Cordova order with daily visible without a tab switch. Hourly/overview routes keep the hero visible at the top; the Daily tab scrolls to and focuses the daily chart. |
 | Tablet | Hero with highlights beside it, then full-width hourly and daily charts, then an air and details grid. |
 | Desktop | Main column: hero, hourly chart, daily chart. Right column: air, warnings and details. The charts always get the widest column. |
 
