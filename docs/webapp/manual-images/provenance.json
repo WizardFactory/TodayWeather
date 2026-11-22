@@ -15,11 +15,11 @@
     },
     {
       "file": "hourly.png",
-      "sha256": "df8c3ef063aa41af8dc95e3f3e1501d99dc61cab2c0c026d9f925b09d41a127a"
+      "sha256": "ff0d6f9e94ffa33dd9eedf3f581dcf00ecf6ccb3eae59af20f46d6a9721384ff"
     },
     {
       "file": "daily.png",
-      "sha256": "b864fbe22adabb39c876025779cbb40fb306f37558b31a3b03d136e08b4333c6"
+      "sha256": "172abbc81ee753b932c94850502fcff3c0dd36e785ac2ed30f4b0d55a54a7f86"
     },
     {
       "file": "air.png",
