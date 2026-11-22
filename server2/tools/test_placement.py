@@ -330,13 +330,18 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
     def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
         body = (placement.PARALLEL_WORKFLOW_PREFIX + placement.VERIFIED_UPLOAD
                 + placement.GOLDEN_JOB)
-        self.assertIn('needs: [placement, python, rust, gnu]', body)
+        self.assertIn('needs: [placement, python, rust, gnu, musl]', body)
         self.assertEqual([], placement.audit_workflow(body))
         for bad in (
-            body.replace('needs: [placement, python, rust, gnu]', 'needs: [placement, rust, gnu]'),
+            body.replace('needs: [placement, python, rust, gnu, musl]', 'needs: [placement, python, rust, gnu]'),
+            body.replace('needs: [placement, python, rust, gnu, musl]', 'needs: [placement, rust, gnu, musl]'),
             body.replace('if: ${{ always() }}', 'if: ${{ success() }}'),
             body.replace('needs.python.result', 'needs.placement.result'),
+            body.replace("needs.musl.result != 'success'", "needs.musl.result == 'failure'"),
             body.replace('tools/ci.sh python', 'tools/ci.sh rust'),
+            body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
+            body.replace('name: server2-linux-musl-candidate\n          path', 'name: server2-linux-musl-verified\n          path', 1),
+            body.replace('retention-days: 1', 'retention-days: 7'),
             body.replace('retention-days: 7', 'retention-days: 90'),
         ):
             self.assertNotEqual(body, bad)

@@ -8,12 +8,13 @@ from unittest.mock import patch
 
 import ci
 
-STAGES = ('placement', 'python', 'rust', 'gnu', 'musl')
+STAGES = ('placement', 'python', 'rust', 'gnu', 'musl', 'promote')
 ROOT = Path('/checkout')
 REVISION = 'a' * 40
 
 # Frozen from the serial inventory of base cfe049ae2 on Linux, with and without the
-# local test/smoke pair, plus tools/test_ci.py. Edit only for an intended CI command change.
+# local test/smoke pair, plus tools/test_ci.py and the #3090 promote check and its tests.
+# Edit only for an intended CI command change.
 SERIAL_LINUX_LOCAL = (
     ('placement', ('<PLACEMENT>',)),
     ('rust', ('<PYTHON>', 'tools/test_placement.py')),
@@ -40,6 +41,7 @@ SERIAL_LINUX_LOCAL = (
     ('gnu', ('<PYTHON>', 'deploy/benchmark/run_isolated.py', 'imds-functional')),
     ('gnu', ('<PYTHON>', 'deploy/benchmark/run_isolated.py', 'online-functional')),
     ('python', ('<PYTHON>', 'tools/test_verify_artifact.py')),
+    ('python', ('<PYTHON>', 'tools/test_promote_artifact.py')),
     ('python', ('<PYTHON>', 'deploy/logging/test_logging.py')),
     ('python', ('<PYTHON>', 'tools/verification/test_kma_client_validation.py')),
     ('gnu', ('cargo', 'fmt', '--check')),
@@ -67,6 +69,7 @@ SERIAL_LINUX_LOCAL = (
     ('musl', ('readelf', '-h', 'target/x86_64-unknown-linux-musl/release/server2')),
     ('musl', ('<PYTHON>', 'tools/verify_artifact.py', '--binary-dir', 'target/x86_64-unknown-linux-musl/release', '--output', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
     ('musl', ('<PYTHON>', 'tools/native_artifact.py', '--target-dir', 'target', '--output', '<ROOT>/reports/verification/server2-local-first/native-staging', '--archive', '<ROOT>/reports/verification/server2-local-first/artifact-native/native.tar.gz', '--source-revision', '<REVISION>')),
+    ('promote', ('<PYTHON>', 'tools/promote_artifact.py', '--artifact', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
 )
 
 SERIAL_LINUX_NO_LOCAL = (
@@ -94,6 +97,7 @@ SERIAL_LINUX_NO_LOCAL = (
     ('python', ('<PYTHON>', 'tests/integration/test_log_diagnosis.py')),
     ('gnu', ('<PYTHON>', 'deploy/benchmark/run_isolated.py', 'online-functional')),
     ('python', ('<PYTHON>', 'tools/test_verify_artifact.py')),
+    ('python', ('<PYTHON>', 'tools/test_promote_artifact.py')),
     ('python', ('<PYTHON>', 'deploy/logging/test_logging.py')),
     ('python', ('<PYTHON>', 'tools/verification/test_kma_client_validation.py')),
     ('gnu', ('cargo', 'fmt', '--check')),
@@ -120,15 +124,16 @@ SERIAL_LINUX_NO_LOCAL = (
     ('musl', ('readelf', '-h', 'target/x86_64-unknown-linux-musl/release/server2')),
     ('musl', ('<PYTHON>', 'tools/verify_artifact.py', '--binary-dir', 'target/x86_64-unknown-linux-musl/release', '--output', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
     ('musl', ('<PYTHON>', 'tools/native_artifact.py', '--target-dir', 'target', '--output', '<ROOT>/reports/verification/server2-local-first/native-staging', '--archive', '<ROOT>/reports/verification/server2-local-first/artifact-native/native.tar.gz', '--source-revision', '<REVISION>')),
+    ('promote', ('<PYTHON>', 'tools/promote_artifact.py', '--artifact', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
 )
 
 
 def expected_serial(platform, has_local_pair):
-    """Darwin drops only the musl group; nothing is regenerated from ci.py."""
+    """Darwin drops only the Linux musl and promote groups; nothing is regenerated from ci.py."""
     inventory = SERIAL_LINUX_LOCAL if has_local_pair else SERIAL_LINUX_NO_LOCAL
     return [(group, [arg.replace('<PYTHON>', sys.executable).replace('<ROOT>', str(ROOT))
                      .replace('<REVISION>', REVISION) for arg in command])
-            for group, command in inventory if platform == 'linux' or group != 'musl']
+            for group, command in inventory if platform == 'linux' or group not in ('musl', 'promote')]
 
 
 class CommandPlanTests(unittest.TestCase):
@@ -160,7 +165,8 @@ class CommandPlanTests(unittest.TestCase):
                 list(ci.command_plan(ROOT, {}, 'python'))
 
     def test_unknown_stage_and_empty_stage_are_rejected(self):
-        for argv, platform in ((['ci.py', 'shadow'], 'linux'), (['ci.py', 'musl'], 'darwin')):
+        for argv, platform in ((['ci.py', 'shadow'], 'linux'), (['ci.py', 'musl'], 'darwin'),
+                               (['ci.py', 'promote'], 'darwin')):
             with (self.subTest(argv=argv, platform=platform),
                   patch.object(sys, 'argv', argv), patch.object(sys, 'platform', platform),
                   patch.object(ci, 'placement_command', return_value=['<PLACEMENT>']),

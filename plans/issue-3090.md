@@ -37,3 +37,20 @@ CI-1 freezes the inventory on the selected base. CI-2 implements group selection
 The plan lives at `plans/issue-3090.md`. Implementation paths are `server2/tools/ci.py`, `server2/tools/ci.sh`, `server2/tools/prepare-ci.sh` as needed, `server2/tools/check_placement.py`, `server2/tools/test_placement.py`, group-parity tests under `server2/tools/` and one task declaration under `server2/config/tasks/`. Declare `.github/workflows/server2.yml` as the sole shared CI wiring change, and the plan as documentation if shipped. Review the actual paths and dependency edges against that declaration. Preserve the foundation check identity and 90-minute long-job budget.
 
 Revert the single CI PR, including its matching workflow audit, to restore serial execution. Domestic test sharding, artifact transfer and Cargo caching are separate experiments, contingent on the measured remaining bottleneck. The broader design’s latency projection is outside this experiment’s acceptance criteria.
+
+## First experiment result
+
+PR #3099 adopted the parallel topology on 2026-11-22. Three interleaved successful pairs took 35.8, 33.9 and 32.7 minutes against 76.5, 68.8 and 54.7 minutes serially (medians 33.9 and 68.8). Summed runner minutes stayed about equal. In the third pair the critical path was placement (0.5 min), then the Rust job (21.6 min, including 12.3 min for `tests/domestic.rs`), then the foundation musl build and verification (10.5 min). The Python job varied from 12.7 to 22.8 minutes across runs.
+
+## Second experiment: musl candidate promotion
+
+AK chose to remove the serial musl stage from the critical path, which relaxes the first experiment's rule that no intermediate release artifact crosses runners.
+
+| Job | Starts | Responsibility |
+| --- | --- | --- |
+| `musl` | Placement passes, parallel with Python, Rust and GNU | Run the unchanged musl build, `readelf`, `verify_artifact.py` and native bundle commands, then upload the directory as the same-run candidate `server2-linux-musl-candidate` with one-day retention. |
+| Foundation | All five jobs conclude | Fail before checkout unless placement, Python, Rust, GNU and musl all succeeded. Download the candidate into the original output path, run `tools/promote_artifact.py`, then upload the unchanged `server2-linux-musl-verified` with seven-day retention. |
+
+`promote_artifact.py` executes nothing from the candidate. It requires the exact file inventory with regular files only. It recomputes the source identity of the PR head and the hashes of the binaries and sources, and requires them to equal `manifest.json`. It requires `verification.json` to have passed for that manifest. It extracts only regular `native/` entries from `native.tar.gz` and validates the bundle with `native_artifact.verify`, including the same source as the manifest. The candidate is reachable only within the workflow run; a failed run can leave a candidate but never the verified name.
+
+Adopt with the same criteria as the first experiment: unchanged command inventory plus the promotion check, a fail-closed guard covering the musl job, a downloadable verified artifact that passes the existing bundle verification, and a lower median over at least three interleaved pairs against the first experiment's parallel workflow. The expected critical path is the longest of the four parallel jobs plus about two minutes. Revert this PR to restore the first experiment's topology.
