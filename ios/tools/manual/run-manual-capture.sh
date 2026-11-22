@@ -59,16 +59,21 @@ sys.stdout.write(sys.stdin.read().replace(host, "<server>").replace(key, "<place
 # its run-unique name when an exit interrupts the creation) and fails the run when the deletion cannot be confirmed.
 STORE_DEVICE=tw_store_capture_$(uuidgen | tr -d - | cut -c1-12 | tr 'A-F' 'a-f')
 CREATED=
-# The created device's UDID, or (when an exit interrupts simctl create) its run-unique name.
+CREATING=
+# The created device's UDID; or, when an exit interrupts simctl create, the device found by the run-unique name (only
+# once this run started creating it). A failed lookup is reported with the name, for manual removal.
 created_udids() {
-  if [ -n "$CREATED" ]; then echo "$CREATED"; return; fi
-  xcrun simctl list devices | sed -n "s/^ *$STORE_DEVICE (\([0-9A-F-]*\)).*/\1/p"
+  if [ -n "$CREATED" ]; then echo "$CREATED"; return 0; fi
+  [ -n "$CREATING" ] || return 0
+  LIST=$(xcrun simctl list devices) || { echo "cleanup: cannot list simulators; check for $STORE_DEVICE" >&2; return 1; }
+  printf '%s\n' "$LIST" | sed -n "s/^ *$STORE_DEVICE (\([0-9A-F-]*\)).*/\1/p"
 }
 cleanup() {
   status=$?
   set +e
   if [ "$STORE" = 1 ]; then
-    for u in $(created_udids); do
+    UDIDS=$(created_udids) || { [ "$status" -ne 0 ] || status=6; }
+    for u in $UDIDS; do
       xcrun simctl shutdown "$u" 2>/dev/null
       xcrun simctl delete "$u"; deleted=$?
       if LIST=$(xcrun simctl list devices) && ! printf '%s\n' "$LIST" | grep -q "($u)"; then
@@ -86,13 +91,15 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 if [ "$STORE" = 1 ]; then
-  ! xcrun simctl list devices | grep -q " $STORE_DEVICE (" || { echo "a simulator named $STORE_DEVICE exists already" >&2; exit 2; }
+  LIST=$(xcrun simctl list devices) || { echo "cannot list simulators" >&2; exit 2; }
+  ! printf '%s\n' "$LIST" | grep -q " $STORE_DEVICE (" || { echo "a simulator named $STORE_DEVICE exists already" >&2; exit 2; }
   eval "$(xcrun simctl list devices -j | python3 -c 'import json, shlex, sys
 udid = sys.argv[1]
 for runtime, devices in json.load(sys.stdin)["devices"].items():
     for d in devices:
         if d["udid"] == udid:
             print("TYPE=" + shlex.quote(d["deviceTypeIdentifier"]) + "; RUNTIME=" + shlex.quote(runtime))' "$UDID")"
+  CREATING=1
   CREATED=$(xcrun simctl create "$STORE_DEVICE" "$TYPE" "$RUNTIME")
   UDID=$CREATED
   xcrun simctl boot "$UDID"

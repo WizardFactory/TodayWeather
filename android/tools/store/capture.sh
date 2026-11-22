@@ -70,7 +70,7 @@ cleanup() {
             [ "$status" -ne 0 ] || status=6
         fi
     fi
-    [ -z "$PORT_LOCK" ] || rmdir "$PORT_LOCK" 2>/dev/null
+    if [ -n "$PORT_LOCK" ] && ! rmdir "$PORT_LOCK" 2>/dev/null; then echo "cleanup: could not remove $PORT_LOCK" >&2; fi
     exit "$status"
 }
 trap cleanup EXIT
@@ -80,15 +80,23 @@ trap 'exit 130' INT TERM
 # device or listener on it and the next port; the booted emulator must then report this run's AVD on it.
 PORT=
 for p in $(seq 5600 2 5680); do
-    mkdir "${TMPDIR:-/tmp}/tw-emulator-port-$p.lock" 2>/dev/null || continue
+    # Signals are held while a lock is taken and recorded, so an interruption cannot leave an unrecorded lock.
+    trap '' INT TERM
+    if mkdir "${TMPDIR:-/tmp}/tw-emulator-port-$p.lock" 2>/dev/null; then PORT_LOCK=${TMPDIR:-/tmp}/tw-emulator-port-$p.lock; fi
+    trap 'exit 130' INT TERM
+    [ -n "$PORT_LOCK" ] || continue
     if adb devices | grep -q "emulator-$p" || nc -z 127.0.0.1 "$p" 2>/dev/null || nc -z 127.0.0.1 $((p + 1)) 2>/dev/null; then
-        rmdir "${TMPDIR:-/tmp}/tw-emulator-port-$p.lock"; continue
+        trap '' INT TERM; rmdir "$PORT_LOCK"; PORT_LOCK=; trap 'exit 130' INT TERM
+        continue
     fi
-    PORT=$p; PORT_LOCK=${TMPDIR:-/tmp}/tw-emulator-port-$p.lock; break
+    PORT=$p; break
 done
 [ -n "$PORT" ] || { echo "no free emulator port" >&2; exit 2; }
 SERIAL=emulator-$PORT
-export ANDROID_SERIAL=$SERIAL
+# After the boot every adb command goes to the transport that reported this run's AVD (A): a device that replaces it
+# on the same serial gets a new transport id, so the commands fail instead of reaching it.
+TRANSPORT=
+A() { [ -n "$TRANSPORT" ] || { echo "no verified transport" >&2; return 1; }; adb -t "$TRANSPORT" "$@"; }
 
 # Marked before creating: the name was checked to be new, so a partly created AVD is this run's to delete.
 CREATED=1
@@ -103,16 +111,21 @@ boot() {
         -timezone Asia/Seoul -change-locale "$1" >"$OUT/.emulator-$1.log" 2>&1 &
     EMULATOR_PID=$!
     i=0
-    until owns_serial && [ "$(adb get-state 2>/dev/null)" = device ] \
-          && [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] \
-          && [ "$(adb shell getprop persist.sys.locale 2>/dev/null | tr -d '\r')" = "$1" ] \
-          && adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | grep -qi launcher; do
+    TRANSPORT=
+    until [ -n "$TRANSPORT" ] && [ "$(A shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] \
+          && [ "$(A shell getprop persist.sys.locale 2>/dev/null | tr -d '\r')" = "$1" ] \
+          && A shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | grep -qi launcher; do
         i=$((i + 1)); [ "$i" -lt 150 ] || { echo "the emulator did not start in $1" >&2; return 4; }
         kill -0 "$EMULATOR_PID" 2>/dev/null || { echo "the emulator exited; see $OUT/.emulator-$1.log" >&2; return 4; }
-        adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
+        # The transport of the serial, once its console reports this run's AVD; input goes only to that transport.
+        if [ -z "$TRANSPORT" ] && owns_serial; then
+            TRANSPORT=$(adb devices -l | sed -n "s/^$SERIAL .*transport_id:\([0-9]*\).*/\1/p")
+        fi
+        [ -z "$TRANSPORT" ] || A shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
         sleep 2
     done
     sleep 10
+    owns_serial || { echo "the serial no longer reports this run's AVD" >&2; return 4; }
 }
 
 for pair in $LOCALES; do
@@ -122,21 +135,21 @@ for pair in $LOCALES; do
     PULL=$OUT/.$locale.pull
     mkdir "$PULL"
     boot "$locale" || exit 4
-    adb shell dumpsys connectivity | grep -q 'Active default network: none' && { echo 'Network required' >&2; exit 3; }
+    A shell dumpsys connectivity | grep -q 'Active default network: none' && { echo 'Network required' >&2; exit 3; }
     if [ ! -f "$OUT/device.txt" ]; then
-        { adb shell getprop ro.build.fingerprint; echo "sdk: $(adb shell getprop ro.build.version.sdk | tr -d '\r')"
-          adb shell wm size; adb shell wm density; adb shell getprop persist.sys.timezone; echo "ads: off"; } > "$OUT/device.txt"
+        { A shell getprop ro.build.fingerprint; echo "sdk: $(A shell getprop ro.build.version.sdk | tr -d '\r')"
+          A shell wm size; A shell wm density; A shell getprop persist.sys.timezone; echo "ads: off"; } > "$OUT/device.txt"
         shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
     fi
-    adb install "$APP/debug/app-debug.apk" >/dev/null
-    adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
-    adb shell cmd locale set-app-locales "$PKG" --locales "$locale"
-    adb shell am instrument -w -e ads off -e manual true -e weather production -e region "$region" \
+    A install "$APP/debug/app-debug.apk" >/dev/null
+    A install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
+    A shell cmd locale set-app-locales "$PKG" --locales "$locale"
+    A shell am instrument -w -e ads off -e manual true -e weather production -e region "$region" \
         -e class "$PKG.StoreCaptureTest" "$PKG.test/$PKG.TestRunner" > "$PULL/store.log" 2>&1
     grep -q '^OK (2 tests)' "$PULL/store.log" || { echo "Capture failed: $locale; see $PULL/store.log" >&2; exit 1; }
-    adb pull "/sdcard/Android/data/$PKG/files/manual/." "$PULL/" >/dev/null || { echo "Pull failed: $locale" >&2; exit 1; }
+    A pull "/sdcard/Android/data/$PKG/files/manual/." "$PULL/" >/dev/null || { echo "Pull failed: $locale" >&2; exit 1; }
     # The six screens, each a PNG at the display size with its record: ads off and the requested language.
-    python3 - "$PULL" "$locale" "$(adb shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)" <<'PY' || exit 1
+    python3 - "$PULL" "$locale" "$(A shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)" <<'PY' || exit 1
 import json, struct, sys
 from pathlib import Path
 d, locale, size = Path(sys.argv[1]), sys.argv[2], sys.argv[3]

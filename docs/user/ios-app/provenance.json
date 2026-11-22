@@ -326,7 +326,7 @@
  "pdf_sha256": "fa3f415a5cbdfe89413ab4eaf5a9f7167343fb52d9b115226c91b2a2c7e332cb",
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "32984d522c0718cac391eb54b7b8bdb98bc5327c2c7b2848157cb141acb469a0",
-  "ios/tools/manual/run-manual-capture.sh": "ee643314385a8fabcbd2f4ccf99ac73d391bb5c30139d7ebdafa561cb4cf75d4",
+  "ios/tools/manual/run-manual-capture.sh": "9230c89fc67940bc551c1f07230c3eaae3871e6a0aa7dcb5a488745f727dadf7",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
  },
  "recaptures": [
@@ -379,6 +379,11 @@
    "date": "2026-11-22",
    "source": "ios/tools/manual/run-manual-capture.sh",
    "change": "after the capture (review round 8) --store names its simulator with a random suffix, refuses an existing name, deletes only the UDID it created and fails when the deletion cannot be confirmed; the manual mode is unchanged"
+  },
+  {
+   "date": "2026-11-22",
+   "source": "ios/tools/manual/run-manual-capture.sh",
+   "change": "after the capture (review round 9) the --store cleanup looks a device up by name only after this run started creating it, and reports a failed lookup with the name; the manual mode is unchanged"
   }
  ]
 }
