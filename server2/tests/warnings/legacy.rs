@@ -64,6 +64,211 @@ fn zones_for_town_matches_legacy_order() {
     }
 }
 #[test]
+fn combined_gwangju_jeonnam_zones_match_legacy_and_reject_unknown() {
+    let table = ZoneTable::parse(ZONE_TABLE, Some("202610130000"));
+    let gwangju = ["동구", "서구", "남구", "북구", "광산구"];
+    let jeonnam = [
+        "목포시",
+        "여수시",
+        "순천시",
+        "나주시",
+        "광양시",
+        "담양군",
+        "곡성군",
+        "구례군",
+        "고흥군",
+        "보성군",
+        "화순군",
+        "장흥군",
+        "강진군",
+        "해남군",
+        "영암군",
+        "무안군",
+        "함평군",
+        "영광군",
+        "장성군",
+        "완도군",
+        "진도군",
+        "신안군",
+    ];
+    for district in gwangju {
+        let combined = table.zones_for_town(&Town {
+            first: "전남광주통합특별시".into(),
+            second: district.into(),
+            third: String::new(),
+        });
+        let legacy = table.zones_for_town(&Town {
+            first: "광주광역시".into(),
+            second: district.into(),
+            third: String::new(),
+        });
+        assert!(!legacy.is_empty(), "{district}");
+        assert_eq!(combined, legacy, "gwangju {district}");
+        assert!(
+            !combined.iter().any(|z| z.starts_with("L105")),
+            "gwangju {district} must exclude Jeonnam zones: {combined:?}"
+        );
+    }
+    for district in jeonnam {
+        let combined = table.zones_for_town(&Town {
+            first: "전남광주통합특별시".into(),
+            second: district.into(),
+            third: String::new(),
+        });
+        let legacy = table.zones_for_town(&Town {
+            first: "전라남도".into(),
+            second: district.into(),
+            third: String::new(),
+        });
+        assert!(!legacy.is_empty(), "{district}");
+        assert_eq!(combined, legacy, "jeonnam {district}");
+        assert!(
+            !combined.iter().any(|z| z.starts_with("L113")),
+            "jeonnam {district} must exclude Gwangju zones: {combined:?}"
+        );
+    }
+    for (first, second, third, legacy_first, legacy_second, legacy_third) in [
+        (
+            "전남광주통합특별시",
+            " 서구 ",
+            "치평동",
+            "광주광역시",
+            "서구",
+            "치평동",
+        ),
+        (
+            " 전남광주통합특별시 ",
+            " 서구 ",
+            "치평동",
+            "광주광역시",
+            "서구",
+            "치평동",
+        ),
+        (
+            "전남광주통합특별시",
+            " 무안군 ",
+            "삼향읍",
+            "전라남도",
+            "무안군",
+            "삼향읍",
+        ),
+        (
+            " 전남광주통합특별시 ",
+            " 무안군 ",
+            "삼향읍",
+            "전라남도",
+            "무안군",
+            "삼향읍",
+        ),
+        (
+            "전남광주통합특별시",
+            " 신안군 ",
+            "흑산면",
+            "전라남도",
+            "신안군",
+            "흑산면",
+        ),
+        (
+            "전남광주통합특별시",
+            " 신안군 ",
+            "흑 산면",
+            "전라남도",
+            "신안군",
+            "흑산면",
+        ),
+        (
+            "전남광주통합특별시",
+            " 여수시 ",
+            "삼산면",
+            "전라남도",
+            "여수시",
+            "삼산면",
+        ),
+        (
+            "전남광주통합특별시",
+            " 여수시 ",
+            "삼 산면",
+            "전라남도",
+            "여수시",
+            "삼산면",
+        ),
+    ] {
+        let combined = table.zones_for_town(&Town {
+            first: first.into(),
+            second: second.into(),
+            third: third.into(),
+        });
+        let legacy = table.zones_for_town(&Town {
+            first: legacy_first.into(),
+            second: legacy_second.into(),
+            third: legacy_third.into(),
+        });
+        assert!(!legacy.is_empty(), "{first} {second} {third}");
+        assert_eq!(combined, legacy, "trimmed/island {first} {second} {third}");
+    }
+    for bad in ["", "   ", "없는구", "강남구"] {
+        assert!(
+            table
+                .zones_for_town(&Town {
+                    first: "전남광주통합특별시".into(),
+                    second: bad.into(),
+                    third: String::new(),
+                })
+                .is_empty(),
+            "unknown/missing district {bad:?} must stay unmapped"
+        );
+    }
+}
+#[tokio::test]
+async fn special_info_resolves_combined_province_by_district() {
+    let peer = Peer::new();
+    let store = peer.store();
+    let zone = serde_json::json!([
+        {"areaCode": "L1130110", "areaName": "광주서부", "active": true, "warnVar": 2, "warnStress": 0},
+        {"areaCode": "L1053410", "areaName": "무안군북부", "active": true, "warnVar": 1, "warnStress": 1},
+        {"areaCode": "_sync", "warnVar": -1, "lastSyncAt": "2026-10-16T00:00:00.000Z"}
+    ]);
+    let zone = OrderedJson::parse(&serde_json::to_vec(&zone).unwrap()).unwrap();
+    let file = seed_file(vec![], Some(zone), "2026-10-16T00:00:00.000Z");
+    server2::warnings::seed::import(
+        &store,
+        &server2::warnings::seed::parse(&file).unwrap(),
+        deadline(),
+    )
+    .await
+    .unwrap();
+    let service = peer.service(FixedClock::at("2026-10-16T01:02:00.000Z"));
+    let gwangju = service
+        .special_info(&Town {
+            first: "전남광주통합특별시".into(),
+            second: "서구".into(),
+            third: "치평동".into(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(gwangju.len(), 1);
+    assert_eq!(gwangju[0].location_name, "광주서부");
+    let jeonnam = service
+        .special_info(&Town {
+            first: "전남광주통합특별시".into(),
+            second: "무안군".into(),
+            third: "삼향읍".into(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(jeonnam.len(), 1);
+    assert_eq!(jeonnam[0].location_name, "무안군북부");
+    let unknown = service
+        .special_info(&Town {
+            first: "전남광주통합특별시".into(),
+            second: "없는구".into(),
+            third: String::new(),
+        })
+        .await
+        .unwrap();
+    assert!(unknown.is_empty());
+}
+#[test]
 fn zone_replay_and_special_info_match_legacy() {
     let o = oracle();
     let mut rows = items(PWN_CD);
