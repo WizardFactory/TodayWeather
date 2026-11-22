@@ -9,6 +9,7 @@ import re
 import shutil
 import statistics
 import subprocess
+import tempfile
 import time
 import uuid
 
@@ -87,6 +88,32 @@ def test_timing(text, selectors, mismatch):
     return float(runs[0][1]), elapsed
 
 
+def verify_png(image, expected_size):
+    with image.open("rb") as stream:
+        if stream.read(8) != b"\x89PNG\r\n\x1a\n":
+            raise RuntimeError(f"Invalid PNG signature: {image}")
+        if stream.seek(0, os.SEEK_END) < 20:
+            raise RuntimeError(f"Truncated PNG: {image}")
+        stream.seek(-12, os.SEEK_END)
+        if stream.read() != b"\x00\x00\x00\x00IEND\xaeB\x60\x82":
+            raise RuntimeError(f"Missing PNG end marker: {image}")
+    # A successful sips property query can report null dimensions for an invalid
+    # image. Convert to a different format to exercise pixel decoding.
+    with tempfile.TemporaryDirectory() as scratch:
+        decoded = Path(scratch) / "decoded.bmp"
+        try:
+            output("sips", "-s", "format", "bmp", str(image), "--out", str(decoded))
+        except subprocess.CalledProcessError as error:
+            raise RuntimeError(f"Could not decode PNG: {image}") from error
+        if not decoded.is_file():
+            raise RuntimeError(f"Could not decode PNG: {image}")
+        props = output("sips", "-g", "pixelWidth", "-g", "pixelHeight", str(decoded))
+        dimensions = dict(re.findall(r"^\s*(pixelWidth|pixelHeight):\s*(\d+)$", props, re.M))
+        size = [int(dimensions.get(key, 0)) for key in ("pixelWidth", "pixelHeight")]
+        if not all(size) or size != list(expected_size):
+            raise RuntimeError(f"Unexpected decoded PNG size for {image}: {size}, expected {expected_size}")
+
+
 def trial(args, name, mode, expected, mismatch=None, timed=True):
     directory = args.out / name
     directory.mkdir()
@@ -132,9 +159,14 @@ def trial(args, name, mode, expected, mismatch=None, timed=True):
         raise RuntimeError(f"{name}: incorrect PNG set in {container / 'tmp' / suffix}")
     if mismatch:
         artifacts = directory / "diagnostics"
+        native = records[mismatch]["nativeSize"]
+        reference = records[mismatch]["referenceSize"]
+        sizes = {f"{mismatch}-native.png": native,
+                 f"{mismatch}-diff.png": [min(a, b) for a, b in zip(native, reference)]}
+        for image in images:
+            verify_png(image, sizes[image.name])
         artifacts.mkdir()
         for image in images:
-            output("sips", "-g", "pixelWidth", "-g", "pixelHeight", str(image))
             shutil.copy2(image, artifacts / image.name)
     if exit_code is None:
         print("Verified the induced failure and its PNGs after Xcode timed out.", flush=True)
