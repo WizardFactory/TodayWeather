@@ -485,6 +485,7 @@ const ko = {
     "관측 시각이 오래된 자료입니다. 외출 전 최신 기상 정보를 확인해 주세요.",
   "chart.label": "시간별 기온 변화, 아래 표에서 수치 확인 가능",
   "chart.empty": "시간별 예보가 없습니다",
+  "chart.hour": "{hour}시",
   "chart.table": "시간별 상세 수치 보기",
   "chart.col.time": "시각",
   "chart.col.temperature": "기온 (°{unit})",

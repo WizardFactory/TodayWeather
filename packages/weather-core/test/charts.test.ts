@@ -2,7 +2,6 @@ import { expect, it } from "vitest";
 import {
   dailyChart,
   hourlyChart,
-  hourlyXPositions,
   linePath,
   normalizeWeather,
 } from "../src";
@@ -13,10 +12,10 @@ const point = (at: string, temperature: number | null) => ({
   at,
   temperature,
 });
-it("keeps all chronological mixed-step rows, aligns yesterday by wall time and inserts an observation", () => {
-  const hourly = Array.from({ length: 36 }, (_, i) =>
+it("charts one column per three-hour row and marks an off-hour observation between columns", () => {
+  const hourly = Array.from({ length: 24 }, (_, i) =>
     point(
-      `2026-09-${i < 24 ? "22" : "23"}T${String(i % 24).padStart(2, "0")}:00`,
+      `2026-09-${21 + Math.floor(i / 8)}T${String((i % 8) * 3).padStart(2, "0")}:00`,
       i,
     ),
   );
@@ -25,12 +24,43 @@ it("keeps all chronological mixed-step rows, aligns yesterday by wall time and i
     current: point("2026-09-23T10:30", -20),
     yesterday: point("2026-09-22T10:30", -50),
   });
-  expect(model.rows).toHaveLength(37);
-  const now = model.rows[model.currentIndex];
-  expect(now.point.temperature).toBe(-20);
-  expect(now.yesterday?.temperature).toBe(-50);
+  // Yesterday and today, eight rows each: no column for the observation.
+  expect(model.rows).toHaveLength(16);
+  expect(model.rows.some((r) => r.current)).toBe(false);
+  expect(model.rows[model.currentIndex].point.at).toBe("2026-09-23T09:00");
+  expect(model.current).toEqual({
+    index: model.currentIndex + 0.5,
+    temperature: -20,
+    yesterday: -50,
+  });
   expect(model.domain[0]).toBeLessThan(-50);
   expect(model.startIndex).toBe(model.currentIndex - 1);
+});
+it("charts the three-hour series instead of the merged one-hour rows", () => {
+  const model = hourlyChart({
+    hourly: [
+      point("2026-09-23T09:00", 1),
+      point("2026-09-23T10:00", 2),
+      point("2026-09-23T11:00", 3),
+      point("2026-09-23T12:00", 4),
+    ],
+    chartHourly: [point("2026-09-23T09:00", 10), point("2026-09-23T12:00", 40)],
+    current: point("2026-09-23T09:00", 9),
+    yesterday: null,
+  });
+  expect(model.rows.map((r) => r.point.temperature)).toEqual([9, 40]);
+  expect(model.rows[0].current).toBe(true);
+  expect(model.current).toBeNull();
+});
+it("keeps only the KMA short rows in the chart series", () => {
+  const shortTimes = new Set(
+    (fixture.response.short as { date: string; time: string | number }[]).map(
+      (r) => `${r.date}${r.time}`,
+    ),
+  );
+  expect(base.chartHourly).toBeDefined();
+  expect(base.chartHourly!.length).toBe(shortTimes.size);
+  expect(base.hourly.length).toBeGreaterThanOrEqual(base.chartHourly!.length);
 });
 it("starts the hourly rows at yesterday 00:00 and keeps day-before-yesterday only as comparison data", () => {
   const hourly = Array.from({ length: 60 }, (_, i) => {
@@ -49,8 +79,8 @@ it("starts the hourly rows at yesterday 00:00 and keeps day-before-yesterday onl
   expect(model.rows.some((r) => r.point.at.startsWith("2026-09-21"))).toBe(false);
   // Yesterday's columns still compare against the day before.
   expect(model.rows[5].yesterday?.temperature).toBe(105);
-  expect(model.startIndex).toBe(model.currentIndex - 1);
-  expect(model.rows[model.startIndex].point.at).toBe("2026-09-23T10:00");
+  expect(model.rows[model.currentIndex].point.at).toBe("2026-09-23T10:00");
+  expect(model.rows[model.startIndex].point.at).toBe("2026-09-23T09:00");
 });
 it("keeps every hourly row when the current time cannot be read", () => {
   const model = hourlyChart({
@@ -165,49 +195,19 @@ it("preserves forecast rainProbability and atomic precipitation group on current
   expect(now.point.precipitationApprox).toBe(true);
 });
 
-it("borrows enclosing forecast rainProbability for off-hour inserted current observation", () => {
+it("opens at the row before the current one even without a current temperature", () => {
   const model = hourlyChart({
     hourly: [
-      { ...point("2026-09-23T09:00", 18), rainProbability: 0 },
-      { ...point("2026-09-23T12:00", 22), rainProbability: 60 },
+      point("2026-09-23T06:00", 1),
+      point("2026-09-23T09:00", 2),
+      point("2026-09-23T12:00", 3),
     ],
-    current: { ...point("2026-09-23T10:15", 20), rainProbability: null },
+    current: point("2026-09-23T10:15", null),
     yesterday: null,
   });
-  const now = model.rows[model.currentIndex];
-  expect(now.point.at).toBe("2026-09-23T10:15");
-  expect(now.point.rainProbability).toBe(0);
-});
-
-it("computes bounded chronological hourly x positions across off-hour, mixed 1h/3h, and >3h gaps", () => {
-  const H = 3_600_000;
-  const baseTime = Date.UTC(2026, 8, 23, 0, 0);
-  // 15m off-hour, 1h step, 3h step, and 12h missing gap
-  const times = [
-    baseTime,
-    baseTime + 15 * 60_000,
-    baseTime + H + 15 * 60_000,
-    baseTime + 4 * H + 15 * 60_000,
-    baseTime + 16 * H + 15 * 60_000,
-  ];
-  const { xs, width, gapBefore } = hourlyXPositions(times, 80, 60, 320);
-  expect(xs[0]).toBe(60);
-  expect(xs[1] - xs[0]).toBeCloseTo(80, 5); // 15m clamped to 1.0 * col
-  expect(xs[2] - xs[1]).toBeCloseTo(80, 5); // 1h -> 1.0 * col
-  expect(xs[3] - xs[2]).toBeCloseTo(108, 5); // 3h -> 1.35 * col
-  expect(xs[4] - xs[3]).toBeCloseTo(120, 5); // 12h -> 1.5 * col
-  expect(gapBefore).toEqual([false, false, false, false, true]);
-  expect(width).toBeCloseTo(xs[4] + 60, 5);
-
-  // 45 mixed rows (16x 3h + 6x 1h + 23x 3h) stays bounded far under 9449px
-  const mixed: number[] = [];
-  let t = baseTime;
-  for (let i = 0; i < 45; i++) {
-    mixed.push(t);
-    t += i >= 16 && i < 22 ? H : 3 * H;
-  }
-  const full = hourlyXPositions(mixed, 77, 77, 1151);
-  expect(full.width).toBeLessThan(5000);
+  expect(model.currentIndex).toBe(1);
+  expect(model.startIndex).toBe(0);
+  expect(model.current).toBeNull();
 });
 
 it("breaks linePath subpaths when breakBefore marks a missing-data gap", () => {

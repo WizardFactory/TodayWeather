@@ -2328,26 +2328,6 @@ textarea {
   position: relative;
   --hourly-columns-h: 9rem;
 }
-.chart-y-axis {
-  position: absolute;
-  top: var(--hourly-columns-h);
-  left: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.chart-y-tick {
-  position: absolute;
-  left: var(--tw-space-1);
-  transform: translateY(-50%);
-  padding: 0 var(--tw-space-1);
-  border-radius: var(--tw-radius-sm);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  color: var(--tw-text-secondary);
-  font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
-  line-height: var(--tw-type-chart-axis-leading);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 .chart-hit {
   fill: transparent;
   cursor: pointer;
@@ -2400,8 +2380,13 @@ textarea {
   max-width: 100%;
   white-space: nowrap;
 }
+/* Native: the day label starts at its column and runs over the next ones. */
 .chart-column .chart-date {
   min-height: 1.5em;
+  align-self: flex-start;
+  max-width: none;
+  position: relative;
+  z-index: 1;
 }
 .chart-icons {
   display: flex;
@@ -2414,9 +2399,17 @@ textarea {
   flex-direction: column;
   align-items: center;
 }
-.chart-period {
-  min-height: 1.5em;
-  white-space: nowrap;
+.chart-icons.split {
+  flex-direction: column;
+  gap: 0;
+}
+/* Keep the probability and amount rows aligned when some days split AM/PM. */
+.daily-columns:not(.merged-only) .chart-icons {
+  min-height: 3rem;
+}
+.chart-unit {
+  margin-inline-start: 1px;
+  font-size: 0.75em;
 }
 [data-weather-section="hourly"],
 [data-weather-section="daily"] {

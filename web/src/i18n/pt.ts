@@ -506,6 +506,7 @@ const pt: Catalog = {
   "chart.label":
     "Variação da temperatura por hora; os valores estão na tabela abaixo",
   "chart.empty": "Sem previsão por hora",
+  "chart.hour": "{hour}h",
   "chart.table": "Ver detalhes por hora",
   "chart.col.time": "Hora",
   "chart.col.temperature": "Temperatura (°{unit})",

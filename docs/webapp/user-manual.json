@@ -19,23 +19,23 @@
       "scenario": "S2",
       "title": "Compare hourly weather",
       "image": "hourly.png",
-      "intro": "The hourly chart compares today's forecast with yesterday. Only the chart scrolls horizontally.",
+      "intro": "The hourly chart compares today's three-hour forecast with yesterday, as in the mobile apps: seven columns per phone screen, from yesterday 00:00. Only the chart scrolls horizontally.",
       "steps": [
-        "Scroll the chart to later hours, or focus it and use Left, Right, Home and End.",
-        "Read the highlighted value and the shared temperature axis.",
-        "Expand wind and humidity, or open the table for the same hourly values."
+        "The chart opens with the column before the current one at the left edge. Scroll to later hours, or back to yesterday 00:00, or focus it and use Left, Right, Home and End.",
+        "Read each temperature on its dot. When the current time falls between columns, a small ringed dot between them marks the current temperature.",
+        "Expand wind and humidity, or open the table for the same three-hour values."
       ],
-      "expected": "All supplied hours remain available. A missing temperature leaves a gap in the line.",
+      "expected": "The chart and its table show the same three-hour rows as the mobile apps. A missing temperature leaves a gap in the line.",
       "failure": "A dash means no supplied value; a missing yesterday series does not produce an invented comparison. If the request fails, focus stays in the content; choose Retry to load the forecast and return focus to the content with the current conditions visible."
     },
     {
       "scenario": "S3",
       "title": "Read daily ranges",
       "image": "daily.png",
-      "intro": "Daily bars use one temperature scale and one cool-to-warm gradient. Past days remain available.",
+      "intro": "Daily bars use one temperature scale and one cool-to-warm gradient. Seven days fit a phone screen, as in the mobile apps; past days remain available.",
       "steps": [
-        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Today starts in the third column when the chart overflows.",
-        "Compare minimum, maximum and current temperature. Different morning/afternoon conditions have AM/PM labels; matching conditions share one icon.",
+        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Each column shows the weekday over the day of the month; today starts in the third column on phones, and wide screens open at the first day.",
+        "Compare minimum, maximum and current temperature. Different morning and afternoon conditions show two stacked icons (morning above); matching conditions share one icon.",
         "Use Left/Right/Home/End or the table for temperatures, conditions, precipitation probability and amount."
       ],
       "expected": "Past probability is hidden. Equal morning and afternoon conditions use one icon.",

@@ -130,8 +130,14 @@ test("daily AM/PM conditions include column zero, merged icons and reading alter
   const columns = page.locator(".daily-columns .chart-column");
   await expect(columns).toHaveCount(6);
   await expect(columns.nth(0).locator("svg")).toHaveCount(2);
-  await expect(columns.nth(0)).toContainText("오전");
-  await expect(columns.nth(0)).toContainText("오후");
+  // Native: AM/PM icons stack without period words; their names stay readable.
+  await expect(
+    columns.nth(0).locator('.chart-condition[aria-label^="오전"]'),
+  ).toHaveCount(1);
+  await expect(
+    columns.nth(0).locator('.chart-condition[aria-label^="오후"]'),
+  ).toHaveCount(1);
+  await expect(columns.nth(0)).not.toContainText("오전");
   await expect(columns.nth(1).locator("svg")).toHaveCount(1);
   const daily = page.locator(".daily-chart");
   await daily.focus();
@@ -712,7 +718,7 @@ test("sidebar keeps single aria-current across routes, removes live-dot, normali
   }
 });
 
-test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
+test("hourly chart matches the native columns: three-hour rows from yesterday, seven per phone screen, current between columns; keeps visible row on expand and handles SVG clicks", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -725,7 +731,9 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
       ...p,
       date: `202609${String(day).padStart(2, "0")}`,
       time: String(hour * 100).padStart(4, "0"),
-      t3h: 10 + (i % 8),
+      // The day before yesterday is 20° colder, so yesterday's columns show
+      // their comparison values as text.
+      t3h: 10 + (i % 8) - (day === 21 ? 20 : 0),
       t1h: undefined,
       pop: 0,
       vec: 270,
@@ -743,7 +751,7 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
     wsd: 2.1,
     rn1: 0,
   }));
-  // Off-hour observation (00:15) with no pop should borrow 0% and not blow up chart width.
+  // Off-hour observation (00:15): a marker between columns, not a column.
   raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
   let fetchCount = 0;
   await page.route(API + "/weather/**", (r) => {
@@ -759,35 +767,44 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   await expect(scroll).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 
-  const metrics = await scroll.evaluate((el) => ({
-    scrollW: el.scrollWidth,
-    clientW: el.clientWidth,
-    scrollLeft: el.scrollLeft,
-  }));
-  expect(metrics.scrollW).toBeLessThan(5000);
-  expect(metrics.scrollW).toBeGreaterThan(metrics.clientW);
+  // Native: the short rows from yesterday (09-22) 00:00, none of the 1-hour rows.
+  const hours = page.locator(".hourly-columns .chart-hour");
+  await expect(hours).toHaveCount(24);
+  await expect(hours.first()).toHaveText("0시");
+  expect(
+    (await hours.allTextContents()).every((h) => Number.parseInt(h) % 3 === 0),
+  ).toBe(true);
+  await expect(page.locator(".chart-y-axis")).toHaveCount(0);
 
-  // Current off-hour column borrows rain probability (0%, not —).
+  // Native: a seventh of the chart per column, the row before the current one at the left edge.
+  const metrics = await scroll.evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    const cols = [...el.querySelectorAll(".hourly-columns .chart-column")];
+    return {
+      clientW: el.clientWidth,
+      scrollLeft: el.scrollLeft,
+      column: cols[0].getBoundingClientRect().width,
+      visible: cols.filter((c) => {
+        const r = c.getBoundingClientRect();
+        return r.left >= sb.left - 1 && r.right <= sb.right + 1;
+      }).length,
+    };
+  });
+  expect(Math.abs(metrics.column - metrics.clientW / 7)).toBeLessThan(1);
+  expect(metrics.visible).toBe(7);
+  expect(Math.abs(metrics.scrollLeft - metrics.column * 7)).toBeLessThan(2);
+
+  // The current column is the 00:00 row; the observation sits halfway to 03:00.
+  await expect(page.locator(".hourly-columns .current-column .chart-hour")).toHaveText("0시");
   await expect(
     page.locator(".hourly-columns .current-column .chart-probability"),
   ).toHaveText("0%");
-
-  // Pinned Y-axis ticks stay visible inside the chart wrapper even after scrolling.
-  await scroll.evaluate((el) => {
-    el.scrollLeft += 400;
+  const marker = await scroll.evaluate((el) => {
+    const line = el.querySelector(".current-marker .now-line");
+    return line ? Number(line.getAttribute("x1")) : null;
   });
-  const ticksVisible = await page.locator(".chart-plot-wrap").evaluate((wrap) => {
-    const wb = wrap.getBoundingClientRect();
-    const ticks = [...wrap.querySelectorAll(".chart-y-tick")];
-    return (
-      ticks.length === 3 &&
-      ticks.every((t) => {
-        const r = t.getBoundingClientRect();
-        return r.left >= wb.left - 1 && r.right <= wb.right + 1 && r.width > 0;
-      })
-    );
-  });
-  expect(ticksVisible).toBe(true);
+  expect(marker).not.toBeNull();
+  expect(Math.abs(marker! - metrics.column * 9)).toBeLessThan(1);
 
   // Remember a column currently in viewport before expanding wind/humidity.
   const visibleBefore = await scroll.evaluate((el) => {
@@ -833,7 +850,9 @@ test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible
   const targetIdx = Math.max(0, visibleBefore);
   const hourlyHit = scroll.locator("svg g .chart-hit").nth(targetIdx);
   await hourlyHit.scrollIntoViewIfNeeded();
-  await hourlyHit.click();
+  // Keep the hit target clear of the bottom toast region.
+  await scroll.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await hourlyHit.click({ position: { x: 4, y: 8 } });
   await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
 
   // Forced-colors (including dark high-contrast) resolves dot value fills to Canvas (PR1-R1).

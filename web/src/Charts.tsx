@@ -12,7 +12,6 @@ import { ArrowUp } from "lucide-react";
 import {
   dailyChart,
   hourlyChart,
-  hourlyXPositions,
   linePath,
   formatValue,
   type Point,
@@ -30,6 +29,8 @@ import {
 import { dateText, hourText } from "./locale";
 import { t, useLanguage } from "./i18n";
 import { useApp } from "./context";
+
+const TABLET_WIDTH = 640;
 
 let measureCtx: CanvasRenderingContext2D | null | undefined;
 function maxTextWidth(labels: string[], font: string): number {
@@ -116,6 +117,42 @@ function rain(point: Point, unit: string) {
     : value;
 }
 
+/** Native column width: a seventh of the chart, at most 60 px, scaled with text size. */
+function nativeColumn(viewport: number, rem: number) {
+  return (rem / 16) * Math.min(viewport / 7, 60);
+}
+
+/** Native hour label: the hour and a short unit ("21시", "21h"). */
+function chartHour(at: string) {
+  const hour = Number(at.slice(11, 13));
+  return Number.isFinite(hour)
+    ? t("chart.hour", { hour: String(hour) })
+    : hourText(at);
+}
+
+/** Native precipitation cell: the first positive amount, whole above 10, unit apart. */
+function chartAmount(point: Point) {
+  const value =
+    point.precipitation !== null && point.precipitation > 0
+      ? point.precipitation
+      : point.snowfall !== null && point.snowfall > 0
+        ? point.snowfall
+        : null;
+  return value === null ? null : formatValue(value, value >= 10 ? 0 : 1);
+}
+
+function ChartAmount({ point, unit }: { point: Point; unit: string }) {
+  const value = chartAmount(point);
+  return value === null ? (
+    <>{"\u00a0"}</>
+  ) : (
+    <>
+      {value}
+      <small className="chart-unit">{unit}</small>
+    </>
+  );
+}
+
 function WindValue({ point, unit }: { point: Point; unit: string }) {
   return (
     <span className="chart-wind">
@@ -136,26 +173,46 @@ function WindValue({ point, unit }: { point: Point; unit: string }) {
   );
 }
 
-function dailyHeader(at: string, reference: string, lang: string) {
-  const a = Date.parse(at.slice(0, 10) + "T00:00:00Z");
-  const b = Date.parse(reference.slice(0, 10) + "T00:00:00Z");
-  const days =
-    Number.isFinite(a) && Number.isFinite(b)
-      ? Math.round((a - b) / 86400000)
-      : NaN;
-  const rel =
-    lang === "ko" || (Number.isFinite(days) && Math.abs(days) <= 1)
-      ? relativeDay(at, reference)
-      : "";
-  if (rel) return { primary: rel, secondary: dateText(at, true) };
+/** Native wind cell: a direction arrow, then the speed. */
+function ChartWind({ point, unit }: { point: Point; unit: string }) {
+  return (
+    <span className="chart-wind">
+      <span className="chart-wind-direction" title={windText(point.windDirection)}>
+        {point.windDegrees !== null && point.windDegrees !== undefined ? (
+          <ArrowUp
+            aria-hidden="true"
+            size="1em"
+            style={{ transform: `rotate(${point.windDegrees + 180}deg)` }}
+          />
+        ) : (
+          "\u00a0"
+        )}
+      </span>
+      <span>
+        {formatValue(point.wind, 1)}
+        <small className="chart-unit">{unit}</small>
+      </span>
+    </span>
+  );
+}
+
+/** Native hourly day label: the relative day and the month and day. */
+function hourlyDayLabel(at: string, reference: string) {
+  const rel = relativeDay(at, reference);
+  return `${rel ? `${rel} ` : ""}${dateText(at, false)}`;
+}
+
+/** Native daily header: the short weekday over the day of the month. */
+function dailyHeader(at: string, lang: string) {
   const d = new Date(at.slice(0, 10) + "T12:00:00Z");
-  const weekday = Number.isNaN(d.getTime())
-    ? "—"
-    : new Intl.DateTimeFormat(lang, {
-        weekday: "short",
-        timeZone: "UTC",
-      }).format(d);
-  return { primary: weekday, secondary: dateText(at, false) };
+  if (Number.isNaN(d.getTime())) return { primary: "—", secondary: "—" };
+  return {
+    primary: new Intl.DateTimeFormat(lang, {
+      weekday: "short",
+      timeZone: "UTC",
+    }).format(d),
+    secondary: String(d.getUTCDate()),
+  };
 }
 
 export function HourlyChart({ weather: w }: { weather: Weather }) {
@@ -165,52 +222,10 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
   const n = model.rows.length;
   const ref = useRef<HTMLDivElement>(null),
     { rem, width: viewport, measured } = useMetrics(ref, n > 0);
-  const axisFont = `${rem}px Pretendard`;
-  const captionFont = `${rem * 0.875}px Pretendard`;
-  const hourW = maxTextWidth(
-    model.rows.map((r) => hourText(r.point.at)),
-    axisFont,
-  );
-  const rainW = maxTextWidth(
-    model.rows.slice(1).map((r) => rain(r.point, w.units.precipitationUnit)),
-    captionFont,
-  );
-  const windDirW = display.chartExpanded
-    ? maxTextWidth(
-        model.rows.map((r) => windText(r.point.windDirection)),
-        axisFont,
-      ) +
-      rem * 1.75
-    : 0;
-  const windSpeedW = display.chartExpanded
-    ? maxTextWidth(
-        model.rows.map(
-          (r) => `${formatValue(r.point.wind, 1)} ${w.units.windSpeedUnit}`,
-        ),
-        axisFont,
-      )
-    : 0;
-  const column = Math.max(
-    rem * (display.chartExpanded ? 5.5 : 4.25),
-    hourW + rem * 1.25,
-    rainW + rem * 1.0,
-    windDirW + rem * 1.25,
-    windSpeedW + rem * 1.25,
-  );
-  const yAxisPad = rem * 2.75;
-  const pad = Math.max(column * 0.6, yAxisPad + column * 0.5);
-  const { xs, width, gapBefore } = useMemo(
-    () =>
-      hourlyXPositions(
-        model.rows.map((r) => r.time),
-        column,
-        pad,
-        viewport,
-      ),
-    [model.rows, column, pad, viewport],
-  );
+  const column = nativeColumn(viewport, rem);
+  const width = Math.max(viewport, n * column);
+  const x = (i: number) => column * (i + 0.5);
   const height = rem * 11;
-  const x = (i: number) => xs[i] ?? pad;
   const y = (v: number) =>
     rem * 1.5 +
     ((model.domain[1] - v) / (model.domain[1] - model.domain[0])) *
@@ -222,7 +237,10 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
       .map((v) => `${formatValue(v)}°`),
     `${rem}px Pretendard`,
   );
-  const dotRadius = Math.max(rem * 0.78, tempTextW / 2 + rem * 0.28);
+  const dotRadius = Math.min(
+    column / 2 - 1,
+    Math.max(rem * 0.78, tempTextW / 2 + rem * 0.28),
+  );
   const yesterdayClose = (r: (typeof model.rows)[number]) =>
     r.yesterday?.temperature !== null &&
     r.yesterday?.temperature !== undefined &&
@@ -234,7 +252,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
     x,
     ref,
     model.currentIndex,
-    yAxisPad,
+    0,
   );
   const readoutId = useId();
   const identity = `${w.location.id}|${lang}|${w.units.temperatureUnit}|${w.units.windSpeedUnit}|${w.units.precipitationUnit}`;
@@ -251,7 +269,8 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
     restoring.current = true;
     if (anchorRef.current === null) {
       const start = Math.max(0, Math.min(n - 1, model.startIndex));
-      const target = Math.max(0, x(start) - yAxisPad - column * 0.55);
+      // Native: the column before the current one opens at the left edge.
+      const target = Math.max(0, column * start);
       el.scrollLeft = target;
       anchorRef.current = {
         time: model.rows[start].time,
@@ -274,11 +293,11 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
       restoring.current = false;
     });
     return () => cancelAnimationFrame(frame);
-  }, [measured, identity, n, width, viewport, model.startIndex, yAxisPad, column]);
+  }, [measured, identity, n, width, viewport, model.startIndex, column]);
   const handleScroll = () => {
     const el = ref.current;
     if (!el || !n || restoring.current) return;
-    const probe = el.scrollLeft + yAxisPad + column * 0.5;
+    const probe = el.scrollLeft + column * 0.5;
     let nearest = 0;
     let best = Infinity;
     for (let i = 0; i < n; i++) {
@@ -296,23 +315,25 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
   if (!n) return <Empty title={t("chart.empty")} />;
   const row = model.rows[cursor] ?? model.rows[0];
   const readout = `${dayLabel(row.point.at, w.current.at)} ${hourText(row.point.at)} ${formatValue(row.point.temperature, 1)}°${w.units.temperatureUnit} · ${t("display.yesterday")} ${formatValue(row.yesterday?.temperature ?? null, 1)}° · ${t("display.precipitation")} ${rain(row.point, w.units.precipitationUnit)}`;
+  // Native: the line passes through the current observation between columns.
+  const currentX = model.current ? column * (model.current.index + 0.5) : 0;
+  const line = model.rows.map((r, i) => ({
+    x: x(i),
+    today: r.point.temperature,
+    yesterday: r.yesterday?.temperature ?? null,
+  }));
+  if (model.current)
+    line.splice(model.currentIndex + 1, 0, {
+      x: currentX,
+      today: model.current.temperature,
+      yesterday: model.current.yesterday,
+    });
   const ticks = [0, 1, 2].map(
     (i) => model.domain[0] + (i * (model.domain[1] - model.domain[0])) / 2,
   );
   return (
     <>
       <div className="chart-plot-wrap">
-        <div
-          className="chart-y-axis"
-          aria-hidden="true"
-          style={{ height }}
-        >
-          {ticks.map((v, i) => (
-            <span className="chart-y-tick" key={i} style={{ top: y(v) }}>
-              {formatValue(v)}°
-            </span>
-          ))}
-        </div>
         <div
           ref={ref}
           className="chart-scroll hourly-chart"
@@ -329,7 +350,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
               {model.rows.map((r, i) => (
                 <div
                   key={r.point.at}
-                  className={`chart-column ${r.current ? "current-column" : ""}`}
+                  className={`chart-column ${i === model.currentIndex ? "current-column" : ""}`}
                   style={{ left: x(i) - column * 0.5, width: column }}
                   onClick={() => setCursor(i)}
                 >
@@ -338,10 +359,10 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                     (i === 0 ||
                       r.point.at.slice(0, 10) !==
                         model.rows[i - 1].point.at.slice(0, 10))
-                      ? dayLabel(r.point.at, w.current.at)
+                      ? hourlyDayLabel(r.point.at, w.current.at)
                       : "\u00a0"}
                   </span>
-                  <span className="chart-hour">{hourText(r.point.at)}</span>
+                  <span className="chart-hour">{chartHour(r.point.at)}</span>
                   {i > 0 ? (
                     <WeatherIcon icon={r.point.icon} size={rem * 1.5} />
                   ) : (
@@ -354,7 +375,14 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                     {i > 0 ? percent(r.point.rainProbability) : "\u00a0"}
                   </span>
                   <span className="chart-amount">
-                    {i > 0 ? rain(r.point, w.units.precipitationUnit) : "\u00a0"}
+                    {i > 0 ? (
+                      <ChartAmount
+                        point={r.point}
+                        unit={w.units.precipitationUnit}
+                      />
+                    ) : (
+                      "\u00a0"
+                    )}
                   </span>
                 </div>
               ))}
@@ -392,21 +420,50 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
               <path
                 className="yesterday-line"
                 d={linePath(
-                  model.rows.map((r) => r.yesterday?.temperature),
-                  x,
+                  line.map((p) => p.yesterday),
+                  (k) => line[k].x,
                   y,
-                  (i) => gapBefore[i],
                 )}
               />
               <path
                 className="today-line"
                 d={linePath(
-                  model.rows.map((r) => r.point.temperature),
-                  x,
+                  line.map((p) => p.today),
+                  (k) => line[k].x,
                   y,
-                  (i) => gapBefore[i],
                 )}
               />
+              {model.current && (
+                <g className="current-marker">
+                  <line
+                    className="now-line"
+                    x1={currentX}
+                    x2={currentX}
+                    y1={0}
+                    y2={height}
+                  />
+                  {model.current.yesterday !== null && (
+                    <circle
+                      className="yesterday-point"
+                      cx={currentX}
+                      cy={y(model.current.yesterday)}
+                      r={rem * 0.25}
+                    />
+                  )}
+                  <circle
+                    className="today-point"
+                    cx={currentX}
+                    cy={y(model.current.temperature)}
+                    r={rem * 0.3}
+                  />
+                  <circle
+                    className="now"
+                    cx={currentX}
+                    cy={y(model.current.temperature)}
+                    r={rem * 0.3 + rem * 0.2}
+                  />
+                </g>
+              )}
               <line
                 className="cursor-line"
                 x1={x(cursor)}
@@ -504,7 +561,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                     style={{ left: x(i) - column * 0.5, width: column }}
                     onClick={() => setCursor(i)}
                   >
-                    <WindValue point={r.point} unit={w.units.windSpeedUnit} />
+                    <ChartWind point={r.point} unit={w.units.windSpeedUnit} />
                     <span>{formatValue(r.point.humidity)}%</span>
                   </div>
                 ))}
@@ -586,33 +643,10 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
     lang = useLanguage();
   const hasSplitIcons = model.rows.some((r) => !r.mergedIcons);
   const headers = useMemo(
-    () => model.rows.map((r) => dailyHeader(r.point.at, w.current.at, lang)),
-    [model.rows, w.current.at, lang],
+    () => model.rows.map((r) => dailyHeader(r.point.at, lang)),
+    [model.rows, lang],
   );
-  const axisFont = `${rem}px Pretendard`;
-  const captionFont = `${rem * 0.875}px Pretendard`;
-  const primaryW = maxTextWidth(
-    headers.map((h) => h.primary),
-    axisFont,
-  );
-  const secondaryW = maxTextWidth(
-    headers.map((h) => h.secondary),
-    captionFont,
-  );
-  const rainW = maxTextWidth(
-    model.rows.map((r) => rain(r.point, w.units.precipitationUnit)),
-    captionFont,
-  );
-  const amW = Math.max(rem * 1.5, maxTextWidth([t("display.am")], axisFont));
-  const pmW = Math.max(rem * 1.5, maxTextWidth([t("display.pm")], axisFont));
-  const splitIconW = hasSplitIcons ? amW + pmW + rem * 1.5 : 0;
-  const column = Math.max(
-    rem * 4.5,
-    primaryW + rem * 1.0,
-    secondaryW + rem * 1.0,
-    rainW + rem * 1.0,
-    splitIconW,
-  );
+  const column = nativeColumn(viewport, rem);
   const width = Math.max(viewport, n * column),
     cell = n ? width / n : column,
     height = rem * 12,
@@ -642,14 +676,8 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       el.scrollLeft = 0;
       anchorDate.current = { at: model.rows[0].point.at, offset: 0 };
     } else if (!userScrolled.current || anchorDate.current === null) {
-      const desired = model.startIndex * cell;
-      const minForToday =
-        model.todayIndex >= 0
-          ? Math.max(0, (model.todayIndex + 1) * cell - viewport)
-          : 0;
-      const maxForToday =
-        model.todayIndex >= 0 ? Math.max(0, model.todayIndex * cell) : desired;
-      const target = Math.min(maxForToday, Math.max(desired, minForToday));
+      // Native: today opens in the third column; 640 px and wider open at the start.
+      const target = viewport >= TABLET_WIDTH ? 0 : model.startIndex * cell;
       el.scrollLeft = target;
       const firstIdx = Math.max(
         0,
@@ -671,7 +699,7 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       restoring.current = false;
     });
     return () => cancelAnimationFrame(frame);
-  }, [measured, identity, n, width, viewport, cell, model.startIndex, model.todayIndex]);
+  }, [measured, identity, n, width, viewport, cell, model.startIndex]);
   const handleScroll = () => {
     const el = ref.current;
     if (!el || !n || restoring.current) return;
@@ -739,7 +767,9 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
               >
                 <span className="chart-day-primary">{headers[i].primary}</span>
                 <span className="chart-day-date">{headers[i].secondary}</span>
-                <div className="chart-icons">
+                <div
+                  className={`chart-icons ${r.mergedIcons ? "" : "split"}`}
+                >
                   <span
                     className="chart-condition"
                     role="img"
@@ -749,11 +779,6 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                         : `${t("display.am")} ${condition(r.point.icon)}`
                     }
                   >
-                    {hasSplitIcons && (
-                      <span aria-hidden="true" className="chart-period">
-                        {r.mergedIcons ? "\u00a0" : t("display.am")}
-                      </span>
-                    )}
                     <WeatherIcon icon={r.point.icon} size={rem * 1.5} />
                   </span>
                   {!r.mergedIcons && (
@@ -762,15 +787,17 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                       role="img"
                       aria-label={`${t("display.pm")} ${condition(r.point.iconPm)}`}
                     >
-                      <span aria-hidden="true" className="chart-period">
-                        {t("display.pm")}
-                      </span>
                       <WeatherIcon icon={r.point.iconPm} size={rem * 1.5} />
                     </span>
                   )}
                 </div>
-                <span>{probability(r)}</span>
-                <span>{rain(r.point, w.units.precipitationUnit)}</span>
+                <span className="chart-probability">{probability(r)}</span>
+                <span className="chart-amount">
+                  <ChartAmount
+                    point={r.point}
+                    unit={w.units.precipitationUnit}
+                  />
+                </span>
               </div>
             ))}
           </div>

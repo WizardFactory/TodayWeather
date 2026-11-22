@@ -286,7 +286,7 @@ Both charts keep the Cordova information model and reading order. The design sys
 
 **Anatomy, top to bottom, sharing one column grid:**
 1. **Day title.** For example `오늘 09.27` / `Today 09/27`. Role `caption`, weight 600. It appears at the first column of each date. A midnight guide line (`chart.grid.strong`) runs through the whole chart.
-2. **Hour label.** For example `21시` / `9 PM`. Role `chart-axis`. It is formatted by the locale; the width estimate already exists in `components.tsx:220-221`.
+2. **Hour label.** The hour and the native apps' short unit (`LOC_HOUR`): `21시`, `21h`, `21時`, `21Uhr` (`chart.hour`). Role `chart-axis`. It does not follow the locale clock, so seven columns fit a phone; the cursor announcement and table keep the locale's time format.
 3. **Sky icon.** Size 1.75em of `chart-axis` (28 px on mobile). The day or night variant comes from the data.
 4. **Precipitation.** The probability is always printed, including `0%`, as in Cordova (`caption`, value plus `%`). At 30% or more it is colored `precip.text`, and at 60% or more the drop icon is filled. An amount (the first truthy of `rn1`/`s06`/`r06`, rounded when it is 10 or more) goes on a second `caption` line when present.
 
@@ -327,15 +327,15 @@ Both charts keep the Cordova information model and reading order. The design sys
 
 | | Mobile | Tablet | Desktop |
 | --- | --- | --- | --- |
-| Column width | clamp(3.25rem, 100vw / 7, 4rem): 57 px at 402, continuing Cordova `min(width/7, 60)` | 4.5rem (72 px) | 4rem (64 px) |
+| Column width | `min(chart width / 7, 60 px)` × text scale (rem / 16), as in the native apps (Cordova `colWidth`) | same | same |
 | Plot height | 11rem | 14rem | 13rem |
-| Visible columns | ≈7 | ≈10–16 | ≈14 in the main column |
+| Visible columns | 7 (fewer with larger text) | chart width / 60 | chart width / 60 |
 
 **Scroll.**
 - Horizontal scrolling happens inside the chart only.
-- The initial position is the column before the current time, as in Cordova.
+- The initial position puts the column before the current one at the left edge, as in the native apps (`getTodayPosition`).
 - The data span matches the service's rows from yesterday 00:00 (the response's current date minus one day) onward; older rows are not drawn and serve only as the yesterday comparison for yesterday's columns. The PWA's 16-point cap is lifted to the rest of the series.
-- Mixed 1-hour and 3-hour rows (and off-hour observations) use bounded chronological segment spacing (`hourlyXPositions`: 1.0× column at ≤1h, smoothly up to 1.35× at 3h, capped at 1.5× for >3h gaps with a line break) so 3-hour spans do not stretch into empty mobile voids and off-hour observations cannot blow up chart width (#3114). The Y-axis ticks stay pinned at the viewport edge while scrolling.
+- Columns are the three-hour forecast rows only (KMA `short`, overseas `hourly`; `Weather.chartHourly`), one column per row at equal spacing, so the column count matches the native apps. The merged one-hour `shortest` rows stay in the rain and snow card. An off-hour observation is not a column (see Now). There is no Y axis; each dot carries its value.
 
 **Interaction and accessibility.**
 - The chart is a focusable `role="group"` with a summary label.
@@ -355,9 +355,9 @@ Both charts keep the Cordova information model and reading order. The design sys
 **Default view.** The Cordova daily chart replaces the PWA's current horizontal-row list (`web/src/Weather.tsx:625-670`) as the default daily view on every tier. The list becomes the table alternative.
 
 **Anatomy, one column per day, including past days the service returns:**
-1. **Weekday.** `chart-axis`, weight 600. Today's column gets an `accent.subtle` background and a small `caption` "Today" tag **above** the weekday, without replacing it. This is a new addition. Cordova's `current-rect` is transparent (`client/scss/ionic.app.scss:524`), except in the old theme, which fills it (`:832`, `:937`).
+1. **Weekday.** The short weekday, `chart-axis`, weight 600. Today's column uses the accent color, as the native apps' `current-rect`; there is no separate "Today" tag.
 2. **Day of month.** `chart-axis`.
-3. **AM and PM sky icons.** Shown as one icon when they are equal or PM is missing. Size 1.75em of `chart-axis`.
+3. **AM and PM sky icons.** Stacked, AM above PM, without period words (their names are in the cursor, tooltip and table). Shown as one icon when they are equal or PM is missing. The icon area keeps one height so the rows below stay aligned.
 4. **Precipitation.** Probability for today and later (Cordova rule: shown when `fromToday >= 0` and truthy), plus an amount when present. Uses `caption` and the same color rules as the hourly chart.
 5. **Min–max bars on one y scale shared by all days.** This scale is what makes week-to-week change visible, and it is the Cordova signature.
    - **Bar (D8).** Width 0.375rem (6 px, rounded caps); Cordova used 2 px. The fill is the PWA daily list's temperature gradient (`web/src/style.css:1058`) turned vertical:
@@ -371,10 +371,10 @@ Both charts keep the Cordova information model and reading order. The design sys
    - **Y domain** (deviation from Cordova, which uses only `tmn`/`tmx`, `app.js:1197-1204`). The domain includes the current temperature, so today's dot can never fall off the scale.
 
 **Geometry.**
-- Column width is the same as the hourly chart. The chart fills the card width when the days fit.
+- Column width is the same as the hourly chart, and every supplied day is a column (the native count). The chart fills the card width when the days fit.
 - Initial scroll:
-  - When the days do not fit, today is the third column (Cordova rule below 640 px).
-  - When they fit (tablet and desktop in most cases), there is no scroll and the chart starts at the first day (Cordova behavior at 640 px and wider).
+  - Below 640 px of chart width, today is the third column (native rule).
+  - At 640 px and wider, the chart starts at the first day (native rule).
 
 **Interaction, accessibility and states.** Same as the hourly chart. The announcement is "Sat 26: AM cloudy, PM sunny, 30%, low 18°, high 27°".
 
