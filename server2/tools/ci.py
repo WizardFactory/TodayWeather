@@ -9,12 +9,27 @@ from pathlib import Path
 
 def output(*args): return subprocess.check_output(args,text=True).strip()
 
+def pull_request_base(event):
+    request = event['pull_request']
+    merge_ref = f"refs/pull/{event.get('number')}/merge"
+    if os.environ.get('GITHUB_REF') != merge_ref:
+        return request['base']['sha']
+
+    # The runner's merge ref can advance between event creation and checkout.
+    # Use the target parent of the merge tree we are actually checking.
+    checkout = output('git', 'rev-list', '--parents', '-n', '1', 'HEAD').split()
+    if (len(checkout) != 3 or checkout[0] != os.environ.get('GITHUB_SHA')
+            or checkout[2] != request['head']['sha']):
+        raise SystemExit('PR merge checkout does not match the GitHub event head')
+    return checkout[1]
+
+
 def main():
     root=Path(__file__).resolve().parents[2]
     os.chdir(root/'server2')
     event=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text()) if os.environ.get('GITHUB_EVENT_PATH') else {}
     if 'pull_request' in event:
-        base=event['pull_request']['base']['sha']
+        base=pull_request_base(event)
     elif event.get('before') and set(event['before']) != {'0'}:
         base=event['before']
     elif os.environ.get('SERVER2_BASE'):

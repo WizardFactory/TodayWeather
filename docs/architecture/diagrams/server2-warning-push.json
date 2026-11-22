@@ -9,7 +9,7 @@
     "animation": "none",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "7d1dcd22b966ab996f98867f60ee7ba6089e812f",
+      "revision": "c29c1d6d4ec1c77f62c7be2fc553f16d887e85d7",
       "provider": "github",
       "link_mode": "local-only"
     }
@@ -45,12 +45,17 @@
       "id": "worker",
       "type": "backend",
       "label": "Warning worker",
-      "sublabel": "library, not started",
+      "sublabel": "selects eligible alerts",
       "sources": [
         {
           "path": "server2/src/push/deliver/warnings.rs",
           "line": 215,
-          "end_line": 712
+          "end_line": 723
+        },
+        {
+          "path": "server2/src/warnings/zones.rs",
+          "line": 50,
+          "end_line": 61
         }
       ]
     },
@@ -68,12 +73,12 @@
         {
           "path": "server2/src/warnings/store.rs",
           "line": 663,
-          "end_line": 714
+          "end_line": 715
         },
         {
           "path": "server2/src/warnings/zones.rs",
-          "line": 69,
-          "end_line": 404
+          "line": 75,
+          "end_line": 414
         }
       ]
     },
@@ -111,8 +116,7 @@
       "to": "s3",
       "y": 160,
       "label": "Publish raw + catalog",
-      "variant": "security",
-      "note": "Raw + catalog first."
+      "variant": "security"
     },
     {
       "id": "warning-step-1",
@@ -120,8 +124,7 @@
       "to": "feed",
       "y": 204,
       "label": "Pass persisted rows",
-      "variant": "default",
-      "note": "First feed is silent."
+      "variant": "default"
     },
     {
       "id": "warning-step-2",
@@ -129,8 +132,7 @@
       "to": "s3",
       "y": 248,
       "label": "Events then CAS head",
-      "variant": "security",
-      "note": "CAS head makes visible."
+      "variant": "security"
     },
     {
       "id": "warning-step-3",
@@ -138,8 +140,7 @@
       "to": "feed",
       "y": 292,
       "label": "Read new feed",
-      "variant": "default",
-      "note": "No startup replay."
+      "variant": "default"
     },
     {
       "id": "warning-step-4",
@@ -147,8 +148,7 @@
       "to": "state",
       "y": 336,
       "label": "Select eligible alerts",
-      "variant": "default",
-      "note": "235-zone + window."
+      "variant": "default"
     },
     {
       "id": "warning-step-5",
@@ -156,26 +156,23 @@
       "to": "s3",
       "y": 380,
       "label": "Claim endpoint",
-      "variant": "security",
-      "note": "Stop if already taken."
+      "variant": "security"
     },
     {
       "id": "warning-auth",
       "from": "worker",
       "to": "fcm",
+      "y": 424,
       "label": "Prepare OAuth",
-      "variant": "default",
-      "note": "No POST before guard.",
-      "y": 424
+      "variant": "default"
     },
     {
       "id": "warning-guard",
       "from": "worker",
       "to": "state",
+      "y": 468,
       "label": "Recheck durable state",
-      "variant": "security",
-      "note": "Check journal + S12 zones.",
-      "y": 468
+      "variant": "security"
     },
     {
       "id": "warning-step-6",
@@ -183,8 +180,7 @@
       "to": "fcm",
       "y": 512,
       "label": "Submit once",
-      "variant": "emphasis",
-      "note": "Active only; no retry."
+      "variant": "emphasis"
     },
     {
       "id": "warning-step-7",
@@ -192,8 +188,7 @@
       "to": "worker",
       "y": 556,
       "label": "Outcome or unknown",
-      "variant": "return",
-      "note": "Never retries on loss."
+      "variant": "return"
     },
     {
       "id": "warning-step-8",
@@ -201,25 +196,26 @@
       "to": "s3",
       "y": 600,
       "label": "Record sanitized result",
-      "variant": "dashed",
-      "note": "Claim survives restart."
+      "variant": "dashed"
     }
   ],
   "cards": [
     {
       "dot": "emerald",
-      "title": "Legacy source contract",
+      "title": "Source and district selection",
       "items": [
-        "First durable feed is silent; later new source events must be less than five minutes old.",
-        "Release, expiry, active announcement, alert time window and granular KMA 235-zone sub-zone matching (embedded kma_warning_subzones.json, safe over-warn fallback on empty/unknown third; shared with current.specialInfo and summaries) govern selection."
+        "The collector publishes every source page and its catalog before the feed hook. Only an acknowledged head makes events visible; the first feed and worker reads are silent and later events must be under five minutes old.",
+        "For 전남광주통합특별시, resolve Gwangju and Jeonnam by district and skip unmapped districts; then apply KMA 235-zone sub-zone matching (embedded kma_warning_subzones.json, safe over-warn fallback on empty/unknown third; shared with current.specialInfo).",
+        "Apply release, expiry, active announcement, inclusive alert time window, and package/token deduplication."
       ]
     },
     {
       "dot": "rose",
-      "title": "One-shot implementation",
+      "title": "One-shot delivery",
       "items": [
-        "Endpoint claim before one submission; failed or unknown work is never retried.",
-        "Startup baseline consumes old feed without broadcasting or resuming delivery."
+        "Stop when an endpoint claim is unavailable or already taken. Prepare OAuth before the final guard.",
+        "Check the latest registration journal and active warning state before FCM POST. Error, timeout, expiry or release prevents the send.",
+        "A lost response never authorizes a resend. The claim survives missing results, cancellation and restart."
       ]
     },
     {

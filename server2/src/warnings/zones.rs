@@ -13,6 +13,15 @@ pub const ZONE_TABLE: &str = include_str!("data/kma_warning_zones.csv");
 /// Copy of `server/utils/data/kma_warning_subzones.json` (#3084/#3085); see `data/PROVENANCE.md`.
 pub const SUBZONE_TABLE: &str = include_str!("data/kma_warning_subzones.json");
 const ROOT_ZONE: &str = "L1000000";
+const ISSUE_COMMANDS: [&str; 4] = ["1", "3", "6", "7"];
+const RELEASE_COMMANDS: [&str; 2] = ["2", "8"];
+const PROVINCE_ALIASES: [(&str, &str); 4] = [
+    ("강원특별자치도", "강원도"),
+    ("전북특별자치도", "전북자치도"),
+    ("전라북도", "전북자치도"),
+    ("제주특별자치도", "제주도"),
+];
+pub const COMBINED_GWANGJU_JEONNAM: &str = "전남광주통합특별시";
 const GWANGJU_DISTRICTS: [&str; 5] = ["동구", "서구", "남구", "북구", "광산구"];
 const JEONNAM_DISTRICTS: [&str; 22] = [
     "목포시",
@@ -38,14 +47,18 @@ const JEONNAM_DISTRICTS: [&str; 22] = [
     "진도군",
     "신안군",
 ];
-const ISSUE_COMMANDS: [&str; 4] = ["1", "3", "6", "7"];
-const RELEASE_COMMANDS: [&str; 2] = ["2", "8"];
-const PROVINCE_ALIASES: [(&str, &str); 4] = [
-    ("강원특별자치도", "강원도"),
-    ("전북특별자치도", "전북자치도"),
-    ("전라북도", "전북자치도"),
-    ("제주특별자치도", "제주도"),
-];
+/// Classify a district under `전남광주통합특별시` into its legacy province (`광주광역시` or
+/// `전라남도`). Returns `None` for empty or unrecognized districts so callers never misroute.
+pub fn gwangju_jeonnam_province(district: &str) -> Option<&'static str> {
+    let clean: String = district.chars().filter(|c| !js::is_space(*c)).collect();
+    if GWANGJU_DISTRICTS.contains(&clean.as_str()) {
+        Some("광주광역시")
+    } else if JEONNAM_DISTRICTS.contains(&clean.as_str()) {
+        Some("전라남도")
+    } else {
+        None
+    }
+}
 const LEGACY_CITIES: [(&str, &str); 1] = [("청원군", "청주시")];
 const SHARED_ZONES: [(&str, &[&str], &str); 1] =
     [("제주도", &["제주시", "서귀포시"], "제주도산지")];
@@ -152,16 +165,6 @@ fn string_list(v: &Value) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn province_for_combined_district(district: &str) -> Option<&'static str> {
-    if GWANGJU_DISTRICTS.contains(&district) {
-        Some("광주광역시")
-    } else if JEONNAM_DISTRICTS.contains(&district) {
-        Some("전라남도")
-    } else {
-        None
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -314,8 +317,9 @@ impl ZoneTable {
             .iter()
             .find(|(k, _)| *k == first)
             .map_or(first, |(_, v)| v);
-        if province_name == "전남광주통합특별시" {
-            let Some(resolved) = province_for_combined_district(&second) else {
+        let is_combined = province_name == COMBINED_GWANGJU_JEONNAM;
+        if is_combined {
+            let Some(resolved) = gwangju_jeonnam_province(&second) else {
                 return vec![];
             };
             province_name = resolved;
@@ -328,7 +332,13 @@ impl ZoneTable {
         else {
             return vec![];
         };
-        let third = trim(&town.third);
+        let normalized_third;
+        let third = if is_combined {
+            normalized_third = js::collapse_space(trim(&town.third), "");
+            normalized_third.as_str()
+        } else {
+            trim(&town.third)
+        };
         let third_base = trim(third.split('/').next().unwrap_or(""));
         if second.is_empty() && third_base.is_empty() {
             return self.expand(&[province]);

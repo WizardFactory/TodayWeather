@@ -91,7 +91,9 @@ impl Peer {
             openweather: dead.clone(),
             waqi: dead.clone(),
             kakao: dead.clone(),
-            google: dead,
+            google: dead.clone(),
+            solar_archive: dead.clone(),
+            gwanbo: dead,
             ..Builtins::production()
         }
     }

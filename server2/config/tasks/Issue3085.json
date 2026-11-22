@@ -14,6 +14,7 @@
     "server2/tests/warnings/fixtures/oracle-expected.json",
     "server2/tests/warnings/fixtures/PROVENANCE.md",
     "server2/tests/delivery/warnings.rs",
+    "server2/tests/domestic/full_response.rs",
     "server2/tests/domestic/parity.rs",
     "server2/tests/domestic/recorded.rs",
     "server2/tests/domestic/support.rs",

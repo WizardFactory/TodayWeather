@@ -290,39 +290,8 @@ fn food_region(first: &V, second: &V) -> Option<(String, String)> {
         V::Str(x) => x.chars().filter(|c| !super::precip::js_ws(*c)).collect(),
         _ => String::new(),
     };
-    if sd == "전남광주통합특별시" {
-        const GWANGJU: [&str; 5] = ["동구", "서구", "남구", "북구", "광산구"];
-        const JEONNAM: [&str; 22] = [
-            "목포시",
-            "여수시",
-            "순천시",
-            "나주시",
-            "광양시",
-            "담양군",
-            "곡성군",
-            "구례군",
-            "고흥군",
-            "보성군",
-            "화순군",
-            "장흥군",
-            "강진군",
-            "해남군",
-            "영암군",
-            "무안군",
-            "함평군",
-            "영광군",
-            "장성군",
-            "완도군",
-            "진도군",
-            "신안군",
-        ];
-        if GWANGJU.contains(&sgg.as_str()) {
-            sd = "광주광역시".into();
-        } else if JEONNAM.contains(&sgg.as_str()) {
-            sd = "전라남도".into();
-        } else {
-            return None;
-        }
+    if sd == crate::warnings::zones::COMBINED_GWANGJU_JEONNAM {
+        sd = crate::warnings::zones::gwangju_jeonnam_province(&sgg)?.into();
     }
     sd = match sd.as_str() {
         "전라북도" => "전북특별자치도".into(),

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { dateText, hourText } from "./locale";
 import {
   useParams,
   useNavigate,
   useSearchParams,
   useLocation,
+  useNavigationType,
   Link,
 } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -62,6 +63,7 @@ import {
   amount,
   precipitationAmount,
   forecastAmount,
+  upcomingPrecipitation,
   weatherStaleTime,
   windText,
 } from "./format";
@@ -139,6 +141,7 @@ export default function WeatherPage({
   const { state, setState, notify, contentInert } = useApp();
   const navigate = useNavigate();
   const route = useLocation();
+  const navigationType = useNavigationType();
   const linkPlaceKind = route.state?.linkPlaceKind;
   // A catalog deep link must never open an unrelated favorite with the same ID.
   const catalogOnly =
@@ -189,8 +192,12 @@ export default function WeatherPage({
     view === "daily" ? data?.daily.length : data?.hourly.length,
   );
   const pendingContentFocus = useRef(false);
+  const pendingErrorFocus = useRef(false);
+  const recoverMainFocus = useRef(false);
+  const pendingPreviewPopFocus = useRef(false);
+  const prevPreviewView = useRef(view);
   useEffect(() => {
-    pendingContentFocus.current = view === "hourly" || view === "daily";
+    pendingContentFocus.current = view === "daily";
   }, [
     route.key,
     view,
@@ -231,6 +238,49 @@ export default function WeatherPage({
     hasChartRows,
     query.isPending,
   ]);
+  useEffect(() => {
+    if (view === "daily") {
+      pendingErrorFocus.current = false;
+      recoverMainFocus.current = false;
+      return;
+    }
+    if (query.isError && !data) {
+      pendingErrorFocus.current = true;
+      recoverMainFocus.current = true;
+    }
+  }, [route.key, view, query.isError, !!data, place?.id]);
+  useEffect(() => {
+    if (contentInert || view === "daily") return;
+    if (query.isError && !data && pendingErrorFocus.current) {
+      pendingErrorFocus.current = false;
+      const main = document.getElementById("main-content");
+      if (main && !main.contains(document.activeElement))
+        main.focus({ preventScroll: true });
+      return;
+    }
+    if (data && recoverMainFocus.current) {
+      recoverMainFocus.current = false;
+      pendingErrorFocus.current = false;
+      // Error -> Retry on non-daily views (hourly/overview/air) unmounts
+      // ErrorState; restore focus to #main-content without scrolling away from top.
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+    }
+  }, [view, query.isError, !!data, contentInert]);
+  useEffect(() => {
+    const previous = prevPreviewView.current;
+    prevPreviewView.current = view;
+    if (!preview || previous === view || view === "daily") return;
+    // Coordinate preview changes ?view= on the same /loc pathname, so App's
+    // pathname effect does not run when returning from daily to hourly/air.
+    window.scrollTo(0, 0);
+    if (navigationType === "POP") pendingPreviewPopFocus.current = true;
+  }, [preview, view, route.key, navigationType]);
+  useEffect(() => {
+    if (!contentInert && pendingPreviewPopFocus.current) {
+      pendingPreviewPopFocus.current = false;
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+    }
+  }, [contentInert, view, route.key]);
   if (!place)
     return (
       <Empty title={t(catalogOnly ? "public.notFound" : "weather.selectFirst")}>
@@ -298,7 +348,6 @@ export default function WeatherPage({
                 </span>
               );
             })()}
-            <span className="live-dot" />
           </h1>
         </div>
         <div className="button-row">
@@ -475,7 +524,7 @@ function WeatherDetails({
   // Mobile rounds the yesterday difference in °F and keeps one decimal in °C.
   const deltaDigits = w.units.temperatureUnit === "F" ? 0 : 1;
   const today = w.daily.find((p) => p.at.slice(0, 10) === now.at.slice(0, 10));
-  const hourly = w.hourly;
+  const precipRows = upcomingPrecipitation(w, view);
   const snowLabel = t(
     w.source === "KMA" ? "metric.snowDepth" : "metric.snowfall",
   );
@@ -747,8 +796,8 @@ function WeatherDetails({
       </div>
       <section className="panel">
         <SectionHead title={t("weather.precipitation.title")} />
-        <div className="detail-grid">
-          {(view === "daily" ? w.daily : hourly).slice(0, 8).map((p) => (
+        <div className="detail-grid precip-grid">
+          {precipRows.map((p) => (
             <div key={p.at}>
               <span>
                 {dayLabel(p.at, now.at)} {view !== "daily" && hourText(p.at)}
@@ -840,10 +889,33 @@ function AirDetails({
   setCode: (code: Pollutant) => void;
 }) {
   const [stationIndex, setStationIndex] = useState(0);
+  const barChartRef = useRef<HTMLDivElement>(null);
   const standard = w.units.airUnit;
   const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
   const station = w.air[stationIndex] ?? w.air[0];
-  if (!station)
+  const p = station?.pollutants[code];
+  const slots = p ? airWindow(p.hourly, station.observedAt) : [];
+  const observedBarIndex = slots[12] ? 12 : slots.findIndex(Boolean);
+  useLayoutEffect(() => {
+    const el = barChartRef.current;
+    if (!el || observedBarIndex < 0) return;
+    if (el.scrollWidth <= el.clientWidth + 1) {
+      el.scrollLeft = 0;
+      return;
+    }
+    const bar = el.children[observedBarIndex] as HTMLElement | undefined;
+    if (!bar) return;
+    const offset =
+      bar.getBoundingClientRect().left -
+      el.getBoundingClientRect().left -
+      el.clientLeft +
+      el.scrollLeft;
+    el.scrollLeft = Math.max(
+      0,
+      offset - (el.clientWidth - bar.offsetWidth) / 2,
+    );
+  }, [w.location.id, stationIndex, code, observedBarIndex]);
+  if (!station || !p)
     return (
       <section className="panel">
         <Empty title={t("air.none.title")}>{t("air.none.body")}</Empty>
@@ -851,9 +923,7 @@ function AirDetails({
         {w.airSummary && <AirAttribution weather={w} />}
       </section>
     );
-  const p = station.pollutants[code],
-    slots = airWindow(p.hourly, station.observedAt),
-    max = Math.max(1, ...slots.map((v) => v?.value ?? 0));
+  const max = Math.max(1, ...slots.map((v) => v?.value ?? 0));
   const otherStation = (c: Pollutant) =>
     station.pollutants[c].station &&
     station.pollutants[c].station !== station.name
@@ -968,6 +1038,7 @@ function AirDetails({
         />
         {slots.some(Boolean) ? (
           <div
+            ref={barChartRef}
             className="bar-chart"
             role="group"
             tabIndex={0}
