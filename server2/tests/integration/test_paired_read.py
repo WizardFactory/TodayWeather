@@ -392,19 +392,13 @@ class PairedReadTests(unittest.TestCase):
     def test_execute_preserves_clock_rollback_reason(self):
         # GEM-BS-002: exercise execute's exception wrapper, not just Ledger.clock.
         state = self.path/'rollback'
-        # #3128: other threads (e.g. a late peer handler writing its Date header) call
-        # time.time() while this runs; they must not consume the scripted clock values.
-        stop = threading.Event()
-        def other_thread_clock():
-            while not stop.is_set():
-                time.time()
-                time.sleep(.001)
-        noise = threading.Thread(target=other_thread_clock, daemon=True)
-        noise.start()
-        self.addCleanup(noise.join)
-        self.addCleanup(stop.set)
-        time.sleep(.01)
         with scripted_clock(side_effect=[1000., 1000., 999.]):
+            # #3128: another thread (e.g. a late peer handler writing its Date header)
+            # reads the clock inside the scripted window; it must not consume a value.
+            other = threading.Thread(target=time.time)
+            other.start()
+            other.join(5)
+            self.assertFalse(other.is_alive())
             with self.assertRaisesRegex(ValueError, 'backwards'):
                 capture.execute(manifest(), 'http://127.0.0.1:1', 'http://127.0.0.1:2',
                                 state, self.binary, loopback_test=True)
