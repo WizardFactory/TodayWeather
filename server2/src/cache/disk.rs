@@ -873,6 +873,10 @@ impl Drop for DiskCache {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::await_holding_lock,
+    reason = "each test holds crate::test_spawn::shared() for its whole run (#3135)"
+)]
 mod fault_tests {
     use super::*;
     use crate::storage::{Limits, ProviderKey, RawRecord};
@@ -914,6 +918,7 @@ mod fault_tests {
     }
     #[tokio::test]
     async fn shared_root_cap_counts_other_namespaces_and_temporary_files() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, object) = setup();
         c.writer(&id).unwrap().enqueue(object.clone());
         assert!(
@@ -950,6 +955,7 @@ mod fault_tests {
     }
     #[tokio::test]
     async fn root_lock_serializes_namespace_admission_and_busy_cache_safely_skips() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.writer(&id).unwrap().enqueue(o.clone());
         assert!(
@@ -988,6 +994,7 @@ mod fault_tests {
     }
     #[test]
     fn writer_admission_is_bounded_and_cancellation_releases_reservations() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, _) = setup();
         let a = c.writer(&id).unwrap();
         let b = c.writer(&id).unwrap();
@@ -1000,6 +1007,7 @@ mod fault_tests {
     }
     #[tokio::test]
     async fn enospc_after_temporary_creation_releases_charge_and_recovers() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.fail_write.store(true, Ordering::SeqCst);
         c.writer(&id).unwrap().enqueue(o.clone());
@@ -1024,6 +1032,7 @@ mod fault_tests {
     }
     #[tokio::test]
     async fn stale_temporary_files_are_cleaned_but_unrelated_files_are_preserved() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.writer(&id).unwrap().enqueue(o.clone());
         assert!(
@@ -1050,6 +1059,7 @@ mod fault_tests {
     }
     #[tokio::test]
     async fn another_namespace_owner_bypasses_without_deleting_the_first_cache() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.writer(&id).unwrap().enqueue(o);
         assert!(
@@ -1066,6 +1076,7 @@ mod fault_tests {
     }
     #[tokio::test]
     async fn tiny_entries_are_charged_in_allocated_blocks_and_lower_cap_evicts_on_restart() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         for i in 1..=4 {
             let mut id = id.clone();
@@ -1089,6 +1100,7 @@ mod fault_tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn symlink_cache_file_is_not_followed_and_new_files_are_private() {
+        let _spawn = crate::test_spawn::shared();
         use std::os::unix::{
             fs::MetadataExt,
             fs::{PermissionsExt, symlink},
@@ -1142,6 +1154,7 @@ mod fault_tests {
     /// DISK-CACHE: a load while a cache write is held answers at once instead of waiting for it.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_held_cache_write_does_not_delay_a_load() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.writer(&id).unwrap().enqueue(o.clone());
         assert!(
@@ -1173,6 +1186,7 @@ mod fault_tests {
     /// DISK-CACHE: with the only blocking thread held, a cache write completes and a load hits.
     #[test]
     fn cache_loads_and_writes_do_not_use_the_blocking_pool() {
+        let _spawn = crate::test_spawn::shared();
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .max_blocking_threads(1)
@@ -1209,6 +1223,7 @@ mod fault_tests {
     /// counted; the reserved one still lands.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn fills_beyond_the_pending_bound_are_dropped_and_counted() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         let (held, release) = hold(&c.hold_write);
         c.writer(&id).unwrap().enqueue(o.clone());
@@ -1236,6 +1251,7 @@ mod fault_tests {
     /// once instead of queuing; the queued ones are then served.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_full_load_queue_misses_at_once() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.writer(&id).unwrap().enqueue(o);
         assert!(
@@ -1271,6 +1287,7 @@ mod fault_tests {
     /// earlier.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn queued_loads_run_before_queued_fills() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         c.writer(&id).unwrap().enqueue(o.clone());
         assert!(
@@ -1307,6 +1324,7 @@ mod fault_tests {
     /// held for a running fill), and a fill still queued then is discarded, not written.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn the_thread_ends_after_the_last_reference_and_discards_queued_work() {
+        let _spawn = crate::test_spawn::shared();
         let (root, c, id, o) = setup();
         let (exit, exited) = tokio::sync::oneshot::channel();
         *c.worker.exited.lock().unwrap() = Some(exit);
