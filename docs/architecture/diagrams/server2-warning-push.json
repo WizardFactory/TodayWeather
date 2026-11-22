@@ -9,7 +9,7 @@
     "animation": "none",
     "repository": {
       "url": "https://github.com/WizardFactory/TodayWeather",
-      "revision": "c29c1d6d4ec1c77f62c7be2fc553f16d887e85d7",
+      "revision": "b6cae089598931f0f4b6b900cf10da3ce57122a7",
       "provider": "github",
       "link_mode": "local-only"
     }
