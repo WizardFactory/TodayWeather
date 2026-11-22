@@ -19,9 +19,10 @@ import subprocess
 import sys
 import tempfile
 import time
-from state import validate_cost_policy, estimate_cost
+from state import Journal, validate_cost_policy, estimate_cost
 
 GiB = 1024**3
+DISK_RESERVE_BYTES = 6 * GiB
 INTERVAL = 10
 # A single failed observation never ends a run: stop after this many in a row (60 s).
 MISS_LIMIT = 6
@@ -99,8 +100,8 @@ def validate(manifest):
     unit = 'server2-shadow-'+manifest['run_id']+'-candidate.service'
     require(manifest['cgroup']=='/system.slice/'+unit,'cgroup')
     allowance = manifest['allowance']
-    require(type(allowance) is dict and set(allowance)=={'reads','writes','put_bytes'},'allowance')
-    for field,cap in [('reads',900000),('writes',900000),('put_bytes',2*GiB)]:
+    require(type(allowance) is dict and set(allowance)==Journal.CAPS.keys(),'allowance')
+    for field,cap in Journal.CAPS.items():
         require(integer(allowance[field],1,cap),'allowance_'+field)
     validate_cost_policy(manifest['cost_policy'],manifest['epoch'])
     # Paid provider prices (USD per runtime unit) of the frozen paid policy, by the server's
@@ -161,7 +162,7 @@ def evaluate(manifest, sample, previous, now):
     if not integer(tx) or tx < result['last_tx']:
         return stop('network_counter_reset')
     result['last_tx']=tx
-    if not integer(sample.get('free_bytes')) or sample['free_bytes'] < 6*GiB:
+    if not integer(sample.get('free_bytes')) or sample['free_bytes'] < DISK_RESERVE_BYTES:
         return stop('disk_reserve')
     metrics=sample.get('metrics')
     required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures','storage_auth_failures'}

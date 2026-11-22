@@ -15,6 +15,8 @@ Scenarios (one run ID each, the host reset in between):
                  does not stop and acquisition keeps running (SR-3); the retention stop drains
                  the collector, and the stand-in holds server, guard, reader and collector
                  records, none with a synthetic key, URL or response body (LP6-AC1, AC2, AC4)
+  provider-fault-{401,403,429,stall}  scope the fault to one data.go.kr nowcast path and
+                 observe the provider, guard, scheduled reader and shipped records (SR-6)
   storage-authorization  the run's data buckets answer 403 once acquisition runs: the guard
                  stops with s3_authorization and its stop record is shipped (SR-3)
   config-change  the destination is unreachable; a changed .env stops acquisition as
@@ -48,12 +50,15 @@ import gzip
 import hashlib
 import io
 import json
+import http.client
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tarfile
 import time
+from contextlib import closing
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -86,6 +91,12 @@ PROVIDERS = ('apis.data.go.kr', 'apihub.kma.go.kr', 'www.weather.go.kr', 'www.km
 MARKER = 'PEER-BODY-MARKER-2983'
 RUNS = ('lp6-provider', 'lp6-storage', 'lp6-config', 'lp6-frozen', 'lp6-broken', 'lp6-tampered',
         'sr5-evidence', 'sr5-candidate')
+FAULTS = {'provider-fault-401': 401, 'provider-fault-403': 403,
+          'provider-fault-429': 429, 'provider-fault-stall': None}
+RUNS += tuple(FAULTS)
+FAULT_PATH = '/1360000/VilageFcstMsgService/getWthrSituation'
+FAULT_SOURCE = 'vilage_fcst_msg'
+FAULT_STALL_SECONDS = 20
 SOURCES = {'server', 'guard', 'reader', 'collector', 'copy'}
 # Test-only drop-in for this disposable VM: the hourly copy timer every 20 seconds. The
 # generated product unit is unchanged (OnCalendar=hourly).
@@ -136,20 +147,25 @@ def bucket_names():
     return [f'server2-shadow-{r}-{kind}' for r in RUNS for kind in ('raw', 'state')]
 
 
-def setup_network():
-    """Test CA, /etc/hosts and an egress block: nothing leaves the VM during the check."""
+def setup_test_tls(names):
+    """Issue the disposable stand-in certificate for the supplied local names."""
     TLS.mkdir(parents=True, exist_ok=True)
-    s3_names = [f's3.{REGION}.amazonaws.com'] + [f'{b}.s3.{REGION}.amazonaws.com' for b in bucket_names()]
-    peer_names = [PRODUCTION, *PROVIDERS]
     run('openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(TLS / 'ca.key'),
         '-out', str(TLS / 'ca.crt'), '-days', '2', '-subj', '/CN=server2 shadow check CA')
-    (TLS / 'ext.cnf').write_text('subjectAltName=' + ','.join('DNS:' + n for n in s3_names + peer_names) + '\n')
+    (TLS / 'ext.cnf').write_text('subjectAltName=' + ','.join('DNS:' + n for n in names) + '\n')
     run('openssl', 'req', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(TLS / 'srv.key'), '-out', str(TLS / 'srv.csr'),
         '-subj', '/CN=standin')
     run('openssl', 'x509', '-req', '-in', str(TLS / 'srv.csr'), '-CA', str(TLS / 'ca.crt'), '-CAkey', str(TLS / 'ca.key'),
         '-CAcreateserial', '-out', str(TLS / 'srv.crt'), '-days', '2', '-extfile', str(TLS / 'ext.cnf'))
     shutil.copy(TLS / 'ca.crt', '/usr/local/share/ca-certificates/server2-shadow-check.crt')
     run('update-ca-certificates')
+
+
+def setup_network():
+    """Test CA, /etc/hosts and an egress block: nothing leaves the VM during the check."""
+    s3_names = [f's3.{REGION}.amazonaws.com'] + [f'{b}.s3.{REGION}.amazonaws.com' for b in bucket_names()]
+    peer_names = [PRODUCTION, *PROVIDERS]
+    setup_test_tls(s3_names + peer_names)
     hosts = [line for line in Path('/etc/hosts').read_text().splitlines() if HOSTS_MARK not in line]
     hosts.append('127.0.0.1 ' + ' '.join(s3_names) + ' ' + HOSTS_MARK)
     hosts.append('127.0.0.2 ' + ' '.join(peer_names) + ' ' + HOSTS_MARK)
@@ -188,13 +204,14 @@ def start_service(unit, argv, ready):
         raise SystemExit(unit + ' did not start')
 
 
-def start_standins(run_id):
+def start_standins(run_id, *, quota_file=None):
     """Destination and data buckets of one run, production/provider peer, instance metadata."""
     shutil.rmtree(STANDIN_STATE, ignore_errors=True)
+    quota_args = ['--rehearsal-quotas', str(quota_file)] if quota_file is not None else []
     start_service('server2-shadow-check-standin.service',
                   ['/usr/bin/python3', '-I', str(LOGGING / 'standin.py'), '--state', str(STANDIN_STATE), '--port', '443',
                    '--bucket', f'server2-shadow-{run_id}-state', '--data-bucket', f'server2-shadow-{run_id}-raw',
-                   '--tls-cert', str(TLS / 'srv.crt'), '--tls-key', str(TLS / 'srv.key')], STANDIN_STATE / 'ready')
+                   '--tls-cert', str(TLS / 'srv.crt'), '--tls-key', str(TLS / 'srv.key'), *quota_args], STANDIN_STATE / 'ready')
     # Restarted for every run: each check run creates a new test CA and certificate.
     start_service('server2-shadow-check-peers.service',
                   ['/usr/bin/python3', '-I', str(HERE / 'check_peers.py'), '--state', str(PEER_STATE),
@@ -237,6 +254,7 @@ def reset_host():
     shutil.rmtree('/var/lib/server2-logs', ignore_errors=True)
     shutil.rmtree('/run/server2-logs', ignore_errors=True)
     (PEER_STATE / 'provider-status').unlink(missing_ok=True)
+    (PEER_STATE / 'provider-fault.json').unlink(missing_ok=True)
 
 
 def policies(now):
@@ -250,13 +268,14 @@ def policies(now):
     return cost, paid
 
 
-def prepare(args, run_id, interface):
+def prepare(args, run_id, interface, *, rehearsal=None):
     """A real plan, journal and generation grant; returns the bundle directory."""
     work = WORK / 'runs' / run_id
-    shutil.rmtree(work, ignore_errors=True)
+    if rehearsal is None:
+        shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(mode=0o700, parents=True)
     source = work / 'source'
-    source.mkdir(parents=True)
-    os.chmod(work, 0o700)
+    source.mkdir(mode=0o700)
     shutil.copy(args.server_binary, source / 'server2')
     shutil.copy(args.collector_tarball, source / 'collector.tar.gz')
     for name in ('paired_read.py',):
@@ -266,24 +285,37 @@ def prepare(args, run_id, interface):
     for name in ('collector.json', 'render.py', 'status.py'):
         shutil.copy(LOGGING / name, source / name)
     # Key lists are JSON arrays of keys of at least 20 characters, as in server2/.env.
-    (source / 'config.env').write_text(''.join(f'{k}={json.dumps([v]) if k.endswith("_KEYS") else v}\n' for k, v in SECRETS.items())
-                                       + 'SERVER2_LOG_LEVEL=info\n')
+    config = ''.join(f'{k}={json.dumps([v]) if k.endswith("_KEYS") else v}\n' for k, v in SECRETS.items())
+    if rehearsal is None:
+        config += 'SERVER2_LOG_LEVEL=info\n'
+    else:
+        config = rehearsal['config']
+    fd = os.open(source / 'config.env', os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as stream:
+        stream.write(config)
     binary = coordinator.artifact_hash(source / 'server2')
     reader = dict(schema=1, duration_seconds=3600, max_attempts=6000, min_spacing_seconds=1, candidate_sha256=binary,
                   cases=[dict(id='seoul', method='GET', path='/weather/v000903/coord/37.566,126.978',
                               interval_seconds=20, conditional=False)])
+    if rehearsal is not None:
+        reader = rehearsal['reader']
+        expected = rehearsal['artifact_sha256']
+        if binary != expected['server'] or coordinator.artifact_hash(source / 'collector.tar.gz') != expected['collector']:
+            raise ValueError('copied rehearsal artifacts changed')
     (source / 'reader.json').write_text(json.dumps(reader))
     for path in source.iterdir():
         path.chmod(0o600)
     now = int(time.time())
-    cost, paid = policies(now)
+    cost, paid = policies(now) if rehearsal is None else (rehearsal['cost_policy'], rehearsal['paid_policy'])
+    allowance = dict(reads=5000, writes=5000, put_bytes=64 * 1024 ** 2) if rehearsal is None else rehearsal['allowance']
+    families = ['kma'] if rehearsal is None else rehearsal['native_families']
     plan = dict(schema=4, run_id=run_id, source_commit=args.source_commit, port=3000, interface=interface,
                 artifacts={n: coordinator.artifact_hash(source / n) for n in coordinator.HOST_ARTIFACTS},
-                cost_policy=cost, paid_policy=paid, native_families=['kma'])
+                cost_policy=cost, paid_policy=paid, native_families=families)
     sha = hashlib.sha256(state.canonical(plan).encode()).hexdigest()
     with state.Journal(work / 'journal', create=True, run_id=run_id, manifest_sha=sha, epoch=now) as journal:
         launch = coordinator.prepare_generation(journal, plan, source, work / 'bundle', 'initial',
-                                                dict(reads=5000, writes=5000, put_bytes=64 * 1024 ** 2), now=now)
+                                                allowance, now=now)
     return work / 'bundle', launch
 
 
@@ -475,7 +507,24 @@ def bucket_audit(report, entry, run_id):
     return result
 
 
-def finish_cli_check(report, entry, run_id):
+def _run_fixture_finish(report, entry, data, command, env, include_originals):
+    # Full inventory export can spend several minutes hashing and copying originals.
+    limit = 1800 if include_originals else 180
+    hidden = data.with_name('data.unreachable')
+    data.rename(hidden)
+    started = time.monotonic()
+    try:
+        return run(*command, env=env, check=False, timeout=limit)
+    except subprocess.TimeoutExpired:
+        detail = dict(timeout_seconds=limit, elapsed_seconds=round(time.monotonic() - started, 3))
+        entry['observations']['finish_cli'] = detail
+        report.check(entry, 'finish CLI completed within its fixture time limit', False, detail)
+        raise
+    finally:
+        hidden.rename(data)
+
+
+def finish_cli_check(report, entry, run_id, *, output=None, include_originals=False):
     """Run the actual operator CLI against the uploaded bytes, with synthetic AWS only."""
     import provision
 
@@ -491,12 +540,23 @@ def finish_cli_check(report, entry, run_id):
     # The loopback receiver stores confirmed uploads as files, without AWS
     # version IDs. Give the exact evidence bytes deterministic fixture IDs.
     versions = []
-    for number, path in enumerate(evidence_objects(run_id), 1):
+    objects = [(state_bucket, f'evidence/{run_id}/{path.name}', path) for path in evidence_objects(run_id)]
+    if include_originals:
+        objects = []
+        for bucket, root in [(state_bucket, STANDIN_STATE / 's3'),
+                             (resources['buckets'][0], STANDIN_STATE / 'data' / resources['buckets'][0])]:
+            objects.extend((bucket, path.relative_to(root).as_posix(), path)
+                           for path in sorted(root.rglob('*')) if path.is_file())
+    for number, (bucket, key, path) in enumerate(objects, 1):
         mirror = fixture / f'{number}.object'
         shutil.copyfile(path, mirror)
-        versions.append(dict(bucket=state_bucket, key=f'evidence/{run_id}/{path.name}',
-                             version=f'v{number:05}', kind='object', path=mirror.name,
-                             size=mirror.stat().st_size, sha256=coordinator.artifact_hash(mirror)))
+        row = dict(bucket=bucket, key=key, version=f'v{number:05}', kind='object', path=mirror.name,
+                   size=mirror.stat().st_size, sha256=coordinator.artifact_hash(mirror))
+        if bucket == resources['buckets'][0] and key.startswith('raw/v2/'):
+            metadata = STANDIN_STATE / 'raw-metadata' / bucket / key
+            if metadata.is_file():
+                row['metadata'] = json.loads(metadata.read_bytes())
+        versions.append(row)
     manifest = fixture / 'fixture.json'
     fd = os.open(manifest, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, 'w') as stream:
@@ -520,23 +580,19 @@ def finish_cli_check(report, entry, run_id):
                                          resources=resources)
 
     cli = SERVER2 / 'tests/integration/shadow_finish_fake_aws.py'
-    output = work / 'finish'
+    output = work / 'finish' if output is None else output
     env = dict(PATH=str(Path(sys.executable).parent) + os.pathsep + os.defpath,
                SHADOW_FINISH_AWS_FIXTURE=str(manifest), PYTHONDONTWRITEBYTECODE='1')
     data = INSTALL_ROOT / run_id / 'data'
-    hidden = data.with_name('data.unreachable')
-    data.rename(hidden)
-    try:
-        result = run(sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
-                     '--state', str(journal_path), '--output', str(output),
-                     '--aws-executable', str(cli), env=env, check=False, timeout=180)
-    finally:
-        hidden.rename(data)
+    command = [sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
+               '--state', str(journal_path), '--output', str(output), '--aws-executable', str(cli)]
+    result = _run_fixture_finish(report, entry, data, command, env, include_originals)
 
     receipt = parsed(result.stdout.strip()) or {}
     paired = receipt.get('host_evidence', {})
     cleanup = receipt.get('cleanup', {})
-    summary = dict(aws='local-version-store', exit_code=result.returncode,
+    summary = dict(aws='local-version-store', version_inventory='latest-only' if include_originals else 'evidence-only',
+                   exit_code=result.returncode,
                    evidence_status=paired.get('status'), source_versions=len(versions),
                    cleanup_complete=cleanup.get('complete'))
     entry['observations']['finish_cli'] = summary
@@ -648,6 +704,165 @@ def provider_rejection(report, args, interface):
     entry['observations']['failing_record'] = failing[:1]
     entry['observations']['guard_record'] = guard_records[:1]
     entry['observations']['reader_record'] = reader[:1]
+
+
+def provider_fault_diagnostic(record, status):
+    if not record or record.get('component') != 'provider' or record.get('stage') != 'provider_http':
+        return False
+    if record.get('status') != status:
+        return False
+    if status is None:
+        elapsed = record.get('duration_ms')
+        # This narrative service uses the default three-second transport timeout.
+        return (record.get('cause') == 'timeout' and type(elapsed) is int
+                and 2_700 <= elapsed < FAULT_STALL_SECONDS * 1000)
+    return record.get('cause') == ('quota' if status == 429 else 'auth')
+
+
+def fault_operation(record, status):
+    if not provider_fault_diagnostic(record, status):
+        return None
+    trace, operation = record.get('trace_id'), record.get('operation_id')
+    if not all(isinstance(value, str) and value for value in (trace, operation)):
+        return None
+    return trace, operation
+
+
+def latest_pair(directory, after_slot=-1):
+    path = directory / 'ledger.sqlite3'
+    if not path.is_file():
+        return None
+    with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=1)) as db:
+        try:
+            row = db.execute('''SELECT c.slot, c.id, c.result, p.result
+                FROM attempts c JOIN attempts p ON c.slot = p.slot AND c.case_id = p.case_id
+                WHERE c.origin = 'candidate' AND p.origin = 'production'
+                  AND c.result IS NOT NULL AND p.result IS NOT NULL AND c.slot > ?
+                ORDER BY c.slot DESC LIMIT 1''', (after_slot,)).fetchone()
+        except sqlite3.OperationalError as error:
+            if str(error) not in ('no such table: attempts', 'database is locked'):
+                raise
+            return None
+    if row is None:
+        return None
+    slot, attempt, candidate, reference = row
+    candidate, reference = json.loads(candidate), json.loads(reference)
+    if (candidate.get('error') or reference.get('error') or candidate.get('captured') is False
+            or reference.get('captured') is False or not candidate.get('status') or reference.get('status') != 200):
+        return None
+    status = candidate['status']
+    return {'slot': slot, 'candidate_status': status,
+            'candidate_dependency_response': (status == 501
+                                              and (directory / f'{attempt}.body').read_bytes() == b'Not Implemented'),
+            'reference_status': 200}
+
+
+def peer_lines(name):
+    path = PEER_STATE / name
+    return path.read_text().splitlines() if path.is_file() else []
+
+
+def injected_requests(previous, status, name):
+    lines = peer_lines(name)[previous:]
+    wanted = 'stall' if status is None else status
+    return [record for record in map(parsed, lines) if record and
+            (record.get('host'), record.get('path'), record.get('method'), record.get('injected'))
+            == ('apis.data.go.kr', FAULT_PATH, 'GET', wanted)]
+
+
+def candidate_health():
+    connection = http.client.HTTPConnection('127.0.0.1', 3000, timeout=4)
+    try:
+        connection.request('GET', '/health')
+        return connection.getresponse().status
+    except (OSError, http.client.HTTPException):
+        return None
+    finally:
+        connection.close()
+
+
+def provider_fault(report, args, interface, run_id, status):
+    name = 'server2-shadow-' + run_id
+    root = INSTALL_ROOT / run_id
+    entry = report.scenario(run_id, ['SR6-AC1'])
+    reset_host()
+    start_standins(run_id)
+    (PEER_STATE / 'provider-status').write_text('200\n')
+    request_log, response_log = 'fault-requests.jsonl', 'fault-responses.jsonl'
+    previous = len(peer_lines(request_log))
+    previous_responses = len(peer_lines(response_log))
+    fault = PEER_STATE / 'provider-fault.json'
+    injection = {'delay_seconds': FAULT_STALL_SECONDS} if status is None else {'status': status}
+    fault.write_text(json.dumps({'path': FAULT_PATH, **injection}))
+    _, result, receipt = install(report, entry, args, run_id, interface)
+    installed = receipt is not None and receipt.get('status') == 'started'
+    report.check(entry, 'scoped offline host installed', installed, result.returncode)
+    if not installed:
+        return
+
+    def live_diagnostic():
+        if not injected_requests(previous, status, request_log):
+            return None
+        sample = run('journalctl', '--namespace=server2', '--unit', f'{name}-candidate.service',
+                     '--output=cat', '--lines=200', '--no-pager', timeout=5, check=False)
+        if sample.returncode == 0:
+            records = [parsed(line) for line in sample.stdout.splitlines()]
+            return next((fault_operation(record, status) for record in reversed(records)
+                         if fault_operation(record, status) is not None), None)
+        return None
+
+    # The cold narrative route can begin its first stalled request near the end
+    # of the ordinary startup window. Its verified transport timeout stays 3 s.
+    started = time.monotonic()
+    seen = wait_until(live_diagnostic, 240 if status is None else 180, 2)
+    entry['observations']['diagnostic_wait_seconds'] = round(time.monotonic() - started, 2)
+    report.check(entry, 'scoped peer receipt and candidate diagnostic observed during acquisition', seen)
+    paired = root / 'data/paired'
+    first_pair = wait_until(lambda: latest_pair(paired), 30, 1)
+    report.check(entry, 'cold weather route returns its bounded dependency response during injection',
+                 bool(first_pair and first_pair['candidate_dependency_response']), first_pair)
+    initial_sample = ((decision(root) or {}).get('diagnostics') or {}).get('observed_at', 0)
+    fault.unlink()
+    after_slot = first_pair['slot'] if first_pair is not None else -1
+    observed = set()
+
+    def guard_after_fault():
+        snapshot = decision(root) or {}
+        sampled = (snapshot.get('diagnostics') or {}).get('observed_at', 0)
+        if initial_sample and sampled > initial_sample:
+            observed.add(sampled)
+        return snapshot if len(observed) >= 2 else None
+
+    latest = wait_until(guard_after_fault, 45, 1) or {}
+    later_pair = wait_until(lambda: latest_pair(paired, after_slot), 35, 1)
+    diagnostics = latest.get('diagnostics') or {}
+    counts = diagnostics.get('provider_http', {}).get(FAULT_SOURCE, {})
+    requests = len(injected_requests(previous, status, request_log))
+    responses = len(injected_requests(previous_responses, status, response_log))
+    entry['observations'].update(injected_requests=requests, injected_responses=responses, guard_provider_http=counts,
+                                 guard_diagnostics=diagnostics, first_pair=first_pair, later_pair=later_pair)
+    if status is None:
+        report.check(entry, 'transport stall did not send HTTP headers or invent a provider rejection',
+                     responses == 0 and not counts, (responses, counts))
+    else:
+        report.check(entry, 'guard counted each scoped response once under its provider source',
+                     responses > 0 and counts == {str(status): responses}, (counts, requests, responses))
+    report.check(entry, 'guard kept storage-authorization count at zero', diagnostics.get('storage_auth_failures') == 0)
+    report.check(entry, 'guard kept running through at least two more samples', bool(latest) and latest.get('stop') is None, latest)
+    report.check(entry, 'candidate, guard and paired reader units kept running', all(
+        prop(f'{name}-{unit}.service', 'ActiveState') == 'active' for unit in ('candidate', 'guard', 'reader')))
+    report.check(entry, 'candidate serves the independent loopback health route after the fault', candidate_health() == 200)
+    report.check(entry, 'a later paired slot captured candidate response and loopback reference 200', first_pair and later_pair)
+
+    code, seconds, _states = retention_stop(name)
+    report.check(entry, 'collector drained after stopping acquisition', code == 0 and seconds < 150, (code, seconds))
+    by_source = delivery_checks(report, entry, run_id, ('server', 'reader', 'collector'))
+    exact = [record for record in map(parsed, by_source.get('server', [])) if provider_fault_diagnostic(record, status)]
+    report.check(entry, 'same provider operation retained in state bucket',
+                 bool(seen and any(fault_operation(record, status) == seen for record in exact)))
+    guard_records = [record for record in map(parsed, by_source.get('guard', [])) if record]
+    report.check(entry, 'no guard stop retained in state bucket', not any(record.get('stop') for record in guard_records))
+    entry['observations']['provider_diagnostic'] = exact[:1]
 
 
 def storage_authorization(report, args, interface):
@@ -880,6 +1095,12 @@ def evidence_candidate_exit(report, args, interface):
     report.check(entry, 'retention stop completes', code == 0 and seconds < 150, (code, seconds))
 
 
+def rehearse(args):
+    import rehearsal_run
+
+    return rehearsal_run.run(args, sys.modules[__name__])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--disposable-host', action='store_true', required=True)
@@ -887,11 +1108,22 @@ def main():
     parser.add_argument('--collector-tarball', required=True, type=Path)
     parser.add_argument('--source-commit', required=True)
     parser.add_argument('--report', required=True, type=Path)
-    parser.add_argument('--scenario', action='append', choices=['provider-rejection', 'storage-authorization', 'config-change', 'frozen-guard',
-                                                                'collector-broken', 'tampered', 'evidence-copy', 'evidence-candidate-exit'])
+    scenarios = {'provider-rejection': provider_rejection, 'storage-authorization': storage_authorization,
+                 'config-change': config_change, 'frozen-guard': frozen_guard,
+                 'collector-broken': collector_broken, 'tampered': tampered,
+                 'evidence-copy': evidence_copy, 'evidence-candidate-exit': evidence_candidate_exit}
+    parser.add_argument('--scenario', action='append', choices=[*scenarios, *FAULTS])
+    parser.add_argument('--rehearsal-hours', type=int, choices=[24], help='opt in to the provider rehearsal')
+    parser.add_argument('--rehearsal-input', type=Path, help='private authorized rehearsal plan (0600)')
+    parser.add_argument('--output-dir', type=Path, help='new private directory for rehearsal outputs')
     args = parser.parse_args()
+    rehearsal_options = (args.rehearsal_hours, args.rehearsal_input, args.output_dir)
+    if any(rehearsal_options) and (not all(rehearsal_options) or args.scenario):
+        parser.error('rehearsal requires all three options and cannot select an offline scenario')
     if os.geteuid() != 0 or sys.platform != 'linux':
         raise SystemExit('run as root on a disposable Linux VM')
+    if args.rehearsal_hours:
+        return rehearse(args)
     interface = run('ip', 'route', 'show', 'default').stdout.split(' dev ', 1)[1].split()[0]
     report = Report()
     WORK.mkdir(parents=True, exist_ok=True)
@@ -899,14 +1131,14 @@ def main():
     setup_network()
     started = time.time()
     try:
-        for scenario, function in (('provider-rejection', provider_rejection), ('storage-authorization', storage_authorization),
-                                   ('config-change', config_change),
-                                   ('frozen-guard', frozen_guard), ('collector-broken', collector_broken), ('tampered', tampered),
-                                   ('evidence-copy', evidence_copy), ('evidence-candidate-exit', evidence_candidate_exit)):
+        for scenario in [*scenarios, *FAULTS]:
             if args.scenario and scenario not in args.scenario:
                 continue
             try:
-                function(report, args, interface)
+                if scenario in FAULTS:
+                    provider_fault(report, args, interface, scenario, FAULTS[scenario])
+                else:
+                    scenarios[scenario](report, args, interface)
             except Exception as error:  # a scenario failure is a failed check, never a pass
                 entry = report.scenario(scenario + '-error', [])
                 report.check(entry, 'scenario completed', False, repr(error))

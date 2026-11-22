@@ -80,6 +80,8 @@ def command_plan(root, event, stage):
         ('python', [python, 'tools/test_native_artifact.py']),
         ('python', [python, 'tests/integration/test_paired_read.py']),
         ('python', [python, 'tests/integration/test_shadow_simulation.py']),
+        ('python', [python, 'tests/integration/test_shadow_measured_simulation.py']),
+        ('python', [python, '-m', 'unittest', 'discover', '-s', 'tests/integration', '-p', 'test_rehearsal_*.py']),
         ('python', [python, 'tests/integration/test_shadow_finish_staging.py']),
         ('python', [python, 'tests/integration/test_shadow_finish_remote.py']),
         ('python', [python, 'tests/integration/test_shadow_finish.py']),
