@@ -94,6 +94,7 @@ def command_plan(root, event, stage):
         *([] if local_tests else [log_diagnosis]),
         ('gnu', [python, 'deploy/benchmark/run_isolated.py', 'online-functional']),
         ('python', [python, 'tools/test_verify_artifact.py']),
+        ('python', [python, 'tools/test_promote_artifact.py']),
         ('python', [python, 'deploy/logging/test_logging.py']),
         ('python', [python, 'tools/verification/test_kma_client_validation.py']),
         ('gnu', ['cargo', 'fmt', '--check']),
@@ -132,25 +133,32 @@ def command_plan(root, event, stage):
         ('gnu', [python, 'deploy/benchmark/run_isolated.py', 'manifest-functional']),
     ]
 
-    if stage in ('all', 'musl') and sys.platform.startswith('linux'):
-        revision = event.get('pull_request', {}).get('head', {}).get('sha') or output('git', 'rev-parse', 'HEAD')
+    if stage not in ('all', 'musl', 'promote') or not sys.platform.startswith('linux'):
+        return
+    revision = event.get('pull_request', {}).get('head', {}).get('sha') or output('git', 'rev-parse', 'HEAD')
+    artifact = root / 'reports/verification/server2-local-first/artifact-native'
+    if stage in ('all', 'musl'):
         yield from [
             ('musl', ['cargo', 'build', '--locked', '--release', '--target', 'x86_64-unknown-linux-musl']),
             ('musl', ['readelf', '-h', 'target/x86_64-unknown-linux-musl/release/server2']),
             ('musl', [python, 'tools/verify_artifact.py', '--binary-dir',
                      'target/x86_64-unknown-linux-musl/release',
-                     '--output', str(root / 'reports/verification/server2-local-first/artifact-native'),
+                     '--output', str(artifact),
                      '--source-revision', revision]),
             ('musl', [python, 'tools/native_artifact.py', '--target-dir', 'target', '--output',
                      str(root / 'reports/verification/server2-local-first/native-staging'),
-                     '--archive', str(root / 'reports/verification/server2-local-first/artifact-native/native.tar.gz'),
+                     '--archive', str(artifact / 'native.tar.gz'),
                      '--source-revision', revision]),
+            ('musl', [python, 'tools/promote_artifact.py', '--artifact', str(artifact), '--record-digest']),
         ]
+    # Hosted foundation re-checks the musl job's same-run candidate before publishing it.
+    yield 'promote', [python, 'tools/promote_artifact.py', '--artifact', str(artifact),
+                      '--source-revision', revision]
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('stage', choices=('all', 'placement', 'python', 'rust', 'gnu', 'musl'),
+    parser.add_argument('stage', choices=('all', 'placement', 'python', 'rust', 'gnu', 'musl', 'promote'),
                         nargs='?', default='all')
     stage = parser.parse_args().stage
     root = Path(__file__).resolve().parents[2]

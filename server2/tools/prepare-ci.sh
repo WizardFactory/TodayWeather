@@ -3,7 +3,7 @@
 set -euo pipefail
 stage=${1:-all}
 case "$stage" in
-  placement|python|rust) exit 0 ;;
+  placement|python|rust|promote) exit 0 ;;
   all) packages=(bubblewrap apparmor musl-tools binutils) ;;
   gnu) packages=(bubblewrap apparmor) ;;
   musl) packages=(musl-tools binutils) ;;
