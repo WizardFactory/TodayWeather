@@ -326,7 +326,7 @@
  "pdf_sha256": "fa3f415a5cbdfe89413ab4eaf5a9f7167343fb52d9b115226c91b2a2c7e332cb",
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "32984d522c0718cac391eb54b7b8bdb98bc5327c2c7b2848157cb141acb469a0",
-  "ios/tools/manual/run-manual-capture.sh": "f5c42ab148a65510c32b900f1d2b6363cf79d84cabf648fa01a44089b2c5c5ca",
+  "ios/tools/manual/run-manual-capture.sh": "cad4bce6f0185ba2912bac4301bb7774539fd9f7355cf432bd100ddf45a37f94",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
  },
  "recaptures": [
@@ -364,6 +364,11 @@
    "date": "2026-11-22",
    "source": "ios/TodayWeatherUITests/ManualUITests.swift",
    "change": "after the capture (#3122 widget images) testCaptureTheStoreScreens adds a Home Screen widget step (removeOtherWidgets, addWidget) and shot() skips the ad check on the Home Screen; testCaptureTheManual is unchanged, so the manual screenshots stand"
+  },
+  {
+   "date": "2026-11-22",
+   "source": "ios/tools/manual/run-manual-capture.sh",
+   "change": "after the capture (review finding CODEX-3124-15) --store runs on a disposable clone of the given simulator; the manual mode is unchanged, so the manual screenshots stand"
   }
  ]
 }

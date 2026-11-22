@@ -4,7 +4,9 @@
 # to each locale too (the launcher and the clock widget follow it), which needs `adb root` (a Google APIs image); the
 # original language is restored on every exit.
 #   ANDROID_SERIAL=emulator-NNNN capture.sh <new out-dir> [locale:region ...]   (default ko-KR:KR en-US:US ja-JP:JP)
-# The output directory must not exist: a run never replaces or deletes an earlier capture.
+# The output directory must not exist: a run never replaces or deletes an earlier capture. Start the emulator a few
+# minutes before: right after a cold boot the first framework restart left the app's external files directory
+# unwritable (EACCES) once on 2026-11-22; a rerun on the same emulator passed.
 # Same private debug inputs, emulator rules and cleanup as tools/manual/capture.sh: a caller-owned emulator with the
 # network on; both test packages are uninstalled on every exit. Writes <out-dir>/<locale>/store-0N-*.png and .json.
 set -eu
