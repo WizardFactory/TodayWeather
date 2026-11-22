@@ -55,21 +55,27 @@ struct NationScreenshotTests {
         let states = try #require(manifest["states"]?.objectValue)
         #expect(states.count >= 21)
         var report: [String] = []
-        for (name, entry) in states {
+        for name in states.keys.sorted() {
+            let entry = states[name]
             let record = try References.json("nation-\(name).json")
             let (page, content, theme, loading) = try Self.state(name)
-            let offset = CGFloat(entry["scrollTop"]?.numberValue?.double ?? 0)
+            let offset = CGFloat(entry?["scrollTop"]?.numberValue?.double ?? 0)
             let view = NationPageFrame(page: page, content: content, theme: theme, insets: Self.insets, loading: loading,
                                        scrolls: false, offset: offset)
                 .frame(width: 393, height: 798)
                 .environment(\.cssFallbackLanguage, "ko")
-            let reference = try References.image("nation-\(name).png")
+            var measurement = ScreenshotMeasurement("nation-\(name)")
+            let reference = try measurement.reference("nation-\(name).png")
             var height = reference.height
             if let map = record["map"]?["rect"] {
                 let bottom = (map["y"]?.numberValue?.double ?? 0) + (map["h"]?.numberValue?.double ?? 0) + 20
                 height = min(height, Int(bottom * Self.scale))
             }
-            try compare(name, render(view).top(height), reference.top(height), tolerances, &report)
+            let rendered = measurement.render { render(view) }
+            let native = measurement.prepare { rendered.top(height) }
+            let cropped = measurement.prepare { reference.top(height) }
+            let diff = try measurement.compare(native, cropped, limit: tolerances["cases"]?[name], margin: tolerances["margin"])
+            report.append("\(name): strong \(diff.strong) mean \(diff.mean) height \(diff.heightDifference)")
             // The status bar above the WebView: `applyIOSStatusBar(theme, '')`.
             let bar = try References.image("nation-\(name)-statusbar.png").rgb(x: 600, y: 20)
             let expected = ShellColors.menu(theme).statusBar
@@ -82,23 +88,5 @@ struct NationScreenshotTests {
         let renderer = ImageRenderer(content: view.environment(\.sizeCategory, .large))
         renderer.scale = Self.scale
         return Bitmap(renderer.cgImage!)
-    }
-
-    private func compare(_ name: String, _ native: Bitmap, _ reference: Bitmap, _ tolerances: JSONValue,
-                         _ report: inout [String]) throws {
-        let diff = ImageDiff(native: native, reference: reference)
-        try diff.write("nation-\(name)")
-        report.append("\(name): strong \(diff.strong) mean \(diff.mean) height \(diff.heightDifference)")
-        guard let limit = tolerances["cases"]?[name] else {
-            Issue.record("no tolerance for \(name): strong \(diff.strong) mean \(diff.mean) height \(diff.heightDifference)")
-            return
-        }
-        let margin = tolerances["margin"]
-        func n(_ v: JSONValue?) -> Double { v?.numberValue?.double ?? .nan }
-        #expect(native.width == reference.width, "\(name) width \(native.width) vs \(reference.width)")
-        #expect(diff.strong <= n(limit["strong"]) + n(margin?["strong"]), "\(name) strong \(diff.strong)")
-        #expect(diff.mean <= n(limit["mean"]) + n(margin?["mean"]), "\(name) mean \(diff.mean)")
-        #expect(abs(Double(diff.heightDifference)) <= n(limit["heightDifference"]) + n(margin?["heightDifference"]),
-                "\(name) height \(diff.heightDifference)")
     }
 }

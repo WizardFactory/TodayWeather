@@ -1,4 +1,5 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
 import SwiftUI
@@ -177,12 +178,18 @@ struct ImageDiff {
 
     nonisolated(unsafe) static let directory = FileManager.default.temporaryDirectory.appendingPathComponent("chart-compare", isDirectory: true)
 
-    init(native: Bitmap, reference: Bitmap) {
+    private(set) var blurSeconds = 0.0
+    private(set) var compareSeconds = 0.0
+
+    init(native: Bitmap, reference: Bitmap, measure: Bool = false) {
         self.native = native
         self.reference = reference
         heightDifference = native.height - reference.height
         let w = min(native.width, reference.width), h = min(native.height, reference.height)
+        let blurStart = measure ? ProcessInfo.processInfo.systemUptime : 0
         let a = Self.blur(native, w, h), b = Self.blur(reference, w, h)
+        let compareStart = measure ? ProcessInfo.processInfo.systemUptime : 0
+        blurSeconds = compareStart - blurStart
         var strongCount = 0, sum = 0
         var mask = [Bool](repeating: false, count: w * h)
         for y in 0..<h {
@@ -200,6 +207,7 @@ struct ImageDiff {
         strong = w * h == 0 ? 1 : Double(strongCount) / Double(w * h)
         mean = w * h == 0 ? 255 : Double(sum) / Double(w * h)
         self.mask = mask
+        if measure { compareSeconds = ProcessInfo.processInfo.systemUptime - compareStart }
     }
 
     /// 3x3 box blur of the RGB channels over the common area (edges use the available neighbors).
@@ -224,9 +232,9 @@ struct ImageDiff {
     }
 
     /// Writes the render and a difference image (reference in grey, strong differences in red).
-    func write(_ name: String) throws {
-        try FileManager.default.createDirectory(at: Self.directory, withIntermediateDirectories: true)
-        Self.png(native.image, Self.directory.appendingPathComponent("\(name)-native.png"))
+    func write(_ name: String, directory: URL = Self.directory) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        Self.png(native.image, directory.appendingPathComponent("\(name)-native.png"))
         let w = min(native.width, reference.width), h = min(native.height, reference.height)
         var data = [UInt8](repeating: 255, count: w * h * 4)
         for y in 0..<h {
@@ -243,7 +251,7 @@ struct ImageDiff {
                                space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue), provider: provider,
                                decode: nil, shouldInterpolate: false, intent: .defaultIntent) {
-            Self.png(image, Self.directory.appendingPathComponent("\(name)-diff.png"))
+            Self.png(image, directory.appendingPathComponent("\(name)-diff.png"))
         }
     }
 
@@ -251,5 +259,87 @@ struct ImageDiff {
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else { return }
         CGImageDestinationAddImage(dest, image, nil)
         CGImageDestinationFinalize(dest)
+    }
+}
+
+
+/// Only the benchmark assigns a mode. Ordinary screenshot tests keep their diagnostic output.
+struct ScreenshotMeasurement {
+    private static let environment = ProcessInfo.processInfo.environment
+    private static let mode = environment["TW_SCREENSHOT_CAPTURE"]
+    private static let profiling = mode != nil && environment["TW_SCREENSHOT_TIMING"] != "off"
+
+    let name: String
+    var referenceFile = ""
+    private var renderSeconds = 0.0
+    private var decodeSeconds = 0.0
+
+    init(_ name: String) { self.name = name }
+
+    mutating func render(_ operation: () -> Bitmap) -> Bitmap {
+        let start = Self.now
+        let value = operation()
+        renderSeconds += Self.now - start
+        return value
+    }
+
+    mutating func prepare(_ operation: () throws -> Bitmap) rethrows -> Bitmap {
+        let start = Self.now
+        let value = try operation()
+        decodeSeconds += Self.now - start
+        return value
+    }
+
+    mutating func reference(_ file: String) throws -> Bitmap {
+        referenceFile = file
+        return try prepare { try References.image(file) }
+    }
+
+    private static var now: Double { profiling ? ProcessInfo.processInfo.systemUptime : 0 }
+
+    func compare(_ rendered: Bitmap, _ reference: Bitmap, limit: JSONValue?, margin: JSONValue?,
+                 hidden: Int = 0) throws -> ImageDiff {
+        let native = Self.environment["TW_SCREENSHOT_MISMATCH"] == name ? rendered.top(1) : rendered
+        let diff = ImageDiff(native: native, reference: reference, measure: Self.profiling)
+        let height = diff.heightDifference - hidden
+        func threshold(_ key: String) -> Double {
+            (limit?[key]?.numberValue?.double ?? .nan) + (margin?[key]?.numberValue?.double ?? .nan)
+        }
+        let widthMatches = native.width == reference.width
+        let strongPasses = diff.strong <= threshold("strong")
+        let meanPasses = diff.mean <= threshold("mean")
+        let heightPasses = Double(abs(height)) <= threshold("heightDifference")
+        let passed = limit != nil && widthMatches && strongPasses && meanPasses && heightPasses
+        let start = Self.now
+        if Self.mode != "failures" || !passed {
+            let directory = Self.environment["TW_SCREENSHOT_OUTPUT"].map { FileManager.default.temporaryDirectory.appendingPathComponent($0, isDirectory: true) }
+            try diff.write(name, directory: directory ?? ImageDiff.directory)
+        }
+        let writeSeconds = Self.now - start
+        if Self.profiling {
+            func digest<T>(_ bytes: [T]) -> String {
+                bytes.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
+            }
+            let hashesStart = Self.now
+            let hashes = [digest(native.pixels), digest(reference.pixels), digest(diff.mask)]
+            let record: [String: Any] = [
+                "name": name, "reference": referenceFile, "passed": passed, "strong": diff.strong, "mean": diff.mean,
+                "height": height, "nativeSize": [native.width, native.height], "referenceSize": [reference.width, reference.height],
+                "hashes": hashes, "render": renderSeconds, "decode": decodeSeconds,
+                "blur": diff.blurSeconds, "compare": diff.compareSeconds, "png": writeSeconds,
+                "hash": Self.now - hashesStart,
+            ]
+            let data = try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys])
+            print("TW-SCREENSHOT " + String(decoding: data, as: UTF8.self))
+        }
+        if limit == nil {
+            Issue.record("no tolerance for \(name): strong \(diff.strong) mean \(diff.mean) height \(height)")
+        } else {
+            #expect(widthMatches, "\(name) width \(native.width) vs \(reference.width)")
+            #expect(strongPasses, "\(name) strong \(diff.strong)")
+            #expect(meanPasses, "\(name) mean \(diff.mean)")
+            #expect(heightPasses, "\(name) height \(height)")
+        }
+        return diff
     }
 }

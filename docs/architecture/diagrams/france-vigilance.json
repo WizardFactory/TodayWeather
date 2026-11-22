@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Metropolitan France Vigilance",
+    "output": "docs/architecture/diagrams/france-vigilance.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "participants": [
+    {"id": "caller", "type": "frontend", "label": "Weather client", "sublabel": "Viewed coordinate"},
+    {"id": "server", "type": "backend", "label": "server1", "sublabel": "Coordinate gateway"},
+    {"id": "geo", "type": "external", "label": "Etalab", "sublabel": "Municipality lookup"},
+    {"id": "issuer", "type": "external", "label": "Météo-France", "sublabel": "Vigilance API"}
+  ],
+  "messages": [
+    {"id": "lookup", "from": "caller", "to": "server", "y": 160, "label": "GET coordinate warnings", "variant": "emphasis"},
+    {"id": "geography", "from": "server", "to": "geo", "y": 202, "label": "Resolve the unrounded point"},
+    {"id": "area", "from": "geo", "to": "server", "y": 244, "label": "Containing department", "variant": "return"},
+    {"id": "refresh", "from": "server", "to": "issuer", "y": 290, "label": "On refresh, request map and optional bulletin"},
+    {"id": "source", "from": "issuer", "to": "server", "y": 334, "label": "Map windows and latest text", "variant": "return"},
+    {"id": "result", "from": "server", "to": "caller", "y": 380, "label": "Coverage state and local warnings", "variant": "return"}
+  ],
+  "cards": [
+    {"dot": "emerald", "title": "Department scope", "items": ["One containing metropolitan department is required.", "An empty current result and an unavailable source have separate states."]},
+    {"dot": "cyan", "title": "Publisher timing", "items": ["Keep the issuer's warning intervals. Untimed floods report a period maximum.", "Workers coalesce national refreshes. Optional text must match the map snapshot."]}
+  ]
+}

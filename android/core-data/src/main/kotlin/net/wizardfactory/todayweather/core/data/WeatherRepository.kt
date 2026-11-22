@@ -242,7 +242,7 @@ class WeatherRepository(
     /** Load at the same coordinates as the displayed live weather, with one bounded request. */
     suspend fun coordinateAirForecast(loaded: LoadResult.Loaded, languages: List<String>): CoordinateAirForecast? {
         if (!loaded.entry.coordinateAirForecastAvailable) return null
-        val json = readCoordinateForecast(loaded, "air-forecast", languages) ?: return null
+        val json = readCoordinateForecast(loaded.place, "air-forecast", languages) ?: return null
         val source = json.text("source")?.takeIf { it == "google" || it == "openweather" } ?: return null
         val attribution = json.text("attribution")?.takeIf(String::isNotBlank) ?: return null
         val parser = forecastTimeParser()
@@ -260,7 +260,7 @@ class WeatherRepository(
 
     suspend fun coordinatePollenForecast(loaded: LoadResult.Loaded, languages: List<String>): CoordinatePollenForecast? {
         if (!loaded.entry.coordinatePollenForecastAvailable) return null
-        val json = readCoordinateForecast(loaded, "pollen-forecast", languages) ?: return null
+        val json = readCoordinateForecast(loaded.place, "pollen-forecast", languages) ?: return null
         if (json.text("source") != "google") return null
         val attribution = json.text("attribution")?.takeIf(String::isNotBlank) ?: return null
         val region = json.text("region")?.takeIf { it.matches(Regex("[A-Z]{2}")) } ?: return null
@@ -270,11 +270,21 @@ class WeatherRepository(
         return CoordinatePollenForecast(attribution, region, days, retrievedAt + 86_400_000L)
     }
 
-    private suspend fun readCoordinateForecast(loaded: LoadResult.Loaded, product: String, languages: List<String>): JsonObject? {
-        val url = WeatherRequests.coordinateForecastUrl(baseUrl, loaded.place, product) ?: return null
+    /** Official warning status belongs to the viewed location and is never stored in the weather cache. */
+    suspend fun coordinateWarnings(place: Place, languages: List<String>): CoordinateWarnings? {
+        val point = place.location ?: return null
+        val json = readCoordinateForecast(place, "warnings", languages, timeoutMillis = 8000) ?: return null
+        val parser = forecastTimeParser()
+        return CoordinateWarnings.decode(json, point.lat, point.long) { parser.forecastTime(it) }?.current(clock())
+    }
+
+    private suspend fun readCoordinateForecast(
+        place: Place, product: String, languages: List<String>, timeoutMillis: Long = 2500,
+    ): JsonObject? {
+        val url = WeatherRequests.coordinateForecastUrl(baseUrl, place, product) ?: return null
         val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages), "Cache-Control" to "no-store")
         return try {
-            withTimeoutOrNull(2500) { NationSource.strictJson(http.getOnce(url, headers)) } as? JsonObject
+            withTimeoutOrNull(timeoutMillis) { NationSource.strictJson(http.getOnce(url, headers)) } as? JsonObject
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

@@ -1,0 +1,18 @@
+{
+  "task": "ParallelCi",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3090",
+  "scope": "Run offline Python, Rust workspace and GNU verification in parallel before publishing the verified musl bundle.",
+  "server2_paths": [
+    "server2/config/tasks/ParallelCi.json",
+    "server2/tools/ci.py",
+    "server2/tools/ci.sh",
+    "server2/tools/prepare-ci.sh",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py",
+    "server2/tools/test_ci.py"
+  ],
+  "outside": [
+    {"path": ".github/workflows/server2.yml", "category": "ci-wiring", "reason": "Run the reviewed command groups and require their results before the existing upload"},
+    {"path": "plans/issue-3090.md", "category": "documentation", "reason": "Document the agreed CI rollout and acceptance criteria"}
+  ]
+}
