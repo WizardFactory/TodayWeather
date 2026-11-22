@@ -54,26 +54,8 @@ jobs:
         with:
           fetch-depth: 0
       - run: bash tools/ci.sh gnu
-  musl:
-    needs: placement
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    defaults:
-      run:
-        working-directory: server2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - run: bash tools/ci.sh musl
-      - uses: actions/upload-artifact@v4
-        with:
-          name: server2-linux-musl-candidate
-          path: reports/verification/server2-local-first/artifact-native/
-          if-no-files-found: error
-          retention-days: 1
   foundation:
-    needs: [placement, python, rust, gnu, musl]
+    needs: [placement, python, rust, gnu]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -86,18 +68,13 @@ jobs:
           ${{ needs.placement.result != 'success' ||
               needs.python.result != 'success' ||
               needs.rust.result != 'success' ||
-              needs.gnu.result != 'success' ||
-              needs.musl.result != 'success' }}
+              needs.gnu.result != 'success' }}
         working-directory: .
         run: exit 1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
-        with:
-          name: server2-linux-musl-candidate
-          path: reports/verification/server2-local-first/artifact-native/
-      - run: bash tools/ci.sh promote
+      - run: bash tools/ci.sh musl
       - uses: actions/upload-artifact@v4
         with:
           name: server2-linux-musl-verified
