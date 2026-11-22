@@ -1,6 +1,9 @@
 #!/bin/sh
 # IN-18 part 3 (#2967): the screenshots of the native user manual (docs/user/ios-app) from the running app.
-#   run-manual-capture.sh <out-dir> <tw* iPhone simulator udid>
+#   run-manual-capture.sh [--no-ads [--store]] <out-dir> <tw* iPhone or iPad simulator udid>
+# --no-ads (#3122): the app is built with empty TW_ADMOB_NATIVE_IOS and TW_ADMOB_INTERSTITIAL_IOS, so AdsSettings is nil:
+# no UMP, no Ads SDK start and no ad request; the test then fails any screenshot with a native ad. No app code changes.
+# --store (with --no-ads): testCaptureTheStoreScreens instead, the four App Store screens (store-0N-*) with Seoul saved.
 # Builds the app and the UI tests ad hoc signed (the app needs its App Group entitlement to finish its start) into
 # ios/build/DerivedData with ios/Private.xcconfig (TW_SERVER_URL, TW_PLACES_API_KEY_IOS): read-only weather, geocode,
 # nationwide and warning GETs to the legacy server and Places predictions from Google. No GoogleService-Info.plist is
@@ -11,10 +14,16 @@
 # the named screenshots to <out-dir>/raw. The server host and the Places key are parsed with Python and replaced by
 # placeholders in every saved log, which are then scanned for them. The app is uninstalled at the end.
 set -eu
+ADS=on
+if [ "${1:-}" = --no-ads ]; then ADS=off; shift; fi
+STORE=0
+if [ "${1:-}" = --store ]; then STORE=1; shift; fi
+if [ "$STORE" = 1 ] && [ "$ADS" != off ]; then echo "--store needs --no-ads" >&2; exit 2; fi
 OUT=$1
 UDID=$2
 BUNDLE=net.wizardfactory.todayweather
 TEST=testCaptureTheManual
+[ "$STORE" = 0 ] || TEST=testCaptureTheStoreScreens
 HERE=$(cd "$(dirname "$0")" && pwd)
 IOS=$(cd "$HERE/../.." && pwd)
 NAME=$(xcrun simctl list devices | grep "$UDID" | sed 's/ (.*//; s/^ *//')
@@ -47,14 +56,25 @@ TCC="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/TCC/TCC.db
 cleanup() { xcrun simctl uninstall "$UDID" "$BUNDLE" 2>/dev/null || true; }
 trap cleanup EXIT
 
+NO_ADS=
+[ "$ADS" = on ] || NO_ADS="TW_ADMOB_NATIVE_IOS= TW_ADMOB_INTERSTITIAL_IOS="
+# shellcheck disable=SC2086 # NO_ADS is two build settings or nothing.
 xcodebuild -project "$IOS/TodayWeather.xcodeproj" -scheme TodayWeatherUITests -destination "platform=iOS Simulator,id=$UDID" \
   -derivedDataPath "$IOS/build/DerivedData" CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_REQUIRED=YES \
-  DEVELOPMENT_TEAM= COMPILER_INDEX_STORE_ENABLE=NO TW_WEATHER_PHOTOS_URL= TW_MAIL_TO= build-for-testing \
+  DEVELOPMENT_TEAM= COMPILER_INDEX_STORE_ENABLE=NO TW_WEATHER_PHOTOS_URL= TW_MAIL_TO= $NO_ADS build-for-testing \
   > "$OUT/build.raw.log" 2>&1 || { redact < "$OUT/build.raw.log" > "$OUT/build.log"; rm -f "$OUT/build.raw.log"; echo "build failed" >&2; exit 1; }
 redact < "$OUT/build.raw.log" > "$OUT/build.log"
 rm -f "$OUT/build.raw.log"
 APP="$IOS/build/DerivedData/Build/Products/Debug-iphonesimulator/TodayWeather.app"
 [ ! -e "$APP/GoogleService-Info.plist" ] || { echo "the build holds a Firebase configuration: no push may be possible here" >&2; exit 1; }
+# The ad units the build carries: both empty for --no-ads, Google's test units otherwise.
+UNITS=$(for k in TWAdMobNativeUnit TWAdMobInterstitialUnit; do /usr/libexec/PlistBuddy -c "Print :$k" "$APP/Info.plist" 2>/dev/null || true; done | tr -d '\n')
+if [ "$ADS" = off ]; then
+  [ -z "$UNITS" ] || { echo "--no-ads: the built app still has ad units" >&2; exit 1; }
+else
+  [ -n "$UNITS" ] || { echo "the built app has no ad units: build again without --no-ads" >&2; exit 1; }
+fi
+echo "ads: $ADS" > "$OUT/ads.txt"
 
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b >/dev/null
@@ -73,7 +93,7 @@ xcrun simctl privacy "$UDID" grant location "$BUNDLE"
 
 STATUS=0
 rm -rf "$OUT/manual.xcresult"
-TEST_RUNNER_TW_MANUAL_UI=1 xcodebuild -project "$IOS/TodayWeather.xcodeproj" -scheme TodayWeatherUITests \
+TEST_RUNNER_TW_MANUAL_UI=1 TEST_RUNNER_TW_MANUAL_ADS=$ADS TEST_RUNNER_TW_STORE_UI=$STORE xcodebuild -project "$IOS/TodayWeather.xcodeproj" -scheme TodayWeatherUITests \
   -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$IOS/build/DerivedData" -resultBundlePath "$OUT/manual.xcresult" \
   test-without-building -only-testing:"TodayWeatherUITests/ManualUITests/$TEST" > "$OUT/xcodebuild.raw.log" 2>&1 || STATUS=$?
 redact < "$OUT/xcodebuild.raw.log" > "$OUT/xcodebuild.log"
@@ -86,9 +106,12 @@ mkdir -p "$OUT/raw"
 # them: the test has no 25 and the shoot-only 27, 28, 32), so the set comes from ManualUITests.swift, not manual.json.
 xcrun xcresulttool export attachments --path "$OUT/manual.xcresult" --output-path "$OUT/raw" > "$OUT/export.log" 2>&1 || {
   echo "exporting the screenshots failed (export.log)" >&2; [ "$STATUS" -ne 0 ] || STATUS=1; }
-python3 - "$OUT/raw" "$IOS/TodayWeatherUITests/ManualUITests.swift" <<'PY' || { [ "$STATUS" -ne 0 ] || STATUS=1; }
+python3 - "$OUT/raw" "$IOS/TodayWeatherUITests/ManualUITests.swift" "$STORE" <<'PY' || { [ "$STATUS" -ne 0 ] || STATUS=1; }
 import json, os, re, sys
-d, test_source = sys.argv[1], sys.argv[2]
+d, test_source, store = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+# The manual's shots are NN-name, the store's store-NN-name (testCaptureTheStoreScreens).
+pattern = r'shot\("(store-\d\d-[^"]+)"\)' if store else r'shot\("(\d\d-[^"]+)"\)'
+ours = (lambda n: n.startswith("store-")) if store else (lambda n: n[:2].isdigit())
 try:
     manifest = json.load(open(os.path.join(d, "manifest.json")))
 except OSError:
@@ -97,14 +120,14 @@ keep = set()
 for test in manifest:
     for a in test.get("attachments", []):
         name, file = a.get("suggestedHumanReadableName", ""), a.get("exportedFileName", "")
-        if file.endswith(".png") and name[:2].isdigit():
+        if file.endswith(".png") and ours(name):
             target = name.split("_")[0] + ".png"
             os.replace(os.path.join(d, file), os.path.join(d, target))
             keep.add(target)
 for f in os.listdir(d):
     if f not in keep:
         os.remove(os.path.join(d, f))
-expected = {name + ".png" for name in re.findall(r'shot\("(\d\d-[^"]+)"\)', open(test_source).read())}
+expected = {name + ".png" for name in re.findall(pattern, open(test_source).read())}
 if not expected or keep != expected:
     sys.exit(f"screenshots missing: {sorted(expected - keep)}; unexpected: {sorted(keep - expected)}")
 PY

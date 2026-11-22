@@ -1,7 +1,11 @@
 #!/bin/sh
 # Actual native manual captures. Requires private debug APK inputs; see README.md.
 # Only a caller-owned emulator may be selected. Uninstalls both test packages on every exit.
+#   capture.sh [--no-ads] <out-dir> [section]
+# --no-ads: the test APK's NoAdsPlatform replaces UMP and the Ads SDK (no ads, #3122); the app build is unchanged.
 set -eu
+ADS_ARGS=
+if [ "${1:-}" = --no-ads ]; then ADS_ARGS='-e ads off'; shift; fi
 HERE=$(cd "$(dirname "$0")" && pwd)
 . "$HERE/../emulator/offline.sh"
 emulator_guard
@@ -24,13 +28,14 @@ adb shell wm size >> "$OUT/device.txt"
 adb shell wm density >> "$OUT/device.txt"
 adb shell getprop persist.sys.timezone >> "$OUT/device.txt"
 adb shell am get-config >> "$OUT/device.txt"
+if [ -n "$ADS_ARGS" ]; then echo "ads: off" >> "$OUT/device.txt"; else echo "ads: debug test units" >> "$OUT/device.txt"; fi
 shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
 if [ "$STEP" = all ]; then STEPS='firstLaunch weatherAndAir places alarms settings nation privacyAndShare'; else STEPS=$STEP; fi
 for section in $STEPS; do
     case "$section" in firstLaunch) CLASS=ManualFirstLaunchTest ;; weatherAndAir|places|alarms|settings|nation|privacyAndShare) CLASS=ManualCaptureTest ;; *) echo 'Unknown section' >&2; exit 2 ;; esac
     adb shell pm clear "$PKG" >/dev/null
     adb shell cmd locale set-app-locales "$PKG" --locales ko-KR
-    adb shell am instrument -w -e manual true -e weather production -e photos feed -e class "$PKG.$CLASS#$section" "$PKG.test/$PKG.TestRunner" > "$OUT/$section.log" 2>&1
+    adb shell am instrument -w $ADS_ARGS -e manual true -e weather production -e photos feed -e class "$PKG.$CLASS#$section" "$PKG.test/$PKG.TestRunner" > "$OUT/$section.log" 2>&1
     adb pull "/sdcard/Android/data/$PKG/files/manual/." "$OUT/" >/dev/null 2>&1 || true
     grep -q '^OK (1 test)' "$OUT/$section.log" || { echo "Capture failed: $section; see $OUT/$section.log" >&2; exit 1; }
     echo "Captured $section"

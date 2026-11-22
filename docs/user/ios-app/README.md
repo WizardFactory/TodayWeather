@@ -2,30 +2,31 @@
 
 [Read the PDF](manual.pdf) · [Editable source](manual.json) · [Capture provenance](provenance.json)
 
-This is the **native Swift / SwiftUI app** for iPhone and iPad, version 2.0.0 preview (#2948). Its 42 illustrated
+This is the **native Swift / SwiftUI app** for iPhone and iPad, version 2.0 (#2948). Its 42 illustrated
 steps follow the sections of the [Cordova app manual](../cordova-app/README.md): first launch and the current
 location, hourly and daily charts, air quality and stations, saved places, alarms, units, startup and refresh
 settings, themes, nationwide information, about, privacy and sharing. The app screens are Korean; the instructions
 are English with the Korean control labels. The [Android native manual](../android-app/README.md) describes the
 Android app.
 
-A UI test captured the original 41 screenshots on 17 November 2026 (Korea time). It captured four menu screens
-again that evening after the privacy rows moved below About. The test used an iPhone 16 simulator (iOS 26.5,
-393×852 pt at scale 3), Korean app language, default text size, a simulated position at Seoul City Hall and
-the status bar fixed at 9:41. Weather, geocoding, nationwide data and warnings are
+A UI test captured the 41 screenshots on 22 November 2026 (Korea time) **without ads** (#3122): the capture build
+has no ad units, so the app requests no consent and no ads, and the test fails any screenshot that shows a native ad.
+The released app shows ads (see [Ads in weather and saved places](#ads-in-weather-and-saved-places)). The test used an
+iPhone 17 Pro Max simulator (iOS 26.5, 440×956 pt at scale 3), Korean app language, default text size, a simulated
+position at Seoul City Hall and the status bar fixed at 9:41. Weather, geocoding, nationwide data and warnings are
 read-only requests to the legacy weather server; place search uses Google Places. Values and warnings are those of
-the capture time. Images are reduced to 720 pixels wide and a 256-color palette without replacing screen content. The
-banners are Google's test ads of a Debug build; whether one loaded varies between pages.
+the capture time. Images are reduced to 720 pixels wide and a 256-color palette without replacing screen content.
+
+The [iPad supplement](ipad/manual.pdf) shows the main screens on an iPad Pro 13-inch simulator from the same
+ad-free capture; its [editable source](ipad/manual.json) lists the steps.
 
 The [four main tabs](main-tabs/manual.pdf) supplement shows each tab with Seoul saved. Look for the short line above the selected tab. The line, outline icon and label share the theme’s accent color. The [editable source](main-tabs/manual.json) includes full-screen captures from an iPhone 16 simulator.
 
-The saved-place search and nationwide wind screenshots were refreshed on 18 November 2026 with fixture data. The wind screenshot uses the next larger text size.
-
-The pull-to-refresh page uses a Korean hourly forecast from an offline test fixture. Its screenshot predates the accent line. Earlier weather screenshots retain the reload icon used by the November 17 build.
+The pull-to-refresh page uses a Korean hourly forecast from an offline test fixture (18 November 2026). Its screenshot predates the tab accent line.
 
 ## Ads in weather and saved places
 
-Each weather tab shows its forecast or air information first. An available native ad appears in the scrolling content. Saved Places shows a larger card after the list and hides it during search and editing. Earlier screenshots in the main manual show the previous fixed banner. [Four placement examples](forecast-ads/manual.pdf) · [Editable guide](forecast-ads/manual.json) · [Capture details](forecast-ads/provenance.json)
+Each weather tab shows its forecast or air information first. An available native ad appears in the scrolling content. Saved Places shows a larger card after the list and hides it during search and editing. The main manual's screenshots are taken without ads; the [four placement examples](forecast-ads/manual.pdf) · [Editable guide](forecast-ads/manual.json) · [Capture details](forecast-ads/provenance.json)
 
 The first Hourly and first Daily visit each day open immediately. After reading beyond a chart, tapping the other forecast tab on a repeat visit has a 10% chance of showing a ready full-screen ad. The two tabs share a limit of one display per local day across saved places. Dismissing the ad opens the tab you selected.
 
@@ -55,11 +56,14 @@ The [Home Screen widget guide](widgets/manual.pdf) covers small and medium widge
 - Optional usage statistics stays off throughout. Advertising privacy choices depend on your region and Google's
   consent service; they are separate from usage statistics.
 - The photo theme shows weather photos from a feed that this capture build did not have, so its page shows no photo.
-- Sharing opens iOS's share sheet with the weather text and the app link. No message was sent.
+- Sharing opens iOS's share sheet with the weather text and the app link. No message was sent. In the
+  22 November capture the share sheet did not appear on the iPhone 17 Pro Max and iPad simulators within two minutes
+  of the tap (the 17 November capture on an iPhone 16 simulator showed it), so the last page shows the share button.
+  This is reported for a device check (#3122).
 - The warning page shows the bulletins of the capture time. Read each announcement time; an older or empty answer
   is not a guarantee of current safety.
-- This is not a release certification. iPad layouts, larger text sizes and the comparison with the Cordova app are
-  checked separately ([parity checklist](../../../ios/parity.md)).
+- This is not a release certification. Larger text sizes and the comparison with the Cordova app are checked
+  separately ([parity checklist](../../../ios/parity.md)).
 
 ## Rebuild and verify
 

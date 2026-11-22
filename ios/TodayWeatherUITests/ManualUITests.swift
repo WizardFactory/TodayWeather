@@ -6,10 +6,13 @@ import XCTest
 /// builds the app ad hoc signed with the private server URL and Places key (read-only weather, geocode, nationwide and
 /// warning GETs; no Firebase configuration, so no push token and no push request), grants location while in use at
 /// Seoul City Hall, answers the tracking question and passes `TEST_RUNNER_TW_MANUAL_UI=1`; without it the test skips.
+/// `TEST_RUNNER_TW_MANUAL_ADS=off` marks a build without ad units (the script's `--no-ads`).
 /// The journey edits alarms only to discard them, and returns units and theme to °C and light.
 @MainActor
 final class ManualUITests: XCTestCase {
     let enabled = ProcessInfo.processInfo.environment["TW_MANUAL_UI"] == "1"
+    /// An ad-free capture (`--no-ads`, #3122): the app was built without ad units, so no screenshot may show an ad.
+    let adsOff = ProcessInfo.processInfo.environment["TW_MANUAL_ADS"] == "off"
     var app: XCUIApplication!
 
     func element(_ identifier: String) -> XCUIElement {
@@ -30,6 +33,11 @@ final class ManualUITests: XCTestCase {
 
     func shot(_ name: String) {
         Thread.sleep(forTimeInterval: 0.8)
+        // Not over the system share sheet: querying the app's tree under it stalls the run.
+        if adsOff && !name.contains("share") {
+            let ad = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'native-ad-'"))
+            XCTAssertFalse(ad.firstMatch.exists, "\(name): an ad-free capture shows no native ad")
+        }
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
@@ -141,6 +149,39 @@ final class ManualUITests: XCTestCase {
         if shoot { shot("32-theme") }
         tap("settings-row-\(value)")
         settingsBack()
+    }
+
+    /// The four App Store screens (#3122) with Seoul saved from S01's shortcut, on the run's iPhone or iPad: hourly
+    /// weather with yesterday's comparison, the expanded hourly details, daily forecasts and air quality. Run by
+    /// `run-manual-capture.sh --no-ads --store`, which passes `TEST_RUNNER_TW_STORE_UI=1`; only ad-free.
+    func testCaptureTheStoreScreens() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["TW_STORE_UI"] == "1" && adsOff,
+                          "run by ios/tools/manual/run-manual-capture.sh --no-ads --store")
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(ko-KR)", "-AppleLocale", "ko_KR"]
+        app.launch()
+        wait("popup-button-0", 120)
+        closePopup(0)
+        let seoul = element("start-shortcut-0")
+        XCTAssertTrue(seoul.waitForExistence(timeout: 30))
+        XCTAssertEqual(seoul.label, "서울")
+        seoul.tap()
+        XCTAssertTrue(waitForTitle({ $0 == "서울" }, 90), "Hourly for Seoul")
+        wait("forecast-chart")
+        Thread.sleep(forTimeInterval: 3)
+        shot("store-01-compare")
+        tap("chart-expander")
+        Thread.sleep(forTimeInterval: 1.5)
+        shot("store-02-hourly")
+        tap("chart-expander")
+        tap("shell-tab-dailyforecast")
+        wait("forecast-chart")
+        shot("store-03-daily")
+        tap("shell-tab-air")
+        wait("air-header")
+        Thread.sleep(forTimeInterval: 2)
+        shot("store-04-air")
     }
 
     func testCaptureTheManual() throws {

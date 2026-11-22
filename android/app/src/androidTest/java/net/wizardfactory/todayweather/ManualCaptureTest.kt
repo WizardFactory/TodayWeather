@@ -52,11 +52,18 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
         if (!system) rule.waitForIdle()
         Thread.sleep(600)
         assertFalse("manual never opts into analytics", app.analytics.choice.value)
+        val ads = adsOff()
+        if (ads) {
+            assertEquals("an ad-free capture never starts the Ads SDK", 0, NoAdsPlatform.sdkStarts.get())
+            if (!system) assertTrue("an ad-free capture shows no native ad",
+                rule.onAllNodesWithTag("admob-native-card", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        }
         val shot = checkNotNull(automation.takeScreenshot()) { "No screenshot: $name" }
         val dir = File(rule.activity.getExternalFilesDir(null), "manual").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { check(shot.compress(Bitmap.CompressFormat.PNG, 100, it)) }
         File(dir, "$name.json").writeText(JSONObject().put("name", name).put("capturedAt", java.time.Instant.now().toString())
             .put("width", shot.width).put("height", shot.height).put("analytics", false)
+            .put("ads", if (ads) "off" else "debug-test-units")
             .put("pushTransport", "intercepted").put("recordedPushRequests", app.sent.size)
             .put("language", rule.activity.resources.configuration.locales.toLanguageTags()).toString(2))
         shot.recycle()

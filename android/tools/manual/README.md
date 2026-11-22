@@ -18,7 +18,17 @@ Use only an emulator owned by this task, with API 33+ and Google Play services:
 ANDROID_SERIAL=emulator-5574 android/tools/manual/capture.sh /tmp/tw-native-manual
 # A focused retry, after the previous run has ended and cleaned up:
 ANDROID_SERIAL=emulator-5574 android/tools/manual/capture.sh /tmp/tw-native-manual-settings settings
+# Ad-free (manual and store screenshots, #3122):
+ANDROID_SERIAL=emulator-5574 android/tools/manual/capture.sh --no-ads /tmp/tw-native-manual-no-ads
 ```
+
+`--no-ads` passes `-e ads off`: the test application replaces Google's consent and
+Ads SDK platform with `NoAdsPlatform` (androidTest only). No consent request is made,
+the SDK never starts and no ad loads; every capture asserts that the SDK was not
+started and that no native ad card is on screen, and records `"ads": "off"`. The app
+APK is the same debug build; neither it nor a release build has a switch that turns
+ads off. In Korea the 광고 개인정보 선택 response (no form required) is the same with
+or without ads.
 
 The script installs both APKs, clears app state before each section, sets an
 emulated Seoul City Hall location, and uninstalls both packages on **every exit**.
