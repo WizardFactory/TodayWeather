@@ -424,7 +424,7 @@ const ko = {
   "pollen.veryHigh": "매우 높음",
   "detail.discomfort": "불쾌지수",
   "detail.foodPoisoning": "식중독",
-  "weather.hourly.title": "시간별 예보",
+  "weather.hourly.title": "시간별 날씨",
   "weather.legend.forecast": "예보",
   "weather.legend.yesterday": "어제",
   "weather.forecastPublished": "예보 발표",
