@@ -7,7 +7,31 @@ on:
 permissions:
   contents: read
 jobs:
-  foundation:
+  placement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh placement
+  python:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh python
+  rust:
+    needs: placement
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     defaults:
@@ -17,7 +41,40 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: bash tools/ci.sh
+      - run: bash tools/ci.sh rust
+  gnu:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh gnu
+  foundation:
+    needs: [placement, python, rust, gnu]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - name: Require all verification jobs to pass
+        if: >-
+          ${{ needs.placement.result != 'success' ||
+              needs.python.result != 'success' ||
+              needs.rust.result != 'success' ||
+              needs.gnu.result != 'success' }}
+        working-directory: .
+        run: exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh musl
       - uses: actions/upload-artifact@v4
         with:
           name: server2-linux-musl-verified

@@ -327,6 +327,21 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.write('server2/tools/golden/arbitrary.py',"self.write('server/private.py','outside')")
         self.assertTrue(self.errors())
 
+    def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
+        body = (placement.PARALLEL_WORKFLOW_PREFIX + placement.VERIFIED_UPLOAD
+                + placement.GOLDEN_JOB)
+        self.assertIn('needs: [placement, python, rust, gnu]', body)
+        self.assertEqual([], placement.audit_workflow(body))
+        for bad in (
+            body.replace('needs: [placement, python, rust, gnu]', 'needs: [placement, rust, gnu]'),
+            body.replace('if: ${{ always() }}', 'if: ${{ success() }}'),
+            body.replace('needs.python.result', 'needs.placement.result'),
+            body.replace('tools/ci.sh python', 'tools/ci.sh rust'),
+            body.replace('retention-days: 7', 'retention-days: 90'),
+        ):
+            self.assertNotEqual(body, bad)
+            self.assertTrue(placement.audit_workflow(bad))
+
     def golden_workflow(self):
         return """name: Server2
 on:

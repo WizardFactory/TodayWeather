@@ -452,15 +452,96 @@ def audit_nonrust(path, body, raw_body=None):
     return [f'{path}: direct external resource reference' for value in values if external_literal(value)]
 
 
+GOLDEN_JOB = "  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
+VERIFIED_UPLOAD = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
+PARALLEL_WORKFLOW_PREFIX = """name: Server2
+on:
+  pull_request:
+    paths:
+      - "server2/**"
+      - ".github/workflows/server2.yml"
+permissions:
+  contents: read
+jobs:
+  placement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh placement
+  python:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh python
+  rust:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh rust
+  gnu:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh gnu
+  foundation:
+    needs: [placement, python, rust, gnu]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - name: Require all verification jobs to pass
+        if: >-
+          ${{ needs.placement.result != 'success' ||
+              needs.python.result != 'success' ||
+              needs.rust.result != 'success' ||
+              needs.gnu.result != 'success' }}
+        working-directory: .
+        run: exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh musl
+"""
+
+
 def audit_workflow(body):
     errors = []
     if re.search(r'^jobs:\s*$', body, re.M):
         expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 90\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
-        expected_goldens="  goldens:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '16.20.2'\n      - uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n      - run: python tools/golden/ci.py --install\n"
-        # Exact job/source wiring; no env, expressions, arbitrary actions or run steps.
-        artifact_upload = '      - uses: actions/upload-artifact@v4\n        with:\n          name: server2-linux-musl-verified\n          path: reports/verification/server2-local-first/artifact-native/\n          if-no-files-found: error\n          retention-days: 7\n'
-        if body.strip() in {expected_foundation.strip(), (expected_foundation+expected_goldens).strip(),
-                            (expected_foundation+artifact_upload+expected_goldens).strip()}:
+        # Accept only the reviewed job, dependency, guard, and action wiring.
+        if body.strip() in {(PARALLEL_WORKFLOW_PREFIX + VERIFIED_UPLOAD + GOLDEN_JOB).strip(),
+                            expected_foundation.strip(), (expected_foundation+GOLDEN_JOB).strip(),
+                            (expected_foundation+VERIFIED_UPLOAD+GOLDEN_JOB).strip()}:
             return []
         return ['server2 workflow differs from exact reviewed foundation/goldens wiring']
     runs = re.findall(r'^[ \t]*-?[ \t]*run:[ \t]*([^\r\n]+)$', body, re.M)
