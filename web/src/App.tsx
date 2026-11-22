@@ -8,6 +8,7 @@ import {
   useNavigate,
   useParams,
   useLocation,
+  useSearchParams,
   useNavigationType,
 } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,7 @@ import {
 } from "lucide-react";
 import {
   PLACES,
+  placeId,
   UNIT_OPTIONS,
   POLLUTANTS,
   formatValue,
@@ -74,6 +76,15 @@ import {
   kstTime,
 } from "./components";
 import WeatherPage from "./Weather";
+import {
+  LINK_ORIGIN,
+  linkedWeatherPath,
+  linkPollutant,
+  linkView,
+  nearbyCatalog,
+  nearbySaved,
+  parseCoordinateLink,
+} from "./deeplink";
 import {
   airDisclaimer,
   airSource,
@@ -159,6 +170,7 @@ export default function App() {
     menuButton = useRef<HTMLButtonElement>(null),
     mainRef = useRef<HTMLElement>(null),
     firstRoute = useRef(true),
+    initialRootRedirect = useRef(false),
     returnFocus = useRef(false),
     focusMain = useRef(false);
   const queryClient = useQueryClient();
@@ -247,8 +259,9 @@ export default function App() {
   }, []);
   useEffect(() => {
     setMenuOpen(false);
-    // Weather owns chart-route scroll/focus once its data has rendered.
-    if (/^\/weather\/[^/]+\/(hourly|daily)$/.test(location.pathname)) {
+    // Weather owns daily chart scroll/focus once its data has rendered;
+    // hourly/overview keep the hero visible at the top of the page.
+    if (/^\/weather\/[^/]+\/daily$/.test(location.pathname)) {
       firstRoute.current = false;
       focusMain.current = false;
       return;
@@ -260,8 +273,17 @@ export default function App() {
     const keep =
       navigationType !== "POP" &&
       (location.state as { keepFocus?: boolean } | null)?.keepFocus;
-    if (firstRoute.current) firstRoute.current = false;
-    else if (!keep) focusMain.current = true;
+    if (firstRoute.current) {
+      firstRoute.current = false;
+      initialRootRedirect.current = location.pathname === "/";
+    } else if (initialRootRedirect.current && navigationType === "REPLACE") {
+      // Initial start_url "/" redirecting via <Navigate replace> is part of
+      // first load and should not hijack focus on launch.
+      initialRootRedirect.current = false;
+    } else {
+      initialRootRedirect.current = false;
+      if (!keep) focusMain.current = true;
+    }
   }, [location.pathname]);
   useEffect(() => {
     // Wait for the render that removed `inert` after closing the menu.
@@ -379,7 +401,7 @@ export default function App() {
     }
     waiting.postMessage({ type: "SKIP_WAITING" });
   };
-  const select = (place: Place) => {
+  const select = (place: Place, destination?: (id: string) => string) => {
     const before = latestState.current;
     try {
       const next = addPlace(before, place);
@@ -389,10 +411,16 @@ export default function App() {
       for (const old of before.places)
         if (!next.places.some((p) => p.id === old.id))
           void deleteSnapshotsFor(old.id);
-      navigate(weatherRoute(next, next.selectedId!));
+      navigate(
+        destination?.(next.selectedId!) ?? weatherRoute(next, next.selectedId!),
+        {
+          replace: !!destination,
+          state: destination ? { linkPlaceKind: "saved" } : undefined,
+        },
+      );
     } catch {
       // Full list: show the place without saving it.
-      navigate(weatherRoute(before, place.id));
+      if (!destination) navigate(weatherRoute(before, place.id));
       setToast(t("toast.listFull"));
     }
   };
@@ -403,6 +431,11 @@ export default function App() {
         selected.id,
       )
     : "/start";
+  const cleanPath = location.pathname.replace(/\/+$/, "") || "/";
+  const weatherNavActive =
+    cleanPath.startsWith("/weather/") ||
+    (!selected && (cleanPath === "/" || cleanPath === "/start"));
+  const airNavActive = cleanPath.startsWith("/air/");
   return (
     <AppContext.Provider
       value={{
@@ -451,20 +484,20 @@ export default function App() {
           </button>
           <div className="sidebar-label">{t("shell.myWeather")}</div>
           <nav>
-            <NavLink
+            <Link
               to={navWeather}
-              className={({ isActive }) =>
-                isActive ? "nav-item active" : "nav-item"
-              }
+              className={weatherNavActive ? "nav-item active" : "nav-item"}
+              aria-current={weatherNavActive ? "page" : undefined}
             >
               <CloudSun size={19} /> {t("nav.weather")}
-            </NavLink>
-            <NavLink
+            </Link>
+            <Link
               to={selected ? "/air/" + selected.id : "/start"}
-              className="nav-item"
+              className={airNavActive ? "nav-item active" : "nav-item"}
+              aria-current={airNavActive ? "page" : undefined}
             >
               <Wind size={19} /> {t("nav.air")}
-            </NavLink>
+            </Link>
             <NavLink to="/locations" className="nav-item">
               <MapPin size={19} /> {t("nav.locations")}
             </NavLink>
@@ -594,6 +627,7 @@ export default function App() {
                 </button>
               </div>
             )}
+            <LinkArrivalBanner compact={compact} />
             <Routes>
               <Route
                 path="/"
@@ -616,6 +650,10 @@ export default function App() {
                 element={<WeatherPage view="air" />}
               />
               <Route path="/place/:publicId" element={<PublicPlace />} />
+              <Route
+                path="/loc"
+                element={<CoordinatePlace savePreview={select} />}
+              />
               <Route path="/nation/:kind" element={<NationPage />} />
               <Route path="/warnings" element={<Warnings />} />
               <Route path="/settings/*" element={<SettingsPage />} />
@@ -655,10 +693,106 @@ export default function App() {
     </AppContext.Provider>
   );
 }
+const LINK_BANNER_DISMISSED = "tw.web.v1.link-banner-dismissed";
+
+function LinkArrivalBanner({ compact }: { compact: boolean }) {
+  const [search] = useSearchParams();
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(LINK_BANNER_DISMISSED) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const mobile =
+    compact || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if (!mobile || dismissed || search.get("from") !== "link") return null;
+  return (
+    <div className="notice link-arrival" aria-label={t("link.appOption")}>
+      <a href={LINK_ORIGIN + "/open"}>{t("link.appOption")}</a>
+      <button
+        type="button"
+        onClick={() => {
+          setDismissed(true);
+          try {
+            sessionStorage.setItem(LINK_BANNER_DISMISSED, "1");
+          } catch {
+            /* Dismiss for this page. */
+          }
+        }}
+      >
+        {t("link.dismiss")}
+      </button>
+    </div>
+  );
+}
+
+function CoordinatePlace({
+  savePreview,
+}: {
+  savePreview: (place: Place, destination: (id: string) => string) => void;
+}) {
+  const { state } = useApp();
+  const [search] = useSearchParams();
+  const value = parseCoordinateLink(search);
+  if (!value) {
+    return (
+      <Empty title={t("link.invalidLocation")}>
+        <Link to="/locations">{t("weather.manageLocations")}</Link>
+      </Empty>
+    );
+  }
+  const { lat, lon, name, view, pollutant } = value;
+  const fromLink = search.get("from") === "link";
+  const routeTo = (id: string) =>
+    linkedWeatherPath(id, view, pollutant, fromLink);
+  const saved = nearbySaved(state.places, lat, lon);
+  const match = saved ?? nearbyCatalog(lat, lon);
+  if (match) {
+    return (
+      <Navigate
+        replace
+        to={routeTo(match.id)}
+        state={{ linkPlaceKind: saved ? "saved" : "catalog" }}
+      />
+    );
+  }
+  const place = {
+    id: placeId(lat, lon),
+    lat,
+    lon,
+    name: name ?? "선택한 지역",
+    address: "",
+    country: "",
+  };
+  return (
+    <WeatherPage
+      view={view}
+      preview={place}
+      savePreview={() => savePreview(place, routeTo)}
+    />
+  );
+}
+
 function PublicPlace() {
   const { publicId } = useParams();
   const { select } = useApp();
+  const [search] = useSearchParams();
   const p = PLACES.find((p) => p.id === publicId);
+  if (p && (search.has("view") || search.has("pollutant"))) {
+    return (
+      <Navigate
+        replace
+        state={{ linkPlaceKind: "catalog" }}
+        to={linkedWeatherPath(
+          p.id,
+          linkView(search.get("view")),
+          linkPollutant(search.get("pollutant")),
+          search.get("from") === "link",
+        )}
+      />
+    );
+  }
   return p ? (
     <>
       <PageTitle

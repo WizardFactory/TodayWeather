@@ -1,0 +1,13 @@
+{
+  "title": "Open shared weather in your browser",
+  "scenario": "Open a shared coordinate link on a phone. The image shows a Korean web preview with a synthetic location and isolated weather data.",
+  "steps": [
+    {
+      "title": "View the forecast and keep the place if you need it",
+      "instruction": "View the shared forecast and switch between Hourly, Daily and Air. Tap Add to favorites to keep this place in your list. Use the app link above the forecast to open or install TodayWeather, or dismiss it for this browser session.",
+      "screenshot": "coordinate-preview.png",
+      "caption": "The mobile preview shows the app action, the selected forecast tab and the Add to favorites button.",
+      "expected": "The browser shows the forecast immediately. The place appears in favorites only after you tap Add."
+    }
+  ]
+}

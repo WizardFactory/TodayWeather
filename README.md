@@ -7,7 +7,9 @@ See the [service architecture guide](docs/architecture/README.md) for the overal
 
 For server/client replacement planning, see the [rewrite reference package](docs/rewrite/README.md): screen definitions and simulator screenshots, data contracts and examples, ordered server assembly diagrams, migration decisions, and verification criteria.
 
-For a browser client alongside iOS and Android, see the [webapp documentation](docs/webapp/README.md): the static PWA, direct existing-API access, remaining mobile-parity goals and deployment preparation.
+For maintained clients, see the [WebApp (PWA and desktop)](docs/webapp/README.md), [native iOS](ios/README.md) and [native Android](android/README.md) guides. The [product lifecycle](docs/architecture/service-overview.md#product-lifecycle) records backend ownership and retired clients.
+
+For Korean solar terms, see the [daily summary and annual API contract](docs/architecture/mobile-api.md#korean-daily-summary-and-annual-solar-terms) and [calendar operations](docs/operations/solar-terms.md).
 
 ## Running Locally
 You have to run server before start mobile application.
@@ -35,10 +37,10 @@ run
 $ npm install
 ```
 
-### mobile application
-TodayWeather builds with Cordova 13 from npm scripts (cordova-android 15, targetSdk 36; cordova-ios 8, iOS 15+). gulp and `ionic state` are no longer used.
+### Historical Cordova mobile application
+The retired Cordova client builds with Cordova 13 from npm scripts (cordova-android 15, targetSdk 36; cordova-ios 8, iOS 15+). gulp and `ionic state` are no longer used.
 
-User manual for the current Android app, with actual screenshots: [docs/user/cordova-app](docs/user/cordova-app/README.md) ([PDF](docs/user/cordova-app/manual.pdf)).
+Historical Android Cordova user manual, with actual screenshots: [docs/user/cordova-app](docs/user/cordova-app/README.md) ([PDF](docs/user/cordova-app/manual.pdf)).
 
 ```bash
 $ cd TodayWeather/client/
@@ -118,7 +120,7 @@ $ cp -rf ../../../applewatch/TodayWeather\ WatchKit\ 1\ Extension ./
 
 ### Publishing
 
-Mobile (Android and iOS): see "release mobile application" above. API-authenticated store metadata export and internal/TestFlight upload commands are documented in the [Cordova store release guide](docs/operations/cordova-store-release.md).
+Historical Cordova releases (Android and iOS): see "release mobile application" above. API-authenticated store metadata export and internal/TestFlight upload commands are documented in the [Cordova store release guide](docs/operations/cordova-store-release.md).
 
 chrome extension
 

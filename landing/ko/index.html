@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="어제와 같은 시간의 기온을 비교하고, 오늘의 최저·최고 기온과 홈 화면 위젯으로 외출을 준비하세요.">
+  <title>오늘날씨 · 어제와 비교하는 날씨</title>
+  <link rel="icon" href="../../web/public/icon.svg">
+  <link rel="stylesheet" href="../../packages/design-tokens/generated/tokens.css">
+  <link rel="stylesheet" href="../landing.css">
+</head>
+<body>
+  <a class="skip" href="#main">본문 바로가기</a>
+  <header class="mast wrap">
+    <a class="brand" href="#main"><img alt="" width="32" height="32" src="../../web/public/icon.svg">오늘날씨</a>
+    <nav aria-label="페이지 메뉴"><a href="#features">차트</a><a href="#widgets">위젯</a><a href="#platforms">웹앱</a></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="intro">
+      <div class="intro">
+        <h1 id="intro">어제보다 오늘,<br>뭘 입을까요?</h1>
+        <p>어제 입었던 옷을 떠올려 보세요. 같은 시간의 기온을 나란히 보면 오늘 겉옷을 챙길지 고르기 쉬워요.</p>
+        <div class="actions" aria-label="오늘날씨 시작하기">
+          <a class="primary" href="https://link.todayweather.ai/open">오늘날씨 열기 <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+      <figure class="forecast">
+        <div class="reading"><div><span class="place">서울 명동</span><strong>11.5<span>°</span></strong></div>
+          <div class="comparison">구름많음<br><b>어제보다 +3°</b></div></div>
+        <img class="chart" width="720" height="492" src="../assets/ios-hourly.webp" alt="오늘 11월 17일 자정을 지나는 시간별 차트. 오전 6시는 오늘 11도, 어제 9도입니다. 파란색은 당일, 회색은 전일 기온입니다.">
+        <figcaption><a class="forecast-link" href="https://link.todayweather.ai/place/seoul">서울 시간별 예보 보기 ↗</a><span>iOS 앱 화면 예시</span></figcaption>
+      </figure>
+    </section>
+    <section id="features" class="feature-band">
+      <div class="wrap split">
+        <div class="copy"><p class="label">일별 예보</p><h2>하루 기온 속,<br>지금은 어디쯤?</h2>
+          <p>막대 양끝은 그날의 최저·최고 기온이에요. 오늘 막대의 빨간 점을 보면, 지금부터 얼마나 더 따뜻해질지 가늠할 수 있어요.</p></div>
+        <figure class="range-card"><img class="chart" src="../assets/android-daily.webp" width="720" height="530" loading="lazy" alt="Android 일별 차트에서 일요일 8일의 최저는 2도, 최고는 8도이고 현재 기온 점은 최저 쪽에 있습니다."><figcaption>일별 기온 범위 <span>Android 앱 화면 예시</span></figcaption></figure>
+      </div>
+    </section>
+    <section id="widgets" class="widgets wrap">
+      <p class="label">새 홈 화면 위젯</p><h2>나가기 전, 홈 화면에서.</h2>
+      <p class="summary">아이폰에서는 오늘과 어제 같은 시각의 기온을 비교하고, 안드로이드에서는 고른 도시의 현지 시각과 시간별 예보를 함께 볼 수 있어요.</p>
+      <div class="widget-pair">
+        <figure><div class="widget-stage"><img src="../assets/ios-widget.webp" width="1050" height="510" loading="lazy" alt="잠실동 기온 곡선 위젯. 낮 12시 예보는 12도, 전날 같은 시각은 8도입니다."></div><figcaption>iOS <span>시간별 기온 비교</span></figcaption></figure>
+        <figure><div class="widget-stage"><img src="../assets/android-widget.webp" width="967" height="518" loading="lazy" alt="뉴욕 시계·날씨 위젯. 현지 시각 오후 9시 20분, 현재 15.3도와 시간별 예보가 보입니다."></div><figcaption>Android <span>도시 시계와 시간별 예보</span></figcaption></figure>
+      </div>
+    </section>
+    <section id="platforms" class="feature-band">
+      <div class="wrap web-entry">
+        <h2>컴퓨터와 휴대폰에서 바로 보는 웹앱</h2>
+        <a class="text-link" href="https://app.todayweather.ai">웹앱 열기 ↗</a>
+      </div>
+    </section>
+  </main>
+  <footer class="wrap"><div id="sources"><h2>날씨 자료 출처</h2><p>기상청 · 에어코리아 · Visual Crossing · Google Air Quality / Pollen · OpenWeather<br>제공 항목은 지역에 따라 달라요. 기상특보는 기상청의 최신 발표를 확인하세요.</p></div>
+    <div class="foot"><span>주식회사 플라잉 · 오늘날씨</span><nav aria-label="정책 및 문의"><a href="https://todayweather.ai/mobile/privacy.html">개인정보처리방침</a><a href="https://todayweather.ai/mobile/terms.html">이용약관</a><a href="https://todayweather.ai/mobile/support.html">고객지원</a></nav></div>
+  </footer>
+</body>
+</html>

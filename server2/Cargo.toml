@@ -79,3 +79,7 @@ path = "tools/state/push_registration_import.rs"
 [[example]]
 name = "s3_readiness"
 path = "tools/s3_readiness.rs"
+
+[[example]]
+name = "solar_term_almanac"
+path = "tools/solar_term_almanac.rs"

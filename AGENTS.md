@@ -23,6 +23,10 @@ Use the [architecture index](docs/architecture/README.md), then the document rel
 
 Treat repository claims as revision-bound and AWS claims as timestamped observations. Recheck relevant implementation before changing behavior.
 
+## Product scope
+
+Use the [product lifecycle](docs/architecture/service-overview.md#product-lifecycle) when scoping features, operations and verification. Cover the affected TodayWeather surfaces: WebApp (PWA and desktop modes), native iOS, native Android and the current server1 backend under `server/`. Preserve client contracts when porting features to the future Rust server2 backend. Treat TodayAir and Cordova as historical references outside ongoing operations. For Korean solar terms, follow the [#3050 delivery plan](plans/issue-3050.md).
+
 ## Repository map and edit locations
 
 | Area | Start here |
@@ -32,10 +36,12 @@ Treat repository claims as revision-bound and AWS claims as timestamped observat
 | Domestic collection | `server/controllers/controllerManager.js`, `server/routes/v000001/routeGather.js`, `server/lib/collectTownForecast.js`, `server/lib/kmaScraper.js` |
 | Domestic response | `server/controllers/controllerTown.js`, `server/controllers/controllerTown24h.js` |
 | World response/cache | `server/controllers/worldWeather/controllerWorldWeather.js`, `dsf.controller.js`, `controllerAqi.js` |
-| App requests and state | `client/www/js/service.weatherutil.js`, `service.weatherinfo.js`, `service.storage.js`, startup/tab controllers |
-| Platform builds | `client/gulpfile.js`, product package/config variants, `tw.ios/`, `ta.ios/`, `applewatch/` |
+| WebApp (PWA and desktop) | `web/`, `packages/weather-core/` |
+| Native mobile clients | `ios/`, `android/` |
+| Historical Cordova requests and state | `client/www/js/service.weatherutil.js`, `service.weatherinfo.js`, `service.storage.js`, startup/tab controllers |
+| Historical platform builds | `client/gulpfile.js`, product package/config variants, `tw.ios/`, `ta.ios/`, `applewatch/` |
 
-Prefer shared app edits in `client/www/` when that is the intended build source. Native widgets and bundled platform `www` trees can differ; inspect the relevant build task before assuming files are generated, disposable or synchronized. Avoid bulk edits to bundled vendor libraries or Cordova platform code for application-only changes.
+For explicitly scoped Cordova maintenance, prefer shared app edits in `client/www/` when that is the intended build source. Native widgets and bundled platform `www` trees can differ; inspect the relevant build task before assuming files are generated, disposable or synchronized. Avoid bulk edits to bundled vendor libraries or Cordova platform code for application-only changes.
 
 ## server2 implementation placement
 

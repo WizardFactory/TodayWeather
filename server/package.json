@@ -22,6 +22,7 @@
     "initdata": "node ./utils/initForecasteDataToMongo && node ./utils/initTownDataToMongo && node ./utils/initMidDataToMongo"
   },
   "dependencies": {
+    "astronomy-engine": "2.1.19",
     "async": "^2.5.0",
     "aws-sdk": "^2.2.35",
     "axios": "^0.18.0",

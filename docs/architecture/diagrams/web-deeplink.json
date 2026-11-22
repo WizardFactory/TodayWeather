@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Web shared-location preview and save",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/web-deeplink.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "dbd0023a32fce0e5381643466dd45bee209b3516"
+    }
+  },
+  "participants": [
+    {"id":"visitor","type":"external","label":"Visitor","sublabel":"Shared coordinate link","sources":[{"path":"specs/deeplink.md","line":141,"end_line":146,"label":"Coordinate link behavior"}]},
+    {"id":"pwa","type":"frontend","label":"Web app","sublabel":"Weather preview","sources":[{"path":"specs/deeplink.md","line":141,"end_line":153,"label":"Browser link contract"}]},
+    {"id":"saved","type":"database","label":"Browser storage","sublabel":"Saved places","sources":[{"path":"specs/deeplink.md","line":144,"end_line":146,"label":"Favorite matching and add"}]},
+    {"id":"weather","type":"backend","label":"Weather API","sublabel":"Coordinate forecast","sources":[{"path":"docs/architecture/web-client.md","line":25,"end_line":25,"label":"Direct public weather requests"}]}
+  ],
+  "messages": [
+    {"id":"open","from":"visitor","to":"pwa","y":160,"label":"Open /loc with coordinates","variant":"emphasis"},
+    {"id":"match","from":"pwa","to":"saved","y":200,"label":"Check nearby saved places"},
+    {"id":"miss","from":"saved","to":"pwa","y":240,"label":"No saved match","variant":"return"},
+    {"id":"fetch","from":"pwa","to":"weather","y":290,"label":"Fetch coordinate weather","variant":"emphasis"},
+    {"id":"forecast","from":"weather","to":"pwa","y":330,"label":"Weather response","variant":"return"},
+    {"id":"preview","from":"pwa","to":"visitor","y":370,"label":"Show the weather preview","variant":"return"},
+    {"id":"add","from":"visitor","to":"pwa","y":425,"label":"Tap Add to favorites","variant":"emphasis"},
+    {"id":"save","from":"pwa","to":"saved","y":465,"label":"Save if capacity permits","variant":"emphasis"}
+  ],
+  "cards": [
+    {"dot":"cyan","title":"Existing place","items":["A nearby saved place or catalog match opens in the requested weather view."]},
+    {"dot":"rose","title":"Invalid input","items":["Invalid coordinates open a recovery page with a link to Locations."]}
+  ]
+}

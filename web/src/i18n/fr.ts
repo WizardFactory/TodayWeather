@@ -199,6 +199,10 @@ const fr: Catalog = {
   "public.body":
     "Enregistrez ce lieu et consultez la météo heure par heure et la qualité de l'air.",
   "public.open": "Voir la météo de ce lieu",
+  "link.appOption": "Ouvrir ou installer l’application",
+  "link.dismiss": "Fermer",
+  "link.addFavorite": "Ajouter aux favoris",
+  "link.invalidLocation": "Ce lieu partagé est invalide.",
   "public.notFound": "Lieu partagé introuvable",
   "welcome.kicker": "La météo du jour",
   "welcome.headline": "Plus doux qu'hier ?",

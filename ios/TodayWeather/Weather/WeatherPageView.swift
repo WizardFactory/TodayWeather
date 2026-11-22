@@ -392,7 +392,8 @@ private struct MainBox: View {
         guard let hero = page.hero else { return 0 }
         let big = metrics.bigFontSize
         let temp = CssLine.metrics([CssRun(text: hero.temperature, size: big)])
-        let lines = SummaryLines.lines(hero.summary, size: s(21), width: width).count
+        let summaryLines = SummaryLines.lines(hero.summary, size: s(21), width: width).count
+        let lines = (hero.rankedSummary ? min(2, summaryLines) : summaryLines)
             + (hero.summaryAir.map { SummaryLines.lines($0, size: s(21), width: width).count } ?? 0)
         return temp.ascent + temp.descent + CGFloat(lines) * s(24)
     }
@@ -406,7 +407,17 @@ private struct MainBox: View {
                             color: colors.headerText, outline: colors.headerOutline, raise: [2: WeatherMetrics.superRaise(big)])
                     ThemeImage(image: hero.sky, theme: theme, height: metrics.bigImageSize)
                 }
-                SummaryLines(text: hero.summary, colors: colors, s: s, width: width)
+                if hero.rankedSummary {
+                    Text(verbatim: hero.summary)
+                        .font(.system(size: s(21)))
+                        .foregroundStyle(colors.headerText.color)
+                        .outlined(colors.headerOutline)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .accessibilityLabel(Text(verbatim: hero.summary))
+                } else {
+                    SummaryLines(text: hero.summary, colors: colors, s: s, width: width)
+                }
                 if let air = hero.summaryAir {
                     SummaryLines(text: air, colors: colors, s: s, width: width)
                         .contentShape(Rectangle())

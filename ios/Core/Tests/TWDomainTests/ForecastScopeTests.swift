@@ -9,6 +9,25 @@ import TWResources
 /// its first place and applies the others as swipes; every value the templates read must match after every apply,
 /// including the values an apply leaves from an earlier place. Port of the Android `ForecastScopeTest` (IN-08, #2957).
 struct ForecastScopeTests {
+    @Test func rankedSummaryExpiresAtSeoulMidnight() throws {
+        let record = try #require(try JSONValue.parse(#"{"country":"KR","source":"KMA","dayChart":[{"values":[]}],"timeTable":[],"currentWeather":{"summary":"최저 -3도, 최고 6도, 입춘","summaryForDate":"2026-02-04","summaryWeather":"weather","summaryAir":"air"}}"#).objectValue)
+        var scope = ForecastScope(type: .mid, metrics: ChartMetrics(bodyWidth: 320, bodyHeight: 600),
+                                  fahrenheit: false, photoTheme: false, yesterday: try yesterday("ko"), expandShortChart: false)
+        let midnight = try #require(ISO8601DateFormatter().date(from: "2026-02-04T15:00:00Z"))
+        scope.apply(record, hasPush: false, now: midnight.addingTimeInterval(-1))
+        #expect(scope.summary?.stringValue == "최저 -3도, 최고 6도, 입춘")
+        #expect(scope.summaryAir == nil)
+        #expect(scope.summaryExpiresAt == midnight)
+        scope.apply(record, hasPush: false, now: midnight)
+        #expect(scope.summary?.stringValue == "weather")
+        #expect(scope.summaryAir?.stringValue == "air")
+        scope.apply(record.setting("country", .string("JP")), hasPush: false, now: midnight.addingTimeInterval(-1))
+        #expect(scope.summary?.stringValue == "weather")
+        scope.apply(record, hasPush: false, now: midnight.addingTimeInterval(-1))
+        scope.apply(nil, hasPush: false)
+        #expect(scope.summary == nil)
+    }
+
     @Test func visitsMatchForecastCtrl() throws {
         let golden = try Corpus.read("forecast.json")
         let visits = try #require(golden["visits"]?.arrayValue)
