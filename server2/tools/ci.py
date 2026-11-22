@@ -149,6 +149,7 @@ def command_plan(root, event, stage):
                      str(root / 'reports/verification/server2-local-first/native-staging'),
                      '--archive', str(artifact / 'native.tar.gz'),
                      '--source-revision', revision]),
+            ('musl', [python, 'tools/promote_artifact.py', '--artifact', str(artifact), '--record-digest']),
         ]
     # Hosted foundation re-checks the musl job's same-run candidate before publishing it.
     yield 'promote', [python, 'tools/promote_artifact.py', '--artifact', str(artifact),

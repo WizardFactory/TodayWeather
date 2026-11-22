@@ -69,6 +69,7 @@ SERIAL_LINUX_LOCAL = (
     ('musl', ('readelf', '-h', 'target/x86_64-unknown-linux-musl/release/server2')),
     ('musl', ('<PYTHON>', 'tools/verify_artifact.py', '--binary-dir', 'target/x86_64-unknown-linux-musl/release', '--output', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
     ('musl', ('<PYTHON>', 'tools/native_artifact.py', '--target-dir', 'target', '--output', '<ROOT>/reports/verification/server2-local-first/native-staging', '--archive', '<ROOT>/reports/verification/server2-local-first/artifact-native/native.tar.gz', '--source-revision', '<REVISION>')),
+    ('musl', ('<PYTHON>', 'tools/promote_artifact.py', '--artifact', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--record-digest')),
     ('promote', ('<PYTHON>', 'tools/promote_artifact.py', '--artifact', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
 )
 
@@ -124,6 +125,7 @@ SERIAL_LINUX_NO_LOCAL = (
     ('musl', ('readelf', '-h', 'target/x86_64-unknown-linux-musl/release/server2')),
     ('musl', ('<PYTHON>', 'tools/verify_artifact.py', '--binary-dir', 'target/x86_64-unknown-linux-musl/release', '--output', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
     ('musl', ('<PYTHON>', 'tools/native_artifact.py', '--target-dir', 'target', '--output', '<ROOT>/reports/verification/server2-local-first/native-staging', '--archive', '<ROOT>/reports/verification/server2-local-first/artifact-native/native.tar.gz', '--source-revision', '<REVISION>')),
+    ('musl', ('<PYTHON>', 'tools/promote_artifact.py', '--artifact', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--record-digest')),
     ('promote', ('<PYTHON>', 'tools/promote_artifact.py', '--artifact', '<ROOT>/reports/verification/server2-local-first/artifact-native', '--source-revision', '<REVISION>')),
 )
 
