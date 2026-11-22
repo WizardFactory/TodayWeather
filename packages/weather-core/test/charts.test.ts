@@ -32,6 +32,34 @@ it("keeps all chronological mixed-step rows, aligns yesterday by wall time and i
   expect(model.domain[0]).toBeLessThan(-50);
   expect(model.startIndex).toBe(model.currentIndex - 1);
 });
+it("starts the hourly rows at yesterday 00:00 and keeps day-before-yesterday only as comparison data", () => {
+  const hourly = Array.from({ length: 60 }, (_, i) => {
+    const day = 21 + Math.floor(i / 24);
+    return point(
+      `2026-09-${day}T${String(i % 24).padStart(2, "0")}:00`,
+      day === 21 ? 100 + i : i % 24,
+    );
+  });
+  const model = hourlyChart({
+    hourly,
+    current: point("2026-09-23T10:30", 11),
+    yesterday: point("2026-09-22T10:30", 9),
+  });
+  expect(model.rows[0].point.at).toBe("2026-09-22T00:00");
+  expect(model.rows.some((r) => r.point.at.startsWith("2026-09-21"))).toBe(false);
+  // Yesterday's columns still compare against the day before.
+  expect(model.rows[5].yesterday?.temperature).toBe(105);
+  expect(model.startIndex).toBe(model.currentIndex - 1);
+  expect(model.rows[model.startIndex].point.at).toBe("2026-09-23T10:00");
+});
+it("keeps every hourly row when the current time cannot be read", () => {
+  const model = hourlyChart({
+    hourly: [point("2026-09-21T23:00", 1), point("2026-09-23T01:00", 2)],
+    current: point("not-a-time", 3),
+    yesterday: null,
+  });
+  expect(model.rows).toHaveLength(2);
+});
 it("omits an observation outside the forecast extent and preserves null gaps", () => {
   const model = hourlyChart({
     hourly: [

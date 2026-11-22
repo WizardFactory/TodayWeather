@@ -334,7 +334,7 @@ Both charts keep the Cordova information model and reading order. The design sys
 **Scroll.**
 - Horizontal scrolling happens inside the chart only.
 - The initial position is the column before the current time, as in Cordova.
-- The data span matches the service's 3-hour rows. The PWA's 16-point cap is lifted to the full series.
+- The data span matches the service's rows from yesterday 00:00 (the response's current date minus one day) onward; older rows are not drawn and serve only as the yesterday comparison for yesterday's columns. The PWA's 16-point cap is lifted to the rest of the series.
 - Mixed 1-hour and 3-hour rows (and off-hour observations) use bounded chronological segment spacing (`hourlyXPositions`: 1.0× column at ≤1h, smoothly up to 1.35× at 3h, capped at 1.5× for >3h gaps with a line break) so 3-hour spans do not stretch into empty mobile voids and off-hour observations cannot blow up chart width (#3114). The Y-axis ticks stay pinned at the viewport edge while scrolling.
 
 **Interaction and accessibility.**

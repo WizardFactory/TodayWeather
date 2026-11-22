@@ -23,6 +23,7 @@ export type HourRow = {
   current: boolean;
 };
 const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
 const MAX_CONNECTED_GAP_MS = 3 * HOUR_MS;
 
 function mergeCurrentPoint(
@@ -157,7 +158,13 @@ export function hourlyChart(
   const yesterdayTime = weather.yesterday
     ? wallTime(weather.yesterday.at)
     : NaN;
+  // The chart scrolls back no further than yesterday 00:00; older rows only
+  // serve as the comparison line for yesterday's columns.
+  const firstTime = Number.isFinite(now)
+    ? now - (now % DAY_MS) - DAY_MS
+    : -Infinity;
   const rows: HourRow[] = [...timeline]
+    .filter(([time]) => time >= firstTime)
     .sort(([a], [b]) => a - b)
     .map(([time, point]) => ({
       time,
