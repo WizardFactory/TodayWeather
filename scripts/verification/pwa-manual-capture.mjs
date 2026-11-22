@@ -17,6 +17,13 @@ const browser = await chromium.launch();
 const fixture = JSON.parse(
   readFileSync("docs/rewrite/examples/client-kma-response.json"),
 ).response;
+// Live KMA observations come a few minutes after the hour (liveTime), so the
+// hourly chart shows the current temperature between columns, as in the apps.
+Object.assign(fixture.current, {
+  time: 7,
+  liveTime: "0730",
+  stnDateTime: "2026.09.23.07:30",
+});
 const page = await browser.newPage({
   viewport: { width: 820, height: 1180 },
   hasTouch: true,
@@ -91,10 +98,11 @@ try {
     `${out}/provenance.json`,
     JSON.stringify(
       {
-        date: "2026-11-22",
+        date: "2026-11-23",
         browser: browser.version(),
         viewport: [820, 1180],
         fixture: "docs/rewrite/examples/client-kma-response.json",
+        fixturePatch: "current time 7, liveTime 0730 (observation between columns)",
         externalRequests: "blocked except fixture fulfilment",
         csp: "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
         images,

@@ -1,11 +1,12 @@
 {
-  "date": "2026-11-22",
+  "date": "2026-11-23",
   "browser": "153.0.8010.12",
   "viewport": [
     820,
     1180
   ],
   "fixture": "docs/rewrite/examples/client-kma-response.json",
+  "fixturePatch": "current time 7, liveTime 0730 (observation between columns)",
   "externalRequests": "blocked except fixture fulfilment",
   "csp": "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
   "images": [
@@ -15,11 +16,11 @@
     },
     {
       "file": "hourly.png",
-      "sha256": "ff0d6f9e94ffa33dd9eedf3f581dcf00ecf6ccb3eae59af20f46d6a9721384ff"
+      "sha256": "6afbde9bfdb0673f0597c985a3426d70c4c2f4378ca9aac37638e4244605db7a"
     },
     {
       "file": "daily.png",
-      "sha256": "172abbc81ee753b932c94850502fcff3c0dd36e785ac2ed30f4b0d55a54a7f86"
+      "sha256": "eed22c29d6bd5620ad0cec2a2ccee550b4a72bfccb5869dbe868cce4c792f770"
     },
     {
       "file": "air.png",
@@ -32,22 +33,6 @@
     {
       "file": "confirmation.png",
       "sha256": "414a6235223d032676c231a008ed910ab431f2ed5a1a235722c210f63e0dc97d"
-    },
-    {
-      "file": "precipitation-hourly.png",
-      "sha256": "84f717d773b48266ede08ac2dcc6ab5108f216a1ac8f8d2bc46563c14aae0e25",
-      "date": "2026-11-22",
-      "browser": "153.0.8010.12",
-      "fixture": "scripts/verification/precipitation-manual-capture.mjs",
-      "scenario": "2598-S1/S3"
-    },
-    {
-      "file": "precipitation-daily.png",
-      "sha256": "fe43d79b9e838ed8ddb8cf2c554f88c8ce530b205fdafa80c78757e96e6ab599",
-      "date": "2026-11-22",
-      "browser": "153.0.8010.12",
-      "fixture": "scripts/verification/precipitation-manual-capture.mjs",
-      "scenario": "2598-S2"
     }
   ]
 }

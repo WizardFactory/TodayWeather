@@ -439,32 +439,20 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
               />
               {model.current && (
                 <g className="current-marker">
-                  <line
-                    className="now-line"
-                    x1={currentX}
-                    x2={currentX}
-                    y1={0}
-                    y2={height}
-                  />
+                  {/* Native: same-size filled points, red for today and grey for yesterday (Cordova circle-*-current, r=5). */}
                   {model.current.yesterday !== null && (
                     <circle
-                      className="yesterday-point"
+                      className="yesterday-point now-yesterday"
                       cx={currentX}
                       cy={y(model.current.yesterday)}
-                      r={rem * 0.25}
+                      r={rem * 0.3125}
                     />
                   )}
                   <circle
-                    className="today-point"
+                    className="now-point"
                     cx={currentX}
                     cy={y(model.current.temperature)}
-                    r={rem * 0.3}
-                  />
-                  <circle
-                    className="now"
-                    cx={currentX}
-                    cy={y(model.current.temperature)}
-                    r={rem * 0.3 + rem * 0.2}
+                    r={rem * 0.3125}
                   />
                 </g>
               )}

@@ -2472,6 +2472,11 @@ textarea {
 .hourly-chart .yesterday-value {
   fill: var(--tw-chart-yesterday-on);
 }
+.now-point {
+  fill: var(--tw-chart-now);
+  stroke: var(--tw-bg-surface);
+  stroke-width: 1.5;
+}
 .now-line {
   stroke: var(--tw-chart-now);
   stroke-width: 1;
@@ -2630,7 +2635,8 @@ textarea {
   .range,
   .today-point,
   .yesterday-point,
-  .now {
+  .now,
+  .now-point {
     fill: CanvasText;
   }
   .hourly-chart .now {

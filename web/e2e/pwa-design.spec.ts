@@ -844,10 +844,17 @@ test("hourly chart matches the native columns: three-hour rows from yesterday, s
   await expect(
     page.locator(".hourly-columns .current-column .chart-probability"),
   ).toHaveText("0%");
+  // Native: a filled red point (no ring or line) marks the observation.
   const marker = await scroll.evaluate((el) => {
-    const line = el.querySelector(".current-marker .now-line");
-    return line ? Number(line.getAttribute("x1")) : null;
+    const point = el.querySelector(".current-marker .now-point");
+    return point ? Number(point.getAttribute("cx")) : null;
   });
+  await expect(scroll.locator(".current-marker .now-line")).toHaveCount(0);
+  // chart.now #e5484d (light), the native red current point.
+  await expect(scroll.locator(".current-marker .now-point")).toHaveCSS(
+    "fill",
+    "rgb(229, 72, 77)",
+  );
   expect(marker).not.toBeNull();
   expect(Math.abs(marker! - metrics.column * 9)).toBeLessThan(1);
   // The observation is announced with the column before it and is in the table.

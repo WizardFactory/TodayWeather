@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather PWA user manual",
-  "date": "2026-11-22",
+  "date": "2026-11-23",
   "pages": [
     {
       "scenario": "S1",
@@ -22,7 +22,7 @@
       "intro": "The hourly chart compares today's three-hour forecast with yesterday, as in the mobile apps: seven columns per phone screen, from yesterday 00:00. Only the chart scrolls horizontally.",
       "steps": [
         "The chart opens with the column before the current one at the left edge. Scroll to later hours, or back to yesterday 00:00, or focus it and use Left, Right, Home and End.",
-        "Read each temperature on its dot. When the current time falls between columns, a small ringed dot between them marks the current temperature.",
+        "Read each temperature on its dot. When the current time falls between columns, a red dot between them marks the current temperature (grey for yesterday at the same time).",
         "Expand wind and humidity, or open the table for the same three-hour values."
       ],
       "expected": "The chart and its table show the same three-hour rows as the mobile apps. A missing temperature leaves a gap in the line.",
