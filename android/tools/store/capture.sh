@@ -1,6 +1,7 @@
 #!/bin/sh
 # Ad-free Play Store screens (#3122) from the actual debug app with live read-only data: StoreCaptureTest per locale.
-#   ANDROID_SERIAL=emulator-NNNN capture.sh <out-dir> [locale:region ...]   (default ko-KR:KR en-US:US ja-JP:JP)
+#   ANDROID_SERIAL=emulator-NNNN capture.sh <new out-dir> [locale:region ...]   (default ko-KR:KR en-US:US ja-JP:JP)
+# The output directory must not exist: a run never replaces or deletes an earlier capture.
 # Same private debug inputs, emulator rules and cleanup as tools/manual/capture.sh: a caller-owned emulator with the
 # network on; both test packages are uninstalled on every exit. Writes <out-dir>/<locale>/store-0N-*.png and .json.
 set -eu
@@ -10,6 +11,11 @@ emulator_guard
 OUT=${1:?output directory required}
 shift
 LOCALES=${*:-ko-KR:KR en-US:US ja-JP:JP}
+# Only language-REGION:REGION pairs (ko-KR:KR); they name the output directories. Checked before any side effect.
+for pair in $LOCALES; do
+    printf '%s\n' "$pair" | grep -Eqx '[a-z]{2}-[A-Z]{2}:[A-Z]{2}' || { echo "Bad locale pair: $pair" >&2; exit 2; }
+done
+[ ! -e "$OUT" ] || { echo "$OUT exists: give a new output directory" >&2; exit 2; }
 APP=$HERE/../../app/build/outputs/apk
 mkdir -p "$OUT"
 trap online_cleanup EXIT
@@ -25,14 +31,9 @@ adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
 shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
 for pair in $LOCALES; do
     locale=${pair%%:*}; region=${pair#*:}
-    # Only language-REGION:REGION pairs (ko-KR:KR); they name the output directories below.
-    printf '%s\n' "$pair" | grep -Eqx '[a-z]{2}-[A-Z]{2}:[A-Z]{2}' || { echo "Bad locale pair: $pair" >&2; exit 2; }
-done
-for pair in $LOCALES; do
-    locale=${pair%%:*}; region=${pair#*:}
-    # Each locale is pulled into a new empty directory, so no earlier capture can stand in for a missing one; the
-    # previous result of that locale is replaced only after the new one has been checked.
-    PULL=$(mktemp -d "$OUT/.pull.XXXXXX")
+    # Each locale is pulled into its own new directory, so no other capture can stand in for a missing one.
+    PULL=$OUT/$locale
+    mkdir "$PULL"
     adb shell pm clear "$PKG" >/dev/null
     adb shell cmd locale set-app-locales "$PKG" --locales "$locale"
     adb shell am instrument -w -e ads off -e manual true -e weather production -e region "$region" \
@@ -57,7 +58,5 @@ for n in ("01-compare", "02-hourly", "03-daily", "04-air"):
             or (r.get("width"), r.get("height")) != (w, h):
         sys.exit(f"{locale}: store-{n}.json does not record an ad-free {locale.split('-')[0]} {w}x{h} capture: {r}")
 PY
-    rm -rf "${OUT:?}/$locale"
-    mv "$PULL" "$OUT/$locale"
     echo "Captured $locale"
 done

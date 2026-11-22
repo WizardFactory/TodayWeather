@@ -8,20 +8,20 @@ App Store: each iOS capture (ios/tools/manual/run-manual-capture.sh --no-ads --s
 frame; only its alpha channel is dropped (RGB unchanged).
 
 Usage (Pillow required; run from the repository root):
-  compose_store_screenshots.py --android <dir with ko-KR/ en-US/ ja-JP/> --crop-top N --crop-bottom N \
-      --iphone <raw dir> --ipad <raw dir> --chromium <chrome-headless-shell> --commit <sha> --captured-on <date>
-Writes client/fastlane/metadata/android/<locale>/images/phoneScreenshots/0N-*.jpg,
-client/fastlane/screenshots/ios/ko/{iphone69,ipad13}-0N-*.png and client/fastlane/screenshots/manifest.json.
-Every input is checked first (the Android display from <android>/device.txt, each image's size, the crop) and the
-whole package is built in a temporary directory; the maintained files are replaced only when all of it succeeded.
+  compose_store_screenshots.py --out <new dir> --android <dir with device.txt, ko-KR/ en-US/ ja-JP/> \
+      --crop-top N --crop-bottom N --iphone <raw dir> --ipad <raw dir> --chromium <chrome-headless-shell> \
+      --commit <sha> --captured-on <date>
+Writes the whole package into --out, which must not exist yet, with the layout of client/fastlane:
+metadata/android/<locale>/images/phoneScreenshots/0N-*.jpg, screenshots/ios/ko/{iphone69,ipad13}-0N-*.png and
+screenshots/manifest.json. It never changes the maintained package: after inspecting the output, copy it over
+client/fastlane (`cp -R <out>/. client/fastlane/`) and review `git diff`; Git holds the previous package. Every input
+is checked first (the Android display from <android>/device.txt, each image's size, the crop).
 """
 import argparse
 import hashlib
 import html
 import json
-import os
 import re
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -56,30 +56,6 @@ def android_display(path):
     if not sizes or not density or not release or "ads: off" not in text:
         raise SystemExit(f"{path}: no display size, density, build fingerprint or 'ads: off'")
     return tuple(int(v) for v in sizes[-1]), int(density.group(1)), release.group(1)
-
-
-def replace_package(stage, files):
-    """Puts the staged files in place: each is first copied beside its target under a temporary name (same file
-    system), then renamed over it; the manifest is renamed last. On a failure before the renames nothing changed."""
-    pending = [(stage / f["file"], FASTLANE / f["file"]) for f in files]
-    pending.append((stage / "screenshots/manifest.json", FASTLANE / "screenshots/manifest.json"))
-    temps = []
-    try:
-        for source, target in pending:
-            temp = target.with_name(f".{target.name}.new")
-            shutil.copy2(source, temp)
-            temps.append((temp, target))
-    except BaseException:
-        for temp, _ in temps:
-            temp.unlink(missing_ok=True)
-        raise
-    keep = {target for _, target in temps}
-    for directory in {target.parent for target in keep if target.name != "manifest.json"}:
-        for old in directory.iterdir():
-            if old.suffix in (".jpg", ".png") and old not in keep and not old.name.startswith("."):
-                old.unlink()
-    for temp, target in temps:
-        os.replace(temp, target)
 
 
 def play(args, stage, work, files, display):
@@ -133,7 +109,7 @@ def ios(args, stage, files):
 
 def main():
     parser = argparse.ArgumentParser()
-    for name in ("--android", "--iphone", "--ipad", "--chromium", "--commit", "--captured-on", "--version"):
+    for name in ("--out", "--android", "--iphone", "--ipad", "--chromium", "--commit", "--captured-on", "--version"):
         parser.add_argument(name, required=name != "--version")
     parser.add_argument("--crop-top", type=int, required=True)
     parser.add_argument("--crop-bottom", type=int, required=True)
@@ -141,14 +117,20 @@ def main():
     display, density, release = android_display(Path(args.android) / "device.txt")
     if args.crop_top < 0 or args.crop_bottom < 0 or args.crop_top + args.crop_bottom >= display[1]:
         raise SystemExit(f"crop {args.crop_top}/{args.crop_bottom} does not fit a {display[0]}x{display[1]} display")
+    out = Path(args.out).resolve()
+    if out.exists():
+        raise SystemExit(f"{out} exists: give a new output directory")
     files = []
-    with tempfile.TemporaryDirectory() as tmp:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # Built beside the output (same file system), then renamed: the output directory appears only complete.
+    with tempfile.TemporaryDirectory(dir=out.parent, prefix=f".{out.name}.") as tmp:
         stage, work = Path(tmp) / "stage", Path(tmp) / "work"
         work.mkdir()
         play(args, stage, work, files, display)
         ios(args, stage, files)
         write_manifest(args, stage, files, display, density, release)
-        replace_package(stage, files)
+        stage.rename(out)
+    print(f"wrote {len(files)} images and screenshots/manifest.json to {out}")
 
 
 def write_manifest(args, stage, files, display, density, release):
