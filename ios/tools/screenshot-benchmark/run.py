@@ -32,7 +32,7 @@ def run(*args, **kwargs):
 
 
 def output(*args):
-    return run(*args, text=True, stdout=subprocess.PIPE).stdout.strip()
+    return run(*args, text=True, stdout=subprocess.PIPE, timeout=60).stdout.strip()
 
 
 def save(path, value):
@@ -75,6 +75,18 @@ def read_records(log):
     return records
 
 
+def test_timing(text, selectors, mismatch):
+    runs = re.findall(r"Test run with [^\n]*? (passed|failed) after ([\d.]+) seconds(?: with (\d+) issues?)?\.", text)
+    expected = ("failed", "1") if mismatch else ("passed", "")
+    if len(runs) != 1 or (runs[0][0], runs[0][2]) != expected:
+        raise RuntimeError(f"Expected one Swift Testing result {expected}, saw {runs}")
+    matches = re.findall(r"Suite (\w+) (passed|failed) after ([\d.]+) seconds", text)
+    elapsed = {suite: float(seconds) for suite, verdict, seconds in matches if verdict == expected[0]}
+    if elapsed.keys() != {selector.partition("/")[0] for selector in selectors}:
+        raise RuntimeError(f"Unexpected Swift Testing suites: {matches}")
+    return float(runs[0][1]), elapsed
+
+
 def trial(args, name, mode, expected, mismatch=None, timed=True):
     directory = args.out / name
     directory.mkdir()
@@ -90,17 +102,28 @@ def trial(args, name, mode, expected, mismatch=None, timed=True):
                *(f"-only-testing:TodayWeatherTests/{item}" for item in selectors), "test-without-building"]
     print(f"{name}: {mode}", flush=True)
     started = time.monotonic()
-    with (directory / "xcodebuild.log").open("w") as log:
-        result = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)
+    log_path = directory / "xcodebuild.log"
+    try:
+        with log_path.open("w") as log:
+            result = subprocess.run(command, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                    timeout=args.timeout_seconds)
+        exit_code = result.returncode
+    except subprocess.TimeoutExpired:
+        exit_code = None
+        with log_path.open("a") as log:
+            print(f"Xcode execution reached the {args.timeout_seconds}s timeout.", file=log)
+        subprocess.run(["xcrun", "simctl", "terminate", args.device, APP],
+                       capture_output=True, timeout=60)
     wall = time.monotonic() - started
-    records = read_records(directory / "xcodebuild.log")
+    records = read_records(log_path)
     save(directory / "cases.json", records)
-    if result.returncode != (65 if mismatch else 0):
-        raise RuntimeError(f"Unexpected exit {result.returncode}: {directory}/xcodebuild.log")
+    if exit_code != (65 if mismatch else 0) and not (mismatch and exit_code is None):
+        raise RuntimeError(f"Unexpected Xcode exit {exit_code}: {log_path}")
     if timed and records.keys() != expected.keys():
         raise RuntimeError(f"{name}: missing {sorted(expected.keys() - records.keys())}, unexpected {sorted(records.keys() - expected.keys())}")
     if any(row["passed"] != (key != mismatch) for key, row in records.items()):
         raise RuntimeError(f"{name}: unexpected comparison verdict")
+    elapsed, suites = test_timing(log_path.read_text(errors="replace"), selectors, mismatch)
     container = Path(output("xcrun", "simctl", "get_app_container", args.device, APP, "data"))
     images = list((container / "tmp" / suffix).glob("*.png"))
     expected_images = {f"{case}-{kind}.png" for case in (expected if mode == "all" else [mismatch] if mismatch else [])
@@ -113,11 +136,11 @@ def trial(args, name, mode, expected, mismatch=None, timed=True):
         for image in images:
             output("sips", "-g", "pixelWidth", "-g", "pixelHeight", str(image))
             shutil.copy2(image, artifacts / image.name)
-    matches = re.findall(r"Test run with .*?(?:passed|failed) after ([0-9.]+) seconds",
-                         (directory / "xcodebuild.log").read_text(errors="replace"))
-    if len(matches) != 1:
-        raise RuntimeError(f"{name}: expected one Swift Testing run, saw {matches}")
-    stats = {"mode": mode, "commandWall": wall, "wall": float(matches[0]), "images": len(images), "bytes": sum(image.stat().st_size for image in images)}
+    if exit_code is None:
+        print("Verified the induced failure and its PNGs after Xcode timed out.", flush=True)
+    stats = {"mode": mode, "commandWall": wall, "wall": elapsed, "bySuite": suites,
+             "xcodeExitCode": exit_code, "xcodeTimedOut": exit_code is None,
+             "images": len(images), "bytes": sum(image.stat().st_size for image in images)}
     stats.update({phase: sum(row[phase] for row in records.values()) for phase in PHASES})
     stats["residual"] = stats["wall"] - sum(stats[phase] for phase in PHASES)
     stats["byMethod"] = {
@@ -150,6 +173,30 @@ def compare_runs(baseline, candidate):
             raise RuntimeError(f"{case}: changed bitmap, comparison metrics or mask")
 
 
+def paired_deltas(groups, metric):
+    values = [metric(a) - metric(b) for a, b in zip(groups["all"], groups["failures"])]
+    return {"seconds": values, "medianSeconds": statistics.median(values)}
+
+
+def summarize_pairs(groups, control, comparison_count):
+    total = paired_deltas(groups, lambda row: row["wall"])
+    savings, saved = total["seconds"], total["medianSeconds"]
+    noise = max(max(row["wall"] for row in group) - min(row["wall"] for row in group) for group in groups.values())
+    example = groups["all"][0]
+    return {
+        "pairedSavingsSeconds": savings, "repeatNoiseSeconds": noise, "medianSavingSeconds": saved,
+        "repeatable": min(savings) > 0 and saved > 2 * noise, "comparisonCount": comparison_count,
+        "pairedBySuite": {suite: paired_deltas(groups, lambda row: row["bySuite"][suite])
+                          for suite in example["bySuite"]},
+        "pairedByMethodPhase": {method: {phase: paired_deltas(groups, lambda row: row["byMethod"][method][phase])
+                                       for phase in PHASES} for method in example["byMethod"]},
+        "control": control, "trials": groups,
+        "medianInstrumentationOverheadSeconds": statistics.median(row["wall"] for row in groups["all"]) - control["wall"],
+        "captureAllMedianPhaseShare": {phase: statistics.median(row[phase] / row["wall"] for row in groups["all"])
+                                      for phase in (*PHASES, "residual")},
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True, help="Dedicated booted simulator UUID")
@@ -157,9 +204,12 @@ def main():
     parser.add_argument("--out", type=Path, required=True, help="New evidence directory")
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--smoke", action="store_true", help="Run only the induced-failure test")
-    selection.add_argument("--benchmark-only", action="store_true", help="Reuse independently verified failure-path evidence")
+    selection.add_argument("--benchmark-only", action="store_true", help="Skip the induced failure after separate diagnostic verification")
+    parser.add_argument("--timeout-seconds", type=int, default=1800, help="Maximum Xcode time per trial (default 1800)")
     parser.add_argument("--warm-all-log", type=Path, help="Reuse a passing warmup from the same test binary")
     args = parser.parse_args()
+    if args.timeout_seconds < 1:
+        parser.error("--timeout-seconds must be positive")
     args.out = args.out.resolve()
     args.xctestrun = args.xctestrun.resolve(strict=True)
     args.out.mkdir(parents=True)
@@ -193,23 +243,12 @@ def main():
     compare_runs(baseline, warm_failures)
     control, _ = trial(args, "control", "all", expected, timed=False)
     groups = {"all": [], "failures": []}
-    savings = []
     for i, order in enumerate(PAIRS, 1):
-        pair = {}
         for mode in order:
             stats, records = trial(args, f"pair-{i}-{mode}", mode, expected)
             compare_runs(baseline, records)
             groups[mode].append(stats)
-            pair[mode] = stats["wall"]
-        savings.append(pair["all"] - pair["failures"])
-    noise = max(max(row["wall"] for row in group) - min(row["wall"] for row in group) for group in groups.values())
-    saved = statistics.median(savings)
-    summary = {"pairedSavingsSeconds": savings, "repeatNoiseSeconds": noise, "medianSavingSeconds": saved,
-               "repeatable": min(savings) > 0 and saved > 2 * noise, "comparisonCount": len(expected),
-               "control": control, "trials": groups,
-               "medianInstrumentationOverheadSeconds": statistics.median(row["wall"] for row in groups["all"]) - control["wall"],
-               "captureAllMedianPhaseShare": {phase: statistics.median(row[phase] / row["wall"] for row in groups["all"])
-                                               for phase in (*PHASES, "residual")}}
+    summary = summarize_pairs(groups, control, len(expected))
     save(args.out / "summary.json", summary)
     print(json.dumps(summary, indent=2))
 
