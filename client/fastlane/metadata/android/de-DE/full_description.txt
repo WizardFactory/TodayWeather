@@ -9,6 +9,6 @@ Wetter außerhalb Koreas: Visual Crossing — https://www.visualcrossing.com/
 
 Wetter- und Luftdaten können fehlerhaft, unvollständig oder verzögert sein; Vorhersagen können von den tatsächlichen Bedingungen abweichen. Diese App ist keine offizielle Behörden-App und ersetzt keine amtlichen Wetterwarnungen, Notfall- oder Evakuierungshinweise und keine fachliche Beratung. Beachte bei sicherheitsrelevanten Entscheidungen die aktuellen Hinweise der zuständigen Behörden.
 
-Diese Version enthält keine Android-Startbildschirm- oder iOS-Widgets. Öffne die App, um das Wetter zu prüfen.
+Startbildschirm-Widgets: Füge die Widgets Aktuelles Wetter, Vorhersage (stündlich oder täglich), Uhr und Wetter sowie Luftqualität hinzu. Vergrößere ein Widget für mehr Vorhersagezeiträume und wähle für jedes Widget den Stil Klassisch Schwarz, Morgenpapier oder Blaue Stunde, den Ort sowie automatische oder manuelle Aktualisierung. Öffne die App mindestens alle fünf Tage, damit die Widgets aktuell bleiben.
 Die Standortberechtigung wird verwendet, wenn du Wetter für deinen aktuellen Standort abrufen möchtest.
 Kontakt: todayweather@wizardfactory.net

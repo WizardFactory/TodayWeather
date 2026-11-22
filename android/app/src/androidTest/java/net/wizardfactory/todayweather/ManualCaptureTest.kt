@@ -82,6 +82,26 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
         assertTrue("weather has a current observation", app.weather.weather.value.getValue(WeatherRepository.key(place)).weather.containsKey("currentWeather"))
     }
     fun tab(tab: Tab) { tap(ShellTags.tab(tab)); Thread.sleep(800) }
+    /** The launcher's confirmation of a pinned widget: its add button, found by label in the launcher's window. */
+    fun launcherAdd() {
+        automation.serviceInfo = automation.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
+        val labels = listOf("홈 화면에 추가", "추가", "Add to home screen", "Add automatically", "Add", "ホーム画面に追加", "追加")
+        val deadline = System.currentTimeMillis() + 20_000
+        var seen = emptyList<String>()
+        while (System.currentTimeMillis() < deadline) {
+            val nodes = automation.windows.mapNotNull { it.root }.filter { it.packageName?.toString() != rule.activity.packageName }
+                .flatMap { root -> generateSequence(listOf(root)) { level -> level.flatMap { n -> (0 until n.childCount).mapNotNull { n.getChild(it) } }.ifEmpty { null } }.flatten() }
+            seen = nodes.mapNotNull { n -> n.text?.toString()?.let { "$it|${n.viewIdResourceName}|${n.isClickable}" } }
+            val button = labels.firstNotNullOfOrNull { label -> nodes.firstOrNull { it.isClickable && it.text?.toString() == label } }
+            if (button != null) {
+                check(button.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                Thread.sleep(2500)
+                return
+            }
+            Thread.sleep(400)
+        }
+        error("Launcher add button absent; visible texts: $seen")
+    }
     fun permission(id: String, name: String? = null) {
         automation.serviceInfo = automation.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
         val deadline = System.currentTimeMillis() + 20_000

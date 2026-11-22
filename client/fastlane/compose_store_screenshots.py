@@ -30,12 +30,19 @@ from PIL import Image
 
 FASTLANE = Path(__file__).resolve().parent
 SCREENS = ["01-compare", "02-hourly", "03-daily", "04-air"]
+# Play also shows the launcher page with the forecast and clock widgets and the one with the current and air widgets;
+# the App Store shows one Home Screen with the widgets.
+PLAY_SCREENS = SCREENS + ["05-widgets", "06-widgets"]
+IOS_SCREENS = SCREENS + ["05-widgets"]
 TEXT = {
-    "ko-KR": ("ko", "오늘날씨", ["어제와 오늘을 한눈에", "시간별 날씨 변화", "일별 예보 확인", "미세먼지와 대기질"],
+    "ko-KR": ("ko", "오늘날씨", ["어제와 오늘을 한눈에", "시간별 날씨 변화", "일별 예보 확인", "미세먼지와 대기질",
+                               "예보와 시계 위젯", "현재 날씨와 대기질 위젯"],
               "표시 정보는 지역과 자료 제공 상황에 따라 달라질 수 있습니다."),
     "en-US": ("en", "TodayWeather", ["Compare yesterday & today", "Follow hourly changes", "Check daily forecasts",
-                                     "See air quality clearly"], "Information varies by region and data availability."),
-    "ja-JP": ("ja", "今日天気", ["昨日と今日を比べる", "時間ごとの天気の変化", "日ごとの予報を確認", "空気質をひと目で"],
+                                     "See air quality clearly", "Forecast & clock widgets", "Weather & air widgets"],
+              "Information varies by region and data availability."),
+    "ja-JP": ("ja", "今日天気", ["昨日と今日を比べる", "時間ごとの天気の変化", "日ごとの予報を確認", "空気質をひと目で",
+                               "予報と時計のウィジェット", "天気と空気質のウィジェット"],
               "表示される情報は地域やデータ提供状況によって異なります。"),
 }
 IOS = {"iphone69": ("APP_IPHONE_67", (1320, 2868)), "ipad13": ("APP_IPAD_PRO_3GEN_129", (2064, 2752))}
@@ -63,7 +70,8 @@ def play(args, stage, work, files, display):
     for locale, (lang, brand, headings, note) in TEXT.items():
         out_dir = stage / "metadata/android" / locale / "images/phoneScreenshots"
         out_dir.mkdir(parents=True)
-        for screen, heading in zip(SCREENS, headings):
+        assert len(headings) == len(PLAY_SCREENS), locale
+        for screen, heading in zip(PLAY_SCREENS, headings):
             raw = Path(args.android) / locale / f"store-{screen}.png"
             with Image.open(raw) as image:
                 if image.size != display:
@@ -95,7 +103,7 @@ def ios(args, stage, files):
     out_dir.mkdir(parents=True)
     for prefix, source in (("iphone69", args.iphone), ("ipad13", args.ipad)):
         display, size = IOS[prefix]
-        for screen in SCREENS:
+        for screen in IOS_SCREENS:
             raw = Path(source) / f"store-{screen}.png"
             out = out_dir / f"{prefix}-{screen}.png"
             with Image.open(raw) as image:
@@ -140,7 +148,8 @@ def write_manifest(args, stage, files, display, density, release):
         "source_base_commit": args.commit,
         "source_state": "Debug builds of the native apps from the source commit with private inputs; not the store binaries.",
         "selected_city": "Seoul (서울) saved; no current location.",
-        "screens": ["comparison", "expanded hourly weather", "daily forecast", "air quality"],
+        "screens": ["comparison", "expanded hourly weather", "daily forecast", "air quality",
+                    "home-screen widgets (Play: forecast and clock, then current weather and air quality)"],
         "devices": {
             "android": f"Dedicated Android {release} emulator, display {display[0]}x{display[1]} at density {density} for the run",
             "ios_iphone": "Dedicated iPhone 17 Pro Max simulator, iOS 26.5",

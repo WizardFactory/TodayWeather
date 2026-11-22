@@ -92,7 +92,7 @@
   }
  },
  "sources": {
-  "ios/TodayWeatherUITests/ManualUITests.swift": "913b38c5abd706d2278e51ac1e2515654d4473aa550dda34a17ff850644078a5",
+  "ios/TodayWeatherUITests/ManualUITests.swift": "32984d522c0718cac391eb54b7b8bdb98bc5327c2c7b2848157cb141acb469a0",
   "ios/tools/manual/run-manual-capture.sh": "f5c42ab148a65510c32b900f1d2b6363cf79d84cabf648fa01a44089b2c5c5ca",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
  },
@@ -103,6 +103,11 @@
    "date": "2026-11-22",
    "source": "ios/tools/manual/run-manual-capture.sh",
    "change": "after the capture (review findings CODEX-3124-5, rounds 1 and 2) the ad-unit guard parses Info.plist, requires each key and Google's test app ID (the Debug value) in both modes, both units empty for --no-ads and the test units otherwise; the build settings, test and image reduction are unchanged, so the screenshots stand (the iPhone store run was repeated with the round-1 guard)"
+  },
+  {
+   "date": "2026-11-22",
+   "source": "ios/TodayWeatherUITests/ManualUITests.swift",
+   "change": "after the capture (#3122 widget images) testCaptureTheStoreScreens adds a Home Screen widget step (removeOtherWidgets, addWidget) and shot() skips the ad check on the Home Screen; testCaptureTheManual is unchanged, so the manual screenshots stand"
   }
  ]
 }

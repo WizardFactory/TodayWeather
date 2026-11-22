@@ -1,5 +1,8 @@
 #!/bin/sh
-# Ad-free Play Store screens (#3122) from the actual debug app with live read-only data: StoreCaptureTest per locale.
+# Ad-free Play Store screens (#3122) from the actual debug app with live read-only data: StoreCaptureTest per locale
+# (the four app screens, then its widgets pinned on the launcher's home screen). The emulator's system language is set
+# to each locale too (the launcher and the clock widget follow it), which needs `adb root` (a Google APIs image); the
+# original language is restored on every exit.
 #   ANDROID_SERIAL=emulator-NNNN capture.sh <new out-dir> [locale:region ...]   (default ko-KR:KR en-US:US ja-JP:JP)
 # The output directory must not exist: a run never replaces or deletes an earlier capture.
 # Same private debug inputs, emulator rules and cleanup as tools/manual/capture.sh: a caller-owned emulator with the
@@ -19,14 +22,30 @@ APP=$HERE/../../app/build/outputs/apk
 # Claimed with a plain mkdir: an existing directory (or a concurrent run that took it first) stops this run here.
 mkdir -p "$(dirname "$OUT")"
 mkdir "$OUT" 2>/dev/null || { echo "$OUT exists: give a new output directory" >&2; exit 2; }
-trap online_cleanup EXIT
+# The system language: persist.sys.locale, then a framework restart; ready once the launcher has focus again.
+system_locale() {
+    adb root >/dev/null 2>&1 || true
+    adb wait-for-device
+    [ "$(adb shell whoami | tr -d '\r')" = root ] || { echo "adb root is needed to set the system language" >&2; exit 2; }
+    adb shell setprop persist.sys.locale "$1"
+    adb shell setprop ctl.restart zygote
+    sleep 5
+    i=0
+    until adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | grep -qi launcher; do
+        i=$((i + 1)); [ "$i" -lt 60 ] || { echo "the framework did not come back in $1" >&2; exit 4; }
+        adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
+        sleep 2
+    done
+    sleep 5
+}
+ORIGINAL_LOCALE=$(adb shell getprop persist.sys.locale | tr -d '\r')
+restore_locale() { [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" = "$ORIGINAL_LOCALE" ] || ( system_locale "$ORIGINAL_LOCALE" ) || echo "could not restore the system language $ORIGINAL_LOCALE" >&2; }
+# online_cleanup (uninstall, offline when that cannot be confirmed) keeps the run's exit status.
+cleanup() { status=$?; restore_locale; (exit "$status"); online_cleanup; }
+trap cleanup EXIT
 trap 'exit 130' INT TERM
 [ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" -ge 33 ] || exit 2
 adb shell dumpsys connectivity | grep -q 'Active default network: none' && { echo 'Network required' >&2; exit 3; }
-adb uninstall "$PKG.test" >/dev/null 2>&1 || true
-adb uninstall "$PKG" >/dev/null 2>&1 || true
-adb install "$APP/debug/app-debug.apk" >/dev/null
-adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
 { adb shell getprop ro.build.fingerprint; echo "sdk: $(adb shell getprop ro.build.version.sdk | tr -d '\r')"
   adb shell wm size; adb shell wm density; adb shell getprop persist.sys.timezone; echo "ads: off"; } > "$OUT/device.txt"
 shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
@@ -36,11 +55,16 @@ for pair in $LOCALES; do
     # after the checks below pass, so a rejected capture is never an input.
     PULL=$OUT/.$locale.pull
     mkdir "$PULL"
-    adb shell pm clear "$PKG" >/dev/null
+    system_locale "$locale"
+    # A new install per locale: uninstalling also removes the widgets the previous locale placed on the launcher.
+    adb uninstall "$PKG.test" >/dev/null 2>&1 || true
+    adb uninstall "$PKG" >/dev/null 2>&1 || true
+    adb install "$APP/debug/app-debug.apk" >/dev/null
+    adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
     adb shell cmd locale set-app-locales "$PKG" --locales "$locale"
     adb shell am instrument -w -e ads off -e manual true -e weather production -e region "$region" \
-        -e class "$PKG.StoreCaptureTest#store" "$PKG.test/$PKG.TestRunner" > "$PULL/store.log" 2>&1
-    grep -q '^OK (1 test)' "$PULL/store.log" || { echo "Capture failed: $locale; see $PULL/store.log" >&2; exit 1; }
+        -e class "$PKG.StoreCaptureTest" "$PKG.test/$PKG.TestRunner" > "$PULL/store.log" 2>&1
+    grep -q '^OK (2 tests)' "$PULL/store.log" || { echo "Capture failed: $locale; see $PULL/store.log" >&2; exit 1; }
     adb pull "/sdcard/Android/data/$PKG/files/manual/." "$PULL/" >/dev/null || { echo "Pull failed: $locale" >&2; exit 1; }
     # The four screens, each a PNG at the display size with its record: ads off and the requested language.
     python3 - "$PULL" "$locale" "$(adb shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)" <<'PY' || exit 1
@@ -48,7 +72,7 @@ import json, struct, sys
 from pathlib import Path
 d, locale, size = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 w, h = (int(x) for x in size.split("x"))
-for n in ("01-compare", "02-hourly", "03-daily", "04-air"):
+for n in ("01-compare", "02-hourly", "03-daily", "04-air", "05-widgets", "06-widgets"):
     png, rec = d / f"store-{n}.png", d / f"store-{n}.json"
     if not png.is_file() or not rec.is_file():
         sys.exit(f"{locale}: store-{n} missing")

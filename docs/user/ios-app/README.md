@@ -89,8 +89,8 @@ different metadata bytes; compare its text and rendered pages before replacing t
 `provenance.json`.
 
 For new captures run `ios/tools/manual/run-manual-capture.sh --no-ads <out-dir> <tw* iPhone or iPad simulator udid>`
-(this edition; without `--no-ads` the build keeps Google's test ad units; `--no-ads --store` takes the four App Store
-images instead; see
+(this edition; without `--no-ads` the build keeps Google's test ad units; `--no-ads --store` takes the five App Store
+images instead, the last one after adding two widgets on the Home Screen; see
 [`ios/README.md`](../../../ios/README.md#user-manual-in-18)). It needs the private `ios/Private.xcconfig` (server URL
 and Places key), which stays outside Git; it removes the private values from every saved log and fails if one remains.
 Keep raw captures, logs and rendered pages in the ignored `reports/`; publish only inspected screenshots. A change of
