@@ -19,6 +19,7 @@ import {
 } from "@todayweather/core";
 import { WeatherIcon, Empty, SectionHead, percent } from "./components";
 import {
+  chartAmountText,
   precipitationAmount,
   forecastAmount,
   dayLabel,
@@ -130,19 +131,8 @@ function chartHour(at: string) {
     : hourText(at);
 }
 
-/** Native precipitation cell: the first positive amount, whole above 10, unit apart. */
-function chartAmount(point: Point) {
-  const value =
-    point.precipitation !== null && point.precipitation > 0
-      ? point.precipitation
-      : point.snowfall !== null && point.snowfall > 0
-        ? point.snowfall
-        : null;
-  return value === null ? null : formatValue(value, value >= 10 ? 0 : 1);
-}
-
 function ChartAmount({ point, unit }: { point: Point; unit: string }) {
-  const value = chartAmount(point);
+  const value = chartAmountText(point, unit);
   return value === null ? (
     <>{"\u00a0"}</>
   ) : (
@@ -314,20 +304,34 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
   };
   if (!n) return <Empty title={t("chart.empty")} />;
   const row = model.rows[cursor] ?? model.rows[0];
-  const readout = `${dayLabel(row.point.at, w.current.at)} ${hourText(row.point.at)} ${formatValue(row.point.temperature, 1)}°${w.units.temperatureUnit} · ${t("display.yesterday")} ${formatValue(row.yesterday?.temperature ?? null, 1)}° · ${t("display.precipitation")} ${rain(row.point, w.units.precipitationUnit)}`;
-  // Native: the line passes through the current observation between columns.
+  // The observation between columns is announced with the column before it.
+  const observation = (i: number) =>
+    model.current && i === model.currentIndex
+      ? ` · ${t("display.current")} ${hourText(model.current.at)} ${formatValue(model.current.temperature, 1)}°${w.units.temperatureUnit}${model.current.yesterday !== null ? ` (${t("display.yesterday")} ${formatValue(model.current.yesterday, 1)}°)` : ""}`
+      : "";
+  const readout = `${dayLabel(row.point.at, w.current.at)} ${hourText(row.point.at)} ${formatValue(row.point.temperature, 1)}°${w.units.temperatureUnit} · ${t("display.yesterday")} ${formatValue(row.yesterday?.temperature ?? null, 1)}° · ${t("display.precipitation")} ${rain(row.point, w.units.precipitationUnit)}${observation(cursor)}`;
+  // Native: the lines pass through the current observation between columns.
   const currentX = model.current ? column * (model.current.index + 0.5) : 0;
-  const line = model.rows.map((r, i) => ({
+  const todayLine = model.rows.map((r, i) => ({
     x: x(i),
-    today: r.point.temperature,
-    yesterday: r.yesterday?.temperature ?? null,
+    v: r.point.temperature as number | null | undefined,
   }));
-  if (model.current)
-    line.splice(model.currentIndex + 1, 0, {
+  const yesterdayLine = model.rows.map((r, i) => ({
+    x: x(i),
+    v: r.yesterday?.temperature,
+  }));
+  if (model.current) {
+    todayLine.splice(model.currentIndex + 1, 0, {
       x: currentX,
-      today: model.current.temperature,
-      yesterday: model.current.yesterday,
+      v: model.current.temperature,
     });
+    // A missing yesterday observation must not break yesterday's line.
+    if (model.current.yesterday !== null)
+      yesterdayLine.splice(model.currentIndex + 1, 0, {
+        x: currentX,
+        v: model.current.yesterday,
+      });
+  }
   const ticks = [0, 1, 2].map(
     (i) => model.domain[0] + (i * (model.domain[1] - model.domain[0])) / 2,
   );
@@ -420,16 +424,16 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
               <path
                 className="yesterday-line"
                 d={linePath(
-                  line.map((p) => p.yesterday),
-                  (k) => line[k].x,
+                  yesterdayLine.map((p) => p.v),
+                  (k) => yesterdayLine[k].x,
                   y,
                 )}
               />
               <path
                 className="today-line"
                 d={linePath(
-                  line.map((p) => p.today),
-                  (k) => line[k].x,
+                  todayLine.map((p) => p.v),
+                  (k) => todayLine[k].x,
                   y,
                 )}
               />
@@ -489,7 +493,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                       width={Math.max(1, hitRight - hitLeft)}
                       height={height}
                     />
-                    <title>{`${dayLabel(r.point.at, w.current.at)} ${hourText(r.point.at)} ${formatValue(r.point.temperature)}° · ${t("display.yesterday")} ${formatValue(r.yesterday?.temperature ?? null)}° · ${rain(r.point, w.units.precipitationUnit)}`}</title>
+                    <title>{`${dayLabel(r.point.at, w.current.at)} ${hourText(r.point.at)} ${formatValue(r.point.temperature)}° · ${t("display.yesterday")} ${formatValue(r.yesterday?.temperature ?? null)}° · ${rain(r.point, w.units.precipitationUnit)}${observation(i)}`}</title>
                     {r.current && r.point.temperature !== null && (
                       <line
                         className="now-line"
@@ -611,14 +615,20 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
               </tr>
             </thead>
             <tbody>
-              {model.rows.map((r) => (
+              {model.rows.map((r, i) => (
                 <tr key={r.point.at}>
                   <th scope="row">
                     {dayLabel(r.point.at, w.current.at)} {hourText(r.point.at)}
                   </th>
                   <td>{formatValue(r.point.temperature, 1)}°</td>
                   <td>{formatValue(r.yesterday?.temperature ?? null, 1)}°</td>
-                  <td>{r.current ? t("display.current") : "—"}</td>
+                  <td>
+                    {r.current
+                      ? t("display.current")
+                      : model.current && i === model.currentIndex
+                        ? `${hourText(model.current.at)} ${formatValue(model.current.temperature, 1)}°`
+                        : "—"}
+                  </td>
                   <td>{percent(r.point.rainProbability)}</td>
                   <td>{rain(r.point, w.units.precipitationUnit)}</td>
                   <td>
@@ -676,8 +686,11 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       el.scrollLeft = 0;
       anchorDate.current = { at: model.rows[0].point.at, offset: 0 };
     } else if (!userScrolled.current || anchorDate.current === null) {
-      // Native: today opens in the third column; 640 px and wider open at the start.
-      const target = viewport >= TABLET_WIDTH ? 0 : model.startIndex * cell;
+      // Native: today opens in the third column; screens 640 px and wider open at the start.
+      const target =
+        document.documentElement.clientWidth >= TABLET_WIDTH
+          ? 0
+          : model.startIndex * cell;
       el.scrollLeft = target;
       const firstIdx = Math.max(
         0,

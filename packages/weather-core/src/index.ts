@@ -138,6 +138,12 @@ export type Weather = {
    * in snapshots saved before it existed; the chart then uses `hourly`.
    */
   chartHourly?: Point[];
+  /**
+   * KMA `current.liveTime` as a wall time: when the observation was made. The
+   * hourly chart puts the current temperature on a column only when this
+   * equals the column time (native `sharp` rule).
+   */
+  liveAt?: string;
   hourlyDetails?: HourlyDetails[];
   daily: Point[];
   air: AirStation[];
@@ -802,6 +808,15 @@ export function normalizeWeather(
     yesterday,
     hourly,
     chartHourly,
+    ...(kma && /^\d{4}$/.test(str(currentRaw.liveTime))
+      ? (() => {
+          const liveAt = rowTime({
+            date: currentRaw.date,
+            time: str(currentRaw.liveTime),
+          });
+          return liveAt ? { liveAt } : {};
+        })()
+      : {}),
     ...(!kma && Array.isArray(raw.hourlyDetails)
       ? { hourlyDetails: raw.hourlyDetails.flatMap(hourlyDetail) }
       : {}),

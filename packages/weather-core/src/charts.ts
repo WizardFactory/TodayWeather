@@ -22,7 +22,8 @@ export type HourRow = {
   yesterday: Point | null;
   current: boolean;
 };
-const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
 
 /** Applies the current observation to the forecast row at the same time. */
 function mergeCurrentPoint(existing: Point, current: Point): Point {
@@ -79,10 +80,21 @@ function mergeCurrentPoint(existing: Point, current: Point): Point {
  * and the next row, not a column of its own.
  */
 export function hourlyChart(
-  weather: Pick<Weather, "hourly" | "chartHourly" | "current" | "yesterday">,
+  weather: Pick<Weather, "hourly" | "chartHourly" | "current" | "yesterday"> &
+    Partial<Pick<Weather, "source" | "liveAt">>,
 ) {
   const supplied = new Map<number, Point>();
-  for (const point of weather.chartHourly ?? weather.hourly) {
+  // Snapshots saved before `chartHourly` keep the merged KMA one-hour rows;
+  // the chart keeps only the three-hour slots.
+  const series =
+    weather.chartHourly ??
+    (weather.source === "KMA"
+      ? weather.hourly.filter((p) => {
+          const time = wallTime(p.at);
+          return time % (3 * HOUR_MS) === 0;
+        })
+      : weather.hourly);
+  for (const point of series) {
     const time = wallTime(point.at);
     if (Number.isFinite(time)) supplied.set(time, point);
   }
@@ -101,9 +113,12 @@ export function hourlyChart(
   const nowInRange =
       times.length > 0 && now >= times[0] && now <= times[times.length - 1],
     inRange = nowInRange && finite(nowTemperature);
+  // Native `sharp`: the observation was made at the column time itself.
+  const live = weather.liveAt ? wallTime(weather.liveAt) : now;
+  const sharp = !Number.isFinite(live) || live === now;
   const rows: HourRow[] = times.map((time) => {
     const point = supplied.get(time)!;
-    const current = inRange && time === now;
+    const current = inRange && sharp && time === now;
     return {
       time,
       point: current ? mergeCurrentPoint(point, weather.current) : point,
@@ -121,6 +136,7 @@ export function hourlyChart(
       ? {
           /** Fractional column position, halfway to the next row (native). */
           index: currentIndex + 0.5,
+          at: weather.liveAt ?? weather.current.at,
           temperature: nowTemperature as number,
           yesterday:
             weather.yesterday && finite(weather.yesterday.temperature)

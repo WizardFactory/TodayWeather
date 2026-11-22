@@ -549,6 +549,7 @@ export function validateSnapshot(
       !(w.yesterday === null || validPoint(w.yesterday)) ||
       !Array.isArray(w.hourly) ||
       !w.hourly.every(validPoint) ||
+      !(w.liveAt === undefined || typeof w.liveAt === "string") ||
       !(
         w.chartHourly === undefined ||
         (Array.isArray(w.chartHourly) && w.chartHourly.every(validPoint))

@@ -153,6 +153,40 @@ test("daily AM/PM conditions include column zero, merged icons and reading alter
   await expect(row).toContainText("오전 맑음");
   await expect(row).toContainText("오후 비");
 });
+test("daily chart opens with today third below a 640 px screen and at the first day from 640 px (native)", async ({
+  page,
+}) => {
+  const raw = dailyFixture();
+  raw.midData.dailyData = Array.from({ length: 16 }, (_, i) => ({
+    ...raw.midData.dailyData[0],
+    date: `2026${i < 13 ? "09" : "10"}${String(i < 13 ? 18 + i : i - 12).padStart(2, "0")}`,
+  }));
+  await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+  for (const [width, today3rd] of [
+    [639, true],
+    [640, false],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/weather/seoul/daily");
+    const daily = page.locator(".daily-chart");
+    await expect(daily.locator(".today-column")).toHaveCount(1);
+    await page.evaluate(() => document.fonts.ready);
+    const pos = await daily.evaluate((el) => {
+      const cols = [...el.querySelectorAll(".chart-column")];
+      return {
+        scrollLeft: el.scrollLeft,
+        overflow: el.scrollWidth > el.clientWidth + 1,
+        cell: cols[0].getBoundingClientRect().width,
+        today: cols.findIndex((c) => c.classList.contains("today-column")),
+        max: el.scrollWidth - el.clientWidth,
+      };
+    });
+    expect(pos.overflow).toBe(true);
+    const expected = today3rd ? Math.min(pos.max, (pos.today - 2) * pos.cell) : 0;
+    expect(today3rd ? expected : 1).toBeGreaterThan(0);
+    expect(Math.abs(pos.scrollLeft - expected)).toBeLessThan(2);
+  }
+});
 test("chart route navigation scrolls and focuses on click, direct load and history", async ({
   page,
 }) => {
@@ -752,7 +786,18 @@ test("hourly chart matches the native columns: three-hour rows from yesterday, s
     rn1: 0,
   }));
   // Off-hour observation (00:15): a marker between columns, not a column.
-  raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
+  // Yesterday's observation is missing (-50), which must not break yesterday's line.
+  raw.current = {
+    ...p,
+    date: "20260923",
+    time: "0015",
+    liveTime: "0015",
+    t1h: 11,
+    pop: undefined,
+    vec: 290,
+    wsd: 1.5,
+    yesterday: { ...p.yesterday, t1h: -50 },
+  };
   let fetchCount = 0;
   await page.route(API + "/weather/**", (r) => {
     fetchCount++;
@@ -805,6 +850,13 @@ test("hourly chart matches the native columns: three-hour rows from yesterday, s
   });
   expect(marker).not.toBeNull();
   expect(Math.abs(marker! - metrics.column * 9)).toBeLessThan(1);
+  // The observation is announced with the column before it and is in the table.
+  await expect(
+    page.locator('[data-weather-section="hourly"] .cursor-readout'),
+  ).toContainText("현재 오전 12:15 11°C");
+  expect(
+    (await scroll.locator(".yesterday-line").getAttribute("d"))!.match(/M/g),
+  ).toHaveLength(1);
 
   // Remember a column currently in viewport before expanding wind/humidity.
   const visibleBefore = await scroll.evaluate((el) => {

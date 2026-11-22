@@ -2333,6 +2333,8 @@ textarea {
   cursor: pointer;
 }
 .chart-scroll {
+  /* Time runs left to right whatever the document direction. */
+  direction: ltr;
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;

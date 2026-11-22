@@ -30,6 +30,7 @@ it("charts one column per three-hour row and marks an off-hour observation betwe
   expect(model.rows[model.currentIndex].point.at).toBe("2026-09-23T09:00");
   expect(model.current).toEqual({
     index: model.currentIndex + 0.5,
+    at: "2026-09-23T10:30",
     temperature: -20,
     yesterday: -50,
   });
@@ -51,6 +52,47 @@ it("charts the three-hour series instead of the merged one-hour rows", () => {
   expect(model.rows.map((r) => r.point.temperature)).toEqual([9, 40]);
   expect(model.rows[0].current).toBe(true);
   expect(model.current).toBeNull();
+});
+it("puts the observation on a column only when it was made at the column time (native sharp)", () => {
+  const hourly = [
+    point("2026-09-23T06:00", 6),
+    point("2026-09-23T09:00", 9),
+    point("2026-09-23T12:00", 12),
+  ];
+  const at9 = { hourly, current: point("2026-09-23T09:00", 20), yesterday: null };
+  // KMA current time 9 with liveTime 0915: a marker between 09:00 and 12:00.
+  const late = hourlyChart({ ...at9, liveAt: "2026-09-23T09:15" });
+  expect(late.rows.some((r) => r.current)).toBe(false);
+  expect(late.rows[late.currentIndex].point.temperature).toBe(9);
+  expect(late.current).toMatchObject({ index: 1.5, at: "2026-09-23T09:15", temperature: 20 });
+  // liveTime 0900 (or none): the 09:00 column carries the observation.
+  for (const sharp of [hourlyChart({ ...at9, liveAt: "2026-09-23T09:00" }), hourlyChart(at9)]) {
+    expect(sharp.rows[sharp.currentIndex].current).toBe(true);
+    expect(sharp.rows[sharp.currentIndex].point.temperature).toBe(20);
+    expect(sharp.current).toBeNull();
+  }
+});
+it("keeps only three-hour slots for KMA snapshots saved without chartHourly", () => {
+  const model = hourlyChart({
+    source: "KMA",
+    hourly: [
+      point("2026-09-23T09:00", 9),
+      point("2026-09-23T10:00", 10),
+      point("2026-09-23T12:00", 12),
+    ],
+    current: point("2026-09-23T09:00", 9),
+    yesterday: null,
+  });
+  expect(model.rows.map((r) => r.point.at)).toEqual([
+    "2026-09-23T09:00",
+    "2026-09-23T12:00",
+  ]);
+});
+it("reads the KMA observation time from liveTime", () => {
+  expect(base.liveAt).toBe("2026-09-23T09:00");
+  const raw = structuredClone(fixture.response) as Record<string, any>;
+  raw.current.liveTime = "0915";
+  expect(normalizeWeather(raw).liveAt).toBe("2026-09-23T09:15");
 });
 it("keeps only the KMA short rows in the chart series", () => {
   const shortTimes = new Set(
