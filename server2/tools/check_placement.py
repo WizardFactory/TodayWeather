@@ -514,6 +514,8 @@ jobs:
     needs: placement
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    outputs:
+      digest: ${{ steps.musl.outputs.digest }}
     defaults:
       run:
         working-directory: server2
@@ -521,7 +523,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: bash tools/ci.sh musl
+      - id: musl
+        run: bash tools/ci.sh musl
       - uses: actions/upload-artifact@v4
         with:
           name: server2-linux-musl-candidate
@@ -554,6 +557,8 @@ jobs:
           name: server2-linux-musl-candidate
           path: reports/verification/server2-local-first/artifact-native/
       - run: bash tools/ci.sh promote
+        env:
+          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}
 """
 
 

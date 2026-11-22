@@ -342,6 +342,8 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
             body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
             body.replace('name: server2-linux-musl-candidate\n          path', 'name: server2-linux-musl-verified\n          path', 1),
             body.replace('retention-days: 1', 'retention-days: 7'),
+            body.replace('          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}\n', ''),
+            body.replace('digest: ${{ steps.musl.outputs.digest }}', 'digest: ${{ steps.musl.outputs.sha }}'),
             body.replace('retention-days: 7', 'retention-days: 90'),
         ):
             self.assertNotEqual(body, bad)
