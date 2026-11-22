@@ -199,6 +199,10 @@ const de: Catalog = {
   "public.body":
     "Speichern Sie den Ort, um das stündliche Wetter und die Luftqualität zu sehen.",
   "public.open": "Wetter für diesen Ort",
+  "link.appOption": "App öffnen oder installieren",
+  "link.dismiss": "Schließen",
+  "link.addFavorite": "Zu Favoriten hinzufügen",
+  "link.invalidLocation": "Dieser geteilte Ort ist ungültig.",
   "public.notFound": "Geteilter Ort nicht gefunden",
   "welcome.kicker": "Wetter für heute",
   "welcome.headline": "Wärmer als gestern?",
