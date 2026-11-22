@@ -121,6 +121,17 @@ class PromoteTests(unittest.TestCase):
             promote_artifact.promote(self.dir, REVISION, recorded)
         self.bundle.assert_called_once()
 
+    def test_promotion_restores_executable_binaries_only_after_checks(self):
+        for name in verify_artifact.BINARIES:
+            (self.dir / name).chmod(0o644)
+        self.bundle.return_value = {'source': dict(SOURCE, server2_tree='d' * 40), 'roles': []}
+        self.rejects('native bundle source differs')
+        self.assertEqual(0o644, (self.dir / 'server2').stat().st_mode & 0o777)
+        self.bundle.return_value = {'source': SOURCE, 'roles': ['server2']}
+        promote_artifact.promote(self.dir, REVISION)
+        for name in verify_artifact.BINARIES:
+            self.assertEqual(0o755, (self.dir / name).stat().st_mode & 0o777)
+
     def test_digest_ignores_file_modes_lost_in_transfer(self):
         before = promote_artifact.candidate_digest(self.dir)
         (self.dir / 'server2').chmod(0o644)
