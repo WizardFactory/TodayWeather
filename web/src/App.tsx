@@ -170,6 +170,7 @@ export default function App() {
     menuButton = useRef<HTMLButtonElement>(null),
     mainRef = useRef<HTMLElement>(null),
     firstRoute = useRef(true),
+    initialRootRedirect = useRef(false),
     returnFocus = useRef(false),
     focusMain = useRef(false);
   const queryClient = useQueryClient();
@@ -258,8 +259,9 @@ export default function App() {
   }, []);
   useEffect(() => {
     setMenuOpen(false);
-    // Weather owns chart-route scroll/focus once its data has rendered.
-    if (/^\/weather\/[^/]+\/(hourly|daily)$/.test(location.pathname)) {
+    // Weather owns daily chart scroll/focus once its data has rendered;
+    // hourly/overview keep the hero visible at the top of the page.
+    if (/^\/weather\/[^/]+\/daily$/.test(location.pathname)) {
       firstRoute.current = false;
       focusMain.current = false;
       return;
@@ -271,8 +273,17 @@ export default function App() {
     const keep =
       navigationType !== "POP" &&
       (location.state as { keepFocus?: boolean } | null)?.keepFocus;
-    if (firstRoute.current) firstRoute.current = false;
-    else if (!keep) focusMain.current = true;
+    if (firstRoute.current) {
+      firstRoute.current = false;
+      initialRootRedirect.current = location.pathname === "/";
+    } else if (initialRootRedirect.current && navigationType === "REPLACE") {
+      // Initial start_url "/" redirecting via <Navigate replace> is part of
+      // first load and should not hijack focus on launch.
+      initialRootRedirect.current = false;
+    } else {
+      initialRootRedirect.current = false;
+      if (!keep) focusMain.current = true;
+    }
   }, [location.pathname]);
   useEffect(() => {
     // Wait for the render that removed `inert` after closing the menu.
@@ -420,6 +431,11 @@ export default function App() {
         selected.id,
       )
     : "/start";
+  const cleanPath = location.pathname.replace(/\/+$/, "") || "/";
+  const weatherNavActive =
+    cleanPath.startsWith("/weather/") ||
+    (!selected && (cleanPath === "/" || cleanPath === "/start"));
+  const airNavActive = cleanPath.startsWith("/air/");
   return (
     <AppContext.Provider
       value={{
@@ -468,20 +484,20 @@ export default function App() {
           </button>
           <div className="sidebar-label">{t("shell.myWeather")}</div>
           <nav>
-            <NavLink
+            <Link
               to={navWeather}
-              className={({ isActive }) =>
-                isActive ? "nav-item active" : "nav-item"
-              }
+              className={weatherNavActive ? "nav-item active" : "nav-item"}
+              aria-current={weatherNavActive ? "page" : undefined}
             >
               <CloudSun size={19} /> {t("nav.weather")}
-            </NavLink>
-            <NavLink
+            </Link>
+            <Link
               to={selected ? "/air/" + selected.id : "/start"}
-              className="nav-item"
+              className={airNavActive ? "nav-item active" : "nav-item"}
+              aria-current={airNavActive ? "page" : undefined}
             >
               <Wind size={19} /> {t("nav.air")}
-            </NavLink>
+            </Link>
             <NavLink to="/locations" className="nav-item">
               <MapPin size={19} /> {t("nav.locations")}
             </NavLink>

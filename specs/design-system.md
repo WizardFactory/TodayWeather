@@ -335,7 +335,7 @@ Both charts keep the Cordova information model and reading order. The design sys
 - Horizontal scrolling happens inside the chart only.
 - The initial position is the column before the current time, as in Cordova.
 - The data span matches the service's 3-hour rows. The PWA's 16-point cap is lifted to the full series.
-- Hour-by-hour rows, where present, keep time-proportional x as the PWA does now.
+- Mixed 1-hour and 3-hour rows (and off-hour observations) use bounded chronological segment spacing (`hourlyXPositions`: 1.0× column at ≤1h, smoothly up to 1.35× at 3h, capped at 1.5× for >3h gaps with a line break) so 3-hour spans do not stretch into empty mobile voids and off-hour observations cannot blow up chart width (#3114). The Y-axis ticks stay pinned at the viewport edge while scrolling.
 
 **Interaction and accessibility.**
 - The chart is a focusable `role="group"` with a summary label.
@@ -381,7 +381,7 @@ Both charts keep the Cordova information model and reading order. The design sys
 ### 5.3 Placement per tier
 | Tier | Placement |
 | --- | --- |
-| Mobile | Hero → hourly chart card → daily chart card → air summary → details. This is the Cordova order with daily visible without a tab switch. The bottom nav Hourly/Daily items scroll to and focus the chart. |
+| Mobile | Hero → hourly chart card → daily chart card → air summary → details. This is the Cordova order with daily visible without a tab switch. Hourly/overview routes keep the hero visible at the top; the Daily tab scrolls to and focuses the daily chart. |
 | Tablet | Hero with highlights beside it, then full-width hourly and daily charts, then an air and details grid. |
 | Desktop | Main column: hero, hourly chart, daily chart. Right column: air, warnings and details. The charts always get the widest column. |
 

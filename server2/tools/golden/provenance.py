@@ -87,8 +87,8 @@ def validate_registry(registry, declaration):
             'unsupported registry schema/semantic scope')
     require(is_digest(registry['reader_sha256']), 'invalid reader identity')
     sources = registry['legacy_sources']
-    require(isinstance(sources, list) and len(sources) == 187 and sources == sorted(set(sources)),
-            'exact unique 187-product-source registry required')
+    require(isinstance(sources, list) and len(sources) == 195 and sources == sorted(set(sources)),
+            'exact unique 195-product-source registry required')
     require(all(isinstance(p, str) and p.startswith('server/') for p in sources), 'invalid legacy source registry')
     exports = registry['verification_exports']
     require(isinstance(exports, list) and exports == sorted(set(exports)) and all(

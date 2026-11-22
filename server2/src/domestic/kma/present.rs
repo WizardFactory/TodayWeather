@@ -427,6 +427,7 @@ pub fn get_special_info(cx: &mut Cx) -> Flow {
     let Ok(rows) = cx.store.special_zones(&codes) else {
         return Flow::Next;
     };
+    cx.warnings_covered = true;
     // Entry fields are read by name; the row order (array) is preserved by the conversion.
     let rows: serde_json::Value = serde_json::from_slice(&rows.to_bytes()).unwrap_or_default();
     let entries: Vec<crate::warnings::zones::Entry> = rows
@@ -704,6 +705,8 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
             }
             convert_weather_data(v, &query);
         }
+        let range_date = obs_civil_date(&current);
+        let mut captured_range = None;
         for (index, v) in cx
             .r("midData")
             .get("dailyData")
@@ -740,11 +743,27 @@ pub fn convert_units_mw(cx: &mut Cx) -> Flow {
                     }
                 }
             }
+            // Validate native Celsius min/max before conversion, matching server1's midForecastPolicy.
+            let row_date = to_str(&v.get("date"));
+            let valid_range = super::js::strict_eq(&cx.r("version"), &V::s("v000903"))
+                && range_date.as_deref() == Some(row_date.as_str())
+                && valid_celsius_range(&v.get("taMin"), &v.get("taMax"));
+            let extreme = valid_range
+                && (to_number(&v.get("taMin")) <= -12.0 || to_number(&v.get("taMax")) >= 33.0);
             for k in ["skyAmIcon", "skyPmIcon", "taMax", "taMin"] {
                 v.del(k);
             }
             convert_weather_data(v, &query);
+            if valid_range {
+                captured_range = Some(crate::solar_terms::summary::DailyRange {
+                    date: row_date,
+                    min: to_str(&v.get("tmn")),
+                    max: to_str(&v.get("tmx")),
+                    extreme,
+                });
+            }
         }
+        cx.solar_term_range = captured_range;
         let unit = query.get("airUnit");
         if current.has("arpltn") {
             recalculate_value(&current.get("arpltn"), &unit);
@@ -1294,15 +1313,234 @@ pub fn get_summary_after_unit_converter(cx: &mut Cx) -> Flow {
         if !current.get("summaryAir").truthy() {
             current.del("summaryAir");
         }
-        current.set(
-            "summary",
-            summary(&current, &current.get("yesterday"), &query, l),
-        );
+        if let Some((text, iso_date)) = ranked_kr_summary(cx, &current, &query, l) {
+            current.set("summary", text.clone());
+            if !text.is_empty() {
+                current.set("summaryForDate", iso_date);
+            }
+        } else {
+            current.set(
+                "summary",
+                summary(&current, &current.get("yesterday"), &query, l),
+            );
+        }
     });
     if r.is_err() {
         current.set("summary", "");
     }
     Flow::Next
+}
+
+fn valid_celsius_range(min_v: &V, max_v: &V) -> bool {
+    let (V::Num(min), V::Num(max)) = (min_v, max_v) else {
+        return false;
+    };
+    min.is_finite()
+        && *min > -50.0
+        && *min < 60.0
+        && max.is_finite()
+        && *max > -50.0
+        && *max < 60.0
+        && min <= max
+}
+
+fn obs_civil_date(current: &V) -> Option<String> {
+    let raw = to_str(&current.get("date"));
+    if raw.len() != 8 || !raw.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let V::Num(t) = current.get("time") else {
+        return None;
+    };
+    if !t.is_finite() || t.fract() != 0.0 || !(0.0..=24.0).contains(&t) {
+        return None;
+    }
+    if t == 24.0 {
+        let iso = format!("{}-{}-{}", &raw[0..4], &raw[4..6], &raw[6..8]);
+        let ms = crate::solar_terms::calendar::kst_midnight_ms(&iso)?;
+        let next =
+            crate::solar_terms::calendar::korea_date(ms + crate::solar_terms::calendar::DAY_MS);
+        Some(next.replace('-', ""))
+    } else {
+        Some(raw)
+    }
+}
+
+fn ranked_kr_summary(cx: &Cx<'_>, current: &V, units: &V, l: Locale) -> Option<(String, String)> {
+    use crate::solar_terms::summary::{
+        CurrentSnapshot, GasItem, ItemKind, Labels, SummaryItem, WarningItem, select,
+    };
+
+    let lookup = cx.solar_terms?;
+    if !super::js::strict_eq(&cx.r("version"), &V::s("v000903")) || !cx.r("gCoord").truthy() {
+        return None;
+    }
+    let region = to_str(&cx.param("region"));
+    crate::narrative::office(&region)?;
+
+    let now_iso = crate::solar_terms::calendar::korea_date(cx.now as i64);
+    let now_yyyymmdd = now_iso.replace('-', "");
+    let obs_date = obs_civil_date(current)?;
+    if obs_date != now_yyyymmdd {
+        return None;
+    }
+    let now_year: i32 = now_iso[0..4].parse().ok()?;
+    if !lookup.year_available(now_year) {
+        return None;
+    }
+
+    let term = (l.name() == "ko" && cx.warnings_covered)
+        .then(|| lookup.term_for_date(&now_iso))
+        .flatten();
+
+    let yesterday = current.get("yesterday");
+    let mut items = Vec::new();
+    let push_opt = |items: &mut Vec<SummaryItem>, kind: ItemKind, opt: Option<Item>| {
+        if let Some(it) = opt {
+            items.push(SummaryItem {
+                kind,
+                text: it.text,
+                grade: to_number(&it.grade),
+            });
+        }
+    };
+    push_opt(
+        &mut items,
+        ItemKind::Change,
+        comparison_item(current, &yesterday, l),
+    );
+    push_opt(&mut items, ItemKind::Weather, weather_item(current));
+    push_opt(&mut items, ItemKind::Warning, special_item(current));
+
+    let air = current.get("arpltn");
+    let air = if air.truthy() {
+        air
+    } else {
+        V::Obj(super::js::Ob::new())
+    };
+    for name in ["Grade", "Str"] {
+        let khai = air.get(&format!("khai{name}"));
+        air.set(
+            &format!("aqi{name}"),
+            if khai.truthy() {
+                khai
+            } else {
+                air.get(&format!("aqi{name}"))
+            },
+        );
+    }
+    let mut air_grade = n(0.);
+    let mut air_text = String::new();
+    if air.get("pm25Grade").truthy() {
+        air_grade = air.get("pm25Grade");
+        air_text = format!("{} {}", tr(l, "LOC_PM25"), to_str(&air.get("pm25Str")));
+    }
+    if air.get("pm10Grade").truthy() && lt(&air_grade, &air.get("pm10Grade")) {
+        air_grade = air.get("pm10Grade");
+        air_text = format!("{} {}", tr(l, "LOC_PM10"), to_str(&air.get("pm10Str")));
+    }
+    if air.get("aqiGrade").truthy() && lt(&air_grade, &air.get("aqiGrade")) {
+        air_grade = air.get("aqiGrade");
+        air_text = format!("{} {}", tr(l, "LOC_AQI"), to_str(&air.get("aqiStr")));
+    }
+    if gt(&air_grade, &n(0.)) {
+        items.push(SummaryItem {
+            kind: ItemKind::Air,
+            text: air_text,
+            grade: to_number(&air_grade),
+        });
+    }
+    push_opt(
+        &mut items,
+        ItemKind::Precipitation,
+        rain_item(current, units, l),
+    );
+    push_opt(
+        &mut items,
+        ItemKind::Discomfort,
+        discomfort_item(current, l),
+    );
+    push_opt(&mut items, ItemKind::Feels, feels_item(current, l));
+    let t = match current.get("time") {
+        V::Str(x) => n(wjs::string_to_number(&x) / 100.),
+        other => other,
+    };
+    push_opt(&mut items, ItemKind::Uv, uv_item(current, &t, l));
+    push_opt(&mut items, ItemKind::Wind, wind_item(current));
+
+    let mut warnings = Vec::new();
+    let sp = current.get("specialInfo");
+    if let Some(arr) = sp.as_arr() {
+        for w in arr.items() {
+            let weather = to_number(&w.get("weather")) as i32;
+            let level = to_number(&w.get("level")) as i32;
+            let ws = w.get("weatherStr");
+            let ls = w.get("levelStr");
+            if weather > 0 && level > 0 && ws.truthy() && ls.truthy() {
+                warnings.push(WarningItem {
+                    weather,
+                    level,
+                    text: format!("{}{}", to_str(&ws), to_str(&ls)),
+                });
+            }
+        }
+    }
+
+    let mut gases = Vec::new();
+    for (code, loc_key) in [
+        ("o3", "LOC_O3"),
+        ("no2", "LOC_NO2"),
+        ("so2", "LOC_SO2"),
+        ("co", "LOC_CO"),
+    ] {
+        let g = to_number(&air.get(&format!("{code}Grade")));
+        let s_val = air.get(&format!("{code}Str"));
+        if g.is_finite() && g >= 3.0 && s_val.truthy() {
+            gases.push(GasItem {
+                grade: g as i32,
+                text: format!("{} {}", tr(l, loc_key), to_str(&s_val)),
+            });
+        }
+    }
+
+    let opt_i32 = |v: &V| match v {
+        V::Num(x) if x.is_finite() => Some(*x as i32),
+        _ => None,
+    };
+    let opt_f64 = |v: &V| match v {
+        V::Num(x) if x.is_finite() => Some(*x),
+        _ => None,
+    };
+    let t1h_v = current.get("t1h");
+    let snap = CurrentSnapshot {
+        weather_type: opt_i32(&current.get("weatherType")),
+        pty: opt_i32(&current.get("pty")),
+        rn1: opt_f64(&current.get("rn1")),
+        ultrv_grade: opt_i32(&current.get("ultrvGrade")),
+        wsd_grade: opt_i32(&current.get("wsdGrade")),
+        dspls_grade: opt_i32(&current.get("dsplsGrade")),
+        sensorytem: opt_f64(&current.get("sensorytem")),
+        heat_index_grade: opt_i32(&current.get("heatIndexGrade")),
+        t1h: opt_f64(&t1h_v),
+        t1h_text: opt_f64(&t1h_v).map(|_| to_str(&t1h_v)),
+        temp_unit_f: to_str(&units.get("temperatureUnit")) == "F",
+        warnings,
+        gases,
+    };
+
+    let range = cx
+        .solar_term_range
+        .as_ref()
+        .filter(|r| r.date == now_yyyymmdd);
+    let labels = Labels {
+        temp: tr(l, "LOC_TEMP"),
+        today: tr(l, "LOC_TODAY"),
+        lowest: tr(l, "LOC_LOWEST"),
+        highest: tr(l, "LOC_HIGHEST"),
+    };
+    let policy = lookup.policy();
+    let text = select(&policy, &items, &snap, term.as_ref(), range, &labels);
+    Some((text, now_iso))
 }
 /// `getSummary` (ControllerTown, the town routes): yesterday and `makeSummary` before any unit
 /// conversion; `req.query` supplies the units as requested (no defaults on these routes).
