@@ -30,6 +30,7 @@
     "server2/tests/integration/test_rehearsal_schedule.py",
     "server2/tests/integration/test_shadow_measured_simulation.py",
     "server2/tests/integration/test_shadow_supervisor.py",
+    "server2/tools/ci.py",
     "server2/tools/shadow/paired_read.py"
   ],
   "outside": [

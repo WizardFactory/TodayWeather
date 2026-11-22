@@ -3,6 +3,7 @@
 
 from datetime import datetime, timezone
 from pathlib import Path
+import subprocess
 import sys
 import unittest
 
@@ -75,6 +76,20 @@ class RehearsalScheduleTests(unittest.TestCase):
         self.assertFalse(report['complete'])
         self.assertFalse(report['deadline_reached'])
         self.assertEqual(report['stop_reason'], 'workload-exited')
+        self.assertEqual(harness.events[-2:], [('stop', 3620.0), ('persist', 3600)])
+
+    def test_liveness_timeout_stops_and_publishes_last_observation(self):
+        harness = Harness()
+        def status():
+            if harness.now >= 3620:
+                raise subprocess.TimeoutExpired('systemctl', 5)
+            return True
+        report = collect_day(observe=harness.observe, running=status, request_stop=harness.stop,
+                             publish=harness.persist, cadence=1800, monotonic=lambda: harness.now,
+                             wall=lambda: START + harness.now - 20, sleep=harness.sleep)
+        self.assertFalse(report['complete'])
+        self.assertEqual(report['stop_reason'], 'workload-status-unavailable')
+        self.assertEqual(report['failed_observation_slots'], [3600])
         self.assertEqual(harness.events[-2:], [('stop', 3620.0), ('persist', 3600)])
 
     def test_stop_failure_cannot_publish_complete(self):

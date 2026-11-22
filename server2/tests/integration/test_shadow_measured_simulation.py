@@ -69,6 +69,36 @@ class MeasuredSimulationTests(unittest.TestCase):
         self.assertEqual(evidence['estimate_168h']['stop'], None)
         self.assertEqual(scenario['production_5xx'], sim.SCENARIOS['realistic-combined']['production_5xx'])
 
+    def test_disk_loss_accumulates_and_reaches_guard_reserve(self):
+        # A small daily fixture makes the disk stop reachable in a later week slot.
+        start_free = 9 * sim.GIB
+        hourly_loss = sim.GIB // 24
+        for hour, row in enumerate(self.report['hours']):
+            row['minimum_free_bytes'] = start_free - hour * hourly_loss
+        scenario, evidence = self.load()
+        host = sim.Host(scenario, random.Random(0), sim.SimTime(self.epoch), self.directory)
+        self.addCleanup(host.reader.ledger.close)
+        day = 24 * sim.HOUR
+        self.assertEqual(host.sample(self.epoch + day)['free_bytes'], start_free - 24 * hourly_loss)
+        near_limit = self.epoch + 4 * day
+        sample = host.sample(near_limit)
+        self.assertLess(sample['free_bytes'], 6 * sim.GIB)
+        self.assertEqual(sim.guard.evaluate(host.manifest, sample, None, near_limit)['stop'], 'disk_reserve')
+        disk = evidence['disk_projection']
+        self.assertEqual(disk['weekly_loss_bytes'], 168 * hourly_loss)
+        self.assertEqual(disk['required_starting_free_bytes'], 6 * sim.GIB + 2 * 168 * hourly_loss)
+        self.assertFalse(disk['twofold_headroom_fits'])
+
+    def test_disk_reclaim_does_not_create_replay_capacity(self):
+        start_free = 10 * sim.GIB
+        for i, row in enumerate(self.report['hours']):
+            row['minimum_free_bytes'] = start_free - (i % 2) * 100
+        scenario, evidence = self.load()
+        self.assertEqual(evidence['disk_projection']['daily_loss_bytes'], 1300)
+        host = sim.Host(scenario, random.Random(0), sim.SimTime(self.epoch), self.directory)
+        self.addCleanup(host.reader.ledger.close)
+        self.assertEqual(host.sample(self.epoch + 2 * sim.HOUR)['free_bytes'], start_free - 100)
+
     def test_missing_provenance_timing_and_limit_fail_before_start(self):
         baseline = copy.deepcopy(self.report)
         for damage, expected_error in (

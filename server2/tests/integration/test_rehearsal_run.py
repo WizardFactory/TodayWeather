@@ -12,6 +12,7 @@ import io
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -143,6 +144,25 @@ class RehearsalDriverTests(unittest.TestCase):
         driver.confirm_quota_days(rows, start, start + DAY)
         with self.assertRaisesRegex(ValueError, 'actual KST dates'):
             driver.confirm_quota_days(rows[:1], start, start + DAY)
+
+    def test_finish_timeout_restores_data_and_records_bounded_failure(self):
+        data = self.root / 'data'
+        data.mkdir()
+        for full, limit in ((True, 1800), (False, 180)):
+            with self.subTest(full=full):
+                report = linux_check.Report()
+                entry = report.scenario('finish', ['SR6-AC2'])
+                def timeout(*args, **opts):
+                    self.assertFalse(data.exists())
+                    self.assertEqual(opts['timeout'], limit)
+                    raise subprocess.TimeoutExpired(['private-command'], limit)
+                with patch.object(linux_check, 'run', side_effect=timeout), self.assertRaises(subprocess.TimeoutExpired):
+                    linux_check._run_fixture_finish(report, entry, data, ['private-command'], {}, full)
+                self.assertTrue(data.is_dir())
+                self.assertFalse(entry['checks'][-1]['passed'])
+                self.assertEqual(entry['observations']['finish_cli']['timeout_seconds'], limit)
+                self.assertGreaterEqual(entry['observations']['finish_cli']['elapsed_seconds'], 0)
+                self.assertNotIn('private-command', str(entry))
 
     def test_preflight_refusal_writes_incomplete_receipt_without_host_commands(self):
         out = self.root / 'output'

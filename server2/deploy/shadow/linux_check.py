@@ -507,6 +507,23 @@ def bucket_audit(report, entry, run_id):
     return result
 
 
+def _run_fixture_finish(report, entry, data, command, env, include_originals):
+    # Full inventory export can spend several minutes hashing and copying originals.
+    limit = 1800 if include_originals else 180
+    hidden = data.with_name('data.unreachable')
+    data.rename(hidden)
+    started = time.monotonic()
+    try:
+        return run(*command, env=env, check=False, timeout=limit)
+    except subprocess.TimeoutExpired:
+        detail = dict(timeout_seconds=limit, elapsed_seconds=round(time.monotonic() - started, 3))
+        entry['observations']['finish_cli'] = detail
+        report.check(entry, 'finish CLI completed within its fixture time limit', False, detail)
+        raise
+    finally:
+        hidden.rename(data)
+
+
 def finish_cli_check(report, entry, run_id, *, output=None, include_originals=False):
     """Run the actual operator CLI against the uploaded bytes, with synthetic AWS only."""
     import provision
@@ -567,16 +584,9 @@ def finish_cli_check(report, entry, run_id, *, output=None, include_originals=Fa
     env = dict(PATH=str(Path(sys.executable).parent) + os.pathsep + os.defpath,
                SHADOW_FINISH_AWS_FIXTURE=str(manifest), PYTHONDONTWRITEBYTECODE='1')
     data = INSTALL_ROOT / run_id / 'data'
-    hidden = data.with_name('data.unreachable')
-    data.rename(hidden)
-    # A full rehearsal exports every original version through a separate fixture CLI call.
-    finish_timeout = 1800 if include_originals else 180
-    try:
-        result = run(sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
-                     '--state', str(journal_path), '--output', str(output),
-                     '--aws-executable', str(cli), env=env, check=False, timeout=finish_timeout)
-    finally:
-        hidden.rename(data)
+    command = [sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
+               '--state', str(journal_path), '--output', str(output), '--aws-executable', str(cli)]
+    result = _run_fixture_finish(report, entry, data, command, env, include_originals)
 
     receipt = parsed(result.stdout.strip()) or {}
     paired = receipt.get('host_evidence', {})

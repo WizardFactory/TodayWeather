@@ -263,7 +263,11 @@ def _run_isolated(args, host, bundle, launch, spec, output, report, operations, 
             report.check(checks, 'collector drain finished', _drain_collector(host))
             audit = host.bucket_audit(report, checks, RUN_ID)
             if audit['complete']:
+                output['failed_phase'] = 'finish-export'
+                previous_checks = len(checks['checks'])
                 host.finish_cli_check(report, checks, RUN_ID, output=args.output_dir / 'finish', include_originals=True)
+                if all(item['passed'] for item in checks['checks'][previous_checks:]):
+                    del output['failed_phase']
     return measured, fingerprint
 
 
@@ -335,6 +339,7 @@ def run(args, host):
             run=host.run, resolve=lambda name: _resolve(host.run, name), inspect_denials=lambda: denial_probes(host.run),
             verify_loopback_tls=lambda address, name: _tls(loopback_trust, address, name),
             verify_provider_tls=lambda address, name: _tls(public_trust, address, name), release=release,
+            retain_until_poweroff=True,
         ) as network:
             output['network'] = network
             stage = 'installed-rehearsal'
@@ -342,9 +347,9 @@ def run(args, host):
         if report.passed() and measured['complete']:
             verified = measured, fingerprint
         else:
-            output['failed_phase'] = 'verification'
+            output.setdefault('failed_phase', 'verification')
     except HOST_ERRORS:
-        output['failed_phase'] = stage
+        output.setdefault('failed_phase', stage)
     finally:
         if fixture_started:
             try:

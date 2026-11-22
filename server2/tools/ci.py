@@ -82,6 +82,9 @@ def main():
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow_supervisor.py'])
     for suite in ('test_shadow_finish.py', 'test_shadow_finish_remote.py', 'test_shadow_finish_staging.py'):
         commands.insert(3, [sys.executable, 'tests/integration/' + suite])
+    commands.insert(3, [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/integration',
+                        '-p', 'test_rehearsal_*.py'])
+    commands.insert(3, [sys.executable, 'tests/integration/test_shadow_measured_simulation.py'])
     # SR-1 (#2999): short deterministic subset of the 168-hour supervisor simulation.
     commands.insert(3, [sys.executable, 'tests/integration/test_shadow_simulation.py'])
     commands.insert(3, [sys.executable, 'tests/integration/test_paired_read.py'])

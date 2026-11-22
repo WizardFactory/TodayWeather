@@ -1,5 +1,6 @@
 """Observe the rehearsal on a monotonic schedule and report partial runs."""
 
+import subprocess
 import time
 
 from rehearsal_measurement import Sample, aggregate
@@ -32,6 +33,7 @@ def collect_day(*, observe, running, request_stop, publish, cadence=60, toleranc
     failures = []
     through = 0
     running_at_deadline = False
+    early_stop_reason = 'workload-exited'
 
     def wait_until(slot):
         delay = start + slot - monotonic()
@@ -44,7 +46,7 @@ def collect_day(*, observe, running, request_stop, publish, cadence=60, toleranc
                            tolerance=tolerance)
         report['deadline_reached'] = deadline
         report['stop_requested'] = confirmed
-        report['stop_reason'] = ('deadline' if deadline else 'workload-exited') if confirmed else 'stop-unconfirmed'
+        report['stop_reason'] = ('deadline' if deadline else early_stop_reason) if confirmed else 'stop-unconfirmed'
         report['complete'] = report['complete'] and deadline and confirmed
         report['failed_observation_slots'] = list(failures)
         return report
@@ -53,7 +55,13 @@ def collect_day(*, observe, running, request_stop, publish, cadence=60, toleranc
         for slot in range(0, DAY + 1, cadence):
             wait_until(slot - FINAL_SAMPLE_LEAD_SECONDS if slot == DAY else slot)
             through = min(DAY, int(monotonic() - start))
-            if not running():
+            try:
+                active = running()
+            except (OSError, subprocess.SubprocessError):
+                failures.append(slot)
+                early_stop_reason = 'workload-status-unavailable'
+                break
+            if not active:
                 break
             try:
                 sampled = observe(slot, int(monotonic() - start))
@@ -71,7 +79,10 @@ def collect_day(*, observe, running, request_stop, publish, cadence=60, toleranc
                 interim['stop_reason'] = 'in-progress'
                 publish(interim)
     finally:
-        confirmed = request_stop() is True
+        try:
+            confirmed = request_stop() is True
+        except (OSError, subprocess.SubprocessError):
+            confirmed = False
     result = checkpoint(deadline=running_at_deadline, confirmed=confirmed)
     publish(result)
     return result

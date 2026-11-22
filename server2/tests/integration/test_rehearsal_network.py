@@ -38,6 +38,20 @@ class RehearsalNetworkTests(unittest.TestCase):
         self.assertIn(b'apis.data.go.kr', self.hosts.read_bytes())
         self.assertEqual(self.run.call_count, 1)
 
+    def test_disposable_guest_keeps_egress_rules_after_driver_exit(self):
+        for fail in (False, True):
+            with self.subTest(fail=fail):
+                self.hosts.write_bytes(self.original)
+                self.run.reset_mock()
+                try:
+                    with self.start(retain_until_poweroff=True):
+                        if fail:
+                            raise ValueError('driver failed')
+                except ValueError as error:
+                    self.assertEqual(str(error), 'driver failed')
+                self.assertIn(b'apis.data.go.kr', self.hosts.read_bytes())
+                self.assertEqual(self.run.call_count, 1)
+
     def test_rule_scope_and_loopback_bindings(self):
         self.assertEqual(self.plan.bindings['apis.data.go.kr'], ('8.8.8.8', '8.8.8.9'))
         self.assertEqual(self.plan.bindings['todayweather.wizardfactory.net'], ('127.0.0.2',))

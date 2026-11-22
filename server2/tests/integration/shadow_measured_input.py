@@ -110,7 +110,8 @@ class MeasuredTrace:
     cost_policy: dict
     paid_policy: dict
     cumulative: dict
-    minimum_free_bytes: tuple
+    hourly_free_bytes: tuple
+    daily_disk_loss: int
 
     def amount(self, name, elapsed):
         day, seconds = divmod(elapsed, DAY)
@@ -119,9 +120,11 @@ class MeasuredTrace:
         return day * prefix[-1] + prefix[hour] + (prefix[hour + 1] - prefix[hour]) * within // HOUR
 
     def apply(self, sample, elapsed):
+        days, within_day = divmod(elapsed, DAY)
+        free = self.hourly_free_bytes[within_day // HOUR] - days * self.daily_disk_loss
         sample.update(cpu_seconds=self.amount('host_cpu_seconds', elapsed),
                       tx_bytes=(self.amount('tx_iface_bytes', elapsed) + self.amount('standin_s3_put_bytes', elapsed)),
-                      free_bytes=self.minimum_free_bytes[(elapsed // HOUR) % 24])
+                      free_bytes=max(0, free))
         sample['metrics'].update({remaining: self.allowance[grant] - self.amount(name, elapsed)
                                   for name, (grant, remaining) in S3_USAGE.items()})
         for name in ('auth_failures', 'quota_failures', 'storage_auth_failures'):
@@ -175,12 +178,23 @@ def load_measurement(measurement_path, policy_path):
     headroom = Decimal(estimate['limit_usd']) - Decimal(estimate['accrued_usd'])
     cumulative = {name: tuple(accumulate((row.counters[name] for row in samples), initial=0))
                   for name in COUNTERS if name not in STATUS_METRICS or totals[name]}
+    # Hourly minima include only 23 observed transitions. Ignore reclaimed
+    # space and budget the largest observed decline for the unobserved transition.
+    minima = [row['minimum_free_bytes'] for row in report['hours']]
+    declines = [max(0, a - b) for a, b in zip(minima, minima[1:])]
+    losses = tuple(accumulate(declines, initial=0))
+    daily_loss = losses[-1] + max(declines)
+    weekly_loss = 7 * daily_loss
+    required_free = guard.DISK_RESERVE_BYTES + 2 * weekly_loss
+    disk = dict(starting_hour_minimum_bytes=minima[0], daily_loss_bytes=daily_loss,
+                weekly_loss_bytes=weekly_loss, reserve_bytes=guard.DISK_RESERVE_BYTES,
+                required_starting_free_bytes=required_free, twofold_headroom_fits=minima[0] >= required_free)
     trace = MeasuredTrace(epoch, allowance, cost, paid, cumulative,
-                          tuple(row['minimum_free_bytes'] for row in report['hours']))
+                          tuple(minima[0] - loss for loss in losses), daily_loss)
     evidence = {key: report[key] for key in ('run_id', 'source_commit', 'artifact_sha256')}
     evidence.update(measurement_sha256=digest, policy_sha256=policy_digest, planned_epoch=epoch,
                     allowance=allowance, cost_policy=cost, paid_policy=paid, projection=projection,
-                    estimate_168h=estimate, projected_budget_fits=estimate['stop'] is None,
+                    disk_projection=disk, estimate_168h=estimate, projected_budget_fits=estimate['stop'] is None,
                     projected_headroom_usd=format(headroom, 'f'), projected_tx_bytes=tx_proxy,
                     tx_assumption='external interface TX plus loopback S3 PUT payload lower bound; '
                                   'paired peer TX and wire overhead are unavailable',

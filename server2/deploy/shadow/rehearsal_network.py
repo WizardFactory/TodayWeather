@@ -79,7 +79,7 @@ def _mapped_hosts(original, bindings):
 
 @contextmanager
 def enforce_network(plan, *, disposable_host, start, hosts_path, run, resolve, inspect_denials,
-                    verify_loopback_tls, verify_provider_tls, release=lambda: True):
+                    verify_loopback_tls, verify_provider_tls, release=lambda: True, retain_until_poweroff=False):
     """Hold the guest isolation until the caller has stopped its services.
 
     The caller owns the disposable Linux host check, stand-in startup and
@@ -115,10 +115,11 @@ def enforce_network(plan, *, disposable_host, start, hosts_path, run, resolve, i
     finally:
         if release() is not True:
             raise RuntimeError('rehearsal shutdown unconfirmed; isolation retained')
-        current = hosts_path.read_bytes()
-        if current.endswith(mappings):
-            hosts_path.write_bytes(current[:-len(mappings)])
-        elif current != original:
-            # Keep the restrictive table if host mappings could not be undone.
-            raise RuntimeError('rehearsal host mappings changed during isolation')
-        run('nft', 'delete', 'table', 'inet', TABLE)
+        if not retain_until_poweroff:
+            current = hosts_path.read_bytes()
+            if current.endswith(mappings):
+                hosts_path.write_bytes(current[:-len(mappings)])
+            elif current != original:
+                # Keep the restrictive table if host mappings could not be undone.
+                raise RuntimeError('rehearsal host mappings changed during isolation')
+            run('nft', 'delete', 'table', 'inet', TABLE)

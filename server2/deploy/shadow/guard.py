@@ -22,6 +22,7 @@ import time
 from state import Journal, validate_cost_policy, estimate_cost
 
 GiB = 1024**3
+DISK_RESERVE_BYTES = 6 * GiB
 INTERVAL = 10
 # A single failed observation never ends a run: stop after this many in a row (60 s).
 MISS_LIMIT = 6
@@ -161,7 +162,7 @@ def evaluate(manifest, sample, previous, now):
     if not integer(tx) or tx < result['last_tx']:
         return stop('network_counter_reset')
     result['last_tx']=tx
-    if not integer(sample.get('free_bytes')) or sample['free_bytes'] < 6*GiB:
+    if not integer(sample.get('free_bytes')) or sample['free_bytes'] < DISK_RESERVE_BYTES:
         return stop('disk_reserve')
     metrics=sample.get('metrics')
     required = {'s3_reads','s3_writes','s3_put_bytes','auth_failures','quota_failures','storage_auth_failures'}
