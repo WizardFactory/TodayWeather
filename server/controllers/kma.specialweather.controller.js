@@ -156,7 +156,8 @@ class KmaSpecialWeatherController {
      * warning of that parent.
      * @param {{first:string, second:string, third:string}} town
      * @param {string} stnName - unused since zone codes replaced the station-based text matching
-     * @param callback (err, [{weather, weatherStr, level, levelStr, locationName}])
+     * @param callback (err, [{weather, weatherStr, level, levelStr, locationName}], zonesChecked)
+     * zonesChecked is true only after a successful lookup covering at least one warning zone.
      */
     getSpecialInfo(town, stnName, callback) {
         if (town == undefined) {
@@ -170,7 +171,7 @@ class KmaSpecialWeatherController {
             return callback(err);
         }
         if (areaCodes.length === 0) {
-            return callback(null, []);
+            return callback(null, [], false);
         }
         KmaSpecialWeatherZone
             .find({active: true, warnVar: {$gt: 0}, areaCode: {$in: areaCodes}}, {_id: 0, __v: 0})
@@ -179,7 +180,7 @@ class KmaSpecialWeatherController {
                 if (err) {
                     return callback(err);
                 }
-                callback(null, this._sort(kmaWarningZones.specialInfoFor(list, areaCodes)));
+                callback(null, this._sort(kmaWarningZones.specialInfoFor(list, areaCodes)), true);
             });
     }
 }

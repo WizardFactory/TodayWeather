@@ -1,0 +1,14 @@
+<resources>
+    <string name="widget_cfg_title">위젯 설정</string>
+    <string name="widget_cfg_place">지역</string>
+    <string name="widget_cfg_follow">앱에서 선택한 지역 사용</string>
+    <string name="widget_cfg_position">현재 위치</string>
+    <string name="widget_cfg_missing">이 지역을 사용할 수 없습니다. 다른 지역을 선택해 주세요.</string>
+    <string name="widget_cfg_forecast">예보</string>
+    <string name="widget_cfg_hourly">시간별</string>
+    <string name="widget_cfg_daily">일별</string>
+    <string name="widget_cfg_compare">어제 기온과 비교</string>
+    <string name="widget_cfg_yesterday">어제 포함</string>
+    <string name="widget_cfg_visit">위젯에서 날씨를 계속 보려면 5일에 한 번 메인 앱을 열어 주세요.</string>
+    <string name="widget_cfg_save">저장</string>
+</resources>

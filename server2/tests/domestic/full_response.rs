@@ -1418,6 +1418,10 @@ async fn the_listed_province_depends_on_the_new_name_and_its_city() {
         ("전북특별자치도", "군산시", "전라북도"),
         ("전남광주통합특별시", "여수시", "전라남도"),
         ("전남광주통합특별시", "광산구", "광주광역시"),
+        ("전남광주통합특별시", " 서구 ", "광주광역시"),
+        (" 전남광주통합특별시 ", " 무안군 ", "전라남도"),
+        ("전남광주통합특별시", "없는구", "전남광주통합특별시"),
+        ("전남광주통합특별시", "", "전남광주통합특별시"),
         ("대구광역시", "군위군", "대구광역시"),
         ("서울특별시", "중구", "서울특별시"),
     ] {
@@ -1435,6 +1439,82 @@ async fn the_listed_province_depends_on_the_new_name_and_its_city() {
             requested,
             "{region} {city}"
         );
+    }
+}
+
+/// CODEX-1 regression: in observed_history mode, a combined-province request with padded
+/// province/district/island whitespace still attaches the exact active `current.specialInfo`
+/// while preserving the requested `regionName`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn combined_province_domestic_response_includes_special_info_with_whitespace() {
+    let _peers = S3_PEERS.lock().await;
+    let peer = Peer::persistent();
+    let mut state = ZoneState::on_seed(None);
+    for (area_code, area_name) in [
+        ("L1130110", "광주서부"),
+        ("L1053410", "무안군북부"),
+        ("L1052500", "흑산도.홍도"),
+    ] {
+        state.insert(Entry {
+            area_code: area_code.into(),
+            area_name: area_name.into(),
+            warn_var: 2.,
+            warn_stress: 0.,
+            active: true,
+            command: "1".into(),
+            event_tm_fc: 202609240900.,
+            event_tm_seq: 1.,
+            event_rank: 1.,
+        });
+    }
+    let warning_store = WarningStore::new(
+        peer.transport_limited(2),
+        CatalogLimits::default(),
+        StoreConfig::default(),
+    )
+    .unwrap();
+    let synced = NOW as i64 - 3_600_000;
+    let oldest = server2::warnings::provider::kst_date(synced, -59);
+    warning_store
+        .publish_zone_snapshot(&state, synced, oldest, NOW as i64, deadline())
+        .await
+        .unwrap();
+
+    let source = build_source(&peer, Arc::new(Providers::default()));
+    let backend = KmaBackend::new(
+        Arc::new(source),
+        Arc::new(|| NOW),
+        AssemblyConfig::default(),
+    );
+    for (region, city, town, expected_zone) in [
+        ("전남광주통합특별시", " 무안군 ", "삼향읍", "무안군북부"),
+        (" 전남광주통합특별시 ", " 서구 ", "치평동", "광주서부"),
+        ("전남광주통합특별시", " 신안군 ", "흑 산면", "흑산도.홍도"),
+    ] {
+        let mut request = super::source_s3::request();
+        request.region = Some(region.into());
+        request.city = Some(city.into());
+        request.town = Some(town.into());
+        let outcome = backend
+            .outcome(request, Instant::now() + Duration::from_secs(8))
+            .await
+            .unwrap();
+        let server2::domestic::kma::Outcome::Json(body) = outcome else {
+            panic!("{outcome:?}")
+        };
+        let body: serde_json::Value = serde_json::from_slice(&body.to_bytes()).unwrap();
+        assert_eq!(
+            body["regionName"],
+            json!(region),
+            "preserve requested regionName"
+        );
+        let names: Vec<&str> = body["current"]["specialInfo"]
+            .as_array()
+            .expect("specialInfo array present")
+            .iter()
+            .filter_map(|item| item["locationName"].as_str())
+            .collect();
+        assert_eq!(names, vec![expected_zone], "{region} {city} {town}");
     }
 }
 

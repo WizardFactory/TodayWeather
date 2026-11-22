@@ -13,7 +13,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -35,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.delay
+import net.wizardfactory.todayweather.languages
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
@@ -124,7 +126,8 @@ object WeatherTabTags {
 @Composable
 internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme,
                        host: WeatherTabHost, charts: ForecastCharts, images: ForecastChartImages, onAirInfo: (String) -> Unit = {}, onUnits: () -> Unit = {}, applies: Int = 0,
-                       locating: Boolean = false, onNoPlace: () -> Unit = {}): TabContent {
+                       locating: Boolean = false, onNoPlace: () -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null,
+                       onForecastRead: (Tab) -> Unit = {}): TabContent {
     val type = if (tab == Tab.DAILY) ForecastType.MID else ForecastType.SHORT
     val metrics = rememberScreenMetrics()
     val texts = host.texts
@@ -139,7 +142,10 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
     val place = state.places.getOrNull(index)
     LaunchedEffect(place) { place?.let { host.readCache(it) } }
     val entry = place?.let { entries[WeatherRepository.key(it)] }
-    val record = remember(place, entry) { place?.let { cityRecord(it, entry) } }
+    val languageTags = languages()
+    val record = remember(place, entry, state.units, languageTags) {
+        place?.let { cityRecord(it, entry, WeatherRepository.summaryRequest(it, state.units, languageTags)) }
+    }
     val hasPush = remember(state.push, index) { hasPushInfo(state, index) }
     // Whether the visit has opened, and whether it found no enabled place when it did.
     val opened = remember(visit) { BooleanArray(2) }
@@ -147,7 +153,8 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
     // the place as it is (`applyEvent` "loadWeatherData"), so a theme chosen on S08 shows the saved photo at once (#2915 F2).
     // A photo the feed gave the place alone is `loadWeatherPhotosEvent`: the photo, without an apply (#2915 F4).
     val weather = remember(record) { record?.let { JsonObject(it - "photo") } }
-    val applied = remember(visit, weather, hasPush, applies) {
+    var expiredAt by remember(visit) { mutableStateOf<Long?>(null) }
+    val applied = remember(visit, weather, hasPush, applies, expiredAt) {
         if (!opened[0]) {
             opened[0] = true
             opened[1] = !visit.open(record, PlaceIndex.enabledCount(state.places.map { it.disable }), hasPush)
@@ -155,6 +162,13 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
             visit.apply(record, hasPush)
         }
         Any()
+    }
+    val windowFocused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+    LaunchedEffect(visit, visit.summaryExpiresAt, windowFocused) {
+        if (!windowFocused) return@LaunchedEffect
+        val expiry = visit.summaryExpiresAt ?: return@LaunchedEffect
+        delay((expiry - System.currentTimeMillis()).coerceAtLeast(0))
+        expiredAt = expiry
     }
     remember(visit, record?.get("photo")) { visit.photoLoaded(record) }
     val units = state.units
@@ -171,7 +185,7 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
         WeatherPageContent(type, page, metrics, hourly, daily, visit.scrolls)
     }
     var expanded by remember(visit) { mutableStateOf(visit.expand) }
-    val scroll = remember(visit) { ScrollState(0) }
+    val scroll = key(tab) { rememberScrollState() }
     val photo = rememberPhoto(visit, (visit.photo as? JsonPrimitive)?.takeIf { it.isString }?.content, host.photos)
     var pollen by remember(visit) { mutableStateOf<List<PollenRow>?>(null) }
     var source by remember(visit) { mutableStateOf<String?>(null) }
@@ -214,7 +228,8 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
                         expanded = visit.expand
                         host.onExpand(visit.expand)
                     },
-                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll)
+                    onPrevious = host.onPrevious, onNext = host.onNext, onAction = onAction, scrollState = scroll, nativeAd = nativeAd,
+                    onForecastRead = { onForecastRead(tab) })
             }
         },
         popups = {

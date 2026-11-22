@@ -1,0 +1,21 @@
+<resources>
+    <string name="widget_display_current">目前天氣</string>
+    <string name="widget_display_forecast">天氣預報</string>
+    <string name="widget_display_clock">時鐘與天氣</string>
+    <string name="widget_display_air">空氣品質</string>
+    <string name="widget_display_expired">請開啟應用程式查看天氣</string>
+    <string name="widget_display_no_place">請在小工具設定中選取已儲存的地點</string>
+    <string name="widget_display_no_weather">請開啟應用程式載入天氣</string>
+    <string name="widget_display_expired_compact">開啟應用程式查看天氣</string>
+    <string name="widget_style_title">小工具樣式</string>
+    <string name="widget_style_classic">經典黑</string>
+    <string name="widget_style_paper">晨報</string>
+    <string name="widget_style_blue">藍色時刻</string>
+    <string name="widget_style_open">開啟應用程式</string>
+    <string name="widget_refresh_mode">天氣更新</string>
+    <string name="widget_refresh_auto">自動 · 每小時</string>
+    <string name="widget_refresh_manual">手動 · 點按重新整理</string>
+    <string name="widget_refresh_stamp">截至 %1$s</string>
+    <string name="widget_refresh_action">重新整理天氣</string>
+    <string name="widget_refresh_empty">重新整理</string>
+</resources>

@@ -1,0 +1,13 @@
+{
+  "title": "Coordinate pollen forecast",
+  "scenario": "Read the selected place's pollen from server1. The example was captured from a local server1 gateway using an isolated synthetic Tokyo response.",
+  "steps": [
+    {
+      "title": "Read the date and available species",
+      "instruction": "If the ordinary coordinate weather advertises pollenForecastAvailable, request the same coordinate path with /pollen-forecast. Read the region and the dateUtc reported by Google for the viewed location, along with source, credit and plant or pollen type codes.",
+      "screenshot": "server1-http.png",
+      "caption": "An isolated Tokyo gateway response with a UTC date and Japanese cedar. The numeric index is absent.",
+      "expected": "Use the UTC date as given. Keep the index missing when it is absent and keep an explicit zero when provided. Preserve ordinary weather when the optional forecast is unavailable."
+    }
+  ]
+}

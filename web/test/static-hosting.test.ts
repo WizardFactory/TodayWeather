@@ -21,6 +21,7 @@ it("rewrites known deep links while preserving API, asset, malformed and unknown
   for (const uri of [
     "/",
     "/locations",
+    "/loc/",
     "/weather/p_37.567_126.978/hourly",
     "/settings",
     "/nation/air",

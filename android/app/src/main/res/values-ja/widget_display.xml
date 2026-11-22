@@ -1,0 +1,21 @@
+<resources>
+    <string name="widget_display_current">現在の天気</string>
+    <string name="widget_display_forecast">天気予報</string>
+    <string name="widget_display_clock">時計と天気</string>
+    <string name="widget_display_air">大気質</string>
+    <string name="widget_display_expired">アプリで天気を確認してください</string>
+    <string name="widget_display_no_place">ウィジェット設定で地点を選択してください</string>
+    <string name="widget_display_no_weather">アプリを開いて天気を取得してください</string>
+    <string name="widget_display_expired_compact">アプリで天気を確認</string>
+    <string name="widget_style_title">ウィジェットのデザイン</string>
+    <string name="widget_style_classic">クラシックブラック</string>
+    <string name="widget_style_paper">モーニングペーパー</string>
+    <string name="widget_style_blue">ブルーアワー</string>
+    <string name="widget_style_open">アプリを開く</string>
+    <string name="widget_refresh_mode">天気の更新</string>
+    <string name="widget_refresh_auto">自動 · 1時間ごと</string>
+    <string name="widget_refresh_manual">手動 · タップで更新</string>
+    <string name="widget_refresh_stamp">%1$s 時点</string>
+    <string name="widget_refresh_action">天気を更新</string>
+    <string name="widget_refresh_empty">更新</string>
+</resources>

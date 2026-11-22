@@ -6,6 +6,12 @@ import net.wizardfactory.todayweather.notify.NotificationChannels
 import net.wizardfactory.todayweather.notify.NotificationPoster
 import net.wizardfactory.todayweather.notify.NotificationTaps
 import net.wizardfactory.todayweather.notify.PushMessage
+import android.content.Intent
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import net.wizardfactory.todayweather.core.storage.startShows
+import net.wizardfactory.todayweather.widget.WidgetOptions
 import android.app.Application
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
@@ -81,7 +87,15 @@ open class TodayWeatherApp : Application() {
 
     /** Handles an entry intent after the migration: links and notification taps. */
     protected open fun onEntryIntent(intent: android.content.Intent) {
-        if (!entryLinks.accept(intent)) notificationTaps.accept(intent)
+        if (intent.action == WidgetOptions.OPEN) {
+            if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+            val pinned = intent.getStringExtra(WidgetOptions.PLACE_KEY) ?: return
+            appScope.launch(Dispatchers.Main.immediate) {
+                val state = appState.state.filterNotNull().first { !it.startShows }
+                val place = WidgetOptions.resolve(state, pinned) ?: return@launch
+                entryLinks.indexes.trySend(state.places.indexOf(place).toDouble())
+            }
+        } else if (!entryLinks.accept(intent)) notificationTaps.accept(intent)
     }
 
     /** The notification permission for S09 (AN-14); the shown activity lends it the system's prompt. */

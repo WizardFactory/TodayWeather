@@ -5250,11 +5250,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         </g>
         </g>
 
-        <g data-edge-from="checker" data-edge-to="candidate" data-edge-label="Guarded health + weather probes" data-edge-key="1" data-edge-id="m1">
+        <g data-edge-from="checker" data-edge-to="candidate" data-edge-label="GET /health on candidate IP" data-edge-key="1" data-edge-id="m1">
           <path data-composition-edge-from="checker" data-composition-edge-to="candidate" data-composition-edge-id="m1" data-composition-points="355.25,215;544,215" d="M 355.25 215 L 544 215" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="341.325" y="195" width="216.6" height="18" rx="3" class="c-mask"/>
-          <text x="449.625" y="205" class="t-edge-emphasis" font-size="11" text-anchor="middle">Guarded health + weather probes</text>
+          <rect x="354.525" y="195" width="190.2" height="18" rx="3" class="c-mask"/>
+          <text x="449.625" y="205" class="t-edge-emphasis" font-size="11" text-anchor="middle">GET /health on candidate IP</text>
         </g>
         </g>
 
@@ -5324,15 +5324,15 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text data-detail="context" x="348.25" y="122" class="t-muted" font-size="7" text-anchor="middle">Retains existing guards</text>
         </g>
 
-        <g id="node-candidate" data-node-id="candidate" data-node-label="Spot candidate" tabindex="0" role="button" aria-label="Focus Spot candidate, Health + weather probes, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Health + weather probes" data-node-context="Sequence participant">
-          <title>Spot candidate · Health + weather probes · Sequence participant</title>
+        <g id="node-candidate" data-node-id="candidate" data-node-label="Spot candidate" tabindex="0" role="button" aria-label="Focus Spot candidate, Serves /health, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Serves /health" data-node-context="Sequence participant">
+          <title>Spot candidate · Serves /health · Sequence participant</title>
           <rect x="467.5" y="72" width="167" height="60" rx="6" class="c-mask"/>
           <rect x="467.5" y="72" width="167" height="60" rx="6" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(473.5 78) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="551" y="108" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Spot candidate</text>
-          <text data-detail="context" x="551" y="122" class="t-muted" font-size="7" text-anchor="middle">Health + weather probes</text>
+          <text data-detail="context" x="551" y="122" class="t-muted" font-size="7" text-anchor="middle">Serves /health</text>
         </g>
 
         <g id="node-observer" data-node-id="observer" data-node-label="Failure observer" tabindex="0" role="button" aria-label="Focus Failure observer, No EC2 permission, Sequence participant" aria-pressed="false" data-node-kind="backend" data-node-sublabel="No EC2 permission" data-node-context="Sequence participant">
@@ -5563,8 +5563,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <h3>Retained safety</h3>
         </div>
         <ul>
-          <li>Health alone never authorizes association.</li>
-          <li>No timeout increase or periodic recheck.</li>
+          <li>Require HTTP 200 with body OK.</li>
+          <li>Recheck Fleet, AMI, IP and EIP owner.</li>
         </ul>
       </div>
 

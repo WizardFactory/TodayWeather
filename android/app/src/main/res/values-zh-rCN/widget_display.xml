@@ -1,0 +1,21 @@
+<resources>
+    <string name="widget_display_current">当前天气</string>
+    <string name="widget_display_forecast">天气预报</string>
+    <string name="widget_display_clock">时钟与天气</string>
+    <string name="widget_display_air">空气质量</string>
+    <string name="widget_display_expired">请打开应用查看天气</string>
+    <string name="widget_display_no_place">请在小组件设置中选择已保存的地点</string>
+    <string name="widget_display_no_weather">请打开应用加载天气</string>
+    <string name="widget_display_expired_compact">打开应用查看天气</string>
+    <string name="widget_style_title">小组件样式</string>
+    <string name="widget_style_classic">经典黑</string>
+    <string name="widget_style_paper">晨报</string>
+    <string name="widget_style_blue">蓝色时刻</string>
+    <string name="widget_style_open">打开应用</string>
+    <string name="widget_refresh_mode">天气更新</string>
+    <string name="widget_refresh_auto">自动 · 每小时</string>
+    <string name="widget_refresh_manual">手动 · 点按刷新</string>
+    <string name="widget_refresh_stamp">截至 %1$s</string>
+    <string name="widget_refresh_action">刷新天气</string>
+    <string name="widget_refresh_empty">刷新</string>
+</resources>

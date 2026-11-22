@@ -79,6 +79,8 @@ i18n.configure({
 });
 
 app.use(cors());
+require('./routes/solarTerms')(app);
+require('./lib/solarTerms/maintenance').start(mongoose.connection, config.mode === 'gather', log);
 
 // Public /weather and /geocode routes (#2606); before the session middleware so
 // they never set cookies.

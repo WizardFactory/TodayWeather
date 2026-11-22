@@ -26,6 +26,8 @@ pub struct RuntimeServices {
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
+    pub solar_terms_api: Option<Arc<dyn crate::solar_terms::api::CalendarApi>>,
+    pub solar_terms_reconcile: Option<Arc<dyn crate::solar_terms::Reconcile>>,
     /// S15b-3c: the image hourly forecast production (an AirKorea acquirer is configured).
     pub image_production: Option<Arc<dyn crate::domestic::kma::source::air_input::ImageProduction>>,
     pub native_fetch: crate::push::deliver::native_fetch::NativeFetch,
@@ -193,6 +195,8 @@ impl RuntimeServices {
             raw_writer: built.raw_writer,
             warning_cycles: built.warning_cycles,
             narrative_acquire: built.narrative_acquire,
+            solar_terms_api: built.solar_terms_api,
+            solar_terms_reconcile: built.solar_terms_reconcile,
             image_production: built.image_production,
             gateway: built.gateway,
             push,
@@ -209,10 +213,12 @@ impl RuntimeServices {
             && self.push.is_none()
             && self.notices.is_none()
             && self.warning_api.is_none()
+            && self.solar_terms_api.is_none()
         {
             return crate::public_router(state);
         }
         let notices = self.notices.clone();
+        let solar_terms = self.solar_terms_api.clone();
         let services = self.clone();
         let mut routes = Router::new().fallback(move |request: Request| {
             let services = services.clone();
@@ -241,6 +247,9 @@ impl RuntimeServices {
             routes = routes.merge(
                 crate::notice::api::router(notices).layer(axum::middleware::from_fn(crate::cors)),
             );
+        }
+        if let Some(solar_terms) = solar_terms {
+            routes = routes.merge(crate::solar_terms::api::router(solar_terms));
         }
         crate::public_router_with_routes(state, routes)
     }

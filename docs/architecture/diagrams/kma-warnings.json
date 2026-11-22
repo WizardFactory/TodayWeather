@@ -265,9 +265,9 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Warning behavior retained",
+      "title": "Warning areas",
       "items": [
-        "Types 1–4, zone replay and current.specialInfo stay unchanged.",
+        "Combined Gwangju–Jeonnam addresses resolve by district.",
         "Narratives never drive wn/wr warning or push state."
       ]
     },

@@ -75,7 +75,6 @@ struct StartView: View {
         .ignoresSafeArea(.keyboard)
         .statusBarStyle(lightContent: page.shell.theme != .light)
         .onAppear {
-            Monetization.shared.setShowAds(false)
             page.opened()
         }
     }

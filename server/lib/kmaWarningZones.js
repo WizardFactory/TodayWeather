@@ -14,6 +14,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var provinceForDistrict = require('./gwangjuJeonnam');
 
 var ZONE_TABLE_FILE = path.join(__dirname, '../utils/data/kma_warning_zones.csv');
 var ROOT_ZONE = 'L1000000';
@@ -154,13 +155,18 @@ function zonesForTown(town) {
     }
     var table = getZoneTable();
     var provinceName = PROVINCE_ALIASES[town.first] || town.first;
+    var second = town.second || '';
+    if (provinceName === '전남광주통합특별시') {
+        second = toText(second).replace(/\s+/g, '');
+        provinceName = provinceForDistrict(second);
+        if (!provinceName) return [];
+    }
     var province = table.firstLevel.filter(function (zone) {
         return zone.name === provinceName;
     })[0];
     if (!province) {
         return [];
     }
-    var second = town.second || '';
     var third = town.third || '';
 
     var island = ISLAND_ZONES.filter(function (rule) {

@@ -1,0 +1,13 @@
+{
+  "title": "Coordinate air-quality forecast",
+  "scenario": "Read an optional overseas forecast through server1. The HTTP example used an isolated gateway and synthetic OpenWeather data for Montevideo.",
+  "steps": [
+    {
+      "title": "Read the forecast at the viewed location",
+      "instruction": "Load the ordinary coordinate weather. If it advertises airForecastAvailable, request the same coordinates with /air-forecast after the coordinate. Read the source, retrieval time and UTC-valid rows. Format the times in the viewed location's time zone.",
+      "screenshot": "server1-http.png",
+      "caption": "Sanitized local HTTP response. The particulate values are in µg/m³, ozone is in ppm, and owm is OpenWeather's own index.",
+      "expected": "A usable response contains attributed forecast rows and sends Cache-Control no-store. Treat available false as an absent forecast and keep the normal weather and air observation."
+    }
+  ]
+}

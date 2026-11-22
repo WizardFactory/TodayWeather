@@ -22,17 +22,17 @@ val serverUrl: String = System.getenv("TW_SERVER_URL") ?: privateProps.getProper
 val weatherPhotosUrl: String = System.getenv("TW_WEATHER_PHOTOS_URL") ?: privateProps.getProperty("TW_WEATHER_PHOTOS_URL", "")
 val mailTo: String = System.getenv("TW_MAIL_TO") ?: privateProps.getProperty("TW_MAIL_TO", "")
 
-// AdMob (AN-15): release builds take the app ID and the banner unit from TW_ADMOB_APP_ID_ANDROID and
-// TW_ADMOB_BANNER_ANDROID (private inputs, as above); debug builds always use Google's sample app ID and test banner
-// unit, so development builds never request real ads (client/scripts/make-client-config.mjs).
-val admobAppId: String = System.getenv("TW_ADMOB_APP_ID_ANDROID") ?: privateProps.getProperty("TW_ADMOB_APP_ID_ANDROID", "")
-val admobBanner: String = System.getenv("TW_ADMOB_BANNER_ANDROID") ?: privateProps.getProperty("TW_ADMOB_BANNER_ANDROID", "")
+// Debug uses the SDK's test creatives. Release builds require units of the matching formats.
+fun adSetting(name: String): String = System.getenv(name) ?: privateProps.getProperty(name, "")
+val admobAppId = adSetting("TW_ADMOB_APP_ID_ANDROID")
+val admobNative = adSetting("TW_ADMOB_NATIVE_ANDROID")
+val admobInterstitial = adSetting("TW_ADMOB_INTERSTITIAL_ANDROID")
 val sampleAppId = "ca-app-pub-3940256099942544~3347511713"
 
 // Place search (AN-10): the Android-restricted key of Places API (New), TW_PLACES_API_KEY_ANDROID (private input, as
 // above). Without it S01 searches the bundled towns.
 val placesKey: String = System.getenv("TW_PLACES_API_KEY_ANDROID") ?: privateProps.getProperty("TW_PLACES_API_KEY_ANDROID", "")
-val testBanner = "ca-app-pub-3940256099942544/9214589741"
+
 
 android {
     namespace = "net.wizardfactory.todayweather"
@@ -62,12 +62,14 @@ android {
     buildTypes {
         debug {
             manifestPlaceholders["admobAppId"] = sampleAppId
-            buildConfigField("String", "BANNER_AD_UNIT", "\"$testBanner\"")
+            buildConfigField("String", "NATIVE_AD_UNIT", "\"ca-app-pub-3940256099942544/2247696110\"")
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT", "\"ca-app-pub-3940256099942544/1033173712\"")
             buildConfigField("boolean", "RELEASE_ADS", "false")
         }
         release {
             manifestPlaceholders["admobAppId"] = admobAppId.ifBlank { sampleAppId }
-            buildConfigField("String", "BANNER_AD_UNIT", "\"" + admobBanner.ifBlank { testBanner } + "\"")
+            buildConfigField("String", "NATIVE_AD_UNIT", "\"$admobNative\"")
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT", "\"$admobInterstitial\"")
             buildConfigField("boolean", "RELEASE_ADS", "true")
         }
     }
@@ -91,7 +93,8 @@ android {
 }
 
 // A release package refuses Google's sample IDs, as client/scripts/build-release.mjs does.
-val releaseAdsMissing = listOf("TW_ADMOB_APP_ID_ANDROID" to admobAppId, "TW_ADMOB_BANNER_ANDROID" to admobBanner)
+val releaseAdsMissing = listOf("TW_ADMOB_APP_ID_ANDROID" to admobAppId, "TW_ADMOB_NATIVE_ANDROID" to admobNative,
+    "TW_ADMOB_INTERSTITIAL_ANDROID" to admobInterstitial)
     .filter { (_, value) -> value.isBlank() || "3940256099942544" in value }.map { it.first }
 tasks.matching { it.name == "packageRelease" || it.name == "bundleRelease" }.configureEach {
     doFirst {
@@ -117,6 +120,7 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.core.splashscreen)
 

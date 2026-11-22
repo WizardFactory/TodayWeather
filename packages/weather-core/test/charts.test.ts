@@ -1,5 +1,11 @@
 import { expect, it } from "vitest";
-import { dailyChart, hourlyChart, linePath, normalizeWeather } from "../src";
+import {
+  dailyChart,
+  hourlyChart,
+  hourlyXPositions,
+  linePath,
+  normalizeWeather,
+} from "../src";
 import fixture from "../../../docs/rewrite/examples/client-kma-response.json";
 const base = normalizeWeather(fixture.response);
 const point = (at: string, temperature: number | null) => ({
@@ -94,4 +100,95 @@ it("keeps every finite label in an entirely partial daily series inside its doma
   expect(model.rows.every((r) => !r.validRange)).toBe(true);
   expect(model.domain[0]).toBeLessThan(-20);
   expect(model.domain[1]).toBeGreaterThan(35);
+});
+
+it("preserves forecast rainProbability and atomic precipitation group on current merge", () => {
+  const forecast = {
+    ...point("2026-09-23T09:00", 18),
+    rainProbability: 30,
+    precipitation: 4,
+    precipitationHours: 3,
+    precipitationBasis: "forecast" as const,
+    precipitationApprox: true,
+  };
+  const current = {
+    ...point("2026-09-23T09:00", 21),
+    rainProbability: null,
+    precipitation: null,
+    precipitationHours: null,
+    precipitationBasis: null,
+    precipitationApprox: undefined,
+  };
+  const model = hourlyChart({
+    hourly: [
+      point("2026-09-23T06:00", 15),
+      forecast,
+      point("2026-09-23T12:00", 22),
+    ],
+    current,
+    yesterday: null,
+  });
+  const now = model.rows[model.currentIndex];
+  expect(now.point.temperature).toBe(21);
+  expect(now.point.rainProbability).toBe(30);
+  expect(now.point.precipitation).toBe(4);
+  expect(now.point.precipitationHours).toBe(3);
+  expect(now.point.precipitationBasis).toBe("forecast");
+  expect(now.point.precipitationApprox).toBe(true);
+});
+
+it("borrows enclosing forecast rainProbability for off-hour inserted current observation", () => {
+  const model = hourlyChart({
+    hourly: [
+      { ...point("2026-09-23T09:00", 18), rainProbability: 0 },
+      { ...point("2026-09-23T12:00", 22), rainProbability: 60 },
+    ],
+    current: { ...point("2026-09-23T10:15", 20), rainProbability: null },
+    yesterday: null,
+  });
+  const now = model.rows[model.currentIndex];
+  expect(now.point.at).toBe("2026-09-23T10:15");
+  expect(now.point.rainProbability).toBe(0);
+});
+
+it("computes bounded chronological hourly x positions across off-hour, mixed 1h/3h, and >3h gaps", () => {
+  const H = 3_600_000;
+  const baseTime = Date.UTC(2026, 8, 23, 0, 0);
+  // 15m off-hour, 1h step, 3h step, and 12h missing gap
+  const times = [
+    baseTime,
+    baseTime + 15 * 60_000,
+    baseTime + H + 15 * 60_000,
+    baseTime + 4 * H + 15 * 60_000,
+    baseTime + 16 * H + 15 * 60_000,
+  ];
+  const { xs, width, gapBefore } = hourlyXPositions(times, 80, 60, 320);
+  expect(xs[0]).toBe(60);
+  expect(xs[1] - xs[0]).toBeCloseTo(80, 5); // 15m clamped to 1.0 * col
+  expect(xs[2] - xs[1]).toBeCloseTo(80, 5); // 1h -> 1.0 * col
+  expect(xs[3] - xs[2]).toBeCloseTo(108, 5); // 3h -> 1.35 * col
+  expect(xs[4] - xs[3]).toBeCloseTo(120, 5); // 12h -> 1.5 * col
+  expect(gapBefore).toEqual([false, false, false, false, true]);
+  expect(width).toBeCloseTo(xs[4] + 60, 5);
+
+  // 45 mixed rows (16x 3h + 6x 1h + 23x 3h) stays bounded far under 9449px
+  const mixed: number[] = [];
+  let t = baseTime;
+  for (let i = 0; i < 45; i++) {
+    mixed.push(t);
+    t += i >= 16 && i < 22 ? H : 3 * H;
+  }
+  const full = hourlyXPositions(mixed, 77, 77, 1151);
+  expect(full.width).toBeLessThan(5000);
+});
+
+it("breaks linePath subpaths when breakBefore marks a missing-data gap", () => {
+  expect(
+    linePath(
+      [10, 12, 14, 16],
+      (i) => i * 10,
+      (v) => v,
+      (i) => i === 2,
+    ),
+  ).toBe("M0,10 L10,12 M20,14 L30,16");
 });

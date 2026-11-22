@@ -35,6 +35,16 @@
           "fcm",
           "s3"
         ]
+      },
+      {
+        "id": "restore",
+        "label": "Startup recovery",
+        "focus": [
+          "origin",
+          "coordinator",
+          "s3",
+          "api"
+        ]
       }
     ],
     "output": "docs/architecture/diagrams/push-s3-proposal.html"
@@ -152,6 +162,20 @@
         170,
         74
       ]
+    },
+    {
+      "id": "origin",
+      "type": "backend",
+      "label": "Service origin",
+      "sublabel": "Spot service /health",
+      "pos": [
+        220,
+        80
+      ],
+      "size": [
+        175,
+        74
+      ]
     }
   ],
   "connections": [
@@ -197,6 +221,28 @@
       "to": "fcm",
       "label": "Rate limited",
       "variant": "emphasis"
+    },
+    {
+      "from": "coordinator",
+      "to": "origin",
+      "label": "Wait for origin",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "route": "orthogonal-v",
+      "via": [
+        [
+          580,
+          245
+        ],
+        [
+          307.5,
+          245
+        ]
+      ],
+      "labelAt": [
+        440,
+        230
+      ]
     }
   ],
   "cards": [
@@ -206,6 +252,15 @@
       "items": [
         "One device record per object",
         "No S3 reads for each recipient"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Startup after Spot replacement",
+      "items": [
+        "Wait for the service origin, then restore the registry",
+        "Retry unresolved regions with capped backoff",
+        "Return 503 until checkpoints are restored and scheduling starts"
       ]
     },
     {

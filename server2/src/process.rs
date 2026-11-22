@@ -173,6 +173,10 @@ where
         .narrative_acquire
         .clone()
         .map(|source| crate::narrative::worker(source, Duration::from_secs(180)));
+    let solar_terms = gateway
+        .solar_terms_reconcile
+        .clone()
+        .map(|reconciler| crate::solar_terms::worker(reconciler, Duration::from_secs(60)));
     let images = gateway.image_production.clone().map(|production| {
         crate::domestic::kma::source::air_input::image_worker(production, IMAGE_PRODUCTION_EVERY)
     });
@@ -237,6 +241,9 @@ where
     tx.send_replace(true);
     if let Some(narrative) = narrative {
         narrative.stop().await;
+    }
+    if let Some(solar_terms) = solar_terms {
+        solar_terms.stop().await;
     }
     if let Some(images) = images {
         images.stop().await;

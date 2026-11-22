@@ -219,12 +219,14 @@ struct MatrixScreenshotTests {
         shell.select(.forecast)
         let colors = ShellColors.of(.light, tab: .forecast)
         let catalog = Catalog(code: shell.locale.catalog)
-        let tabs = render(TabBar(selected: .forecast, colors: colors, catalog: catalog, insets: insets, onTap: { _ in })
+        var legacyColors = colors
+        legacyColors.tabSelected = colors.tabText
+        let tabs = render(TabBar(selected: .forecast, colors: legacyColors, catalog: catalog, insets: insets, onTap: { _ in })
             .frame(width: display.width), display, width: display.width, language: language)
         let tabsReference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-tabs.png"))
         // The home indicator iOS drew over the WebView's bottom inset in some captures (system UI, not the page's).
         let indicator = CGRect(x: display.width / 2 - 75, y: CGFloat(tabsReference.height) / display.scale - 14, width: 150, height: 12)
-        let masks = ShellScreenshotTests.legacyRefreshGlyph(.forecast, width: display.width) + (display.bottom > 0 ? [indicator] : [])
+        let masks = ShellScreenshotTests.legacySelection(.forecast, width: display.width) + (display.bottom > 0 ? [indicator] : [])
         try report.compare("\(size)-\(language)-shell-tabs",
                            tabs.copying(masks, from: tabsReference, scale: display.scale), tabsReference)
         let reference = try References.image(Self.file(display, language, "shell-\(language)-light-forecast-header.png"))

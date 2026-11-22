@@ -16,6 +16,7 @@ struct ShellColors: Equatable {
     var tabBar: CssColor
     var tabLine: CssColor
     var tabText: CssColor
+    var tabSelected: CssColor
     var menuList: CssColor
     var menuItem: CssColor
     var menuBorder: CssColor
@@ -29,7 +30,7 @@ struct ShellColors: Equatable {
         let white = CssColor(0xFFFFFF), black = CssColor(0x000000)
         let light = ShellColors(
             headerBar: white, headerLine: CssColor(0xDDDDDD), headerText: black,
-            tabBar: white, tabLine: CssColor(0xB2B2B2), tabText: black,
+            tabBar: white, tabLine: CssColor(0xB2B2B2), tabText: black, tabSelected: CssColor(0x116D9B),
             menuList: white, menuItem: white, menuBorder: CssColor(0xDDDDDD), menuText: CssColor(0x444444),
             statusBar: white, statusBarLightContent: false)
         // `.photo-theme .body-content .bar`, `.old-theme .body-content .bar` and the menu's bar in both themes.
@@ -42,7 +43,7 @@ struct ShellColors: Equatable {
         case .dark:
             return ShellColors(
                 headerBar: CssColor(0x1B1B1B), headerLine: CssColor(0x444444), headerText: white,
-                tabBar: CssColor(0x1B1B1B), tabLine: CssColor(0x444444), tabText: white,
+                tabBar: CssColor(0x1B1B1B), tabLine: CssColor(0x444444), tabText: white, tabSelected: CssColor(0x85D6FF),
                 menuList: CssColor(0x171717), menuItem: CssColor(0x1C1C1D), menuBorder: CssColor(0x111111), menuText: white,
                 statusBar: CssColor(0x1B1B1B), statusBarLightContent: true)
         case .photo:
@@ -59,10 +60,12 @@ struct ShellColors: Equatable {
             case .forecast:
                 c.headerBar = CssColor(0x03A9F4); c.headerLine = CssColor(0x0288D1)
                 c.tabBar = CssColor(0x03A9F4); c.tabLine = CssColor(0x0288D1); c.tabText = white
+                c.tabSelected = CssColor(0x08344C)
                 c.statusBar = CssColor(0x03A9F4)
             case .dailyforecast:
                 c.headerBar = CssColor(0x00BCD4); c.headerLine = CssColor(0x0097A7)
                 c.tabBar = CssColor(0x00BCD4); c.tabLine = CssColor(0x0097A7); c.tabText = white
+                c.tabSelected = CssColor(0x08344C)
                 c.statusBar = CssColor(0x00BCD4)
             default: break
             }
@@ -78,7 +81,6 @@ struct ShellColors: Equatable {
 /// `fonts/`), registered for the process. Code points from ionicons.css (`.ion-*:before { content }`) of the built app.
 enum Glyphs {
     static let starOutline = "\u{F4B2}"      // ion-ios-star-outline
-    static let star = "\u{F4B3}"             // ion-ios-star
     static let clockOutline = "\u{F402}"     // ion-ios-clock-outline
     static let calendarOutline = "\u{F3F3}"  // ion-ios-calendar-outline
     static let cloudOutline = "\u{F409}"     // ion-ios-cloud-outline
@@ -92,9 +94,9 @@ enum Glyphs {
         return .custom("Ionicons", fixedSize: size)
     }
 
-    static func tab(_ tab: ShellTab, selected: Bool) -> String {
+    static func tab(_ tab: ShellTab) -> String {
         switch tab {
-        case .search: selected ? star : starOutline
+        case .search: starOutline
         case .forecast: clockOutline
         case .dailyforecast: calendarOutline
         case .air: cloudOutline

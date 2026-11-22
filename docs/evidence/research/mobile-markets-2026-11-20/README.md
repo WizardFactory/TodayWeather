@@ -1,0 +1,38 @@
+# Prelaunch city comparison for issue 2613
+
+The candidate study used data available on 2026-11-19. The [candidate comparison](city-comparison.csv) compares 59 functional urban areas in the 21 focus countries. No TodayWeather behavioral or financial data enter the scores. Rank is an opportunity index within this shortlist. It does not estimate revenue, margins or operational readiness.
+
+The [focus-city decision](../../../operations/mobile-focus-cities.md) selects 48 cities. The original candidate table retains its 59 rows. Daegu joined the focus list after scoring.
+
+## Candidate boundaries
+
+Use the [JRC/OECD estimated functional urban areas, 2015 epoch](https://human-settlement.emergency.copernicus.eu/documents/GHSL_FUA_2019.pdf), including the estimated commuting zone. Keep each country's largest, the runner-up if its population reaches one million, and every area of at least three million. The US-coded Tijuana area is omitted because applying one national advertising value to this cross-border market would be misleading. Centre names follow the source; Osaka includes Kyoto. A centre's weather coordinate represents one site in the area.
+
+## Inputs and scoring
+
+- Reach (45 points). Multiply FUA population by the 2024 national [ITU / World Bank internet use fraction](https://data.worldbank.org/indicator/IT.NET.USER.ZS). Population and penetration refer to different years and geographic units. This is a size proxy. It does not measure 2026 smartphone users, language fit or attainable share.
+- Advertising demand (35 points). Use the 2025 national estimate of annual digital advertising dollars per internet user in [Digital 2026, printed p. 637](https://wearesocial.com/wp-content/uploads/2025/10/GDR-2026.pdf#page=637). It covers more formats than app banners. Uruguay was absent from the chart. Its [national industry survey](https://www.iab.com.uy/4o-estudio-del-mercado-de-la-publicidad-digital-en-uruguay-grupo-radar-iab-uruguay/) uses a different survey base. Keep the Montevideo advertising value and rank empty. A missing value is never scored zero.
+- Recurring weather (20 points). Use [Open-Meteo's historical API](https://open-meteo.com/en/docs/historical-weather-api), model ERA5, local dates from 2021-01-01 through 2025-12-31, at the recorded city coordinates. Count each day once if precipitation reaches 1 mm, the high first reaches 30°C from below, the low reaches freezing from above, or the high changes by at least 8°C against the previous day. At the first date only precipitation can qualify. Divide by five. All 59 series have 1,826 complete daily records. This index captures recurring weather conditions; it does not measure forecast skill, commute-hour timing, alert use, app opens or ad impressions. Sustained hot or cold spells only trigger the onset test once. AQI and wind are omitted. Open-Meteo supplies the series based on ECMWF ERA5 reanalysis (Copernicus Climate Change Service).
+- Normalize log reach and log ad intensity separately between their observed shortlist minima and maxima. Normalize weather days on a linear scale. Multiply by 45, 35 and 20 and add. Log scaling dampens the influence of extreme size and ad-market values. The alternative columns exchange 10 points between reach and advertising, holding weather fixed. Decimal scores in the CSV are for reproducibility.
+- For a population-boundary sensitivity check, the CSV includes the [UN WUP 2025 urban centre estimates, F21](https://population.un.org/wup/downloads/?tab=Cities). Centre boundaries differ from commuting zones. No corresponding figure is assigned to San Jose. The alternative uses matched main centres only, excludes the two incomplete rows, and recomputes reach min/max on that set.
+- There is no common city-level mobile eCPM, retail spending, paid conversion, goods sales, acquisition-cost, smartphone-language, forecast quality or SLA input. Commercial demand has national geographic resolution. A Dutch-speaking Belgian audience may be overstated, and the multilingual Swiss or Canadian areas may differ from the national proxy. Scores do not establish local profitability or authorize release.
+
+## Seasonal atlas
+
+The [monthly weather workbook](seasonal-weather-atlas.xlsx) covers the 48 selected metros as of 2026-11-20. The November 19 study supplied the 21-country calendar and the first 47 city series. Daegu was added on November 20 using the same periods, units and thresholds. The workbook preserves the Korean research text and local-language weather terms.
+
+| Worksheet | What it contains |
+| --- | --- |
+| 21개국 달력 · 국가별 월간 상세 | A 12-month overview and 252 country-month records with seasonal topics, local vocabulary, example questions, regional exceptions and links to supporting sources. |
+| 도시별 월간 수치 · 도시 자료 좌표 | 576 city-month records, the requested city coordinates, the ERA5 grid coordinates returned, the local time zone and links to the data requests. |
+| 관심과 방송 근거 · 현지 자료 대조 · 출처 | Public survey questions, broadcast examples, comparisons against local sources and a register of 70 references. The reading guide defines the thresholds and units. |
+
+The temperature and precipitation series cover 1,826 local dates per metro in 2021–2025. Each monthly precipitation value is the average of the five monthly totals. Rain-day counts use at least 1 mm of precipitation, including the water equivalent of snow. The atlas also counts days meeting fixed precipitation or temperature thresholds within each month. The candidate score uses **onsets** for heat and frost. Humidity, wind and solar energy use separate 2001–2020 monthly climatologies. Solar energy is reported in kWh/m²/day. [Open-Meteo historical weather](https://open-meteo.com/en/docs/historical-weather-api) · [NASA POWER climatology](https://power.larc.nasa.gov/docs/services/api/temporal/climatology/)
+
+### Findings that depend on place or time
+
+- In July, São Paulo averaged 3.2 precipitation days, Rio de Janeiro 6.2 and Recife 25.2 in the five-year grid series. Recife's local climate assessment identifies May through July as its wettest period. Grid and local rainfall amounts differ substantially at this coastal site. [Recife climate assessment](https://licenciamentounificado.recife.pe.gov.br/sites/default/files/inline-files/EIV%20HR_1.pdf)
+- In South Korea, 70% named air pollution among the three most important environmental issues in the 2019 Ipsos survey, compared with a 35% survey average. A different domestic question about the single most urgent environmental issue put air quality improvement at 13.7% in 2022, 19.3% in 2023 and 15.3% in 2024. The two questions cannot establish a common trend in weather-app use. [Ipsos](https://www.ipsos.com/sites/default/files/ct/news/documents/2019-08/earth-day-2019.pdf) · [Korea Environment Institute](https://www.kei.re.kr/elibList.es?act=view&c_id=766481&elibName=researchreport&mid=a10101000000)
+- UK forecast language such as *sunny spells* describes when the sun may break through. The Met Office defines measured sunshine duration separately. The forecast guidance and ITV examples reviewed did not establish a requirement for every bulletin to report numeric sunshine hours. [Met Office observations](https://weather.metoffice.gov.uk/guides/observations/how-we-measure-sunshine) · [Met Office forecast guide](https://weather.metoffice.gov.uk/guides/about-forecasts) · [ITV London](https://www.itv.com/news/london/weather-forecast)
+
+Country-month topics and example questions are prelaunch interpretations. A regional warning, a national bulletin's lead story and survey-reported interest each describe a different population or event. City-month usage, ad revenue and the cost of serving additional users remain unmeasured.

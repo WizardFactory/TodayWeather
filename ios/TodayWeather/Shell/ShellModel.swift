@@ -48,6 +48,10 @@ final class ShellModel {
     /// A tap on a tab before the shell handles it: true when the app took it (no enabled place: the start choice O02,
     /// IN-10).
     @ObservationIgnored var onTabTap: (ShellTab) -> Bool = { _ in false }
+    /// A deliberate transition, after the no-place/start handler has had first refusal.
+    @ObservationIgnored var onForecastTap: (ShellTab) -> Bool = { _ in false }
+    private(set) var selectionRevision = 0
+
     /// An entry event after the migration (IN-04, IN-14 and IN-16 handle notification taps and links).
     @ObservationIgnored var onEntry: (EntryEvent) -> Void = { _ in }
 
@@ -58,6 +62,20 @@ final class ShellModel {
         let state = holder.state
         screen = StartScreen.first(startVersion: state?.cordovaExtras["startVersion"], startupPage: state?.settings.startupPage)
         selected = StartupPage.tab(state?.settings.startupPage)
+    }
+
+    struct AdVisit: Hashable {
+        let selection: Int
+        let place: Int?
+        let location: Location?
+        let address: String?
+    }
+
+    var adVisit: AdVisit {
+        let state = holder.state
+        let place = state.flatMap { $0.places.indices.contains($0.placeIndex) ? $0.places[$0.placeIndex] : nil }
+        return AdVisit(selection: selectionRevision, place: state?.placeIndex, location: place?.location,
+                       address: place?.address)
     }
 
     var theme: Theme { Theme.of(holder.state?.settings.theme) }
@@ -85,11 +103,13 @@ final class ShellModel {
     /// A tap on the tab bar.
     func tapTab(_ tab: ShellTab) {
         if onTabTap(tab) { return }
-        if selected != tab { selected = tab }
+        if onForecastTap(tab) { return }
+        if selected != tab { select(tab) }
     }
 
     /// A page changes the tab (S03's air cells open the Air tab; S01 closes onto the startup page's tab).
     func select(_ tab: ShellTab) {
+        selectionRevision += 1
         selected = tab
     }
 

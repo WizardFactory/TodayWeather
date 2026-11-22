@@ -4,6 +4,7 @@ import {
   POLLUTANTS,
   parseUnits,
   coordinates,
+  validDaySummary,
   type Place,
   type Units,
   type Weather,
@@ -343,12 +344,19 @@ export async function clearLocalData(
     req.onsuccess = req.onerror = req.onblocked = () => resolve();
   });
 }
+function withoutLiveForecastCapabilities(weather: Weather): Weather {
+  const snapshot = { ...weather };
+  delete snapshot.coordinateAirForecastAvailable;
+  delete snapshot.coordinatePollenForecastAvailable;
+  return snapshot;
+}
+
 export async function writeSnapshot(
   key: string,
   weather: Weather,
 ): Promise<void> {
   await snapshots("readwrite", (s) =>
-    s.put({ weather, savedAt: Date.now() }, key),
+    s.put({ weather: withoutLiveForecastCapabilities(weather), savedAt: Date.now() }, key),
   );
   await pruneSnapshots();
   // Small fixed bound; prune by recorded save time from one consistent read.
@@ -543,8 +551,18 @@ export function validateSnapshot(
       !["available", "unavailable"].includes(w.availability.air)
     )
       return;
+    const snapshot = withoutLiveForecastCapabilities(w as Weather);
+    // A damaged optional summary must not discard a usable offline forecast.
+    if (
+      w.daySummary !== undefined &&
+      (w.source !== "KMA" ||
+        w.location.country !== "KR" ||
+        !validDaySummary(w.daySummary))
+    ) {
+      delete snapshot.daySummary;
+    }
     // Older normalization revisions use different cache keys and never reach here.
-    return w as Weather;
+    return snapshot;
   } catch {
     return;
   }

@@ -378,13 +378,6 @@ main:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.live-dot {
-  background: var(--tw-bg-surface-sunken);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: block;
-}
 .button-row {
   display: flex;
   gap: 10px;
@@ -639,15 +632,6 @@ main:focus {
 .chart-legend .muted {
   background: var(--tw-bg-surface-sunken);
 }
-.chart-scroll {
-  overflow: auto;
-  margin: 0 -6px;
-}
-.chart-scroll svg {
-  display: block;
-  width: 100%;
-  max-height: 245px;
-}
 .chart-value {
   fill: var(--text);
   font-size: max(var(--tw-type-label-size), var(--font-floor));
@@ -699,14 +683,18 @@ th {
 }
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--tw-space-3);
 }
 .detail-grid > div {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--tw-space-2);
   flex-wrap: wrap;
+  background: var(--soft);
+  border: 1px solid transparent;
+  border-radius: var(--tw-radius-md);
+  padding: var(--tw-space-3);
   font-size: max(var(--tw-type-caption-size), var(--font-floor));
   color: var(--muted);
 }
@@ -718,6 +706,15 @@ th {
 }
 .detail-grid svg {
   color: var(--tw-text-secondary);
+}
+.detail-grid.precip-grid > div {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--tw-space-1);
+}
+.detail-grid.precip-grid > div > span:first-child {
+  color: var(--text);
+  font-weight: var(--tw-type-label-weight);
 }
 .source-notes {
   font-size: max(var(--tw-type-caption-size), var(--font-floor));
@@ -753,6 +750,17 @@ th {
   margin-bottom: 18px;
   flex-wrap: wrap;
   border: 1px solid transparent;
+}
+.notice.link-arrival {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.link-arrival a {
+  text-decoration: underline;
+}
+.link-arrival button {
+  color: inherit;
+  padding: 0.25rem 0.5rem;
 }
 .notice.demo {
   background: var(--tw-accent-subtle);
@@ -1126,17 +1134,21 @@ th {
   max-width: 100%;
 }
 .bar-chart {
+  position: relative;
   display: flex;
-  gap: 13px;
+  gap: var(--tw-space-3);
   align-items: flex-end;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 20px 0 10px;
 }
 .bar-chart > div {
-  min-width: 31px;
+  min-width: 3.5rem;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  white-space: nowrap;
   font-size: max(var(--tw-type-caption-size), var(--font-floor));
   color: var(--muted);
 }
@@ -1149,6 +1161,7 @@ th {
 }
 .bar-chart small {
   font-size: max(var(--tw-type-caption-size), var(--font-floor));
+  white-space: nowrap;
 }
 .daily-air {
   display: flex;
@@ -2311,6 +2324,34 @@ textarea {
   border-radius: var(--tw-radius-md);
   background: var(--tw-border-subtle);
 }
+.chart-plot-wrap {
+  position: relative;
+  --hourly-columns-h: 9rem;
+}
+.chart-y-axis {
+  position: absolute;
+  top: var(--hourly-columns-h);
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.chart-y-tick {
+  position: absolute;
+  left: var(--tw-space-1);
+  transform: translateY(-50%);
+  padding: 0 var(--tw-space-1);
+  border-radius: var(--tw-radius-sm);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--tw-text-secondary);
+  font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
+  line-height: var(--tw-type-chart-axis-leading);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chart-hit {
+  fill: transparent;
+  cursor: pointer;
+}
 .chart-scroll {
   overflow-x: auto;
   overflow-y: hidden;
@@ -2325,10 +2366,13 @@ textarea {
   display: block;
 }
 .hourly-columns {
-  height: 9rem;
+  height: var(--hourly-columns-h);
 }
 .daily-columns {
-  height: 10rem;
+  height: 11.25rem;
+}
+.daily-columns.merged-only {
+  height: 9.75rem;
 }
 .chart-column {
   position: absolute;
@@ -2338,9 +2382,19 @@ textarea {
   justify-content: flex-start;
   gap: var(--tw-space-2);
   text-align: center;
-  padding: var(--tw-space-2);
+  padding: var(--tw-space-2) var(--tw-space-1);
   font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
   line-height: var(--tw-type-chart-axis-leading);
+}
+.chart-day-primary {
+  font-weight: var(--tw-type-label-weight);
+}
+.chart-day-date {
+  font-size: max(var(--tw-type-caption-size), var(--font-floor));
+  color: var(--tw-text-secondary);
+}
+.today-column .chart-day-date {
+  color: inherit;
 }
 .chart-column > span {
   max-width: 100%;
@@ -2407,14 +2461,21 @@ textarea {
   fill: var(--tw-text-primary);
   font-weight: var(--tw-type-chart-value-weight);
 }
-.chart-axis {
-  font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
-  fill: var(--tw-text-secondary);
-}
 .now {
   fill: var(--tw-chart-now);
   stroke: var(--tw-bg-surface);
   stroke-width: 2;
+}
+.hourly-chart .now {
+  fill: none;
+  stroke: var(--tw-chart-now);
+  stroke-width: 2.5;
+}
+.hourly-chart .today-value {
+  fill: var(--tw-chart-today-on);
+}
+.hourly-chart .yesterday-value {
+  fill: var(--tw-chart-yesterday-on);
 }
 .now-line {
   stroke: var(--tw-chart-now);
@@ -2577,6 +2638,14 @@ textarea {
   .now {
     fill: CanvasText;
   }
+  .hourly-chart .now {
+    fill: none;
+    stroke: CanvasText;
+  }
+  .hourly-chart .today-value,
+  .hourly-chart .yesterday-value {
+    fill: Canvas;
+  }
   .hero-card {
     background: Canvas;
     color: CanvasText;
@@ -2675,6 +2744,48 @@ textarea {
 .air-summary .warning-text {
   grid-column: 1 / -1;
 }
+@media (min-width: 768px) {
+  .air-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--tw-space-6);
+    row-gap: var(--tw-space-2);
+    align-items: center;
+    min-height: 0;
+  }
+  .air-summary .section-head {
+    grid-column: 1 / -1;
+    margin-bottom: var(--tw-space-2);
+  }
+  .air-summary .air-orb {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    margin: 0;
+  }
+  .air-summary .air-small-values {
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: flex-start;
+    margin-bottom: 0;
+  }
+  .air-summary > .stamp {
+    grid-column: 2;
+    grid-row: 3;
+    text-align: left;
+  }
+  .air-summary .air-forecast {
+    grid-column: 3;
+    grid-row: 2 / 4;
+    margin: 0;
+    justify-content: flex-end;
+  }
+  .air-summary .empty-state,
+  .air-summary .provider-air-summary,
+  .air-summary .warning-text,
+  .air-summary .source-credit {
+    grid-column: 1 / -1;
+  }
+}
 .air-small-values {
   flex-wrap: wrap;
 }
@@ -2683,17 +2794,15 @@ textarea {
   outline-offset: 3px;
 }
 
-.hourly-chart .today-value {
-  fill: var(--tw-chart-today-on);
-}
-.hourly-chart .yesterday-value {
-  fill: var(--tw-chart-yesterday-on);
-}
-.hourly-chart .current-value {
-  fill: var(--tw-text-primary);
-}
-
 .chart-icon-placeholder {
   width: 1.5rem;
   height: 1.5rem;
+}
+
+.hero-ranked-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
 }

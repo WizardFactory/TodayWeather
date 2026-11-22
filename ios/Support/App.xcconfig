@@ -17,19 +17,18 @@ TW_MAIL_TO =
 // Info.plist as TWPlacesAPIKey. Empty without it: S01 searches the bundled towns instead.
 TW_PLACES_API_KEY_IOS =
 
-// TW_ADMOB_APP_ID_IOS, TW_ADMOB_BANNER_IOS: AdMob's app ID and banner unit (IN-15), written into Info.plist as
-// GADApplicationIdentifier and TWAdMobBannerUnit. Without TW_ADMOB_APP_ID_IOS a Release build carries this
-// placeholder, which no AdMob app has: the Google Mobile Ads SDK stops an app whose GADApplicationIdentifier is empty
-// at launch (GADInvalidInitializationException), and AdsSettings treats the placeholder as missing, so neither UMP nor
-// the Ads SDK starts and no ad is requested.
+// The placeholder lets an unconfigured build launch the SDK-linked app without sending requests.
+// Private.xcconfig supplies the registered iOS app and its native and interstitial units for Release.
 TW_ADMOB_APP_ID_IOS = ca-app-pub-0000000000000000~0000000000
+TW_ADMOB_NATIVE_IOS =
+TW_ADMOB_INTERSTITIAL_IOS =
 
 // Release signing is scoped to the app target so Swift package resource bundles get no provisioning profile.
 CODE_SIGN_STYLE = Automatic
 
 #include? "../Private.xcconfig"
 
-// Debug builds always use Google's documented test app ID and test banner unit, whatever Private.xcconfig holds,
-// as the Cordova builds without --release did (client/scripts/make-client-config.mjs).
+// Use Google's iOS demo units in Debug, including when a private Release configuration is present.
 TW_ADMOB_APP_ID_IOS[config=Debug] = ca-app-pub-3940256099942544~1458002511
-TW_ADMOB_BANNER_IOS[config=Debug] = ca-app-pub-3940256099942544/2435281174
+TW_ADMOB_NATIVE_IOS[config=Debug] = ca-app-pub-3940256099942544/3986624511
+TW_ADMOB_INTERSTITIAL_IOS[config=Debug] = ca-app-pub-3940256099942544/4411468910

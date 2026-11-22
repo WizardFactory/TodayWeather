@@ -84,6 +84,27 @@ struct WeatherTabTests {
         return condition()
     }
 
+    @Test func rankedSummaryUsesTheWeatherRequestAndKeepsAirAccessible() async throws {
+        let text = "최저 -3도, 최고 6도, 입춘"
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let body = try #require(try JSONValue.parse(Self.body("kma-seoul")).objectValue)
+        let current = try #require(body["current"]?.objectValue)
+        let marked = current.setting("summary", .string(text)).setting("summaryForDate", .string(formatter.string(from: Date())))
+        let data = Data(JSONValue.object(body.setting("current", .object(marked))).jsonText.utf8)
+        let f = Fixture { _ in .answer(0.01, data) }
+        f.screens.handle(.launch)
+        #expect(await eventually { f.screens.pageContent?.page.hero?.summary == text })
+        #expect(f.screens.pageContent?.page.hero?.summaryAir == nil)
+        #expect(f.server.requests.count == 1)
+        f.screens.handle(.resume)
+        #expect(f.screens.pageContent?.page.hero?.summary == text)
+        f.screens.perform(.airInfo("aqi"))
+        #expect(f.shell.selected == .air)
+    }
+
     @Test func manualRefreshWaitsForTheSelectedPlacesResponse() async throws {
         let f = Fixture(Self.byPlace(seoul: 0.4))
         #expect(f.shell.selected == .forecast)

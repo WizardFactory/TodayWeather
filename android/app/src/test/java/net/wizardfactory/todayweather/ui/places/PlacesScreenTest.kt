@@ -2,16 +2,29 @@ package net.wizardfactory.todayweather.ui.places
 
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.core.graphics.Insets
@@ -47,6 +60,8 @@ import net.wizardfactory.todayweather.core.storage.Settings
 import net.wizardfactory.todayweather.core.storage.UnitSettings
 import net.wizardfactory.todayweather.core.storage.closeStart
 import net.wizardfactory.todayweather.search.BundledTowns
+import net.wizardfactory.todayweather.ui.air.AirTags
+import net.wizardfactory.todayweather.ui.forecast.ForecastTags
 import net.wizardfactory.todayweather.ui.forecast.PhotoLoader
 import net.wizardfactory.todayweather.ui.forecast.WeatherTabHost
 import net.wizardfactory.todayweather.ui.forecast.forecastTexts
@@ -84,6 +99,7 @@ class PlacesScreenTest {
     private val alarm = Json.parseToJsonElement("""{"cityIndex":1,"id":1,"category":"alarm","enable":true}""") as JsonObject
     private val removed = mutableListOf<Int>()
     private val opened = mutableListOf<String>()
+    private val adVisits = mutableListOf<Tab>()
 
     private class Memory(initial: AppState) : StateAccess {
         val flow = MutableStateFlow(initial)
@@ -108,7 +124,7 @@ class PlacesScreenTest {
     /** While it is set, weather requests wait for it (the rows' loads at entry come before). */
     private var held: CompletableDeferred<Unit>? = null
 
-    private fun show(places: List<Place>, index: Int = 1, startupPage: String = "2", records: List<JsonObject> = emptyList(), device: Device = Device()) {
+    private fun show(places: List<Place>, index: Int = 1, startupPage: String = "2", records: List<JsonObject> = emptyList(), device: Device = Device(), withAd: Boolean = false) {
         memory = Memory(AppState(places = places, placeIndex = index, units = UnitSettings.defaults("KR"), settings = Settings(startupPage = startupPage),
             push = PushState(fcmToken = "t", records = records)).closeStart().copy(placeIndex = index))
         val http = HttpGet { url, _ ->
@@ -134,12 +150,95 @@ class PlacesScreenTest {
                     { listOf("ko-KR") }), device, s, removeAlarms = { removed += it })
             }
             AppContent(state, entries, loading, retry, session, host, "test", onExit = {}, places = places, startTab = Tab.LOCATIONS,
+                nativeAd = if (withAd) ({ tab ->
+                    DisposableEffect(Unit) {
+                        adVisits += tab
+                        onDispose {}
+                    }
+                    val render: @Composable () -> Unit = { Box(Modifier.size(80.dp).testTag("native-placement")) }
+                    render
+                }) else null,
                 openAppSettings = { opened += "app" }, openLocationSettings = { opened += "location" })
         }
         rule.waitForIdle()
     }
 
     private fun modeLabel() = rule.onNodeWithTag(PlacesTags.MODE).fetchSemanticsNode().config[SemanticsProperties.Text].joinToString()
+
+    @Test
+    fun nativeCardFollowsSavedPlacesAndIsAbsentFromSearchAndEdit() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul, busan), withAd = true)
+        val ad = rule.onNodeWithTag("native-placement")
+        val lastRow = rule.onNodeWithTag(PlacesTags.row(2)).getUnclippedBoundsInRoot()
+        assertTrue(ad.getUnclippedBoundsInRoot().top >= lastRow.bottom)
+        rule.onNodeWithTag(PlacesTags.MODE).performClick()
+        ad.assertDoesNotExist()
+        rule.onNodeWithTag(PlacesTags.MODE).performClick()
+        ad.assertExists()
+        rule.onNodeWithTag(PlacesTags.INPUT).performClick()
+        ad.assertDoesNotExist()
+    }
+
+    @Test
+    fun forecastCardsFollowTheirDataInsideEachVerticalScroll() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul), withAd = true)
+        for (tab in listOf(Tab.HOURLY, Tab.DAILY, Tab.AIR)) {
+            rule.onNodeWithTag(ShellTags.tab(tab)).performClick()
+            rule.waitForIdle()
+            val page = if (tab == Tab.AIR) AirTags.PAGE else ForecastTags.PAGE
+            val card = rule.onNode(hasTestTag("native-placement") and hasAnyAncestor(hasTestTag(page)))
+            val anchor = if (tab == Tab.AIR) AirTags.CHART else ForecastTags.block(1)
+            assertTrue("a complete $tab chart precedes its ad",
+                card.getUnclippedBoundsInRoot().top >= rule.onNodeWithTag(anchor).getUnclippedBoundsInRoot().bottom)
+            if (tab == Tab.DAILY) {
+                val details = rule.onNodeWithText(string(R.string.LOC_DETAIL_WEATHER), useUnmergedTree = true)
+                assertTrue("the ad follows the day-details group",
+                    card.getUnclippedBoundsInRoot().top >= details.getUnclippedBoundsInRoot().bottom)
+            }
+        }
+    }
+
+    @Test
+    fun menuReturnResumesTheCoveredPlacementWhileTabAndCityChangesStartNewVisits() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul, busan), withAd = true)
+        val ad = rule.onNodeWithTag("native-placement")
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        ad.assertDoesNotExist()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        ad.assertExists()
+        assertEquals(listOf(Tab.LOCATIONS), adVisits)
+
+        rule.onNodeWithTag(ShellTags.tab(Tab.HOURLY)).performClick()
+        rule.waitForIdle()
+        rule.runOnIdle { memory.change { it.copy(placeIndex = 2) } }
+        rule.waitForIdle()
+        rule.onNodeWithTag(ShellTags.tab(Tab.LOCATIONS)).performClick()
+        rule.waitForIdle()
+        assertEquals(listOf(Tab.LOCATIONS, Tab.HOURLY, Tab.HOURLY, Tab.LOCATIONS), adVisits)
+    }
+
+    @Test
+    fun closingMenuAtEndOfDailyKeepsTheFilledCardAndReadingPosition() {
+        show(listOf(Place.currentPositionPlaceholder(), seoul), withAd = true)
+        rule.onNodeWithTag(ShellTags.tab(Tab.DAILY)).performClick()
+        val scroll = rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+        scroll.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 100_000f) }
+        rule.waitForIdle()
+        fun offset() = scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        val before = offset()
+        assertTrue(before > 0f)
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.onNodeWithTag("native-placement").assertDoesNotExist()
+        rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
+        rule.onNodeWithTag("native-placement").assertExists()
+        assertEquals(before, offset())
+    }
+
+    @Test
+    fun emptyPlacesHasNoNativeCard() {
+        show(listOf(Place.currentPositionPlaceholder()), index = 0, withAd = true)
+        rule.onNodeWithTag("native-placement").assertDoesNotExist()
+    }
 
     @Test
     fun theRowsShowTheirPlacesAndTheBellsOfTheVisit() {

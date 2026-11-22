@@ -8,6 +8,8 @@ import android.util.Log
 import com.google.android.gms.ads.MobileAds
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.google.android.ump.UserMessagingPlatform
 
 /** A consent form loaded to be shown once. */
@@ -99,6 +101,11 @@ class AdsConsent(
     private val track: (String, Map<String, Any?>) -> Boolean,
     private val onReady: () -> Unit,
 ) {
+    private val requestAllowed = MutableStateFlow(false)
+    val allowed = requestAllowed.asStateFlow()
+    private var privacyActivity: Activity? = null
+    internal val nativeAllowed: Boolean get() = privacyActivity == null && allowed.value
+    private var sdkReady = false
     private var requested = false
     private var updated = false
     private var formDone = false
@@ -135,6 +142,7 @@ class AdsConsent(
     fun stop(activity: Activity) {
         if (current === activity) current = null
         if (formActivity === activity) formActivity = null
+        if (privacyActivity === activity) privacyActivity = null
     }
 
     /** The plugin's `handleConsentForm`: the form when consent is required, loaded, then shown. */
@@ -174,23 +182,48 @@ class AdsConsent(
      * 광고 개인정보 선택: the privacy options form where one is required; otherwise, or when it cannot show,
      * [onUnavailable] (`LOC_AD_PRIVACY_UNAVAILABLE`). A changed consent may allow the SDK to start.
      */
-    fun openPrivacyOptions(activity: Activity, onUnavailable: () -> Unit) {
-        try {
-            if (!platform.privacyOptionsRequired()) return onUnavailable()
-            platform.showPrivacyOptionsForm(activity) { shown ->
-                if (!shown) {
-                    Log.w(TAG, "privacy ad_choices form_unavailable")
-                    onUnavailable()
-                }
+    fun openPrivacyOptions(activity: Activity, onNativeEligibilityChanged: () -> Unit = {}, onUnavailable: () -> Unit) {
+        if (privacyActivity != null) return
+        val required = try {
+            platform.privacyOptionsRequired()
+        } catch (_: Exception) {
+            false
+        }
+        if (!required) return onUnavailable()
+
+        // UMP can keep canRequestAds() true across a personalization change. Discard the old cards before showing it.
+        privacyActivity = activity
+        onNativeEligibilityChanged()
+        var settled = false
+        fun finish(shown: Boolean) {
+            if (settled || privacyActivity !== activity) return
+            settled = true
+            fellBack = false
+            val updated = try {
                 startIfAllowed()
+                true
+            } catch (_: Exception) {
+                requestAllowed.value = false
+                false
             }
-        } catch (e: Exception) {
-            onUnavailable()
+            privacyActivity = null
+            onNativeEligibilityChanged()
+            if (!shown || !updated) {
+                Log.w(TAG, "privacy ad_choices form_unavailable")
+                onUnavailable()
+            }
+        }
+        try {
+            platform.showPrivacyOptionsForm(activity, ::finish)
+        } catch (_: Exception) {
+            finish(false)
         }
     }
 
     private fun startIfAllowed() {
-        if (platform.canRequestAds()) startSdk()
+        val consent = platform.canRequestAds()
+        if (consent) startSdk()
+        requestAllowed.value = sdkReady && (consent || fellBack)
     }
 
     private fun consentFailed(reason: String) {
@@ -205,7 +238,11 @@ class AdsConsent(
     private fun startSdk() {
         if (started) return
         started = true
-        platform.startSdk(onReady)
+        platform.startSdk {
+            sdkReady = true
+            requestAllowed.value = platform.canRequestAds() || fellBack
+            onReady()
+        }
     }
 
     companion object {

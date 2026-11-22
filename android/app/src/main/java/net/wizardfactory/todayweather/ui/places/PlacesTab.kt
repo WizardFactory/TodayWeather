@@ -150,7 +150,7 @@ private class PlacesColors(val page: Color, val row: Color, val border: Color, v
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme: Theme, page: PlacesPage, host: PlacesHost, onSelect: (Int) -> Unit,
-                      onAdded: () -> Unit, onAlarm: (Int) -> Unit = {}): TabContent {
+                      onAdded: () -> Unit, onAlarm: (Int) -> Unit = {}, nativeAd: (@Composable () -> Unit)? = null): TabContent {
     val colors = PlacesColors.of(theme)
     var headerHeight by remember { mutableStateOf(44.dp) }
     var editing by rememberSaveable { mutableStateOf(false) }
@@ -303,6 +303,7 @@ fun rememberPlacesTab(state: AppState, entries: Map<String, WeatherEntry>, theme
                             first = false
                         }
                     }
+                    if (!editing && rows.any { !it.disabled }) nativeAd?.invoke()
                 }
             }
         },

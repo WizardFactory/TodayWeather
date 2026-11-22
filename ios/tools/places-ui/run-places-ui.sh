@@ -109,7 +109,7 @@ keep = set()
 for test in manifest:
     for a in test.get("attachments", []):
         name, file = a.get("suggestedHumanReadableName", ""), a.get("exportedFileName", "")
-        if file.endswith(".png") or name.split("_")[0] in ("before-drag", "after-drag", "pull-refresh-hourly", "after-header-swipe", "busan-hourly",
+        if name.startswith("selected-") or file.endswith(".png") or name.split("_")[0] in ("before-drag", "after-drag", "pull-refresh-hourly", "after-header-swipe", "busan-hourly",
                                                             "london-hourly", "swiped-to-busan", "places-list", "after-delete"):
             target = name.split("_")[0] + ".png"
             os.replace(os.path.join(d, file), os.path.join(d, target))

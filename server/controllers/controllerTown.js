@@ -2153,7 +2153,7 @@ function ControllerTown() {
      * @param res
      * @returns {string}
      */
-    this.makeSummary = function(current, yesterday, units, res) {
+    this.makeSummary = function(current, yesterday, units, res, rank) {
         var str = "";
         var item;
         var itemList = [];
@@ -2169,7 +2169,7 @@ function ControllerTown() {
             if (obj.grade <= 2) {
                 obj.grade = 2.5;
             }
-            item = {str: obj.str, grade: obj.grade};
+            item = {kind: 'change', str: obj.str, grade: obj.grade};
             itemList.push(item);
         }
 
@@ -2178,13 +2178,13 @@ function ControllerTown() {
             if (current.weatherType > 3) {
                 tmpGrade = 3;
             }
-            item = {str: current.weather, grade: tmpGrade};
+            item = {kind: 'weather', str: current.weather, grade: tmpGrade};
             itemList.push(item);
         }
 
         if (current.hasOwnProperty('specialInfo')) {
             var obj = current.specialInfo[0];
-            item = {str: obj.weatherStr+obj.levelStr, grade: obj.weather+5};
+            item = {kind: 'warning', str: obj.weatherStr+obj.levelStr, grade: obj.weather+5};
             itemList.push(item);
         }
 
@@ -2212,7 +2212,7 @@ function ControllerTown() {
         }
 
         if (tmpGrade > 0) {
-            item = {str: str, grade: tmpGrade};
+            item = {kind: 'air', str: str, grade: tmpGrade};
             itemList.push(item);
         }
 
@@ -2232,21 +2232,21 @@ function ControllerTown() {
             }
 
             current.rn1Str = current.rn1 + units.precipitationUnit;
-            item = {str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
+            item = {kind: 'precipitation', str: current.ptyStr + " " + current.rn1Str, grade: current.rn1+3};
             itemList.push(item);
         }
 
         if (current.dsplsGrade && current.dsplsGrade && current.t1h >= 20) {
             tmpGrade = current.dsplsGrade;
             str = ts.__('LOC_DISCOMFORT_INDEX') + " " + current.dsplsStr;
-            item = {str:str, grade: tmpGrade};
+            item = {kind: 'discomfort', str:str, grade: tmpGrade};
             itemList.push(item);
         }
 
         if (current.sensorytem && current.sensorytem !== current.t1h) {
             diffTemp = Math.round(current.sensorytem - current.t1h);
             str = ts.__('LOC_FEELS_LIKE') + ' ' + current.sensorytem +"˚";
-            item = {str : str, grade: Math.abs(diffTemp)};
+            item = {kind: 'feels', str : str, grade: Math.abs(diffTemp)};
             itemList.push(item);
         }
 
@@ -2264,13 +2264,13 @@ function ControllerTown() {
                 tmpGrade++;
             }
             str = ts.__('LOC_UV') +' '+current.ultrvStr;
-            item = {str:str, grade: tmpGrade};
+            item = {kind: 'uv', str:str, grade: tmpGrade};
             itemList.push(item);
         }
 
         if (current.wsdGrade && current.wsdStr) {
             //약함(1)을 보통으로 보고 보정 1함.
-            item = {str: current.wsdStr, grade: current.wsdGrade+1};
+            item = {kind: 'wind', str: current.wsdStr, grade: current.wsdGrade+1};
             itemList.push(item);
         }
 
@@ -2282,6 +2282,8 @@ function ControllerTown() {
         // }
 
         //감기
+
+        if (rank) return rank(itemList);
 
         itemList.sort(function (a, b) {
             if(a.grade > b.grade){

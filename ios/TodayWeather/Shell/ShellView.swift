@@ -49,6 +49,7 @@ struct ShellInsets: Equatable {
 /// `startVersion` asks for it, otherwise the shell.
 struct RootView: View {
     let launch: AppLaunch
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
         Group {
@@ -58,15 +59,20 @@ struct RootView: View {
                     // S01 (IN-10), created with the shell while the start gate holds.
                     if let start = launch.startPage { StartView(page: start) } else { SplashView() }
                 case .tab: ShellView(model: shell, content: { launch.tabContent($0) },
-                                     banner: Monetization.shared.bannerView,
                                      page: launch.pageView)
+                        .environment(\.forecastNativeAds, launch.pageScreen == nil ? Monetization.shared.nativeAds : nil)
+                        .environment(\.forecastChartRead, { tab in Monetization.shared.chartRead(tab) })
                 }
             } else {
                 SplashView()
             }
         }
-        // IN-15: the banner's session starts with the window, and a new width loads a new banner.
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { Monetization.shared.windowWidthChanged($0) }
+        .onChange(of: phase, initial: true) { _, phase in
+            if phase == .active {
+                Monetization.shared.refreshEligibility()
+                Monetization.shared.nativeAds?.prepareSpare()
+            }
+        }
         .task { launch.start(); Monetization.shared.uiStarted() }
     }
 }
@@ -115,7 +121,7 @@ struct CordovaChromeTextSize: ViewModifier {
 }
 
 /// The frame every screen shares (IN-07): the page of the selected tab under its header bar, the bottom tab bar, the
-/// full-screen side menu, the popups and the reserved slot for the bottom banner (IN-15), laid out as the Cordova iOS
+/// full-screen side menu, the popups, laid out as the Cordova iOS
 /// build: the status bar in the theme's color (`applyIOSStatusBar`) above the WebView's area; the tab bar reaching the
 /// bottom edge with the home indicator's inset inside it (Ionic `.tabs` `padding-bottom: env(safe-area-inset-bottom)`);
 /// the header bar keeping the side insets clear.
@@ -123,17 +129,13 @@ struct ShellView: View {
     let model: ShellModel
     /// The page of a tab; IN-08 and later give it. Nil (or nil for a tab): the shell's default.
     var content: ((ShellTab) -> TabContent?)? = nil
-    /// The banner while it shows (IN-15). The slot is under the tab bar, above the home indicator, as the AdMob plugin
-    /// put it (`EmiBannerManager.updateBannerLayout`: the WebView ends at the banner's top, the banner sits on the
-    /// home indicator's inset, black below and beside it).
-    var banner: AnyView? = nil
     /// A page over the tabs and the tab bar, from the status bar down, in the given insets (IN-12's settings pages); nil
     /// while none shows.
     var page: ((ShellInsets) -> AnyView?)? = nil
 
     var body: some View {
         GeometryReader { geometry in
-            ShellFrame(model: model, insets: .live(geometry.safeAreaInsets), content: content, banner: banner, page: page)
+            ShellFrame(model: model, insets: .live(geometry.safeAreaInsets), content: content, page: page)
                 .ignoresSafeArea()
         }
         // `KeyboardResize` false (config.xml): the keyboard covers the page; the tab bar and the layout stay.
@@ -147,28 +149,17 @@ struct ShellFrame: View {
     let model: ShellModel
     let insets: ShellInsets
     var content: ((ShellTab) -> TabContent?)? = nil
-    var banner: AnyView? = nil
     var page: ((ShellInsets) -> AnyView?)? = nil
-    /// The banner with the strip below it (IN-15).
-    @State private var bannerHeight: CGFloat = 0
-
-    /// The insets inside the WebView: with a banner the WebView no longer reaches the home indicator.
-    private var webViewInsets: ShellInsets {
-        banner == nil ? insets : ShellInsets(statusBar: insets.statusBar, top: insets.top, bottom: 0, leading: insets.leading,
-                                             trailing: insets.trailing)
-    }
-
     var body: some View {
         let colors = ShellColors.of(model.theme, tab: model.selected)
         let catalog = Catalog(code: model.locale.catalog)
         let tab = content.flatMap { $0(model.selected) } ?? defaultContent(model.selected)
-        // A page over the tabs is in the WebView too: with a banner it ends at the banner's top (IN-15).
-        let over = page.flatMap { $0(webViewInsets) }
+        let over = page.flatMap { $0(insets) }
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 colors.statusBar.color.frame(height: insets.statusBar)
                 ZStack(alignment: .top) {
-                    tab.page.frame(maxWidth: .infinity, maxHeight: .infinity)
+                    tab.page.modifier(ForecastNativeVisitHost()).id(model.adVisit).frame(maxWidth: .infinity, maxHeight: .infinity)
                         .environment(\.shellInsets, insets)
                         .accessibilityIdentifier("shell-page-\(model.selected.rawValue)")
                     HeaderBar(colors: colors, title: tab.title, titleAccessory: tab.titleAccessory, titleView: tab.titleView,
@@ -178,34 +169,25 @@ struct ShellFrame: View {
                 // The WebView's area: a page scrolled up must not draw over the status bar (IN-18, seen in the manual's
                 // captures of S03 and S05 scrolled down).
                 .clipped()
-                TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: webViewInsets,
+                TabBar(selected: model.selected, colors: colors, catalog: catalog, insets: insets,
                        onTap: model.tapTab)
                     .modifier(CordovaChromeTextSize())
-                if let banner {
-                    // IN-15: black below the banner, over the home indicator's inset (the plugin's root view).
-                    banner.frame(maxWidth: .infinity).padding(.bottom, insets.bottom).background(Color.black)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bannerHeight = $0 }
-                        .accessibilityIdentifier("shell-banner")
-                }
             }
             .accessibilityHidden(over != nil)
-            if let over { over.padding(.bottom, banner == nil ? 0 : bannerHeight) }
+            if let over { over }
             // The menu covers the WebView's area; the status bar keeps the tab's color (Cordova does not change it).
-            // With a banner the WebView, and so the menu and the popups, end at the banner's top (IN-15).
             GeometryReader { area in
-                SideMenu(model: model, catalog: catalog, insets: webViewInsets)
+                SideMenu(model: model, catalog: catalog, insets: insets)
                     .offset(x: model.menuOpen ? 0 : -area.size.width)
                     .animation(.easeInOut(duration: 0.2), value: model.menuOpen)
                     .accessibilityHidden(!model.menuOpen)
             }
             .padding(.top, insets.statusBar)
-            .padding(.bottom, banner == nil ? 0 : bannerHeight)
             if let overlay = tab.overlay {
-                overlay.padding(.top, insets.statusBar).padding(.bottom, banner == nil ? 0 : bannerHeight)
+                overlay.padding(.top, insets.statusBar)
             }
             if let popup = model.popups.first {
                 IonicPopupView(popup: popup, onTap: model.tapPopupButton).padding(.top, insets.statusBar)
-                    .padding(.bottom, banner == nil ? 0 : bannerHeight)
             }
         }
         .background(CssColor(0xF5F5F5).color)
@@ -352,9 +334,10 @@ struct TabBar: View {
         HStack(alignment: .top, spacing: 0) {
             ForEach(ShellTab.allCases, id: \.self) { tab in
                 let on = tab == selected
+                let ink = (on ? colors.tabSelected : colors.tabText).color
                 Button { onTap(tab) } label: {
                     VStack(spacing: 0) {
-                        Text(Glyphs.tab(tab, selected: on))
+                        Text(Glyphs.tab(tab))
                             .font(Glyphs.ionicons(ShellMetrics.tabGlyph))
                             .frame(height: ShellMetrics.tabGlyphLine)
                         Text(catalog(tab.textKey))
@@ -366,7 +349,7 @@ struct TabBar: View {
                             // WebKit's 14 pt line puts the label 2 px (at 3x) higher than SwiftUI centers it.
                             .offset(y: ShellMetrics.tabLabelBaseline)
                     }
-                    .foregroundStyle(colors.tabText.color)
+                    .foregroundStyle(ink)
                     .frame(maxWidth: .infinity, minHeight: ShellMetrics.tabItemHeight, alignment: .top)
                     .padding(.horizontal, 2)
                     .contentShape(Rectangle())
@@ -374,6 +357,15 @@ struct TabBar: View {
                 .buttonStyle(.plain)
                 .opacity(on ? 1 : 0.7)
                 .frame(maxWidth: ShellMetrics.tabItemMaxWidth)
+                .overlay(alignment: .top) {
+                    if on {
+                        Capsule().fill(ink)
+                            .frame(width: 24, height: 2.5)
+                            .offset(y: -1)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .accessibilityIdentifier("shell-tab-\(tab.rawValue)")
                 .accessibilityAddTraits(on ? .isSelected : [])
             }

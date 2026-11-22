@@ -17,12 +17,17 @@ read-only requests to the legacy weather server; place search uses Google Places
 the capture time. Images are reduced to 720 pixels wide and a 256-color palette without replacing screen content. The
 banners are Google's test ads of a Debug build; whether one loaded varies between pages.
 
-The [four main tabs](main-tabs/manual.pdf) supplement shows the updated layout with a saved Seoul forecast. Its [editable source](main-tabs/manual.json) uses full-screen captures from an iPhone 17 Pro simulator, including the system status bar.
+The [four main tabs](main-tabs/manual.pdf) supplement shows each tab with Seoul saved. Look for the short line above the selected tab. The line, outline icon and label share the theme’s accent color. The [editable source](main-tabs/manual.json) includes full-screen captures from an iPhone 16 simulator.
 
 The saved-place search and nationwide wind screenshots were refreshed on 18 November 2026 with fixture data. The wind screenshot uses the next larger text size.
 
-The pull-to-refresh page uses a Korean hourly forecast from an offline test fixture. Its screenshot shows the
-updated tab bar. Earlier weather screenshots retain the reload icon used by the November 17 build.
+The pull-to-refresh page uses a Korean hourly forecast from an offline test fixture. Its screenshot predates the accent line. Earlier weather screenshots retain the reload icon used by the November 17 build.
+
+## Ads in weather and saved places
+
+Each weather tab shows its forecast or air information first. An available native ad appears in the scrolling content. Saved Places shows a larger card after the list and hides it during search and editing. Earlier screenshots in the main manual show the previous fixed banner. [Four placement examples](forecast-ads/manual.pdf) · [Editable guide](forecast-ads/manual.json) · [Capture details](forecast-ads/provenance.json)
+
+The first Hourly and first Daily visit each day open immediately. After reading beyond a chart, tapping the other forecast tab on a repeat visit has a 10% chance of showing a ready full-screen ad. The two tabs share a limit of one display per local day across saved places. Dismissing the ad opens the tab you selected.
 
 ## Read the current temperature
 

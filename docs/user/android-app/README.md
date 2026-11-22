@@ -2,11 +2,18 @@
 
 [Read the PDF](manual.pdf) · [Editable source](manual.json) · [Capture provenance](provenance.json)
 
+The [forecast advertising supplement](forecast-ads/manual.pdf) shows the Android
+native cards on Hourly, Daily, Locations and AQI. Its four device captures from
+18 November replace the older manual’s bottom-banner depiction for those pages.
+The [editable supplement](forecast-ads/manual.json) and [capture record](forecast-ads/provenance.json)
+identify the Android 14 Google Play emulator, sample ads and saved Seoul fixture.
+
 This is the **native Kotlin / Jetpack Compose app**, version 2.0.0 preview. Its
 45 illustrated steps cover first launch and permissions, current location,
 hourly/daily charts, air quality and stations, saved places, alarms, units,
 startup/refresh settings, themes, nationwide information, privacy, sharing and exit.
 The app screens are Korean; the instructions are English with Korean control labels.
+The [home-screen widget guide](widgets/README.md) covers configuration, resizing, the five-day visit interval and recovery.
 The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1.
 
 The original 44 screenshots were captured from the running native app on 15 November 2026

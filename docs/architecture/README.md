@@ -2,7 +2,7 @@
 
 This is a source-based analysis of TodayWeather and TodayAir at commit `b9795125a1b7dc8a4f7602d4612a6be7d79413ad`, prepared on 2026-09-20. It combines checked-out implementation analysis with authorized read-only AWS inspection on the same date. Control-plane settings and deployed Lambda source were inspected. The service EC2 was subsequently inspected over authorized read-only SSH; separate gather/Mongo host internals, provider availability and end-to-end responses remain unverified.
 
-Product status update: AK confirmed on **2026-09-28** that TodayAir is retired. See [product lifecycle](service-overview.md#product-lifecycle); historical source descriptions do not imply continued operation.
+See the [product lifecycle](service-overview.md#product-lifecycle) for AK’s 2026-11-20 operating scope, the server1-to-server2 direction and retired clients. The [#3050 plan](../../plans/issue-3050.md) applies that scope to Korean solar terms.
 
 ## Reading order
 
@@ -96,6 +96,7 @@ Use `architecture` for collection and `sequence` for mobile requests. Architectu
 - [Visual Crossing deployment checklist](../operations/visual-crossing-deploy.md): overseas weather (#2585) host configuration, `VC_SECRET_KEY`/`VC_DAILY_RECORD_LIMIT`, post-deploy smoke, usage and log monitoring, retention, kill switch and rollback.
 - [Gather runtime policy](../operations/gather-runtime-policy.md): `GATHER_*` environment variables for retry counts, retry delay, task flags and the KAQ minimum (#2588), production values, operator procedure and remaining host-only drift.
 - [Static web client](web-client.md): responsive PWA, direct existing-API reads, local persistence and S3/CloudFront deployment boundaries.
+- [Deep-link edge fallback](deeplink-edge.md): dedicated link host, association files and browser routing.
 
 The opt-in [S3 push coordinator](push-s3-design.md) has a separate [interactive diagram](diagrams/push-s3-proposal.html) and [Archify source](diagrams/push-s3-proposal.json); it is repository implementation, not a deployed-topology claim.
 

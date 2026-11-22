@@ -4,6 +4,9 @@
 var path = require('path');
 var spawnSync = require('child_process').spawnSync;
 var commands = [
+    [path.join(__dirname, 'solar-terms.test.js')],
+    [path.join(__dirname, 'solar-term-summary.test.js')],
+    [path.join(__dirname, 'solar-term-summary-smoke.js')],
     [path.join(__dirname, 'town-geocode-coordinates.test.js')],
     [path.join(__dirname, 'credential-free-load.test.js')],
     [path.join(__dirname, 'payment-removal.test.js')],

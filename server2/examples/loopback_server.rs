@@ -41,6 +41,8 @@ fn builtins(args: &[String]) -> Builtins {
         waqi: UNREACHABLE.into(),
         kakao: UNREACHABLE.into(),
         google: UNREACHABLE.into(),
+        solar_archive: UNREACHABLE.into(),
+        gwanbo: UNREACHABLE.into(),
         ..Builtins::production()
     };
     let mut pairs = args.chunks(2);
@@ -59,6 +61,8 @@ fn builtins(args: &[String]) -> Builtins {
             "--waqi" => builtins.waqi = value,
             "--kakao" => builtins.kakao = value,
             "--google" => builtins.google = value,
+            "--solar-archive" => builtins.solar_archive = value,
+            "--gwanbo" => builtins.gwanbo = value,
             "--geocoder-daily-units" => {
                 let units = value.parse().unwrap_or_else(|_| usage());
                 builtins.geocoder_daily_units = [units, units];

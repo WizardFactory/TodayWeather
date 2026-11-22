@@ -17,6 +17,7 @@ var express = require('express');
 var format = require('../lib/geocoder/format');
 var transport = require('../lib/geocoder/transport');
 var weatherUnavailable = require('../lib/weatherUnavailable');
+var airConfig = require('../config/air');
 
 var DEFAULT_WEATHER_VERSION = 'v000901';
 var OWN_PATH = /^\/(?:weather|geocode)(?:\/|$)/;
@@ -172,6 +173,10 @@ function createGatewayRouter(deps) {
         return require('../lib/geocoder').getDefaultGeocoder();
     };
     var loopback = deps.loopback || null;
+    var airForecast = deps.airForecast || (airConfig.coordinateForecastEnabled ?
+        require('../lib/air/coordinateForecast').defaultService() : undefined);
+    var pollenForecast = deps.pollenForecast || (airConfig.pollenMonthlyRequestCap ?
+        require('../lib/pollen/coordinateForecast').defaultService(airConfig.pollenMonthlyRequestCap) : undefined);
     var maxInflight = deps.maxInflight || positiveInt(process.env.GATEWAY_MAX_INFLIGHT, 40);
     var deadlineMs = deps.deadlineMs || 9000;
     var attemptMs = deps.attemptMs || 3000;
@@ -196,7 +201,16 @@ function createGatewayRouter(deps) {
     }
 
     function sendJson(res, body, maxAge) {
-        res.set('Cache-Control', 'max-age=' + maxAge);
+        res.vary('Accept-Language');
+        // Date- or edition-sensitive summaries must revalidate, including at KST midnight.
+        // Express calculates the ETag from the final JSON after geo fields have been merged.
+        var cacheControl = 'no-store';
+        if (maxAge !== undefined) {
+            var marked = body && body.current && body.current.summaryForDate;
+            var ttl = marked ? Math.min(maxAge, require('../lib/solarTerms/summaryCache').remainingSeconds(marked, Date.now())) : maxAge;
+            cacheControl = 'max-age=' + ttl + (marked ? ', must-revalidate' : '');
+        }
+        res.set('Cache-Control', cacheControl);
         res.json(body);
     }
 
@@ -319,7 +333,33 @@ function createGatewayRouter(deps) {
             return getGeocoder().coord(loc, lang, {signal: ctx.signal}).then(function (geo) {
                 noteGeo(ctx, geo);
                 return fetchBackend(backendPath(version, geo) + query, lang, ctx).then(function (body) {
-                    return {body: format.mergeIntoWeather(body, geo), maxAge: WEATHER_MAX_AGE};
+                    var merged = format.mergeIntoWeather(body, geo);
+                    if (airForecast && version === 'v000903' && geo.country !== 'KR') {
+                        merged.airForecastAvailable = true;
+                    }
+                    if (pollenForecast && version === 'v000903' && pollenForecast.supports(geo.country)) {
+                        merged.pollenForecastAvailable = true;
+                    }
+                    return {body: merged, maxAge: WEATHER_MAX_AGE};
+                });
+            });
+        };
+    }
+
+    function coordinateForecast(supports, fetch) {
+        return function (req, ctx) {
+            ctx.info.version = req.params.version;
+            var loc = parseLoc(req.params.loc);
+            var lang = format.languageFromHeader(req.headers['accept-language']);
+            return getGeocoder().coord(loc, lang, {signal: ctx.signal}).then(function (geo) {
+                noteGeo(ctx, geo);
+                if (ctx.expired || !supports(geo.country)) {
+                    return {body: {available: false}};
+                }
+                return new Promise(function (resolve) {
+                    fetch({lat: loc[0], lon: loc[1]}, geo.country, new Date(), function (result) {
+                        resolve({body: result || {available: false}});
+                    });
                 });
             });
         };
@@ -351,6 +391,14 @@ function createGatewayRouter(deps) {
     var router = express.Router({caseSensitive: true});
     router.get('/weather/coord/:loc', guarded('weather', weather(DEFAULT_WEATHER_VERSION)));
     router.get('/weather/:version(v000901|v000902|v000903)/coord/:loc', guarded('weather', weather()));
+    if (airForecast) {
+        router.get('/weather/:version(v000903)/coord/:loc/air-forecast', guarded('weather-air-forecast',
+            coordinateForecast(function (country) { return country !== 'KR'; }, airForecast)));
+    }
+    if (pollenForecast) {
+        router.get('/weather/:version(v000903)/coord/:loc/pollen-forecast', guarded('weather-pollen-forecast',
+            coordinateForecast(pollenForecast.supports, pollenForecast.fetch)));
+    }
     router.get('/geocode/:version(v000903)/coord/:loc', guarded('geocode-coord', geocodeCoord));
     router.get('/geocode/:version(v000901|v000903)/addr/*', guarded('geocode-addr', geocodeAddr));
 

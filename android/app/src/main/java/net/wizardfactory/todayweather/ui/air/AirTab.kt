@@ -1,7 +1,7 @@
 package net.wizardfactory.todayweather.ui.air
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,7 +50,8 @@ import net.wizardfactory.todayweather.ui.shell.line
  */
 @Composable
 fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme, host: WeatherTabHost,
-                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}, locating: Boolean = false): TabContent {
+                   code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}, locating: Boolean = false,
+                   nativeAd: (@Composable () -> Unit)? = null): TabContent {
     val metrics = rememberScreenMetrics()
     val texts = host.texts
     val airUnit = state.units.airUnit
@@ -79,7 +80,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
     var taps by remember(visit) { mutableIntStateOf(0) }
     val page = remember(applied, taps, texts, airUnit) { AirPage(visit, texts) }
     val content = remember(page, metrics) { AirContent(page, metrics, visit.airChart, visit.standard, texts["LOC_HOUR"]) }
-    val scroll = remember(visit) { ScrollState(0) }
+    val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     var source by remember(visit) { mutableStateOf<String?>(null) }
     val loadingSelected = place != null && (WeatherRepository.key(place) in loading || place.currentPosition && locating)
@@ -124,7 +125,7 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
                         else -> {}
                     }
                 },
-                scrollState = scroll)
+                scrollState = scroll, nativeAd = nativeAd)
         },
         popups = { source?.let { s -> SourceDialog(s, texts) { source = null } } },
     )

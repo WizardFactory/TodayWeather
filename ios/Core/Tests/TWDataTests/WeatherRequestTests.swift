@@ -226,6 +226,32 @@ struct WeatherRequestTests {
         #expect(again.loading.isEmpty)
     }
 
+    @Test func datedSummaryKeepsItsRequestWhenReopeningOffline() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-summary-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let original = try #require(try JSONValue.parse(WeatherFixtures.body("kma-seoul")).objectValue)
+        let current = try #require(original["current"]?.objectValue)
+        let marked = current.setting("summary", "calendar").setting("summaryForDate", "2026-02-04")
+        let body = Data(JSONValue.object(original.setting("current", .object(marked))).jsonText.utf8)
+        let clock = VirtualClock()
+        let http = ScriptedWeatherHTTP(clock: clock) { _ in .answer(0, body) }
+        let live = WeatherRepository(baseURL: Self.server, cacheDirectory: dir, http: http, clock: clock)
+        guard case .loaded = await live.load(seoul, units: koreanUnits, acceptLanguage: "ko", force: true) else {
+            Issue.record("failed to load marked fixture"); return
+        }
+        let offline = WeatherRepository(baseURL: nil, cacheDirectory: dir, http: http, clock: clock)
+        let cached = try #require(offline.cached(seoul))
+        func summary(_ place: Place, _ units: UnitSettings, _ language: String) -> String? {
+            cityRecord(place, cached, summaryRequest: WeatherRepository.summaryRequest(place, units, language))["currentWeather"]?["summary"]?.stringValue
+        }
+        var fahrenheit = koreanUnits
+        fahrenheit.temperatureUnit = "F"
+        #expect(summary(seoul, koreanUnits, "ko") == "calendar")
+        #expect(summary(seoul, koreanUnits, "en") == nil)
+        #expect(summary(seoul, fahrenheit, "ko") == nil)
+        #expect(summary(london, koreanUnits, "ko") == nil)
+    }
+
     /// A02: fields a response leaves out keep their old value; the entry is cached and read back by a new repository (a
     /// cold start shows the last weather while it loads).
     @Test func mergeAndCache() async throws {
@@ -246,6 +272,71 @@ struct WeatherRequestTests {
         let cold = WeatherRepository(baseURL: Self.server, cacheDirectory: dir, http: http, clock: clock)
         #expect(cold.cached(seoul)?.weather.jsonValue.jsonText == entry.weather.jsonValue.jsonText)
         #expect(cold.canLoad(seoul), "the gate lives in memory: a new process loads at once")
+    }
+
+    @Test func readCoordinateAirForecastOnlyFromLiveWeather() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("tw-air-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let place = Place(currentPosition: false, disable: false, name: "London", location: Location(lat: 51.51, long: -0.13))
+        let clock = VirtualClock()
+        let at = ISO8601DateFormatter()
+        at.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var weather = try #require(JSONValue.parse(WeatherFixtures.body("vc-london")).objectValue)
+        weather["airForecastAvailable"] = .bool(true)
+        let forecast = """
+        {"source":"google","attribution":"Source: Includes air quality data from Google",
+         "retrievedAt":"\(at.string(from: clock.now))",
+         "rows":[{"at":"\(at.string(from: clock.now.addingTimeInterval(3600)))","pollutants":{"pm25":0},"indexes":{"uaqi":75}}]}
+        """
+        let weatherData = Data(JSONValue.object(weather).jsonText.utf8)
+        let forecastData = Data(forecast.utf8)
+        let http = ScriptedWeatherHTTP(clock: clock) { url in
+            .answer(0, url.path.hasSuffix("/air-forecast") ? forecastData : weatherData)
+        }
+        let repository = WeatherRepository(baseURL: Self.server, cacheDirectory: dir, http: http, clock: clock)
+        guard case .loaded(_, let entry, let loaded) = await repository.load(place, units: koreanUnits, acceptLanguage: "en", force: true) else {
+            Issue.record("No weather for London"); return
+        }
+        let air = try #require(await repository.coordinateAirForecast(entry, place: loaded, acceptLanguage: "en"))
+        #expect(air.source == "google")
+        #expect(air.timeZoneId == "Europe/London")
+        #expect(air.rows.first?["pollutants"]?["pm25"]?.numberValue?.double == 0)
+        #expect(http.attempts.count == 2)
+        #expect(http.attempts.last?.url.path.hasSuffix("/weather/v000903/coord/51.51,-0.13/air-forecast") == true)
+        let cold = WeatherRepository(baseURL: Self.server, cacheDirectory: dir, http: http, clock: clock)
+        let cached = try #require(cold.cached(place))
+        #expect(!cached.coordinateAirForecastAvailable)
+        #expect(await cold.coordinateAirForecast(cached, place: place, acceptLanguage: "en") == nil)
+        #expect(http.attempts.count == 2)
+    }
+    @Test func readCoordinatePollenWithReportedUtcDay() async throws {
+        let clock = VirtualClock()
+        let at = ISO8601DateFormatter()
+        at.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var weather = try #require(JSONValue.parse(WeatherFixtures.body("vc-london")).objectValue)
+        weather["pollenForecastAvailable"] = .bool(true)
+        let forecast = """
+        {"source":"google","attribution":"Google Maps","region":"GB",
+         "retrievedAt":"\(at.string(from: clock.now))",
+         "days":[{"dateUtc":"2026-11-14","plants":[{"code":"BIRCH"},{"code":"OAK","index":0}],"types":[]}]}
+        """
+        let weatherData = Data(JSONValue.object(weather).jsonText.utf8)
+        let forecastData = Data(forecast.utf8)
+        let http = ScriptedWeatherHTTP(clock: clock) { url in
+            .answer(0, url.path.hasSuffix("/pollen-forecast") ? forecastData : weatherData)
+        }
+        let repository = WeatherRepository(baseURL: Self.server, cacheDirectory: nil, http: http, clock: clock)
+        guard case .loaded(_, let entry, let place) = await repository.load(london, units: koreanUnits, acceptLanguage: "ko", force: true) else {
+            Issue.record("No weather for London"); return
+        }
+        let pollen = try #require(await repository.coordinatePollenForecast(entry, place: place, acceptLanguage: "ko"))
+        #expect(pollen.source == "google")
+        #expect(pollen.region == "GB")
+        #expect(pollen.days.first?["dateUtc"]?.stringValue == "2026-11-14")
+        let plants = try #require(pollen.days.first?["plants"]?.arrayValue)
+        #expect(plants.first?["index"] == nil)
+        #expect(plants.last?["index"]?.numberValue?.double == 0)
+        #expect(http.attempts.last?.url.path.hasSuffix("/weather/v000903/coord/51.51,-0.13/pollen-forecast") == true)
     }
 }
 }
