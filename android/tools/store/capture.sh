@@ -15,9 +15,10 @@ LOCALES=${*:-ko-KR:KR en-US:US ja-JP:JP}
 for pair in $LOCALES; do
     printf '%s\n' "$pair" | grep -Eqx '[a-z]{2}-[A-Z]{2}:[A-Z]{2}' || { echo "Bad locale pair: $pair" >&2; exit 2; }
 done
-[ ! -e "$OUT" ] || { echo "$OUT exists: give a new output directory" >&2; exit 2; }
 APP=$HERE/../../app/build/outputs/apk
-mkdir -p "$OUT"
+# Claimed with a plain mkdir: an existing directory (or a concurrent run that took it first) stops this run here.
+mkdir -p "$(dirname "$OUT")"
+mkdir "$OUT" 2>/dev/null || { echo "$OUT exists: give a new output directory" >&2; exit 2; }
 trap online_cleanup EXIT
 trap 'exit 130' INT TERM
 [ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" -ge 33 ] || exit 2
@@ -31,8 +32,9 @@ adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
 shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
 for pair in $LOCALES; do
     locale=${pair%%:*}; region=${pair#*:}
-    # Each locale is pulled into its own new directory, so no other capture can stand in for a missing one.
-    PULL=$OUT/$locale
+    # Each locale is pulled into its own new directory and moved to <out>/<locale> (what the composer reads) only
+    # after the checks below pass, so a rejected capture is never an input.
+    PULL=$OUT/.$locale.pull
     mkdir "$PULL"
     adb shell pm clear "$PKG" >/dev/null
     adb shell cmd locale set-app-locales "$PKG" --locales "$locale"
@@ -58,5 +60,6 @@ for n in ("01-compare", "02-hourly", "03-daily", "04-air"):
             or (r.get("width"), r.get("height")) != (w, h):
         sys.exit(f"{locale}: store-{n}.json does not record an ad-free {locale.split('-')[0]} {w}x{h} capture: {r}")
 PY
+    mv "$PULL" "$OUT/$locale"
     echo "Captured $locale"
 done
