@@ -341,9 +341,9 @@ def inert_golden_identities(tree):
 REVIEWED_VERIFICATION_POLICIES = {
     'server2/tools/golden/policies/air.json': '801d6dd66979e57b79fba98bf979a35d0911fce5ce2ea1538d1bb93d6a444c25',
     'server2/tools/golden/policies/nation.json': 'a0f09ab457274ffcbdde4f42fb7d13a239277f06446f5caf4cdb33ece957309a',
-    'server2/tools/golden/policies/delivery.json': '29c6d50720b8f42a1dcfb901cd5cce253a1823bf9a37e21dc9edc93889655bc5',
-    'server2/tools/golden/policies/domestic_http.json': '1a84e14cdc78776efeabd2514e4cdaf0691c20fb28952e52a2ab51da469c1e28',
-    'server2/tools/golden/policies/rest_http.json': 'c09eeb641f56af4594181207e6d96b251a0e929ba842a35c6c2e306eefca04c7',
+    'server2/tools/golden/policies/delivery.json': '2d302897c8019900d1477cb68c63eb710a9809d3e27ef8b91cfd82d1539c945f',
+    'server2/tools/golden/policies/domestic_http.json': 'a4416b8bccd1a3bd4e2cc419d4816a1e0fb80ba4509ca23d59d74eca87147d06',
+    'server2/tools/golden/policies/rest_http.json': '73593f09f64fc8250c112fc6a2da17f2f90edab809ac6a7bf53d7cf846914f90',
 }
 
 

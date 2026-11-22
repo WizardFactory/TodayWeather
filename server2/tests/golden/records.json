@@ -193,7 +193,7 @@
       "server/locales/zh-TW.json": "bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda",
       "server/models/modelKmaForecastNarrative.js": "6d5494f57ccbfcfdac6556cdca7d7e836a15e4b6d6ea1e350d25e955b6e8a091",
       "server/models/modelKmaSpecialWeatherSituation.js": "f2f45a8b6a421479838caa7fc8b45d97f2f1f78065b11a0f817a94036b281ce8",
-      "server/routes/gateway.js": "b464184861028b330b213d27661b77007d7f0047d33c786b98bb7d477f3723d5",
+      "server/routes/gateway.js": "08ff6da828436b9af64eda3a85b256a8de09b88af8e6451fc3450ef36f9490bb",
       "server/routes/v000705/index.js": "b29f289fab08549d31ddde85dac03590d6b4137004e475cd7e5da33995dc1154",
       "server/routes/v000705/routePushNotification.js": "c0a52209f6deba75f04107f9346d4039b71e323f01d162356877de1aa3a3fd03",
       "server/routes/v000705/routeTownForecast.js": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599",
