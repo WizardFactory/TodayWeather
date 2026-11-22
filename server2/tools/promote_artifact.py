@@ -95,6 +95,10 @@ def promote(artifact, revision, expected=None):
         bundle = native_artifact.verify(extract_bundle(artifact / 'native.tar.gz', scratch))
     if bundle['source'] != manifest['source']:
         raise ValueError('native bundle source differs from the artifact manifest')
+    # download-artifact drops the executable bits verify_artifact.py set; restore them
+    # only after every check passed so the published binaries match a direct upload.
+    for name in verify_artifact.BINARIES:
+        (artifact / name).chmod(0o755)
     return {'status': 'PASS', 'source': manifest['source'], 'binaries': manifest['binaries'],
             'native_roles': len(bundle['roles']), 'candidate_digest': actual,
             'digest_checked': expected is not None}
