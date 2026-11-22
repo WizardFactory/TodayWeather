@@ -10,7 +10,8 @@ are English with the Korean control labels. The [Android native manual](../andro
 Android app.
 
 A UI test captured the 41 screenshots on 22 November 2026 (Korea time) **without ads** (#3122): the capture build
-has no ad units, so the app requests no consent and no ads, and the test fails any screenshot that shows a native ad.
+has no ad units, so the app requests no consent and no ads, and the test fails any screenshot that shows a native ad
+(except over the system share sheet, where querying the app stalls the run).
 The released app shows ads (see [Ads in weather and saved places](#ads-in-weather-and-saved-places)). The test used an
 iPhone 17 Pro Max simulator (iOS 26.5, 440×956 pt at scale 3), Korean app language, default text size, a simulated
 position at Seoul City Hall and the status bar fixed at 9:41. Weather, geocoding, nationwide data and warnings are
@@ -77,6 +78,7 @@ RL_useA85=0 "$MANUAL_PYTHON" "$MANUAL_SKILL/scripts/build_manual.py" docs/user/i
   --font "$MANUAL_FONT"
 "$MANUAL_PYTHON" "$MANUAL_SKILL/scripts/render_pages.py" /tmp/tw-ios-manual.pdf /tmp/tw-ios-manual-pages
 "$MANUAL_PYTHON" ios/tools/manual/verify.py docs/user/ios-app
+"$MANUAL_PYTHON" ios/tools/manual/verify.py docs/user/ios-app/ipad
 "$MANUAL_PYTHON" ios/tools/manual/test_verify.py
 ```
 
@@ -86,7 +88,9 @@ under Python's `-O`. Rendering and a visual review of every page are additional 
 different metadata bytes; compare its text and rendered pages before replacing the published edition and renewing
 `provenance.json`.
 
-For new captures run `ios/tools/manual/run-manual-capture.sh <out-dir> <tw* iPhone simulator udid>` (see
+For new captures run `ios/tools/manual/run-manual-capture.sh --no-ads <out-dir> <tw* iPhone or iPad simulator udid>`
+(this edition; without `--no-ads` the build keeps Google's test ad units; `--no-ads --store` takes the four App Store
+images instead; see
 [`ios/README.md`](../../../ios/README.md#user-manual-in-18)). It needs the private `ios/Private.xcconfig` (server URL
 and Places key), which stays outside Git; it removes the private values from every saved log and fails if one remains.
 Keep raw captures, logs and rendered pages in the ignored `reports/`; publish only inspected screenshots. A change of

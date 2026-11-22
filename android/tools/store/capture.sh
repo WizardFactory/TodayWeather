@@ -25,12 +25,33 @@ adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
 shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
 for pair in $LOCALES; do
     locale=${pair%%:*}; region=${pair#*:}
-    mkdir -p "$OUT/$locale"
+    # Each locale is pulled into a new empty directory, so no earlier capture can stand in for a missing one.
+    rm -rf "$OUT/$locale" "$OUT/$locale.pull"
+    mkdir -p "$OUT/$locale.pull"
     adb shell pm clear "$PKG" >/dev/null
     adb shell cmd locale set-app-locales "$PKG" --locales "$locale"
     adb shell am instrument -w -e ads off -e manual true -e weather production -e region "$region" \
-        -e class "$PKG.StoreCaptureTest#store" "$PKG.test/$PKG.TestRunner" > "$OUT/$locale/store.log" 2>&1
-    adb pull "/sdcard/Android/data/$PKG/files/manual/." "$OUT/$locale/" >/dev/null 2>&1 || true
-    grep -q '^OK (1 test)' "$OUT/$locale/store.log" || { echo "Capture failed: $locale; see $OUT/$locale/store.log" >&2; exit 1; }
+        -e class "$PKG.StoreCaptureTest#store" "$PKG.test/$PKG.TestRunner" > "$OUT/$locale.pull/store.log" 2>&1
+    grep -q '^OK (1 test)' "$OUT/$locale.pull/store.log" || { echo "Capture failed: $locale; see $OUT/$locale.pull/store.log" >&2; exit 1; }
+    adb pull "/sdcard/Android/data/$PKG/files/manual/." "$OUT/$locale.pull/" >/dev/null || { echo "Pull failed: $locale" >&2; exit 1; }
+    # The four screens, each a PNG at the display size with its record: ads off and the requested language.
+    python3 - "$OUT/$locale.pull" "$locale" "$(adb shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)" <<'PY' || exit 1
+import json, struct, sys
+from pathlib import Path
+d, locale, size = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+w, h = (int(x) for x in size.split("x"))
+for n in ("01-compare", "02-hourly", "03-daily", "04-air"):
+    png, rec = d / f"store-{n}.png", d / f"store-{n}.json"
+    if not png.is_file() or not rec.is_file():
+        sys.exit(f"{locale}: store-{n} missing")
+    head = png.read_bytes()[:24]
+    if head[:8] != b"\x89PNG\r\n\x1a\n" or struct.unpack(">II", head[16:24]) != (w, h):
+        sys.exit(f"{locale}: store-{n}.png is not a {w}x{h} PNG")
+    r = json.loads(rec.read_text())
+    if r.get("ads") != "off" or r.get("analytics") is not False or r.get("language") != locale.split("-")[0] \
+            or (r.get("width"), r.get("height")) != (w, h):
+        sys.exit(f"{locale}: store-{n}.json does not record an ad-free {locale.split('-')[0]} {w}x{h} capture: {r}")
+PY
+    mv "$OUT/$locale.pull" "$OUT/$locale"
     echo "Captured $locale"
 done

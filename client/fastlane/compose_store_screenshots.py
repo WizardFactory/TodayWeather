@@ -12,11 +12,15 @@ Usage (Pillow required; run from the repository root):
       --iphone <raw dir> --ipad <raw dir> --chromium <chrome-headless-shell> --commit <sha> --captured-on <date>
 Writes client/fastlane/metadata/android/<locale>/images/phoneScreenshots/0N-*.jpg,
 client/fastlane/screenshots/ios/ko/{iphone69,ipad13}-0N-*.png and client/fastlane/screenshots/manifest.json.
+Every input is checked first (the Android display from <android>/device.txt, each image's size, the crop) and the
+whole package is built in a temporary directory; the maintained files are replaced only when all of it succeeded.
 """
 import argparse
 import hashlib
 import html
 import json
+import re
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -40,15 +44,26 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def play(args, work, files):
+def android_display(path):
+    """The display of the Android run (device.txt of android/tools/store/capture.sh): size in pixels and density."""
+    text = path.read_text()
+    sizes = re.findall(r"(?:Physical|Override) size: (\d+)x(\d+)", text)
+    density = re.search(r"Physical density: (\d+)", text)
+    if not sizes or not density or "ads: off" not in text:
+        raise SystemExit(f"{path}: no display size, density or 'ads: off'")
+    return tuple(int(v) for v in sizes[-1]), int(density.group(1))
+
+
+def play(args, stage, work, files, display):
     template = (FASTLANE / "screenshot-frame.html").read_text()
     for locale, (lang, brand, headings, note) in TEXT.items():
-        out_dir = FASTLANE / "metadata/android" / locale / "images/phoneScreenshots"
-        for old in out_dir.glob("*.jpg"):
-            old.unlink()
+        out_dir = stage / "metadata/android" / locale / "images/phoneScreenshots"
+        out_dir.mkdir(parents=True)
         for screen, heading in zip(SCREENS, headings):
             raw = Path(args.android) / locale / f"store-{screen}.png"
             with Image.open(raw) as image:
+                if image.size != display:
+                    raise SystemExit(f"{raw}: {image.size} is not the run's display {display}")
                 rgb = image.convert("RGB")
                 view = rgb.crop((0, args.crop_top, rgb.width, rgb.height - args.crop_bottom))
             view_path = work / f"{locale}-{screen}.png"
@@ -66,24 +81,24 @@ def play(args, work, files):
             with Image.open(shot) as rendered:
                 assert rendered.size == (1080, 1920), rendered.size
                 rendered.convert("RGB").save(out, quality=92, optimize=True)
-            files.append({"file": str(out.relative_to(FASTLANE)), "platform": "android", "locale": locale,
+            files.append({"file": str(out.relative_to(stage)), "platform": "android", "locale": locale,
                           "display_type": "phoneScreenshots", "width": 1080, "height": 1920, "sha256": sha(out),
                           "raw_source_sha256": sha(raw)})
 
 
-def ios(args, files):
-    out_dir = FASTLANE / "screenshots/ios/ko"
-    for old in out_dir.glob("*.png"):
-        old.unlink()
+def ios(args, stage, files):
+    out_dir = stage / "screenshots/ios/ko"
+    out_dir.mkdir(parents=True)
     for prefix, source in (("iphone69", args.iphone), ("ipad13", args.ipad)):
         display, size = IOS[prefix]
         for screen in SCREENS:
             raw = Path(source) / f"store-{screen}.png"
             out = out_dir / f"{prefix}-{screen}.png"
             with Image.open(raw) as image:
-                assert image.size == size, (raw, image.size)
+                if image.size != size:
+                    raise SystemExit(f"{raw}: {image.size}, expected {size}")
                 image.convert("RGB").save(out, optimize=True)
-            files.append({"file": str(out.relative_to(FASTLANE)), "platform": "ios", "locale": "ko",
+            files.append({"file": str(out.relative_to(stage)), "platform": "ios", "locale": "ko",
                           "display_type": display, "width": size[0], "height": size[1], "sha256": sha(out),
                           "raw_source_sha256": sha(raw)})
 
@@ -95,10 +110,32 @@ def main():
     parser.add_argument("--crop-top", type=int, required=True)
     parser.add_argument("--crop-bottom", type=int, required=True)
     args = parser.parse_args()
+    display, density = android_display(Path(args.android) / "device.txt")
+    if args.crop_top < 0 or args.crop_bottom < 0 or args.crop_top + args.crop_bottom >= display[1]:
+        raise SystemExit(f"crop {args.crop_top}/{args.crop_bottom} does not fit a {display[0]}x{display[1]} display")
     files = []
     with tempfile.TemporaryDirectory() as tmp:
-        play(args, Path(tmp), files)
-    ios(args, files)
+        stage, work = Path(tmp) / "stage", Path(tmp) / "work"
+        work.mkdir()
+        play(args, stage, work, files, display)
+        ios(args, stage, files)
+        write_manifest(args, stage, files, display, density)
+        # All 20 images and the manifest exist: replace the maintained files.
+        for locale in TEXT:
+            target = FASTLANE / "metadata/android" / locale / "images/phoneScreenshots"
+            for old in target.glob("*.jpg"):
+                old.unlink()
+            for new in (stage / "metadata/android" / locale / "images/phoneScreenshots").iterdir():
+                shutil.copy2(new, target / new.name)
+        target = FASTLANE / "screenshots/ios/ko"
+        for old in target.glob("*.png"):
+            old.unlink()
+        for new in (stage / "screenshots/ios/ko").iterdir():
+            shutil.copy2(new, target / new.name)
+        shutil.copy2(stage / "screenshots/manifest.json", FASTLANE / "screenshots/manifest.json")
+
+
+def write_manifest(args, stage, files, display, density):
     manifest = {
         "captured_on": args.captured_on,
         "version": args.version or "2.0 native (Android 2.0.0, iOS 2.0.1 in the stores)",
@@ -107,7 +144,7 @@ def main():
         "selected_city": "Seoul (서울) saved; no current location.",
         "screens": ["comparison", "expanded hourly weather", "daily forecast", "air quality"],
         "devices": {
-            "android": "Dedicated Android API36 AVD tw_api36_capture, display set to 1080x1920 at density 420 for the run",
+            "android": f"Dedicated Android API36 AVD, display {display[0]}x{display[1]} at density {density} for the run",
             "ios_iphone": "Dedicated iPhone 17 Pro Max simulator, iOS 26.5",
             "ios_ipad": "Dedicated iPad Pro 13-inch (M5) simulator, iOS 26.5",
         },
@@ -122,7 +159,8 @@ def main():
         "review_limit": "Live weather of the capture time; recapture if the visible UI changes.",
         "files": sorted(files, key=lambda f: f["file"]),
     }
-    (FASTLANE / "screenshots/manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+    (stage / "screenshots").mkdir(parents=True, exist_ok=True)
+    (stage / "screenshots/manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
 
 
 if __name__ == "__main__":

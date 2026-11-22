@@ -326,7 +326,7 @@
  "pdf_sha256": "fa3f415a5cbdfe89413ab4eaf5a9f7167343fb52d9b115226c91b2a2c7e332cb",
  "sources": {
   "ios/TodayWeatherUITests/ManualUITests.swift": "913b38c5abd706d2278e51ac1e2515654d4473aa550dda34a17ff850644078a5",
-  "ios/tools/manual/run-manual-capture.sh": "f59aefd077525994957e14c82036be90954150c72dcaa375ec3d5bad36d6f541",
+  "ios/tools/manual/run-manual-capture.sh": "32c0dae4f4a736f7ee2043f7ba76797b730a6660811b6e256ebdd32aa862a69b",
   "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
  },
  "recaptures": [
@@ -354,6 +354,11 @@
    "date": "2026-11-22",
    "source": "ios/tools/manual/run-manual-capture.sh, ios/TodayWeatherUITests/ManualUITests.swift",
    "change": "#3122: --no-ads builds without ad units and the test checks every screenshot (except over the system share sheet) for native ads; --store adds testCaptureTheStoreScreens for the App Store images. All 41 journey screenshots were recaptured with --no-ads; the share sheet did not appear on the capture simulators, so the last page shows the share button."
+  },
+  {
+   "date": "2026-11-22",
+   "source": "ios/tools/manual/run-manual-capture.sh",
+   "change": "after the capture (review finding CODEX-3124-5) the ad-unit guard parses Info.plist and requires each key: --no-ads keeps the app ID with both units empty, the default build Google's test identifiers; the build settings, test and image reduction are unchanged, so the screenshots stand (the iPhone store run repeated with the new guard)"
   }
  ]
 }

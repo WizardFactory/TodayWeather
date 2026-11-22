@@ -67,13 +67,23 @@ redact < "$OUT/build.raw.log" > "$OUT/build.log"
 rm -f "$OUT/build.raw.log"
 APP="$IOS/build/DerivedData/Build/Products/Debug-iphonesimulator/TodayWeather.app"
 [ ! -e "$APP/GoogleService-Info.plist" ] || { echo "the build holds a Firebase configuration: no push may be possible here" >&2; exit 1; }
-# The ad units the build carries: both empty for --no-ads, Google's test units otherwise.
-UNITS=$(for k in TWAdMobNativeUnit TWAdMobInterstitialUnit; do /usr/libexec/PlistBuddy -c "Print :$k" "$APP/Info.plist" 2>/dev/null || true; done | tr -d '\n')
-if [ "$ADS" = off ]; then
-  [ -z "$UNITS" ] || { echo "--no-ads: the built app still has ad units" >&2; exit 1; }
-else
-  [ -n "$UNITS" ] || { echo "the built app has no ad units: build again without --no-ads" >&2; exit 1; }
-fi
+# The ad settings the build carries, each key present: --no-ads keeps the app ID with both units empty; otherwise
+# Google's test app ID and test units (the Debug values of Support/App.xcconfig).
+python3 - "$APP/Info.plist" "$ADS" <<'PY' || exit 1
+import plistlib, sys
+info, ads = plistlib.load(open(sys.argv[1], "rb")), sys.argv[2]
+keys = ("GADApplicationIdentifier", "TWAdMobNativeUnit", "TWAdMobInterstitialUnit")
+missing = [k for k in keys if not isinstance(info.get(k), str)]
+if missing:
+    sys.exit(f"the built Info.plist lacks {missing}")
+app, native, interstitial = (info[k] for k in keys)
+if ads == "off":
+    if native or interstitial or not app.startswith("ca-app-pub-"):
+        sys.exit("--no-ads: the built app must keep its app ID and have both ad units empty")
+elif (app, native, interstitial) != ("ca-app-pub-3940256099942544~1458002511", "ca-app-pub-3940256099942544/3986624511",
+                                     "ca-app-pub-3940256099942544/4411468910"):
+    sys.exit("the built app does not carry Google's test ad identifiers: build again without --no-ads")
+PY
 echo "ads: $ADS" > "$OUT/ads.txt"
 
 xcrun simctl boot "$UDID" 2>/dev/null || true

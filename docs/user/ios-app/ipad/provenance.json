@@ -1,0 +1,108 @@
+{
+ "schema": 1,
+ "product": "TodayWeather iOS native 2.0 (iPad supplement)",
+ "runtime": "Swift / SwiftUI; no Ionic or Cordova runtime",
+ "product_base_commit": "dad0800d26a637cadde1e56c2b00598562934159",
+ "capture_date": "2026-11-22",
+ "environment": {
+  "device": "owned iPad Pro 13-inch (M5) simulator tw_3122_ipad (iOS 26.5), 1032x1376 pt at scale 2",
+  "app_language": "ko-KR (launch arguments)",
+  "position": "Seoul City Hall (simctl location)",
+  "status_bar": "simctl status_bar override 9:41",
+  "raw_pixels": [
+   2064,
+   2752
+  ],
+  "published_pixels": [
+   1032,
+   1376
+  ],
+  "text_size": "default (large)"
+ },
+ "build_inputs": [
+  "TW_SERVER_URL",
+  "TW_PLACES_API_KEY_IOS"
+ ],
+ "build_type": "Debug, ad hoc signed, built without ad units (TW_ADMOB_NATIVE_IOS and TW_ADMOB_INTERSTITIAL_IOS empty: no UMP, no Ads SDK start, no ad request); no GoogleService-Info.plist; no TW_WEATHER_PHOTOS_URL",
+ "data": "read-only GETs to the legacy weather server (weather, geocode, nationwide, warnings) and Google Places predictions; values are those of the capture time",
+ "capture": "ios/tools/manual/run-manual-capture.sh --no-ads <out> <udid> (ManualUITests.testCaptureTheManual, 41 screenshots); nine selected (journey shots 03, 05, 08, 11, 15, 16, 26, 33, 36) reduced to half size (1032 px wide) and a 256-color palette",
+ "screenshots": {
+  "screenshots/01-hourly.png": {
+   "sha256": "db6b8a3190f19124e3256ea3d922a3e1bf0ceba000370d00a90867e1a05d1c15",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/02-hourly-expanded.png": {
+   "sha256": "c88c913ca6f1e523e69f37eb3636aa3ab2bc18e7d277e65fbff065519b94fa63",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/03-daily.png": {
+   "sha256": "c068b2287af631b2df855edb25ebb4881913845bd7b20cead157efb26a7147c2",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/04-air.png": {
+   "sha256": "c7f8c6201a0d51d761ace633d9cad991cf303c32bdc5dd25333ebb269663a9fc",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/05-places.png": {
+   "sha256": "cba58ac0fa11d727c5e93e93b8ca46f16f004d85f410f9952d168270ff3899d0",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/06-place-search.png": {
+   "sha256": "915fae0f333b18b2036a64337fe3a61a3c4f0214f3dfffef0d9a16d11f46c816",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/07-menu.png": {
+   "sha256": "895b59ca6968d9e11ea2f5175e73576a07dace57f9151db23d6e912d31fd111d",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/08-dark-weather.png": {
+   "sha256": "c7c96d5a213b51531ebf4dcc3a45a726003bd3f619141490bf5e4169385a2d75",
+   "size": [
+    1032,
+    1376
+   ]
+  },
+  "screenshots/09-national-weather.png": {
+   "sha256": "6fd7e49f9cb229c3d9da0e3deaee29ee8f2b6e9f3ba32bfd2e76c7631e46cbb7",
+   "size": [
+    1032,
+    1376
+   ]
+  }
+ },
+ "sources": {
+  "ios/TodayWeatherUITests/ManualUITests.swift": "913b38c5abd706d2278e51ac1e2515654d4473aa550dda34a17ff850644078a5",
+  "ios/tools/manual/run-manual-capture.sh": "32c0dae4f4a736f7ee2043f7ba76797b730a6660811b6e256ebdd32aa862a69b",
+  "ios/tools/manual/verify.py": "5e50119e8fcedd7c486bade2a001c23059e6712308fe8c4664403e8c2d8242c3"
+ },
+ "manual_sha256": "974ed6a8bb04a8600fe83b8e0edc2e4f37b8d4edbc8c4e058c5c15f24ed68fe2",
+ "pdf_sha256": "5f35f05aae51fcd95cbf53657d0ef43e18ada276699cc504c46e38f687e87a7a",
+ "source_changes": [
+  {
+   "date": "2026-11-22",
+   "source": "ios/tools/manual/run-manual-capture.sh",
+   "change": "after the capture (review finding CODEX-3124-5) the ad-unit guard parses Info.plist and requires each key: --no-ads keeps the app ID with both units empty, the default build Google's test identifiers; the build settings, test and image reduction are unchanged, so the screenshots stand (the iPhone store run repeated with the new guard)"
+  }
+ ]
+}
