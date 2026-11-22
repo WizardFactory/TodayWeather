@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-01",
+  "date": "2026-11-22",
   "browser": "153.0.8010.12",
   "viewport": [
     820,
@@ -11,41 +11,41 @@
   "images": [
     {
       "file": "display.png",
-      "sha256": "6b77848c1bac7352ccf0230e85d37d67d1d006896393df0dfc31f9fbaa53d6c4"
+      "sha256": "420c6846fc01d3ae751655c00ff89b3f191362aea6b06f336678523baab10dbd"
     },
     {
       "file": "hourly.png",
-      "sha256": "04216762a9ce16e4eb4879590b2c72eb7a010777a94c31d89817bb7bbd75029c"
+      "sha256": "df8c3ef063aa41af8dc95e3f3e1501d99dc61cab2c0c026d9f925b09d41a127a"
     },
     {
       "file": "daily.png",
-      "sha256": "1b652e9a94ed54789f653d6922c819763f155acba608b75235d5b61cf1bedb41"
+      "sha256": "b864fbe22adabb39c876025779cbb40fb306f37558b31a3b03d136e08b4333c6"
     },
     {
       "file": "air.png",
-      "sha256": "ec9c454548e15edccddcf83d16d8e4f29be2bead3658a85790d44192345707ae"
+      "sha256": "5fdee1529f2bbb76954501af812ee759cd64c0ace5cefc2d734f290554b778e3"
     },
     {
       "file": "enlarged.png",
-      "sha256": "75ffe82dadb75a64fd64fbdf2fa8f1b8e41f4fb1d6f375c969fea7ed08d85568"
+      "sha256": "7090255efbc4822750098453a568f39643ebbd36f3866ac13f99d6acacc6fb10"
     },
     {
       "file": "confirmation.png",
-      "sha256": "daa2b5f2938b03e4bc6c657d549fd89f43bd7e0044a35e5951276ca866fe3e6f"
+      "sha256": "414a6235223d032676c231a008ed910ab431f2ed5a1a235722c210f63e0dc97d"
     },
     {
       "file": "precipitation-hourly.png",
-      "sha256": "51bdd64d41cb73b96726d907451e7d4632fd797fdc11b3ef8779044833bc851a",
-      "date": "2026-10-03",
-      "browser": "145.0.7632.6",
+      "sha256": "84f717d773b48266ede08ac2dcc6ab5108f216a1ac8f8d2bc46563c14aae0e25",
+      "date": "2026-11-22",
+      "browser": "153.0.8010.12",
       "fixture": "scripts/verification/precipitation-manual-capture.mjs",
       "scenario": "2598-S1/S3"
     },
     {
       "file": "precipitation-daily.png",
-      "sha256": "d20111336f938208c76f4faf294096547966ed1e7c8e4ab6d46c091de1f30480",
-      "date": "2026-10-03",
-      "browser": "145.0.7632.6",
+      "sha256": "fe43d79b9e838ed8ddb8cf2c554f88c8ce530b205fdafa80c78757e96e6ab599",
+      "date": "2026-11-22",
+      "browser": "153.0.8010.12",
       "fixture": "scripts/verification/precipitation-manual-capture.mjs",
       "scenario": "2598-S2"
     }
