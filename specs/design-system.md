@@ -373,8 +373,8 @@ Both charts keep the Cordova information model and reading order. The design sys
 **Geometry.**
 - Column width is the same as the hourly chart, and every supplied day is a column (the native count). The chart fills the card width when the days fit.
 - Initial scroll:
-  - Below 640 px of chart width, today is the third column (native rule).
-  - At 640 px and wider, the chart starts at the first day (native rule).
+  - On screens narrower than 640 px, today is the third column (native rule, screen width as the native `bodyWidth`).
+  - On screens 640 px and wider, the chart starts at the first day (native rule).
 
 **Interaction, accessibility and states.** Same as the hourly chart. The announcement is "Sat 26: AM cloudy, PM sunny, 30%, low 18°, high 27°".
 
