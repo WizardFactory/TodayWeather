@@ -60,3 +60,20 @@ The median paired saving was **27.47s (4.2% of the median capture-all run)**. Th
 All six Xcode runs passed all 92 comparisons. Capture-all wrote 184 PNGs per run and failure-only wrote zero on the passing fixtures. The induced height mismatch produced one Swift Testing failure and both readable PNGs, with no PNGs for other cases. Xcode stalled while finalizing the induced-failure result bundle. The separately verified Swift Testing log and PNGs provide the failure evidence. One animated loading frame varied across runs and kept the same reference, dimensions and verdict. The other 91 inputs, metrics and masks matched exactly.
 
 Prioritize an equivalent blur and pixel-comparison optimization. Failure-only output met the threshold for a CI trial. This measurement covers the simulator sample. The full standalone job and end-to-end PR latency require a separate macos-26 qualification.
+
+## Local comparator optimization
+
+The iOS test comparator reuses vertical sums for adjacent horizontal windows and divides once by the number of pixels in the clipped 3×3 box. It stores each blurred RGB channel as a byte. The comparison keeps its own source stride for each bitmap, the existing mean and height calculation, and the strict strong-difference threshold above 64. The synthetic regression in [ChartScreenshotTests.swift](../ios/TodayWeatherTests/ChartScreenshotTests.swift) covers narrow and short images, unequal dimensions, integer truncation and the threshold boundary using a direct box calculation.
+
+On the same iPhone 17 simulator with iOS 26.5 and Xcode 27.2, capture-all mode passed all 92 comparisons and wrote 184 PNGs. The 91 comparisons with identical inputs matched exactly for strong, mean, height and mask. The loading spinner's rendered input varied and kept its passing verdict.
+
+| Phase | Archived baseline median, three runs (s) | Optimized sample, one run (s) |
+| --- | ---: | ---: |
+| Simulator test elapsed | 655.87 | 276.57 |
+| Blur | 567.77 | 187.98 |
+| Pixel comparison | 53.08 | 53.82 |
+| Diagnostic PNGs | 27.57 | 27.67 |
+
+The forced height mismatch ran all 23 nationwide comparisons with one expected failure. Failure-only capture produced two readable PNGs at the expected dimensions. Xcode returned 65 and finalized the result bundle.
+
+The local sample ran 379.30 seconds faster (57.8%). The sample uses the same test selection and original fixture bytes. Repeat the measurement on macos-26 and qualify the complete standalone job before judging PR latency or selecting a test partition. The [post-merge hosted baseline](https://github.com/WizardFactory/TodayWeather/actions/runs/45009810694) took 58m14s for the regular job and 86m34s for standalone, with simulator steps of 54m58s and 82m36s respectively.
