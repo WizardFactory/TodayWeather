@@ -55,20 +55,29 @@ host, key = sys.argv[1], sys.argv[2]
 sys.stdout.write(sys.stdin.read().replace(host, "<server>").replace(key, "<places-key>"))' "$HOST" "$KEY"; }
 # --store changes the Home Screen (it removes the other apps' widgets and adds the app's), so it runs on a simulator this
 # run creates (the given simulator's device type and runtime, Korean system language) and deletes on every exit; the
-# given simulator is not booted, shut down or changed. The created device is found by its run-unique name, so an exit
-# at any point deletes it; a device that cannot be deleted fails the run.
-STORE_DEVICE=tw_store_capture_$$
+# given simulator is not booted, shut down or changed. Cleanup deletes only the device this run created (its UDID, or
+# its run-unique name when an exit interrupts the creation) and fails the run when the deletion cannot be confirmed.
+STORE_DEVICE=tw_store_capture_$(uuidgen | tr -d - | cut -c1-12 | tr 'A-F' 'a-f')
+CREATED=
+# The created device's UDID, or (when an exit interrupts simctl create) its run-unique name.
+created_udids() {
+  if [ -n "$CREATED" ]; then echo "$CREATED"; return; fi
+  xcrun simctl list devices | sed -n "s/^ *$STORE_DEVICE (\([0-9A-F-]*\)).*/\1/p"
+}
 cleanup() {
   status=$?
   set +e
   if [ "$STORE" = 1 ]; then
-    for u in $(xcrun simctl list devices | sed -n "s/^ *$STORE_DEVICE (\([0-9A-F-]*\)).*/\1/p"); do
-      xcrun simctl shutdown "$u" 2>/dev/null; xcrun simctl delete "$u"
+    for u in $(created_udids); do
+      xcrun simctl shutdown "$u" 2>/dev/null
+      xcrun simctl delete "$u"; deleted=$?
+      if LIST=$(xcrun simctl list devices) && ! printf '%s\n' "$LIST" | grep -q "($u)"; then
+        :
+      else
+        echo "cleanup: could not confirm that the simulator $u ($STORE_DEVICE) was deleted (simctl delete exit $deleted)" >&2
+        [ "$status" -ne 0 ] || status=6
+      fi
     done
-    if xcrun simctl list devices | grep -q " $STORE_DEVICE ("; then
-      echo "cleanup: could not delete the simulator $STORE_DEVICE" >&2
-      [ "$status" -ne 0 ] || status=6
-    fi
   else
     xcrun simctl uninstall "$UDID" "$BUNDLE" 2>/dev/null
   fi
@@ -77,13 +86,15 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 if [ "$STORE" = 1 ]; then
+  ! xcrun simctl list devices | grep -q " $STORE_DEVICE (" || { echo "a simulator named $STORE_DEVICE exists already" >&2; exit 2; }
   eval "$(xcrun simctl list devices -j | python3 -c 'import json, shlex, sys
 udid = sys.argv[1]
 for runtime, devices in json.load(sys.stdin)["devices"].items():
     for d in devices:
         if d["udid"] == udid:
             print("TYPE=" + shlex.quote(d["deviceTypeIdentifier"]) + "; RUNTIME=" + shlex.quote(runtime))' "$UDID")"
-  UDID=$(xcrun simctl create "$STORE_DEVICE" "$TYPE" "$RUNTIME")
+  CREATED=$(xcrun simctl create "$STORE_DEVICE" "$TYPE" "$RUNTIME")
+  UDID=$CREATED
   xcrun simctl boot "$UDID"
   xcrun simctl bootstatus "$UDID" -b >/dev/null
   xcrun simctl spawn "$UDID" defaults write -g AppleLanguages -array ko-KR
