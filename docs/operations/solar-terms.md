@@ -1,8 +1,23 @@
-# Korean solar-term calendar on server1
+# Korean solar-term calendar on server1 and server2
 
 The forecast presenter looks up a Korean civil date in memory. Calendar clients can independently request `GET /calendar/v1/kr/solar-terms/{year}` without location, units, language or credentials. The annual resource always returns Korean names for all 24 events. The [client delivery plan](../../plans/issue-3050.md) specifies which events can enter the weather summary.
 
-## Reading the calendar
+## server2 (Rust) parity (#3086)
+
+`server2` implements the same HTTP contract, 20–50 year rolling KST horizon (`SOLAR_TERMS_FUTURE_YEARS`), Korean editorial policy (`server2/src/solar_terms/data/kr.json`), and `v000903` domestic `current.summary` / `current.summaryForDate` ranking without MongoDB or external binaries:
+
+- **Pure-Rust calculation & PDF extraction**: `server2/src/solar_terms/astro.rs` ports the MIT-licensed Astronomy Engine `2.1.19` `SearchSunLongitude` algorithm in pure Rust, and `server2/src/solar_terms/pdf.rs` decodes `FlateDecode` streams and `/ToUnicode` CMaps directly using `flate2` (no `pdftotext` host dependency on static `musl` builds).
+- **S3 persistence (`raw/v2/` + `index/v2/`)**: `server2/src/solar_terms/store.rs` stores each validated official almanac edition (metadata, SHA-256 digest, verification timestamp, algorithm version, and raw PDF bytes) as an immutable `RawRecord` under `raw/v2/kr-solar-terms/almanac/` indexed via `CatalogStore` under `index/v2/kr-solar-terms/almanac/`, reusing the provisioned `tw-server2-runtime` IAM prefixes.
+- **Lifecycle & resilience**: When the `kma` native family is active, `RuntimeServices` mounts `GET /calendar/v1/kr/solar-terms/{year}`, injects the in-memory lookup into `KmaBackend`, and runs a 60-second background reconciliation loop (initial S3 restore + once-per-KST-day KASI/gazette check, adding the next year from June 1). Before initial S3 restore finishes, current and next years return `503` while distant calculated years remain available; post-restore S3 outages retain the last loaded snapshots.
+- **Operator verification CLI (non-writing)**:
+
+```sh
+cargo run --manifest-path server2/Cargo.toml --example solar_term_almanac -- 2027
+cargo run --manifest-path server2/Cargo.toml --example solar_term_almanac -- 2027 /path/to/2027.pdf 'https://www.gwanbo.go.kr/ezpdf/customLayout.jsp?contentId=I0000000000000001782374733940000&tocId=I0000000000000001782199865342000&isTocOrder=N'
+cargo test --manifest-path server2/Cargo.toml --test solar_terms
+```
+
+## Reading the calendar (server1 and server2)
 
 A successful body includes `year`, `timeZone: "Asia/Seoul"`, `status`, `revision`, `officialEdition` and chronological `terms`. Each term has a stable longitude ID, `nameKo`, effective `date` and `corrected` flag. A calculated snapshot has null edition metadata. A verified snapshot identifies the gazette notice, source URL and publication date. Revalidate a cached year with its ETag after one hour. On 200 replace the complete year; on 304 retain it. A source failure leaves readers on the last complete revision. A malformed year gets 400, an out-of-horizon year gets 404, and unavailable in-range data gets 503.
 

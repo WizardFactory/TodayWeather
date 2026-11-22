@@ -1,0 +1,46 @@
+{
+  "task": "GoldenSources3091",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3087",
+  "scope": "Prepare complete current-source oracle recordings for the shared CI checks. Verify source provenance and review actual HTTP differences before accepting a new baseline.",
+  "server2_paths": [
+    "server2/config/golden-provenance.json",
+    "server2/config/tasks/GoldenSources3091.json",
+    "server2/tests/delivery/fixtures/alarm-oracle.json.gz",
+    "server2/tests/delivery/fixtures/alerts-air-filter.json.gz",
+    "server2/tests/delivery/fixtures/alerts-malformed.json.gz",
+    "server2/tests/delivery/fixtures/alerts-oracle.json.gz",
+    "server2/tests/delivery/fixtures/warnings-oracle.json.gz",
+    "server2/tests/domestic/fixtures/life.json.gz",
+    "server2/tests/domestic/fixtures/oracle.json.gz",
+    "server2/tests/domestic/fixtures/s3-response.json.gz",
+    "server2/tests/domestic/fixtures/s3-rich-response.json.gz",
+    "server2/tests/domestic/fixtures/towns-oracle.json.gz",
+    "server2/tests/golden/records.json",
+    "server2/tests/integration/fixtures/kma-replay.json",
+    "server2/tests/integration/fixtures/kma-rich-replay.json",
+    "server2/tests/legacy_versions/fixtures/kma-older.json.gz",
+    "server2/tests/legacy_versions/fixtures/kma-town.json.gz",
+    "server2/tests/nation/oracle.json",
+    "server2/tests/world/fixtures/oracle.json.gz",
+    "server2/tests/world/fixtures/widget.json.gz",
+    "server2/tools/check_placement.py",
+    "server2/tools/golden/policies/delivery.json",
+    "server2/tools/golden/policies/domestic_http.json",
+    "server2/tools/golden/policies/rest_http.json",
+    "server2/tools/golden/provenance.py",
+    "server2/tools/golden/test_provenance.py",
+    "server2/tools/push/record_warnings.js"
+  ],
+  "outside": [
+    {
+      "path": "server/test/offline/source-fingerprints.js",
+      "category": "legacy-export",
+      "reason": "Fingerprint the exact additional tracked modules executed by the offline legacy verification export."
+    },
+    {
+      "path": "docs/operations/server2-golden.md",
+      "category": "documentation",
+      "reason": "Document the complete current-source replay, HTTP differences and qualification limits."
+    }
+  ]
+}

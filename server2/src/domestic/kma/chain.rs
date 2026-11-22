@@ -27,6 +27,12 @@ pub struct Cx<'a> {
     pub towns: Option<Arr>,
     /// S16: a JSON copy of the `_getDaySummaryList` rows `getPastMid` merged.
     pub past_days: Option<Vec<crate::gateway::OrderedJson>>,
+    /// #3086: optional Korean solar-term lookup for `v000903` ranked summaries.
+    pub solar_terms: Option<&'a dyn crate::solar_terms::TermLookup>,
+    /// #3086: true only when warning zones for this town were resolved and read successfully.
+    pub warnings_covered: bool,
+    /// #3086: today's daily min/max range validated in Celsius before unit conversion.
+    pub solar_term_range: Option<crate::solar_terms::summary::DailyRange>,
 }
 impl Cx<'_> {
     pub fn r(&self, key: &str) -> V {
@@ -453,11 +459,12 @@ impl KmaStore for Callbacks<'_> {
 }
 
 /// Run the router list; also returns the `getPastMid` day-summary rows (S16).
-pub fn run_capturing(
+pub fn run_capturing_with_solar_terms(
     request: &KmaRequest,
     store: &dyn KmaStore,
     now: f64,
     config: AssemblyConfig,
+    solar_terms: Option<&dyn crate::solar_terms::TermLookup>,
 ) -> (Outcome, Option<Vec<crate::gateway::OrderedJson>>) {
     let store = &Callbacks(store);
     let params = Ob::new();
@@ -485,6 +492,9 @@ pub fn run_capturing(
         config,
         towns: None,
         past_days: None,
+        solar_terms,
+        warnings_covered: false,
+        solar_term_range: None,
     };
     let Some(steps) = chain(&request.version, request.part.as_deref()) else {
         return (Outcome::Status(404, "Not Found\n".into()), None);

@@ -8,6 +8,7 @@ pub mod observability;
 pub mod process;
 pub mod resolver;
 pub mod runtime_services;
+pub mod solar_terms;
 pub mod startup;
 pub mod storage;
 

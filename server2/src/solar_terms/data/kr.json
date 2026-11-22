@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "terms": [
+    {"id": "solar-0", "group": "featured"},
+    {"id": "solar-15", "group": "spare"},
+    {"id": "solar-30", "group": "calendar"},
+    {"id": "solar-45", "group": "spare"},
+    {"id": "solar-60", "group": "calendar"},
+    {"id": "solar-75", "group": "calendar"},
+    {"id": "solar-90", "group": "featured"},
+    {"id": "solar-105", "group": "spare"},
+    {"id": "solar-120", "group": "spare"},
+    {"id": "solar-135", "group": "spare"},
+    {"id": "solar-150", "group": "featured"},
+    {"id": "solar-165", "group": "calendar"},
+    {"id": "solar-180", "group": "featured"},
+    {"id": "solar-195", "group": "calendar"},
+    {"id": "solar-210", "group": "calendar"},
+    {"id": "solar-225", "group": "spare"},
+    {"id": "solar-240", "group": "calendar"},
+    {"id": "solar-255", "group": "calendar"},
+    {"id": "solar-270", "group": "featured"},
+    {"id": "solar-285", "group": "calendar"},
+    {"id": "solar-300", "group": "spare"},
+    {"id": "solar-315", "group": "featured"},
+    {"id": "solar-330", "group": "spare"},
+    {"id": "solar-345", "group": "spare"}
+  ]
+}

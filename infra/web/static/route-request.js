@@ -16,7 +16,7 @@ function handler(event) {
   )
     return { statusCode: 400, statusDescription: "Bad Request" };
   var navigation =
-    /^\/(?:$|start\/?$|locations\/?$|settings(?:\/[^.]*)?$|help\/?$|membership\/?$|warnings\/?$|(?:air|place|notifications)\/[^/]+\/?$|weather\/[^/]+\/(?:hourly|daily|overview)\/?$|nation\/(?:weather|air)\/?$)/.test(
+    /^\/(?:$|start\/?$|locations\/?$|loc\/?$|settings(?:\/[^.]*)?$|help\/?$|membership\/?$|warnings\/?$|(?:air|place|notifications)\/[^/]+\/?$|weather\/[^/]+\/(?:hourly|daily|overview)\/?$|nation\/(?:weather|air)\/?$)/.test(
       uri,
     );
   if (navigation) request.uri = "/index.html";

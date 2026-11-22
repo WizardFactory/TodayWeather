@@ -996,15 +996,17 @@ export function setNumberLocale(locale: string) {
   numberLocale = locale;
 }
 export function formatValue(v: number | null | undefined, digits = 0): string {
-  return v === null || v === undefined || !Number.isFinite(v)
-    ? "—"
-    : new Intl.NumberFormat(numberLocale, {
-        maximumFractionDigits: digits,
-      }).format(v);
+  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  const safe =
+    Object.is(v, -0) || (v < 0 && Math.abs(v) * 10 ** digits < 0.5) ? 0 : v;
+  return new Intl.NumberFormat(numberLocale, {
+    maximumFractionDigits: digits,
+  }).format(safe);
 }
 
 export {
   hourlyChart,
+  hourlyXPositions,
   dailyChart,
   wallTime,
   linePath,

@@ -111,6 +111,7 @@ struct Inner {
     slots: Arc<Semaphore>,
     limit: usize,
     deadline: Duration,
+    clock: Arc<dyn Fn() -> i64 + Send + Sync>,
 }
 impl Gateway {
     pub fn new(geocoder: Arc<dyn Geocoder>, backends: BackendDispatcher) -> Self {
@@ -123,10 +124,17 @@ impl Gateway {
                 slots: Arc::new(Semaphore::new(40)),
                 limit: 40,
                 deadline: PUBLIC_DEADLINE,
+                clock: Arc::new(crate::narrative::now_ms),
             }),
             direct: None,
             widget: None,
         }
+    }
+    /// Inject a clock for deterministic cache-header expiration testing.
+    pub fn with_clock(mut self, clock: Arc<dyn Fn() -> i64 + Send + Sync>) -> Self {
+        let inner = Arc::make_mut(&mut self.inner);
+        inner.clock = clock;
+        self
     }
     /// Select a native internal geocoder for weather versions. Public geocode routing keeps
     /// its independent coexistence selection; unselected weather versions keep that path.
@@ -164,6 +172,7 @@ impl Gateway {
                 slots: Arc::new(Semaphore::new(limit)),
                 limit,
                 deadline,
+                clock: Arc::new(crate::narrative::now_ms),
             }),
             direct: None,
             widget: None,
@@ -260,7 +269,7 @@ impl Gateway {
             .map_err(|_| GatewayError::Provider)?
         });
         match task.await {
-            Ok(Ok((bytes, max_age, tag))) => response::send_tagged(
+            Ok(Ok((bytes, max_age, tag))) => response::send_tagged_at(
                 &method,
                 &headers,
                 StatusCode::OK,
@@ -268,6 +277,8 @@ impl Gateway {
                 Some(max_age),
                 None,
                 tag,
+                (self.inner.clock)(),
+                true,
             ),
             Ok(Err(error)) => response::error(&method, &headers, error),
             Err(_) => response::error(&method, &headers, GatewayError::Provider),

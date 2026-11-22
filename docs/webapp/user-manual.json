@@ -26,7 +26,7 @@
         "Expand wind and humidity, or open the table for the same hourly values."
       ],
       "expected": "All supplied hours remain available. A missing temperature leaves a gap in the line.",
-      "failure": "A dash means no supplied value; a missing yesterday series does not produce an invented comparison. If the request fails, focus stays in the content; choose Retry to load and focus the chart."
+      "failure": "A dash means no supplied value; a missing yesterday series does not produce an invented comparison. If the request fails, focus stays in the content; choose Retry to load the forecast and return focus to the content with the current conditions visible."
     },
     {
       "scenario": "S3",
