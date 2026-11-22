@@ -1,0 +1,20 @@
+{
+  "title": "Metropolitan France Vigilance",
+  "scenario": "Read Météo-France warnings for a viewed coordinate on server1. These examples use an actual local HTTP replay of the issuer snapshot from November 20, 2026, captured at its original validity time.",
+  "steps": [
+    {
+      "title": "Read a timed department advisory",
+      "instruction": "With Vigilance enabled on server1, request GET /weather/v000903/coord/48.85661,2.3522/warnings. Check the department code, issuer and timing fields before displaying the advisory.",
+      "screenshot": "paris-advisory.png",
+      "caption": "Paris, department 75. The issuer's yellow wind interval ends at 16:00 UTC.",
+      "expected": "Show Météo-France and its original warning period. Display a future onset as upcoming and remove an interval when it expires."
+    },
+    {
+      "title": "Read a successful clear result",
+      "instruction": "Request GET /weather/v000903/coord/45.764,4.8357/warnings. Use sources.state together with the warnings list.",
+      "screenshot": "lyon-clear.png",
+      "caption": "Lyon, department 69. Current coverage has no advisories in the replay.",
+      "expected": "Interpret an empty list as clear only when the source state is current. Unsupported and unavailable states can also have empty warning arrays."
+    }
+  ]
+}
