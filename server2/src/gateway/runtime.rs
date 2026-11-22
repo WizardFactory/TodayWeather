@@ -60,6 +60,9 @@ pub struct Builtins {
     /// Geocoder roots (`https://dapi.kakao.com`, `https://maps.googleapis.com`).
     pub kakao: String,
     pub google: String,
+    /// Official Korean almanac archive and gazette roots (`astro.kasi.re.kr`, `www.gwanbo.go.kr`).
+    pub solar_archive: String,
+    pub gwanbo: String,
     /// Units per Kakao key and per Google key and UTC day
     /// ([`crate::geocode::budget::KAKAO_DAILY_UNITS`], [`crate::geocode::budget::GOOGLE_DAILY_UNITS`]).
     pub geocoder_daily_units: [u64; 2],
@@ -81,6 +84,8 @@ impl Builtins {
             waqi: waqi.1.into(),
             kakao: crate::geocode::KAKAO_ENDPOINT.into(),
             google: crate::geocode::GOOGLE_ENDPOINT.into(),
+            solar_archive: crate::solar_terms::official::ARCHIVE_BASE.into(),
+            gwanbo: crate::solar_terms::official::GAZETTE_ORIGIN.into(),
             geocoder_daily_units: [
                 crate::geocode::budget::KAKAO_DAILY_UNITS,
                 crate::geocode::budget::GOOGLE_DAILY_UNITS,
@@ -365,6 +370,8 @@ pub(crate) struct BuiltGateway {
     pub warning_acquire: Option<Arc<dyn crate::domestic::kma::source::fetch::ForecastAcquire>>,
     pub raw_writer: Option<Arc<crate::storage::response_first::Writer>>,
     pub narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>>,
+    pub solar_terms_api: Option<Arc<dyn crate::solar_terms::api::CalendarApi>>,
+    pub solar_terms_reconcile: Option<Arc<dyn crate::solar_terms::Reconcile>>,
     pub image_production: Option<Arc<dyn crate::domestic::kma::source::air_input::ImageProduction>>,
 }
 struct UnavailableGeocoder;
@@ -405,6 +412,8 @@ pub(crate) fn build_shared(
             raw_writer: None,
             warning_cycles: None,
             narrative_acquire: None,
+            solar_terms_api: None,
+            solar_terms_reconcile: None,
             image_production: None,
         });
     }
@@ -458,6 +467,8 @@ pub(crate) fn build_shared(
     let mut raw_writer = None;
     let mut warning_cycles = None;
     let mut narrative_acquire: Option<Arc<dyn crate::narrative::Acquire>> = None;
+    let mut solar_terms_api: Option<Arc<dyn crate::solar_terms::api::CalendarApi>> = None;
+    let mut solar_terms_reconcile: Option<Arc<dyn crate::solar_terms::Reconcile>> = None;
     let mut image_production = None;
     if let (Some(s3), true) = (s3, families.kma_source() || families.push) {
         // S15b: the S3 input source over the shared admission, one for every listed address
@@ -492,6 +503,37 @@ pub(crate) fn build_shared(
                     .map_err(|_| GatewayError::InvalidConfiguration)?,
             );
             narrative_acquire = Some(service.clone());
+            Some(service)
+        } else {
+            None
+        };
+        let solar_terms: Option<Arc<dyn crate::solar_terms::TermLookup>> = if families.kma {
+            let (future_years, warned) = crate::solar_terms::calendar::future_years_from_var(var);
+            if warned {
+                eprintln!("Invalid SOLAR_TERMS_FUTURE_YEARS; using the default 20-year horizon.");
+            }
+            let seeds = crate::solar_terms::calendar::bundled_seeds()
+                .map_err(|_| GatewayError::InvalidConfiguration)?;
+            let fetcher = crate::solar_terms::official::ReqwestFetcher::new()
+                .map_err(|_| GatewayError::InvalidConfiguration)?;
+            let official_source: Arc<dyn crate::solar_terms::official::OfficialSource> =
+                Arc::new(crate::solar_terms::official::GazetteSource::with_endpoints(
+                    fetcher,
+                    builtins.solar_archive.clone(),
+                    builtins.gwanbo.clone(),
+                ));
+            let service = Arc::new(
+                crate::solar_terms::store::Service::new(
+                    s3.clone(),
+                    crate::solar_terms::calendar::system_clock(),
+                    future_years,
+                    &seeds,
+                    Some(official_source),
+                )
+                .map_err(|_| GatewayError::InvalidConfiguration)?,
+            );
+            solar_terms_reconcile = Some(service.clone());
+            solar_terms_api = Some(service.clone());
             Some(service)
         } else {
             None
@@ -538,12 +580,13 @@ pub(crate) fn build_shared(
         // the same S3 admission. Nation shares this backend and its summary recorder.
         let summaries: Arc<dyn crate::summary::SummarySink> =
             Arc::new(crate::summary::Recorder::new(s3.clone()));
-        let kma = crate::domestic::kma::backend::select_native_versions_with_narrative(
+        let kma = crate::domestic::kma::backend::select_native_versions_with_services(
             &backend,
             source.clone(),
             &families.kma_versions(),
             Some(summaries),
             narrative.clone(),
+            solar_terms,
         )?;
         native.kma = Some(kma.clone());
         if families.direct().any() {
@@ -581,6 +624,8 @@ pub(crate) fn build_shared(
         raw_writer,
         warning_cycles,
         narrative_acquire,
+        solar_terms_api,
+        solar_terms_reconcile,
         image_production,
     })
 }
