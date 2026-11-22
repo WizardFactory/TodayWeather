@@ -776,13 +776,28 @@ test("an observation on a 3-hour column turns that dot red with readable text an
     dot.locator("xpath=following-sibling::*[contains(@class,'today-value')][1]"),
   ).toHaveCSS("fill", "rgb(255, 255, 255)");
   await page.emulateMedia({ forcedColors: "active" });
-  const fills = await scroll.evaluate((el) => ({
-    now: getComputedStyle(el.querySelector(".today-point.now-point")!).fill,
-    other: getComputedStyle(
-      el.querySelector(".today-point:not(.now-point)")!,
-    ).fill,
-  }));
+  const fills = await scroll.evaluate((el) => {
+    const svg = el.querySelector("svg")!;
+    const probe = (color: string) => {
+      const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.style.fill = color;
+      svg.appendChild(t);
+      const value = getComputedStyle(t).fill;
+      t.remove();
+      return value;
+    };
+    const dot = el.querySelector(".today-point.now-point")!;
+    return {
+      now: getComputedStyle(dot).fill,
+      other: getComputedStyle(el.querySelector(".today-point:not(.now-point)")!).fill,
+      value: getComputedStyle(dot.nextElementSibling!).fill,
+      highlight: probe("Highlight"),
+      highlightText: probe("HighlightText"),
+    };
+  });
   expect(fills.now).not.toBe(fills.other);
+  expect(fills.now).toBe(fills.highlight);
+  expect(fills.value).toBe(fills.highlightText);
 });
 test("hourly chart matches the native columns: three-hour rows from yesterday, seven per phone screen, current between columns; keeps visible row on expand and handles SVG clicks", async ({
   page,

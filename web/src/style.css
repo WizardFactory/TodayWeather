@@ -2657,11 +2657,15 @@ textarea {
   .hourly-chart .yesterday-value {
     fill: Canvas;
   }
-  /* The current dot stays distinct from forecast dots. */
+  /* The current dot stays distinct from forecast dots; its value uses the
+     paired HighlightText. */
   .now-point,
   .hourly-chart .today-point.now-point {
     fill: Highlight;
     stroke: CanvasText;
+  }
+  .hourly-chart .today-point.now-point + .today-value {
+    fill: HighlightText;
   }
   .hero-card {
     background: Canvas;
