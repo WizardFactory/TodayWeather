@@ -41,6 +41,8 @@ export type Place = {
   lat: number;
   lon: number;
   current?: boolean;
+  /** Unrounded search or GPS point. Ordinary weather and its cache retain the existing coordinates. */
+  warningLocation?: {lat: number; lon: number};
 };
 export type Point = {
   at: string;
@@ -261,7 +263,7 @@ export function normalizeCoordinatePollenForecast(
   return days.length ? {source, attribution, region, retrievedAt, days} : undefined;
 }
 
-export function coordinates(
+export function exactCoordinates(
   lat: unknown,
   lon: unknown,
 ): { lat: number; lon: number } {
@@ -281,7 +283,11 @@ export function coordinates(
     Math.abs(b) > 180
   )
     throw new Error("Invalid coordinates");
-  return { lat: Math.round(a * 1000) / 1000, lon: Math.round(b * 1000) / 1000 };
+  return {lat: a, lon: b};
+}
+export function coordinates(lat: unknown, lon: unknown): {lat: number; lon: number} {
+  const point = exactCoordinates(lat, lon);
+  return {lat: Math.round(point.lat * 1000) / 1000, lon: Math.round(point.lon * 1000) / 1000};
 }
 export function placeId(lat: number, lon: number): string {
   const p = coordinates(lat, lon);
@@ -1012,3 +1018,5 @@ export {
   linePath,
   temperatureDomain,
 } from "./charts";
+
+export { decodeCoordinateWarnings, warningsAt, type CoordinateWarnings } from "./warnings";

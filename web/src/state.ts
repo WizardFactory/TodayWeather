@@ -4,6 +4,7 @@ import {
   POLLUTANTS,
   parseUnits,
   coordinates,
+  exactCoordinates,
   validDaySummary,
   type Place,
   type Units,
@@ -61,6 +62,14 @@ export function restoreState(storage: Pick<Storage, "getItem">): SavedState {
         )
           continue;
         const c = coordinates(p.lat, p.lon);
+        let warningLocation: Place["warningLocation"];
+        try {
+          if (p.warningLocation) {
+            warningLocation = exactCoordinates(p.warningLocation.lat, p.warningLocation.lon);
+          }
+        } catch {
+          /* Preserve saved places whose optional precise point did not validate. */
+        }
         if (places.some((x) => x.id === p.id)) continue;
         places.push({
           id: p.id,
@@ -69,6 +78,7 @@ export function restoreState(storage: Pick<Storage, "getItem">): SavedState {
           country: typeof p.country === "string" ? p.country.slice(0, 3) : "",
           ...c,
           ...(p.current ? { current: true } : {}),
+          ...(warningLocation ? { warningLocation } : {}),
         });
       } catch {
         /* Discard invalid records without blocking startup. */
@@ -180,8 +190,17 @@ export function addPlace(state: SavedState, place: Place): SavedState {
         places: state.places.map((p) => (p === found ? place : p)),
         selectedId: place.id,
       };
-    if (!place.current || found.current)
-      return { ...state, selectedId: found.id };
+    if (!place.current) return { ...state, selectedId: found.id };
+    if (found.current) {
+      const warningLocation = place.warningLocation;
+      return {
+        ...state,
+        selectedId: found.id,
+        places: warningLocation
+          ? state.places.map((p) => (p === found ? {...p, warningLocation} : p))
+          : state.places,
+      };
+    }
     // A new fix on a saved favorite: keep the favorite as is and retire the
     // stale current-location entry instead of converting or duplicating it.
     return {
