@@ -29,7 +29,7 @@ a bundle is not qualification approval.
 
 ## Qualification S3 allowance
 
-The main `server2` executable recognizes the optional `SERVER2_SHADOW_S3_LIMITS=reads,writes,put_bytes` setting. Values are nonnegative decimal integers. Maximum per-process values are 1,140,000 reads, 900,000 write/list attempts and 2 GiB of attempted PUT bodies. Missing leaves ordinary runtime behavior unchanged; an empty, malformed or excessive value fails startup. The coordinator must supply a disjoint precharged allocation for each process, not the maximum on each restart. Aggregate candidate allocations and the separate operator/export/cleanup reserve must fit the run's ceilings.
+The main `server2` executable recognizes the optional `SERVER2_SHADOW_S3_LIMITS=reads,writes,put_bytes` setting. Values are nonnegative decimal integers. Maximum per-process values are 1,740,000 reads, 900,000 write/list attempts and 2 GiB of attempted PUT bodies. Missing leaves ordinary runtime behavior unchanged; an empty, malformed or excessive value fails startup. The coordinator must supply a disjoint precharged allocation for each process, not the maximum on each restart. Aggregate candidate allocations and the separate operator/export/cleanup reserve must fit the run's ceilings.
 
 Main installs one immutable process owner before runtime construction. Every S3 transport consults it immediately before a physical send; constructing additional clients or validating settings cannot replenish it. GET and HEAD consume reads. LIST consumes write/list attempts despite using HTTP GET. PUT atomically consumes one write and its body size. Rejected compound reservations spend neither dimension. Once admitted, failures, 412 conflicts and cancellation are not refunded. Existing automatic HTTP retries and redirects remain disabled.
 
@@ -229,9 +229,9 @@ The guard writes its stop decision before it stops the candidate and reader, bec
 
 ## Transfer model and protected cleanup
 
-Candidate S3 grants follow the server's parse caps (1,140,000 reads, 900,000 write/list
+Candidate S3 grants follow the server's parse caps (1,740,000 reads, 900,000 write/list
 attempts, 2 GiB of PUT bytes); the allocations themselves are sized from measurement
-(SR-6). The observed coordinate-and-address day used 80,955 candidate reads. Repeating that day for seven days gives 566,685 reads and a minimum grant of 1,133,370 at twice the projected demand. The read cap rounds that floor up to the next 10,000. The [cost ceiling](#cost-ceiling) prices what is actually used; it ignores CPU
+(SR-6). With quota renewal working, the November 21–22 coordinate-and-address rehearsal used 124,168 candidate reads in 24 hours. Repeating this workload for seven days gives 869,176 reads, requiring a grant of 1,738,352 at twice the projected demand. The read cap rounds that floor up to the next 10,000. The [cost ceiling](#cost-ceiling) prices what is actually used; it ignores CPU
 credits, free tiers and refunds. Verified rate evidence must be supplied before launch. The cost estimate uses the initial generation's counters. A future restart mode must carry prior-generation spend into the estimate.
 
 The finish reserve prices up to 16 GiB of operator transfers for new journals.

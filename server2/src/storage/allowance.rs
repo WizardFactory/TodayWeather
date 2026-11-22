@@ -25,7 +25,7 @@ pub struct Allowance {
 }
 impl Allowance {
     pub fn new(counts: Counts) -> Result<Self, Error> {
-        if counts.reads > 1_140_000
+        if counts.reads > 1_740_000
             || counts.writes > 900_000
             || counts.put_bytes > 2 * 1024 * 1024 * 1024
         {
@@ -340,7 +340,7 @@ mod tests {
                 put_bytes: 0
             })
         );
-        for reads in [1_133_370, 1_140_000] {
+        for reads in [1_140_000, 1_738_352, 1_740_000] {
             let counts = parse(Some(format!("{reads},900000,2147483648")))
                 .unwrap()
                 .unwrap();
@@ -353,7 +353,7 @@ mod tests {
             "-1,2,3",
             "+1,2,3",
             "1, 2,3",
-            "1140001,0,0",
+            "1740001,0,0",
             "0,900001,0",
             "0,0,2147483649",
             "9999999999999999999999,0,0",

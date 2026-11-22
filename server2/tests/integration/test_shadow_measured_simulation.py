@@ -85,7 +85,7 @@ class MeasuredSimulationTests(unittest.TestCase):
         self.policy['allowance']['reads'] -= 1
         with self.assertRaisesRegex(ValueError, '2×.*reads'):
             self.load()
-        self.policy['allowance']['reads'] = 1_140_001
+        self.policy['allowance']['reads'] = 1_740_001
         with self.assertRaisesRegex(ValueError, 'cap.*reads'):
             self.load()
 

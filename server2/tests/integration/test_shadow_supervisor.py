@@ -100,14 +100,14 @@ class JournalTests(unittest.TestCase):
     def test_run_request_budget_rejects_a_second_grant_above_the_server_cap(self):
         with self.create() as j:
             with self.assertRaises(E):
-                j.reserve_generation('initial', self.allocation(reads=1_140_001), now=1000)
+                j.reserve_generation('initial', self.allocation(reads=1_740_001), now=1000)
             with self.assertRaises(E):
                 j.reserve_generation('initial', self.allocation(writes=900_001), now=1000)
-            j.reserve_generation('initial', self.allocation(reads=1_133_370), now=1000)
-            j.reserve_generation('restart-1', self.allocation(reads=6_630), now=1000)
+            j.reserve_generation('initial', self.allocation(reads=1_738_352), now=1000)
+            j.reserve_generation('restart-1', self.allocation(reads=1_648), now=1000)
             with self.assertRaises(E):
                 j.reserve_generation('restart-2', self.allocation(reads=1), now=1000)
-            self.assertEqual(j.snapshot()['allocated']['reads'], 1_140_000)
+            self.assertEqual(j.snapshot()['allocated']['reads'], 1_740_000)
             self.assertEqual(j.snapshot()['generations'], 2)
 
     def test_three_generations_only_even_with_unused_budget(self):
@@ -509,10 +509,10 @@ def host_sample(m=None):
 class GuardTests(unittest.TestCase):
     def test_guard_accepts_measured_read_grant_and_enforces_dimension_caps(self):
         manifest = host_manifest()
-        for reads in (1_133_370, 1_140_000):
+        for reads in (1_140_000, 1_738_352, 1_740_000):
             manifest['allowance']['reads'] = reads
             self.assertEqual(guard.validate(manifest)['allowance']['reads'], reads)
-        for field, excessive in (('reads', 1_140_001), ('writes', 900_001), ('put_bytes', 2**31 + 1)):
+        for field, excessive in (('reads', 1_740_001), ('writes', 900_001), ('put_bytes', 2**31 + 1)):
             invalid = host_manifest()
             invalid['allowance'][field] = excessive
             with self.subTest(field=field), self.assertRaisesRegex(guard.GuardError, 'allowance_' + field):

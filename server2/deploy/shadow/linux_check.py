@@ -569,10 +569,12 @@ def finish_cli_check(report, entry, run_id, *, output=None, include_originals=Fa
     data = INSTALL_ROOT / run_id / 'data'
     hidden = data.with_name('data.unreachable')
     data.rename(hidden)
+    # A full rehearsal exports every original version through a separate fixture CLI call.
+    finish_timeout = 1800 if include_originals else 180
     try:
         result = run(sys.executable, '-B', '-E', '-s', str(HERE / 'provision.py'), 'finish', '--execute',
                      '--state', str(journal_path), '--output', str(output),
-                     '--aws-executable', str(cli), env=env, check=False, timeout=180)
+                     '--aws-executable', str(cli), env=env, check=False, timeout=finish_timeout)
     finally:
         hidden.rename(data)
 

@@ -42,6 +42,16 @@
       "path": "docs/evidence/tasks/issue-3004/verification.md",
       "category": "documentation",
       "reason": "Record selected fault, local rehearsal, allocation and simulator results with their measurement scope."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3004/hourly-measurements.json",
+      "category": "documentation",
+      "reason": "Retain the sanitized 24-hour input so the measured simulation can be reproduced."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3004/allocation-plan.json",
+      "category": "documentation",
+      "reason": "Bind the offline seven-day replay policy to its measured input and cost assumptions."
     }
   ]
 }
