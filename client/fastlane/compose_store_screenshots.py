@@ -10,7 +10,7 @@ frame; only its alpha channel is dropped (RGB unchanged).
 Usage (Pillow required; run from the repository root):
   compose_store_screenshots.py --out <new dir> --android <dir with device.txt, ko-KR/ en-US/ ja-JP/> \
       --crop-top N --crop-bottom N --iphone <raw dir> --ipad <raw dir> --chromium <chrome-headless-shell> \
-      --commit <sha> --captured-on <date>
+      --commit <app source sha> --capture-commit <capture tooling sha> --captured-on <date>
 Writes the whole package into --out, which must not exist yet, with the layout of client/fastlane:
 metadata/android/<locale>/images/phoneScreenshots/0N-*.jpg, screenshots/ios/ko/{iphone69,ipad13}-0N-*.png and
 screenshots/manifest.json. It never changes the maintained package: after inspecting the output, copy it over
@@ -117,7 +117,8 @@ def ios(args, stage, files):
 
 def main():
     parser = argparse.ArgumentParser()
-    for name in ("--out", "--android", "--iphone", "--ipad", "--chromium", "--commit", "--captured-on", "--version"):
+    for name in ("--out", "--android", "--iphone", "--ipad", "--chromium", "--commit", "--capture-commit", "--captured-on",
+                 "--version"):
         parser.add_argument(name, required=name != "--version")
     parser.add_argument("--crop-top", type=int, required=True)
     parser.add_argument("--crop-bottom", type=int, required=True)
@@ -146,7 +147,9 @@ def write_manifest(args, stage, files, display, density, release):
         "captured_on": args.captured_on,
         "version": args.version or "2.0 native (Android 2.0.0, iOS 2.0.1 in the stores)",
         "source_base_commit": args.commit,
-        "source_state": "Debug builds of the native apps from the source commit with private inputs; not the store binaries.",
+        "capture_tooling_commit": args.capture_commit,
+        "source_state": "Debug builds of the native apps (app sources of source_base_commit) with private inputs, driven by "
+                        "the capture tests and scripts of capture_tooling_commit; not the store binaries.",
         "selected_city": "Seoul (서울) saved; no current location.",
         "screens": ["comparison", "expanded hourly weather", "daily forecast", "air quality",
                     "home-screen widgets (Play: forecast and clock, then current weather and air quality)"],
@@ -156,9 +159,11 @@ def write_manifest(args, stage, files, display, density, release):
             "ios_ipad": "Dedicated iPad Pro 13-inch (M5) simulator, iOS 26.5",
         },
         "composition": {
-            "android": f"HTML marketing frame (screenshot-frame.html) with the actual app viewport: status bar "
-                       f"({args.crop_top} px) and navigation bar ({args.crop_bottom} px) removed; UI/data not retouched.",
-            "ios": "Full native framebuffer; opaque alpha removal only; RGB pixels unchanged.",
+            "android": f"HTML marketing frame (screenshot-frame.html) around the actual screen with the status bar "
+                       f"({args.crop_top} px) and navigation bar ({args.crop_bottom} px) removed: the app for 01-04, the "
+                       f"launcher's home-screen pages with the pinned widgets for 05-06; UI/data not retouched.",
+            "ios": "Full native framebuffer (the app for 01-04, the Home Screen with the added widgets for 05); opaque "
+                   "alpha removal only; RGB pixels unchanged.",
         },
         "advertising": "Ad-free captures (#3122): Android NoAdsPlatform (test APK only), iOS build without ad units; "
                        "the shipped apps show ads.",

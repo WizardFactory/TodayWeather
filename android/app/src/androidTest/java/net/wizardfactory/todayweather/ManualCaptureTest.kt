@@ -89,7 +89,7 @@ internal class ManualWalk(val rule: AndroidComposeTestRule<*, MainActivity>) {
         val deadline = System.currentTimeMillis() + 20_000
         var seen = emptyList<String>()
         while (System.currentTimeMillis() < deadline) {
-            val nodes = automation.windows.mapNotNull { it.root }.filter { it.packageName?.toString() != rule.activity.packageName }
+            val nodes = automation.windows.mapNotNull { it.root }.filter { it.packageName?.toString()?.contains("launcher") == true }
                 .flatMap { root -> generateSequence(listOf(root)) { level -> level.flatMap { n -> (0 until n.childCount).mapNotNull { n.getChild(it) } }.ifEmpty { null } }.flatten() }
             seen = nodes.mapNotNull { n -> n.text?.toString()?.let { "$it|${n.viewIdResourceName}|${n.isClickable}" } }
             val button = labels.firstNotNullOfOrNull { label -> nodes.firstOrNull { it.isClickable && it.text?.toString() == label } }

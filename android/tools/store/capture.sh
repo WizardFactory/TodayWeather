@@ -14,34 +14,69 @@ emulator_guard
 OUT=${1:?output directory required}
 shift
 LOCALES=${*:-ko-KR:KR en-US:US ja-JP:JP}
-# Only language-REGION:REGION pairs (ko-KR:KR); they name the output directories. Checked before any side effect.
+# Only language-REGION:REGION pairs (ko-KR:KR), each locale once; they name the output directories. Checked before any
+# side effect.
+SEEN=
 for pair in $LOCALES; do
     printf '%s\n' "$pair" | grep -Eqx '[a-z]{2}-[A-Z]{2}:[A-Z]{2}' || { echo "Bad locale pair: $pair" >&2; exit 2; }
+    case " $SEEN " in *" ${pair%%:*} "*) echo "Locale given twice: ${pair%%:*}" >&2; exit 2 ;; esac
+    SEEN="$SEEN ${pair%%:*}"
 done
+# The run switches the system language and restarts the framework as root, so it takes only this project's own AVDs
+# (named tw_*), and one run per emulator at a time (a lock directory in the emulator's AVD directory).
+AVD=$(adb emu avd name 2>/dev/null | tr -d '\r' | head -1)
+case "$AVD" in tw_*) ;; *) echo "refusing emulator AVD '$AVD': only this project's tw_* AVDs" >&2; exit 2 ;; esac
+LOCK=$HOME/.android/avd/$AVD.avd/tw-store-capture.lock
+mkdir "$LOCK" 2>/dev/null || { echo "another store capture holds $AVD ($LOCK)" >&2; exit 2; }
 APP=$HERE/../../app/build/outputs/apk
 # Claimed with a plain mkdir: an existing directory (or a concurrent run that took it first) stops this run here.
 mkdir -p "$(dirname "$OUT")"
-mkdir "$OUT" 2>/dev/null || { echo "$OUT exists: give a new output directory" >&2; exit 2; }
-# The system language: persist.sys.locale, then a framework restart; ready once the launcher has focus again.
+mkdir "$OUT" 2>/dev/null || { rmdir "$LOCK"; echo "$OUT exists: give a new output directory" >&2; exit 2; }
+# adb waits are bounded: a device that does not answer in 120 s fails the run.
+adb_wait() { i=0; until [ "$(adb get-state 2>/dev/null)" = device ]; do i=$((i + 1)); [ "$i" -lt 60 ] || return 1; sleep 2; done; }
+WAS_ROOT=$(adb shell whoami | tr -d '\r')
+# The system language: persist.sys.locale, then a framework restart; done once the language is applied and the
+# launcher has focus again. Returns non-zero instead of exiting, so cleanup can still run after a failure.
 system_locale() {
     adb root >/dev/null 2>&1 || true
-    adb wait-for-device
-    [ "$(adb shell whoami | tr -d '\r')" = root ] || { echo "adb root is needed to set the system language" >&2; exit 2; }
-    adb shell setprop persist.sys.locale "$1"
-    adb shell setprop ctl.restart zygote
+    adb_wait || return 1
+    [ "$(adb shell whoami | tr -d '\r')" = root ] || { echo "adb root is needed to set the system language" >&2; return 2; }
+    adb shell setprop persist.sys.locale "$1" || return 1
+    adb shell setprop ctl.restart zygote || return 1
     sleep 5
     i=0
-    until adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | grep -qi launcher; do
-        i=$((i + 1)); [ "$i" -lt 60 ] || { echo "the framework did not come back in $1" >&2; exit 4; }
+    until [ "$(adb shell getprop persist.sys.locale 2>/dev/null | tr -d '\r')" = "$1" ] && \
+          adb shell dumpsys window 2>/dev/null | grep -m1 mCurrentFocus | grep -qi launcher; do
+        i=$((i + 1)); [ "$i" -lt 60 ] || { echo "the framework did not come back in $1" >&2; return 4; }
         adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
         sleep 2
     done
     sleep 5
 }
 ORIGINAL_LOCALE=$(adb shell getprop persist.sys.locale | tr -d '\r')
-restore_locale() { [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" = "$ORIGINAL_LOCALE" ] || ( system_locale "$ORIGINAL_LOCALE" ) || echo "could not restore the system language $ORIGINAL_LOCALE" >&2; }
-# online_cleanup (uninstall, offline when that cannot be confirmed) keeps the run's exit status.
-cleanup() { status=$?; restore_locale; (exit "$status"); online_cleanup; }
+# Back to the original language and, when this run made adbd root, to an unrooted adbd; any failure is reported and
+# fails the run.
+restore_device() {
+    ok=0
+    if [ "$(adb shell getprop persist.sys.locale 2>/dev/null | tr -d '\r')" != "$ORIGINAL_LOCALE" ]; then
+        system_locale "$ORIGINAL_LOCALE" || { echo "could not restore the system language $ORIGINAL_LOCALE" >&2; ok=1; }
+    fi
+    if [ "$WAS_ROOT" != root ] && [ "$(adb shell whoami 2>/dev/null | tr -d '\r')" = root ]; then
+        adb unroot >/dev/null 2>&1; adb_wait
+        [ "$(adb shell whoami 2>/dev/null | tr -d '\r')" != root ] || { echo "adbd is still root" >&2; ok=1; }
+    fi
+    return $ok
+}
+# Every exit: restore the device, then online_cleanup (uninstall both packages, offline when that cannot be confirmed)
+# with the run's status, made a failure when the restore failed. Runs with errexit off.
+cleanup() {
+    status=$?
+    set +e
+    restore_device || [ "$status" -ne 0 ] || status=6
+    rmdir "$LOCK" 2>/dev/null
+    (exit "$status")
+    online_cleanup
+}
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 [ "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" -ge 33 ] || exit 2
@@ -55,7 +90,7 @@ for pair in $LOCALES; do
     # after the checks below pass, so a rejected capture is never an input.
     PULL=$OUT/.$locale.pull
     mkdir "$PULL"
-    system_locale "$locale"
+    system_locale "$locale" || exit 4
     # A new install per locale: uninstalling also removes the widgets the previous locale placed on the launcher.
     adb uninstall "$PKG.test" >/dev/null 2>&1 || true
     adb uninstall "$PKG" >/dev/null 2>&1 || true

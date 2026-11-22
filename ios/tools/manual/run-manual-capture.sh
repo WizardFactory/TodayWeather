@@ -3,7 +3,8 @@
 #   run-manual-capture.sh [--no-ads [--store]] <out-dir> <tw* iPhone or iPad simulator udid>
 # --no-ads (#3122): the app is built with empty TW_ADMOB_NATIVE_IOS and TW_ADMOB_INTERSTITIAL_IOS, so AdsSettings is nil:
 # no UMP, no Ads SDK start and no ad request; the test then fails any screenshot with a native ad. No app code changes.
-# --store (with --no-ads): testCaptureTheStoreScreens instead, the four App Store screens (store-0N-*) with Seoul saved.
+# --store (with --no-ads): testCaptureTheStoreScreens instead, the App Store images (store-0N-*) with Seoul saved, the
+# last on the Home Screen with the app's widgets, on a disposable clone of the simulator.
 # Builds the app and the UI tests ad hoc signed (the app needs its App Group entitlement to finish its start) into
 # ios/build/DerivedData with ios/Private.xcconfig (TW_SERVER_URL, TW_PLACES_API_KEY_IOS): read-only weather, geocode,
 # nationwide and warning GETs to the legacy server and Places predictions from Google. No GoogleService-Info.plist is
@@ -52,8 +53,19 @@ PY
 redact() { python3 -c 'import sys
 host, key = sys.argv[1], sys.argv[2]
 sys.stdout.write(sys.stdin.read().replace(host, "<server>").replace(key, "<places-key>"))' "$HOST" "$KEY"; }
+# --store changes the Home Screen (it removes the other apps' widgets and adds the app's), so it runs on a disposable
+# clone of the given simulator (same device type and settings), deleted on every exit; the given simulator is untouched.
+CLONE=
+if [ "$STORE" = 1 ]; then
+  xcrun simctl shutdown "$UDID" 2>/dev/null || true
+  CLONE=$(xcrun simctl clone "$UDID" "tw_store_capture_$$")
+  UDID=$CLONE
+fi
 TCC="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/TCC/TCC.db"
-cleanup() { xcrun simctl uninstall "$UDID" "$BUNDLE" 2>/dev/null || true; }
+cleanup() {
+  xcrun simctl uninstall "$UDID" "$BUNDLE" 2>/dev/null || true
+  if [ -n "$CLONE" ]; then xcrun simctl shutdown "$CLONE" 2>/dev/null || true; xcrun simctl delete "$CLONE" || true; fi
+}
 trap cleanup EXIT
 
 NO_ADS=
