@@ -810,11 +810,14 @@ export function normalizeWeather(
     chartHourly,
     ...(kma && /^\d{4}$/.test(str(currentRaw.liveTime))
       ? (() => {
-          const liveAt = rowTime({
-            date: currentRaw.date,
-            time: str(currentRaw.liveTime),
-          });
-          return liveAt ? { liveAt } : {};
+          const live = str(currentRaw.liveTime);
+          // The server writes 00h as the previous day's 24h; its liveTime
+          // minutes then belong to the hour of current.at.
+          const liveAt =
+            live.slice(0, 2) === current.at.slice(11, 13)
+              ? `${current.at.slice(0, 11)}${live.slice(0, 2)}:${live.slice(2)}`
+              : rowTime({ date: currentRaw.date, time: live });
+          return liveAt && /:[0-5]\d$/.test(liveAt) ? { liveAt } : {};
         })()
       : {}),
     ...(!kma && Array.isArray(raw.hourlyDetails)

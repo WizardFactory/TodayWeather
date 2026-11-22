@@ -93,6 +93,13 @@ it("reads the KMA observation time from liveTime", () => {
   const raw = structuredClone(fixture.response) as Record<string, any>;
   raw.current.liveTime = "0915";
   expect(normalizeWeather(raw).liveAt).toBe("2026-09-23T09:15");
+  // Server wire shape after midnight: 00h is the previous day's 24h.
+  Object.assign(raw.current, { date: "20260922", time: 24, liveTime: "0015" });
+  const midnight = normalizeWeather(raw);
+  expect(midnight.current.at).toBe("2026-09-23T00:00");
+  expect(midnight.liveAt).toBe("2026-09-23T00:15");
+  const model = hourlyChart(midnight);
+  expect(model.rows.some((r) => r.current)).toBe(false);
 });
 it("keeps only the KMA short rows in the chart series", () => {
   const shortTimes = new Set(
