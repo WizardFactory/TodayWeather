@@ -17,12 +17,40 @@ const browser = await chromium.launch();
 const fixture = JSON.parse(
   readFileSync("docs/rewrite/examples/client-kma-response.json"),
 ).response;
+// The live API sends 41 three-hour rows, from the day before yesterday 00h to
+// the day after tomorrow 24h, so the chart has yesterday's comparison values.
 // Live KMA observations come a few minutes after the hour (liveTime), so the
-// hourly chart shows the current temperature between columns, as in the apps.
+// current temperature sits between columns, as in the apps.
+const shape = [0, -1, -2, 1, 4, 6, 4, 2];
+const sky = ["moon", "moon", "sun", "sun", "sun", "sun", "sun", "moon"];
+const base = { 21: 9, 22: 11, 23: 17, 24: 13, 25: 12, 26: 12 };
+fixture.short = Array.from({ length: 41 }, (_, i) => {
+  const day = 21 + Math.floor(i / 8),
+    slot = i % 8,
+    rainy = day === 24 && slot >= 3 && slot <= 6;
+  return {
+    ...fixture.short[0],
+    date: `202609${day}`,
+    time: slot * 3,
+    dateObj: `2026.09.${day} ${String(slot * 3).padStart(2, "0")}:00`,
+    fromToday: day - 23,
+    t3h: base[day] + shape[slot],
+    skyIcon: rainy ? "rain" : sky[slot],
+    pop: rainy ? 60 : day === 24 ? 30 : 0,
+    ...(rainy ? { r06: 4, pty: 1 } : {}),
+  };
+});
 Object.assign(fixture.current, {
   time: 7,
   liveTime: "0730",
   stnDateTime: "2026.09.23.07:30",
+  t1h: 17,
+  yesterday: {
+    ...fixture.current.yesterday,
+    time: 7,
+    dateObj: "2026.09.22 07:00",
+    t1h: 9,
+  },
 });
 const page = await browser.newPage({
   viewport: { width: 820, height: 1180 },
@@ -102,7 +130,7 @@ try {
         browser: browser.version(),
         viewport: [820, 1180],
         fixture: "docs/rewrite/examples/client-kma-response.json",
-        fixturePatch: "current time 7, liveTime 0730 (observation between columns)",
+        fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 17, yesterday 9",
         externalRequests: "blocked except fixture fulfilment",
         csp: "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
         images,

@@ -461,7 +461,7 @@ test("full mixed-day timeline, current observation, keyboard cursor and model ta
   expect(await page.locator(".chart-extras .chart-wind svg").count()).toBe(42);
   await page.locator(".chart-panel summary").click();
   expect(await page.locator(".chart-panel tbody tr").count()).toBe(42);
-  expect(await page.locator(".hourly-chart .now").count()).toBe(1);
+  expect(await page.locator(".hourly-chart .now-point").count()).toBe(1);
   expect(await page.locator(".daily-chart .now").count()).toBe(1);
   const stops = await page
     .locator(".daily-chart stop")
@@ -497,8 +497,15 @@ for (const width of [320, 402])
     await page.goto("/weather/seoul/hourly");
     await expect(page.locator(".hourly-chart")).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
+    // Native: every yesterday value is drawn and today's dot covers it when
+    // they meet, so only today's values and the legend must stay apart.
+    const yesterday = await page.locator(".hourly-chart").evaluate((el) => ({
+      points: el.querySelectorAll("svg > g:not(.current-marker) .yesterday-point").length,
+      values: el.querySelectorAll(".yesterday-value").length,
+    }));
+    expect(yesterday.values).toBe(yesterday.points);
     const collisions = await page.locator(".hourly-chart").evaluate((el) => {
-      const rects = [...el.querySelectorAll("text.chart-value")].map((e) =>
+      const rects = [...el.querySelectorAll("text.today-value")].map((e) =>
         e.getBoundingClientRect(),
       );
       const intersect = (a: DOMRect, b: DOMRect) =>
@@ -815,7 +822,8 @@ test("hourly chart matches the native columns: three-hour rows from yesterday, s
   // Native: the short rows from yesterday (09-22) 00:00, none of the 1-hour rows.
   const hours = page.locator(".hourly-columns .chart-hour");
   await expect(hours).toHaveCount(24);
-  await expect(hours.first()).toHaveText("0시");
+  // Native KMA labels end a day at 24시.
+  await expect(hours.first()).toHaveText("24시");
   expect(
     (await hours.allTextContents()).every((h) => Number.parseInt(h) % 3 === 0),
   ).toBe(true);
@@ -840,11 +848,20 @@ test("hourly chart matches the native columns: three-hour rows from yesterday, s
   expect(Math.abs(metrics.scrollLeft - metrics.column * 7)).toBeLessThan(2);
 
   // The current column is the 00:00 row; the observation sits halfway to 03:00.
-  await expect(page.locator(".hourly-columns .current-column .chart-hour")).toHaveText("0시");
+  await expect(page.locator(".hourly-columns .current-column .chart-hour")).toHaveText("24시");
   await expect(
     page.locator(".hourly-columns .current-column .chart-probability"),
   ).toHaveText("0%");
   // Native: a filled red point (no ring or line) marks the observation.
+  // Native: a row's sky and probability sit on the boundary before its hour,
+  // which is where the between-column observation point is drawn.
+  const offsets = await scroll.evaluate((el) => {
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[9];
+    const hour = col.querySelector(".chart-hour")!.getBoundingClientRect();
+    const prob = col.querySelector(".chart-probability")!.getBoundingClientRect();
+    return (hour.left + hour.width / 2) - (prob.left + prob.width / 2);
+  });
+  expect(Math.abs(offsets - metrics.column / 2)).toBeLessThan(1);
   const marker = await scroll.evaluate((el) => {
     const point = el.querySelector(".current-marker .now-point");
     return point ? Number(point.getAttribute("cx")) : null;

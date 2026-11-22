@@ -2383,6 +2383,20 @@ textarea {
   white-space: nowrap;
 }
 /* Native: the day label starts at its column and runs over the next ones. */
+/* Native: sky, probability and amount of a row sit on the boundary before it. */
+.chart-between {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tw-space-2);
+  /* The whole column, padding included, so -50% lands on its left edge. */
+  width: calc(100% + 2 * var(--tw-space-1));
+  flex-shrink: 0;
+  transform: translateX(-50%);
+}
+.chart-between > span {
+  white-space: nowrap;
+}
 .chart-column .chart-date {
   min-height: 1.5em;
   align-self: flex-start;
@@ -2460,11 +2474,6 @@ textarea {
   fill: var(--tw-chart-now);
   stroke: var(--tw-bg-surface);
   stroke-width: 2;
-}
-.hourly-chart .now {
-  fill: none;
-  stroke: var(--tw-chart-now);
-  stroke-width: 2.5;
 }
 .hourly-chart .today-value {
   fill: var(--tw-chart-today-on);
@@ -2638,10 +2647,6 @@ textarea {
   .now,
   .now-point {
     fill: CanvasText;
-  }
-  .hourly-chart .now {
-    fill: none;
-    stroke: CanvasText;
   }
   .hourly-chart .today-value,
   .hourly-chart .yesterday-value {

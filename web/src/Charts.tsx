@@ -123,12 +123,14 @@ function nativeColumn(viewport: number, rem: number) {
   return (rem / 16) * Math.min(viewport / 7, 60);
 }
 
-/** Native hour label: the hour and a short unit ("21시", "21h"). */
-function chartHour(at: string) {
+/**
+ * Native hour label: the hour and a short unit ("21시", "21h"). KMA rows end
+ * a day at 24h, so midnight reads "24시" as in the apps.
+ */
+function chartHour(at: string, kma: boolean) {
   const hour = Number(at.slice(11, 13));
-  return Number.isFinite(hour)
-    ? t("chart.hour", { hour: String(hour) })
-    : hourText(at);
+  if (!Number.isFinite(hour)) return hourText(at);
+  return t("chart.hour", { hour: String(hour === 0 && kma ? 24 : hour) });
 }
 
 function ChartAmount({ point, unit }: { point: Point; unit: string }) {
@@ -224,19 +226,15 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
     model.rows
       .flatMap((r) => [r.point.temperature, r.yesterday?.temperature])
       .filter((v): v is number => v !== null && v !== undefined)
-      .map((v) => `${formatValue(v)}°`),
+      .map((v) => formatValue(v)),
     `${rem}px Pretendard`,
   );
+  // Native dots: radius 10 in a 60 px column with the value inside, every
+  // yesterday value shown and today's dot drawn over it.
   const dotRadius = Math.min(
     column / 2 - 1,
-    Math.max(rem * 0.78, tempTextW / 2 + rem * 0.28),
+    Math.max(rem * 0.625, tempTextW / 2 + rem * 0.15),
   );
-  const yesterdayClose = (r: (typeof model.rows)[number]) =>
-    r.yesterday?.temperature !== null &&
-    r.yesterday?.temperature !== undefined &&
-    r.point.temperature !== null &&
-    Math.abs(y(r.yesterday.temperature) - y(r.point.temperature)) <
-      dotRadius * 2 + rem * 0.35;
   const { cursor, setCursor, keyDown } = useCursor(
     n,
     x,
@@ -366,28 +364,34 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                       ? hourlyDayLabel(r.point.at, w.current.at)
                       : "\u00a0"}
                   </span>
-                  <span className="chart-hour">{chartHour(r.point.at)}</span>
-                  {i > 0 ? (
-                    <WeatherIcon icon={r.point.icon} size={rem * 1.5} />
-                  ) : (
-                    <span
-                      className="chart-icon-placeholder"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span className="chart-probability">
-                    {i > 0 ? percent(r.point.rainProbability) : "\u00a0"}
+                  <span className="chart-hour">
+                    {chartHour(r.point.at, w.source === "KMA")}
                   </span>
-                  <span className="chart-amount">
+                  {/* Native: the row's sky, probability and amount sit on the
+                      boundary before its hour (the period that ends there). */}
+                  <div className="chart-between">
                     {i > 0 ? (
-                      <ChartAmount
-                        point={r.point}
-                        unit={w.units.precipitationUnit}
-                      />
+                      <WeatherIcon icon={r.point.icon} size={rem * 1.5} />
                     ) : (
-                      "\u00a0"
+                      <span
+                        className="chart-icon-placeholder"
+                        aria-hidden="true"
+                      />
                     )}
-                  </span>
+                    <span className="chart-probability">
+                      {i > 0 ? percent(r.point.rainProbability) : "\u00a0"}
+                    </span>
+                    <span className="chart-amount">
+                      {i > 0 ? (
+                        <ChartAmount
+                          point={r.point}
+                          unit={w.units.precipitationUnit}
+                        />
+                      ) : (
+                        "\u00a0"
+                      )}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -482,27 +486,17 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                       height={height}
                     />
                     <title>{`${dayLabel(r.point.at, w.current.at)} ${hourText(r.point.at)} ${formatValue(r.point.temperature)}° · ${t("display.yesterday")} ${formatValue(r.yesterday?.temperature ?? null)}° · ${rain(r.point, w.units.precipitationUnit)}${observation(i)}`}</title>
-                    {r.current && r.point.temperature !== null && (
-                      <line
-                        className="now-line"
-                        x1={x(i)}
-                        x2={x(i)}
-                        y1={0}
-                        y2={height}
-                      />
-                    )}
                     {r.yesterday?.temperature !== null &&
                       r.yesterday?.temperature !== undefined && (
                         <circle
                           className="yesterday-point"
                           cx={x(i)}
                           cy={y(r.yesterday.temperature)}
-                          r={yesterdayClose(r) ? rem * 0.25 : dotRadius}
+                          r={dotRadius}
                         />
                       )}
                     {r.yesterday?.temperature !== null &&
-                      r.yesterday?.temperature !== undefined &&
-                      !yesterdayClose(r) && (
+                      r.yesterday?.temperature !== undefined && (
                         <text
                           x={x(i)}
                           y={y(r.yesterday.temperature)}
@@ -510,25 +504,18 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                           dominantBaseline="central"
                           className="chart-value yesterday-value"
                         >
-                          {formatValue(r.yesterday.temperature)}°
+                          {formatValue(r.yesterday.temperature)}
                         </text>
                       )}
                     {r.point.temperature !== null && (
                       <>
+                        {/* Native sharp: the current column's dot turns red. */}
                         <circle
-                          className="today-point"
+                          className={`today-point ${r.current ? "now-point" : ""}`}
                           cx={x(i)}
                           cy={y(r.point.temperature)}
                           r={dotRadius}
                         />
-                        {r.current && (
-                          <circle
-                            className="now"
-                            cx={x(i)}
-                            cy={y(r.point.temperature)}
-                            r={dotRadius + rem * 0.2}
-                          />
-                        )}
                         <text
                           x={x(i)}
                           y={y(r.point.temperature)}
@@ -536,7 +523,7 @@ export function HourlyChart({ weather: w }: { weather: Weather }) {
                           dominantBaseline="central"
                           className="chart-value today-value"
                         >
-                          {formatValue(r.point.temperature)}°
+                          {formatValue(r.point.temperature)}
                         </text>
                       </>
                     )}

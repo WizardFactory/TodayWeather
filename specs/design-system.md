@@ -286,8 +286,8 @@ Both charts keep the Cordova information model and reading order. The design sys
 
 **Anatomy, top to bottom, sharing one column grid:**
 1. **Day title.** For example `오늘 09.27` / `Today 09/27`. Role `caption`, weight 600. It appears at the first column of each date. A midnight guide line (`chart.grid.strong`) runs through the whole chart.
-2. **Hour label.** The hour and the native apps' short unit (`LOC_HOUR`): `21시`, `21h`, `21時`, `21Uhr` (`chart.hour`). Role `chart-axis`. It does not follow the locale clock, so seven columns fit a phone; the cursor announcement and table keep the locale's time format.
-3. **Sky icon.** Size 1.75em of `chart-axis` (28 px on mobile). The day or night variant comes from the data.
+2. **Hour label.** The hour and the native apps' short unit (`LOC_HOUR`): `21시`, `21h`, `21時`, `21Uhr` (`chart.hour`); KMA midnight reads `24` as the apps' `time: 24` rows. Role `chart-axis`. It does not follow the locale clock, so seven columns fit a phone; the cursor announcement and table keep the locale's time format.
+3. **Sky icon.** Size 1.75em of `chart-axis` (28 px on mobile). The day or night variant comes from the data. As in the native apps, a row's icon, probability and amount sit on the boundary before its hour (the period ending there), while the hour label and temperature dots sit under the hour.
 4. **Precipitation.** The probability is always printed, including `0%`, as in Cordova (`caption`, value plus `%`). At 30% or more it is colored `precip.text`, and at 60% or more the drop icon is filled. An amount (the first truthy of `rn1`/`s06`/`r06`, rounded when it is 10 or more) goes on a second `caption` line when present.
 
    Cordova column rules that are kept:
@@ -298,11 +298,11 @@ Both charts keep the Cordova information model and reading order. The design sys
 
    | Element | Line | Dot / marker | Value text |
    | --- | --- | --- | --- |
-   | Today | `chart.today` line, 2.5 px | Dots at least 1.6em of `chart-value` (24 px on mobile), filled `chart.today`; expand to fit negative/two-digit values with padding, enlarging columns if needed | `chart-value` in `chart.today.on` (white 4.81 / ink 8.18 dark) |
-   | Yesterday | `chart.yesterday.line`, 1.5 px, dashed "4 4" | Dots filled `chart.yesterday.dot` (`#637088` / `#8391a8`) | White 5.00 / ink 5.63 |
-   | Now | Between 3-hour columns, both lines are spliced through the current observation (today `t1h`, yesterday's value at the same time). When the current time falls on a 3-hour column, there is no splice. This follows Cordova's `sharp` rule (`client/www/js/app.js:547-551`, `706-721`, `748-871`) | `chart.now` point **on the today line at `t1h`** (`#e5484d` light 3.62 on canvas / `#ff6b70` dark 4.67 on raised). A `chart.yesterday.dot` point marks yesterday at the same time. Between columns: a 0.5em point placed half a column after `currentIndex`. On a 3-hour column: a full-size dot | On a 3-hour column: `chart-value` inside the dot. Otherwise the value appears in the column-cursor announcement and tooltip |
+   | Today | `chart.today` line, 2.5 px | Dots of radius 0.625rem (native radius 10), widened only to fit the value and never beyond the column, filled `chart.today` | The number without `°`, `chart-value` in `chart.today.on` (white 4.81 / ink 8.18 dark) |
+   | Yesterday | `chart.yesterday.line`, 1.5 px, dashed "4 4" | Same-size dots filled `chart.yesterday.dot` (`#637088` / `#8391a8`) in every column | The number without `°`; white 5.00 / ink 5.63 |
+   | Now | Between 3-hour columns, both lines are spliced through the current observation (today `t1h`, yesterday's value at the same time). When the current time falls on a 3-hour column, there is no splice. This follows Cordova's `sharp` rule (`client/www/js/app.js:547-551`, `706-721`, `748-871`) | `chart.now` point **on the today line at `t1h`** (`#e5484d` light 3.62 on canvas / `#ff6b70` dark 4.67 on raised). A `chart.yesterday.dot` point marks yesterday at the same time. Between columns: a 0.625em filled point (native radius 5) half a column after `currentIndex`, no ring or line. On a 3-hour column: that column's full-size today dot turns `chart.now` (native `circle-today-current`; white text is 3.9:1, accepted for native parity) | On a 3-hour column: `chart-value` inside the dot. Otherwise the value appears in the column-cursor announcement, tooltip and table |
 
-   **Overlap rule.** When today's and yesterday's dots in a column would overlap vertically (less than 1 dot apart), yesterday's value text is hidden and its dot shrinks to 8 px. Today's value always wins. This fixes the Cordova overlap visible in `docs/rewrite/screenshots/native-ios-hourly.png`.
+   **Overlap rule.** As in the native apps, every yesterday value is drawn and today's dot is drawn over it where they meet; nothing is hidden. Dots are kept at the native size so they meet only for close temperatures.
 6. **Details rows (expander).** Wind direction arrow rotated by `vec`, wind speed plus unit, and humidity %. All use `caption`. The expanded state persists in a new preference, mirroring Cordova's `expandShortChart`. This needs `vec` mapped into `packages/weather-core` (currently unmapped).
 
 **Chart color tokens.** Line and fill colors are non-text and need at least 3:1. Dot text needs at least 4.5.
