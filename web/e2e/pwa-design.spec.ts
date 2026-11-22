@@ -854,6 +854,27 @@ test("hourly chart matches the native columns: three-hour rows from yesterday, s
   await expect(
     page.locator('[data-weather-section="hourly"] .cursor-readout'),
   ).toContainText("현재 오전 12:15 11°C");
+  await scroll.focus();
+  await scroll.press("ArrowRight");
+  await expect(
+    page.locator('[data-weather-section="hourly"] .cursor-readout'),
+  ).not.toContainText("현재");
+  await scroll.press("ArrowLeft");
+  await expect(
+    page.locator('[data-weather-section="hourly"] .cursor-readout'),
+  ).toContainText("현재 오전 12:15 11°C");
+  await expect(
+    scroll.locator("svg > g:not(.current-marker)").nth(8).locator("title"),
+  ).toContainText("현재 오전 12:15 11°C");
+  await page.locator('[data-weather-section="hourly"] details summary').click();
+  await expect(
+    page
+      .locator('[data-weather-section="hourly"] .data-table tbody tr')
+      .nth(8)
+      .locator("td")
+      .nth(2),
+  ).toHaveText("오전 12:15 11°");
+  await page.locator('[data-weather-section="hourly"] details summary').click();
   expect(
     (await scroll.locator(".yesterday-line").getAttribute("d"))!.match(/M/g),
   ).toHaveLength(1);

@@ -72,6 +72,21 @@ it("puts the observation on a column only when it was made at the column time (n
     expect(sharp.current).toBeNull();
   }
 });
+it("draws no marker for an observation after the last column or with a damaged time", () => {
+  const hourly = [point("2026-09-23T06:00", 6), point("2026-09-23T09:00", 9)];
+  const current = point("2026-09-23T09:00", 20);
+  const after = hourlyChart({ hourly, current, yesterday: null, liveAt: "2026-09-23T09:15" });
+  expect(after.current).toBeNull();
+  expect(after.rows.some((r) => r.current)).toBe(false);
+  expect(after.startIndex).toBe(0);
+  const damaged = hourlyChart({
+    hourly: [...hourly, point("2026-09-23T12:00", 12)],
+    current: point("2026-09-23T10:00", 20),
+    yesterday: null,
+    liveAt: "2026-09-23T09:99",
+  });
+  expect(damaged.current?.at).toBe("2026-09-23T10:00");
+});
 it("keeps only three-hour slots for KMA snapshots saved without chartHourly", () => {
   const model = hourlyChart({
     source: "KMA",

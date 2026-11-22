@@ -114,8 +114,9 @@ export function hourlyChart(
       times.length > 0 && now >= times[0] && now <= times[times.length - 1],
     inRange = nowInRange && finite(nowTemperature);
   // Native `sharp`: the observation was made at the column time itself.
-  const live = weather.liveAt ? wallTime(weather.liveAt) : now;
-  const sharp = !Number.isFinite(live) || live === now;
+  const live = weather.liveAt ? wallTime(weather.liveAt) : NaN,
+    liveValid = Number.isFinite(live);
+  const sharp = !liveValid || live === now;
   const rows: HourRow[] = times.map((time) => {
     const point = supplied.get(time)!;
     const current = inRange && sharp && time === now;
@@ -131,12 +132,16 @@ export function hourlyChart(
   let currentIndex = -1;
   if (nowInRange)
     for (let i = 0; i < rows.length && rows[i].time <= now; i++) currentIndex = i;
+  // A marker needs the next column; an observation after it has no place.
   const between =
-    inRange && !rows[currentIndex].current
+    inRange &&
+    !rows[currentIndex].current &&
+    currentIndex < rows.length - 1 &&
+    (!liveValid || live < rows[currentIndex + 1].time)
       ? {
           /** Fractional column position, halfway to the next row (native). */
           index: currentIndex + 0.5,
-          at: weather.liveAt ?? weather.current.at,
+          at: liveValid ? weather.liveAt! : weather.current.at,
           temperature: nowTemperature as number,
           yesterday:
             weather.yesterday && finite(weather.yesterday.temperature)
