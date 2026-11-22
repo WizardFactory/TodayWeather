@@ -15,6 +15,8 @@ pub enum Flow {
 pub type Middleware = fn(&mut Cx) -> Flow;
 
 pub struct Cx<'a> {
+    /// Original requested province before `list_region` rewrote `region`.
+    pub requested_region: Option<String>,
     /// The Express `req` object.
     pub req: V,
     pub locale: Locale,
@@ -482,6 +484,7 @@ pub fn run_capturing_with_solar_terms(
         ("originalUrl", V::from(request.original_url.as_str())),
     ]);
     let mut cx = Cx {
+        requested_region: request.requested_region.clone(),
         req: V::Obj(req),
         locale: request.locale,
         store,
