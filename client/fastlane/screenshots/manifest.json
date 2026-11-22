@@ -11,7 +11,7 @@
     "air quality"
   ],
   "devices": {
-    "android": "Dedicated Android API36 AVD, display 1080x1920 at density 420 for the run",
+    "android": "Dedicated Android 16 emulator, display 1080x1920 at density 420 for the run",
     "ios_iphone": "Dedicated iPhone 17 Pro Max simulator, iOS 26.5",
     "ios_ipad": "Dedicated iPad Pro 13-inch (M5) simulator, iOS 26.5"
   },

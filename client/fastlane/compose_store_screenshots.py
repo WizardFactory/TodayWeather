@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -45,13 +46,40 @@ def sha(path):
 
 
 def android_display(path):
-    """The display of the Android run (device.txt of android/tools/store/capture.sh): size in pixels and density."""
+    """The display of the Android run (device.txt of android/tools/store/capture.sh): size in pixels, density (an
+    override wins over the physical value, as for the size) and the Android release from the build fingerprint."""
     text = path.read_text()
     sizes = re.findall(r"(?:Physical|Override) size: (\d+)x(\d+)", text)
-    density = re.search(r"Physical density: (\d+)", text)
-    if not sizes or not density or "ads: off" not in text:
-        raise SystemExit(f"{path}: no display size, density or 'ads: off'")
-    return tuple(int(v) for v in sizes[-1]), int(density.group(1))
+    override = re.search(r"Override density: (\d+)", text)
+    density = override or re.search(r"Physical density: (\d+)", text)
+    release = re.search(r"^[^/\s]+/[^/]+/[^:]+:(\d+)/", text, re.M)
+    if not sizes or not density or not release or "ads: off" not in text:
+        raise SystemExit(f"{path}: no display size, density, build fingerprint or 'ads: off'")
+    return tuple(int(v) for v in sizes[-1]), int(density.group(1)), release.group(1)
+
+
+def replace_package(stage, files):
+    """Puts the staged files in place: each is first copied beside its target under a temporary name (same file
+    system), then renamed over it; the manifest is renamed last. On a failure before the renames nothing changed."""
+    pending = [(stage / f["file"], FASTLANE / f["file"]) for f in files]
+    pending.append((stage / "screenshots/manifest.json", FASTLANE / "screenshots/manifest.json"))
+    temps = []
+    try:
+        for source, target in pending:
+            temp = target.with_name(f".{target.name}.new")
+            shutil.copy2(source, temp)
+            temps.append((temp, target))
+    except BaseException:
+        for temp, _ in temps:
+            temp.unlink(missing_ok=True)
+        raise
+    keep = {target for _, target in temps}
+    for directory in {target.parent for target in keep if target.name != "manifest.json"}:
+        for old in directory.iterdir():
+            if old.suffix in (".jpg", ".png") and old not in keep and not old.name.startswith("."):
+                old.unlink()
+    for temp, target in temps:
+        os.replace(temp, target)
 
 
 def play(args, stage, work, files, display):
@@ -110,7 +138,7 @@ def main():
     parser.add_argument("--crop-top", type=int, required=True)
     parser.add_argument("--crop-bottom", type=int, required=True)
     args = parser.parse_args()
-    display, density = android_display(Path(args.android) / "device.txt")
+    display, density, release = android_display(Path(args.android) / "device.txt")
     if args.crop_top < 0 or args.crop_bottom < 0 or args.crop_top + args.crop_bottom >= display[1]:
         raise SystemExit(f"crop {args.crop_top}/{args.crop_bottom} does not fit a {display[0]}x{display[1]} display")
     files = []
@@ -119,23 +147,11 @@ def main():
         work.mkdir()
         play(args, stage, work, files, display)
         ios(args, stage, files)
-        write_manifest(args, stage, files, display, density)
-        # All 20 images and the manifest exist: replace the maintained files.
-        for locale in TEXT:
-            target = FASTLANE / "metadata/android" / locale / "images/phoneScreenshots"
-            for old in target.glob("*.jpg"):
-                old.unlink()
-            for new in (stage / "metadata/android" / locale / "images/phoneScreenshots").iterdir():
-                shutil.copy2(new, target / new.name)
-        target = FASTLANE / "screenshots/ios/ko"
-        for old in target.glob("*.png"):
-            old.unlink()
-        for new in (stage / "screenshots/ios/ko").iterdir():
-            shutil.copy2(new, target / new.name)
-        shutil.copy2(stage / "screenshots/manifest.json", FASTLANE / "screenshots/manifest.json")
+        write_manifest(args, stage, files, display, density, release)
+        replace_package(stage, files)
 
 
-def write_manifest(args, stage, files, display, density):
+def write_manifest(args, stage, files, display, density, release):
     manifest = {
         "captured_on": args.captured_on,
         "version": args.version or "2.0 native (Android 2.0.0, iOS 2.0.1 in the stores)",
@@ -144,7 +160,7 @@ def write_manifest(args, stage, files, display, density):
         "selected_city": "Seoul (서울) saved; no current location.",
         "screens": ["comparison", "expanded hourly weather", "daily forecast", "air quality"],
         "devices": {
-            "android": f"Dedicated Android API36 AVD, display {display[0]}x{display[1]} at density {density} for the run",
+            "android": f"Dedicated Android {release} emulator, display {display[0]}x{display[1]} at density {density} for the run",
             "ios_iphone": "Dedicated iPhone 17 Pro Max simulator, iOS 26.5",
             "ios_ipad": "Dedicated iPad Pro 13-inch (M5) simulator, iOS 26.5",
         },

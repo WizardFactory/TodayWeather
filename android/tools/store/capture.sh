@@ -20,22 +20,27 @@ adb uninstall "$PKG.test" >/dev/null 2>&1 || true
 adb uninstall "$PKG" >/dev/null 2>&1 || true
 adb install "$APP/debug/app-debug.apk" >/dev/null
 adb install "$APP/androidTest/debug/app-debug-androidTest.apk" >/dev/null
-{ adb shell getprop ro.build.fingerprint; adb shell wm size; adb shell wm density; adb shell getprop persist.sys.timezone
-  echo "ads: off"; } > "$OUT/device.txt"
+{ adb shell getprop ro.build.fingerprint; echo "sdk: $(adb shell getprop ro.build.version.sdk | tr -d '\r')"
+  adb shell wm size; adb shell wm density; adb shell getprop persist.sys.timezone; echo "ads: off"; } > "$OUT/device.txt"
 shasum -a 256 "$APP/debug/app-debug.apk" "$APP/androidTest/debug/app-debug-androidTest.apk" > "$OUT/apk.sha256"
 for pair in $LOCALES; do
     locale=${pair%%:*}; region=${pair#*:}
-    # Each locale is pulled into a new empty directory, so no earlier capture can stand in for a missing one.
-    rm -rf "$OUT/$locale" "$OUT/$locale.pull"
-    mkdir -p "$OUT/$locale.pull"
+    # Only language-REGION:REGION pairs (ko-KR:KR); they name the output directories below.
+    printf '%s\n' "$pair" | grep -Eqx '[a-z]{2}-[A-Z]{2}:[A-Z]{2}' || { echo "Bad locale pair: $pair" >&2; exit 2; }
+done
+for pair in $LOCALES; do
+    locale=${pair%%:*}; region=${pair#*:}
+    # Each locale is pulled into a new empty directory, so no earlier capture can stand in for a missing one; the
+    # previous result of that locale is replaced only after the new one has been checked.
+    PULL=$(mktemp -d "$OUT/.pull.XXXXXX")
     adb shell pm clear "$PKG" >/dev/null
     adb shell cmd locale set-app-locales "$PKG" --locales "$locale"
     adb shell am instrument -w -e ads off -e manual true -e weather production -e region "$region" \
-        -e class "$PKG.StoreCaptureTest#store" "$PKG.test/$PKG.TestRunner" > "$OUT/$locale.pull/store.log" 2>&1
-    grep -q '^OK (1 test)' "$OUT/$locale.pull/store.log" || { echo "Capture failed: $locale; see $OUT/$locale.pull/store.log" >&2; exit 1; }
-    adb pull "/sdcard/Android/data/$PKG/files/manual/." "$OUT/$locale.pull/" >/dev/null || { echo "Pull failed: $locale" >&2; exit 1; }
+        -e class "$PKG.StoreCaptureTest#store" "$PKG.test/$PKG.TestRunner" > "$PULL/store.log" 2>&1
+    grep -q '^OK (1 test)' "$PULL/store.log" || { echo "Capture failed: $locale; see $PULL/store.log" >&2; exit 1; }
+    adb pull "/sdcard/Android/data/$PKG/files/manual/." "$PULL/" >/dev/null || { echo "Pull failed: $locale" >&2; exit 1; }
     # The four screens, each a PNG at the display size with its record: ads off and the requested language.
-    python3 - "$OUT/$locale.pull" "$locale" "$(adb shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)" <<'PY' || exit 1
+    python3 - "$PULL" "$locale" "$(adb shell wm size | tr -d '\r' | sed -n 's/.*size: //p' | tail -1)" <<'PY' || exit 1
 import json, struct, sys
 from pathlib import Path
 d, locale, size = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
@@ -52,6 +57,7 @@ for n in ("01-compare", "02-hourly", "03-daily", "04-air"):
             or (r.get("width"), r.get("height")) != (w, h):
         sys.exit(f"{locale}: store-{n}.json does not record an ad-free {locale.split('-')[0]} {w}x{h} capture: {r}")
 PY
-    mv "$OUT/$locale.pull" "$OUT/$locale"
+    rm -rf "${OUT:?}/$locale"
+    mv "$PULL" "$OUT/$locale"
     echo "Captured $locale"
 done

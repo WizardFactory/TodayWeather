@@ -77,12 +77,13 @@ missing = [k for k in keys if not isinstance(info.get(k), str)]
 if missing:
     sys.exit(f"the built Info.plist lacks {missing}")
 app, native, interstitial = (info[k] for k in keys)
+if app != "ca-app-pub-3940256099942544~1458002511":
+    sys.exit("the built app does not carry Google's test app ID (the Debug value)")
 if ads == "off":
-    if native or interstitial or not app.startswith("ca-app-pub-"):
-        sys.exit("--no-ads: the built app must keep its app ID and have both ad units empty")
-elif (app, native, interstitial) != ("ca-app-pub-3940256099942544~1458002511", "ca-app-pub-3940256099942544/3986624511",
-                                     "ca-app-pub-3940256099942544/4411468910"):
-    sys.exit("the built app does not carry Google's test ad identifiers: build again without --no-ads")
+    if native or interstitial:
+        sys.exit("--no-ads: the built app still has ad units")
+elif (native, interstitial) != ("ca-app-pub-3940256099942544/3986624511", "ca-app-pub-3940256099942544/4411468910"):
+    sys.exit("the built app does not carry Google's test ad units: build again without --no-ads")
 PY
 echo "ads: $ADS" > "$OUT/ads.txt"
 
