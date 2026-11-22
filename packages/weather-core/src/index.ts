@@ -1005,6 +1005,7 @@ export function formatValue(v: number | null | undefined, digits = 0): string {
 
 export {
   hourlyChart,
+  hourlyXPositions,
   dailyChart,
   wallTime,
   linePath,

@@ -512,3 +512,219 @@ for (const width of [320, 402])
       });
     expect(windCollisions).toEqual([]);
   });
+
+test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const raw: any = structuredClone(fixture.response);
+  const p = raw.current;
+  raw.short = Array.from({ length: 32 }, (_, i) => {
+    const day = 21 + Math.floor((i * 3) / 24);
+    const hour = (i * 3) % 24;
+    return {
+      ...p,
+      date: `202609${String(day).padStart(2, "0")}`,
+      time: String(hour * 100).padStart(4, "0"),
+      t3h: 10 + (i % 8),
+      t1h: undefined,
+      pop: 0,
+      vec: 270,
+      wsd: 3.2,
+      r06: 0,
+    };
+  });
+  raw.shortest = Array.from({ length: 6 }, (_, h) => ({
+    ...p,
+    date: "20260923",
+    time: String(h * 100).padStart(4, "0"),
+    t1h: 12 + h,
+    pop: 0,
+    vec: 300,
+    wsd: 2.1,
+    rn1: 0,
+  }));
+  // Off-hour observation (00:15) with no pop should borrow 0% and not blow up chart width.
+  raw.current = { ...p, date: "20260923", time: "0015", t1h: 11, pop: undefined, vec: 290, wsd: 1.5 };
+  let fetchCount = 0;
+  await page.route(API + "/weather/**", (r) => {
+    fetchCount++;
+    const payload = structuredClone(raw);
+    if (fetchCount > 1) {
+      payload.current.stnDateTime = "2026.09.23.00:25";
+    }
+    return r.fulfill({ json: payload });
+  });
+  await page.goto("/weather/seoul/hourly");
+  const scroll = page.locator(".hourly-chart");
+  await expect(scroll).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const metrics = await scroll.evaluate((el) => ({
+    scrollW: el.scrollWidth,
+    clientW: el.clientWidth,
+    scrollLeft: el.scrollLeft,
+  }));
+  expect(metrics.scrollW).toBeLessThan(5000);
+  expect(metrics.scrollW).toBeGreaterThan(metrics.clientW);
+
+  // Current off-hour column borrows rain probability (0%, not —).
+  await expect(
+    page.locator(".hourly-columns .current-column .chart-probability"),
+  ).toHaveText("0%");
+
+  // Pinned Y-axis ticks stay visible inside the chart wrapper even after scrolling.
+  await scroll.evaluate((el) => {
+    el.scrollLeft += 400;
+  });
+  const ticksVisible = await page.locator(".chart-plot-wrap").evaluate((wrap) => {
+    const wb = wrap.getBoundingClientRect();
+    const ticks = [...wrap.querySelectorAll(".chart-y-tick")];
+    return (
+      ticks.length === 3 &&
+      ticks.every((t) => {
+        const r = t.getBoundingClientRect();
+        return r.left >= wb.left - 1 && r.right <= wb.right + 1 && r.width > 0;
+      })
+    );
+  });
+  expect(ticksVisible).toBe(true);
+
+  // Remember a column currently in viewport before expanding wind/humidity.
+  const visibleBefore = await scroll.evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    const cols = [...el.querySelectorAll(".hourly-columns .chart-column")];
+    return cols.findIndex((c) => {
+      const r = c.getBoundingClientRect();
+      return r.left >= sb.left + 48 && r.right <= sb.right - 10;
+    });
+  });
+  expect(visibleBefore).toBeGreaterThanOrEqual(0);
+
+  await page.getByRole("button", { name: "바람·습도 보기", exact: true }).click();
+  await expect(page.locator(".chart-extras")).toBeVisible();
+
+  // The previously visible column remains inside the scroll viewport after expansion.
+  const leftAfterExpand = await scroll.evaluate((el, idx) => {
+    const sb = el.getBoundingClientRect();
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
+    const r = col.getBoundingClientRect();
+    return { inView: r.right > sb.left && r.left < sb.right, left: r.left };
+  }, visibleBefore);
+  expect(leftAfterExpand.inView).toBe(true);
+
+  // Refetch with updated observedAt preserves the user's scrolled anchor position.
+  await page.getByRole("button", { name: "새로고침" }).click();
+  await expect(page.locator(".data-footer")).toContainText("00:25");
+  const leftAfterRefetch = await scroll.evaluate((el, idx) => {
+    const col = el.querySelectorAll(".hourly-columns .chart-column")[idx];
+    return col.getBoundingClientRect().left;
+  }, visibleBefore);
+  expect(Math.abs(leftAfterRefetch - leftAfterExpand.left)).toBeLessThan(20);
+
+  // Wind direction arrows keep natural size (not stretched to 100% column width).
+  const maxArrowWidth = await page
+    .locator(".chart-extras .chart-wind-direction svg")
+    .evaluateAll((els) =>
+      Math.max(...els.map((e) => e.getBoundingClientRect().width)),
+    );
+  expect(maxArrowWidth).toBeLessThan(30);
+
+  // Clicking an SVG hit target (without force) updates data-cursor.
+  const targetIdx = Math.max(0, visibleBefore);
+  const hourlyHit = scroll.locator("svg g .chart-hit").nth(targetIdx);
+  await hourlyHit.scrollIntoViewIfNeeded();
+  await hourlyHit.click();
+  await expect(scroll).toHaveAttribute("data-cursor", String(targetIdx));
+
+  // Forced-colors (including dark high-contrast) resolves dot value fills to Canvas (PR1-R1).
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ forcedColors: "active", colorScheme });
+    const forcedFills = await scroll.evaluate((el) => {
+      const svg = el.querySelector("svg")!;
+      const probe = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      probe.style.fill = "Canvas";
+      svg.appendChild(probe);
+      const canvasBg = getComputedStyle(probe).fill;
+      probe.remove();
+      const canvasText = getComputedStyle(document.body).color;
+      const pt = el.querySelector(".today-point");
+      const todayTxt = el.querySelector(".today-value");
+      const yestTxt = el.querySelector(".yesterday-value");
+      return {
+        canvasBg,
+        canvasText,
+        pt: pt ? getComputedStyle(pt).fill : "",
+        todayTxt: todayTxt ? getComputedStyle(todayTxt).fill : "",
+        yestTxt: yestTxt ? getComputedStyle(yestTxt).fill : "",
+      };
+    });
+    expect(forcedFills.canvasBg).not.toBe(forcedFills.canvasText);
+    expect(forcedFills.pt).toBe(forcedFills.canvasText);
+    expect(forcedFills.todayTxt).toBe(forcedFills.canvasBg);
+    expect(forcedFills.yestTxt).toBe(forcedFills.canvasBg);
+  }
+});
+
+for (const lang of ["ko", "fr"] as const)
+  test(`daily chart keeps Today unclipped at 390px (${lang}, 100% & 130%) and updates cursor on SVG bar click (#3114)`, async ({
+    page,
+  }) => {
+    await page.addInitScript((language) => {
+      localStorage.setItem(
+        "tw.web.v1.preferences",
+        JSON.stringify({
+          version: 1,
+          places: [],
+          selectedId: null,
+          settings: { startup: "hourly", language },
+        }),
+      );
+    }, lang);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const raw: any = structuredClone(fixture.response);
+    raw.current = { ...raw.current, date: "20260922", time: "0900", t1h: 20 };
+    raw.midData.dailyData = Array.from({ length: 17 }, (_, i) => ({
+      ...raw.midData.dailyData[0],
+      date: `202609${String(15 + i).padStart(2, "0")}`,
+      time: "0000",
+      tmn: 10 + (i % 5),
+      tmx: 22 + (i % 5),
+      skyAm: "sun",
+      skyPm: i === 7 ? "rain" : "sun",
+      pop: i === 8 ? 60 : 0,
+      r06: i === 8 ? 14.5 : 0,
+    }));
+    await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+    await page.goto("/weather/seoul/daily");
+    const daily = page.locator(".daily-chart");
+    await expect(daily).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    for (const scale of ["1", "1.3"]) {
+      await page.evaluate((s) => {
+        document.documentElement.style.setProperty("--tw-text-scale", s);
+        window.dispatchEvent(new Event("resize"));
+      }, scale);
+      await expect
+        .poll(async () =>
+          daily.evaluate((el) => {
+            const sb = el.getBoundingClientRect();
+            const today = el
+              .querySelector(".today-column")!
+              .getBoundingClientRect();
+            return (
+              today.left >= sb.left - 2 && today.right <= sb.right + 2
+            );
+          }),
+        )
+        .toBe(true);
+    }
+
+    // Scroll Tomorrow (index 8) into view and click its SVG group without force.
+    const tomorrowGroup = daily.locator("svg > g").nth(8);
+    await tomorrowGroup.scrollIntoViewIfNeeded();
+    await tomorrowGroup.click();
+    await expect(daily).toHaveAttribute("data-cursor", "8");
+    await expect(page.locator(".daily-chart-panel .cursor-readout")).toContainText("60%");
+  });
