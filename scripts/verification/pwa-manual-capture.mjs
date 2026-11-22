@@ -91,7 +91,7 @@ try {
     `${out}/provenance.json`,
     JSON.stringify(
       {
-        date: "2026-10-01",
+        date: "2026-11-22",
         browser: browser.version(),
         viewport: [820, 1180],
         fixture: "docs/rewrite/examples/client-kma-response.json",
