@@ -622,6 +622,96 @@ test("precipitation forecast section shows upcoming rows instead of past days (#
   await expect(precipPanel).not.toContainText("어제");
 });
 
+test("sidebar keeps single aria-current across routes, removes live-dot, normalizes -0, and aligns air bars (#3116)", async ({
+  page,
+}) => {
+  const raw = structuredClone(fixture.response) as any;
+  raw.current = { ...raw.current, date: "20260923", time: "0900", t1h: -0.04 };
+  if (raw.airInfoList?.[0]?.pollutants?.aqi) {
+    raw.airInfoList[0].pollutants.pm10 = structuredClone(
+      raw.airInfoList[0].pollutants.aqi,
+    );
+  }
+  await page.route(API + "/weather/**", (route) => route.fulfill({ json: raw }));
+
+  // /start without saved places marks only 날씨 active (never both 날씨 & 미세먼지).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/start");
+  const activeLinks = page.locator('.sidebar nav [aria-current="page"]');
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+
+  // /weather/seoul/hourly: single active 날씨, no .live-dot, -0.04 formatted as 0° (not -0°).
+  await page.goto("/weather/seoul/hourly");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+  await expect(page.locator(".live-dot")).toHaveCount(0);
+  await expect(page.locator(".hero-card .temperature")).toHaveText("0°C");
+
+  // /weather/seoul/daily still marks 날씨 active.
+  await page.goto("/weather/seoul/daily");
+  await expect(activeLinks).toHaveCount(1);
+  await expect(activeLinks).toContainText("날씨");
+
+  // /air/seoul marks only 미세먼지 active, keeps bar labels single-line, and centers observed bar across viewports.
+  for (const vp of [
+    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(vp);
+    await page.goto("/air/seoul");
+    await expect(activeLinks).toHaveCount(1);
+    await expect(activeLinks).toContainText("미세먼지");
+
+    const checkCentered = () =>
+      page.locator(".bar-chart").evaluate((el) => {
+        const sb = el.getBoundingClientRect();
+        const bars = [...el.querySelectorAll(":scope > div")];
+        const labels = [...el.querySelectorAll("small")].filter((s) =>
+          s.textContent?.trim(),
+        );
+        const wrapped = labels.some((s) => {
+          const lh = parseFloat(getComputedStyle(s).lineHeight) || 18;
+          return s.getBoundingClientRect().height > lh * 1.6;
+        });
+        const obs = bars[12]!.getBoundingClientRect();
+        const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+        const clamped = el.scrollLeft <= 1 || el.scrollLeft >= maxScroll - 1;
+        const centerDiff = Math.abs(
+          (obs.left + obs.right) / 2 - (sb.left + sb.right) / 2,
+        );
+        return {
+          count: bars.length,
+          wrapped,
+          inView: obs.left >= sb.left - 2 && obs.right <= sb.right + 2,
+          clamped,
+          centerDiff,
+        };
+      });
+
+    const initial = await checkCentered();
+    expect(initial.count).toBe(24);
+    expect(initial.wrapped).toBe(false);
+    expect(initial.inView).toBe(true);
+    if (!initial.clamped) expect(initial.centerDiff).toBeLessThanOrEqual(2);
+
+    if (vp.width === 768) {
+      // Scrolling away then switching pollutant re-centers the observed bar cleanly.
+      await page.locator(".bar-chart").evaluate((el) => {
+        el.scrollLeft = 0;
+      });
+      const pm10Radio = page.getByRole("radio", { name: /^미세먼지/ });
+      await pm10Radio.click();
+      await expect(pm10Radio).toHaveAttribute("aria-checked", "true");
+      const afterSwitch = await checkCentered();
+      expect(afterSwitch.inView).toBe(true);
+      if (!afterSwitch.clamped)
+        expect(afterSwitch.centerDiff).toBeLessThanOrEqual(2);
+    }
+  }
+});
+
 test("hourly chart bounds mixed 1h/3h/off-hour width, pins Y-axis, keeps visible row on expand, and handles SVG clicks (#3114)", async ({
   page,
 }) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { dateText, hourText } from "./locale";
 import {
   useParams,
@@ -348,7 +348,6 @@ export default function WeatherPage({
                 </span>
               );
             })()}
-            <span className="live-dot" />
           </h1>
         </div>
         <div className="button-row">
@@ -797,7 +796,7 @@ function WeatherDetails({
       </div>
       <section className="panel">
         <SectionHead title={t("weather.precipitation.title")} />
-        <div className="detail-grid">
+        <div className="detail-grid precip-grid">
           {precipRows.map((p) => (
             <div key={p.at}>
               <span>
@@ -890,10 +889,33 @@ function AirDetails({
   setCode: (code: Pollutant) => void;
 }) {
   const [stationIndex, setStationIndex] = useState(0);
+  const barChartRef = useRef<HTMLDivElement>(null);
   const standard = w.units.airUnit;
   const zone = w.source === "KMA" ? ("KST" as const) : ("local" as const);
   const station = w.air[stationIndex] ?? w.air[0];
-  if (!station)
+  const p = station?.pollutants[code];
+  const slots = p ? airWindow(p.hourly, station.observedAt) : [];
+  const observedBarIndex = slots[12] ? 12 : slots.findIndex(Boolean);
+  useLayoutEffect(() => {
+    const el = barChartRef.current;
+    if (!el || observedBarIndex < 0) return;
+    if (el.scrollWidth <= el.clientWidth + 1) {
+      el.scrollLeft = 0;
+      return;
+    }
+    const bar = el.children[observedBarIndex] as HTMLElement | undefined;
+    if (!bar) return;
+    const offset =
+      bar.getBoundingClientRect().left -
+      el.getBoundingClientRect().left -
+      el.clientLeft +
+      el.scrollLeft;
+    el.scrollLeft = Math.max(
+      0,
+      offset - (el.clientWidth - bar.offsetWidth) / 2,
+    );
+  }, [w.location.id, stationIndex, code, observedBarIndex]);
+  if (!station || !p)
     return (
       <section className="panel">
         <Empty title={t("air.none.title")}>{t("air.none.body")}</Empty>
@@ -901,9 +923,7 @@ function AirDetails({
         {w.airSummary && <AirAttribution weather={w} />}
       </section>
     );
-  const p = station.pollutants[code],
-    slots = airWindow(p.hourly, station.observedAt),
-    max = Math.max(1, ...slots.map((v) => v?.value ?? 0));
+  const max = Math.max(1, ...slots.map((v) => v?.value ?? 0));
   const otherStation = (c: Pollutant) =>
     station.pollutants[c].station &&
     station.pollutants[c].station !== station.name
@@ -1018,6 +1038,7 @@ function AirDetails({
         />
         {slots.some(Boolean) ? (
           <div
+            ref={barChartRef}
             className="bar-chart"
             role="group"
             tabIndex={0}
