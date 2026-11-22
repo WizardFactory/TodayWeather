@@ -1,7 +1,7 @@
 /** Actual scenario screenshots; static build and synthetic KMA fixture only. */
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 const out = "docs/webapp/manual-images";
 mkdirSync(out, { recursive: true });
@@ -133,7 +133,15 @@ try {
         fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 17, yesterday 9",
         externalRequests: "blocked except fixture fulfilment",
         csp: "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
-        images,
+        // Keep entries written by other capture scripts (precipitation-*.png).
+        images: [
+          ...images,
+          ...(existsSync(`${out}/provenance.json`)
+            ? JSON.parse(readFileSync(`${out}/provenance.json`)).images.filter(
+                (old) => !images.some((img) => img.file === old.file),
+              )
+            : []),
+        ],
       },
       null,
       2,

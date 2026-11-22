@@ -2486,6 +2486,11 @@ textarea {
   stroke: var(--tw-bg-surface);
   stroke-width: 1.5;
 }
+/* The red current dot that holds its value keeps text contrast >= 4.5:1
+   (white on #b3261e 6.54; ink on #ff8a80 7.87). */
+.hourly-chart .today-point.now-point {
+  fill: var(--tw-status-danger-text);
+}
 .now-line {
   stroke: var(--tw-chart-now);
   stroke-width: 1;
@@ -2651,6 +2656,12 @@ textarea {
   .hourly-chart .today-value,
   .hourly-chart .yesterday-value {
     fill: Canvas;
+  }
+  /* The current dot stays distinct from forecast dots. */
+  .now-point,
+  .hourly-chart .today-point.now-point {
+    fill: Highlight;
+    stroke: CanvasText;
   }
   .hero-card {
     background: Canvas;

@@ -759,6 +759,31 @@ test("sidebar keeps single aria-current across routes, removes live-dot, normali
   }
 });
 
+test("an observation on a 3-hour column turns that dot red with readable text and stays distinct in forced colors", async ({
+  page,
+}) => {
+  // The fixture observation is at 09:00 with liveTime 0900: native sharp.
+  await page.route(API + "/weather/**", (r) =>
+    r.fulfill({ json: fixture.response }),
+  );
+  await page.goto("/weather/seoul/hourly");
+  const scroll = page.locator(".hourly-chart");
+  const dot = scroll.locator("svg > g:not(.current-marker) .today-point.now-point");
+  await expect(dot).toHaveCount(1);
+  await expect(scroll.locator(".current-marker")).toHaveCount(0);
+  await expect(dot).toHaveCSS("fill", "rgb(179, 38, 30)");
+  await expect(
+    dot.locator("xpath=following-sibling::*[contains(@class,'today-value')][1]"),
+  ).toHaveCSS("fill", "rgb(255, 255, 255)");
+  await page.emulateMedia({ forcedColors: "active" });
+  const fills = await scroll.evaluate((el) => ({
+    now: getComputedStyle(el.querySelector(".today-point.now-point")!).fill,
+    other: getComputedStyle(
+      el.querySelector(".today-point:not(.now-point)")!,
+    ).fill,
+  }));
+  expect(fills.now).not.toBe(fills.other);
+});
 test("hourly chart matches the native columns: three-hour rows from yesterday, seven per phone screen, current between columns; keeps visible row on expand and handles SVG clicks", async ({
   page,
 }) => {
