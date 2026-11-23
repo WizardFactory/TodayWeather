@@ -161,6 +161,34 @@ function decodeSegment(segment: string) {
   }
 }
 
+/** The point of a coordinate place id (`p_<lat>_<lon>`, `placeId`), or undefined for another id or invalid coordinates. */
+export function coordinateIdPoint(
+  id: string | undefined,
+): { lat: number; lon: number } | undefined {
+  const match = id?.match(/^p_(-?\d+(?:\.\d+)?)_(-?\d+(?:\.\d+)?)$/);
+  if (!match) return;
+  try {
+    return coordinates(match[1], match[2]);
+  } catch {
+    return;
+  }
+}
+
+/**
+ * The place a weather or air route shows, as the screens resolve it (`resolvePlace`): a saved place, a catalog city,
+ * or the point of a coordinate id that is not saved, which has no name to share.
+ */
+function routePlace(
+  places: Place[],
+  id: string,
+): Partial<Pick<Place, "id" | "name" | "lat" | "lon">> | undefined {
+  return (
+    places.find((p) => p.id === id) ??
+    PLACES.find((p) => p.id === id) ??
+    coordinateIdPoint(id)
+  );
+}
+
 export function canonicalLinkForRoute(
   pathname: string,
   search: string,
@@ -192,16 +220,14 @@ export function canonicalLinkForRoute(
   if (weatherMatch) {
     const id = decodeSegment(weatherMatch[1]);
     const view = weatherMatch[2] === "daily" ? "daily" : "hourly";
-    const place =
-      places.find((p) => p.id === id) ?? PLACES.find((p) => p.id === id);
+    const place = routePlace(places, id);
     return place ? shareLink(place, view) : `${LINK_ORIGIN}/open`;
   }
 
   const airMatch = /^\/air\/([^/]+)$/.exec(clean);
   if (airMatch) {
     const id = decodeSegment(airMatch[1]);
-    const place =
-      places.find((p) => p.id === id) ?? PLACES.find((p) => p.id === id);
+    const place = routePlace(places, id);
     return place
       ? shareLink(place, "air", params.get("pollutant") ?? undefined)
       : `${LINK_ORIGIN}/open`;

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { AASA, ASSET_LINKS, associations } from "../deploy-deeplink-static.mjs";
+import { smoke } from "../deeplink-live-smoke.mjs";
 
 const read = (relative) => readFileSync(new URL(relative, import.meta.url), "utf8");
 const golden = JSON.parse(read("../../specs/deeplink.golden.json"));
@@ -73,4 +75,43 @@ test("the stack embeds the checked handler and isolates a read-only S3 origin", 
   assert.equal(distribution.DefaultCacheBehavior.ViewerProtocolPolicy, "redirect-to-https");
   assert.equal(distribution.ViewerCertificate.MinimumProtocolVersion, "TLSv1.2_2021");
   assert.ok(distribution.CustomErrorResponses.every((entry) => !entry.ResponsePagePath && !entry.ResponseCode));
+});
+
+// CODEX-3155-2: the live smoke run against this handler, with the association files served as S3 would.
+const identity = {
+  teamId: "TESTTEAM00",
+  fingerprint: Array(32).fill("00").join(":"),
+};
+
+function edgeFetcher({ dropVary = false } = {}) {
+  const files = associations(identity);
+  return async (url, init) => {
+    const parsed = new URL(url);
+    // The WHATWG URL collapses nothing in "//"; pass the raw path on as CloudFront does.
+    const result = request(
+      parsed.pathname,
+      init.method,
+      parsed.search.slice(1),
+      init.headers["user-agent"] ?? "",
+    );
+    const status = result.statusCode ?? 200;
+    if (status === 200) {
+      const key = result.uri.slice(1);
+      if (key !== AASA && key !== ASSET_LINKS) return new Response(null, { status: 404 });
+      return new Response(JSON.stringify(files[key]), {
+        status: 200,
+        headers: { "content-type": "application/json", "cache-control": "public, max-age=3600" },
+      });
+    }
+    const headers = {};
+    for (const [name, header] of Object.entries(result.headers ?? {})) {
+      if (!(dropVary && name === "vary")) headers[name] = header.value;
+    }
+    return new Response(null, { status, headers });
+  };
+}
+
+test("the live smoke passes against the handler and requires Vary: User-Agent on store fallbacks", async () => {
+  await smoke(identity, edgeFetcher());
+  await assert.rejects(smoke(identity, edgeFetcher({ dropVary: true })), /vary/i);
 });

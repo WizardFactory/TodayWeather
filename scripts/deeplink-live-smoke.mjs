@@ -61,6 +61,9 @@ export async function smoke(identity, fetcher = fetch) {
     const result = await request(path, 302, "GET", { "user-agent": ua });
     assert.equal(result.headers.get("location"), location, `${path} (${ua})`);
     assert.equal(result.headers.get("cache-control"), "no-store", path);
+    // The answer depends on the user agent on every platform, so no cache may reuse it for another (AC5).
+    const vary = (result.headers.get("vary") ?? "").split(",").map((token) => token.trim().toLowerCase());
+    assert.ok(vary.includes("user-agent"), `Vary: User-Agent missing for ${path} (${ua})`);
     await result.body?.cancel();
   }
 

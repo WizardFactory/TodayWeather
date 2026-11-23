@@ -56,6 +56,28 @@ test.describe("shared location", () => {
     await expect(page.getByRole("heading", { name: "적도" })).toBeVisible();
   });
 
+  // CODEX-3155-1: a coordinate id that is not saved still shows its forecast, and its app link keeps place and view.
+  test("an unsaved coordinate route keeps its place in the app link", async ({
+    page,
+  }) => {
+    await page.goto("/weather/p_0_0/daily");
+    await expect(
+      page.getByRole("button", { name: "일별", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("link", { name: "앱에서 보기" }),
+    ).toHaveAttribute(
+      "href",
+      "https://link.todayweather.ai/loc?lat=0&lon=0&view=daily&fallback=store",
+    );
+    await expect(
+      page.locator('meta[name="apple-itunes-app"]'),
+    ).toHaveAttribute(
+      "content",
+      "app-id=1041700694, app-argument=https://link.todayweather.ai/loc?lat=0&lon=0&view=daily",
+    );
+  });
+
   test("invalid coordinates offer a recoverable route", async ({ page }) => {
     await page.goto("/loc/?lat=91&lon=0");
     await expect(

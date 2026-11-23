@@ -120,6 +120,27 @@ describe("web deep-link contract", () => {
     );
   });
 
+  // CODEX-3155-1: the forecast shows a coordinate id that is not saved (resolvePlace), so its link keeps the place.
+  it("keeps the place and view of an unsaved coordinate route", () => {
+    expect(canonicalLinkForRoute("/weather/p_0_0/daily", "", [])).toBe(
+      "https://link.todayweather.ai/loc?lat=0&lon=0&view=daily",
+    );
+    expect(
+      canonicalLinkForRoute("/air/p_37.383_127.119", "?pollutant=pm25", []),
+    ).toBe(
+      "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&view=air&pollutant=pm25",
+    );
+    // Near a catalog city the link is the city's, as a share from that screen is.
+    expect(
+      canonicalLinkForRoute("/weather/p_37.567_126.978/hourly", "", []),
+    ).toBe("https://link.todayweather.ai/place/seoul");
+    for (const path of ["/weather/p_91_0/daily", "/weather/nowhere/daily", "/air/p_x_y"]) {
+      expect(canonicalLinkForRoute(path, "", [])).toBe(
+        "https://link.todayweather.ai/open",
+      );
+    }
+  });
+
   it("builds OS-specific app-open URLs preserving the current place and store fallback", () => {
     const placeUrl = "https://link.todayweather.ai/place/seoul?view=daily";
     const androidUa =
