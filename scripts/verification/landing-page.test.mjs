@@ -141,6 +141,19 @@ test('the stylesheet loads the subset font beside it', () => {
   assert.deepEqual(attribute(css, /url\("([^"]+)"\)/g), ['assets/landing-sans.woff2']);
 });
 
+test('the native summaries link to the matching store fallback', () => {
+  for (const page of pages) {
+    const html = readFileSync(page, 'utf8');
+    const links = attribute(html, /<h3><a href="(https:\/\/link\.todayweather\.ai\/[^"]+)">/g)
+      .map((href) => new URL(href.replace(/&amp;/g, '&')));
+    assert.deepEqual(links.map((url) => url.searchParams.get('store')), ['ios', 'android'], page);
+    for (const url of links) {
+      assert.equal(url.pathname, '/open', url.href);
+      assert.equal(url.searchParams.get('fallback'), 'store', url.href);
+    }
+  }
+});
+
 test('the share image, touch icon and root files are present', () => {
   const site = 'https://todayweather.ai/';
   for (const page of pages) {
