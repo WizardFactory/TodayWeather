@@ -93,6 +93,6 @@ The local sample ran 379.30 seconds faster (57.8%). The sample uses the same tes
 
 **Acceptance for this step.**
 
-1. PR CI on this branch finishes in minutes: one macOS job, compared with the 43–51 min of job time and the queueing before.
+1. PR CI on this branch is one macOS job without a simulator: 12.3 min of job time and 22.3 min from creation with 10.0 min of macOS queueing (run 45197092056), compared with 43–51 min of job time per job before. This is still above the tier's 10 minutes; reducing the job's build and dependency time is the next step of this issue.
 2. iOS release verification passes on the branch head, with every app-hosted suite and the matrix run (tests that need production access or a Cordova build skip without their variables, as before).
 3. A stale generated asset fails the PR job. A build that reads a removed directory fails it. A screenshot mismatch fails release CI and uploads the images.
