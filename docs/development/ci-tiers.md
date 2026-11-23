@@ -88,7 +88,7 @@ PR CI is [iOS](../../.github/workflows/ios.yml), one macOS job and no simulator:
 3. `swift test` runs the package tests of `ios/Core` on macOS.
 4. `xcodebuild build-for-testing` compiles the app with its app-hosted test bundle, and the UI tests, for the iOS Simulator without booting one.
 
-Release CI is [iOS release verification](../../.github/workflows/ios-release.yml). It reruns the PR job on the commit, then runs every app-hosted suite on the iPhone 17 simulator (iOS 26.5) in the standalone checkout. That includes the screenshot comparisons and the IN-18 size and language matrix. When a comparison fails, the renders and difference images are uploaded as `screenshot-compare-<run>-<attempt>`. It signs nothing and holds no secret.
+Release CI is [iOS release verification](../../.github/workflows/ios-release.yml). It reruns the PR job on the commit, then runs the scheme's app-hosted suites on the iPhone 17 simulator (iOS 26.5) in the standalone checkout. That includes the screenshot comparisons and the IN-18 size and language matrix; tests that need production access or a Cordova build skip without their variables. When a comparison fails, the renders and difference images are uploaded as `screenshot-compare-<run>-<attempt>`. It signs nothing and holds no secret.
 
 | Job | What it checks |
 | --- | --- |
@@ -104,4 +104,4 @@ Start it and read it as for Android, from a branch or tag at the commit: `gh wor
 gh workflow run ios-release.yml --ref <branch> -f ref=<full SHA of the head>
 ```
 
-PR CI no longer runs the screenshot suites, so this run is what keeps a visual regression out of `master`. The branch must be in this repository and contain `ios-release.yml`. A branch made before the workflow existed merges `master` first. For a pull request from a fork, a maintainer pushes its head to a branch here (`git push origin <full SHA>:refs/heads/verify/<name>`) and runs it from there. Only a change that cannot alter what is drawn may skip it: tools, documents, CI, and tests that do not touch rendering. The nightly run catches the rest, for changes under the iOS PR workflow's paths.
+PR CI no longer runs the screenshot suites, so this run is what keeps a visual regression out of `master`. The branch must be in this repository and contain `ios-release.yml`; a branch made before the workflow existed merges `master` first. A pull request from a fork cannot run it before merge: its code would run with this repository's permissions. A maintainer reviews it, merges it, and verifies `master`'s head before any release. A run started by a pull request event, which happens only when the pull request changes the release workflow itself, checks GitHub's merge commit and not the head, so it is not this run. Only a change that cannot alter what is drawn may skip it: tools, documents, CI, and tests that do not touch rendering. The nightly run catches the rest, for changes under the iOS PR workflow's paths.

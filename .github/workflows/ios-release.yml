@@ -1,5 +1,5 @@
 name: iOS release verification
-run-name: iOS release verification ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+run-name: iOS release verification ${{ inputs.ref || github.sha }}
 # Release CI of the native iOS app (docs/development/ci-tiers.md): the PR checks on the named commit, then every
 # app-hosted suite on the simulator, the screenshot comparisons and the IN-18 size and language matrix included, in
 # a checkout without client/, android/ and the legacy iOS directories. It may take long and is not a pull-request
@@ -46,7 +46,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
+          # A pull request run (a change of this workflow) checks the merge commit its definitions come from; the
+          # head of a pull request is verified by a dispatch from its branch (docs/development/ci-tiers.md).
+          ref: ${{ inputs.ref || github.sha }}
       - id: decide
         env:
           GH_TOKEN: ${{ github.token }}

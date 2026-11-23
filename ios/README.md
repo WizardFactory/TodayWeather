@@ -36,7 +36,7 @@ cd ios && xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather \
 
 The scheme's test action runs the app-hosted tests and the package tests. `build/` is ignored.
 
-PR CI (`.github/workflows/ios.yml`) re-runs the import tools and checks that they change nothing, then deletes `client/`, `android/`, `tw.ios/`, `ta.ios/` and `applewatch/` and runs the package tests and `build-for-testing` of the app, its test bundle and the UI tests; it boots no simulator. iOS release verification (`.github/workflows/ios-release.yml`, on a named commit and nightly) runs the scheme's tests above, every app-hosted suite and screenshot comparison included, in that standalone checkout. A pull request that changes what the app draws runs it on its head before merge ([PR CI and release CI](../docs/development/ci-tiers.md#ios)).
+PR CI (`.github/workflows/ios.yml`) re-runs the import tools and checks that they change nothing, then deletes `client/`, `android/`, `tw.ios/`, `ta.ios/` and `applewatch/` and runs the package tests and `build-for-testing` of the app, its test bundle and the UI tests; it boots no simulator. iOS release verification (`.github/workflows/ios-release.yml`, on a named commit and nightly) runs the scheme's tests above in that standalone checkout, the screenshot comparisons and the size and language matrix included; the production and Cordova-upgrade tests skip there without their variables, as they did before. A pull request that changes what the app draws runs it on its head before merge ([PR CI and release CI](../docs/development/ci-tiers.md#ios)).
 
 ## Imported client assets
 
