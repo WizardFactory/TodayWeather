@@ -21,10 +21,19 @@ NODE = shutil.which('node')
 
 
 class Formats(unittest.TestCase):
+    def test_domestic_replay_manifests_pin_the_registered_oracles(self):
+        digests = {fixture['path']: fixture['sha256'] for fixture in REGISTRY['fixtures']}
+        for family, filename in (('kma', 's3-response.json.gz'), ('kma-rich', 's3-rich-response.json.gz')):
+            with self.subTest(family=family):
+                manifest = ROOT / 'server2/tests/integration/fixtures' / f'{family}-replay.json'
+                path = f'tests/domestic/fixtures/{filename}'
+                expected = {'path': path, 'sha256': digests[f'server2/{path}']}
+                self.assertEqual(json.loads(manifest.read_text())['oracle'], expected)
+
     def test_explicit_registry_has_exact_current_coverage(self):
         registry = p.validate_registry(deepcopy(REGISTRY), DECLARATION)
         self.assertEqual(sum(len(f['maps']) for f in registry['fixtures']), 23)
-        self.assertEqual(sum(len(m['paths']) for f in registry['fixtures'] for m in f['maps']), 1141)
+        self.assertEqual(sum(len(m['paths']) for f in registry['fixtures'] for m in f['maps']), 1183)
 
     def test_registry_schema_and_coverage_mutations_fail_closed(self):
         for mutate in (lambda r:r.update(schema=True), lambda r:r.update(schema=2), lambda r:r.update(unknown=True),
@@ -122,7 +131,7 @@ class OwnedCorpus(unittest.TestCase):
         report=self.audit()
         self.assertEqual(report['status'],'SOURCE_CURRENT')
         self.assertEqual(report['drifted_fixtures'],0)
-        self.assertEqual(report['references'],1141)
+        self.assertEqual(report['references'],1183)
         self.assertEqual(report['semantics'],'NOT_EVALUATED')
 
     def test_reader_has_narrow_environment_and_invalid_response_fails_closed(self):
@@ -152,7 +161,7 @@ class OwnedCorpus(unittest.TestCase):
             'server/test/offline/oracle-provenance/air/sections-air.js',
         }
         air_path = 'server2/tests/domestic/fixtures/air.json.gz'
-        self.assertEqual(len(self.registry['legacy_sources']), 187)
+        self.assertEqual(len(self.registry['legacy_sources']), 195)
         for helper in helpers:
             references = [f['path'] for f in self.registry['fixtures']
                           for m in f['maps'] if helper in m['paths']]
@@ -170,7 +179,7 @@ class OwnedCorpus(unittest.TestCase):
         self.git('rm','--cached',name)
         before = self.audit()
         self.assertEqual(before['status'],'SOURCE_CURRENT')
-        self.assertEqual(len(before['legacy_sources']),187)
+        self.assertEqual(len(before['legacy_sources']),195)
         self.assertEqual(set(before['verification_exports']),set(self.registry['verification_exports']))
         self.write(name,b'changed export bytes')
         after = self.audit()

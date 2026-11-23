@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
 
+concurrency:
+  # First attempts of a pull request's runs share a group and cancel older ones. Re-runs,
+  # pushes and manual runs get their own group, so a re-run of an older commit can never
+  # cancel or replace the newest commit's run.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-run-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 permissions:
   contents: read
 
@@ -40,7 +46,10 @@ jobs:
           async@2.5.0 express@4.13.4 sprintf@0.1.5 xml2js@0.4.23 mongoose@5.1.2 i18n@0.8.3 axios@0.18.1
           sql.js@1.8.0 body-parser@1.13.3
       - name: S3 registration and priority dispatch regressions (#2626)
-        run: node server/test/offline/push-s3.test.js
+        run: |
+          node server/test/offline/push-s3.test.js
+          node server/test/offline/push-startup-recovery.js
+          node server/test/offline/push-readiness-monitor.js
       - name: Scheduled alarm preparation retry regressions (#2677)
         run: node server/test/offline/push-preparation-retry.test.js
       - name: Push store (SQLite) checks (#2626)
@@ -116,6 +125,7 @@ jobs:
           TW_SMOKE_OUTPUT_DIR: ${{ runner.temp }}/rss-smoke/output
         run: |
           node server/test/offline/vc-weather.test.js
+          node server/test/offline/overseas-uv.test.js
           node server/test/offline/vc-weather-smoke.js
           TZ=Asia/Seoul node server/test/offline/vc-weather.test.js
           TZ=Asia/Seoul node server/test/offline/vc-weather-smoke.js
@@ -233,6 +243,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/runtime"
           cp server/package.json server/package-lock.json "$RUNNER_TEMP/runtime/"
           npm ci --prefix "$RUNNER_TEMP/runtime" --no-audit --no-fund
+      - name: Korean solar-term calendar and ranked forecast
+        env:
+          NODE_PATH: ${{ runner.temp }}/runtime/node_modules
+        run: |
+          node server/test/offline/solar-terms.test.js
+          node server/test/offline/solar-term-summary.test.js
+          node server/test/offline/solar-term-summary-smoke.js
       - name: Credential-free Geo and Push loading on Node 16.20.2
         env:
           NODE_PATH: ${{ runner.temp }}/runtime/node_modules

@@ -22,45 +22,143 @@ export type HourRow = {
   yesterday: Point | null;
   current: boolean;
 };
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Applies the current observation to the forecast row at the same time. */
+function mergeCurrentPoint(existing: Point, current: Point): Point {
+  return {
+    ...existing,
+    at: current.at,
+    temperature: current.temperature,
+    low: current.low ?? existing.low,
+    high: current.high ?? existing.high,
+    humidity: current.humidity ?? existing.humidity,
+    wind: current.wind ?? existing.wind,
+    windDirection: current.windDirection || existing.windDirection,
+    windDegrees: current.windDegrees ?? existing.windDegrees,
+    pressure: current.pressure ?? existing.pressure,
+    visibility: current.visibility ?? existing.visibility,
+    rainProbability: current.rainProbability ?? existing.rainProbability,
+    feelsLike: current.feelsLike ?? existing.feelsLike,
+    icon: current.icon || existing.icon,
+    iconPm: current.iconPm || existing.iconPm,
+    description: current.description || existing.description,
+    sunrise: current.sunrise || existing.sunrise,
+    sunset: current.sunset || existing.sunset,
+    uv: current.uv || existing.uv,
+    discomfort: current.discomfort || existing.discomfort,
+    ...(current.precipitation !== null
+      ? {
+          precipitation: current.precipitation,
+          precipitationHours: current.precipitationHours,
+          precipitationBasis: current.precipitationBasis,
+          precipitationApprox: current.precipitationApprox,
+        }
+      : {}),
+    ...(current.snowfall !== null
+      ? {
+          snowfall: current.snowfall,
+          snowfallHours: current.snowfallHours,
+          snowfallBasis: current.snowfallBasis,
+          snowfallApprox: current.snowfallApprox,
+        }
+      : {}),
+    ...(current.uvIndex !== undefined ? { uvIndex: current.uvIndex } : {}),
+    ...(current.pollenOak !== undefined ? { pollenOak: current.pollenOak } : {}),
+    ...(current.pollenPine !== undefined ? { pollenPine: current.pollenPine } : {}),
+    ...(current.pollenWeeds !== undefined ? { pollenWeeds: current.pollenWeeds } : {}),
+  };
+}
+
+/**
+ * The hourly chart of the native apps (Cordova `convertWeatherData`): one
+ * column per three-hour forecast row from yesterday 00:00 (the native
+ * `slice(8)` of a series that starts the day before yesterday). Older rows
+ * only supply the yesterday line. The current observation replaces the row
+ * at its exact time; otherwise it is a marker between the row at or before it
+ * and the next row, not a column of its own.
+ */
 export function hourlyChart(
-  weather: Pick<Weather, "hourly" | "current" | "yesterday">,
+  weather: Pick<Weather, "hourly" | "chartHourly" | "current" | "yesterday"> &
+    Partial<Pick<Weather, "source" | "liveAt">>,
 ) {
   const supplied = new Map<number, Point>();
-  for (const point of weather.hourly) {
+  // Snapshots saved before `chartHourly` keep the merged KMA one-hour rows;
+  // the chart keeps only the three-hour slots.
+  const series =
+    weather.chartHourly ??
+    (weather.source === "KMA"
+      ? weather.hourly.filter((p) => {
+          const time = wallTime(p.at);
+          return time % (3 * HOUR_MS) === 0;
+        })
+      : weather.hourly);
+  for (const point of series) {
     const time = wallTime(point.at);
     if (Number.isFinite(time)) supplied.set(time, point);
   }
-  const timeline = new Map(supplied),
-    times = [...timeline.keys()].sort((a, b) => a - b),
-    now = wallTime(weather.current.at);
-  // Never move an out-of-extent observation onto an unrelated forecast point.
-  const inRange =
-    times.length > 0 && now >= times[0] && now <= times[times.length - 1];
-  if (inRange && finite(weather.current.temperature))
-    timeline.set(now, {
-      ...(timeline.get(now) ?? weather.current),
-      ...weather.current,
-    });
+  const now = wallTime(weather.current.at),
+    nowTemperature = weather.current.temperature;
+  const firstTime = Number.isFinite(now)
+    ? now - (now % DAY_MS) - DAY_MS
+    : -Infinity;
   const yesterdayTime = weather.yesterday
     ? wallTime(weather.yesterday.at)
     : NaN;
-  const rows: HourRow[] = [...timeline]
-    .sort(([a], [b]) => a - b)
-    .map(([time, point]) => ({
+  const times = [...supplied.keys()]
+    .filter((time) => time >= firstTime)
+    .sort((a, b) => a - b);
+  // Never move an out-of-extent observation onto an unrelated forecast point.
+  const nowInRange =
+      times.length > 0 && now >= times[0] && now <= times[times.length - 1],
+    inRange = nowInRange && finite(nowTemperature);
+  // Native `sharp`: the observation was made at the column time itself.
+  const live = weather.liveAt ? wallTime(weather.liveAt) : NaN,
+    liveValid = Number.isFinite(live);
+  const sharp = !liveValid || live === now;
+  const rows: HourRow[] = times.map((time) => {
+    const point = supplied.get(time)!;
+    const current = inRange && sharp && time === now;
+    return {
       time,
-      point,
-      current: inRange && time === now && finite(weather.current.temperature),
+      point: current ? mergeCurrentPoint(point, weather.current) : point,
+      current,
       yesterday:
-        supplied.get(time - 86400000) ??
-        (time - 86400000 === yesterdayTime ? weather.yesterday : null),
-    }));
+        supplied.get(time - DAY_MS) ??
+        (time - DAY_MS === yesterdayTime ? weather.yesterday : null),
+    };
+  });
+  let currentIndex = -1;
+  if (nowInRange)
+    for (let i = 0; i < rows.length && rows[i].time <= now; i++) currentIndex = i;
+  // A marker needs the next column; an observation after it has no place.
+  const between =
+    inRange &&
+    !rows[currentIndex].current &&
+    currentIndex < rows.length - 1 &&
+    (!liveValid || live < rows[currentIndex + 1].time)
+      ? {
+          /** Fractional column position, halfway to the next row (native). */
+          index: currentIndex + 0.5,
+          at: liveValid ? weather.liveAt! : weather.current.at,
+          temperature: nowTemperature as number,
+          yesterday:
+            weather.yesterday && finite(weather.yesterday.temperature)
+              ? weather.yesterday.temperature
+              : null,
+        }
+      : null;
   return {
     rows,
-    domain: temperatureDomain(
-      rows.flatMap((r) => [r.point.temperature, r.yesterday?.temperature]),
-    ),
-    currentIndex: rows.findIndex((r) => r.current),
-    startIndex: Math.max(0, rows.findIndex((r) => r.time >= now) - 1),
+    domain: temperatureDomain([
+      ...rows.flatMap((r) => [r.point.temperature, r.yesterday?.temperature]),
+      between?.temperature,
+      between?.yesterday,
+    ]),
+    currentIndex,
+    current: between,
+    startIndex: Math.max(0, currentIndex - 1),
   };
 }
 export type DayRow = {
@@ -107,10 +205,12 @@ export function linePath(
   values: (number | null | undefined)[],
   x: (i: number) => number,
   y: (value: number) => number,
+  breakBefore?: (i: number) => boolean,
 ): string {
   let connected = false;
   return values
     .map((value, i) => {
+      if (breakBefore?.(i)) connected = false;
       if (!finite(value)) {
         connected = false;
         return "";

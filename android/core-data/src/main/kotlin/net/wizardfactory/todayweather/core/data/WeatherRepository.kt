@@ -2,6 +2,10 @@ package net.wizardfactory.todayweather.core.data
 
 import java.io.File
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +15,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -30,7 +36,30 @@ data class WeatherEntry(
     val weather: JsonObject, val loadedAt: Long, val temperatureUnit: String? = null,
     /** Original coordinate/address of a current-position request. Absent in older cache files. */
     val currentLocationKey: String? = null,
+    val timeZoneId: String? = null,
+    val coordinateAirForecastAvailable: Boolean = false,
+    val coordinatePollenForecastAvailable: Boolean = false,
+    val summaryRequest: String? = null,
 )
+
+/** An optional short-lived server1 response. Keep it out of the place weather cache. */
+data class CoordinateAirForecast(
+    val source: String,
+    val attribution: String,
+    val validUntilMillis: Long,
+    val timeZoneId: String?,
+    val rows: JsonArray,
+)
+
+/** Google day rows keep the reported UTC dates for the viewed coordinate. */
+data class CoordinatePollenForecast(
+    val attribution: String,
+    val region: String,
+    val days: JsonArray,
+    val validUntilMillis: Long,
+) {
+    val source: String get() = "google"
+}
 
 sealed interface LoadResult {
     /** The response applied to the place that requested it; [place] carries what the response changed in it. */
@@ -86,8 +115,16 @@ class WeatherRepository(
     /** `canLoadCity`: a disabled place never; otherwise not loaded in this process, or more than ten minutes ago. */
     fun canLoad(place: Place): Boolean {
         if (place.disable) return false
-        val loaded = synchronized(this) { loadTimes[key(place)] } ?: return true
-        return clock() - loaded > GATE_MS
+        val key = key(place)
+        val loaded = synchronized(this) { loadTimes[key] } ?: return true
+        val now = clock()
+        if (now - loaded > GATE_MS) return true
+        if (entries.value[key]?.summaryRequest == null) return false
+        val kst = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Seoul"), java.util.Locale.US)
+        kst.timeInMillis = loaded
+        val day = kst.get(java.util.Calendar.DAY_OF_YEAR)
+        kst.timeInMillis = now
+        return day != kst.get(java.util.Calendar.DAY_OF_YEAR)
     }
 
     /** `reloadCity`: the next gated load of [place] runs. */
@@ -174,11 +211,21 @@ class WeatherRepository(
         return commits.withLock {
             if (!latest(key, request)) return@withLock LoadResult.Superseded
             val previous = cached(place)
-            val responseUnits = (parsed.getOrNull() as? JsonObject)?.get("units") as? JsonObject
+            val response = parsed.getOrNull() as? JsonObject
+            val responseUnits = response?.get("units") as? JsonObject
             val temperatureUnit = (responseUnits?.get("temperatureUnit") as? JsonPrimitive)?.contentOrNull ?: units.temperatureUnit
-            val entry = WeatherEntry(merge(previous?.weather, city), clock(), temperatureUnit.takeIf { it == "C" || it == "F" },
-                currentLocationKey = location.takeIf { place.currentPosition })
             val updated = updatePlace(place, city)
+            val country = city.text("country") ?: place.country
+            val marked = country == "KR" && (city["currentWeather"] as? JsonObject)?.containsKey("summaryForDate") == true
+            val entry = WeatherEntry(merge(previous?.weather, city), clock(), temperatureUnit.takeIf { it == "C" || it == "F" },
+                currentLocationKey = location.takeIf { place.currentPosition }, timeZoneId = when (response?.text("source")) {
+                    "KMA" -> "Asia/Seoul"
+                    else -> knownZone((response?.get("timezone") as? JsonObject)?.text("timezoneId"))
+                },
+                summaryRequest = if (marked) summaryRequest(updated, units, languages) else null,
+                coordinateAirForecastAvailable = (response?.get("airForecastAvailable") as? JsonPrimitive)?.booleanOrNull == true,
+                coordinatePollenForecastAvailable = (response?.get("pollenForecastAvailable") as? JsonPrimitive)?.booleanOrNull == true,
+            )
             val newKey = key(updated)
             synchronized(this) {
                 loadTimes[key] = entry.loadedAt
@@ -192,6 +239,67 @@ class WeatherRepository(
         }
     }
 
+    /** Load at the same coordinates as the displayed live weather, with one bounded request. */
+    suspend fun coordinateAirForecast(loaded: LoadResult.Loaded, languages: List<String>): CoordinateAirForecast? {
+        if (!loaded.entry.coordinateAirForecastAvailable) return null
+        val json = readCoordinateForecast(loaded.place, "air-forecast", languages) ?: return null
+        val source = json.text("source")?.takeIf { it == "google" || it == "openweather" } ?: return null
+        val attribution = json.text("attribution")?.takeIf(String::isNotBlank) ?: return null
+        val parser = forecastTimeParser()
+        val retrievedAt = parser.forecastTime(json.text("retrievedAt")) ?: return null
+        val now = clock()
+        if (now - retrievedAt !in -60_000L until 3_600_000L) return null
+        val received = json["rows"] as? JsonArray ?: return null
+        val futureRows = received.filter { row ->
+            val at = (row as? JsonObject)?.text("at")
+            (parser.forecastTime(at) ?: Long.MIN_VALUE) > now
+        }
+        if (futureRows.isEmpty()) return null
+        return CoordinateAirForecast(source, attribution, retrievedAt + 3_600_000L, loaded.entry.timeZoneId, JsonArray(futureRows))
+    }
+
+    suspend fun coordinatePollenForecast(loaded: LoadResult.Loaded, languages: List<String>): CoordinatePollenForecast? {
+        if (!loaded.entry.coordinatePollenForecastAvailable) return null
+        val json = readCoordinateForecast(loaded.place, "pollen-forecast", languages) ?: return null
+        if (json.text("source") != "google") return null
+        val attribution = json.text("attribution")?.takeIf(String::isNotBlank) ?: return null
+        val region = json.text("region")?.takeIf { it.matches(Regex("[A-Z]{2}")) } ?: return null
+        val days = (json["days"] as? JsonArray)?.takeIf { it.isNotEmpty() } ?: return null
+        val retrievedAt = forecastTimeParser().forecastTime(json.text("retrievedAt")) ?: return null
+        if (clock() - retrievedAt !in -60_000L until 86_400_000L) return null
+        return CoordinatePollenForecast(attribution, region, days, retrievedAt + 86_400_000L)
+    }
+
+    /** Official warning status belongs to the viewed location and is never stored in the weather cache. */
+    suspend fun coordinateWarnings(place: Place, languages: List<String>): CoordinateWarnings? {
+        val point = place.location ?: return null
+        val json = readCoordinateForecast(place, "warnings", languages, timeoutMillis = 8000) ?: return null
+        val parser = forecastTimeParser()
+        return CoordinateWarnings.decode(json, point.lat, point.long) { parser.forecastTime(it) }?.current(clock())
+    }
+
+    private suspend fun readCoordinateForecast(
+        place: Place, product: String, languages: List<String>, timeoutMillis: Long = 2500,
+    ): JsonObject? {
+        val url = WeatherRequests.coordinateForecastUrl(baseUrl, place, product) ?: return null
+        val headers = mapOf("Accept-Language" to WeatherRequests.acceptLanguage(languages), "Cache-Control" to "no-store")
+        return try {
+            withTimeoutOrNull(timeoutMillis) { NationSource.strictJson(http.getOnce(url, headers)) } as? JsonObject
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun forecastTimeParser() = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+        isLenient = false
+    }
+
+    private fun SimpleDateFormat.forecastTime(time: String?) =
+        time?.let { runCatching { parse(it)?.time }.getOrNull() }
+
     private fun latest(key: String, request: Long) = synchronized(this) { latestRequest[key] == request }
 
     private fun fetched(outcome: String, started: Long) = telemetry.track("weather_fetch", mapOf("outcome" to outcome, "duration_ms" to clock() - started))
@@ -202,7 +310,10 @@ class WeatherRepository(
         runCatching {
             val o = Json.parseToJsonElement(file.readText()) as JsonObject
             WeatherEntry(o["weather"] as JsonObject, (o["loadedAt"] as JsonPrimitive).content.toLong(),
-                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull, (o["currentLocationKey"] as? JsonPrimitive)?.contentOrNull)
+                (o["temperatureUnit"] as? JsonPrimitive)?.contentOrNull, (o["currentLocationKey"] as? JsonPrimitive)?.contentOrNull,
+                if ("timeZoneId" in o) knownZone(o.text("timeZoneId"))
+                else "Asia/Seoul".takeIf { (o["weather"] as? JsonObject)?.text("source") == "KMA" },
+                summaryRequest = o.text("summaryRequest"))
         }.getOrNull()
     }
 
@@ -216,6 +327,8 @@ class WeatherRepository(
                 temp.writeText(buildJsonObject {
                     put("loadedAt", JsonPrimitive(entry.loadedAt))
                     put("weather", entry.weather)
+                    entry.summaryRequest?.let { put("summaryRequest", JsonPrimitive(it)) }
+                    put("timeZoneId", JsonPrimitive(entry.timeZoneId))
                     entry.currentLocationKey?.let { put("currentLocationKey", JsonPrimitive(it)) }
                     entry.temperatureUnit?.let { put("temperatureUnit", JsonPrimitive(it)) }
                 }.toString())
@@ -239,6 +352,10 @@ class WeatherRepository(
 
         /** Which place a request and its entry belong to: the current position, else its coordinates, else its address. */
         fun key(place: Place): String = if (place.currentPosition) "current" else locationKey(place)
+
+        /** Exact forecast request represented by a dated summary, including the current-position coordinates. */
+        fun summaryRequest(place: Place, units: UnitSettings, languages: List<String>): String? =
+            WeatherRequests.url("", place, units)?.let { it + "\n" + WeatherRequests.acceptLanguage(languages) }
 
         fun locationKey(place: Place): String {
             val location = place.location
@@ -275,6 +392,9 @@ class WeatherRepository(
             return if (!hasLocation && location != null && location.lat != 0.0) place.copy(location = location) else place
         }
 
+        private val zoneIds by lazy { java.util.TimeZone.getAvailableIDs().toHashSet() }
+        private fun knownZone(id: String?): String? = id?.takeIf { it in zoneIds }
+
         private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { truthy(it) }?.contentOrNull
 
         private fun location(value: JsonElement): Location? {
@@ -298,9 +418,17 @@ class WeatherRepository(
 }
 
 /** The weather a place shows: its entry's fields with the place's own (`cities[index]` of the Cordova app). */
-fun cityRecord(place: Place, entry: WeatherEntry?): JsonObject {
+fun cityRecord(place: Place, entry: WeatherEntry?, summaryRequest: String? = null): JsonObject {
     val fields = LinkedHashMap<String, JsonElement>()
     entry?.weather?.forEach { (k, v) -> fields[k] = v }
+    val current = fields["currentWeather"] as? JsonObject
+    if (current != null && "summaryForDate" in current) {
+        if (summaryRequest == null || entry?.summaryRequest != summaryRequest) {
+            fields["currentWeather"] = JsonObject(current - "summary")
+        } else {
+            fields["country"] = JsonPrimitive("KR") // Verified on this request; some saved places have no country.
+        }
+    }
     place.name?.let { fields["name"] = JsonPrimitive(it) }
     place.address?.let { fields["address"] = JsonPrimitive(it) }
     place.country?.let { fields["country"] = JsonPrimitive(it) }

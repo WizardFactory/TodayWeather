@@ -1,11 +1,12 @@
 {
   "schema": 1,
-  "reader_sha256": "02e3baf98424692bbc8d1ce9c9c781e1e1d1ac3094dcf49311ed1cc1fb5e3063",
+  "reader_sha256": "f835b5169106c31d0850162fccce309cbfb37e1c1adfdd72997f5a57b93b3395",
   "legacy_sources": [
     "server/app.js",
     "server/config/air.js",
     "server/config/config.js",
     "server/config/gather.js",
+    "server/config/solar-terms/kr.json",
     "server/controllers/airkorea.dust.image.controller.js",
     "server/controllers/airkorea.hourly.forecast.controller.js",
     "server/controllers/alert.push.controller.js",
@@ -36,6 +37,7 @@
     "server/lib/AQI/airFallback.js",
     "server/lib/AQI/waqiStationName.js",
     "server/lib/VC/vcConverter.js",
+    "server/lib/air/forecastRows.js",
     "server/lib/air/httpClient.js",
     "server/lib/air/nationAir.js",
     "server/lib/air/observation.js",
@@ -63,6 +65,7 @@
     "server/lib/geocoder/kakao.js",
     "server/lib/geocoder/keys.js",
     "server/lib/geocoder/transport.js",
+    "server/lib/gwangjuJeonnam.js",
     "server/lib/history/observations.js",
     "server/lib/history/policy.js",
     "server/lib/history/provider.js",
@@ -82,12 +85,17 @@
     "server/lib/lifeIndexKmaRequester.js",
     "server/lib/midForecastPolicy.js",
     "server/lib/pushCoordinator/engine.js",
+    "server/lib/pushCoordinator/errors.js",
+    "server/lib/pushCoordinator/region.js",
     "server/lib/pushCoordinator/registry.js",
     "server/lib/pushCoordinator/runtime.js",
+    "server/lib/pushCoordinator/storage.js",
     "server/lib/pushCoordinator/transport.js",
     "server/lib/pushCoordinator/warningFeed.js",
     "server/lib/pushStore/index.js",
     "server/lib/pushStore/mongo.js",
+    "server/lib/solarTerms/calendar.js",
+    "server/lib/solarTerms/summary.js",
     "server/lib/sunRiseSet.js",
     "server/lib/unitConverter.js",
     "server/lib/weatherUnavailable.js",
@@ -193,7 +201,7 @@
   "fixtures": [
     {
       "path": "server2/tests/delivery/fixtures/alarm-oracle.json.gz",
-      "sha256": "ee4bb8055cb8a36d28ff6e89c49348cf14811070e61f24cd88bc8df17a50ecba",
+      "sha256": "25e827eb95d2fe92516e70734aab76afa849d9d3babdc493ac5a9add81975821",
       "compression": "gzip",
       "maps": [
         {
@@ -225,6 +233,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -242,6 +251,7 @@
             "server/lib/dataGoKrRejection.js",
             "server/lib/diffcolor.ciede2000.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/kaq.finedust.image.parser.js",
@@ -304,7 +314,7 @@
     },
     {
       "path": "server2/tests/delivery/fixtures/alerts-air-filter.json.gz",
-      "sha256": "caaa0645ed775cc186677e2babfa216f757126c25be315b7d5ecb161448001a5",
+      "sha256": "81309dc996ecdee919cd7feec55a72db9dcce20969238ad3fad280c93c062832",
       "compression": "gzip",
       "maps": [
         {
@@ -337,6 +347,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -354,6 +365,7 @@
             "server/lib/dataGoKrRejection.js",
             "server/lib/diffcolor.ciede2000.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/kaq.finedust.image.parser.js",
@@ -415,7 +427,7 @@
     },
     {
       "path": "server2/tests/delivery/fixtures/alerts-malformed.json.gz",
-      "sha256": "6d6ffcbbd356f25c04fb9aa61809ef502bf5b895f07cca7891f5628768105a89",
+      "sha256": "c567502765bb484d17306d006427a66059fbd8b58faad3c206a701c52c4eea0f",
       "compression": "gzip",
       "maps": [
         {
@@ -448,6 +460,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -465,6 +478,7 @@
             "server/lib/dataGoKrRejection.js",
             "server/lib/diffcolor.ciede2000.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/kaq.finedust.image.parser.js",
@@ -526,7 +540,7 @@
     },
     {
       "path": "server2/tests/delivery/fixtures/alerts-oracle.json.gz",
-      "sha256": "139259f4ba1db02c2834e0bc67291f210c99d39046deb4614211dfbf51110d52",
+      "sha256": "5186ca38df7c08917a14ba8c7895f19008422f1225d418716d099f4ba35dad90",
       "compression": "gzip",
       "maps": [
         {
@@ -559,6 +573,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -576,6 +591,7 @@
             "server/lib/dataGoKrRejection.js",
             "server/lib/diffcolor.ciede2000.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/kaq.finedust.image.parser.js",
@@ -637,16 +653,21 @@
     },
     {
       "path": "server2/tests/delivery/fixtures/warnings-oracle.json.gz",
-      "sha256": "74b0994ca31c3efbe6e0fb78a05c97ea02cf401d783d2ac73e575876dddac210",
+      "sha256": "71204fb1cdf394fb99d845b0c91f198cbb4b65e1fbcbc40f6d7f3e5bec2c87c6",
       "compression": "gzip",
       "maps": [
         {
           "pointer": "/sourceHashes",
           "paths": [
+            "server/lib/geocoder/transport.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/kmaWarningZones.js",
             "server/lib/pushCoordinator/engine.js",
+            "server/lib/pushCoordinator/errors.js",
+            "server/lib/pushCoordinator/region.js",
             "server/lib/pushCoordinator/registry.js",
             "server/lib/pushCoordinator/runtime.js",
+            "server/lib/pushCoordinator/storage.js",
             "server/lib/pushCoordinator/transport.js",
             "server/lib/pushCoordinator/warningFeed.js",
             "server/utils/data/kma_warning_zones.csv"
@@ -731,7 +752,7 @@
     },
     {
       "path": "server2/tests/domestic/fixtures/life.json.gz",
-      "sha256": "6e39bf1281badaa8d88972fb7c9cb0c24e64ce434a952c427fb63225ec61a2fa",
+      "sha256": "96660b0bb104568a027196e70d26a507a09c3ba2646d21ea4cd827ddb35d6309",
       "compression": "gzip",
       "maps": [
         {
@@ -742,6 +763,7 @@
             "server/lib/dataGoKrKeys.js",
             "server/lib/dataGoKrRejection.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/kmaTimeLib.js",
             "server/lib/lifeIndexKmaRequester.js",
             "server/models/kma/kma.lifeindex.model.js",
@@ -760,7 +782,7 @@
     },
     {
       "path": "server2/tests/domestic/fixtures/oracle.json.gz",
-      "sha256": "6899cf4f6b53c347f2d0c118887c3b36db73427272a0818c23698f15313f58ba",
+      "sha256": "353ca4b1621a3659873dface1f3443443ce335b4031514ba46c1dd090011e64a",
       "compression": "gzip",
       "maps": [
         {
@@ -768,6 +790,7 @@
           "paths": [
             "server/app.js",
             "server/config/air.js",
+            "server/config/solar-terms/kr.json",
             "server/controllers/controller.weather.desc.js",
             "server/controllers/controllerKmaStnWeather.js",
             "server/controllers/controllerManager.js",
@@ -783,6 +806,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -794,6 +818,7 @@
             "server/lib/air/providers/waqi.js",
             "server/lib/aqi.converter.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/history/provider.js",
@@ -808,6 +833,8 @@
             "server/lib/kmaTimeLib.js",
             "server/lib/kmaWarningZones.js",
             "server/lib/midForecastPolicy.js",
+            "server/lib/solarTerms/calendar.js",
+            "server/lib/solarTerms/summary.js",
             "server/lib/sunRiseSet.js",
             "server/lib/unitConverter.js",
             "server/locales/de.json",
@@ -826,7 +853,7 @@
     },
     {
       "path": "server2/tests/domestic/fixtures/s3-response.json.gz",
-      "sha256": "0f3850559c7eaf9e95d699cba1d32acb8ad021475082ce5b33ba77b8b029a162",
+      "sha256": "f56445fac69a895155d0684181e6f0a0c0ec52dbc42d1cb30ef04cf05b34ebd8",
       "compression": "gzip",
       "maps": [
         {
@@ -834,6 +861,7 @@
           "paths": [
             "server/app.js",
             "server/config/air.js",
+            "server/config/solar-terms/kr.json",
             "server/controllers/controller.weather.desc.js",
             "server/controllers/controllerKmaStnWeather.js",
             "server/controllers/controllerManager.js",
@@ -849,6 +877,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -863,6 +892,7 @@
             "server/lib/dataGoKrRejection.js",
             "server/lib/foodPoisoning.js",
             "server/lib/forecastGridCollection.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/history/provider.js",
@@ -877,6 +907,8 @@
             "server/lib/kmaTimeLib.js",
             "server/lib/kmaWarningZones.js",
             "server/lib/midForecastPolicy.js",
+            "server/lib/solarTerms/calendar.js",
+            "server/lib/solarTerms/summary.js",
             "server/lib/sunRiseSet.js",
             "server/lib/unitConverter.js",
             "server/locales/de.json",
@@ -920,7 +952,7 @@
     },
     {
       "path": "server2/tests/domestic/fixtures/s3-rich-response.json.gz",
-      "sha256": "1d5ae34b0837a7ef9966f6441b6f3d184d236643486f2eed92f4383f09ede2f5",
+      "sha256": "238bcb8afdd2c9c8f48213c5a58e745aabe4d860621211e53b3828ab4adc1ed9",
       "compression": "gzip",
       "maps": [
         {
@@ -929,6 +961,7 @@
             "server/app.js",
             "server/config/air.js",
             "server/config/gather.js",
+            "server/config/solar-terms/kr.json",
             "server/controllers/airkorea.dust.image.controller.js",
             "server/controllers/airkorea.hourly.forecast.controller.js",
             "server/controllers/controller.weather.desc.js",
@@ -951,6 +984,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -977,6 +1011,7 @@
             "server/lib/geocoder/kakao.js",
             "server/lib/geocoder/keys.js",
             "server/lib/geocoder/transport.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/history/provider.js",
@@ -995,6 +1030,8 @@
             "server/lib/kmaWarningZones.js",
             "server/lib/lifeIndexKmaRequester.js",
             "server/lib/midForecastPolicy.js",
+            "server/lib/solarTerms/calendar.js",
+            "server/lib/solarTerms/summary.js",
             "server/lib/sunRiseSet.js",
             "server/lib/unitConverter.js",
             "server/lib/weatherUnavailable.js",
@@ -1163,7 +1200,7 @@
     },
     {
       "path": "server2/tests/domestic/fixtures/towns-oracle.json.gz",
-      "sha256": "6e90364d7c3f3d8dc4f115e6b7af19d7eb9ba4008cd4e7a7304c6ff4f71cd945",
+      "sha256": "47affebc239c97055bdb64a4ab921b9216830c9eb12512b41ac2a2c3965e3e3f",
       "compression": "gzip",
       "maps": [
         {
@@ -1181,7 +1218,7 @@
     },
     {
       "path": "server2/tests/golden/records.json",
-      "sha256": "a95f78a100f5b048b05a59b67f4213e268bd4fc3346ead20c4f5f81c05e83fdf",
+      "sha256": "2c60c7082562abb02cb0e62defbc90646311079e6b19f9accfbdec15019f82c1",
       "compression": "none",
       "maps": [
         {
@@ -1189,6 +1226,7 @@
           "paths": [
             "server/app.js",
             "server/config/air.js",
+            "server/config/solar-terms/kr.json",
             "server/controllers/alert.push.controller.js",
             "server/controllers/controller.weather.desc.js",
             "server/controllers/controllerKmaStnWeather.js",
@@ -1210,6 +1248,7 @@
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
             "server/lib/VC/vcConverter.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/nationAir.js",
             "server/lib/air/observation.js",
@@ -1229,6 +1268,7 @@
             "server/lib/geocoder/kakao.js",
             "server/lib/geocoder/keys.js",
             "server/lib/geocoder/transport.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/history/provider.js",
@@ -1243,6 +1283,8 @@
             "server/lib/kmaTimeLib.js",
             "server/lib/kmaWarningZones.js",
             "server/lib/midForecastPolicy.js",
+            "server/lib/solarTerms/calendar.js",
+            "server/lib/solarTerms/summary.js",
             "server/lib/sunRiseSet.js",
             "server/lib/unitConverter.js",
             "server/lib/weatherUnavailable.js",
@@ -1287,7 +1329,7 @@
     },
     {
       "path": "server2/tests/legacy_versions/fixtures/kma-older.json.gz",
-      "sha256": "ffbc6c37d4d26ace6518bdfa6f888d84ddef42370eeec8164f82d06daa3df304",
+      "sha256": "5b87868df00caa242bdfdcc0001ed1a094866d8ec1e349c2033d9df584e714b0",
       "compression": "gzip",
       "maps": [
         {
@@ -1310,6 +1352,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -1321,6 +1364,7 @@
             "server/lib/air/providers/waqi.js",
             "server/lib/aqi.converter.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/history/provider.js",
@@ -1354,7 +1398,7 @@
     },
     {
       "path": "server2/tests/legacy_versions/fixtures/kma-town.json.gz",
-      "sha256": "c0c1d0b54edbcfe38eaadb3cff43924d3b0127850f48d6c1abbc8f521a301a6b",
+      "sha256": "eeb41c0ecc2e1429d8a2bf6ae284facb871f669f81c273831bbb219d509c77e2",
       "compression": "gzip",
       "maps": [
         {
@@ -1377,6 +1421,7 @@
             "server/controllers/lifeIndexKmaController.js",
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -1388,6 +1433,7 @@
             "server/lib/air/providers/waqi.js",
             "server/lib/aqi.converter.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/history/provider.js",
@@ -1437,7 +1483,7 @@
     },
     {
       "path": "server2/tests/nation/oracle.json",
-      "sha256": "ced3f9e1939a2e02ee9bef48b4ca1f10ca794959b48051efd9bffa5c3636caa3",
+      "sha256": "5c62042753fde310180e801fe32299c23dfbdad8ebe021e5a528651d642a213f",
       "compression": "none",
       "maps": [
         {
@@ -1495,7 +1541,7 @@
     },
     {
       "path": "server2/tests/world/fixtures/oracle.json.gz",
-      "sha256": "502d80524cf6b829226dc07c4f6b31fda078f20a21c170ab208a4ee261f79e76",
+      "sha256": "fd255e2817304a2f341feed8511566429f508de3eb0b65d528291e761b3a311f",
       "compression": "gzip",
       "maps": [
         {
@@ -1517,6 +1563,7 @@
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
             "server/lib/VC/vcConverter.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -1528,6 +1575,7 @@
             "server/lib/air/providers/waqi.js",
             "server/lib/aqi.converter.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/kmaPrecipitation.js",
@@ -1561,7 +1609,7 @@
     },
     {
       "path": "server2/tests/world/fixtures/widget.json.gz",
-      "sha256": "2b6e0b639077960fa7a08f44580cc5787b4ef738e32dfc265d13fbccaf8a6015",
+      "sha256": "03e5c190107b9cb856dcdb204f7eecba4d31e7cbe9b559d6a73b4a2be0431114",
       "compression": "gzip",
       "maps": [
         {
@@ -1583,6 +1631,7 @@
             "server/lib/AQI/airFallback.js",
             "server/lib/AQI/waqiStationName.js",
             "server/lib/VC/vcConverter.js",
+            "server/lib/air/forecastRows.js",
             "server/lib/air/httpClient.js",
             "server/lib/air/observation.js",
             "server/lib/air/providerBudget.js",
@@ -1594,6 +1643,7 @@
             "server/lib/air/providers/waqi.js",
             "server/lib/aqi.converter.js",
             "server/lib/foodPoisoning.js",
+            "server/lib/gwangjuJeonnam.js",
             "server/lib/history/observations.js",
             "server/lib/history/policy.js",
             "server/lib/kmaPrecipitation.js",
@@ -1669,6 +1719,7 @@
     "server2/tests/providers/fixtures/gateway-30.json",
     "server2/tests/providers/fixtures/pollen-v3-live-20261001.json",
     "server2/tests/providers/fixtures/uv-idx-v5.json",
+    "server2/tests/solar_terms/fixtures/server1-parity.json",
     "server2/tests/state/fixtures/export-alertpushes.json",
     "server2/tests/summary/fixtures/asos-daily-108-20251012-20251018.json",
     "server2/tests/warnings/fixtures/brk-news.json",

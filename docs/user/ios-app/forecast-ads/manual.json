@@ -1,0 +1,34 @@
+{
+  "title": "TodayWeather for iOS · Forecast ads",
+  "scenario": "On iPhone, open TodayWeather with saved places. These simulator captures use a local sample creative in the app’s native ad view. Actual ad artwork, text, and the AdChoices control come from the ad service.",
+  "steps": [
+    {
+      "title": "Hourly forecast",
+      "instruction": "Tap 시간별날씨. Scroll past the hourly forecast chart and the hourly air outlook when it is available.",
+      "screenshot": "forecast.png",
+      "caption": "A compact ad card separates the hourly forecast from the detail cards.",
+      "expected": "The forecast remains readable and the tab bar stays within reach."
+    },
+    {
+      "title": "Daily forecast",
+      "instruction": "Tap 일별날씨. Read the multi-day chart, air outlook and daily detail row, then scroll toward the weather data source.",
+      "screenshot": "dailyforecast.png",
+      "caption": "The compact card sits below daily weather details.",
+      "expected": "Swipe the daily detail row horizontally without opening an ad."
+    },
+    {
+      "title": "Air quality",
+      "instruction": "Tap 대기정보 and scroll below the current air conditions and hourly air-quality graph.",
+      "screenshot": "air.png",
+      "caption": "The compact card appears between the air overview and the remaining data.",
+      "expected": "The grade, guidance and hourly AQI remain together above the card."
+    },
+    {
+      "title": "Saved places",
+      "instruction": "Tap 즐겨찾기 and scroll to the end of the saved locations. Enter edit or search mode to manage your places.",
+      "screenshot": "search.png",
+      "caption": "A stacked ad card appears after the final visible saved place.",
+      "expected": "Search, results and editing show only place controls and content."
+    }
+  ]
+}

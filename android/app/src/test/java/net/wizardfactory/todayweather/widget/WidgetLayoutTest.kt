@@ -60,7 +60,7 @@ class WidgetLayoutTest {
         WidgetReadings(WeatherConverter.convert(Json.parseToJsonElement(body))!!, "C",
             YesterdayText(context.getString(R.string.LOC_SAME_AS_YESTERDAY), context.getString(R.string.LOC_THAN_YESTERDAY)))
     }
-    private val display get() = Display("current", "회현동", readings = readings, updated = "11. 8. 오전 9:00", shortTime = "09:07")
+    private val display get() = Display("current", "회현동", readings = readings, updated = "11. 8. 오전 9:00", shortTime = "09:07", timeZoneId = java.util.TimeZone.getDefault().id)
 
     @Test fun automaticHeaderShowsWhenTheCachedWeatherWasUpdated() {
         val host = render("auto-update-time", Kind.CURRENT, display, 172, 160)
@@ -104,12 +104,34 @@ class WidgetLayoutTest {
 
     @Test fun clockIncludesLiveClockAndForecast() {
         val clock = render("clock", Kind.CLOCK, display, 360, 224)
-        val face = clock.descendants.filterIsInstance<TextClock>().single()
+        val face = clock.findViewById<TextClock>(R.id.widget_clock_time)
         assertTrue("attached clock should show a time, got '${face.text}'", Regex("\\d{1,2}:\\d{2}").containsMatchIn(face.text))
         assertEquals("clock time wraps: '${face.text}'", 1, face.layout.lineCount)
         val available = face.width - face.compoundPaddingLeft - face.compoundPaddingRight
         assertTrue("clock time exceeds its width: '${face.text}'", face.layout.getLineWidth(0) <= available + 1f)
         assertTrue(clock.labels().any { it.text.toString() == readings.hours.first().label })
+    }
+
+    @Test fun forecastLabelsAndIconsRemainLegibleAtLauncherSizes() {
+        for (style in WidgetStyle.entries) {
+            for (kind in listOf(Kind.CLOCK, Kind.FORECAST)) {
+                val host = render("legibility-$style-$kind", kind, display.copy(style = style), 360, 200)
+                val first = readings.hours.first()
+                val time = host.labels().single { it.text.toString() == first.label }
+                val expected = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 16f, context.resources.displayMetrics)
+                assertEquals("forecast hour size in $kind", expected, time.textSize, 0.5f)
+                val icon = host.descendants.first { it.contentDescription == first.icon && it.width == dp(if (kind == Kind.CLOCK) 31 else 38) }
+                assertEquals("square forecast icon", icon.width, icon.height)
+            }
+            for ((width, height) in listOf(245 to 50, 245 to 100, 245 to 150, 300 to 150, 172 to 180, 300 to 180, 245 to 270)) {
+                for (kind in listOf(Kind.CLOCK, Kind.FORECAST)) {
+                    for (daily in listOf(false, true)) {
+                        render("fit-$kind-$style-$width-$height-$daily", kind,
+                            display.copy(style = style, daily = daily, manualRefresh = true), width, height)
+                    }
+                }
+            }
+        }
     }
 
     @Test fun forecastUsesFiveColumnsWhenWideAndTwoWhenNarrow() {
@@ -126,13 +148,44 @@ class WidgetLayoutTest {
         }
     }
 
+    @Test fun liveFacesShowEachCityAtTheSameInstantAndFollowItsCalendar() {
+        android.provider.Settings.System.putString(context.contentResolver, android.provider.Settings.System.TIME_12_24, "24")
+        fun checkClock(city: String, zone: String, instant: String, expectedTime: String, expectedDate: String): AppWidgetHostView {
+            val epoch = java.time.Instant.parse(instant).toEpochMilli()
+            android.os.SystemClock.setCurrentTimeMillis(epoch)
+            val weather = if (zone == "Asia/Seoul") readings else {
+                val fixture = File(project, "../core-domain/src/test/resources/corpus/inputs/vc-newyork.json").readText()
+                WidgetReadings(WeatherConverter.convert(Json.parseToJsonElement(fixture))!!, "C", YesterdayText("", ""))
+            }
+            val host = render("local-$zone-$expectedTime".replace("/", "-").replace(":", ""), Kind.CLOCK,
+                display.copy(title = city, readings = weather, style = WidgetStyle.BLUE, timeZoneId = zone), 360, 200)
+            val clock = host.findViewById<TextClock>(R.id.widget_clock_time)
+            val date = host.findViewById<TextClock>(R.id.widget_clock_date)
+            assertEquals(zone, clock.timeZone)
+            assertEquals(zone, date.timeZone)
+            assertEquals(expectedTime, clock.text.toString())
+            assertEquals(expectedDate, date.text.toString())
+            return host
+        }
+        checkClock("서울", "Asia/Seoul", "2026-03-08T04:59:00Z", "13:59", "2026. 3. 8.")
+        val beforeMidnight = checkClock("뉴욕", "America/New_York", "2026-03-08T04:59:00Z", "23:59", "2026. 3. 7.")
+        shadowOf(Looper.getMainLooper()).idleFor(1, java.util.concurrent.TimeUnit.MINUTES)
+        assertEquals("00:00", beforeMidnight.findViewById<TextClock>(R.id.widget_clock_time).text.toString())
+        assertEquals("2026. 3. 8.", beforeMidnight.findViewById<TextClock>(R.id.widget_clock_date).text.toString())
+        checkClock("뉴욕", "America/New_York", "2026-03-08T05:00:00Z", "00:00", "2026. 3. 8.")
+        checkClock("뉴욕", "America/New_York", "2026-03-08T06:59:00Z", "01:59", "2026. 3. 8.")
+        checkClock("뉴욕", "America/New_York", "2026-03-08T07:00:00Z", "03:00", "2026. 3. 8.")
+        val unknown = render("local-unavailable", Kind.CLOCK, display.copy(timeZoneId = null), 360, 200)
+        assertTrue(unknown.descendants.none { it is TextClock })
+        assertTrue(unknown.labels().any { it.text.toString() == "–" })
+    }
+
     @Test fun blueHourDateAndLiveTimeShareTheirRightEdge() {
         for (format in listOf("12", "24")) {
             android.provider.Settings.System.putString(context.contentResolver, android.provider.Settings.System.TIME_12_24, format)
             val host = render("clock-blue-$format", Kind.CLOCK, display.copy(style = WidgetStyle.BLUE), 360, 200)
-            val date = android.text.format.DateFormat.getMediumDateFormat(context).format(java.util.Date())
-            val dateLabel = host.labels().single { it.text.toString() == date }
-            val clock = host.descendants.filterIsInstance<TextClock>().single()
+            val dateLabel = host.findViewById<TextClock>(R.id.widget_clock_date)
+            val clock = host.findViewById<TextClock>(R.id.widget_clock_time)
             fun textEnd(label: TextView) = host.boundsOf(label).left + label.compoundPaddingLeft + label.layout.getLineRight(0)
             val gap = abs(textEnd(dateLabel) - textEnd(clock))
             assertTrue("$format-hour date and clock text ends differ by $gap px", gap <= dp(1))

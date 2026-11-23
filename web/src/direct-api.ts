@@ -1,7 +1,12 @@
 import {
   coordinates,
+  exactCoordinates,
+  decodeCoordinateWarnings,
+  warningsAt,
   DEFAULT_UNITS,
   normalizeWeather,
+  normalizeCoordinateAirForecast,
+  normalizeCoordinatePollenForecast,
   normalizeNation,
   normalizeWarnings,
   parseUnits,
@@ -84,11 +89,12 @@ export async function readJson(response: Response): Promise<any> {
   return data;
 }
 function geo(value: any): Place {
-  const c = coordinates(
+  const warningLocation = exactCoordinates(
     value?.location?.lat,
     value?.location?.long ?? value?.location?.lon,
   );
   if (!value || typeof value !== "object") throw new Error(t("error.geocode"));
+  const c = coordinates(warningLocation.lat, warningLocation.lon);
   const address = String(value.address || "");
   return {
     id: placeId(c.lat, c.lon),
@@ -99,6 +105,7 @@ function geo(value: any): Place {
     address: String(value.address || "").slice(0, 300),
     country: String(value.country || "").slice(0, 3),
     ...c,
+    warningLocation,
   };
 }
 const RETRY_DELAY_MS = 1000;
@@ -134,7 +141,7 @@ export async function directApi(
   const route = url.pathname,
     mode = settings.mode;
   const units = parseUnits(Object.fromEntries(url.searchParams));
-  const upstream = async (p: string, options: { noStore?: boolean } = {}) => {
+  const upstream = async (p: string, options: { noStore?: boolean; singleAttempt?: boolean } = {}) => {
     // One delayed retry for gateway (502) or network failures; a CloudFront
     // 502 without CORS headers surfaces as a network failure.
     for (let attempt = 0; ; attempt++) {
@@ -156,7 +163,7 @@ export async function directApi(
       } catch {
         if (signal.aborted) throw signal.reason;
       }
-      if (attempt === 0 && (!response || response.status === 502)) {
+      if (attempt === 0 && !options.singleAttempt && (!response || response.status === 502)) {
         await response?.body?.cancel().catch(() => undefined);
         await wait(RETRY_DELAY_MS, signal);
         continue;
@@ -213,6 +220,23 @@ export async function directApi(
       }),
     );
   }
+  if (route === "/weather/warnings") {
+    if (mode !== "live") return undefined;
+    const point = exactCoordinates(url.searchParams.get("lat"), url.searchParams.get("lon"));
+    const data = await upstream(`/weather/v000903/coord/${point.lat},${point.lon}/warnings`, {
+      noStore: true, singleAttempt: true,
+    });
+    const warnings = decodeCoordinateWarnings(data, point);
+    return warnings ? warningsAt(warnings) : undefined;
+  }
+  if (mode === "live" && (route === "/weather/air-forecast" || route === "/weather/pollen-forecast")) {
+    const {lat, lon} = coordinates(url.searchParams.get("lat"), url.searchParams.get("lon"));
+    const type = route === "/weather/air-forecast" ? "air-forecast" : "pollen-forecast";
+    const data = await upstream(`/weather/v000903/coord/${lat},${lon}/${type}`, {
+      noStore: true, singleAttempt: true,
+    });
+    return type === "air-forecast" ? normalizeCoordinateAirForecast(data) : normalizeCoordinatePollenForecast(data);
+  }
   if (route === "/weather" || route === "/locations/reverse") {
     const c = coordinates(
       url.searchParams.get("lat"),
@@ -227,14 +251,14 @@ export async function directApi(
       country: "",
       ...c,
     };
-    if (route === "/locations/reverse")
+    if (route === "/locations/reverse") {
+      const warningLocation = exactCoordinates(url.searchParams.get("lat"), url.searchParams.get("lon"));
       return mode === "demo"
         ? { ...p, ...c }
-        : geo(
-            await upstream(`/geocode/v000903/coord/${c.lat},${c.lon}`, {
-              noStore: true,
-            }),
-          );
+        : {...geo(await upstream(`/geocode/v000903/coord/${c.lat},${c.lon}`, {
+            noStore: true,
+          })), warningLocation};
+    }
     if (mode === "demo" && units.airUnit !== "airkorea")
       throw new Error(t("error.demoAirUnit"));
     const raw =

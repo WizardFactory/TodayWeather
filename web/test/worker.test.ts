@@ -67,6 +67,7 @@ it("keeps CloudFront and worker navigation routes compatible", () => {
     "/membership",
     "/warnings",
     "/locations",
+    "/loc/",
     "/air/seoul",
     "/place/seoul",
     "/notifications/seoul",
@@ -76,6 +77,7 @@ it("keeps CloudFront and worker navigation routes compatible", () => {
     "/theme.js",
   ])
     expect(worker.test(path), path).toBe(server.test(path));
+  expect(server.test("/loc/")).toBe(true);
   expect(server.test("/api/web/v1/missing")).toBe(false);
   expect(server.test("/weather/p_37.567_126.978/hourly")).toBe(true);
 });

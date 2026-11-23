@@ -46,16 +46,22 @@ export const DEEP_LINKS = [
   "/settings",
   "/help",
 ];
-/** Suffixes produced by rainSuffix in web/src/Weather.tsx for KMA data. */
+/**
+ * Suffixes of the `rain.suffix.*` messages (web/src/i18n/ko.ts) for KMA data.
+ * Forecast amounts carry the hours the service covers, up to a day
+ * (`{hours}시간 예보`: 1 to 24, partial-day totals included); observed amounts
+ * are the current hour or a three-hour row (`1시간 관측`, `3시간 관측`), as
+ * `point()` in packages/weather-core assigns them. RAIN_HOURS matches these.
+ */
 export const RAIN_LABELS = [
-  "1시간 관측",
-  "3시간 관측",
   "지금까지 관측",
   "관측 누적",
   "1시간 예보(근사)",
-  "3시간 예보",
   "예보",
 ];
+const RAIN_HOURS = /^(?:(?:[1-9]|1\d|2[0-4])시간 예보|[13]시간 관측)$/;
+const knownRainLabel = (label) =>
+  RAIN_LABELS.includes(label) || RAIN_HOURS.test(label);
 /** Weather request paths of the probed places (coordinates from PLACES). */
 const SEOUL_WEATHER = "/weather/v000903/coord/37.567";
 const TOKYO_WEATHER = "/weather/v000903/coord/35.69";
@@ -88,9 +94,18 @@ export function unknownRainLabels(texts) {
     const m = text.match(/^(강수량|강수 .+?)(?: · (.+))?$/);
     if (!m) return true;
     if (m[1] === "강수량")
-      return m[2] !== undefined && !RAIN_LABELS.includes(m[2]);
-    return m[2] === undefined || !RAIN_LABELS.includes(m[2]);
+      return m[2] !== undefined && !knownRainLabel(m[2]);
+    return m[2] === undefined || !knownRainLabel(m[2]);
   });
+}
+/**
+ * Hourly chart columns from the current one on, given each column's
+ * current-column flag. The chart also draws yesterday's columns, which must
+ * not satisfy the forecast minimum: without a current column the count is 0.
+ */
+export function upcomingHourColumns(currentFlags) {
+  const current = currentFlags.indexOf(true);
+  return current < 0 ? 0 : currentFlags.length - current;
 }
 /** True when a KMA "YYYY.MM.DD.HH:MM" time was shown without parsing. */
 export function dottedKmaTime(text) {
@@ -1083,14 +1098,21 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       async () => {
         await rendered(".temperature");
         const temperature = await temperatureText();
-        const hours = await page.locator(".chart-label").count();
+        const hours = upcomingHourColumns(
+          await page
+            .locator(".hourly-chart .hourly-columns .chart-column")
+            .evaluateAll((columns) =>
+              columns.map((c) => c.classList.contains("current-column")),
+            ),
+        );
         const problems = [];
         if (!/\d/.test(temperature))
           problems.push("temperature " + JSON.stringify(temperature));
-        if (hours < 8) problems.push(`${hours} hourly chart labels (< 8)`);
+        if (hours < 8)
+          problems.push(`${hours} current and later hourly columns (< 8)`);
         if (problems.length)
           await renderFailure(problems.join(", "), SEOUL_WEATHER);
-        return `temperature ${temperature}, ${hours} hourly chart labels`;
+        return `temperature ${temperature}, ${hours} current and later hourly columns`;
       },
       "/weather/",
     );
@@ -1122,17 +1144,18 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       },
       "/weather/",
     );
-    // The daily list renders with the weather data; wait for its rows.
+    // Wait for the rendered daily chart columns before checking the count.
+    const dailyColumns = ".daily-chart .chart-column";
     await visit(
       "/weather/seoul/daily",
-      ".daily-row, .empty-state:not([role=status]), .empty-state.error",
+      `${dailyColumns}, .empty-state:not([role=status]), .empty-state.error`,
     );
     await check(
       "Seoul daily view renders >=3 daily rows",
       "app",
       async () => {
         await rendered(".temperature");
-        const days = await page.locator(".daily-row").count();
+        const days = await page.locator(dailyColumns).count();
         if (days < 3)
           await renderFailure(`${days} daily rows (< 3)`, SEOUL_WEATHER);
         return `${days} daily rows`;

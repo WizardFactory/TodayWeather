@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Coordinate pollen forecast",
+    "output": "docs/architecture/diagrams/coordinate-pollen-forecast.html",
+    "viewBox": [1080, 590],
+    "column_fit": "spread",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    {"id": "app", "type": "frontend", "label": "Web and native apps", "sublabel": "Viewed weather coordinates"},
+    {"id": "server", "type": "backend", "label": "server1", "sublabel": "Public coordinate gateway"},
+    {"id": "counter", "type": "database", "label": "MongoDB", "sublabel": "Separate Pollen counter"},
+    {"id": "pollen", "type": "external", "label": "Google", "sublabel": "Pollen API"}
+  ],
+  "messages": [
+    {"id": "weather", "from": "app", "to": "server", "y": 160, "label": "GET coordinate weather", "variant": "emphasis"},
+    {"id": "support", "from": "server", "to": "app", "y": 199, "label": "Weather and availability signal", "variant": "return"},
+    {"id": "lookup", "from": "app", "to": "server", "y": 253, "label": "GET coordinate pollen forecast", "variant": "emphasis"},
+    {"id": "reserve", "from": "server", "to": "counter", "y": 299, "label": "If viewed country is supported, reserve one call", "variant": "default"},
+    {"id": "fetch", "from": "server", "to": "pollen", "y": 347, "label": "If admitted, request five daily forecasts", "variant": "default"},
+    {"id": "forecast", "from": "pollen", "to": "server", "y": 390, "label": "Region, UTC dates, species and optional indices", "variant": "return"},
+    {"id": "result", "from": "server", "to": "app", "y": 439, "label": "no-store: forecast or unavailable", "variant": "return"}
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Location and measurement",
+      "items": [
+        "Country selection follows viewed coordinates. KMA risk remains independent.",
+        "Provider dates use UTC. Index zero and missing data remain distinct."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Data and allowance",
+      "items": [
+        "No provider data enter the ordinary weather snapshot or quota collection.",
+        "A missing reservation, invalid region or provider failure only affects pollen."
+      ]
+    }
+  ]
+}

@@ -151,11 +151,11 @@ Node16.20.2 SHA256 `83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f383
 
 All prior fixture bytes, histories, failure receipts and the complete world-driver code fence are preserved. Post-adoption freshness/native validation is required separately; these recordings alone do not establish G1 PASS, current CI, independent PR review or final candidate placement.
 
-## Current G1 qualification boundary
+## October 20 G1 qualification boundary
 
-The registry contains 22 fixtures and 23 explicit source-map pointers. Its two
-identity domains are 187 tracked product/reference files and 33 verification
-exports. The unchanged Node reader returns 190 keys: the 187 product files plus
+At the October 20 checkpoint the registry contained 22 fixtures and 23 explicit source-map pointers. Its two
+identity domains were 187 tracked product/reference files and 33 verification
+exports. At that checkpoint the Node reader returned 190 keys: the 187 product files plus
 three declared exports. Python hashes the other 30 referenced exports with
 regular-file, symlink and byte limits. Export permission is the exact
 intersection of declarations and actual map references; a directory prefix does
@@ -278,3 +278,70 @@ not relabel them. `SOURCE_CURRENT` still means freshness, not semantic
 equivalence. G1 integration does not close the parent issue's other work or the
 real-host, seven-day shadow, quota and complete rollback-bundle gates in the
 [cutover guide](server2-cutover.md).
+
+## November 21 current-source recordings (candidate)
+
+PR #3091 exposed legacy-source drift also present on its base. The product tree
+used here is `e1e6d20322aec3256d8aaa918e65fbe2a1e02d0a`. The
+[Apple Silicon qualification](https://github.com/WizardFactory/TodayWeather/actions/runs/44926187889)
+ran all eight HTTP profiles twice with the pinned Node executable above.
+Every pair matched byte for byte, with no guard violations or outstanding
+sockets or ports. The job reports REVIEW_REQUIRED for S02, core, and rich
+because their responses changed. Its artifacts contain the raw pairs and
+typed comparisons. The recording branch is separate from the product PR.
+
+| Profile | Differences relative to the previous fixture outside the source map |
+| --- | --- |
+| S02 | 31 responses gained Vary. Five cases changed 12 middleware implementation hash entries. |
+| Core domestic S3 | 14 responses gained Vary. |
+| Rich domestic S3 | 16 responses gained Vary. |
+| KMA, older KMA, town, world, widget | None. |
+
+Of the 61 recorded header changes, 44 set `Vary: Accept-Language, Cookie`
+on direct domestic requests and 17 set `Vary: Accept-Language` on gateway
+responses. No recorded status, response body, or Date header changed.
+The locked recorder dependency trees omit astronomy-engine. These comparisons
+cover the historical corpus. Active calendar parity requires the separately
+pinned product dependency and native verification tracked in
+[PR #3112](https://github.com/WizardFactory/TodayWeather/pull/3112#issuecomment-7065994755).
+
+The November candidate covers 195 product/reference files and 33 verification
+exports across 1,183 source references. Its reader returns 198 keys, including
+three exports. The local freshness check reports 22 current fixtures.
+
+The other eight fixtures use the existing towns, nation, delivery, life, and
+warning recorders. The life driver and its seven modules were reconstructed
+from the exact SHA-256-pinned code in LIFE-PROVENANCE. The four delivery
+variants used the new S02 input and its exact digest. The warning recorder
+now identifies five additional loaded legacy files. These are verification
+dependencies of the existing on-disk recorder, observed during two
+instrumented executions. Response comparisons exclude no changed fields.
+The source-map, runtime labels, and the packaging of raw JSON are distinct
+from HTTP behavior. The complete selected captures and failure receipts
+are retained in the operator's ignored verification evidence.
+
+## November 23 gateway source renewal
+
+PRs #3083 and #3107 added the opt-in France Vigilance and AEMET warning route to
+`server/routes/gateway.js`. The route registers only when
+`METEOFRANCE_VIGILANCE_ENABLED` or `AEMET_WARNINGS_ENABLED` is `true`, and both
+are unset in the recorders. The provenance audit reported drift in the two
+fixtures that map this file: S02 (`server2/tests/golden/records.json`) and rich
+domestic S3 (`server2/tests/domestic/fixtures/s3-rich-response.json.gz`). See
+[#3132](https://github.com/WizardFactory/TodayWeather/issues/3132).
+
+The two HTTP policies pinned the previous `gateway.js` digest, so the recorders
+blocked the new source until it was repinned. With the new pin, the Apple
+Silicon qualification script from the November 21 recordings ran all eight
+profiles twice on a local Darwin ARM64 host. It used the official Node 16.20.2
+binary (SHA256
+`83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f3839a6e`) with TZ
+UTC. Every pair matched byte for byte. S02 and rich each showed exactly one
+typed difference: the `source.files` digest of `server/routes/gateway.js`.
+The other six profiles showed none. No status, body or header changed.
+
+The second recording of each changed profile became the fixture. The new
+digests are repinned in the registry, the delivery static input and the KMA
+rich replay manifest. The delivery fixtures record no S02 digest and were not
+re-recorded. Golden CI passed locally: 22 fixtures source-current, 27
+provenance tests, 18 golden checks and S02 verification over 76 cases.

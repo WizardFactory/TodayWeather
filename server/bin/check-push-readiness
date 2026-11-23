@@ -1,0 +1,107 @@
+#!/usr/bin/env node
+'use strict';
+// Run from cron with its usual alert recipient. Healthy runs are silent.
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const zlib = require('zlib');
+
+function socketReady(socketPath) {
+    if (!socketPath || !path.isAbsolute(socketPath)) return Promise.resolve(false);
+    return new Promise(resolve => {
+        const request = http.get({ socketPath, path: '/health' }, res => {
+            let body = '';
+            res.setEncoding('utf8');
+            res.on('error', () => resolve(false));
+            res.on('data', chunk => {
+                body += chunk;
+                if (body.length > 8192) request.destroy();
+            });
+            res.on('end', () => {
+                try { resolve(res.statusCode === 200 && JSON.parse(body).ready === true); }
+                catch (_) { resolve(false); }
+            });
+        });
+        const deadline = setTimeout(() => request.destroy(), 3000);
+        request.on('error', () => resolve(false));
+        request.on('close', () => { clearTimeout(deadline); resolve(false); });
+    });
+}
+
+function registrations(logPath, now) {
+    const windowStart = now - 5 * 60000;
+    const dir = path.dirname(logPath), base = path.basename(logPath);
+    const logFiles = () => fs.readdirSync(dir).filter(name => name === base ||
+        (name.startsWith(base) && /^(?:-\d{8}|\.\d+)(?:\.gz)?$/.test(name.slice(base.length))));
+    const names = logFiles();
+    const initialLog = fs.statSync(logPath);
+    if (!names.includes(base)) throw new Error('current log unavailable');
+    const counts = { registrations: 0, http503: 0 };
+    // Bound memory and work on busy hosts. If the five-minute window does not fit,
+    // report unavailable coverage so a truncated sample cannot look healthy.
+    const maxBytes = 8 * 1024 * 1024;
+    let remaining = 32 * 1024 * 1024;
+    const seen = new Set();
+    for (const name of names) {
+        const fd = fs.openSync(path.join(dir, name), 'r');
+        let contents, clipped;
+        try {
+            const st = fs.fstatSync(fd);
+            if (!st.isFile()) throw new Error('not a log file');
+            const key = st.dev + ':' + st.ino;
+            if (seen.has(key) || st.mtimeMs < windowStart) continue;
+            seen.add(key);
+            const length = Math.min(st.size, maxBytes);
+            clipped = st.size > length;
+            if (length > remaining || (clipped && name.endsWith('.gz'))) throw new Error('log exceeds sample bound');
+            const data = Buffer.alloc(length);
+            if (fs.readSync(fd, data, 0, length, st.size - length) !== length) throw new Error('log changed during read');
+            contents = name.endsWith('.gz') ? zlib.gunzipSync(data, { maxOutputLength: Math.min(maxBytes, remaining) }) : data;
+            remaining -= contents.length;
+        } finally { fs.closeSync(fd); }
+        let first = true;
+        for (const line of contents.toString('utf8').split('\n')) {
+            if (!line) continue;
+            if (clipped && first) { first = false; continue; }
+            // Combined nginx log: parse the timestamp on every row. Bad requests
+            // can have malformed request lines and still carry a valid timestamp.
+            const ts = /\[(\d{2})\/(\w{3})\/(\d{4}):(\d\d:\d\d:\d\d) ([+-]\d{4})\] "/.exec(line);
+            if (!ts) throw new Error('unrecognized log format');
+            const time = Date.parse(ts[1] + ' ' + ts[2] + ' ' + ts[3] + ' ' + ts[4] + ' ' + ts[5]);
+            if (!Number.isFinite(time)) throw new Error('invalid timestamp');
+            if (clipped && time >= windowStart) throw new Error('incomplete time window');
+            clipped = false;
+            if (time < windowStart || time > now) continue;
+            const request = /^(POST|PUT|DELETE) (\/[^? ]+)(?:\?[^ ]*)? HTTP\/[^"]+" (\d{3}) /.exec(line.slice(ts.index + ts[0].length));
+            if (!request) continue;
+            const [, method, target, status] = request;
+            // Version mounts in server/app.js and routes/v*/index.js.
+            const single = /^\/v(?:000705|000803|000901|000902|000903)\/push\/?$/i.test(target);
+            const bulk = method === 'POST' && /^\/v(?:000902|000903)\/push-list\/?$/i.test(target);
+            if (single || bulk) {
+                counts.registrations++;
+                if (status === '503') counts.http503++;
+            }
+        }
+        if (clipped) throw new Error('incomplete time window');
+    }
+    const finalLog = fs.statSync(logPath);
+    if (initialLog.ino !== finalLog.ino || initialLog.dev !== finalLog.dev ||
+        initialLog.size > finalLog.size || logFiles().sort().join('\n') !== names.sort().join('\n')) {
+        throw new Error('log rotation changed the sample');
+    }
+    return counts;
+}
+
+async function main() {
+    const ready = await socketReady(process.env.PUSH_SOCKET_PATH);
+    let counts = { registrations: null, http503: null }, logReadable = true;
+    try { counts = registrations(process.env.PUSH_NGINX_ACCESS_LOG || '/var/log/nginx/access.log', Date.now()); }
+    catch (_) { logReadable = false; }
+    const healthy = ready && logReadable && counts.http503 === 0;
+    if (!healthy || process.argv.includes('--verbose')) {
+        console.log(JSON.stringify(Object.assign({ event: 'push-readiness-monitor', socketReady: ready, logReadable }, counts)));
+    }
+    if (!healthy) process.exitCode = 1;
+}
+main().catch(() => { console.log('{"event":"push-readiness-monitor","error":"check-failed"}'); process.exitCode = 1; });

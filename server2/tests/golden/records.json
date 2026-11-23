@@ -121,17 +121,18 @@
     "oracle_sha256": "cdadca2821384885388e0a36a20883273735f7c325837bc80a8dd9e381c5ac46",
     "dependency_lock_sha256": "18caa49d992431a51c255b8560870385e1e698177e5cdf89cb81bc21df6ce8b3",
     "files": {
-      "server/app.js": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8",
-      "server/config/air.js": "194d074be1ad3bb67dac8273db395d785f848bdb5728cab4e9de99ada1c85f70",
+      "server/app.js": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f",
+      "server/config/air.js": "53450999717edb3cfd41e8ba67b81999b716697876c78c987b79ed0fab658f62",
+      "server/config/solar-terms/kr.json": "ed55dc2a3625d21fd974ee79b9ecb1092d1929e71b50cab24826454b38ee3605",
       "server/controllers/alert.push.controller.js": "c147cce006973c8a50ba75a59f6770c829528a39e3c28da382ab578d27563e5c",
       "server/controllers/controller.weather.desc.js": "58f8de678cd4d9e745804fcfd9b8910368dfda7b87afca4a95a5a2a64606854d",
       "server/controllers/controllerKmaStnWeather.js": "c7bd8b7848bf2f3a10c6f2b87f6dec3c6a06151da0aee8b22282254f495f5163",
       "server/controllers/controllerManager.js": "b64cdffdb4bd8936d3bd1164000fad8a600e554a1c6ca5faf418d27a4f52d442",
       "server/controllers/controllerPush.js": "0ea6353917b6182bcede0307d712568a479d70bb086c098cd2dfd9f24865ac7e",
-      "server/controllers/controllerTown.js": "e337c2eae987901eb975c3bb9f5274bb4be05d4d5309c91f43ae7e28d9878013",
-      "server/controllers/controllerTown24h.js": "ef4ad5804d5d1cec94e8880e6d9d93597408ae9035f5bfd086c4e80563b4f708",
+      "server/controllers/controllerTown.js": "53d07bcf04c2ee2d834cc8ac198bf52a3acaf675179b0a62c4751b4955047206",
+      "server/controllers/controllerTown24h.js": "a5f7a6ee755baef29e422473eec81352d28242ad14d215b55af03a8ab107ee5d",
       "server/controllers/kecoController.js": "17c1eef79eb86d25ff5aaed346cc1480f35afc4432b8ddd9e76cb92e185cffb9",
-      "server/controllers/kma.specialweather.controller.js": "a8886d197aa306d38388085ed63491871d2802e80eaa55778c589f6e769f1917",
+      "server/controllers/kma.specialweather.controller.js": "6cb83307a1ffd04cefcec41bf9fb681103b07622a59b6a6278f599ce35febaa9",
       "server/controllers/kma/kma.town.current.controller.js": "2887d7f30909a12d434186ee1c1d26aebeb1f1e290ad48ff93c3dde738e3c94e",
       "server/controllers/kma/kma.town.mid.controller.js": "5b9c06658411e8eadac2302d6f1bc9b883eba30f3c0b6eee5e9938d28708fe87",
       "server/controllers/kma/kma.town.short.controller.js": "2a6b06b5047b6e20a1184e18124517a43ce6e370a9c14bf944f342f829bafe1b",
@@ -139,30 +140,32 @@
       "server/controllers/kma/kma.town.shortest.controller.js": "5d3c4a094aff03df95fec18f1fb4299a2862f01b8557cc5e58c79b334005ad2a",
       "server/controllers/lifeIndexKmaController.js": "7cc6dbd838996dc759f2332492d4965934fb04384be27cb1f7b7cce4950353b9",
       "server/controllers/worldWeather/controller.ww.units.js": "ff94f2057990d2e1dfb0f4f7342ca95e079118ef993d75e862605ce381ad9d49",
-      "server/controllers/worldWeather/controllerWorldWeather.js": "bca8c7d0d5a57e5e5ceb36fa39f124e18ec5e1611858e9bf0e075584d3410b80",
-      "server/controllers/worldWeather/dsf.controller.js": "bfa81ada168d2c4da8a4d226c9674b18ee45217884f8a62f828c37805cb69b9c",
+      "server/controllers/worldWeather/controllerWorldWeather.js": "703d6de973c5decda79352dbe4296efc6eb0a92aafce60564bee369525ec6de9",
+      "server/controllers/worldWeather/dsf.controller.js": "f03020a7449d9e9826ca4c6326450fa4f21c977614ced72a9fd378e901e11b66",
       "server/lib/AQI/airFallback.js": "c235302a9bf21faff77dac6c33a29d6c5bd4e10e005acd5ef542b1af6f830136",
       "server/lib/AQI/waqiStationName.js": "b5cbb6244a89b06b140bf9aeb32bed84e7b1701558ac655cbeb90bd82d65b305",
-      "server/lib/VC/vcConverter.js": "6656c2cf15947eb8e6e7c216f5bc890f1950fc92a4daed3e0065d86f035e03f9",
+      "server/lib/VC/vcConverter.js": "fd05e616c7bd7638c31a0cfd90796455d05207fbfdbfe1c0b1ba61343dfdf63a",
+      "server/lib/air/forecastRows.js": "a5087f1a8474322a4be08c84ac538d4eb3c76d84f182cbb2df8f1ba9229e6484",
       "server/lib/air/httpClient.js": "187be46f5f57bb59c2f3edfc77e73023feb13c6be25dbb7e7cda5dc1dda45270",
       "server/lib/air/nationAir.js": "8840fe6fa1721d2e3a0c1c96758dea549fbb9102cb5250df6153c6b6bac5e804",
       "server/lib/air/observation.js": "9b83c8d1b394fa10e71933ce19bdcf90220a63dd7191b6894389f5e9412b7244",
-      "server/lib/air/providerBudget.js": "2fc221ab84be73bef38f1a53b691984d8177a27900197bd2bf1fe8e554e0e653",
+      "server/lib/air/providerBudget.js": "4379d03303d5d59b084f4b33bc2a958bd0b93eb3afe6eca30a1a66914a10499b",
       "server/lib/air/providerChain.js": "15dcb72f2fad8956492ee9bfb4b5e4b991df4723243ca931de5813ac84325f2e",
-      "server/lib/air/providers/google.js": "00c7f985a9ca38c6de19b87841a23d0897d4f217d1af159f3de3edb983b4dbcc",
+      "server/lib/air/providers/google.js": "a0f8bdf62f18c40f8bf3d64b84bb24bc98979b80522e12492a7a0ef83a3b0b8c",
       "server/lib/air/providers/index.js": "ac3c9c23e8e02907af2f55caf6bc3b04157fc589cc9a14a72445af9ba9808b6d",
-      "server/lib/air/providers/openweather.js": "5c123ba47b959271f41d24f92e856f1da1c4d59ff2140c8a74b6f150c3d506cc",
+      "server/lib/air/providers/openweather.js": "7cfd23233df72c44062bfc0b76640c59a178023c91e22875946135d90095d9f2",
       "server/lib/air/providers/visualcrossing.js": "515e409716ed7b6be9aadb810ee0d136f9d8c2fed87afed79a455dac63d1c4d5",
       "server/lib/air/providers/waqi.js": "27e47ecee1db4a803017e43ac0ee3064cb0463f0b179395e9efe8fb410e8465f",
       "server/lib/aqi.converter.js": "75755a5e87941c0d6f0f3675b85cc70d8d252342dcc14f4b6a7232e61ddf0a73",
-      "server/lib/foodPoisoning.js": "8814417c9a35b19319e9026b42c3ac01019061a75b82f9354298d0af88b14e33",
+      "server/lib/foodPoisoning.js": "f00d3883014255b88b56a7e73613bd60184b33e241a3f2ad88160eb7b24cd054",
       "server/lib/geocoder/cache.js": "07daeef8f66b8b7e97e264d49b9ebd083bfbe27d5b46cf45c413d5672ece5d5d",
       "server/lib/geocoder/format.js": "6fd658169916d1cce8b9c43e2749426f75ea69e982219e0333a4e3f860618df6",
       "server/lib/geocoder/google.js": "24363be73b826e729c36c0d54bf215ad362d6fc29e939b264798cceb21c62667",
       "server/lib/geocoder/index.js": "8f8dcb874dea2c40558d16ccdd06639fe1aa44435000f68f0dcc8bf262abee3f",
       "server/lib/geocoder/kakao.js": "c7c907277dcb3347ba8c17b16ca8c675103f623a6f5e0f4a5f3e284632a0968e",
       "server/lib/geocoder/keys.js": "3e9287cd5b8a2abd386ba2aad75fd28f59a49f371c7ba9f0be0648ea922acdc2",
-      "server/lib/geocoder/transport.js": "d8a1fb310f7d8a586a111fd01028ce80ec30ec5a01ea2421b17a31019f11d8c0",
+      "server/lib/geocoder/transport.js": "351bbb5c170ca4a1bcdb0fb4a850ebe264302bbe60e6189128129e4f9cd13ee6",
+      "server/lib/gwangjuJeonnam.js": "e23aa0b179416f9bdfe4013d0251b5abc067992ccb860cb3c16c4a251799fc76",
       "server/lib/history/observations.js": "4cf30adbe28680a7432a05e6dc6e476d1403e0653ca00183a37b7ea3a152f5e9",
       "server/lib/history/policy.js": "9bb355477fc057470fef43edebd30ae3fc11eae3a708545aaa916511f1da516d",
       "server/lib/history/provider.js": "eb3d3d34672e2d38ad2141d50bae1b747c7334472c43f7c081b0c148e848631d",
@@ -171,12 +174,14 @@
       "server/lib/history/service.js": "dae72a1badff864ebdbb437530dae9aba0728c451cc6a98d1b4c7d4a75a064cb",
       "server/lib/history/store.js": "7892f529d0fe7a0d6db47b72b99795b8b7845be562907c7200887583d0179cd5",
       "server/lib/kmaForecastNarrative.js": "abd29ee872d019d4dc859734ae126f1420d2018fb79574dfb006f8902f51277e",
-      "server/lib/kmaForecastNarrativeResponse.js": "c84ab2a2aa90b00f2340d3499147420b02b196efa25b214e144ae50671a7c2bd",
+      "server/lib/kmaForecastNarrativeResponse.js": "96b0178e580586f83a5b6bb34ece544d67d923043afd8e8c75328b017ed51ed4",
       "server/lib/kmaForecastRegions.js": "692027586f9411cb8ffb3eadb2a729e54ee66350d47030b04d2e6eb5b8b30907",
       "server/lib/kmaPrecipitation.js": "2425c15759495f40a1ec376d7d87677bc159f7e307a2edd77f3fb90e2876e1a5",
       "server/lib/kmaTimeLib.js": "e17dc2941e7e03701cebbe05b4cb077d771d9ed022af8a618057a99bb1b5ec61",
-      "server/lib/kmaWarningZones.js": "b10f42aec4d4a77b0b2a8017f0c1688a95e82702345752d41ebd1682d0cf059f",
+      "server/lib/kmaWarningZones.js": "a44226b92a127f1fddf5c1ef8d0b8af23ecd6815195dcb5df154bfdc3f7f439a",
       "server/lib/midForecastPolicy.js": "31e440ca678afc33639564e38aead4be4e05fe87c0df2748460c5eebd4c8a51b",
+      "server/lib/solarTerms/calendar.js": "929a268361e85e95361821ff0ec8896ed3465e8d160aa69b90ad94f3234b2632",
+      "server/lib/solarTerms/summary.js": "8e0b079f9cff8c1639e0e05b666741e833d7128a31ec4bfd47a8a311e0977110",
       "server/lib/sunRiseSet.js": "0a304339c2f44596f1fc646ced3b6602639d33b59bf624ce295a55a6989fa569",
       "server/lib/unitConverter.js": "f52aa2503ba18aa1236cbd91e1a11f4f9fdbc5e61bc82411378e37e9cc84570b",
       "server/lib/weatherUnavailable.js": "cc81caa418d4e85d6aa303bee889cf7e2082828ee68f215bb2b2c0db6e9b8f0d",
@@ -188,7 +193,7 @@
       "server/locales/zh-TW.json": "bc47e1dddfe07659f083e15b80f10472ee8ac7899db94b40d1c01df10e037dda",
       "server/models/modelKmaForecastNarrative.js": "6d5494f57ccbfcfdac6556cdca7d7e836a15e4b6d6ea1e350d25e955b6e8a091",
       "server/models/modelKmaSpecialWeatherSituation.js": "f2f45a8b6a421479838caa7fc8b45d97f2f1f78065b11a0f817a94036b281ce8",
-      "server/routes/gateway.js": "90d772e4aa915928be66f3835db9e4db4ffcb266614016b9f903be24f49dba75",
+      "server/routes/gateway.js": "08ff6da828436b9af64eda3a85b256a8de09b88af8e6451fc3450ef36f9490bb",
       "server/routes/v000705/index.js": "b29f289fab08549d31ddde85dac03590d6b4137004e475cd7e5da33995dc1154",
       "server/routes/v000705/routePushNotification.js": "c0a52209f6deba75f04107f9346d4039b71e323f01d162356877de1aa3a3fd03",
       "server/routes/v000705/routeTownForecast.js": "032be90a0d284b45bed49e807c4aafd7dc138764302922d24b0c38fdb1ed6599",
@@ -210,7 +215,7 @@
       "server/test/offline/fixtures/kma-warning/wthr-pwn.json": "d3d5d90e1578e1669d107f39b912ab345ca31d85782da68f531dd0f7dfdb1b72",
       "server/test/offline/fixtures/vc-london-combined.json": "d52ec07c22a43b528f451efc2227b464d06b9a490b44082931c73aac25f37136",
       "server/test/offline/fixtures/vc-tokyo-combined.json": "35c1341b709b994ca2c7d16a930eced6017baa8c8702114aed3c6ef173cb1bb4",
-      "server/test/offline/rss-response-smoke.js": "915ab74cef38a7ebc7ce2a67a95fc0bd9ed68d2bc72a8933e3322f2909e51d78",
+      "server/test/offline/rss-response-smoke.js": "cee8271b134f948b8ae56b53b848596df24b77ef1a2c98319fc60537b4f3bcf8",
       "server/test/offline/vc-synthetic.js": "8e61887db826270325fa5db1cd592329874316107f26a6a302cf3767a7784cf4",
       "server/test/offline/vc-weather-smoke.js": "4eec79811611d390c46d5b78d27d9d0c407712ec4d8cbcd70cc3dbcb3dcc3810",
       "server/utils/data/kma_warning_zones.csv": "c796c7d22d3c336b8d21172998b54788c6cf46c0c1df34ec6a66810421074ed2"
@@ -525,7 +530,7 @@
           },
           {
             "name": "layer-30",
-            "implementation_sha256": "43e951d1047a81e0fcc05494fe31a18c4a4f1e4115a911a52f58169796c8d700"
+            "implementation_sha256": "3d8a525ae4581a3282d0e92c8879305e39156bce7562a249425b7e667b8f1967"
           },
           {
             "name": "layer-31",
@@ -533,7 +538,7 @@
           },
           {
             "name": "layer-32",
-            "implementation_sha256": "17a6f6cdce02e7241a37f067f8c5af865ba178cee8f5223f240f926cd6bd120b"
+            "implementation_sha256": "a44271b12416da46beb25d65086653b5e40ba98477e4b7b8c434d651f2e1e802"
           },
           {
             "name": "layer-33",
@@ -541,7 +546,7 @@
           },
           {
             "name": "layer-34",
-            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
+            "implementation_sha256": "52e704e2a48c188c60ca1f28f8612f3e3b9bd10ec36a1f44a0263744b1fcb884"
           }
         ]
       }
@@ -859,7 +864,7 @@
           },
           {
             "name": "layer-30",
-            "implementation_sha256": "43e951d1047a81e0fcc05494fe31a18c4a4f1e4115a911a52f58169796c8d700"
+            "implementation_sha256": "3d8a525ae4581a3282d0e92c8879305e39156bce7562a249425b7e667b8f1967"
           },
           {
             "name": "layer-31",
@@ -867,7 +872,7 @@
           },
           {
             "name": "layer-32",
-            "implementation_sha256": "17a6f6cdce02e7241a37f067f8c5af865ba178cee8f5223f240f926cd6bd120b"
+            "implementation_sha256": "a44271b12416da46beb25d65086653b5e40ba98477e4b7b8c434d651f2e1e802"
           },
           {
             "name": "layer-33",
@@ -875,7 +880,7 @@
           },
           {
             "name": "layer-34",
-            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
+            "implementation_sha256": "52e704e2a48c188c60ca1f28f8612f3e3b9bd10ec36a1f44a0263744b1fcb884"
           }
         ]
       }
@@ -966,6 +971,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -1197,11 +1206,11 @@
           },
           {
             "name": "layer-31",
-            "implementation_sha256": "92af6c9ea60e4f49103d3fef8d7cee8b8d3e7c6092840e4d6522cf682350968d"
+            "implementation_sha256": "62367a0c992259ddf4112bed80dac98e5e7e754b726feabcb1da79596028f70f"
           },
           {
             "name": "layer-32",
-            "implementation_sha256": "43e951d1047a81e0fcc05494fe31a18c4a4f1e4115a911a52f58169796c8d700"
+            "implementation_sha256": "3d8a525ae4581a3282d0e92c8879305e39156bce7562a249425b7e667b8f1967"
           },
           {
             "name": "layer-33",
@@ -1209,7 +1218,7 @@
           },
           {
             "name": "layer-34",
-            "implementation_sha256": "17a6f6cdce02e7241a37f067f8c5af865ba178cee8f5223f240f926cd6bd120b"
+            "implementation_sha256": "a44271b12416da46beb25d65086653b5e40ba98477e4b7b8c434d651f2e1e802"
           },
           {
             "name": "layer-35",
@@ -1217,7 +1226,7 @@
           },
           {
             "name": "layer-36",
-            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
+            "implementation_sha256": "52e704e2a48c188c60ca1f28f8612f3e3b9bd10ec36a1f44a0263744b1fcb884"
           }
         ]
       }
@@ -1258,6 +1267,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -1509,7 +1522,7 @@
           },
           {
             "name": "layer-26",
-            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
+            "implementation_sha256": "52e704e2a48c188c60ca1f28f8612f3e3b9bd10ec36a1f44a0263744b1fcb884"
           }
         ]
       },
@@ -1779,7 +1792,7 @@
           },
           {
             "name": "layer-29",
-            "implementation_sha256": "750b3bec948e745d72ee993e421500d65be08123cbdbcd755aa0e373e78e2dcd"
+            "implementation_sha256": "52e704e2a48c188c60ca1f28f8612f3e3b9bd10ec36a1f44a0263744b1fcb884"
           }
         ]
       }
@@ -1875,6 +1888,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -1938,6 +1955,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -2005,6 +2026,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -2068,6 +2093,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -2135,6 +2164,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -2198,6 +2231,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -2556,6 +2593,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -2703,6 +2744,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -2751,6 +2796,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -2900,6 +2949,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -3045,6 +3098,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -3194,6 +3251,10 @@
           ]
         ],
         [
+          "vary",
+          "Accept-Language, Cookie"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -3339,6 +3400,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -3489,6 +3554,10 @@
           [
             "connect.sid=s%3Agolden-session-fixed.2TkWTwisubK6DR%2FEUQz9y0gis%2FNgXdhdO8YnDyX8AQg; Path=/; Expires=Thu, 24 Sep 2026 00:11:00 GMT; HttpOnly"
           ]
+        ],
+        [
+          "vary",
+          "Accept-Language, Cookie"
         ],
         [
           "x-powered-by",
@@ -4126,6 +4195,10 @@
           "W/\"8345-4sYwyiZWILI67j9CT0iIlA\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -4193,6 +4266,10 @@
         [
           "etag",
           "W/\"51a4-7qzrSKol1TweEO1BrbKuyA\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",
@@ -4264,6 +4341,10 @@
           "W/\"8345-4sYwyiZWILI67j9CT0iIlA\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -4331,6 +4412,10 @@
         [
           "etag",
           "W/\"51a4-7qzrSKol1TweEO1BrbKuyA\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",
@@ -4402,6 +4487,10 @@
           "W/\"834a-ZH4L2RCo5GOs/Dl+1aqQaw\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -4469,6 +4558,10 @@
         [
           "etag",
           "W/\"51cb-T9QeK5mLYPz4H7zuSVmdTA\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",
@@ -4540,6 +4633,10 @@
           "W/\"832a-luKITeLmvDR4Qm6jLkR/ng\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -4607,6 +4704,10 @@
         [
           "etag",
           "W/\"6ce4-naau+BtMAzGBnFvdY8vo8w\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",
@@ -4678,6 +4779,10 @@
           "W/\"8115-/8C9R7swjc+S96mSOURntQ\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -4742,6 +4847,10 @@
         [
           "etag",
           "W/\"731a-TLBZAvNhtJD+u8nuYXKAfw\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",
@@ -4811,6 +4920,10 @@
         [
           "etag",
           "W/\"731a-TLBZAvNhtJD+u8nuYXKAfw\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",
@@ -4883,6 +4996,10 @@
           "W/\"750a-Y0WMo1r7T8ZAkGbY4SIGog\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -4952,6 +5069,10 @@
           "W/\"ce-bvMaXehNgzGST2fbuh12Dw\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -5010,6 +5131,10 @@
           "W/\"6c-ZeRvcMyjcURIWefGYr2AWA\""
         ],
         [
+          "vary",
+          "Accept-Language"
+        ],
+        [
           "x-powered-by",
           "Express"
         ]
@@ -5063,6 +5188,10 @@
         [
           "etag",
           "W/\"6c-ZeRvcMyjcURIWefGYr2AWA\""
+        ],
+        [
+          "vary",
+          "Accept-Language"
         ],
         [
           "x-powered-by",

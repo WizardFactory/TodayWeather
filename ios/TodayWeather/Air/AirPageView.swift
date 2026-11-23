@@ -23,6 +23,11 @@ struct AirPageContent {
         scrolls = scope.scrolls
     }
 
+    var nativeAnchor: AirBlock? {
+        if page.chartTitle != nil { return .chart }
+        return page.main == nil && page.detail == nil && page.daily == nil ? nil : .gauge
+    }
+
     /// The blocks as the references number them: 0 the header block, 1 the gauge, then each card.
     var blocks: [AirBlock] {
         var list: [AirBlock] = [.header, .gauge]
@@ -78,9 +83,11 @@ struct AirPageView: View {
             .background(colors.page.card.color)
             .cardShadow()
             Spacer().frame(height: WeatherMetrics.gap)
+            if content.nativeAnchor == .gauge { ForecastNativeSlot(tab: .air, theme: theme) }
             ForEach(content.blocks.dropFirst(2), id: \.self) { block in
                 AirBlockView(block: block, content: content, theme: theme, actions: actions)
                 Spacer().frame(height: WeatherMetrics.gap)
+                if block == content.nativeAnchor { ForecastNativeSlot(tab: .air, theme: theme) }
             }
             trackingNotice
         }

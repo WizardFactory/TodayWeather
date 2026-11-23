@@ -4,6 +4,8 @@ import {
   POLLUTANTS,
   parseUnits,
   coordinates,
+  exactCoordinates,
+  validDaySummary,
   type Place,
   type Units,
   type Weather,
@@ -60,6 +62,14 @@ export function restoreState(storage: Pick<Storage, "getItem">): SavedState {
         )
           continue;
         const c = coordinates(p.lat, p.lon);
+        let warningLocation: Place["warningLocation"];
+        try {
+          if (p.warningLocation) {
+            warningLocation = exactCoordinates(p.warningLocation.lat, p.warningLocation.lon);
+          }
+        } catch {
+          /* Preserve saved places whose optional precise point did not validate. */
+        }
         if (places.some((x) => x.id === p.id)) continue;
         places.push({
           id: p.id,
@@ -68,6 +78,7 @@ export function restoreState(storage: Pick<Storage, "getItem">): SavedState {
           country: typeof p.country === "string" ? p.country.slice(0, 3) : "",
           ...c,
           ...(p.current ? { current: true } : {}),
+          ...(warningLocation ? { warningLocation } : {}),
         });
       } catch {
         /* Discard invalid records without blocking startup. */
@@ -179,8 +190,17 @@ export function addPlace(state: SavedState, place: Place): SavedState {
         places: state.places.map((p) => (p === found ? place : p)),
         selectedId: place.id,
       };
-    if (!place.current || found.current)
-      return { ...state, selectedId: found.id };
+    if (!place.current) return { ...state, selectedId: found.id };
+    if (found.current) {
+      const warningLocation = place.warningLocation;
+      return {
+        ...state,
+        selectedId: found.id,
+        places: warningLocation
+          ? state.places.map((p) => (p === found ? {...p, warningLocation} : p))
+          : state.places,
+      };
+    }
     // A new fix on a saved favorite: keep the favorite as is and retire the
     // stale current-location entry instead of converting or duplicating it.
     return {
@@ -343,12 +363,19 @@ export async function clearLocalData(
     req.onsuccess = req.onerror = req.onblocked = () => resolve();
   });
 }
+function withoutLiveForecastCapabilities(weather: Weather): Weather {
+  const snapshot = { ...weather };
+  delete snapshot.coordinateAirForecastAvailable;
+  delete snapshot.coordinatePollenForecastAvailable;
+  return snapshot;
+}
+
 export async function writeSnapshot(
   key: string,
   weather: Weather,
 ): Promise<void> {
   await snapshots("readwrite", (s) =>
-    s.put({ weather, savedAt: Date.now() }, key),
+    s.put({ weather: withoutLiveForecastCapabilities(weather), savedAt: Date.now() }, key),
   );
   await pruneSnapshots();
   // Small fixed bound; prune by recorded save time from one consistent read.
@@ -522,6 +549,10 @@ export function validateSnapshot(
       !(w.yesterday === null || validPoint(w.yesterday)) ||
       !Array.isArray(w.hourly) ||
       !w.hourly.every(validPoint) ||
+      !(
+        w.chartHourly === undefined ||
+        (Array.isArray(w.chartHourly) && w.chartHourly.every(validPoint))
+      ) ||
       !Array.isArray(w.daily) ||
       !w.daily.every(validPoint) ||
       !Array.isArray(w.air) ||
@@ -543,8 +574,29 @@ export function validateSnapshot(
       !["available", "unavailable"].includes(w.availability.air)
     )
       return;
+    const snapshot = withoutLiveForecastCapabilities(w as Weather);
+    // A damaged optional summary must not discard a usable offline forecast.
+    if (
+      w.daySummary !== undefined &&
+      (w.source !== "KMA" ||
+        w.location.country !== "KR" ||
+        !validDaySummary(w.daySummary))
+    ) {
+      delete snapshot.daySummary;
+    }
+    // A damaged observation time falls back to current.at for the chart.
+    if (
+      w.liveAt !== undefined &&
+      !(
+        typeof w.liveAt === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(w.liveAt) &&
+        Number.isFinite(Date.parse(`${w.liveAt}:00Z`))
+      )
+    ) {
+      delete snapshot.liveAt;
+    }
     // Older normalization revisions use different cache keys and never reach here.
-    return w as Weather;
+    return snapshot;
   } catch {
     return;
   }

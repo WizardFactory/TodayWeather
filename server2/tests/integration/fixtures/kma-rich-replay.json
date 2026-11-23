@@ -3,7 +3,7 @@
   "family": "kma-rich",
   "oracle": {
     "path": "tests/domestic/fixtures/s3-rich-response.json.gz",
-    "sha256": "1d5ae34b0837a7ef9966f6441b6f3d184d236643486f2eed92f4383f09ede2f5"
+    "sha256": "238bcb8afdd2c9c8f48213c5a58e745aabe4d860621211e53b3828ab4adc1ed9"
   },
   "declared_differences": [
     {

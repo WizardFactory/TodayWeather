@@ -43,6 +43,9 @@ final class FirebaseAnalyticsSdk: AnalyticsSdk {
 @MainActor
 final class FirebaseBannerConfigSource: BannerConfigSource {
     private let config = RemoteConfig.remoteConfig()
+    private var registration: ConfigUpdateListenerRegistration?
+
+    deinit { registration?.remove() }
 
     func setDefaults(_ defaults: [String: String], done: @escaping @MainActor (Bool) -> Void) {
         config.setDefaults(defaults.mapValues { $0 as NSString })
@@ -74,9 +77,26 @@ final class FirebaseBannerConfigSource: BannerConfigSource {
         }
     }
 
+    func observeFormatUpdates(_ notify: @escaping @MainActor () -> Void) {
+        guard registration == nil else { return }
+        let formatKeys: Set<String> = [RemoteBannerConfig.nativeEnabledKey, RemoteBannerConfig.interstitialEnabledKey]
+        registration = config.addOnConfigUpdateListener { update, error in
+            guard error == nil, let update, !formatKeys.isDisjoint(with: update.updatedKeys) else { return }
+            Task { @MainActor in notify() }
+        }
+    }
+
+    func activateUpdate(done: @escaping @MainActor (Bool) -> Void) {
+        config.activate { _, error in
+            let ok = error == nil
+            Task { @MainActor in done(ok) }
+        }
+    }
+
     func values() -> [String: String] {
         var values: [String: String] = [:]
-        for key in [RemoteBannerPolicy.enabledKey, RemoteBannerPolicy.delayKey] {
+        for key in [RemoteBannerPolicy.enabledKey, RemoteBannerPolicy.delayKey,
+                    RemoteBannerConfig.nativeEnabledKey, RemoteBannerConfig.interstitialEnabledKey] {
             values[key] = config.configValue(forKey: key).stringValue
         }
         return values

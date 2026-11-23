@@ -108,8 +108,10 @@ struct RequestSitesTests {
 
     @Test func sdksAreUsedWhereTheRegisterSays() {
         #expect(Self.filesMatching(Self.sdk) == [
-            "TodayWeather/Ads/AdMobBanner.swift",
             "TodayWeather/Ads/FirebaseBridges.swift",
+            "TodayWeather/Ads/ForecastCreativeHost.swift",
+            "TodayWeather/Ads/ForecastInterstitial.swift",
+            "TodayWeather/Ads/ForecastNativeAds.swift",
             "TodayWeather/Ads/GoogleAdsPlatform.swift",
             "TodayWeather/Ads/Monetization.swift",
             "TodayWeather/AnalyticsGuard.swift",
@@ -119,11 +121,12 @@ struct RequestSitesTests {
     }
 
     /// Reads of a URL's contents (`Data(contentsOf:)`, `String(contentsOf:)`) are the reviewed local files: the state
-    /// file, the consent files, the weather cache, the bundled fonts and towns and the file probe. A new one, which could
+    /// file, the local interstitial allowance, the consent files, the weather cache, the bundled fonts and towns and the file probe. A new one, which could
     /// read a remote URL past the transports, changes the list (CODEX-IN18P1-4).
     @Test func urlReadsAreTheReviewedLocalFiles() {
         #expect(Self.filesMatching(#"\b(?:Data|String|NSData|NSString)\(\s*contentsOf:"#) == [
             "Core/Sources/TWData/WeatherRepository.swift",
+            "Core/Sources/TWDomain/Ads/ForecastAdVisits.swift",
             "Core/Sources/TWStorage/AppStateStore.swift",
             "Core/Sources/TWStorage/FileProbe.swift",
             "TodayWeather/Ads/AnalyticsConsentFiles.swift",

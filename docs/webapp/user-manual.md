@@ -2,7 +2,7 @@
 
 [Read the nine-page PDF](user-manual.pdf). The [editable JSON](user-manual.json) contains the same instructions; [scenario screenshots and provenance](manual-images/provenance.json) come from the actual static PWA using synthetic weather data.
 
-The manual covers display preferences, hourly comparison, daily ranges, air information, enlarged text, saved browser data and clean-checkout reproduction. Its S1–S7 scenarios match the [adoption plan](../../plans/pwa-design-adoption.md). Choose Hourly or Daily to scroll to and focus its chart. Daily AM/PM conditions and precipitation are available in the cursor and table; partial extrema retain the shared scale. Missing values remain dashes; timestamps and stale-data warnings remain visible. Browser text size is independent of system text size. The accepted iOS system comparison is 23pt / 17pt (about135%), while the PWA control offers exactly130%.
+The manual covers display preferences, hourly comparison, daily ranges, air information, enlarged text, saved browser data and clean-checkout reproduction. Its S1–S7 scenarios match the [adoption plan](../../plans/pwa-design-adoption.md). Hourly/overview routes keep the current-conditions hero visible at the top; choose Daily to scroll to and focus the daily chart. Both charts follow the mobile apps' column counts: hourly shows the three-hour rows from yesterday 00:00 and daily shows every supplied day, seven columns per phone screen. Daily AM/PM conditions stack two icons, and their names and precipitation are available in the cursor and table; partial extrema retain the shared scale. Missing values remain dashes; timestamps and stale-data warnings remain visible. Browser text size is independent of system text size. The accepted iOS system comparison is 23pt / 17pt (about135%), while the PWA control offers exactly130%.
 
 ## Reproduce
 
@@ -26,7 +26,7 @@ python scripts/verification/pwa-manual-pdf.py
 
 The source and selected screenshots are maintained deliverables. After updates, rasterize and inspect every PDF page for clipping, readable text and correct screenshots. Preserve the image digests in the provenance file. See [testing](testing.md) and the [physical comparison](../design-system/physical-pwa-comparison.md) for the limits of automated and device evidence.
 
-When no saved weather is available, Hourly/Daily loading or error states focus the main content. Retry success focuses and scrolls the selected chart. Existing scenario screenshots show unchanged successful layouts.
+When no saved weather is available, Hourly/Daily loading or error states focus the main content. Retry success restores focus to the main content with the hero visible on Hourly/Overview, and focuses and scrolls the daily chart on Daily. Existing scenario screenshots show unchanged successful layouts.
 
 ## Rain and snow coverage (#2598)
 

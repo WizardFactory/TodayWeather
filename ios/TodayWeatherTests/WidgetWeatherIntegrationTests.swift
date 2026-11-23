@@ -81,6 +81,33 @@ struct WidgetWeatherIntegrationTests {
         #expect(WidgetSharing.place(place, base: server, units: units).request == nil)
     }
 
+    @MainActor @Test func coldWidgetEntryObservesOnlyTheForecastActuallyOpened() async throws {
+        let launch = AppLaunch(store: MemoryStore(), environment: .init(preferredLanguages: ["ko"], photosURL: nil, version: "test"),
+                               weatherCache: nil, placeSearch: { nil })
+        let sdk = PrivacyRowsTests.Sdk()
+        let records = PrivacyRowsTests.Records()
+        records.choice = "true"
+        records.collection = true
+        let directory = URL.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var draws = 0
+        let visits = ForecastAdVisits(directory: directory, draw: { draws += 1; return 0 })
+        let presenter = ForecastInterstitial(visits: visits, load: { _, _ in }, root: { nil }, uptime: { 0 }, track: { _, _ in })
+        let ads = Monetization(analytics: UsageAnalytics(sdk: sdk, records: records, trafficType: "development"),
+                               settings: nil, interstitial: presenter)
+        ads.connect(launch)
+        let state = ShellFixture.state(startupPage: "1")
+        let url = try #require(URL(string: "todayweather://widget?place=" + WidgetSharing.id(state.places[1])))
+        launch.entries.submit(.link(url))
+        launch.migrationFinished(state)
+        await Task.yield()
+        #expect(launch.shell?.selected == .forecast)
+        #expect(sdk.events.filter { $0.hasPrefix("screen_view") } == ["screen_view tab.forecast"])
+        #expect(visits.reserve(from: .forecast, to: .dailyforecast, readPastChart: true, navigate: {}) == nil)
+        #expect(draws == 0)
+        #expect(visits.reserve(from: .dailyforecast, to: .forecast, readPastChart: true, navigate: {}) != nil)
+    }
+
     @MainActor @Test func widgetLinksSelectTheirPlaceBeforeAndAfterMigration() throws {
         let launch = AppLaunch(store: MemoryStore(), environment: .init(preferredLanguages: ["ko"], photosURL: nil, version: "test"),
                                weatherCache: nil, placeSearch: { nil })

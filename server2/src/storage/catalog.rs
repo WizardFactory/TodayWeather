@@ -205,6 +205,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
     pub fn limits(&self) -> &CatalogLimits {
         &self.limits
     }
+    /// The end of an admitted operation: its caller's deadline, capped at the per-operation limit
+    /// counted from now. Call it after [`Self::admit`], so queueing does not consume the cap.
     fn deadline(&self, deadline: Instant) -> Instant {
         deadline.min(Instant::now() + self.limits.deadline)
     }
@@ -226,12 +228,19 @@ impl<T: CatalogTransport> CatalogStore<T> {
         .await
         .map_err(|_| Error::Transport)?
     }
-    async fn admit(&self) -> Result<tokio::sync::OwnedSemaphorePermit, Error> {
-        self.io
-            .clone()
-            .acquire_owned()
+    /// Waits for one of the store's I/O admissions until the caller's `deadline` (KMA-NATION-READS).
+    /// Queueing holds nothing, so only the caller's own deadline bounds it; the operation's cap
+    /// ([`Self::deadline`]) starts once admitted. A caller whose deadline passed while queued gets
+    /// `Timeout` before any work, even when the admission and the deadline arrive together.
+    async fn admit(&self, deadline: Instant) -> Result<tokio::sync::OwnedSemaphorePermit, Error> {
+        let permit = timeout_at(deadline, self.io.clone().acquire_owned())
             .await
-            .map_err(|_| Error::Transport)
+            .map_err(|_| Error::Timeout)?
+            .map_err(|_| Error::Transport)?;
+        if Instant::now() >= deadline {
+            return Err(Error::Timeout);
+        }
+        Ok(permit)
     }
     fn count_control(&self, c: &mut Context, n: usize) -> Result<(), Error> {
         c.controls = c.controls.checked_add(n).ok_or(Error::Capacity)?;
@@ -552,8 +561,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 return Err(Error::Invalid("targeted member namespace"));
             }
         }
+        let _admission = self.admit(deadline).await?;
         timeout_at(self.deadline(deadline), async {
-            let _admission = self.admit().await?;
             let mut c = Context::new();
             self.pin(id, &mut c).await?;
             let Some(Some(p)) = c.pins.get(id) else {
@@ -629,8 +638,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
         if maximum_acquisitions == 0 || maximum_acquisitions > self.limits.entries {
             return Err(Error::Invalid("page acquisition limit"));
         }
+        let _admission = self.admit(deadline).await?;
         timeout_at(self.deadline(deadline), async {
-            let _admission = self.admit().await?;
             let mut c = Context::new();
             self.pin(id, &mut c).await?;
             let Some(Some(target)) = c.pins.get(id) else {
@@ -778,8 +787,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
             crate::observability::Stage::Lookup,
             async {
                 id.validate()?;
+                let _admission = self.admit(deadline).await?;
                 timeout_at(self.deadline(deadline), async {
-                    let _admission = self.admit().await?;
                     self.lookup_inner(id, &mut Context::new()).await
                 })
                 .await
@@ -811,8 +820,8 @@ impl<T: CatalogTransport> CatalogStore<T> {
             crate::observability::Stage::Lookup,
             async {
                 id.validate()?;
+                let _admission = self.admit(deadline).await?;
                 timeout_at(self.deadline(deadline), async {
-                    let _admission = self.admit().await?;
                     let extra = (1..width).rev().find_map(|n| {
                         let permits = self.io.clone().try_acquire_many_owned(n as u32).ok()?;
                         Some((n, permits))
@@ -971,16 +980,17 @@ impl<T: CatalogTransport> CatalogStore<T> {
         record: RawRecord,
         deadline: Instant,
     ) -> Result<RawRecord, Error> {
+        id.validate()?;
+        if !id.matches(&record.envelope.identity)
+            || record.envelope.fetch_group.is_some()
+            || record.envelope.pagination.is_some()
+        {
+            return Err(Error::Invalid("single publication identity"));
+        }
+        // Nothing is written while queued: an admission timeout is definite.
+        let _admission = self.admit(deadline).await?;
         let mut started = false;
         let result = timeout_at(self.deadline(deadline), async {
-            let _admission = self.admit().await?;
-            id.validate()?;
-            if !id.matches(&record.envelope.identity)
-                || record.envelope.fetch_group.is_some()
-                || record.envelope.pagination.is_some()
-            {
-                return Err(Error::Invalid("single publication identity"));
-            }
             let candidate = record.clone();
             let l = self.limits.clone();
             let envelope = self
@@ -1048,9 +1058,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
             crate::observability::Component::S3,
             crate::observability::Stage::Publish,
             async {
+                // Nothing is written while queued: an admission timeout is definite.
+                let _admission = self.admit(deadline).await?;
                 let mut started = false;
                 let result = timeout_at(self.deadline(deadline), async {
-                    let _admission = self.admit().await?;
                     // S10F GROK-1: credentials before the first write; a failure here is definite.
                     self.transport.ready().await?;
                     let l = self.limits.clone();
@@ -1400,9 +1411,10 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 return Err(Error::Invalid("duplicate repair prefix"));
             }
         }
+        // Nothing is written while queued: an admission timeout is definite.
+        let _admission = self.admit(deadline).await?;
         let mut started = false;
         match timeout_at(self.deadline(deadline), async {
-            let _admission = self.admit().await?;
             // S10F GROK-1: credentials before the first write; a failure here is definite.
             self.transport.ready().await?;
             self.repair_inner(scope, &mut Context::new(), &mut started, materialize)

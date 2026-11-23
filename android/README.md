@@ -36,6 +36,8 @@ From `android/`:
 
 Set `ANDROID_SERIAL` to an emulator serial before any install or device test; a connected phone must not be the target by accident.
 
+The Robolectric tests read their Android runtimes (one jar per SDK level in `@Config`, listed in `app/build.gradle.kts`) from `app/build/robolectric-runtimes`, where Gradle copies them: Robolectric runs offline and downloads nothing while the tests run. A test of an SDK level without a listed runtime fails naming the missing jar; add the version Robolectric asks for.
+
 CI (`.github/workflows/android.yml`) runs the same build and tests twice: once after re-running the import tool, the corpus generator and the server route table generator and checking that they change nothing, and once in a checkout whose `client/` directory has been deleted.
 
 ## Imported client assets
@@ -226,7 +228,7 @@ The channel checks apply from API 26 and the permission grant from API 33; the c
 
 Native cards and repeat-visit interstitials (#3041) share the UMP consent flow. Usage analytics and Crashlytics retain their separate settings (#2894).
 
-- Four screens have an in-content native slot. Forecast tab transitions can show a preloaded interstitial after both a qualified reading break and a repeat destination visit. The first visit per tab is protected and the app shares one durable daily cap. See the [screen and failure-state specification](../docs/rewrite/android-forecast-ad-placement.md).
+- Four screens have an in-content native slot. Returning to a tab reuses its registered ad for up to 55 minutes from load. The app preloads at most one spare for unfilled tabs. If no ad is ready, that visit stays ad-free while the app prepares the next visit. After a load failure it retries on later demand at least a minute apart. Disabling native serving or opening the ad privacy form clears all cached ads. Loading resumes after the form closes if the current privacy choices and remote policy permit it. Forecast tab transitions can show a preloaded interstitial after both a qualified reading break and a repeat destination visit. The first visit per tab is protected and the app shares one durable daily cap. See the [screen and failure-state specification](../docs/rewrite/android-forecast-ad-placement.md).
 - UMP and the Ads SDK start after onboarding. The app honors the existing `tw_banner_enabled` master switch and `tw_banner_delay_seconds` opening delay, plus independent `tw_native_enabled` and `tw_interstitial_enabled` flags (default true). Use either format flag for a targeted rollback. Clients apply fetched or cached policy on opening. Debug may use test units after a technical UMP failure.
 
 - **Usage analytics (`app` `analytics/`):**
@@ -355,13 +357,24 @@ Private inputs stay out of Git, docs and logs, as in the Cordova build (`npm run
 - `TW_MAIL_TO` (environment or `android/private.properties`): the feedback address of 의견보내기, `mailTo` of the Cordova build's `client.config.js`. Without it the mail opens without a recipient.
 - `TW_PLACES_API_KEY_ANDROID` (environment or `android/private.properties`): the Places API (New) key of S01's search, restricted to this app's package and signing certificates. Without it S01 searches the bundled towns.
 - `TW_ADMOB_APP_ID_ANDROID`, `TW_ADMOB_NATIVE_ANDROID` and `TW_ADMOB_INTERSTITIAL_ANDROID` (environment or android/private.properties) identify the release app and its format-specific ad units. Debug builds use Google test units. Release packaging rejects missing or sample values.
-- Release signing inputs (AN-19).
+- Release signing: the existing release keystore and key alias, named to `apksigner` on the operator's machine ([runbook, step 4](../docs/operations/android-release.md#4-build-and-sign)). The Gradle build reads none of them.
 
 The build and the unit tests run without them.
 
 ## Version
 
-`versionCode` 200000 and `versionName` 2.0.0 keep the native debug build installable over the Cordova 1.1.1 build (100091). AN-19 sets the release value above every active Play track.
+`versionCode` 200000 and `versionName` 2.0.0 keep the native debug build installable over the Cordova 1.1.1 build (100091). A release sets both in a pull request, with a `versionCode` above every active Play track ([runbook, step 1](../docs/operations/android-release.md#1-freeze-the-version)).
+
+## Release
+
+The [Android release runbook](../docs/operations/android-release.md) is the procedure: version freeze, release CI, the manual emulator gates, the operator's build and signing, the device gate, the tag and its notes, the test tracks, the staged rollout and its halt and rollback. The release itself is [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898).
+
+- **Release CI:** [Android release verification](../.github/workflows/android-release.yml) runs the pull-request checks, `lintRelease` and the device suites that need no private input on hosted API 36 and API 24 emulators, a tablet and a foldable, for a named commit and nightly ([PR CI and release CI](../docs/development/ci-tiers.md#android)).
+- **`tools/release-ci/run-suites.sh <out-dir> <suite> …`** runs those suites on one emulator and reports each. A suite passes by adb's status and the raw status of every test (`instrument` and `instrumentation_passed` in `tools/emulator/offline.sh`), so a failed adb or a skipped test fails it; `tools/emulator/test-instrumentation-passed.sh` and `tools/release-ci/test-runners.sh` (an adb test double) check that in CI. The `parity` and `window-fit` runners accept only an AVD whose name starts with `tw_`, and `fold` in the name turns the fold steps on. `tools/release-ci/run-device-tests.sh <out-dir> [Class[:name=value] …]` runs the instrumented classes without a runner of their own (`CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held), each in a new install, and fails on a failed or skipped test.
+- **`tools/release/export_candidate.py <full SHA> <new directory> --private <directory>`** is the first command of the release build: it writes the commit's `android/` files from Git's object database to a new directory outside the checkout, byte for byte with their modes, reads them back against the commit, and adds the two private inputs. The release is built there, from that commit's files and from nothing a checkout or a Git setting may add (`test_export_candidate.py` checks it in CI).
+- **`tools/release/gradle-release.sh`** runs `assembleRelease` in the export with a new environment that holds only the listed location and locale variables, so `private.properties` decides the inputs and no variable of the shell does, and stops when the Gradle user home has an init script (`test-gradle-release.sh`, with a stand-in `gradlew`).
+- **`tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>`** checks a signed release APK against the release users have (both signatures, every signer's certificate, package, a higher `versionCode`, the checkout's version and SDK levels, not debuggable, a real AdMob app ID, the Firebase configuration) and prints its identity for the release notes.
+- The build has no signing configuration and needs nothing outside `android/`: in the export, `assembleRelease` writes `app-release-unsigned.apk`, and the operator signs it with `apksigner` and the existing release key. Signing inputs are never in the checkout.
 
 ### AN-18 large-window verification
 

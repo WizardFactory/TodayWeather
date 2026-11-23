@@ -170,9 +170,7 @@ Four server callers use the unversioned public geocode paths, which X1 excludes.
 
 ### 4.3 Replacement probe (`AttachEIPToSpot`)
 
-When a spot replacement starts, `AttachEIPToSpot` moves the service Elastic IP only after the new instance answers `/health` and `/v000903/kma/coord/37.5665,126.9780` with fresh KMA data. That probe path runs `coord2addr`, which calls the public geocode API. After cutover the public geocode API is served by the service origin itself, which during a replacement is the stopped old instance, so the probe would fail and the EIP would never move.
-
-Change the probe's data path to the KMA address route that the probe coordinate resolves to (`/v000903/kma/addr/{enc name1}/{enc name2}[/{enc name3}]`, taken from R3 for `37.5665,126.9780` on the direct origin). It returns the same `currentPubDate` and `current` fields and needs no geocoding. This is a one-constant change to the `AttachEIPToSpot` function (source kept outside this repository), deployed under A3 **before** cutover; it works with the Lambda path too. The constant must be the percent-encoded ASCII path: the probe's `http.client` rejects non-ASCII paths, and `ready()` would then report not ready for every replacement.
+The [EIP checker](../infra/aws/service-eip/lambda_function.py) must request `GET /health` directly from the replacement instance's public IPv4. HTTP 200 with the exact body `OK` satisfies application readiness. The attachment decision also requires the existing account, region, AMI, Fleet and ownership checks. Weather and geocoding can be verified separately during cutover. Deploy the reviewed checker under A3 and verify its revision against DO-6 before cutover.
 
 ## 5. Operations
 

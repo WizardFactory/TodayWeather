@@ -1,13 +1,36 @@
 #!/usr/bin/env bash
 # Install Linux test isolation on the ephemeral GitHub-hosted Ubuntu runner.
 set -euo pipefail
-sudo apt-get update
-sudo apt-get install --yes --no-install-recommends bubblewrap apparmor musl-tools binutils
+stage=${1:-all}
+case "$stage" in
+  placement|python|rust-*|shadow-*|promote) exit 0 ;;
+  all) packages=(bubblewrap apparmor musl-tools binutils) ;;
+  gnu) packages=(bubblewrap apparmor) ;;
+  musl) packages=(musl-tools binutils) ;;
+  *) printf 'Unknown Server2 CI stage: %s\n' "$stage" >&2; exit 2 ;;
+esac
+# A stalled package mirror must fail or retry within minutes instead of holding the
+# job until its timeout (one update hung for 54 minutes, #3139).
+# timeout runs as root and kills apt 15 s after its deadline if TERM is not enough.
+apt=(apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+for attempt in 1 2 3; do
+  # --error-on=any: a partly failed index download is retried instead of installing from it.
+  if sudo timeout --kill-after=15s 180 "${apt[@]}" update --error-on=any; then
+    break
+  fi
+  if [[ "$attempt" == 3 ]]; then
+    printf 'apt-get update failed %s times\n' "$attempt" >&2
+    exit 1
+  fi
+  sleep 10
+done
+sudo timeout --kill-after=15s 600 "${apt[@]}" install --yes --no-install-recommends "${packages[@]}"
 
 # Ubuntu 24.04 restricts unprivileged user namespaces. Load the pinned upstream
 # executable-specific profile, which permits bwrap setup and denies child
 # capabilities, rather than disabling the host-wide user namespace policy.
-if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]] &&
+if [[ "$stage" != "musl" ]] &&
+   [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]] &&
    [[ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" == "1" ]]; then
   profile=config/ci/bwrap-userns-restrict
   test -f "$profile"
@@ -15,4 +38,6 @@ if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]] &&
 fi
 
 # Build the intended x86_64 host artifact before any separately authorized EC2 smoke.
-rustup target add --toolchain 1.99.0 x86_64-unknown-linux-musl
+if [[ "$stage" != "gnu" ]]; then
+  rustup target add --toolchain 1.99.0 x86_64-unknown-linux-musl
+fi

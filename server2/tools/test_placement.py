@@ -5,7 +5,10 @@ import os
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
+
+import ci
 spec = importlib.util.spec_from_file_location('placement', Path(os.environ.get('SERVER2_TEST_CHECKER', Path(__file__).with_name('check_placement.py'))))
 placement = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(placement)
@@ -24,6 +27,35 @@ class PlacementTests(unittest.TestCase):
     def fixture_symlink(self, path, value): (self.root/path).symlink_to(value)
     def commit(self): self.git('add','.'); self.git('commit','-qm','fixture')
     def errors(self): return placement.check(self.root,self.d,self.base)
+    def test_ci_pr_merge_uses_checkout_parent_for_placement(self):
+        self.git('switch', '-c', 'pr')
+        self.write('server2/src/lib.rs', 'pub fn pr() {}\n')
+        self.commit()
+        pr_head = self.git('rev-parse', 'HEAD').strip()
+        self.git('switch', '-c', 'target', self.base)
+        self.write('web/deeplink.js', '// master\n')
+        self.commit()
+        target_head = self.git('rev-parse', 'HEAD').strip()
+        self.git('merge', '--no-ff', '--no-edit', 'pr')
+        merge_head = self.git('rev-parse', 'HEAD').strip()
+        event = {'number': 7, 'pull_request': {
+            'base': {'sha': self.base}, 'head': {'sha': pr_head},
+        }}
+        git_in_fixture = lambda *args: self.git(*args[1:]).strip()
+        with patch.dict(os.environ, {'GITHUB_REF': 'refs/pull/7/merge', 'GITHUB_SHA': merge_head}), \
+                patch.object(ci, 'output', git_in_fixture):
+            base = ci.pull_request_base(event)
+            self.assertEqual(target_head, base)
+            self.assertEqual(['server2/src/lib.rs'], placement.changed_paths(self.root, base))
+            event['pull_request']['head']['sha'] = self.base
+            with self.assertRaisesRegex(SystemExit, 'does not match'):
+                ci.pull_request_base(event)
+
+    def test_ci_pr_head_checkout_retains_event_base(self):
+        event = {'number': 7, 'pull_request': {'base': {'sha': self.base}}}
+        with patch.dict(os.environ, {'GITHUB_REF': 'refs/heads/pr'}):
+            self.assertEqual(self.base, ci.pull_request_base(event))
+
     def test_declared_docs_and_named_recorder(self):
         self.write('docs/operations/fixture.md','manual');self.write('server/test/offline/golden-record.js','oracle');self.assertEqual([],self.errors())
     def test_outside_config_tests_deploy(self):
@@ -294,6 +326,47 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
         self.write(path,"open('../server/config/private.json').read()")
         self.write('server2/tools/golden/arbitrary.py',"self.write('server/private.py','outside')")
         self.assertTrue(self.errors())
+
+    def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
+        body = placement.PARALLEL_WORKFLOW_PREFIX + placement.GOLDEN_JOB
+        self.assertIn('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]', body)
+        self.assertEqual([], placement.audit_workflow(body))
+        for bad in (
+            body.replace('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, rust-build, rust, gnu, musl, goldens]'),
+            body.replace('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, shadow, rust-build, rust, gnu, musl]'),
+            body.replace("              needs.rust-build.result != 'success' ||\n", ''),
+            body.replace('    needs: rust-build\n', '    needs: placement\n'),
+            body.replace('shard: [1, 2, 3, 4, 5, 6]', 'shard: [1, 2, 3, 4, 5]'),
+            body.replace('name: server2-nextest-archive\n          path: reports/nextest/\n          if-no-files-found',
+                         'name: server2-nextest-archive\n          path: reports/\n          if-no-files-found'),
+            body.replace(" ||\n              (github.event_name != 'pull_request' && needs.goldens.result != 'success')", ''),
+            body.replace('          SERVER2_DECLARATION: ${{ inputs.declaration }}\n', ''),
+            body.replace('if: ${{ always() }}', 'if: ${{ success() }}'),
+            body.replace('needs.shadow.result', 'needs.placement.result'),
+            body.replace("needs.musl.result != 'skipped'", "needs.musl.result == 'failure'"),
+            body.replace("(github.event_name != 'pull_request' && needs.musl.result != 'success') ", ''),
+            body.replace("    if: ${{ github.event_name != 'pull_request' }}\n    runs-on", '    runs-on'),
+            body.replace('shard: [1, 2, 3, 4]', 'shard: [1, 2, 3]'),
+            body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
+            body.replace("save-if: ${{ github.ref == 'refs/heads/master' }}", 'save-if: true', 1),
+            body.replace('cargo-nextest@0.9.152', 'cargo-nextest'),
+            # Only pull request runs may cancel superseded runs; a master push must never be lost.
+            body.replace("cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}",
+                         'cancel-in-progress: true'),
+            # A re-run of an older commit must not join the pull request's group.
+            body.replace("github.event_name == 'pull_request' && github.run_attempt == '1' && format(",
+                         "github.event_name == 'pull_request' && format("),
+            body.replace("format('{0}-run-{1}', github.workflow, github.run_id)", "format('{0}-run-{1}', github.workflow, github.ref)"),
+            body.replace('rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0', 'rust-cache@v2', 1),
+            body.replace('name: server2-linux-musl-candidate\n          path', 'name: server2-linux-musl-verified\n          path', 1),
+            body.replace('retention-days: 1', 'retention-days: 7'),
+            body.replace('retention-days: 7', 'retention-days: 90'),
+            body.replace('          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}\n', ''),
+        ):
+            self.assertNotEqual(body, bad)
+            self.assertTrue(placement.audit_workflow(bad))
 
     def golden_workflow(self):
         return """name: Server2

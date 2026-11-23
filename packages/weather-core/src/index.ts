@@ -41,6 +41,8 @@ export type Place = {
   lat: number;
   lon: number;
   current?: boolean;
+  /** Unrounded search or GPS point. Ordinary weather and its cache retain the existing coordinates. */
+  warningLocation?: {lat: number; lon: number};
 };
 export type Point = {
   at: string;
@@ -107,6 +109,15 @@ export type AirStation = {
   forecastPublishedAt: string | null;
   pollutants: Record<Pollutant, AirMeasure>;
 };
+export type HourlyDetails = {
+  at: string;
+  uvIndex?: number;
+  windGustMps?: number;
+  wbgtC?: number;
+  solarRadiationWm2?: number;
+  solarEnergyMjm2?: number;
+  severeRisk?: number;
+};
 export type Weather = {
   schemaVersion: 1;
   source: "KMA" | "VC";
@@ -121,10 +132,27 @@ export type Weather = {
   current: Point;
   yesterday: Point | null;
   hourly: Point[];
+  /**
+   * The three-hour forecast series the native apps chart (KMA `short`,
+   * overseas `hourly`), without the merged one-hour `shortest` rows. Absent
+   * in snapshots saved before it existed; the chart then uses `hourly`.
+   */
+  chartHourly?: Point[];
+  /**
+   * KMA `current.liveTime` as a wall time: when the observation was made. The
+   * hourly chart puts the current temperature on a column only when this
+   * equals the column time (native `sharp` rule).
+   */
+  liveAt?: string;
+  hourlyDetails?: HourlyDetails[];
   daily: Point[];
   air: AirStation[];
+  coordinateAirForecastAvailable?: true;
+  coordinatePollenForecastAvailable?: true;
+  timeZoneId?: string;
   /** Provider wording only; no verified air observation time or inferred numeric grade. */
   airSummary?: string;
+  daySummary?: { date: string; text: string };
   availability: {
     weather: "available" | "partial";
     air: "available" | "unavailable";
@@ -156,7 +184,98 @@ const array = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const str = (v: unknown): string =>
   typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
 
-export function coordinates(
+const AIR_FORECAST_POLLUTANTS = ["pm25", "pm10", "o3", "no2", "so2", "co"] as const;
+
+export type CoordinateAirForecast = {
+  source: "google" | "openweather";
+  attribution: string;
+  retrievedAt: string;
+  rows: {
+    at: string;
+    /** PM in µg/m³, gaseous pollutants in ppm. */
+    pollutants: Partial<Record<(typeof AIR_FORECAST_POLLUTANTS)[number], number>>;
+    indexes: { uaqi?: number; local?: { code: string; aqi: number }; owm?: number };
+  }[];
+};
+
+export function normalizeCoordinateAirForecast(
+  value: unknown,
+  now = Date.now(),
+): CoordinateAirForecast | undefined {
+  const data = record(value);
+  const { source, attribution, retrievedAt } = data;
+  if (
+    (source !== "google" && source !== "openweather") ||
+    typeof attribution !== "string" || !attribution.trim() ||
+    typeof retrievedAt !== "string"
+  ) return;
+  const age = now - Date.parse(retrievedAt);
+  if (!Number.isFinite(age) || age >= 60 * 60 * 1000 || age < -60_000) return;
+  const number = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+  const rows = array(data.rows).flatMap((entry) => {
+    const row = record(entry);
+    if (typeof row.at !== "string" || !(Date.parse(row.at) > now)) return [];
+    const pollutantData = record(row.pollutants);
+    const pollutants: CoordinateAirForecast["rows"][number]["pollutants"] = {};
+    for (const symbol of AIR_FORECAST_POLLUTANTS) {
+      const concentration = number(pollutantData[symbol]);
+      if (concentration !== undefined) pollutants[symbol] = concentration;
+    }
+    if (!Object.keys(pollutants).length) return [];
+    const indexData = record(row.indexes), local = record(indexData.local);
+    const indexes: CoordinateAirForecast["rows"][number]["indexes"] = {};
+    if (source === "google") {
+      const uaqi = number(indexData.uaqi), aqi = number(local.aqi);
+      if (uaqi !== undefined) indexes.uaqi = uaqi;
+      if (aqi !== undefined && typeof local.code === "string" && local.code)
+        indexes.local = { aqi, code: local.code };
+    } else {
+      const owm = number(indexData.owm);
+      if (owm !== undefined && owm >= 1 && owm <= 5 && Number.isInteger(owm)) indexes.owm = owm;
+    }
+    return [{ at: row.at, pollutants, indexes }];
+  });
+  return rows.length ? { source, attribution, retrievedAt, rows } : undefined;
+}
+type PollenEntry = { code: string; index?: number; inSeason?: boolean };
+export type CoordinatePollenForecast = {
+  source: "google";
+  attribution: string;
+  region: string;
+  retrievedAt: string;
+  days: { dateUtc: string; plants: PollenEntry[]; types: PollenEntry[] }[];
+};
+
+export function normalizeCoordinatePollenForecast(
+  value: unknown,
+  now = Date.now(),
+): CoordinatePollenForecast | undefined {
+  const data = record(value);
+  const { source, attribution, region, retrievedAt } = data;
+  if (source !== "google" || typeof attribution !== "string" || !attribution.trim() ||
+      typeof region !== "string" || !/^[A-Z]{2}$/.test(region) || typeof retrievedAt !== "string") return;
+  const age = now - Date.parse(retrievedAt);
+  if (!Number.isFinite(age) || age >= 86_400_000 || age < -60_000) return;
+  const pollenEntries = (value: unknown): PollenEntry[] => array(value).flatMap((item) => {
+    const { code, index, inSeason } = record(item);
+    if (typeof code !== "string" || !/^[A-Z][A-Z0-9_]{0,63}$/.test(code)) return [];
+    return [{
+      code,
+      ...(typeof index === "number" && Number.isInteger(index) && index >= 0 && index <= 5 ? { index } : {}),
+      ...(typeof inSeason === "boolean" ? { inSeason } : {}),
+    }];
+  });
+  const days = array(data.days).flatMap((item) => {
+    const row = record(item), dateUtc = row.dateUtc;
+    if (typeof dateUtc !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateUtc)) return [];
+    const plants = pollenEntries(row.plants), types = pollenEntries(row.types);
+    return plants.length || types.length ? [{dateUtc, plants, types}] : [];
+  });
+  return days.length ? {source, attribution, region, retrievedAt, days} : undefined;
+}
+
+export function exactCoordinates(
   lat: unknown,
   lon: unknown,
 ): { lat: number; lon: number } {
@@ -176,7 +295,11 @@ export function coordinates(
     Math.abs(b) > 180
   )
     throw new Error("Invalid coordinates");
-  return { lat: Math.round(a * 1000) / 1000, lon: Math.round(b * 1000) / 1000 };
+  return {lat: a, lon: b};
+}
+export function coordinates(lat: unknown, lon: unknown): {lat: number; lon: number} {
+  const point = exactCoordinates(lat, lon);
+  return {lat: Math.round(point.lat * 1000) / 1000, lon: Math.round(point.lon * 1000) / 1000};
 }
 export function placeId(lat: number, lon: number): string {
   const p = coordinates(lat, lon);
@@ -551,6 +674,22 @@ export function normalizeAir(value: unknown): AirStation {
     pollutants,
   };
 }
+/** Validate the optional summary as one unit for both API and persisted inputs. */
+export function validDaySummary(
+  value: unknown,
+): value is { date: string; text: string } {
+  const { date, text } = record(value);
+  return (
+    typeof text === "string" &&
+    text.trim().length > 0 &&
+    text.length <= 500 &&
+    typeof date === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    Number.isFinite(Date.parse(date)) &&
+    new Date(date).toISOString().startsWith(date)
+  );
+}
+
 export function normalizeWeather(
   value: unknown,
   options: {
@@ -609,19 +748,22 @@ export function normalizeWeather(
   // Overseas hourly rows sum three provider hours (server _makeHourlyDataFromDSF).
   // The observed three-hour slot that ends after the current observation is
   // still accumulating (D45): label it partial, not a complete 3-hour total.
+  const accumulating = (p: Point): Point =>
+    p.precipitationBasis === "observed" &&
+    p.precipitationHours === 3 &&
+    p.at > current.at
+      ? {
+          ...p,
+          precipitationBasis: "partial" as const,
+          precipitationHours: null,
+        }
+      : p;
   const hourly = kma
-      ? kmaForecast(raw.short, raw.shortest, source, target).map((p) =>
-          p.precipitationBasis === "observed" &&
-          p.precipitationHours === 3 &&
-          p.at > current.at
-            ? {
-                ...p,
-                precipitationBasis: "partial" as const,
-                precipitationHours: null,
-              }
-            : p,
-        )
+      ? kmaForecast(raw.short, raw.shortest, source, target).map(accumulating)
       : points(raw.hourly, 3),
+    chartHourly = kma
+      ? kmaForecast(raw.short, [], source, target).map(accumulating)
+      : hourly,
     daily = points(kma ? record(raw.midData).dailyData : raw.daily, 24);
   // Keep station emptiness authoritative; never carry an old station into a new result.
   const airRaw = Array.isArray(raw.airInfoList)
@@ -644,6 +786,14 @@ export function normalizeWeather(
     notices.push("어제 같은 시각의 기온을 제공하지 않습니다.");
   if (!air.length)
     notices.push("이 지역의 대기질 관측 자료를 제공하지 않습니다.");
+  // The provider has already formatted the ranked text in its response units.
+  const summaryUnitsMatch = (Object.keys(source) as (keyof Units)[]).every(
+    (key) => source[key] === target[key],
+  );
+  const daySummary = {
+    date: currentRaw.summaryForDate,
+    text: currentRaw.summary,
+  };
   return {
     schemaVersion: 1,
     source: kma ? "KMA" : "VC",
@@ -657,8 +807,35 @@ export function normalizeWeather(
     current,
     yesterday,
     hourly,
+    chartHourly,
+    ...(kma && /^\d{4}$/.test(str(currentRaw.liveTime))
+      ? (() => {
+          const live = str(currentRaw.liveTime);
+          // The server writes 00h as the previous day's 24h; its liveTime
+          // minutes then belong to the hour of current.at.
+          const liveAt =
+            live.slice(0, 2) === current.at.slice(11, 13)
+              ? `${current.at.slice(0, 11)}${live.slice(0, 2)}:${live.slice(2)}`
+              : rowTime({ date: currentRaw.date, time: live });
+          return liveAt && /:[0-5]\d$/.test(liveAt) ? { liveAt } : {};
+        })()
+      : {}),
+    ...(!kma && Array.isArray(raw.hourlyDetails)
+      ? { hourlyDetails: raw.hourlyDetails.flatMap(hourlyDetail) }
+      : {}),
     daily,
     air,
+    ...(kma &&
+    location.country === "KR" &&
+    summaryUnitsMatch &&
+    validDaySummary(daySummary)
+      ? { daySummary }
+      : {}),
+    ...(!kma && raw.airForecastAvailable === true ? { coordinateAirForecastAvailable: true as const } : {}),
+    ...(raw.pollenForecastAvailable === true ? { coordinatePollenForecastAvailable: true as const } : {}),
+    ...(typeof record(raw.timezone).timezoneId === "string"
+      ? { timeZoneId: record(raw.timezone).timezoneId as string }
+      : {}),
     ...(typeof currentRaw.summaryAir === "string" &&
     currentRaw.summaryAir.trim()
       ? { airSummary: str(currentRaw.summaryAir).trim().slice(0, 500) }
@@ -670,6 +847,26 @@ export function normalizeWeather(
     notices,
   };
 }
+function hourlyDetail(value: unknown): HourlyDetails[] {
+  const row = record(value);
+  if (typeof row.at !== "string" || !Number.isFinite(Date.parse(row.at))) return [];
+  const detail: HourlyDetails = { at: row.at };
+  const fields = [
+    "uvIndex", "windGustMps", "wbgtC", "solarRadiationWm2", "solarEnergyMjm2", "severeRisk",
+  ] as const;
+  for (const field of fields) {
+    const metric = row[field];
+    if (
+      typeof metric === "number" && Number.isFinite(metric) &&
+      (field === "wbgtC" || metric >= 0) &&
+      (field !== "severeRisk" || metric <= 100)
+    ) {
+      detail[field] = metric;
+    }
+  }
+  return Object.keys(detail).length > 1 ? [detail] : [];
+}
+
 export function normalizeNation(
   value: unknown,
   options: { units: Units; mode: "demo" | "live" },
@@ -833,11 +1030,12 @@ export function setNumberLocale(locale: string) {
   numberLocale = locale;
 }
 export function formatValue(v: number | null | undefined, digits = 0): string {
-  return v === null || v === undefined || !Number.isFinite(v)
-    ? "—"
-    : new Intl.NumberFormat(numberLocale, {
-        maximumFractionDigits: digits,
-      }).format(v);
+  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  const safe =
+    Object.is(v, -0) || (v < 0 && Math.abs(v) * 10 ** digits < 0.5) ? 0 : v;
+  return new Intl.NumberFormat(numberLocale, {
+    maximumFractionDigits: digits,
+  }).format(safe);
 }
 
 export {
@@ -847,3 +1045,5 @@ export {
   linePath,
   temperatureDomain,
 } from "./charts";
+
+export { decodeCoordinateWarnings, warningsAt, type CoordinateWarnings } from "./warnings";

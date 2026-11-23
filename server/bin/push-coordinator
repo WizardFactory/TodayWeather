@@ -36,7 +36,6 @@ async function main() {
     };
     var runtime = require('../lib/pushCoordinator/runtime').create();
     var registry = new Registry({ storage: storage, resolve: runtime.resolve });
-    await registry.init();
     var dispatcher = new Dispatcher({
         send: runtime.send,
         concurrency: Number(process.env.PUSH_SEND_CONCURRENCY) || 128,
@@ -51,9 +50,18 @@ async function main() {
         feed: new Feed({ storage: storage }),
         warnings: process.env.WARNING_PUSH_ENABLED === 'true'
     });
-    await engine.init();
-    var server = await ipc.listen(socket, registry, dispatcher);
-    engine.start();
+    var server = await ipc.listen(socket, registry, dispatcher, () => registry.ready && engine.running);
+    var stopping = false;
+    process.on('SIGTERM', stop);
+    process.on('SIGINT', stop);
+    try {
+        await require('../lib/pushCoordinator/startup').restoreAndStart(
+            require('../config/config').serviceServer.url, registry, engine
+        );
+    } catch (error) {
+        server.close();
+        throw error;
+    }
     console.log(
         JSON.stringify({
             event: 'push-coordinator-ready',
@@ -75,7 +83,6 @@ async function main() {
             })
         );
     }, 60000);
-    var stopping = false;
     async function stop() {
         if (stopping) return;
         stopping = true;
@@ -83,16 +90,14 @@ async function main() {
         registry.ready = false;
         server.close();
         try {
-            await engine.stop();
+            if (engine.running) await engine.stop();
         } catch (e) {
             console.error('Push checkpoint failed during shutdown');
         }
         process.exit(0);
     }
-    process.on('SIGTERM', stop);
-    process.on('SIGINT', stop);
 }
 main().catch(function (e) {
     console.error(e.message);
-    process.exitCode = 1;
+    process.exit(1);
 });

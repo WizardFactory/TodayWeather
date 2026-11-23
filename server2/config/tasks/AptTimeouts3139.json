@@ -1,0 +1,11 @@
+{
+  "task": "AptTimeouts3139",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3139",
+  "scope": "Bound and retry the hosted runner's apt calls so a stalled package mirror fails within minutes instead of holding the job to its timeout.",
+  "server2_paths": [
+    "server2/config/tasks/AptTimeouts3139.json",
+    "server2/tools/prepare-ci.sh",
+    "server2/tools/test_ci.py"
+  ],
+  "outside": []
+}

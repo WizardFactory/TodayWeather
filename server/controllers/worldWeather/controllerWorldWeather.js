@@ -1849,6 +1849,34 @@ function controllerWorldWeather() {
             //log.info("hourly list = "+hourlyList.length);
 
             var shortest = req.result.shortest = [];
+            if (req.dsfFromDayBeforeYesterday) {
+                // Use absolute UTC time before legacy chart alignment. The same local hour may occur
+                // twice when daylight saving time ends, and both provider forecasts are valid.
+                var byTime = new Map();
+                var now = req.cDate.getTime();
+                var fields = ['uvIndex', 'windGustMps', 'wbgtC', 'solarRadiationWm2', 'solarEnergyMjm2', 'severeRisk'];
+                dsf.data.forEach(function(item) {
+                    item.hourly.data.forEach(function(row) {
+                        var validTime = new Date(row.forecastAtMs);
+                        if (!Number.isFinite(validTime.getTime()) || validTime.getTime() <= now) {
+                            return;
+                        }
+                        var detail = {at: validTime.toISOString()};
+                        fields.forEach(function(field) {
+                            if (Number.isFinite(row[field])) {
+                                detail[field] = row[field];
+                            }
+                        });
+                        if (Object.keys(detail).length > 1) {
+                            byTime.set(row.forecastAtMs, detail);
+                        }
+                    });
+                });
+                if (byTime.size) {
+                    req.result.hourlyDetails = Array.from(byTime.values())
+                        .sort(function(a, b) { return a.at.localeCompare(b.at); });
+                }
+            }
 
             var foundYesterday = false;
             hourlyList.forEach(function(dbItem, dataIndex) {

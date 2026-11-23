@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "TodayWeather deep-link edge fallback",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/diagrams/deeplink-edge.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "b4eea528677aaec713bbb0e3eb61107b8a636cc7"
+    }
+  },
+  "participants": [
+    {"id":"client","type":"external","label":"Browser / OS","sublabel":"Link or verification","sources":[{"path":"specs/deeplink.md","line":46,"end_line":50,"label":"Association request contract"}]},
+    {"id":"edge","type":"backend","label":"CloudFront","sublabel":"link.todayweather.ai","sources":[{"path":"specs/deeplink.md","line":114,"end_line":137,"label":"Viewer-request route contract"}]},
+    {"id":"assets","type":"database","label":"Private S3","sublabel":"Association JSON and HTML","sources":[{"path":"specs/deeplink.md","line":116,"end_line":128,"label":"Static origin contract"}]},
+    {"id":"pwa","type":"frontend","label":"Web app","sublabel":"app.todayweather.ai","sources":[{"path":"specs/deeplink.md","line":130,"end_line":136,"label":"PWA destination contract"}]}
+  ],
+  "messages": [
+    {"id":"static-request","from":"client","to":"edge","y":160,"label":"GET /open or association file","variant":"emphasis"},
+    {"id":"origin-read","from":"edge","to":"assets","y":200,"label":"Read static object with OAC","variant":"security"},
+    {"id":"origin-response","from":"assets","to":"edge","y":240,"label":"200 HTML or JSON","variant":"return"},
+    {"id":"static-response","from":"edge","to":"client","y":280,"label":"200 with response headers","variant":"return"},
+    {"id":"content-request","from":"client","to":"edge","y":345,"label":"GET a valid content URL","variant":"emphasis"},
+    {"id":"redirect","from":"edge","to":"client","y":385,"label":"302 to the matching PWA route","variant":"return"},
+    {"id":"web-request","from":"client","to":"pwa","y":425,"label":"Open weather with from=link","variant":"emphasis"}
+  ],
+  "cards": [
+    {"dot":"rose","title":"Edge responses","items":["405 for unsupported methods","400 for malformed paths","404 for unknown routes"]},
+    {"dot":"cyan","title":"Scope","items":["This sequence shows HTTP fallback and association reads.","Native link dispatch and live rollout are verified separately."]}
+  ]
+}

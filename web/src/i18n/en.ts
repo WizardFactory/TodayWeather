@@ -195,6 +195,10 @@ const en: Catalog = {
   "public.body":
     "Save it to your locations to check hourly weather and air quality.",
   "public.open": "View weather here",
+  "link.appOption": "Open or install the app",
+  "link.dismiss": "Dismiss",
+  "link.addFavorite": "Add to favorites",
+  "link.invalidLocation": "This shared location is invalid.",
   "public.notFound": "Shared location not found",
   "welcome.kicker": "Weather for today",
   "welcome.headline": "Warmer than yesterday?",
@@ -492,6 +496,7 @@ const en: Catalog = {
     "These observations are old. Check the latest weather before going out.",
   "chart.label": "Hourly temperature trend; values are in the table below",
   "chart.empty": "No hourly forecast",
+  "chart.hour": "{hour}h",
   "chart.table": "Show hourly details",
   "chart.col.time": "Time",
   "chart.col.temperature": "Temperature (°{unit})",

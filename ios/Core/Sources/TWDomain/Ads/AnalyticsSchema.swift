@@ -35,8 +35,8 @@ public enum AnalyticsSchema {
         ("favorite_change", [("action", .oneOf(["add", "remove"]))]),
         ("location_permission", [("outcome", .oneOf(["granted", "denied", "unknown"]))]),
         ("ad_lifecycle", [("action", .oneOf(["request", "loaded", "failed", "impression", "show", "hide", "consent_failed"])),
-                          ("ad_format", .oneOf(["banner"]))]),
-        ("ad_load_error", [("ad_format", .oneOf(["banner"])), ("error_code", .upTo(999))]),
+                          ("ad_format", .oneOf(["banner", "native", "interstitial", "consent"]))]),
+        ("ad_load_error", [("ad_format", .oneOf(["banner", "native", "interstitial"])), ("error_code", .upTo(999))]),
         ("ad_policy_exposure", [("delay_seconds", .upTo(120))]),
     ]
 
@@ -52,6 +52,8 @@ public enum AnalyticsSchema {
     /// A number must be finite, whole, at least 0 and at most the field's limit (`Math.floor(value) === value`).
     public static func validate(_ name: String, _ params: [String: AnalyticsValue]?) -> [(String, AnalyticsParameter)]? {
         guard let fields = events.first(where: { JSString.equal($0.name, name) })?.fields, let params else { return nil }
+        // UMP failures are shared by formats. They cannot be reported as an impression or a creative load error.
+        if name == "ad_lifecycle", params["ad_format"] == .text("consent"), params["action"] != .text("consent_failed") { return nil }
         var safe: [(String, AnalyticsParameter)] = []
         for (key, rule) in fields {
             let value = params[key]

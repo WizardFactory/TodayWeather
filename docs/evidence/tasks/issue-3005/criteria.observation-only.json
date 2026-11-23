@@ -1,0 +1,418 @@
+{
+  "schema": 1,
+  "profile": "local_peer",
+  "run_id": "sr6-rehearsal",
+  "launch_sha256": "002ab06a3eedcda2387173a2b72ebdfe8d6a10c5bb0cea72975325b83663d1f9",
+  "cases": {
+    "current-0": {
+      "family": "current-0",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "current-1": {
+      "family": "current-1",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "current-2": {
+      "family": "current-2",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "current-3": {
+      "family": "current-3",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "current-4": {
+      "family": "current-4",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "current-5": {
+      "family": "current-5",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "weather-default-seoul": {
+      "family": "weather-default-seoul",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "weather-default-ny": {
+      "family": "weather-default-ny",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "weather-v000901-seoul": {
+      "family": "weather-v000901-seoul",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "weather-v000901-ny": {
+      "family": "weather-v000901-ny",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "weather-v000902-seoul": {
+      "family": "weather-v000902-seoul",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "weather-v000902-ny": {
+      "family": "weather-v000902-ny",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "kma-v000901": {
+      "family": "kma-v000901",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "kma-v000903": {
+      "family": "kma-v000903",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "town-v000705": {
+      "family": "town-v000705",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "town-v000803": {
+      "family": "town-v000803",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "geocode-coord": {
+      "family": "geocode-coord",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "geocode-addr-v000901": {
+      "family": "geocode-addr-v000901",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "geocode-addr-v000903": {
+      "family": "geocode-addr-v000903",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "nation-v000901": {
+      "family": "nation-v000901",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "nation-v000903": {
+      "family": "nation-v000903",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "warning": {
+      "family": "warning",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "notice": {
+      "family": "notice",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "ww": {
+      "family": "ww",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "head-weather-default-seoul": {
+      "family": "head-weather-default-seoul",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-weather-default-seoul": {
+      "family": "conditional-weather-default-seoul",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-current-0": {
+      "family": "head-current-0",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-current-0": {
+      "family": "conditional-current-0",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-kma-v000901": {
+      "family": "head-kma-v000901",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-kma-v000901": {
+      "family": "conditional-kma-v000901",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-kma-v000903": {
+      "family": "head-kma-v000903",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-kma-v000903": {
+      "family": "conditional-kma-v000903",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-geocode-coord": {
+      "family": "head-geocode-coord",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-geocode-coord": {
+      "family": "conditional-geocode-coord",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-town-v000803": {
+      "family": "head-town-v000803",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-town-v000803": {
+      "family": "conditional-town-v000803",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-nation-v000903": {
+      "family": "head-nation-v000903",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-nation-v000903": {
+      "family": "conditional-nation-v000903",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-weather-v000901-seoul": {
+      "family": "head-weather-v000901-seoul",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-weather-v000901-seoul": {
+      "family": "conditional-weather-v000901-seoul",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-weather-v000902-seoul": {
+      "family": "head-weather-v000902-seoul",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-weather-v000902-seoul": {
+      "family": "conditional-weather-v000902-seoul",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-geocode-addr-v000903": {
+      "family": "head-geocode-addr-v000903",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-geocode-addr-v000903": {
+      "family": "conditional-geocode-addr-v000903",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-warning": {
+      "family": "head-warning",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-warning": {
+      "family": "conditional-warning",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-town-v000705": {
+      "family": "head-town-v000705",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-town-v000705": {
+      "family": "conditional-town-v000705",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-geocode-addr-v000901": {
+      "family": "head-geocode-addr-v000901",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-geocode-addr-v000901": {
+      "family": "conditional-geocode-addr-v000901",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-nation-v000901": {
+      "family": "head-nation-v000901",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-nation-v000901": {
+      "family": "conditional-nation-v000901",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-notice": {
+      "family": "head-notice",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-notice": {
+      "family": "conditional-notice",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    },
+    "head-ww": {
+      "family": "head-ww",
+      "expected_statuses": [
+        200
+      ]
+    },
+    "conditional-ww": {
+      "family": "conditional-ww",
+      "expected_statuses": [
+        200,
+        304
+      ]
+    }
+  },
+  "minimum_usable_pairs": {
+    "current-0": null,
+    "current-1": null,
+    "current-2": null,
+    "current-3": null,
+    "current-4": null,
+    "current-5": null,
+    "weather-default-seoul": null,
+    "weather-default-ny": null,
+    "weather-v000901-seoul": null,
+    "weather-v000901-ny": null,
+    "weather-v000902-seoul": null,
+    "weather-v000902-ny": null,
+    "kma-v000901": null,
+    "kma-v000903": null,
+    "town-v000705": null,
+    "town-v000803": null,
+    "geocode-coord": null,
+    "geocode-addr-v000901": null,
+    "geocode-addr-v000903": null,
+    "nation-v000901": null,
+    "nation-v000903": null,
+    "warning": null,
+    "notice": null,
+    "ww": null,
+    "head-weather-default-seoul": null,
+    "conditional-weather-default-seoul": null,
+    "head-current-0": null,
+    "conditional-current-0": null,
+    "head-kma-v000901": null,
+    "conditional-kma-v000901": null,
+    "head-kma-v000903": null,
+    "conditional-kma-v000903": null,
+    "head-geocode-coord": null,
+    "conditional-geocode-coord": null,
+    "head-town-v000803": null,
+    "conditional-town-v000803": null,
+    "head-nation-v000903": null,
+    "conditional-nation-v000903": null,
+    "head-weather-v000901-seoul": null,
+    "conditional-weather-v000901-seoul": null,
+    "head-weather-v000902-seoul": null,
+    "conditional-weather-v000902-seoul": null,
+    "head-geocode-addr-v000903": null,
+    "conditional-geocode-addr-v000903": null,
+    "head-warning": null,
+    "conditional-warning": null,
+    "head-town-v000705": null,
+    "conditional-town-v000705": null,
+    "head-geocode-addr-v000901": null,
+    "conditional-geocode-addr-v000901": null,
+    "head-nation-v000901": null,
+    "conditional-nation-v000901": null,
+    "head-notice": null,
+    "conditional-notice": null,
+    "head-ww": null,
+    "conditional-ww": null
+  }
+}

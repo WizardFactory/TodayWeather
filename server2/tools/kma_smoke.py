@@ -20,17 +20,18 @@ refusals run the release `server2` binary: unknown or repeated entries, and `kma
 settings or the data.go.kr keys, must stop startup before binding. Every process runs in an empty
 working directory, so no real server2/.env is read."""
 import argparse
+from datetime import datetime, timedelta, timezone
 import http.server
 import json
 import os
 from pathlib import Path
 import re
-import json
 import select
 import subprocess
 import sys
 import tempfile
 import threading
+import time
 import urllib.parse
 import urllib.request
 
@@ -60,6 +61,50 @@ class Origin(g.Peer):
             self.wfile.write(GEOCODE)
             return
         super().do_GET()
+
+
+COMBINED_PROVINCE = '전남광주통합특별시'
+COMBINED_TOWNS = {
+    (35.16, 126.85): ('서구', '치평동', ['광주서부']),
+    (34.81, 126.46): ('무안군', '삼향읍', ['무안군북부']),
+    (35.00, 126.70): ('없는구', '', []),
+}
+
+
+class CombinedWarningOrigin(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        pass
+
+    def do_GET(self):
+        route = urllib.parse.urlsplit(self.path)
+        query = urllib.parse.parse_qs(route.query)
+        if route.path == '/v2/local/geo/coord2regioncode.json':
+            coords = (float(query['y'][0]), float(query['x'][0]))
+            district, town, _ = COMBINED_TOWNS[coords]
+            doc = dict(address_name=f'{COMBINED_PROVINCE} {district} {town}'.strip(),
+                       region_1depth_name=COMBINED_PROVINCE, region_2depth_name=district,
+                       region_3depth_name=town, region_4depth_name='')
+            response = dict(meta={'total_count': 2},
+                            documents=[dict(doc, region_type=kind) for kind in ('H', 'B')])
+        elif route.path == '/1360000/WthrWrnInfoService/getPwnCd' and query.get('fromTmFc') == [self.tm_fc[:8]]:
+            rows = [
+                dict(areaCode=code, areaName=name, warnVar=2, warnStress=0, command='1',
+                     cancel='0', tmFc=int(self.tm_fc), tmSeq=index, startTime=int(self.tm_fc),
+                     allEndTime=0, endTime=0)
+                for index, (code, name) in enumerate(
+                    [('L1130110', '광주서부'), ('L1053410', '무안군북부')], start=1)
+            ]
+            response = dict(response=dict(header={'resultCode': '00'},
+                                          body=dict(items={'item': rows}, totalCount=len(rows),
+                                                    pageNo=1, numOfRows=10000)))
+        else:
+            response = dict(response=dict(header={'resultCode': '03', 'resultMsg': 'NO_DATA'}))
+        body = json.dumps(response, ensure_ascii=False).encode()
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -120,6 +165,42 @@ def start(command, endpoint, families):
     except BaseException:
         g.stop(process)
         raise
+
+
+def check_combined_province(peer_binary):
+    CombinedWarningOrigin.tm_fc = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime('%Y%m%d%H%M')
+    with http.server.ThreadingHTTPServer(('127.0.0.1', 0), CombinedWarningOrigin) as origin:
+        thread = threading.Thread(target=origin.serve_forever, daemon=True)
+        thread.start()
+        endpoint = f'http://127.0.0.1:{origin.server_port}'
+        peer, s3 = s3_peer()
+        try:
+            process, base = start(peer_command(peer_binary, endpoint, s3), endpoint, 'kma')
+            try:
+                deadline = time.monotonic() + 20
+                for (lat, lon), (district, _, expected) in COMBINED_TOWNS.items():
+                    path = f'/weather/v000903/coord/{lat},{lon}'
+                    while True:
+                        status, _, raw = g.request(base, path, headers={'Accept-Language': 'ko-KR'})
+                        assert status == 200, (path, status, raw[:300])
+                        body = json.loads(raw)
+                        assert body.get('regionName') == COMBINED_PROVINCE, (path, body.get('regionName'))
+                        warnings = body.get('current', {}).get('specialInfo', [])
+                        names = [warning['locationName'] for warning in warnings]
+                        # The first request starts the collector. A later request sees the S3 publication.
+                        if names or not expected or time.monotonic() >= deadline:
+                            break
+                        time.sleep(0.5)
+                    assert names == expected, (path, names, expected)
+                    print(f'PASS combined-province {district}: HTTP 200, regionName preserved, specialInfo={names}',
+                          flush=True)
+            finally:
+                g.stop(process)
+        finally:
+            peer.terminate()
+            peer.wait(timeout=5)
+            origin.shutdown()
+            thread.join(timeout=2)
 
 
 def run(binary, peer_binary):
@@ -248,6 +329,8 @@ def run(binary, peer_binary):
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
+
+    check_combined_province(peer_binary)
 
 
 if __name__ == '__main__':

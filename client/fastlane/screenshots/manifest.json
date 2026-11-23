@@ -1,25 +1,27 @@
 {
-  "captured_on": "2026-10-01",
-  "version": "1.1.0",
-  "source_base_commit": "6ec6c68ceb518e22382ba2c24428964d4d2e0e67",
-  "source_state": "Dirty Cordova release checkout, including concurrent measurement work; not a final integrated release binary.",
-  "selected_city": "Seoul public shortcut; no device GPS permission granted.",
+  "captured_on": "2026-11-22",
+  "version": "2.0 native (Android 2.0.0, iOS 2.0.1 in the stores)",
+  "source_base_commit": "5723221e99a165c54c06f09657d0869c459d64d0",
+  "capture_tooling_commit": "96bfec8133eabf7f0614725c8dc738b02af2e7a3",
+  "source_state": "Debug builds of the native apps (app sources of source_base_commit) with private inputs, driven by the capture tests and scripts of capture_tooling_commit; not the store binaries.",
+  "selected_city": "Seoul (서울) saved; no current location.",
   "screens": [
     "comparison",
     "expanded hourly weather",
     "daily forecast",
-    "air quality"
+    "air quality",
+    "home-screen widgets (Play: forecast and clock, then current weather and air quality)"
   ],
   "devices": {
-    "android": "Dedicated Android API36 AVD, 1080x1920",
-    "ios_iphone": "Dedicated iPhone 17 Pro Max simulator, iOS26.5",
-    "ios_ipad": "Dedicated iPad Pro 13-inch (M5) simulator, iOS26.5"
+    "android": "Disposable Android 16 AVD created by the run, display 1080x1920 at density 420, freshly booted in each locale's system language",
+    "ios_iphone": "iPhone 17 Pro Max simulator created by the run (Korean), iOS 26.5",
+    "ios_ipad": "iPad Pro 13-inch (M5) simulator created by the run (Korean), iOS 26.5"
   },
   "composition": {
-    "android": "HTML marketing frame with actual native screen pixels; source viewport x0,y142,width1080,height1546 excludes system/test-ad regions. UI/data not retouched.",
-    "ios": "Full native framebuffer; opaque alpha removal only; RGB pixels unchanged."
+    "android": "HTML marketing frame (screenshot-frame.html) around the actual screen with the status bar (106 px) and navigation bar (63 px) removed: the app for 01-04, the launcher's home-screen pages with the pinned widgets for 05-06; UI/data not retouched.",
+    "ios": "HTML marketing frame (screenshot-frame-ios.html) with the Korean heading around the full native framebuffer (the app for 01-04, the Home Screen with the added widgets for 05), scaled down to fit inside the frame's border, not cropped or masked; UI/data not retouched."
   },
-  "advertising": "Google test ad units only; screenshots do not validate production consent or revenue.",
+  "advertising": "Ad-free captures (#3122): Android NoAdsPlatform (test APK only), iOS build without ad units; the shipped apps show ads.",
   "locale_fallbacks": {
     "android": [
       "de-DE",
@@ -33,7 +35,7 @@
       "zh-Hant"
     ]
   },
-  "review_limit": "Reconcile against final binary if visible UI changes. Store changes are drafts; no review/public rollout.",
+  "review_limit": "Live weather of the capture time; recapture if the visible UI changes.",
   "files": [
     {
       "file": "metadata/android/en-US/images/phoneScreenshots/01-compare.jpg",
@@ -42,8 +44,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "c8e31730177687e3ac88775fabb82d55ba052766c437e380edb68153ae7d17e8",
-      "raw_source_sha256": "0fbb8b52613adc0323be512a723dc5999e4e04e601f7083bce5ac3888e7e180b"
+      "sha256": "72123ce1f5acb12e5a13e5108203ca46923ccfc5b02dd98c8cb177d8dddad84b",
+      "raw_source_sha256": "1a425bd01954ab5270b9288ed487190d19e2ff792545f4f0ebd99b572f02de45"
     },
     {
       "file": "metadata/android/en-US/images/phoneScreenshots/02-hourly.jpg",
@@ -52,8 +54,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "0ad9334d055565b9eac2e3c7b8ca4fc2401fb500a1e42375e32b435135bcb30b",
-      "raw_source_sha256": "2e8e93cb24eb8b7b76a032e18970ce63c9a78b5b4ffccba631fbc10da27b2ab0"
+      "sha256": "3dd19c087f80ca55c27de0d69b0546be92b328445f7f87f7732113963a14b31e",
+      "raw_source_sha256": "64484dfbee9c5f2eed5203d01c3cb9bc2ec418974457e9ef71a3105899fe9a7e"
     },
     {
       "file": "metadata/android/en-US/images/phoneScreenshots/03-daily.jpg",
@@ -62,8 +64,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "e0a4ae696a13ae103dc7e7be7b6491152b56271578c517ed50e8372a5ec88de9",
-      "raw_source_sha256": "2d1ab9299772e9a00d722459b787e63ecc1b28b336d8e1b3118c2b67c78fa534"
+      "sha256": "42ee6d29866e890a6532aea1a08c6b49f4447c05142caebbc0a8ed331a3472ad",
+      "raw_source_sha256": "7d12acdad15cd49fe6359ac3690e6e68bf1beebc2d6be19389fa6bc1b0c72819"
     },
     {
       "file": "metadata/android/en-US/images/phoneScreenshots/04-air.jpg",
@@ -72,8 +74,28 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "38602d7ed44e82119ec6b457184483bd1cf9fba4a0bf77f574a865c7a8e57513",
-      "raw_source_sha256": "db7207c7df2c2a71872cd1b6bb7a5e5c321396df1079e095adb4ec64bb452ead"
+      "sha256": "0abbb5288673ed2f3a6ac5f43254896d27bad1ec9bfa92d8d20c3a3d19e2bcd1",
+      "raw_source_sha256": "d83488bb4697ad39676e15c28db93df839961f3000c29b0631953e150f6ebec8"
+    },
+    {
+      "file": "metadata/android/en-US/images/phoneScreenshots/05-widgets.jpg",
+      "platform": "android",
+      "locale": "en-US",
+      "display_type": "phoneScreenshots",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "d94e69195efd27c3ac7d29276024c43d57523daf509c57c280871196ea964787",
+      "raw_source_sha256": "0ab36ecaeec4988a32326e55942e615bbfad9518d2baf24cce95446602f34e29"
+    },
+    {
+      "file": "metadata/android/en-US/images/phoneScreenshots/06-widgets.jpg",
+      "platform": "android",
+      "locale": "en-US",
+      "display_type": "phoneScreenshots",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "407999cf59a69ac85a96ea76cb743fa443be8c4ac649630442ba7546964d23a0",
+      "raw_source_sha256": "0b09795ae1d53b5e77eba8c6005911d8e8a18afc029697068a1234264beb55bc"
     },
     {
       "file": "metadata/android/ja-JP/images/phoneScreenshots/01-compare.jpg",
@@ -82,8 +104,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "63d2fbdf79fc274e3acf85ccc7a3662a408c023ec8a48af19af624c246812023",
-      "raw_source_sha256": "473f038faff0f8bd4d4aa3d2debbb43398603f2a4717842435d948cc2643de87"
+      "sha256": "9a199207dffe614df821bea78c55a29e086a03958a2e078ce84af5a629f6d126",
+      "raw_source_sha256": "f70e16d7e22fe18505c63107018033b0fae19013695e434680cc93dec04b91eb"
     },
     {
       "file": "metadata/android/ja-JP/images/phoneScreenshots/02-hourly.jpg",
@@ -92,8 +114,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "77934e4cf94e4d50218f0fe62744bd305b09f39342b818dd6282307c0b5312c5",
-      "raw_source_sha256": "d707de408e3e4629257d96bb57c17ee4ac20c11f4ac1a8033af72ab5bc72f41a"
+      "sha256": "b34fcc8cc7991715c443cb7783611ae6be5cb4c4f3dfac26f156696951907327",
+      "raw_source_sha256": "3ea37a281195ad1df199190f9186e820bc866fd01b73025493b7794c8e9b0dcc"
     },
     {
       "file": "metadata/android/ja-JP/images/phoneScreenshots/03-daily.jpg",
@@ -102,8 +124,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "16165f4ad1d9a295c408f3252ac4f0837803b95195e98b38d44a0030eae1d254",
-      "raw_source_sha256": "577f064e31e21c218b6a5d48042ce957f75868ad1fa80ddd2d770dc6181d48f3"
+      "sha256": "bed2e94fe9c90b6dcd821684c5e5df03ca304f3cf0665141907aba9943f3ea2e",
+      "raw_source_sha256": "ce5dbad7ebf2ccde6940d7f9c0a9951dc61f49e261878f8564b2c1a98f7936cd"
     },
     {
       "file": "metadata/android/ja-JP/images/phoneScreenshots/04-air.jpg",
@@ -112,8 +134,28 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "5cc8cce3a559b957790a2ae3308b4631ac71c10977ff34a922b60e1694bcaddf",
-      "raw_source_sha256": "7183f7c778d2c8bf52bdc2d991edb8a4ecc0ed9cb801887efc5276ca23751738"
+      "sha256": "a1d87cfc9226611c05a198eae20fd2de40eb346478b3fdcfbdbdc35f93822ce8",
+      "raw_source_sha256": "57213638de47e0d8d59bc169df3576060e666ba9bc4cfc5fffaf404bb9c6e687"
+    },
+    {
+      "file": "metadata/android/ja-JP/images/phoneScreenshots/05-widgets.jpg",
+      "platform": "android",
+      "locale": "ja-JP",
+      "display_type": "phoneScreenshots",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "c2716706ea5ec3eb471c86b52989178367d29b957e3ae346dbf5de38a7c402f2",
+      "raw_source_sha256": "524441be1fec684717098bbdd0cd294455510a86a4c63bdb07a8a10cb5d7d44a"
+    },
+    {
+      "file": "metadata/android/ja-JP/images/phoneScreenshots/06-widgets.jpg",
+      "platform": "android",
+      "locale": "ja-JP",
+      "display_type": "phoneScreenshots",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "f27812d7f2e647edb5bbfe12d93094039bc1014ad79d58791e2a273d08f399e9",
+      "raw_source_sha256": "e0e1bb6a2c4fefb0762fd5e40b3d0513569ea07ce74afb8e49c53cb8682ddd2f"
     },
     {
       "file": "metadata/android/ko-KR/images/phoneScreenshots/01-compare.jpg",
@@ -122,8 +164,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "eca36f6da484abc758e7bdbc0934da1c2dead8825a92dd84a9f20408cb3b7887",
-      "raw_source_sha256": "bfdf6aeb3dfaa837cc3674dc481170b27dd0fb0280f57ed64ed78254ba73922f"
+      "sha256": "3a518c3dcd9cd734dc41e05e9ea850f97d2238b21674347e330275075cddb6e8",
+      "raw_source_sha256": "123feceb9af8b4e951cdc5e2e52caad6b1d2d89830d31f267f71e79566331e8b"
     },
     {
       "file": "metadata/android/ko-KR/images/phoneScreenshots/02-hourly.jpg",
@@ -132,8 +174,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "581de568f8f539d3159b12ab25dbf3e99ccafd2ded07911e2387e94c5003ee24",
-      "raw_source_sha256": "056e17bf9a438e9c32999d034218b7a02a494050b1f1188b08fc3fdebc447094"
+      "sha256": "b11beb5fd19ed9306ed5e759ab27dd5545d6d3626eab8b7440e28a8bf6006d32",
+      "raw_source_sha256": "2a062651afd62c0876d45e84a2ad53ef0150a6a92c762cda21bb276ca3e1cd5f"
     },
     {
       "file": "metadata/android/ko-KR/images/phoneScreenshots/03-daily.jpg",
@@ -142,8 +184,8 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "6a9c3003a932c3d313ae52f54e38598f1d445b0d7dd2703862db80a2f4613a3a",
-      "raw_source_sha256": "a2f46c718a32d3931f479fe2bb52e5ee0426d7fbf035ec2d4e18b41010f7066e"
+      "sha256": "dd2587c1fb62c419a2ed42c04e3008a223ef84fd7ea618dc9709734a4e356413",
+      "raw_source_sha256": "34e2d8bdab0c844bdec9dce7b9ce9cca9da7a6160e17b4c681f9dca9a09ff068"
     },
     {
       "file": "metadata/android/ko-KR/images/phoneScreenshots/04-air.jpg",
@@ -152,8 +194,28 @@
       "display_type": "phoneScreenshots",
       "width": 1080,
       "height": 1920,
-      "sha256": "d3f4568d77ff068016b3bd945e05b0eef7a8a6feb55cb8e12951bc727285eca1",
-      "raw_source_sha256": "5284dfde420584768766f1dac2cd0738bc9f3258be6f5fba26737a3c29663f01"
+      "sha256": "813eae9c1ccfb5a0675c6246548fde087038006c103532a64548fc8a1d7018da",
+      "raw_source_sha256": "3e48c59b3626e84a60f72e6fe854fe44bbdc6a147a4f0e798d8cb73af5927133"
+    },
+    {
+      "file": "metadata/android/ko-KR/images/phoneScreenshots/05-widgets.jpg",
+      "platform": "android",
+      "locale": "ko-KR",
+      "display_type": "phoneScreenshots",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "c85a5785dc63f0398692f50ae59a582c4494b36118ce707258dc6d0668943e7d",
+      "raw_source_sha256": "9e9e976a99a2db16d21b15740229b3a13f0a5dd07a7931b5a02897b560cf03e7"
+    },
+    {
+      "file": "metadata/android/ko-KR/images/phoneScreenshots/06-widgets.jpg",
+      "platform": "android",
+      "locale": "ko-KR",
+      "display_type": "phoneScreenshots",
+      "width": 1080,
+      "height": 1920,
+      "sha256": "8c3ab106dc50a12d2f0687065a6749f83d6bb98e6f5ca7cb16f1e7c8ef48d78f",
+      "raw_source_sha256": "76ba88cd767ee4bd680c20f3cdba485337a45f1741fe49deacb3e4be35a3eade"
     },
     {
       "file": "screenshots/ios/ko/ipad13-01-compare.png",
@@ -162,8 +224,8 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "8b608522ff950c0b6b72b16b95b9633bd2f74549f57fb6765d078149e3751e88",
-      "raw_source_sha256": "e37de5f53410c4b8402ad4ccff1ee1b9aea9eb4bb31f3ff0556fd3a40a12b7ba"
+      "sha256": "45ef552491099d43b8d8030bd49a1982372d9a485e7218c7483116e755aa0c30",
+      "raw_source_sha256": "7c88951cf465da84e05b756a09a24755c7658101915ef91aa72e28578e53c918"
     },
     {
       "file": "screenshots/ios/ko/ipad13-02-hourly.png",
@@ -172,8 +234,8 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "5757934bfb04735f283ff9f053d0f4c1f6ab3ea93d84b10fbfa55efb7382c858",
-      "raw_source_sha256": "352d6efb8772b12ac25be736fe497c5ff1f3c0502e4f4e3a846ef3710f3c952c"
+      "sha256": "8c924679c9196d39f933809b4e38cb5f5f483bcd0530d42df6af50db39998766",
+      "raw_source_sha256": "5559a5ab042fb98b758c1888c8f0a065ac1618d53a90b715c40baefd8b578cc0"
     },
     {
       "file": "screenshots/ios/ko/ipad13-03-daily.png",
@@ -182,8 +244,8 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "4b9f6905c7e1da9016124ca2585b8a8710adf0888a6bd27d3583d05482ec9465",
-      "raw_source_sha256": "413dc664ca8109e04cb67e5a44dedb69642251dd28a88222d52c3c9e8f0cbe5d"
+      "sha256": "25e6680d69a5ea009de8c05214989416a2ccf43433e9e6175610973add496c3b",
+      "raw_source_sha256": "98b1079968ebc0f8a7d53b1bba58392df7c1db031cef995cbc88c48cac0975e2"
     },
     {
       "file": "screenshots/ios/ko/ipad13-04-air.png",
@@ -192,8 +254,18 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "ad1b827e3e70c0630d892caee591c85543ff41812309f520afda6a760516e527",
-      "raw_source_sha256": "4f24e6b50936d629186e9ba0e33b2d8296b68887554dcb29b8b162fb8f4c5f4d"
+      "sha256": "1f980f95ecf31ad86d59c1a7538dc3ffce04ccf8ffd3e509bd8529a2b3835d53",
+      "raw_source_sha256": "5e7633d7d105eea4e4dd89b7ae5636dcc76513477c503a6b4637482616618cd7"
+    },
+    {
+      "file": "screenshots/ios/ko/ipad13-05-widgets.png",
+      "platform": "ios",
+      "locale": "ko",
+      "display_type": "APP_IPAD_PRO_3GEN_129",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "66f75adbefca41e97234377d1601a7113c3594f5b614eaf8d2045d4d04016e49",
+      "raw_source_sha256": "988a6a73a7c872284d2b5b907789f0479bf893c99944d31f2fee29a9ff618725"
     },
     {
       "file": "screenshots/ios/ko/iphone69-01-compare.png",
@@ -202,8 +274,8 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "97dec9326a101e73171945dbf1a898b673e5f087f6cc39e63b626e5dafa8415f",
-      "raw_source_sha256": "e2e8ff72a8541f3a2cb48248bcb056188509a15c038fcf57911ea41bee10923a"
+      "sha256": "88068810ac68f6d57d5af9a1abbd525d042b115284fc9573b57e948084f1e63c",
+      "raw_source_sha256": "1fcf90dde46426be76d99295bc1b85966dce655288c08cf79d5184a5185c4dd6"
     },
     {
       "file": "screenshots/ios/ko/iphone69-02-hourly.png",
@@ -212,8 +284,8 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "5838b864d742f76c1edc1f2beb3bb4477c52107fe53b7e202e81373693f2debd",
-      "raw_source_sha256": "3561de5b85ac7d4f0d4f3dbab6e79b73a60d812afe1d7d2e8f6265be76f53f8c"
+      "sha256": "a845e5ed0c1d38e5dd93e8fd203ca539abf14ca02fd22041c915c73206a0a1b0",
+      "raw_source_sha256": "2f815f0805af14ce311f3f89ece277ff86b5dc75bbdfe4f23d5a4a6c45042bcb"
     },
     {
       "file": "screenshots/ios/ko/iphone69-03-daily.png",
@@ -222,8 +294,8 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "1b957db2b0adef0cd9957d894978662fba13ef9bb6c54836aef646e8b95e45cc",
-      "raw_source_sha256": "2216ea4299dff1464742386269847501957244301c6a61b6e9cd540fd751eb45"
+      "sha256": "c46178c565ee324a5b34778845dbcac1252587f7ebe87dce1af26b7385abdb9a",
+      "raw_source_sha256": "ade0c2205c6702ee761a713864a3ed0901c8546f0329d9adc4184e6c6403de7a"
     },
     {
       "file": "screenshots/ios/ko/iphone69-04-air.png",
@@ -232,8 +304,18 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "ec2ca9841316e4a0963b14d7da6ab9bc5f93c2bf4fb9d8ec5682181f0cd6a925",
-      "raw_source_sha256": "6278531ee534a9252085074c7a9f9a66d28ed0cf4f424e4d177a8b20d8d95416"
+      "sha256": "ee16be65f9456262402b934f939166239d411804bdc0fcf33d31f6c4c6db2c4e",
+      "raw_source_sha256": "216bc7ec2afbc1524743fd37d8d15e753f9dcdee9740bf48c6ba534fcacbf11e"
+    },
+    {
+      "file": "screenshots/ios/ko/iphone69-05-widgets.png",
+      "platform": "ios",
+      "locale": "ko",
+      "display_type": "APP_IPHONE_67",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "07cc714190d639fea79fd7c78911f8c5be2420b24281f2d4b59e58f509110427",
+      "raw_source_sha256": "40d7ca8871d0f5fcafa25c2d7cb8d787c445709ef7d3f6b9f9487e59dcd7df23"
     }
   ]
 }

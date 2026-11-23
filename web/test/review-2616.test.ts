@@ -62,7 +62,11 @@ describe("device-locale formats with another UI language (#2613)", () => {
 describe("stored weather of another language", () => {
   it("is the newest valid snapshot", async () => {
     const place = PLACES[0];
-    const snap = (fetchedAt: string) => ({ fetchedAt }) as any;
+    const snap = (fetchedAt: string) =>
+      ({
+        fetchedAt,
+        daySummary: { date: "2026-09-29", text: "localized summary" },
+      }) as any;
     const stored = new Map<string, any>([
       [weatherKey(place, DEFAULT_UNITS, "ko"), snap("2026-09-28T16:00:00Z")],
       [weatherKey(place, DEFAULT_UNITS, "en"), snap("2026-09-29T11:59:00Z")],
@@ -74,6 +78,7 @@ describe("stored weather of another language", () => {
       read,
     );
     expect(found?.fetchedAt).toBe("2026-09-29T11:59:00Z");
+    expect(found?.daySummary).toBeUndefined();
     // The current language's own snapshot still wins.
     stored.set(
       weatherKey(place, DEFAULT_UNITS, "fr"),

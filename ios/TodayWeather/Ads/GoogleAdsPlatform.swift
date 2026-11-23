@@ -137,3 +137,19 @@ final class Once<Value> {
         action(value)
     }
 }
+
+extension AdsPlatform {
+    /// The plugin's `setAdRequest` with the #2945 rule.
+    func makeRequest() -> Request {
+        let (status, consent) = privacyState()
+        let personalized = AdRequestRule.personalized(status, consent)
+        MobileAds.shared.requestConfiguration.setPublisherFirstPartyIDEnabled(personalized)
+        let request = Request()
+        if !personalized {
+            let extras = Extras()
+            extras.additionalParameters = AdRequestRule.nonPersonalizedExtras
+            request.register(extras)
+        }
+        return request
+    }
+}

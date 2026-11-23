@@ -68,6 +68,59 @@ describe("static browser API transport", () => {
       "/geocode/v000903/coord/37.567,126.978",
     );
   });
+  it("reads advertised coordinate air separately and preserves the original AQI scale", async () => {
+    const { api, fetchCoordinateAirForecast } = await import("../src/api");
+    const retrievedAt = new Date().toISOString();
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    fetcher
+      .mockResolvedValueOnce(json({
+        ...world.response, airForecastAvailable: true,
+        location: { lat: -34.901, long: -56.165 },
+        timezone: { timezoneId: "America/Montevideo" },
+      }))
+      .mockResolvedValueOnce(json({
+        source: "openweather", attribution: "OpenWeather", retrievedAt,
+        rows: [{ at: future, pollutants: { pm25: 0, pm10: 12, o3: 0.03 }, indexes: { owm: 2, uaqi: 23 } }],
+      }));
+    const weather = await api<Weather>("/weather?lat=-34.901&lon=-56.165&airUnit=airnow");
+    const signal = new AbortController().signal;
+    expect(weather.timeZoneId).toBe("America/Montevideo");
+    expect(await fetchCoordinateAirForecast(weather, signal)).toEqual({
+      source: "openweather", attribution: "OpenWeather", retrievedAt,
+      rows: [{ at: future, pollutants: { pm25: 0, pm10: 12, o3: 0.03 }, indexes: { owm: 2 } }],
+    });
+    expect(fetcher.mock.calls[1][0]).toContain("/weather/v000903/coord/-34.901,-56.165/air-forecast");
+    expect(fetcher.mock.calls[1][1].cache).toBe("no-store");
+    await expect(fetchCoordinateAirForecast({ ...weather, mode: "demo" }, signal)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    fetcher.mockRejectedValueOnce(new TypeError("Offline"));
+    await expect(fetchCoordinateAirForecast(weather, signal)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(weather.current.temperature).not.toBeNull();
+  });
+  it("reads a viewed pollen date without fabricating missing species levels", async () => {
+    const { api, fetchCoordinatePollenForecast } = await import("../src/api");
+    const retrievedAt = new Date().toISOString();
+    fetcher
+      .mockResolvedValueOnce(json({
+        ...world.response, pollenForecastAvailable: true,
+        location: { lat: 35.681, long: 139.767 }, country: "JP",
+      }))
+      .mockResolvedValueOnce(json({
+        source: "google", attribution: "Google Maps", region: "JP", retrievedAt,
+        days: [{dateUtc: "2026-11-20", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
+      }));
+    const weather = await api<Weather>("/weather?lat=35.681&lon=139.767&airUnit=airnow");
+    const signal = new AbortController().signal;
+    expect(await fetchCoordinatePollenForecast(weather, signal)).toEqual({
+      source: "google", attribution: "Google Maps", region: "JP", retrievedAt,
+      days: [{dateUtc: "2026-11-20", plants: [{code: "JAPANESE_CEDAR"}, {code: "JAPANESE_CYPRESS", index: 0}], types: []}],
+    });
+    expect(fetcher.mock.calls[1][0]).toContain("/weather/v000903/coord/35.681,139.767/pollen-forecast");
+    expect(fetcher.mock.calls[1][1].cache).toBe("no-store");
+    await expect(fetchCoordinatePollenForecast({ ...weather, coordinatePollenForecastAvailable: undefined }, signal)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it("rejects invalid input and notification writes locally", async () => {
     fetcher.mockResolvedValue(json({}));
     const { api } = await import("../src/api");
@@ -137,4 +190,63 @@ describe("static browser API transport", () => {
     await expect(import("../src/api")).rejects.toThrow("direct");
     expect(fetcher).not.toHaveBeenCalled();
   });
+});
+
+it("loads warnings for the viewed coordinates and expires source coverage on read", async () => {
+  const { fetchCoordinateWarnings } = await import("../src/api");
+  const { warningsAt } = await import("@todayweather/core");
+  const now = Date.now();
+  const stamp = (offset: number) => new Date(now + offset).toISOString();
+  const place = { id: "barcelona", name: "Barcelona", address: "", country: "ES", lat: 41.3874, lon: 2.1686 };
+  const snapshot = {
+    location: {lat: place.lat, lon: place.lon, country: "ES"},
+    checkedAt: stamp(0),
+    sources: [{issuer: "AEMET", state: "current", asOf: stamp(-1000), freshUntil: stamp(60000)}],
+    warnings: [{issuer: "AEMET", id: "warning", event: "Lluvia", effectiveAt: stamp(-1000), expiresAt: stamp(90000)}],
+  };
+  fetcher.mockResolvedValueOnce(json(snapshot)).mockResolvedValueOnce(json(snapshot));
+  const result = await fetchCoordinateWarnings(place, new AbortController().signal);
+  expect(result?.warnings[0]?.id).toBe("warning");
+  const [url, init] = fetcher.mock.calls[0];
+  expect(new URL(url).pathname).toBe("/weather/v000903/coord/41.3874,2.1686/warnings");
+  expect(init.cache).toBe("no-store");
+  expect(warningsAt(result!, now + 60000).sources[0].state).toBe("unavailable");
+  expect(warningsAt(result!, now + 60000).warnings).toEqual([]);
+  expect(await fetchCoordinateWarnings({...place, lat: 40.4168}, new AbortController().signal)).toBeUndefined();
+});
+
+it("keeps exact warning coordinates through search, GPS and saved place restore", async () => {
+  const { api, fetchCoordinateWarnings } = await import("../src/api");
+  const { addPlace, defaultState, restoreState, weatherKey } = await import("../src/state");
+  const point = {lat: 41.2342678, lon: 1.5947185};
+  const view = {address: "Catalonia", country: "ES", location: {lat: point.lat, long: point.lon}};
+  const snapshot = {
+    location: {...point, country: "ES"},
+    checkedAt: new Date().toISOString(),
+    sources: [{issuer: "AEMET", state: "unavailable"}],
+    warnings: [],
+  };
+  fetcher.mockResolvedValueOnce(json(view)).mockResolvedValueOnce(json({
+    ...view, location: {lat: 41.234, long: 1.595},
+  })).mockResolvedValueOnce(json(snapshot)).mockResolvedValueOnce(json(snapshot)).mockResolvedValueOnce(json(snapshot));
+  const resolved = await api<import("@todayweather/core").Place>("/locations/resolve?q=Catalonia");
+  const gps = await api<import("@todayweather/core").Place>(`/locations/reverse?lat=${point.lat}&lon=${point.lon}`);
+  expect(resolved.lat).toBe(41.234);
+  expect(gps.lon).toBe(1.595);
+  for (const place of [resolved, gps]) {
+    const state = restoreState({getItem: () => JSON.stringify({...defaultState(), places: [place]})});
+    const result = await fetchCoordinateWarnings(state.places[0], new AbortController().signal);
+    expect(result?.location).toMatchObject(point);
+  }
+  const legacyGps = {...gps, current: true};
+  delete legacyGps.warningLocation;
+  const legacy = restoreState({getItem: () => JSON.stringify({...defaultState(), places: [legacyGps]})});
+  const updated = addPlace(legacy, {...gps, current: true});
+  expect(updated.selectedId).toBe(legacyGps.id);
+  expect(weatherKey(updated.places[0], DEFAULT_UNITS)).toBe(weatherKey(legacyGps, DEFAULT_UNITS));
+  const current = await fetchCoordinateWarnings(updated.places[0], new AbortController().signal);
+  expect(current?.location).toMatchObject(point);
+  for (const [url] of fetcher.mock.calls.slice(2)) {
+    expect(new URL(url).pathname).toBe("/weather/v000903/coord/41.2342678,1.5947185/warnings");
+  }
 });

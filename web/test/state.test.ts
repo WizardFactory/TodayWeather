@@ -65,6 +65,11 @@ describe("untrusted persisted weather", () => {
     const key = weatherKey(w.location, w.units),
       value = { weather: w, savedAt: now };
     expect(validateSnapshot(value, key, now)).toEqual(w);
+    expect(validateSnapshot(
+      { ...value, weather: { ...w, coordinateAirForecastAvailable: true, coordinatePollenForecastAvailable: true } },
+      key,
+      now,
+    )).toEqual(w);
     expect(
       validateSnapshot(
         { ...value, weather: { ...w, airSummary: "제공사 요약" } },
@@ -72,6 +77,45 @@ describe("untrusted persisted weather", () => {
         now,
       )?.airSummary,
     ).toBe("제공사 요약");
+    expect(
+      validateSnapshot(
+        {
+          ...value,
+          weather: {
+            ...w,
+            coordinateAirForecastAvailable: true,
+            coordinatePollenForecastAvailable: true,
+            daySummary: { date: "2026-02-30", text: "입춘" },
+          },
+        },
+        key,
+        now,
+      ),
+    ).toEqual(w);
+    // A damaged observation time is dropped; a valid one and chartHourly are kept.
+    expect(
+      validateSnapshot(
+        { ...value, weather: { ...w, liveAt: "2026-09-23T09:15" } },
+        key,
+        now,
+      )?.liveAt,
+    ).toBe("2026-09-23T09:15");
+    for (const liveAt of ["2026-09-23T09:99", 930, "0930"]) {
+      const kept = validateSnapshot(
+        { ...value, weather: { ...w, liveAt } },
+        key,
+        now,
+      );
+      expect(kept).toBeDefined();
+      expect(kept?.liveAt).toBeUndefined();
+    }
+    expect(
+      validateSnapshot(
+        { ...value, weather: { ...w, chartHourly: [{}] } },
+        key,
+        now,
+      ),
+    ).toBeUndefined();
     for (const savedAt of [
       undefined,
       NaN,

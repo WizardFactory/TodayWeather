@@ -36,6 +36,17 @@ struct WeatherPageContent {
         self.photo = scope.photoTheme ? photo : nil
     }
 
+    /// Anchor follows visible optional sections in the outer vertical scroll. The chart block can exist without data.
+    var nativeAnchor: WeatherBlock? {
+        if type == .short {
+            guard hourly != nil else { return nil }
+            return page.hourlyAqi == nil ? .chart : .hourlyAqi
+        }
+        guard daily != nil else { return nil }
+        if page.dayDetails != nil { return .dayDetails }
+        return page.dailyAqi == nil ? .chart : .dailyAqi
+    }
+
     /// The blocks as the references number them: 0 the header block, 1 the chart, then each card and the attribution.
     var blocks: [WeatherBlock] {
         var list: [WeatherBlock] = [.header, .chart]
@@ -63,6 +74,36 @@ struct WeatherPageActions {
     var perform: (PageAction) -> Void = { _ in }
 }
 
+/// One forecast visit qualifies after a deliberate forward drag and the vertical viewport reaches a detail section.
+struct ForecastDetailRead {
+    private var forwardDrag = false
+    private var reachedDetails = false
+    private var reported = false
+
+    mutating func drag(_ translation: CGSize) -> Bool {
+        if -translation.height > abs(translation.width) { forwardDrag = true }
+        return take()
+    }
+
+    /// Count a readable portion of the first actual detail block. A short Daily page can reach its
+    /// final scroll offset while much of the chart is still visible above the details.
+    static func reachesDetail(height: CGFloat, viewport: CGRect?) -> Bool {
+        guard height > 0, let viewport else { return false }
+        return viewport.maxY >= min(44, height)
+    }
+
+    mutating func observeDetail(_ reached: Bool) -> Bool {
+        reachedDetails = reached
+        return take()
+    }
+
+    private mutating func take() -> Bool {
+        guard forwardDrag, reachedDetails, !reported else { return false }
+        reported = true
+        return true
+    }
+}
+
 /// S03 (Hourly) or S04 (Daily) as tab-forecast.html and tab-dailyforecast.html draw them (#2957): the first card with
 /// the header block (photo, arrows, temperature, sky image, summary) and the chart, then the cards and the data-source
 /// notice, on the theme's page color. The shell's header bar lies over the header block's top. Port of the Android
@@ -77,9 +118,15 @@ struct WeatherPageView: View {
     @Environment(\.shellInsets) private var shellInsets
     @Environment(\.sizeCategory) private var sizeCategory
 
+    @Environment(\.forecastChartRead) private var chartRead
+    @State private var reading = ForecastDetailRead()
+
+    private var tab: ShellTab { content.type == .short ? .forecast : .dailyforecast }
+
     var body: some View {
         let colors = WeatherColors.of(theme, daily: content.type == .mid)
         let barHeight = ShellMetrics.headerHeight + shellInsets.top
+        let firstDetail = content.nativeAnchor == nil ? nil : content.blocks.dropFirst(2).first { $0 != .attribution }
         let stack = VStack(spacing: 0) {
             VStack(spacing: 0) {
                 WeatherBlockView(block: .header, content: content, theme: theme, actions: actions)
@@ -90,9 +137,20 @@ struct WeatherPageView: View {
             .background(colors.card.color)
             .cardShadow()
             Spacer().frame(height: WeatherMetrics.gap)
+            if content.nativeAnchor == .chart {
+                ForecastNativeSlot(tab: tab, theme: theme)
+            }
             ForEach(content.blocks.dropFirst(2), id: \.self) { block in
                 WeatherBlockView(block: block, content: content, theme: theme, actions: actions)
+                    .onGeometryChange(for: Bool?.self) { geometry in
+                        guard block == firstDetail else { return nil }
+                        return ForecastDetailRead.reachesDetail(height: geometry.size.height,
+                            viewport: geometry.bounds(of: .scrollView(axis: .vertical)))
+                    } action: { reached in
+                        if let reached, reading.observeDetail(reached) { chartRead(tab) }
+                    }
                 if block != .attribution { Spacer().frame(height: WeatherMetrics.gap) }
+                if block == content.nativeAnchor { ForecastNativeSlot(tab: tab, theme: theme) }
             }
             trackingNotice
         }
@@ -102,12 +160,18 @@ struct WeatherPageView: View {
                     stack.padding(.top, -barHeight)
                 }
                     // Keep the hero under the translucent bar and the pull indicator below it.
+                    .simultaneousGesture(DragGesture(minimumDistance: 12).onChanged { drag in
+                        if firstDetail != nil, reading.drag(drag.translation) { chartRead(tab) }
+                    })
                     .scrollClipDisabled()
                     .padding(.top, barHeight)
                     .refreshable { await actions.refresh() }
             } else {
                 stack.frame(maxHeight: .infinity, alignment: .top)
             }
+        }
+        .onChange(of: content.visit) {
+            reading = ForecastDetailRead()
         }
         // Not into the safe area: the shell lays the page out under its own status bar color.
         .background(colors.page.color, ignoresSafeAreaEdges: [])
@@ -330,7 +394,8 @@ private struct MainBox: View {
         guard let hero = page.hero else { return 0 }
         let big = metrics.bigFontSize
         let temp = CssLine.metrics([CssRun(text: hero.temperature, size: big)])
-        let lines = SummaryLines.lines(hero.summary, size: s(21), width: width).count
+        let summaryLines = SummaryLines.lines(hero.summary, size: s(21), width: width).count
+        let lines = (hero.rankedSummary ? min(2, summaryLines) : summaryLines)
             + (hero.summaryAir.map { SummaryLines.lines($0, size: s(21), width: width).count } ?? 0)
         return temp.ascent + temp.descent + CGFloat(lines) * s(24)
     }
@@ -344,7 +409,17 @@ private struct MainBox: View {
                             color: colors.headerText, outline: colors.headerOutline, raise: [2: WeatherMetrics.superRaise(big)])
                     ThemeImage(image: hero.sky, theme: theme, height: metrics.bigImageSize)
                 }
-                SummaryLines(text: hero.summary, colors: colors, s: s, width: width)
+                if hero.rankedSummary {
+                    Text(verbatim: hero.summary)
+                        .font(.system(size: s(21)))
+                        .foregroundStyle(colors.headerText.color)
+                        .outlined(colors.headerOutline)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .accessibilityLabel(Text(verbatim: hero.summary))
+                } else {
+                    SummaryLines(text: hero.summary, colors: colors, s: s, width: width)
+                }
                 if let air = hero.summaryAir {
                     SummaryLines(text: air, colors: colors, s: s, width: width)
                         .contentShape(Rectangle())

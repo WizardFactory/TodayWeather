@@ -8,6 +8,7 @@
 
 var http = require('../httpClient');
 var observation = require('../observation');
+var forecastRows = require('../forecastRows');
 
 var URL = 'https://api.openweathermap.org/data/2.5/air_pollution';
 var CODES = {pm2_5: 'pm25', pm10: 'pm10', o3: 'o3', no2: 'no2', so2: 'so2', co: 'co'};
@@ -17,8 +18,7 @@ function key(keyString) {
     return Array.isArray(keys) && keys[0] ? keys[0].key : undefined;
 }
 
-function parse(body) {
-    var item = Array.isArray(body.list) ? body.list[0] : undefined;
+function parse(item) {
     if (!item || typeof item !== 'object' || !item.components || typeof item.components !== 'object' ||
         !observation.finite(item.dt)) {
         return undefined;
@@ -50,6 +50,14 @@ module.exports = {
     isConfigured: function (keyString) {
         return http.isValidKey(key(keyString));
     },
+    fetchForecast: function (gCoord, now, deps, callback) {
+        var range = forecastRows.period(now, 96);
+        var url = URL + '/forecast?lat=' + Number(gCoord.lat) + '&lon=' + Number(gCoord.lon) +
+            '&appid=' + encodeURIComponent(key(deps.keyString));
+        http.request(deps.axios, {method: 'get', url: url, timeoutMs: deps.timeoutMs}, function (result) {
+            callback(forecastRows.read(http, result, 'list', parse, range));
+        });
+    },
     fetchCurrent: function (gCoord, deps, callback) {
         var url = URL + '?lat=' + Number(gCoord.lat) + '&lon=' + Number(gCoord.lon) +
             '&appid=' + encodeURIComponent(key(deps.keyString));
@@ -58,7 +66,7 @@ module.exports = {
                 if (!result.ok) {
                     return {outcome: 'failed', kind: result.kind, reason: result.reason};
                 }
-                var obs = parse(result.body);
+                var obs = parse(Array.isArray(result.body.list) ? result.body.list[0] : undefined);
                 if (!obs) {
                     return {outcome: 'failed', kind: 'invalid-body', reason: 'invalid-body'};
                 }

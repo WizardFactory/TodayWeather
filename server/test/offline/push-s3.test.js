@@ -518,6 +518,32 @@ runner.test('cold restore bounds geocoding and fails readiness when resolution f
         })
     );
 });
+runner.test('restore retries failed regions without resealing or reopening writes', async function () {
+    var store = memory(), initial = await registry(store);
+    await initial.upsert([record(), record({ uuid: 'device2', fcmToken: 'token2', location: { lat: 38, long: 127 } })]);
+    await initial.settled();
+    var retries = 0, healthyCalls = 0;
+    var candidate = new (feature('registry').Registry)({
+        storage: store,
+        resolve: async function (location) {
+            if (location.lat === 37) healthyCalls++;
+            else if (retries < 3) throw new (feature('errors').RegionError)('unavailable', true);
+            return { zones: ['37'] };
+        }
+    });
+    var before = store.writes;
+    await candidate.init(async function (unresolved) {
+        assert.equal(unresolved, 1);
+        assert.equal(candidate.ready, false);
+        await assert.rejects(candidate.upsert([record()]), /not ready/);
+        retries++;
+    });
+    assert.equal(retries, 3);
+    assert.equal(healthyCalls, 1);
+    assert.equal(store.writes - before, 2);
+    assert.equal(candidate.ready, true);
+    assert.equal(candidate.records.size, 2);
+});
 runner.test(
     'late region row expands an existing warning without resending old recipients',
     async function () {

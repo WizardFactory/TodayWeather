@@ -1,4 +1,5 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
 import SwiftUI
@@ -177,21 +178,31 @@ struct ImageDiff {
 
     nonisolated(unsafe) static let directory = FileManager.default.temporaryDirectory.appendingPathComponent("chart-compare", isDirectory: true)
 
-    init(native: Bitmap, reference: Bitmap) {
+    private(set) var blurSeconds = 0.0
+    private(set) var compareSeconds = 0.0
+
+    init(native: Bitmap, reference: Bitmap, measure: Bool = false) {
         self.native = native
         self.reference = reference
         heightDifference = native.height - reference.height
         let w = min(native.width, reference.width), h = min(native.height, reference.height)
+        let blurStart = measure ? ProcessInfo.processInfo.systemUptime : 0
         let a = Self.blur(native, w, h), b = Self.blur(reference, w, h)
+        let compareStart = measure ? ProcessInfo.processInfo.systemUptime : 0
+        blurSeconds = compareStart - blurStart
         var strongCount = 0, sum = 0
         var mask = [Bool](repeating: false, count: w * h)
         for y in 0..<h {
+            let nativeRow = y * native.width * 4
+            let referenceRow = y * reference.width * 4
             for x in 0..<w {
                 let i = y * w + x
+                let nativePixel = nativeRow + x * 4
+                let referencePixel = referenceRow + x * 4
                 var blurred = 0, plain = 0
                 for c in 0..<3 {
-                    blurred = max(blurred, abs(a[i * 3 + c] - b[i * 3 + c]))
-                    plain = max(plain, abs(Int(native.pixels[(y * native.width + x) * 4 + c]) - Int(reference.pixels[(y * reference.width + x) * 4 + c])))
+                    blurred = max(blurred, abs(Int(a[i * 3 + c]) - Int(b[i * 3 + c])))
+                    plain = max(plain, abs(Int(native.pixels[nativePixel + c]) - Int(reference.pixels[referencePixel + c])))
                 }
                 if blurred > 64 { strongCount += 1; mask[i] = true }
                 sum += plain
@@ -200,33 +211,56 @@ struct ImageDiff {
         strong = w * h == 0 ? 1 : Double(strongCount) / Double(w * h)
         mean = w * h == 0 ? 255 : Double(sum) / Double(w * h)
         self.mask = mask
+        if measure { compareSeconds = ProcessInfo.processInfo.systemUptime - compareStart }
     }
 
-    /// 3x3 box blur of the RGB channels over the common area (edges use the available neighbors).
-    private static func blur(_ image: Bitmap, _ w: Int, _ h: Int) -> [Int] {
-        var out = [Int](repeating: 0, count: w * h * 3)
+    /// Sum the vertical neighbors once per column and reuse them for up to three horizontal neighbors.
+    /// Divide only after combining both axes to preserve the original integer truncation.
+    private static func blur(_ image: Bitmap, _ w: Int, _ h: Int) -> [UInt8] {
+        guard w > 0, h > 0 else { return [] }
+        var out = [UInt8](repeating: 0, count: w * h * 3)
+        var columns = [Int](repeating: 0, count: w * 3)
+        let stride = image.width * 4
+
         for y in 0..<h {
+            let row = y * stride
+            let hasAbove = y > 0
+            let hasBelow = y + 1 < h
+            let rows = 1 + (hasAbove ? 1 : 0) + (hasBelow ? 1 : 0)
+
             for x in 0..<w {
-                var s = [0, 0, 0], n = 0
-                for dy in -1...1 {
-                    for dx in -1...1 {
-                        let xx = x + dx, yy = y + dy
-                        guard xx >= 0, yy >= 0, xx < w, yy < h else { continue }
-                        let p = (yy * image.width + xx) * 4
-                        s[0] += Int(image.pixels[p]); s[1] += Int(image.pixels[p + 1]); s[2] += Int(image.pixels[p + 2]); n += 1
-                    }
+                let pixel = row + x * 4
+                for c in 0..<3 {
+                    let i = pixel + c
+                    var sum = Int(image.pixels[i])
+                    if hasAbove { sum += Int(image.pixels[i - stride]) }
+                    if hasBelow { sum += Int(image.pixels[i + stride]) }
+                    columns[x * 3 + c] = sum
                 }
-                let o = (y * w + x) * 3
-                out[o] = s[0] / n; out[o + 1] = s[1] / n; out[o + 2] = s[2] / n
+            }
+
+            for x in 0..<w {
+                let hasLeft = x > 0
+                let hasRight = x + 1 < w
+                let count = rows * (1 + (hasLeft ? 1 : 0) + (hasRight ? 1 : 0))
+                let column = x * 3
+                let output = (y * w + x) * 3
+                for c in 0..<3 {
+                    let i = column + c
+                    var sum = columns[i]
+                    if hasLeft { sum += columns[i - 3] }
+                    if hasRight { sum += columns[i + 3] }
+                    out[output + c] = UInt8(sum / count)
+                }
             }
         }
         return out
     }
 
     /// Writes the render and a difference image (reference in grey, strong differences in red).
-    func write(_ name: String) throws {
-        try FileManager.default.createDirectory(at: Self.directory, withIntermediateDirectories: true)
-        Self.png(native.image, Self.directory.appendingPathComponent("\(name)-native.png"))
+    func write(_ name: String, directory: URL = Self.directory) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        Self.png(native.image, directory.appendingPathComponent("\(name)-native.png"))
         let w = min(native.width, reference.width), h = min(native.height, reference.height)
         var data = [UInt8](repeating: 255, count: w * h * 4)
         for y in 0..<h {
@@ -243,7 +277,7 @@ struct ImageDiff {
                                space: CGColorSpace(name: CGColorSpace.sRGB)!,
                                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue), provider: provider,
                                decode: nil, shouldInterpolate: false, intent: .defaultIntent) {
-            Self.png(image, Self.directory.appendingPathComponent("\(name)-diff.png"))
+            Self.png(image, directory.appendingPathComponent("\(name)-diff.png"))
         }
     }
 
@@ -251,5 +285,164 @@ struct ImageDiff {
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else { return }
         CGImageDestinationAddImage(dest, image, nil)
         CGImageDestinationFinalize(dest)
+    }
+}
+
+
+struct ImageDiffTests {
+    @Test func preservesComparisonMetrics() throws {
+        for (nativeWidth, nativeHeight, referenceWidth, referenceHeight) in [
+            (1, 1, 1, 1), (1, 5, 2, 4), (5, 1, 4, 2), (2, 2, 2, 2),
+            (2, 5, 5, 3), (8, 7, 6, 9), (6, 9, 8, 7),
+        ] {
+            let native = try bitmap(width: nativeWidth, height: nativeHeight) { x, y, channel in
+                UInt8(truncatingIfNeeded: x * 61 + y * 89 + channel * 47)
+            }
+            let reference = try bitmap(width: referenceWidth, height: referenceHeight) { x, y, channel in
+                UInt8(truncatingIfNeeded: x * 133 + y * 29 + channel * 81 + 75)
+            }
+            let result = ImageDiff(native: native, reference: reference)
+            let width = min(native.width, reference.width)
+            let height = min(native.height, reference.height)
+            var mask: [Bool] = []
+            var sum = 0
+            for y in 0..<height {
+                for x in 0..<width {
+                    var strong = false
+                    var plain = 0
+                    for channel in 0..<3 {
+                        func value(_ image: Bitmap, _ x: Int, _ y: Int) -> Int {
+                            Int(image.pixels[(y * image.width + x) * 4 + channel])
+                        }
+                        var a = 0, b = 0, count = 0
+                        for dy in -1...1 {
+                            for dx in -1...1 {
+                                let xx = x + dx, yy = y + dy
+                                guard (0..<width).contains(xx), (0..<height).contains(yy) else { continue }
+                                a += value(native, xx, yy)
+                                b += value(reference, xx, yy)
+                                count += 1
+                            }
+                        }
+                        strong = strong || abs(a / count - b / count) > 64
+                        plain = max(plain, abs(value(native, x, y) - value(reference, x, y)))
+                    }
+                    mask.append(strong)
+                    sum += plain
+                }
+            }
+            try #require(result.mask == mask)
+            try #require(result.strong == Double(mask.filter { $0 }.count) / Double(width * height))
+            try #require(result.mean == Double(sum) / Double(width * height))
+            try #require(result.heightDifference == nativeHeight - referenceHeight)
+        }
+
+        // A two-pixel edge uses both samples and truncates the average.
+        let reference = try bitmap(width: 2, height: 1) { _, _, _ in 0 }
+        for delta: UInt8 in [129, 130] {
+            let native = try bitmap(width: 2, height: 1) { x, _, _ in x == 0 ? delta : 0 }
+            let diff = ImageDiff(native: native, reference: reference)
+            try #require(diff.mask == [delta == 130, delta == 130])
+            try #require(diff.mean == Double(delta) / 2)
+        }
+    }
+
+    private func bitmap(width: Int, height: Int, pixel: (Int, Int, Int) -> UInt8) throws -> Bitmap {
+        var data = Data()
+        for y in 0..<height {
+            for x in 0..<width {
+                for channel in 0..<3 { data.append(pixel(x, y, channel)) }
+                data.append(255)
+            }
+        }
+        let provider = try #require(CGDataProvider(data: data as CFData))
+        let image = try #require(CGImage(
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+        ))
+        return Bitmap(image)
+    }
+}
+
+/// Only the benchmark assigns a mode. Ordinary screenshot tests keep their diagnostic output.
+struct ScreenshotMeasurement {
+    private static let environment = ProcessInfo.processInfo.environment
+    private static let mode = environment["TW_SCREENSHOT_CAPTURE"]
+    private static let profiling = mode != nil && environment["TW_SCREENSHOT_TIMING"] != "off"
+
+    let name: String
+    var referenceFile = ""
+    private var renderSeconds = 0.0
+    private var decodeSeconds = 0.0
+
+    init(_ name: String) { self.name = name }
+
+    mutating func render(_ operation: () -> Bitmap) -> Bitmap {
+        let start = Self.now
+        let value = operation()
+        renderSeconds += Self.now - start
+        return value
+    }
+
+    mutating func prepare(_ operation: () throws -> Bitmap) rethrows -> Bitmap {
+        let start = Self.now
+        let value = try operation()
+        decodeSeconds += Self.now - start
+        return value
+    }
+
+    mutating func reference(_ file: String) throws -> Bitmap {
+        referenceFile = file
+        return try prepare { try References.image(file) }
+    }
+
+    private static var now: Double { profiling ? ProcessInfo.processInfo.systemUptime : 0 }
+
+    func compare(_ rendered: Bitmap, _ reference: Bitmap, limit: JSONValue?, margin: JSONValue?,
+                 hidden: Int = 0) throws -> ImageDiff {
+        let native = Self.environment["TW_SCREENSHOT_MISMATCH"] == name ? rendered.top(1) : rendered
+        let diff = ImageDiff(native: native, reference: reference, measure: Self.profiling)
+        let height = diff.heightDifference - hidden
+        func threshold(_ key: String) -> Double {
+            (limit?[key]?.numberValue?.double ?? .nan) + (margin?[key]?.numberValue?.double ?? .nan)
+        }
+        let widthMatches = native.width == reference.width
+        let strongPasses = diff.strong <= threshold("strong")
+        let meanPasses = diff.mean <= threshold("mean")
+        let heightPasses = Double(abs(height)) <= threshold("heightDifference")
+        let passed = limit != nil && widthMatches && strongPasses && meanPasses && heightPasses
+        let start = Self.now
+        if Self.mode != "failures" || !passed {
+            let directory = Self.environment["TW_SCREENSHOT_OUTPUT"].map { FileManager.default.temporaryDirectory.appendingPathComponent($0, isDirectory: true) }
+            try diff.write(name, directory: directory ?? ImageDiff.directory)
+        }
+        let writeSeconds = Self.now - start
+        if Self.profiling {
+            func digest<T>(_ bytes: [T]) -> String {
+                bytes.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
+            }
+            let hashesStart = Self.now
+            let hashes = [digest(native.pixels), digest(reference.pixels), digest(diff.mask)]
+            let record: [String: Any] = [
+                "name": name, "reference": referenceFile, "passed": passed, "strong": diff.strong, "mean": diff.mean,
+                "height": height, "nativeSize": [native.width, native.height], "referenceSize": [reference.width, reference.height],
+                "hashes": hashes, "render": renderSeconds, "decode": decodeSeconds,
+                "blur": diff.blurSeconds, "compare": diff.compareSeconds, "png": writeSeconds,
+                "hash": Self.now - hashesStart,
+            ]
+            let data = try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys])
+            print("TW-SCREENSHOT " + String(decoding: data, as: UTF8.self))
+        }
+        if limit == nil {
+            Issue.record("no tolerance for \(name): strong \(diff.strong) mean \(diff.mean) height \(height)")
+        } else {
+            #expect(widthMatches, "\(name) width \(native.width) vs \(reference.width)")
+            #expect(strongPasses, "\(name) strong \(diff.strong)")
+            #expect(meanPasses, "\(name) mean \(diff.mean)")
+            #expect(heightPasses, "\(name) height \(height)")
+        }
+        return diff
     }
 }

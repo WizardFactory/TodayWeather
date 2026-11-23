@@ -92,6 +92,29 @@ android {
     }
 }
 
+// Robolectric's Android runtimes (one per SDK level the tests name in @Config) come through Gradle, with its
+// retries and cache, and the tests read them offline. Left to itself Robolectric downloads them from Maven Central
+// while the tests run, and a refused download fails every Robolectric class (IOException in MavenArtifactFetcher).
+// The versions are those Robolectric 4.17 (gradle/libs.versions.toml) asks for; without one, the tests of its SDK
+// level fail naming the missing file. Each version resolves on its own: together Gradle would keep only the newest.
+val robolectricRuntimes = listOf(
+    "14-robolectric-10818077-i7", // SDK 34
+    "7.0.0_r1-robolectric-r1-i7", // SDK 24
+).map { version ->
+    configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:$version"))
+        .apply { isTransitive = false }
+}
+val robolectricRuntimeDir = layout.buildDirectory.dir("robolectric-runtimes")
+val copyRobolectricRuntimes = tasks.register<Copy>("copyRobolectricRuntimes") {
+    from(robolectricRuntimes)
+    into(robolectricRuntimeDir)
+}
+tasks.withType<Test>().configureEach {
+    dependsOn(copyRobolectricRuntimes)
+    systemProperty("robolectric.offline", "true")
+    systemProperty("robolectric.dependency.dir", robolectricRuntimeDir.get().asFile.absolutePath)
+}
+
 // A release package refuses Google's sample IDs, as client/scripts/build-release.mjs does.
 val releaseAdsMissing = listOf("TW_ADMOB_APP_ID_ANDROID" to admobAppId, "TW_ADMOB_NATIVE_ANDROID" to admobNative,
     "TW_ADMOB_INTERSTITIAL_ANDROID" to admobInterstitial)

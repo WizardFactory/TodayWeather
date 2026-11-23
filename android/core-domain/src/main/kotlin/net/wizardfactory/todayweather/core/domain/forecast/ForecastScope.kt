@@ -1,5 +1,10 @@
 package net.wizardfactory.todayweather.core.domain.forecast
 
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -56,6 +61,7 @@ class ForecastScope(
     var chartShortDetailHeight: Double? = null; private set
     var chartMidHeight: Double? = null; private set
     var showDetailWeather: Boolean = false; private set
+    var summaryExpiresAt: Long? = null; private set
     var summary: JsonElement? = null; private set
 
     /** Null when deleted: `delete $scope.summaryAir` for a place without one. */
@@ -83,7 +89,12 @@ class ForecastScope(
     }
 
     /** `applyWeatherData` for the selected place's record ([city] null: no place at the selected index). */
-    fun apply(city: JsonObject?, hasPush: Boolean) {
+    fun apply(city: JsonObject?, hasPush: Boolean, now: Long = System.currentTimeMillis()) {
+        // Never show a previous place's dated summary while applying an incomplete replacement.
+        if (summaryExpiresAt != null) {
+            summary = null
+            summaryExpiresAt = null
+        }
         if (city == null || city["address"] == JsonNull) return
         val dayCharts = city["dayChart"] as? JsonArray ?: return
         val firstDay = dayCharts.firstOrNull()
@@ -151,8 +162,18 @@ class ForecastScope(
         showDetailWeather = true
         if (!isObject(currentWeather)) return
         val cw = currentWeather as? JsonObject
-        summary = if (Js.truthy(cw?.get("summaryWeather"))) cw?.get("summaryWeather") else cw?.get("summary")
-        summaryAir = cw?.get("summaryAir")?.takeIf { Js.truthy(it) }
+        val marked = cw?.containsKey("summaryForDate") == true
+        val expiry = if (marked) summaryExpiry(cw.get("summaryForDate"), now) else null
+        val text = cw?.get("summary") as? JsonPrimitive
+        if (expiry != null && city["country"] == JsonPrimitive("KR") && city["source"] == JsonPrimitive("KMA") &&
+            text?.isString == true && text.content.isNotBlank()) {
+            summary = text
+            summaryAir = null
+            summaryExpiresAt = expiry
+        } else {
+            summary = cw?.get("summaryWeather")?.takeIf { Js.truthy(it) } ?: cw?.get("summary")?.takeUnless { marked }
+            summaryAir = cw?.get("summaryAir")?.takeIf { Js.truthy(it) }
+        }
         diffTempStr = ForecastText.diffTodayYesterday(cw?.get("t1h"),
             cw?.get("yesterday")?.takeIf { Js.truthy(it) }?.let { it as? JsonObject ?: JsonObject(emptyMap()) }, fahrenheit, yesterday)
         if (type == ForecastType.SHORT) {
@@ -168,6 +189,20 @@ class ForecastScope(
         })
         // A complete apply scrolls both charts to today's position 300 ms later (`getTodayPosition`), the same data too.
         scrolls++
+    }
+
+    private fun summaryExpiry(marker: JsonElement?, now: Long): Long? {
+        val zone = TimeZone.getTimeZone("Asia/Seoul")
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = zone }
+        if (marker != JsonPrimitive(formatter.format(Date(now)))) return null
+        return Calendar.getInstance(zone, Locale.US).apply {
+            timeInMillis = now
+            add(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
     }
 
     /**

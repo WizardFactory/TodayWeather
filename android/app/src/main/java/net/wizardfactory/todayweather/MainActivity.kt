@@ -152,11 +152,12 @@ class MainActivity : ComponentActivity() {
             combine(opened.consent.allowed, opened.adConfig.policy) { consent, config -> consent to config }
                 .collectLatest { (consent, config) ->
                     val allow = consent && config.ready && config.policy.enabled
-                    nativeAds.setEnabled(false)
+                    val delayMs = adDelayRemaining(config)
+                    refreshNativeEligibility()
                     interstitial.setEnabled(false)
                     if (allow) {
-                        delay((opened.adStart + config.policy.delaySeconds * 1000L - SystemClock.elapsedRealtime()).coerceAtLeast(0L))
-                        nativeAds.setEnabled(config.nativeEnabled)
+                        delay(delayMs)
+                        refreshNativeEligibility()
                         interstitial.setEnabled(config.interstitialEnabled)
                     }
                 }
@@ -167,7 +168,7 @@ class MainActivity : ComponentActivity() {
             opened.consent.start(this@MainActivity)
         }
         val privacy = PrivacyActions(app.analytics.choice, app.analytics::setCollectionEnabled) { onUnavailable ->
-            opened.consent.openPrivacyOptions(this, onUnavailable)
+            opened.consent.openPrivacyOptions(this, ::refreshNativeEligibility, onUnavailable)
         }
         setContent {
             val state by app.appState.state.collectAsState()
@@ -209,7 +210,7 @@ class MainActivity : ComponentActivity() {
                 }
                 AppContent(s, entries, loading, retry, session, host, BuildConfig.VERSION_NAME, onExit = ::finish, settings = opened.settings,
                     handoffs = handoffs, nation = opened.nation, privacy = privacy, nativeAd = { tab ->
-                        rememberNativeAdSlot(nativeAds, compact = tab != Tab.LOCATIONS, dark = Theme.of(s.settings.theme) == Theme.DARK)
+                        rememberNativeAdSlot(nativeAds, tab, dark = Theme.of(s.settings.theme) == Theme.DARK)
                     },
                     onVisit = interstitial::recordVisible, onRepeatVisit = interstitial::handleTap,
                     onScreen = app.analytics::screen, startTab = if (afterStart) Tab.HOURLY else null,
@@ -220,8 +221,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun adDelayRemaining(config: RemoteBannerConfig.State): Long =
+        (opened.adStart + config.policy.delaySeconds * 1000L - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
+
+    private fun refreshNativeEligibility() {
+        val config = opened.adConfig.policy.value
+        nativeAds.setEnabled(!isFinishing && !isDestroyed && opened.consent.nativeAllowed &&
+            config.ready && config.policy.enabled && config.nativeEnabled && adDelayRemaining(config) == 0L)
+    }
+
     override fun onResume() {
         super.onResume()
+        refreshNativeEligibility()
+        nativeAds.setForeground(true)
         WidgetAccess.mainAppOpened(this)
         // Cordova's `resume`: each return to the foreground reloads the selected place if the gate allows.
         if (resumedBefore) opened.session.reload(WeatherSession.Sender.RESUME)
@@ -230,6 +242,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        nativeAds.setForeground(false)
         app.foreground.resumed = false
         super.onPause()
     }
@@ -677,7 +690,7 @@ private fun screenName(route: String): String = when {
 }
 
 /** The device's languages for `Accept-Language`, as the WebView sent them. */
-private fun languages(): List<String> = LocaleListCompat.getAdjustedDefault().toLanguageTags().split(",").filter { it.isNotEmpty() }
+internal fun languages(): List<String> = LocaleListCompat.getAdjustedDefault().toLanguageTags().split(",").filter { it.isNotEmpty() }
 
 /** O06 of an app open: [due] once, then its answer (OK enables the migrated alerts). */
 interface AlertIntro {

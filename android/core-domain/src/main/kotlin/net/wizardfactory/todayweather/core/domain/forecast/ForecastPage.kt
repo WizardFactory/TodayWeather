@@ -50,7 +50,7 @@ sealed interface PageAction {
 data class PollenRow(val labelKey: String, val gradeLabel: String, val infoKey: String, val adviceKey: String)
 
 /** The header block's weather (`.main-box`): temperature, sky image and the summary lines. */
-data class Hero(val temperature: String, val sky: PageImage, val summary: String, val summaryAir: String?)
+data class Hero(val temperature: String, val sky: PageImage, val summary: String, val summaryAir: String?, val rankedSummary: Boolean = false)
 
 /** A cell of an AQI table: heading, the sentiment glyph in the grade color, the grade text and a value under it. */
 data class AqiCell(
@@ -108,7 +108,8 @@ class ForecastPage(private val scope: ForecastScope, private val units: PageUnit
     val hero: Hero? = if (!Js.truthy(scope.currentWeather)) null else Hero(
         temperature = collapse(scope.temp(cw?.get("t1h"))),
         sky = PageImage(true, Js.display(cw?.get("skyIcon")) + ".png"),
-        summary = collapse(Js.display(scope.summary)),
+        rankedSummary = scope.summaryExpiresAt != null,
+        summary = if (scope.summaryExpiresAt != null) Js.display(scope.summary) else collapse(Js.display(scope.summary)),
         summaryAir = scope.summaryAir?.takeIf { Js.truthy(it) }?.let { collapse(Js.display(it)) },
     )
 

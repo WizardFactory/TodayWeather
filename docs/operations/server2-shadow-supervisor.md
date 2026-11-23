@@ -29,7 +29,7 @@ a bundle is not qualification approval.
 
 ## Qualification S3 allowance
 
-The main `server2` executable recognizes the optional `SERVER2_SHADOW_S3_LIMITS=reads,writes,put_bytes` setting. Values are nonnegative decimal integers. Maximum per-process values are 900,000 reads, 900,000 write/list attempts and 2 GiB of attempted PUT bodies. Missing leaves ordinary runtime behavior unchanged; an empty, malformed or excessive value fails startup. The coordinator must supply a disjoint precharged allocation for each process, not the maximum on each restart. Aggregate candidate allocations and the separate operator/export/cleanup reserve must fit the run's ceilings.
+The main `server2` executable recognizes the optional `SERVER2_SHADOW_S3_LIMITS=reads,writes,put_bytes` setting. Values are nonnegative decimal integers. Maximum per-process values are 1,740,000 reads, 900,000 write/list attempts and 2 GiB of attempted PUT bodies. Missing leaves ordinary runtime behavior unchanged; an empty, malformed or excessive value fails startup. The coordinator must supply a disjoint precharged allocation for each process, not the maximum on each restart. Aggregate candidate allocations and the separate operator/export/cleanup reserve must fit the run's ceilings.
 
 Main installs one immutable process owner before runtime construction. Every S3 transport consults it immediately before a physical send; constructing additional clients or validating settings cannot replenish it. GET and HEAD consume reads. LIST consumes write/list attempts despite using HTTP GET. PUT atomically consumes one write and its body size. Rejected compound reservations spend neither dimension. Once admitted, failures, 412 conflicts and cancellation are not refunded. Existing automatic HTTP retries and redirects remain disabled.
 
@@ -105,6 +105,36 @@ python3 tests/integration/shadow_simulation.py --seeds 5 --scenario realistic-co
 ```
 
 Each scenario is a set of fault rates and events (operator poll failures, guard sample failures, provider quota signals, production 429/5xx/timeouts, operator-unreachable windows, S3/network/CPU rates, candidate exit). For each seed it reports whether the run reached 168 hours, the collected hours, the host's and operator's stop reasons, and whether the evidence is complete. The host is modelled from the generated units: a candidate exit or a guard stop ends candidate, guard and reader together, while a reader exit stops only the reader until the operator's next poll; the 168-hour stop ends the group if the guard has not; a reader request takes effect when it completes. Since SR-5a, `evidence_retrievable` is the bucket-only audit's verdict: the real copy program runs at install, every wall-clock hour and as the finalizer when the reader stops and at 168 hours, against a host tree with the reader's files, and stores objects in a directory standing for the state bucket; `copy_failures` windows make its PUTs fail. The SSH export is still recorded, as reachability only (`ssh_export_reachable`). Scenarios include an operator unreachable from day 3 (`operator-ip-change-day-3`) or for the last hour (`operator-unreachable-at-deadline`), a failed final copy recovered by the next hourly copy (`final-copy-fails-hourly-recovers`) and a reader that exits 2 (`reader-failed`). Fault rates are inputs, not measurements; a copy run is instantaneous, the log collector is only a reported unit state, and the guard's watchdog, operator process death and host reboot are not modelled. `test_shadow_simulation.py` runs a short deterministic subset in CI. The baseline for this revision is in the [SR-1 evidence](../evidence/tasks/issue-2999/verification.md).
+
+## Local 24-hour provider rehearsal
+
+SR-6 measures one approved request mix on a fresh, disposable Linux VM with systemd. The guest permits outbound HTTPS to the pinned IPv4 addresses of `apis.data.go.kr` for KMA and AirKorea. The comparison origin, S3 and instance metadata use local stand-ins. For the coordinate-and-address workload, retain the configured coordinate observations and schedule a real KMA address request every 15 minutes. Attribute measured load and projected cost only to that workload. The run consumes real provider quota.
+
+Prepare a schema-1 plan, the two-variable provider configuration, its independently trusted key reference and the reader manifest as owner-only regular files (mode `0600`). The plan binds the candidate and collector SHA-256 values, native route families, candidate S3 allowance, paid-provider policy, and the cumulative USD 300 policy including prior spend and the finish reserve. Use zero paid-provider grants. For each scheduled API and every KST date the run can touch, record used calls and a reserved allowance covering retries. Keep a single owner for that reservation. Bind the reader to the candidate hash and set its duration to at least 86,415 seconds to cover the measured day and the runner’s start margin. [Runner input checks](../../server2/deploy/shadow/rehearsal_run.py) · [Quota and credential checks](../../server2/deploy/shadow/rehearsal_inputs.py)
+
+From `server2/` inside the disposable guest, run the following as root. The report must be directly inside a new private output directory. The runner configures the guest firewall, trust store and systemd units.
+
+```sh
+python3 deploy/shadow/linux_check.py --disposable-host --rehearsal-hours 24 \
+  --rehearsal-input "$PLAN" --server-binary "$SERVER_BINARY" \
+  --collector-tarball "$COLLECTOR_TARBALL" --source-commit "$SOURCE_COMMIT" \
+  --output-dir "$OUTPUT" --report "$OUTPUT/report.json"
+```
+
+Retain the private output through finish. Check `report.json` for `"status": "complete"` and `measurement.json` for `"complete": true`. The runner writes incomplete checkpoints until it verifies 24 consecutive measured hours crossing UTC and KST midnight, the independent stop timer, stopped acquisition units, the final evidence copy, collector drain, bucket audit and the [finish export](#resumable-finish-and-resource-disposition) under `finish/`. Inspect hourly gaps, the failed phase and paired outcomes on a partial run. A complete measurement describes resource use even if some requests failed. API-specific actual call counts are unavailable, and exported object versions come from the local fixture.
+
+The disposable rehearsal guest retains its restrictive firewall and host mappings through export and poweroff. A failed systemd liveness query ends sampling, requests a stop and writes an incomplete checkpoint identifying the slot. Keep the exported VM powered off.
+
+If the full fixture export times out, preserve the original report, incomplete measurement, output directory, fixture contents, audit hashes and journal. Confirm the workload has stopped. Resume the same `provision.py finish --execute` against the original journal and output, in a private network and mount namespace with candidate host data hidden. Use the original `shadow_finish_fake_aws.py` executable and `SHADOW_FINISH_AWS_FIXTURE` manifest. The fixture-only command and arguments are constructed in [the finish check](../../server2/deploy/shadow/linux_check.py). Keep the initial attempt and its timeout record. Before publishing a separate recovered measurement, verify the finish receipt, paired file hashes, every frozen fixture version and the writer-fence and deletion ordering. Bind the original report, measurement and resume receipt by digest. Require all original acquisition and deadline checks to have passed, and preserve the original 24 hourly rows when publishing the recovered measurement.
+
+For a complete measurement, freeze a separate schema-1 replay policy with `measurement_sha256` over the exact file bytes, a later `planned_epoch`, the S3 `allowance`, `cost_policy` and `paid_policy`. The measured simulator projects additive hourly counters over seven days, retains observed peaks and requires candidate S3 allocations and initial paid grants to cover twice the projected demand within their caps. Review projected cost headroom against the frozen policy. The disk model starts at the first hourly free-space minimum, adds each observed decrease, and charges the largest hourly decrease once for the missing transition between days. Reclaimed bytes provide no additional modeled capacity. The report compares starting free space to the guard reserve plus twice the projected weekly loss. [Projection](../../server2/deploy/shadow/rehearsal_projection.py) · [Measured input validation](../../server2/tests/integration/shadow_measured_input.py)
+
+```sh
+python3 tests/integration/shadow_simulation.py --measurement "$OUTPUT/measurement.json" \
+  --measured-policy "$REPLAY_POLICY" --seeds 20 --output "$OUTPUT/simulation.json"
+```
+
+Inspect `measurement.seed_acceptance` and the individual runs in `simulation.json`. The threshold is at least 19 full simulated runs out of 20. A real cloud canary and a 168-hour collection each require separate authorization.
 
 ## Initial host installation component
 
@@ -203,9 +233,9 @@ The guard writes its stop decision before it stops the candidate and reader, bec
 
 ## Transfer model and protected cleanup
 
-Candidate S3 grants follow the server's parse caps (900,000 reads, 900,000 write/list
+Candidate S3 grants follow the server's parse caps (1,740,000 reads, 900,000 write/list
 attempts, 2 GiB of PUT bytes); the allocations themselves are sized from measurement
-(SR-6). The [cost ceiling](#cost-ceiling) prices what is actually used; it ignores CPU
+(SR-6). With quota renewal working, the November 21–22 coordinate-and-address rehearsal used 124,168 candidate reads in 24 hours. Repeating this workload for seven days gives 869,176 reads, requiring a grant of 1,738,352 at twice the projected demand. The read cap rounds that floor up to the next 10,000. The [cost ceiling](#cost-ceiling) prices what is actually used; it ignores CPU
 credits, free tiers and refunds. Verified rate evidence must be supplied before launch. The cost estimate uses the initial generation's counters. A future restart mode must carry prior-generation spend into the estimate.
 
 The finish reserve prices up to 16 GiB of operator transfers for new journals.
@@ -285,10 +315,28 @@ not production. Provider API keys remain private in the hashed configuration.
 This lifecycle supports only the initial process; it does not automatically
 restart, replace a host or replenish a grant.
 
+### Private configuration and a failed start
+
+`DONGNAE_SECRET_KEYS` and `AIRKOREA_SECRET_KEYS` are JSON arrays of keys (`'["key"]'`). A bare key leaves the list empty; without a data.go.kr key the candidate with a KMA family exits at startup with `invalid gateway configuration`; the November 23 canary's first run stopped this way. Before `prepare`, check offline that each list in the private configuration parses as a JSON array and that `DONGNAE_SECRET_KEYS` holds at least one usable key: a string of at least 20 characters that is not a placeholder. An empty `AIRKOREA_SECRET_KEYS` list starts but leaves the AirKorea path disabled. Do not start the candidate against real settings for this check: a KMA candidate reaches S3 and providers as soon as it starts.
+
+When the install was recorded (`host-install` in the journal) but failed before any sample exists, `run` reports `acquisition_failed` and `finish` returns `awaiting_evidence`: it keeps the instance until paired evidence is verified or the 170-hour deadline passes. To end such a run earlier, and only for the instance named in that journal's `owned-resources` record: read the host journal and unit states over SSH and keep them with the run, terminate that instance, wait until EC2 reports it `terminated`, then repeat `finish` with the original journal and the same output directory. `finish` records the fence only after it observes the instance terminated or absent. Read its `cleanup` result: role, profile and security group removal and raw bucket deletion follow its inventory and export conditions, and without paired evidence the state bucket stays `pending` before the deadline and is retained after it. [November 23 canary](../evidence/tasks/issue-3005/canary-20261123.md)
+
 ## Operator quick start
 
-The [one-page manual](server2-shadow-supervisor/manual.pdf) and its [editable source](server2-shadow-supervisor/manual.json) show actual offline prepare/inspect/refusal output with fixture artifacts. They are not evidence of an AWS capture.
+The [three-page operator manual](server2-shadow-supervisor/manual.pdf) covers offline preparation, finish recovery and qualification of retained evidence. The final page shows the SR-7 decision from the November 21–22 rehearsal. [Editable source](server2-shadow-supervisor/manual.json)
 
 The SSH receiver starts the installer with Python bytecode writes disabled (`-B`). This keeps interpreter-generated cache directories out of the private input bundle without relaxing its ownership or permissions checks. This option does not depend on an operator environment variable surviving SSH.
 
 Evidence validation compares response metadata exactly, excluding only the nonnegative integer `elapsed_ms` added to the ledger after capture. Missing bodies, pending attempts, changed headers or hashes remain incomplete. The S3 export adapter supplies `--bucket`, `--key`, `--version-id` and `--range` as separate argv values from the frozen request. The customized AWS CLI `get-object` command does not accept `--cli-input-json`; the original version and full byte range remain pinned.
+
+## Offline qualification decision
+
+Use the final finish directory from the original journal. For the November 21–22 rehearsal, use the recovered directory and its pinned reader. Run the evaluator from the repository root with a fresh private output path.
+
+```sh
+python3.11 -IB server2/tools/shadow/qualification_evaluator.py \
+  --criteria docs/evidence/tasks/issue-3005/criteria.observation-only.json \
+  --evidence "$FINISH_DIR" --out "$PRIVATE_OUTPUT/qualification.json"
+```
+
+An exit code of zero means the evaluator wrote the report. Read its recommendation and all eight criterion rows. C1 checks evidence integrity. A local comparison can leave service criteria unassessed even when every file is retrievable. The November 23 assessment produced **hold**. Review the operational margins alongside the paired evidence, then record separate owner decisions for a cloud canary and a live week. [Decision report](../evidence/tasks/issue-3005/qualification.md) · [Scoring criteria](../../server2/tools/shadow/qualification_criteria.md) · [Operator manual](server2-shadow-supervisor/manual.pdf)

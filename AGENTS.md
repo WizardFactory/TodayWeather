@@ -23,6 +23,10 @@ Use the [architecture index](docs/architecture/README.md), then the document rel
 
 Treat repository claims as revision-bound and AWS claims as timestamped observations. Recheck relevant implementation before changing behavior.
 
+## Product scope
+
+Use the [product lifecycle](docs/architecture/service-overview.md#product-lifecycle) when scoping features, operations and verification. Cover the affected TodayWeather surfaces: WebApp (PWA and desktop modes), native iOS, native Android and the current server1 backend under `server/`. Preserve client contracts when porting features to the future Rust server2 backend. Treat TodayAir and Cordova as historical references outside ongoing operations. For Korean solar terms, follow the [#3050 delivery plan](plans/issue-3050.md).
+
 ## Repository map and edit locations
 
 | Area | Start here |
@@ -32,10 +36,12 @@ Treat repository claims as revision-bound and AWS claims as timestamped observat
 | Domestic collection | `server/controllers/controllerManager.js`, `server/routes/v000001/routeGather.js`, `server/lib/collectTownForecast.js`, `server/lib/kmaScraper.js` |
 | Domestic response | `server/controllers/controllerTown.js`, `server/controllers/controllerTown24h.js` |
 | World response/cache | `server/controllers/worldWeather/controllerWorldWeather.js`, `dsf.controller.js`, `controllerAqi.js` |
-| App requests and state | `client/www/js/service.weatherutil.js`, `service.weatherinfo.js`, `service.storage.js`, startup/tab controllers |
-| Platform builds | `client/gulpfile.js`, product package/config variants, `tw.ios/`, `ta.ios/`, `applewatch/` |
+| WebApp (PWA and desktop) | `web/`, `packages/weather-core/` |
+| Native mobile clients | `ios/`, `android/` |
+| Historical Cordova requests and state | `client/www/js/service.weatherutil.js`, `service.weatherinfo.js`, `service.storage.js`, startup/tab controllers |
+| Historical platform builds | `client/gulpfile.js`, product package/config variants, `tw.ios/`, `ta.ios/`, `applewatch/` |
 
-Prefer shared app edits in `client/www/` when that is the intended build source. Native widgets and bundled platform `www` trees can differ; inspect the relevant build task before assuming files are generated, disposable or synchronized. Avoid bulk edits to bundled vendor libraries or Cordova platform code for application-only changes.
+For explicitly scoped Cordova maintenance, prefer shared app edits in `client/www/` when that is the intended build source. Native widgets and bundled platform `www` trees can differ; inspect the relevant build task before assuming files are generated, disposable or synchronized. Avoid bulk edits to bundled vendor libraries or Cordova platform code for application-only changes.
 
 ## server2 implementation placement
 
@@ -63,6 +69,7 @@ These rules govern server2 work. Ordinary maintenance of legacy behavior in `ser
 
 - Choose checks that match the change. For behavior changes, cover the relevant regression and an additional functional check using isolated dependencies. For documentation, validate links, source claims and diagram artifacts without starting collection.
 - `server/package.json` defines `npm test` (Mocha) and `npm run e2e`. Inspect the selected tests first: the legacy suite includes database and provider integrations. A missing dependency or credential means not run, not passed.
+- Place every CI check by the [PR CI and release CI](docs/development/ci-tiers.md) tiers: a pull-request workflow finishes in minutes and needs no emulator, simulator or secret; slow and exact checks go to the target's release CI, which reruns the PR checks on the release commit. Do not move a check out of PR CI without placing it in release CI in the same change.
 - Historical build/CI commands are not proof of current compatibility. Gulp tasks may replace configuration/resources and run Cordova operations; Travis contains an old deployment recipe. Read commands before executing them and distinguish local build authorization from deployment authorization.
 - Keep credentials and private release configuration out of docs, logs and commits. Record environment variable names and prerequisites rather than secret values.
 - When changing a route, collector, response, mode or storage contract, update the affected architecture document and Archify JSON. Regenerate HTML through the installed Archify skill and verify artifact, browser and visual results separately. Do not manually patch generated HTML.

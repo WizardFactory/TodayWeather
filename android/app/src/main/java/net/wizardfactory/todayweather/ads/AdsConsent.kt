@@ -103,6 +103,8 @@ class AdsConsent(
 ) {
     private val requestAllowed = MutableStateFlow(false)
     val allowed = requestAllowed.asStateFlow()
+    private var privacyActivity: Activity? = null
+    internal val nativeAllowed: Boolean get() = privacyActivity == null && allowed.value
     private var sdkReady = false
     private var requested = false
     private var updated = false
@@ -140,6 +142,7 @@ class AdsConsent(
     fun stop(activity: Activity) {
         if (current === activity) current = null
         if (formActivity === activity) formActivity = null
+        if (privacyActivity === activity) privacyActivity = null
     }
 
     /** The plugin's `handleConsentForm`: the form when consent is required, loaded, then shown. */
@@ -179,19 +182,41 @@ class AdsConsent(
      * 광고 개인정보 선택: the privacy options form where one is required; otherwise, or when it cannot show,
      * [onUnavailable] (`LOC_AD_PRIVACY_UNAVAILABLE`). A changed consent may allow the SDK to start.
      */
-    fun openPrivacyOptions(activity: Activity, onUnavailable: () -> Unit) {
-        try {
-            if (!platform.privacyOptionsRequired()) return onUnavailable()
-            platform.showPrivacyOptionsForm(activity) { shown ->
-                if (!shown) {
-                    Log.w(TAG, "privacy ad_choices form_unavailable")
-                    onUnavailable()
-                }
-                fellBack = false
+    fun openPrivacyOptions(activity: Activity, onNativeEligibilityChanged: () -> Unit = {}, onUnavailable: () -> Unit) {
+        if (privacyActivity != null) return
+        val required = try {
+            platform.privacyOptionsRequired()
+        } catch (_: Exception) {
+            false
+        }
+        if (!required) return onUnavailable()
+
+        // UMP can keep canRequestAds() true across a personalization change. Discard the old cards before showing it.
+        privacyActivity = activity
+        onNativeEligibilityChanged()
+        var settled = false
+        fun finish(shown: Boolean) {
+            if (settled || privacyActivity !== activity) return
+            settled = true
+            fellBack = false
+            val updated = try {
                 startIfAllowed()
+                true
+            } catch (_: Exception) {
+                requestAllowed.value = false
+                false
             }
-        } catch (e: Exception) {
-            onUnavailable()
+            privacyActivity = null
+            onNativeEligibilityChanged()
+            if (!shown || !updated) {
+                Log.w(TAG, "privacy ad_choices form_unavailable")
+                onUnavailable()
+            }
+        }
+        try {
+            platform.showPrivacyOptionsForm(activity, ::finish)
+        } catch (_: Exception) {
+            finish(false)
         }
     }
 

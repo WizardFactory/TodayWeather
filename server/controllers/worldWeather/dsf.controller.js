@@ -661,6 +661,9 @@ class DsfController {
                 if (typeof item.uvIndex === 'number' && isFinite(item.uvIndex) && item.uvIndex >= 0) {
                     hourlyData.uvIndex = item.uvIndex;
                 }
+                if (item.details) {
+                    Object.assign(hourlyData, item.details);
+                }
 
                 result.hourly.data.push(hourlyData);
             });

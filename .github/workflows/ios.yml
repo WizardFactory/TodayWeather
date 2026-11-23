@@ -135,6 +135,12 @@ on:
       - "android/tools/server-routes/generate.mjs"
       - ".github/workflows/ios.yml"
 
+concurrency:
+  # First attempts of a pull request's runs share a group and cancel older ones. Re-runs,
+  # pushes and manual runs get their own group, so a re-run of an older commit can never
+  # cancel or replace the newest commit's run.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-run-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 # Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
 # Xcode 27 (ios/README.md); both build the iOS 17.0 deployment target.
 env:

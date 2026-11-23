@@ -194,6 +194,10 @@ const ja: Catalog = {
   "public.body":
     "お気に入り地域に保存して、時間別の天気と大気質を確認しましょう。",
   "public.open": "この地域の天気を見る",
+  "link.appOption": "アプリで開く・インストール",
+  "link.dismiss": "閉じる",
+  "link.addFavorite": "お気に入りに追加",
+  "link.invalidLocation": "共有された場所を確認できません。",
   "public.notFound": "共有された地域が見つかりません",
   "welcome.kicker": "今日のための天気",
   "welcome.headline": "昨日より暖かいでしょうか？",
@@ -490,6 +494,7 @@ const ja: Catalog = {
     "観測時刻が古いデータです。外出前に最新の気象情報をご確認ください。",
   "chart.label": "時間別の気温の推移（数値は下の表で確認できます）",
   "chart.empty": "時間別予報はありません",
+  "chart.hour": "{hour}時",
   "chart.table": "時間別の詳細な数値を見る",
   "chart.col.time": "時刻",
   "chart.col.temperature": "気温 (°{unit})",

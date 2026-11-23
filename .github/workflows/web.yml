@@ -9,6 +9,8 @@ on:
       - "tsconfig.json"
       - "*config.ts"
       - "infra/web/**"
+      - "infra/deeplink/**"
+      - "specs/deeplink.golden.json"
       - "docs/rewrite/examples/**"
       - "docs/user/images/**"
       - ".github/workflows/web.yml"
@@ -24,12 +26,20 @@ on:
       - "tsconfig.json"
       - "*config.ts"
       - "infra/web/**"
+      - "infra/deeplink/**"
+      - "specs/deeplink.golden.json"
       - "docs/rewrite/examples/**"
       - "docs/user/images/**"
       - ".github/workflows/web.yml"
       - ".github/workflows/web-live-smoke.yml"
       - ".github/workflows/web-release.yml"
   workflow_dispatch:
+concurrency:
+  # First attempts of a pull request's runs share a group and cancel older ones. Re-runs,
+  # pushes and manual runs get their own group, so a re-run of an older commit can never
+  # cancel or replace the newest commit's run.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-run-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 permissions:
   contents: read
 jobs:
@@ -45,6 +55,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm test
+      - name: Check deep-link contract and edge offline
+        run: node --test scripts/verification/deeplink-golden.test.mjs scripts/verification/deeplink-edge.test.mjs scripts/verification/deeplink-deploy.test.mjs
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

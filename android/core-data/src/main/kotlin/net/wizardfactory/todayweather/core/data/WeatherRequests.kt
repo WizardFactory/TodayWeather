@@ -43,6 +43,11 @@ object WeatherRequests {
         "&pressureUnit=${units.pressureUnit}&distanceUnit=${units.distanceUnit}&precipitationUnit=${units.precipitationUnit}" +
         "&airUnit=${units.airUnit}&airForecastSource=kaq"
 
+    internal fun coordinateForecastUrl(baseUrl: String, place: Place, product: String): String? {
+        val location = place.location ?: return null
+        return "$baseUrl/weather/$VERSION/coord/${jsNumber(location.lat)},${jsNumber(location.long)}/$product"
+    }
+
     /**
      * The `Accept-Language` a WebView sends for [languageTags] (the app's languages, first preferred), as Chrome builds
      * it: each tag, followed by its base language when the next tag does not share it and the list does not name it,

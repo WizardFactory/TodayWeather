@@ -18,7 +18,7 @@
      "handler": "cors(…)"
     },
     {
-     "line": 85,
+     "line": 87,
      "kind": "mount",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -27,7 +27,7 @@
      "router": "server/routes/gateway.js"
     },
     {
-     "line": 88,
+     "line": 90,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -36,7 +36,7 @@
      "handler": "session(…)"
     },
     {
-     "line": 98,
+     "line": 100,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -45,7 +45,7 @@
      "handler": "favicon(…)"
     },
     {
-     "line": 100,
+     "line": 102,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -54,7 +54,7 @@
      "handler": "bodyParser.json(…)"
     },
     {
-     "line": 101,
+     "line": 103,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -63,7 +63,7 @@
      "handler": "bodyParser.urlencoded(…)"
     },
     {
-     "line": 102,
+     "line": 104,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -72,7 +72,7 @@
      "handler": "cookieParser(…)"
     },
     {
-     "line": 103,
+     "line": 105,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -81,7 +81,7 @@
      "handler": "express.static(…)"
     },
     {
-     "line": 105,
+     "line": 107,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -90,7 +90,7 @@
      "handler": "i18n.init"
     },
     {
-     "line": 107,
+     "line": 109,
      "kind": "mount",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -99,7 +99,7 @@
      "router": "server/routes/v000001/index.js"
     },
     {
-     "line": 108,
+     "line": 110,
      "kind": "mount",
      "path": "/v000001",
      "regex": "^\\/v000001\\/?(?=\\/|$)",
@@ -107,7 +107,7 @@
      "router": "server/routes/v000001/index.js"
     },
     {
-     "line": 109,
+     "line": 111,
      "kind": "mount",
      "path": "/v000705",
      "regex": "^\\/v000705\\/?(?=\\/|$)",
@@ -115,7 +115,7 @@
      "router": "server/routes/v000705/index.js"
     },
     {
-     "line": 110,
+     "line": 112,
      "kind": "mount",
      "path": "/v000803",
      "regex": "^\\/v000803\\/?(?=\\/|$)",
@@ -123,7 +123,7 @@
      "router": "server/routes/v000803/index.js"
     },
     {
-     "line": 111,
+     "line": 113,
      "kind": "mount",
      "path": "/v000901",
      "regex": "^\\/v000901\\/?(?=\\/|$)",
@@ -131,7 +131,7 @@
      "router": "server/routes/v000901/index.js"
     },
     {
-     "line": 112,
+     "line": 114,
      "kind": "mount",
      "path": "/v000902",
      "regex": "^\\/v000902\\/?(?=\\/|$)",
@@ -139,7 +139,7 @@
      "router": "server/routes/v000902/index.js"
     },
     {
-     "line": 113,
+     "line": 115,
      "kind": "mount",
      "path": "/v000903",
      "regex": "^\\/v000903\\/?(?=\\/|$)",
@@ -147,7 +147,7 @@
      "router": "server/routes/v000903/index.js"
     },
     {
-     "line": 114,
+     "line": 116,
      "kind": "mount",
      "path": "/ww",
      "regex": "^\\/ww\\/?(?=\\/|$)",
@@ -155,7 +155,7 @@
      "router": "server/routes/worldweather/routeWeather.js"
     },
     {
-     "line": 115,
+     "line": 117,
      "kind": "mount",
      "path": "/req",
      "regex": "^\\/req\\/?(?=\\/|$)",
@@ -163,7 +163,7 @@
      "router": "server/routes/worldweather/routeRequester.js"
     },
     {
-     "line": 116,
+     "line": 118,
      "kind": "route",
      "method": "GET",
      "path": "/health",
@@ -171,7 +171,7 @@
      "ignoreCase": true
     },
     {
-     "line": 168,
+     "line": 170,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -181,7 +181,7 @@
      "arity": 3
     },
     {
-     "line": 179,
+     "line": 181,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -191,7 +191,7 @@
      "arity": 3
     },
     {
-     "line": 190,
+     "line": 192,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -207,7 +207,7 @@
    "caseSensitive": true,
    "layers": [
     {
-     "line": 352,
+     "line": 398,
      "kind": "route",
      "method": "GET",
      "path": "/weather/coord/:loc",
@@ -215,7 +215,7 @@
      "ignoreCase": false
     },
     {
-     "line": 353,
+     "line": 399,
      "kind": "route",
      "method": "GET",
      "path": "/weather/:version(v000901|v000902|v000903)/coord/:loc",
@@ -223,7 +223,31 @@
      "ignoreCase": false
     },
     {
-     "line": 354,
+     "line": 401,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/:version(v000903)/coord/:loc/air-forecast",
+     "regex": "^\\/weather\\/(?:(v000903))\\/coord\\/(?:([^\\/]+?))\\/air-forecast\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 405,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/:version(v000903)/coord/:loc/pollen-forecast",
+     "regex": "^\\/weather\\/(?:(v000903))\\/coord\\/(?:([^\\/]+?))\\/pollen-forecast\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 409,
+     "kind": "route",
+     "method": "GET",
+     "path": "/weather/:version(v000903)/coord/:loc/warnings",
+     "regex": "^\\/weather\\/(?:(v000903))\\/coord\\/(?:([^\\/]+?))\\/warnings\\/?$",
+     "ignoreCase": false
+    },
+    {
+     "line": 427,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000903)/coord/:loc",
@@ -231,7 +255,7 @@
      "ignoreCase": false
     },
     {
-     "line": 355,
+     "line": 428,
      "kind": "route",
      "method": "GET",
      "path": "/geocode/:version(v000901|v000903)/addr/*",
@@ -239,7 +263,7 @@
      "ignoreCase": false
     },
     {
-     "line": 358,
+     "line": 431,
      "kind": "route",
      "method": "ALL",
      "path": "OWN_PATH",
@@ -247,7 +271,7 @@
      "ignoreCase": false
     },
     {
-     "line": 365,
+     "line": 438,
      "kind": "middleware",
      "path": "/",
      "regex": "^\\/?(?=\\/|$)",
@@ -1659,13 +1683,13 @@
  "sources": [
   {
    "path": "server/app.js",
-   "commit": "78b918a2c346c481b29ebdd9a8c75982ac8d34fe",
-   "sha256": "bf8081f9dca7708540d8b78f739f2e746eb6a564ae48b01fb6f95a56e10619a8"
+   "commit": "e3a79dcf08ccb5186929a7a65dc4fdada3db6426",
+   "sha256": "0c7c6d1c8f01f0ab62960bec42d2e419f96050b1048c8756c53447057efa2a0f"
   },
   {
    "path": "server/routes/gateway.js",
-   "commit": "5f8c5ddc73666b93ad1b90fcf78c4d4a903981b2",
-   "sha256": "90d772e4aa915928be66f3835db9e4db4ffcb266614016b9f903be24f49dba75"
+   "commit": "43954563b74a82801d69d0add1f6b920fcae5db4",
+   "sha256": "08ff6da828436b9af64eda3a85b256a8de09b88af8e6451fc3450ef36f9490bb"
   },
   {
    "path": "server/routes/v000001/index.js",

@@ -99,7 +99,7 @@ class AirReceiver : WeatherReceiver() { override val glanceAppWidget: GlanceAppW
 internal data class Display(
     val placeKey: String? = null, val title: String = "", val daily: Boolean = false, val yesterday: Boolean = false,
     val style: WidgetStyle = WidgetStyle.CLASSIC, val readings: WidgetReadings? = null, val updated: String = "", val shortTime: String = "", val message: Int? = null,
-    val manualRefresh: Boolean = false,
+    val manualRefresh: Boolean = false, val timeZoneId: String? = null,
 )
 
 private suspend fun loadDisplay(context: Context, id: Int): Display {
@@ -121,14 +121,16 @@ private suspend fun loadDisplay(context: Context, id: Int): Display {
     val shortTime = if (sameDay) android.text.format.DateFormat.getTimeFormat(context).format(loaded)
         else android.text.format.DateFormat.format("MM/dd", loaded).toString()
     return Display(WidgetOptions.key(place), title, options.daily, options.yesterday, options.style,
-        WidgetReadings(entry.weather, entry.temperatureUnit, labels), time, shortTime, manualRefresh = options.manualRefresh)
+        WidgetReadings(entry.weather, entry.temperatureUnit, labels), time, shortTime, manualRefresh = options.manualRefresh, timeZoneId = entry.timeZoneId)
 }
 
 private class WeatherWidget(private val kind: Kind) : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(DpSize(48.dp, 50.dp), DpSize(130.dp, 50.dp),
         DpSize(245.dp, 50.dp), DpSize(130.dp, 100.dp),
         DpSize(245.dp, 100.dp), DpSize(130.dp, 150.dp), DpSize(200.dp, 150.dp),
-        DpSize(245.dp, 150.dp), DpSize(300.dp, 150.dp), DpSize(245.dp, 218.dp), DpSize(300.dp, 218.dp),
+        DpSize(245.dp, 150.dp), DpSize(300.dp, 150.dp),
+        DpSize(130.dp, 180.dp), DpSize(245.dp, 180.dp), DpSize(300.dp, 180.dp),
+        DpSize(245.dp, 200.dp), DpSize(300.dp, 200.dp),
         DpSize(245.dp, 270.dp), DpSize(300.dp, 270.dp)))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -172,10 +174,17 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
     val wide = size.width >= 245.dp
     val roomy = size.height >= 150.dp
     val strip = size.height < 100.dp
+    val forecastPanel = kind == Kind.CLOCK || kind == Kind.FORECAST
+    val verticalPadding = when {
+        strip || (forecastPanel && size.height < 180.dp) -> 1.dp
+        forecastPanel && size.height < 200.dp -> 3.dp
+        roomy -> 12.dp
+        else -> 6.dp
+    }
     val action = actionStartActivity(WidgetOptions.openIntent(context, data?.placeKey))
     val frame = GlanceModifier.fillMaxSize().cornerRadius(if (style == WidgetStyle.BLUE) 24.dp else 17.dp).background(style.background).clickable(action)
         .padding(horizontal = when { compact -> 3.dp; wide -> 16.dp; else -> 10.dp },
-            vertical = when { strip -> 1.dp; roomy -> 12.dp; else -> 6.dp })
+            vertical = verticalPadding)
     if (data == null || data.message != null) {
         val message = when {
             data == null -> R.string.app_name
@@ -247,22 +256,22 @@ private fun StyledPanel(context: Context, kind: Kind, data: Display?) {
                         Row(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
                             if (style == WidgetStyle.BLUE) WeatherBlock(weather, roomy, wide)
                             Column(GlanceModifier.defaultWeight(), horizontalAlignment = if (style == WidgetStyle.BLUE) Alignment.End else Alignment.Start) {
-                                if (roomy) Label(android.text.format.DateFormat.getMediumDateFormat(context).format(Date()), 12, secondary)
-                                Clock(context, when { !roomy -> 19; style == WidgetStyle.BLUE -> 23; size.width < 300.dp -> 25; else -> 31 },
+                                if (roomy && data.timeZoneId != null) ClockDate(context, data.timeZoneId, style == WidgetStyle.BLUE)
+                                Clock(context, data.timeZoneId, when { !roomy -> 19; style == WidgetStyle.BLUE -> 23; size.width < 300.dp -> 25; else -> 31 },
                                     alignEnd = style == WidgetStyle.BLUE)
                             }
                             if (style != WidgetStyle.BLUE) WeatherBlock(weather, roomy, wide)
                         }
-                        Cells(context, weather, data.daily, data.yesterday, true, inlineIcon = !roomy, dense = true)
+                        Cells(context, weather, data.daily, data.yesterday, true, inlineIcon = size.height < 180.dp, dense = true)
                         if (size.height >= 270.dp) Cells(context, weather, !data.daily, data.yesterday, true, dense = true)
                     } else {
-                        Clock(context, if (roomy) 25 else 18)
+                        Clock(context, data.timeZoneId, if (roomy) 25 else 18)
                         Row(verticalAlignment = Alignment.CenterVertically) { Reading(weather, if (roomy) 20 else 15, 28) }
                     }
                 }
                 Kind.FORECAST -> {
                     if (roomy) Row(verticalAlignment = Alignment.CenterVertically) { Reading(weather, 20, 25) }
-                    Cells(context, weather, data.daily, data.yesterday, wide, dense = !roomy)
+                    Cells(context, weather, data.daily, data.yesterday, wide, dense = size.height < 180.dp)
                 }
                 Kind.AIR -> {
                     Column(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
@@ -365,13 +374,31 @@ private fun WeatherBlock(weather: WidgetReadings, roomy: Boolean, wide: Boolean)
 }
 
 @Composable
-private fun Clock(context: Context, sp: Int = 17, alignEnd: Boolean = false) {
+private fun ClockDate(context: Context, zone: String, alignEnd: Boolean) {
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(context.resources.configuration.locales[0], "yyyyMd")
+    val id = R.id.widget_clock_date
+    val date = RemoteViews(context.packageName, R.layout.widget_clock_date)
+    date.setString(id, "setTimeZone", zone)
+    date.setCharSequence(id, "setFormat12Hour", pattern)
+    date.setCharSequence(id, "setFormat24Hour", pattern)
+    date.setInt(id, "setGravity", if (alignEnd) android.view.Gravity.END else android.view.Gravity.START)
+    date.setTextColor(id, localStyle.current.muted.toArgb())
+    AndroidRemoteViews(date, GlanceModifier.fillMaxWidth())
+}
+
+@Composable
+private fun Clock(context: Context, zone: String?, sp: Int = 17, alignEnd: Boolean = false) {
+    if (zone == null) {
+        Label("–", sp, bold = true)
+        return
+    }
     val layout = when {
         alignEnd -> R.layout.widget_end_clock_face
         localStyle.current == WidgetStyle.PAPER -> R.layout.widget_paper_clock_face
         else -> R.layout.widget_display_clock_face
     }
     val face = RemoteViews(context.packageName, layout)
+    face.setString(R.id.widget_clock_time, "setTimeZone", zone)
     face.setTextViewTextSize(R.id.widget_clock_time, android.util.TypedValue.COMPLEX_UNIT_SP, sp.toFloat())
     face.setTextColor(R.id.widget_clock_time, localStyle.current.ink.toArgb())
     val width = sp * (if (android.text.format.DateFormat.is24HourFormat(context)) 3 else 5)
@@ -379,7 +406,7 @@ private fun Clock(context: Context, sp: Int = 17, alignEnd: Boolean = false) {
     // can keep the original XML text height after setTextViewTextSize runs.
     val fontScale = context.resources.configuration.fontScale
     val clockBox = if (alignEnd) GlanceModifier.fillMaxWidth() else GlanceModifier.width(width.dp)
-    AndroidRemoteViews(face, clockBox.height((sp * 1.5f * fontScale).dp))
+    AndroidRemoteViews(face, clockBox.height(kotlin.math.ceil(sp * 1.5f * fontScale).dp))
 }
 
 /** One launcher row: reserve its first line for the location and update time. */
@@ -392,7 +419,7 @@ private fun Strip(context: Context, kind: Kind, data: Display, weather: WidgetRe
     when (kind) {
         Kind.FORECAST -> Cells(context, weather, data.daily, data.yesterday, wide, inlineIcon = true)
         Kind.CLOCK -> Row {
-            Clock(context)
+            Clock(context, data.timeZoneId)
             Label("  " + weather.current, 16)
         }
         Kind.CURRENT -> Row {
@@ -417,8 +444,10 @@ private fun Cells(context: Context, weather: WidgetReadings, daily: Boolean, yes
         return
     }
     val style = localStyle.current
+    val strip = LocalSize.current.height < 100.dp
+    val short = LocalSize.current.height <= 100.dp
     val band = if (style == WidgetStyle.BLUE && !inlineIcon)
-        GlanceModifier.fillMaxWidth().cornerRadius(12.dp).background(style.surface).padding(vertical = 3.dp)
+        GlanceModifier.fillMaxWidth().cornerRadius(12.dp).background(style.surface).padding(vertical = if (short) 0.dp else 3.dp)
         else GlanceModifier.fillMaxWidth()
     Row(band) {
         cells.take(when { LocalSize.current.width >= 300.dp -> 5; wide -> 4; else -> 2 }).forEach { cell ->
@@ -429,21 +458,26 @@ private fun Cells(context: Context, weather: WidgetReadings, daily: Boolean, yes
                     1 -> context.getString(R.string.LOC_TOMORROW)
                     else -> cell.label
                 }
-                Label(label, if (inlineIcon) 10 else 13, secondary)
+                Label(if (inlineIcon && daily) cell.icon + label else label, when { strip -> 10; inlineIcon -> 12; else -> 16 }, secondary)
                 val classicHours = !daily && style == WidgetStyle.CLASSIC
-                if (classicHours && !inlineIcon) Label(cell.value, 14, bold = true)
+                if (classicHours && !inlineIcon) Label(cell.value, 17, bold = true)
                 if (!inlineIcon) {
                     val art = skyArtwork(cell.sky)
-                    if (art == null) Label(cell.icon, if (dense) 16 else 22)
-                    else Image(ImageProvider(art), cell.icon, GlanceModifier.size(if (dense) 26.dp else 32.dp))
+                    if (art == null) Label(cell.icon, if (dense) 19 else 26)
+                    else Image(ImageProvider(art), cell.icon, GlanceModifier.size(when { short -> 26.dp; dense -> 31.dp; else -> 38.dp }))
                 }
                 if (daily && !dense && !inlineIcon) {
                     val low = cell.value.substringBefore(" / ")
                     val high = cell.value.substringAfter(" / ")
-                    Label(high, 17, bold = true)
-                    Label("${low}°", 14, secondary)
+                    Label(high, 20, bold = true)
+                    Label("${low}°", 17, secondary)
                 } else if (!classicHours || inlineIcon) {
-                    Label(if (inlineIcon) cell.icon + cell.value else cell.value, if (inlineIcon || daily) 11 else 15, bold = true)
+                    val value = when {
+                        daily -> cell.value.replace(" / ", "/")
+                        inlineIcon -> cell.icon + cell.value
+                        else -> cell.value
+                    }
+                    Label(value, when { strip -> 11; inlineIcon || daily -> 13; else -> 18 }, bold = true)
                 }
             }
         }

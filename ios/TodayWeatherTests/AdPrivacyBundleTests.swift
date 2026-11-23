@@ -58,44 +58,63 @@ struct AdPrivacyBundleTests {
         #expect(info["GADDelayAppMeasurementInit"] as? Bool == true)
     }
 
-    /// Debug builds carry Google's documented test app ID and test banner unit.
     @Test func debugBuildUsesGoogleTestIdentifiers() {
         #expect(info["GADApplicationIdentifier"] as? String == AdsSettings.testAppID)
-        #expect(info["TWAdMobBannerUnit"] as? String == AdsSettings.testBannerUnit)
-        #expect(AdsSettings.current == AdsSettings(bannerUnit: AdsSettings.testBannerUnit, releaseAds: false))
+        #expect(info["TWAdMobBannerUnit"] == nil)
+        #expect(AdsSettings.current == AdsSettings(nativeUnit: AdsSettings.testNativeUnit,
+                                                   interstitialUnit: AdsSettings.testInterstitialUnit, releaseAds: false))
         #expect(AdsSettings.trafficType(AdsSettings.current) == "development")
+        var swapped = info
+        swapped["TWAdMobNativeUnit"] = AdsSettings.testInterstitialUnit
+        swapped["TWAdMobInterstitialUnit"] = AdsSettings.testNativeUnit
+        #expect(AdsSettings.from(info: swapped, debug: true) == nil)
     }
 
-    /// A Release build needs real identifiers: missing, malformed or test values mean no ads, never test ads.
-    @Test func releaseSettingsRefuseMissingAndTestValues() {
-        let real = ["GADApplicationIdentifier": "ca-app-pub-1234567890123456~1234567890",
-                    "TWAdMobBannerUnit": "ca-app-pub-1234567890123456/1234567890"]
-        #expect(AdsSettings.from(info: real, debug: false) == AdsSettings(bannerUnit: "ca-app-pub-1234567890123456/1234567890",
-                                                                           releaseAds: true))
-        #expect(AdsSettings.trafficType(AdsSettings.from(info: real, debug: false)) == "production")
-        #expect(AdsSettings.from(info: [:], debug: false) == nil)
-        #expect(AdsSettings.from(info: ["GADApplicationIdentifier": AdsSettings.placeholderAppID,
-                                        "TWAdMobBannerUnit": real["TWAdMobBannerUnit"]!], debug: false) == nil,
-                "the placeholder of a build without the private value")
-        #expect(AdsSettings.from(info: ["GADApplicationIdentifier": "", "TWAdMobBannerUnit": ""], debug: false) == nil)
-        #expect(AdsSettings.from(info: ["GADApplicationIdentifier": AdsSettings.testAppID,
-                                        "TWAdMobBannerUnit": AdsSettings.testBannerUnit], debug: false) == nil)
-        #expect(AdsSettings.from(info: ["GADApplicationIdentifier": real["GADApplicationIdentifier"]!,
-                                        "TWAdMobBannerUnit": AdsSettings.testBannerUnit], debug: false) == nil)
-        #expect(AdsSettings.from(info: ["GADApplicationIdentifier": "ca-app-pub-123~1", "TWAdMobBannerUnit": "x"], debug: false) == nil)
-        #expect(AdsSettings.from(info: real, debug: true) == nil, "a Debug build never takes real units")
+    /// The ad-free capture build (`run-manual-capture.sh --no-ads`, #3122) has empty unit values: no ads in either
+    /// configuration, so `Monetization` starts no UMP, no SDK and no request. The app itself has no switch for it.
+    @Test func emptyUnitsMeanNoAds() {
+        for debug in [true, false] {
+            let appID = debug ? AdsSettings.testAppID : "ca-app-pub-1234567890123456~1234567890"
+            let empty = ["GADApplicationIdentifier": appID, "TWAdMobNativeUnit": "", "TWAdMobInterstitialUnit": ""]
+            #expect(AdsSettings.from(info: empty, debug: debug) == nil)
+        }
     }
 
-    /// Each banner request applies the #2945 rule to the live state: `npa=1` unless it may be personalized.
-    @Test @MainActor func bannerRequestsCarryNpaUnlessPersonalized() {
+    @Test func releaseRequiresDistinctUnitsFromItsOwnPublisher() {
+        let native = "ca-app-pub-1234567890123456/1234567890"
+        let interstitial = "ca-app-pub-1234567890123456/1234567891"
+        let configured = ["GADApplicationIdentifier": "ca-app-pub-1234567890123456~1234567890",
+                          "TWAdMobNativeUnit": native, "TWAdMobInterstitialUnit": interstitial]
+        let release = AdsSettings.from(info: configured, debug: false)
+        #expect(release == AdsSettings(nativeUnit: native, interstitialUnit: interstitial, releaseAds: true))
+        #expect(AdsSettings.trafficType(release) == "production")
+        for (key, invalid) in [("GADApplicationIdentifier", AdsSettings.placeholderAppID),
+                               ("GADApplicationIdentifier", AdsSettings.testAppID),
+                               ("TWAdMobNativeUnit", interstitial), ("TWAdMobNativeUnit", AdsSettings.testNativeUnit),
+                               ("TWAdMobInterstitialUnit", AdsSettings.testInterstitialUnit),
+                               ("TWAdMobInterstitialUnit", "ca-app-pub-1111111111111111/1234567890"),
+                               ("TWAdMobNativeUnit", "malformed")] {
+            var candidate = configured
+            candidate[key] = invalid
+            #expect(AdsSettings.from(info: candidate, debug: false) == nil)
+        }
+        for key in configured.keys {
+            var candidate = configured
+            candidate.removeValue(forKey: key)
+            #expect(AdsSettings.from(info: candidate, debug: false) == nil)
+        }
+        #expect(AdsSettings.from(info: configured, debug: true) == nil)
+    }
+
+    /// Every SDK request uses the live #2945 privacy decision.
+    @Test @MainActor func adRequestsCarryNpaUnlessPersonalized() {
         let platform = StatePlatform()
-        let banner = AdMobBanner(unitID: AdsSettings.testBannerUnit, platform: platform, track: { _, _ in })
         let gdpr = [AdConsentRecord(gdprApplies: 0, purposeConsents: nil), AdConsentRecord(gdprApplies: 1, purposeConsents: "1111"),
                     AdConsentRecord(gdprApplies: 1, purposeConsents: "1100")]
         for status in [TrackingStatus.authorized, .denied, .restricted, .notDetermined, .unavailable] {
             for record in gdpr {
                 platform.state = (status, record)
-                let extras = banner.request().adNetworkExtras(for: Extras.self) as? Extras
+                let extras = platform.makeRequest().adNetworkExtras(for: Extras.self) as? Extras
                 let personalized = status == .authorized && record.purposeConsents != "1100"
                 #expect((extras?.additionalParameters as? [String: String]) == (personalized ? nil : ["npa": "1"]),
                         "\(status) \(record)")
@@ -104,7 +123,7 @@ struct AdPrivacyBundleTests {
     }
 }
 
-/// An `AdsPlatform` that only answers the privacy state (the banner's request rule).
+/// An `AdsPlatform` that only answers the privacy state (the shared request rule).
 @MainActor
 final class StatePlatform: AdsPlatform {
     var state: (TrackingStatus, AdConsentRecord) = (.notDetermined, AdConsentRecord(gdprApplies: 0, purposeConsents: nil))

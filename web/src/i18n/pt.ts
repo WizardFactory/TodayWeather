@@ -198,6 +198,10 @@ const pt: Catalog = {
   "public.body":
     "Salve nos seus locais para ver o tempo por hora e a qualidade do ar.",
   "public.open": "Ver o tempo neste local",
+  "link.appOption": "Abrir ou instalar o app",
+  "link.dismiss": "Fechar",
+  "link.addFavorite": "Adicionar aos favoritos",
+  "link.invalidLocation": "Este local compartilhado é inválido.",
   "public.notFound": "Local compartilhado não encontrado",
   "welcome.kicker": "O tempo para hoje",
   "welcome.headline": "Mais quente que ontem?",
@@ -502,6 +506,7 @@ const pt: Catalog = {
   "chart.label":
     "Variação da temperatura por hora; os valores estão na tabela abaixo",
   "chart.empty": "Sem previsão por hora",
+  "chart.hour": "{hour}h",
   "chart.table": "Ver detalhes por hora",
   "chart.col.time": "Hora",
   "chart.col.temperature": "Temperatura (°{unit})",

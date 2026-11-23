@@ -21,6 +21,7 @@ it("rewrites known deep links while preserving API, asset, malformed and unknown
   for (const uri of [
     "/",
     "/locations",
+    "/loc/",
     "/weather/p_37.567_126.978/hourly",
     "/settings",
     "/nation/air",
@@ -108,6 +109,33 @@ function makeDist(dir: string) {
   writeFileSync(join(dir, "sw.js"), 'const VERSION="abc";');
   writeFileSync(join(dir, "release.json"), JSON.stringify(release));
 }
+it("uploads only the emitted Pretendard license as revalidated plain text", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "tw-static-license-"));
+  try {
+    makeDist(dir);
+    const options = { dir, bucket: "test-static-bucket", distribution: "D123" };
+    writeFileSync(join(dir, "assets/Pretendard-OFL.txt"), "Open Font License");
+    const commands = await planUpload(options);
+    const license = commands.find(
+      (command: string[]) =>
+        command[3] === "s3://test-static-bucket/assets/Pretendard-OFL.txt",
+    );
+    expect(license?.slice(4)).toEqual([
+      "--content-type",
+      "text/plain; charset=utf-8",
+      "--cache-control",
+      "no-cache",
+      "--only-show-errors",
+    ]);
+    writeFileSync(join(dir, "assets/unrecognized.txt"), "unexpected");
+    await expect(planUpload(options)).rejects.toThrow(
+      "Unexpected artifact: assets/unrecognized.txt",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 it("previews uploads without AWS execution, orders assets first, retains old files and rejects demo builds", async () => {
   const dir = mkdtempSync(join(tmpdir(), "tw-static-upload-"));
   try {
@@ -743,6 +771,10 @@ it("accepts only the known precipitation labels in the live smoke", async () => 
       "강수 2 mm · 관측 누적",
       "강수 약 1 mm · 1시간 예보(근사)",
       "강수 4 mm · 3시간 예보",
+      "강수 0 mm · 24시간 예보",
+      "강수 0 mm · 1시간 예보",
+      "강수 5 mm · 6시간 예보",
+      "강수 약 12 mm · 21시간 예보",
       "강수 3 mm · 예보",
       "강수량",
       "강수량 · 1시간 관측",
@@ -754,13 +786,25 @@ it("accepts only the known precipitation labels in the live smoke", async () => 
       "강수 1 mm · 6시간",
       "강수량 · 3시간",
       "강수 1 mm · 관측",
+      "강수 1 mm · 0시간 예보",
+      "강수 1 mm · 25시간 예보",
+      "강수 1 mm · 6시간 관측",
     ]),
   ).toEqual([
     "강수 1 mm",
     "강수 1 mm · 6시간",
     "강수량 · 3시간",
     "강수 1 mm · 관측",
+    "강수 1 mm · 0시간 예보",
+    "강수 1 mm · 25시간 예보",
+    "강수 1 mm · 6시간 관측",
   ]);
+  // Yesterday's columns alone do not meet the hourly forecast minimum.
+  const flags = (n: number, current: number) =>
+    Array.from({ length: n }, (_, i) => i === current);
+  expect(smoke.upcomingHourColumns(flags(33, 15))).toBe(18);
+  expect(smoke.upcomingHourColumns(flags(8, -1))).toBe(0);
+  expect(smoke.upcomingHourColumns(flags(8, 7))).toBe(1);
   expect(smoke.dottedKmaTime("관측 시각 2026.09.26.14:00")).toBe(true);
   expect(smoke.dottedKmaTime("관측 시각 2026-09-26 14:00")).toBe(false);
 });
