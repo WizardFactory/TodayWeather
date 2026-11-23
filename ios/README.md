@@ -36,7 +36,7 @@ cd ios && xcodebuild -project TodayWeather.xcodeproj -scheme TodayWeather \
 
 The scheme's test action runs the app-hosted tests and the package tests. `build/` is ignored.
 
-CI (`.github/workflows/ios.yml`) runs the same commands twice: once after re-running the import tools (client assets, golden corpus and chart scenes) and checking that they change nothing, and once in a checkout whose `client/`, `android/`, `tw.ios/`, `ta.ios/` and `applewatch/` directories have been deleted.
+PR CI (`.github/workflows/ios.yml`) re-runs the import tools and checks that they change nothing, then deletes `client/`, `android/`, `tw.ios/`, `ta.ios/` and `applewatch/` and runs the package tests and `build-for-testing` of the app, its test bundle and the UI tests; it boots no simulator. iOS release verification (`.github/workflows/ios-release.yml`, on a named commit and nightly) runs the scheme's tests above, every app-hosted suite and screenshot comparison included, in that standalone checkout. A pull request that changes what the app draws runs it on its head before merge ([PR CI and release CI](../docs/development/ci-tiers.md#ios)).
 
 ## Imported client assets
 
@@ -610,6 +610,10 @@ The script builds the app and the UI tests ad hoc signed with `ios/Private.xccon
 The build and the tests run without private inputs. They stay outside Git (ignored by `ios/.gitignore`): the Firebase configuration `GoogleService-Info.plist` of the existing Firebase iOS app (IN-03, IN-04; without it the app does not configure Firebase), and a `Private.xcconfig` with the server URL `TW_SERVER_URL` (IN-04, IN-08; Info.plist `TWServerURL`, empty without it), the weather photo feed `TW_WEATHER_PHOTOS_URL` (IN-07; Info.plist `TWWeatherPhotosURL`, empty without it), the feedback address `TW_MAIL_TO` (IN-12; Info.plist `TWMailTo`, empty without it), the AdMob and Places identifiers (IN-08, IN-10, IN-15) and release signing (IN-19).
 
 ## App Store release (IN-19)
+
+Archive only a commit for which iOS release verification has passed
+(`gh workflow run ios-release.yml --ref master -f ref=<full SHA>`, [PR CI and release CI](../docs/development/ci-tiers.md#ios)),
+and record the run with the release; tag it as in [GitHub Releases](../docs/operations/github-releases.md).
 
 Use the existing TodayWeather App Store record (Apple ID 1041700694), bundle ID
 `net.wizardfactory.todayweather`, Apple team, App Group and Firebase iOS app.

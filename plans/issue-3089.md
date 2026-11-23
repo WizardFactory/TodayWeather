@@ -77,3 +77,22 @@ On the same iPhone 17 simulator with iOS 26.5 and Xcode 27.2, capture-all mode p
 The forced height mismatch ran all 23 nationwide comparisons with one expected failure. Failure-only capture produced two readable PNGs at the expected dimensions. Xcode returned 65 and finalized the result bundle.
 
 The local sample ran 379.30 seconds faster (57.8%). The sample uses the same test selection and original fixture bytes. Repeat the measurement on macos-26 and qualify the complete standalone job before judging PR latency or selecting a test partition. The [post-merge hosted baseline](https://github.com/WizardFactory/TodayWeather/actions/runs/45009810694) took 58m14s for the regular job and 86m34s for standalone, with simulator steps of 54m58s and 82m36s respectively.
+
+## Release tier split (2026-11-23)
+
+**Decision.** On 2026-11-23 AK set two tiers for every target ([PR CI and release CI](../docs/development/ci-tiers.md)): pull-request checks finish in minutes and boot no emulator or simulator; release CI verifies a named commit precisely, however long it takes. AK then approved moving the iOS simulator suites to release CI as the next step of this issue. This replaces the sentence above that no visual coverage moves out of the PR path in this trial. The partition trial (B–D) is no longer the route to minutes. After #3131 the simulator step alone took 37–57 minutes, plus macOS queueing.
+
+**Change.**
+
+- [iOS](../.github/workflows/ios.yml) is one macOS job. It runs the import and generator freshness check in the full checkout, removes the legacy directories, then runs `swift test` and `build-for-testing` of the app, its app-hosted test bundle and the UI tests. No simulator boots.
+- [iOS release verification](../.github/workflows/ios-release.yml) reruns that job on the commit. It then runs the whole `TodayWeather` scheme on the simulator in the standalone checkout, the screenshot suites and the size and language matrix included, and uploads the comparison images on a failure.
+- It runs on dispatch for a full SHA and nightly when an input of the iOS PR workflow changed. A pull request that changes what the app draws runs it on its head before merge.
+- The earlier two-job layout stays in the history as the rollback: revert the commit that introduced `ios-release.yml`.
+
+**Coverage.** Nothing is dropped. The freshness check, the standalone build, the macOS package tests and UI-test compilation stay in PR CI. The full checkout's simulator run was a subset of the standalone run: the same scheme without the matrix. Its only additional property was that the tests passed with `client/` present, and no test reads `client/`. Release CI runs the standalone superset. New tests run automatically, because the release job runs the scheme without selectors.
+
+**Acceptance for this step.**
+
+1. PR CI on this branch finishes in minutes: one macOS job, compared with the 43–51 min of job time and the queueing before.
+2. iOS release verification passes on the branch head, with every app-hosted suite and the matrix run.
+3. A stale generated asset fails the PR job. A build that reads a removed directory fails it. A screenshot mismatch fails release CI and uploads the images.
