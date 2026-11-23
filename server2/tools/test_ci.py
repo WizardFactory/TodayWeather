@@ -3,6 +3,7 @@ from collections import Counter
 import re
 from pathlib import Path
 import subprocess
+import tempfile
 import sys
 import unittest
 from unittest.mock import patch
@@ -267,6 +268,40 @@ class CommandPlanTests(unittest.TestCase):
                 ci.main()
             self.assertEqual(2, raised.exception.code)
             run.assert_not_called()
+
+    def run_prepare(self, failing_updates):
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir, log = Path(tmp), Path(tmp) / 'calls'
+            stubs = {
+                'sudo': ('echo "sudo $*" >> "$LOG"\n'
+                         'if [[ " $* " == *" update"* ]]; then\n'
+                         '  n=$(grep -c " update" "$LOG"); [[ $n -le $FAILS ]] && exit 100\n'
+                         'fi\nexit 0'),
+                'sleep': 'exit 0',
+            }
+            for name, body in stubs.items():
+                (bin_dir / name).write_text('#!/bin/bash\n' + body + '\n')
+                (bin_dir / name).chmod(0o755)
+            # From server2/, so the AppArmor step on an Ubuntu 24.04 runner finds its profile.
+            result = subprocess.run(['/bin/bash', str(Path(__file__).with_name('prepare-ci.sh')), 'gnu'],
+                                    capture_output=True, text=True, cwd=Path(__file__).parents[1],
+                                    env={'PATH': f'{bin_dir}:/usr/bin:/bin', 'LOG': str(log),
+                                         'FAILS': str(failing_updates)})
+            calls = log.read_text().splitlines() if log.exists() else []
+            return result, [call for call in calls if 'apparmor_parser' not in call]
+
+    def test_prepare_bounds_and_retries_package_downloads(self):
+        options = '-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30'
+        result, calls = self.run_prepare(failing_updates=2)
+        self.assertEqual(0, result.returncode, result.stderr)
+        bound = 'sudo timeout --kill-after=15s'
+        self.assertEqual([f'{bound} 180 apt-get {options} update --error-on=any'] * 3
+                         + [f'{bound} 600 apt-get {options} install --yes --no-install-recommends '
+                            'bubblewrap apparmor'], calls)
+        result, calls = self.run_prepare(failing_updates=3)
+        self.assertEqual(1, result.returncode)
+        self.assertIn('apt-get update failed 3 times', result.stderr)
+        self.assertFalse([call for call in calls if ' install ' in call])
 
     def test_prepare_rejects_an_unknown_stage_before_installing(self):
         result = subprocess.run(['bash', str(Path(__file__).with_name('prepare-ci.sh')), 'shadow'],
