@@ -5,6 +5,7 @@ import {
   FIXED_APP_QR_URL,
   PLAY_STORE_URL,
   appOpenHref,
+  appPromptFor,
   canonicalLinkForRoute,
   detectMobilePlatform,
   nearbySaved,
@@ -276,5 +277,19 @@ describe("web deep-link contract", () => {
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) bytes[i] = readBits(12 + i * 8, 8);
     expect(new TextDecoder().decode(bytes)).toBe(FIXED_APP_QR_URL);
+  });
+
+  it("offers the app bar only to mobile browsers and the QR only to wide desktop windows", () => {
+    const tab = { compact: false, standalone: false };
+    expect(appPromptFor("android", { ...tab, compact: true })).toBe("bar");
+    expect(appPromptFor("ios", { ...tab, compact: true })).toBe("bar");
+    expect(appPromptFor("ipados", tab)).toBe("bar");
+    expect(appPromptFor("mobile", { ...tab, compact: true })).toBe("bar");
+    expect(appPromptFor("desktop", tab)).toBe("qr");
+    // A narrow desktop window must not get a store link that resolves back to the web app.
+    expect(appPromptFor("desktop", { ...tab, compact: true })).toBe("none");
+    // The installed PWA must not nag on every launch.
+    expect(appPromptFor("ios", { compact: true, standalone: true })).toBe("none");
+    expect(appPromptFor("android", { compact: true, standalone: true })).toBe("none");
   });
 });

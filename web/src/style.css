@@ -251,9 +251,10 @@ small {
   margin-bottom: 10px;
 }
 .app-qr-svg {
+  /* 41 modules at 3 CSS px each, so every module keeps the same width. */
   display: block;
-  width: 112px;
-  height: 112px;
+  width: 123px;
+  height: 123px;
 }
 .app-qr-card strong {
   font-size: max(var(--tw-type-label-size), var(--font-floor));

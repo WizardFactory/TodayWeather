@@ -1,7 +1,10 @@
 import { test, expect } from "./fixtures";
 
+const IPHONE_UA =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+
 test.describe("shared location", () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+  test.use({ viewport: { width: 390, height: 844 }, userAgent: IPHONE_UA });
 
   test("previews coordinates, dismisses the app action, and saves explicitly", async ({
     page,
@@ -160,5 +163,32 @@ test.describe("desktop QR and default link preview metadata", () => {
       "content",
       "오늘날씨 · TodayWeather",
     );
+    // A static og:url would canonicalize every shared place to the home page.
+    await expect(page.locator('meta[property="og:url"]')).toHaveCount(0);
+  });
+
+  test("a narrow desktop window shows neither the app bar nor the QR card", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/weather/seoul/daily");
+    await expect(page.getByRole("heading", { name: "서울" })).toBeVisible();
+    await expect(page.locator(".link-arrival")).toHaveCount(0);
+    await expect(page.locator(".app-qr-card")).toHaveCount(0);
+  });
+
+  test("the installed PWA does not show the app bar", async ({ browser }) => {
+    const context = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      userAgent: IPHONE_UA,
+    });
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, "standalone", { value: true });
+    });
+    const page = await context.newPage();
+    await page.goto("/weather/seoul/daily");
+    await expect(page.getByRole("heading", { name: "서울" })).toBeVisible();
+    await expect(page.locator(".link-arrival")).toHaveCount(0);
+    await context.close();
   });
 });

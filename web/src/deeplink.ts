@@ -136,6 +136,23 @@ export function detectMobilePlatform(
   return "desktop";
 }
 
+export type AppPrompt = "bar" | "qr" | "none";
+
+/**
+ * Mobile browsers get the "Open in app" bar, wide desktop windows get the
+ * fixed store QR. A narrow desktop window gets neither: its store link would
+ * resolve back to the web app. The installed PWA gets neither, so it does not
+ * prompt on every launch.
+ */
+export function appPromptFor(
+  platform: MobilePlatform,
+  { compact, standalone }: { compact: boolean; standalone: boolean },
+): AppPrompt {
+  if (standalone) return "none";
+  if (platform !== "desktop") return "bar";
+  return compact ? "none" : "qr";
+}
+
 function decodeSegment(segment: string) {
   try {
     return decodeURIComponent(segment);

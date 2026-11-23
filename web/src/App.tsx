@@ -79,6 +79,7 @@ import WeatherPage from "./Weather";
 import { AppQrCode } from "./AppQrCode";
 import {
   appOpenHref,
+  appPromptFor,
   canonicalLinkForRoute,
   detectMobilePlatform,
   linkedWeatherPath,
@@ -700,16 +701,22 @@ export default function App() {
 const LINK_BANNER_DISMISSED = "tw.web.v1.link-banner-dismissed";
 const IOS_APP_ID = "1041700694";
 
-function isMobileClient(compact: boolean) {
+function runsAsInstalledApp() {
   return (
-    compact ||
-    detectMobilePlatform(navigator.userAgent, navigator.maxTouchPoints) !==
-      "desktop"
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function appPrompt(compact: boolean) {
+  return appPromptFor(
+    detectMobilePlatform(navigator.userAgent, navigator.maxTouchPoints),
+    { compact, standalone: runsAsInstalledApp() },
   );
 }
 
 function DesktopAppQrCard({ compact }: { compact: boolean }) {
-  if (isMobileClient(compact)) return null;
+  if (appPrompt(compact) !== "qr") return null;
   return (
     <div className="app-qr-card" aria-label={t("link.qrTitle")}>
       <div className="app-qr-frame">
@@ -747,8 +754,7 @@ function LinkArrivalBanner({ compact }: { compact: boolean }) {
       );
     }
   }, [canonicalUrl]);
-  const mobile = isMobileClient(compact);
-  if (!mobile || dismissed) return null;
+  if (appPrompt(compact) !== "bar" || dismissed) return null;
   const href = appOpenHref(
     canonicalUrl,
     navigator.userAgent,
