@@ -1,6 +1,6 @@
 {
-  "title": "Shadow supervisor: prepare and recover",
-  "scenario": "Operator guide for a prepared schema-5 journal. The inspection capture uses the offline preparation fixture. The finish capture uses an interrupted and resumed offline AWS CLI stand-in, with an exact known launch and no SSH identity.",
+  "title": "Shadow supervisor operator guide",
+  "scenario": "Use a prepared schema-5 journal. Steps 1 and 2 show offline fixtures for preparation and interrupted finish recovery. Step 3 uses the retained SR-6 local-peer rehearsal.",
   "steps": [
     {
       "title": "Prepare once, inspect, then execute only the qualified run",
@@ -15,6 +15,13 @@
       "screenshot": "finish-output.png",
       "caption": "The offline replay completed with verified paired evidence, complete original sources and completed resource disposition. The output excerpt abbreviates paths and shows selected fields.",
       "expected": "Use the same journal and output if the operation is interrupted. On exit 1, inspect result.json and any sources/manifest.json. At 170 hours, an incomplete export keeps the state bucket without expiry. Weather parity is evaluated separately."
+    },
+    {
+      "title": "Evaluate the retained finish offline",
+      "instruction": "From the repository root, replace the placeholders with the frozen policy JSON, the private finish directory and a new output file in a private directory. Run the command as one line.\n\npython3.11 -IB server2/tools/shadow/qualification_evaluator.py --criteria <policy> --evidence <finish> --out <fresh_path>",
+      "screenshot": "qualification-output.png",
+      "caption": "Selected fields from the report produced by replaying the retained SR-6 finish. The local peer supplied the comparison responses.",
+      "expected": "Read recommendation and the eight criteria in the output file. For SR-6, C1 passed the integrity checks. C2 through C8 remain unassessed. Keep the decision on hold. A short cloud canary and a week-long run each require separate approval."
     }
   ]
 }

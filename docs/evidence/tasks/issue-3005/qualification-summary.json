@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "run_id": "sr6-rehearsal",
+  "profile": "local_peer",
+  "recommendation": "hold",
+  "launch_sha256": "002ab06a3eedcda2387173a2b72ebdfe8d6a10c5bb0cea72975325b83663d1f9",
+  "criteria_sha256": "c20111559c5bebed2627cd2ea4a1310021f218b71a96af92636df89979ace066",
+  "archive_sha256": "44b7ecb4ad11951bd766a1a79d678aec5f5d8537cf73e8e4fddb471721e0fc7b",
+  "qualification_sha256": "8fc683fba9daa831809afd4a72101b80550b60e5d5830c0dd0321761a7394282",
+  "evaluator_sha256": "0c23be5c0ffe17f8eab2fa6bf5056b5cf2e37c27a5577a65f8db67d57384fdfc",
+  "evidence": {
+    "candidate_sha256": "0d94e8d53c22487291210c2218339ee9f926352526337bdf971691f3a3a7cc20",
+    "launch_source_commit": "80245c1d9f66cbfefbaedd2f5194ee76af3232d1",
+    "ledger_sha256": "600039122da406e7fc08829e14d3dcafc775807fce92797425747f5b84ad2ae1",
+    "reader_sha256": "3b77e43b38b50729185b419d9d2c522e120c18be01b3b54f662539cd7519debb",
+    "sampler_sha256": "46e17e33561201e5c068fec581fb0172c7aa5ffcb6e33f0b3ce1f6e5d5e60153",
+    "source": "bucket",
+    "terminal": null
+  },
+  "criteria": [
+    {
+      "id": "C1",
+      "status": "pass",
+      "reason": "retained_launch_reader_ledger_and_pairs_verified"
+    },
+    {
+      "id": "C2",
+      "status": "unassessed",
+      "reason": "usable_pairs_against_declared_count_minima"
+    },
+    {
+      "id": "C3",
+      "status": "unassessed",
+      "reason": "local_peer_is_not_production"
+    },
+    {
+      "id": "C4",
+      "status": "unassessed",
+      "reason": "local_peer_is_not_production"
+    },
+    {
+      "id": "C5",
+      "status": "unassessed",
+      "reason": "absolute_admitted_attempt_error_fraction"
+    },
+    {
+      "id": "C6",
+      "status": "unassessed",
+      "reason": "reader_elapsed_ms"
+    },
+    {
+      "id": "C7",
+      "status": "unassessed",
+      "reason": "rehearsal_measurements_required"
+    },
+    {
+      "id": "C8",
+      "status": "unassessed",
+      "reason": "production_control_not_supplied"
+    }
+  ],
+  "counts": {
+    "sampled_seconds": 86400,
+    "planned_cases": 56,
+    "attempted_case_count": 46,
+    "complete_two_sided_slots": 895,
+    "admitted": 1796,
+    "origin_statuses": {
+      "production": {
+        "200": 895
+      },
+      "candidate": {
+        "501": 598,
+        "200": 204,
+        "404": 50,
+        "304": 1,
+        "500": 48
+      }
+    },
+    "skips": {
+      "production": {
+        "no-validator": 16
+      },
+      "candidate": {
+        "no-validator": 10
+      }
+    }
+  },
+  "direct_address_candidate": {
+    "p50": 2554,
+    "p95": 2606,
+    "p99": 2703
+  }
+}
