@@ -34,11 +34,11 @@
       "image": "daily.png",
       "intro": "Daily bars use one temperature scale and one cool-to-warm gradient. Seven days fit a phone screen, as in the mobile apps; past days remain available.",
       "steps": [
-        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Each column shows the weekday over the day of the month; today starts in the third column on phones, and wide screens open at the first day.",
-        "Compare minimum, maximum and current temperature. Different morning and afternoon conditions show two stacked icons (morning above); matching conditions share one icon.",
+        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Each column shows the weekday over the two-digit day of the month; today starts in the third column on phones, and wide screens open at the first day.",
+        "Compare minimum, maximum and current temperature: the red dot on today's bar is the current temperature. Different morning and afternoon conditions show two stacked icons (morning above); matching conditions share one icon.",
         "Use Left/Right/Home/End or the table for temperatures, conditions, precipitation probability and amount."
       ],
-      "expected": "Past probability is hidden. Equal morning and afternoon conditions use one icon.",
+      "expected": "Past probability is hidden and a day without rain probability leaves that cell empty. Equal morning and afternoon conditions use one icon.",
       "failure": "An incomplete range has no bar. The missing value is a dash; any supplied extremum remains on the shared scale. A failed request keeps focus in the content; Retry returns focus to Daily after data arrives."
     },
     {

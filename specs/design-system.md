@@ -356,17 +356,17 @@ Both charts keep the Cordova information model and reading order. The design sys
 
 **Anatomy, one column per day, including past days the service returns:**
 1. **Weekday.** The short weekday, `chart-axis`, weight 600. Today's column uses the accent color, as the native apps' `current-rect`; there is no separate "Today" tag.
-2. **Day of month.** `chart-axis`.
+2. **Day of month.** Two digits (`01`), as the native apps. `chart-axis`.
 3. **AM and PM sky icons.** Stacked, AM above PM, without period words (their names are in the cursor, tooltip and table). Shown as one icon when they are equal or PM is missing. The icon area keeps one height so the rows below stay aligned.
-4. **Precipitation.** Probability for today and later (Cordova rule: shown when `fromToday >= 0` and truthy), plus an amount when present. Uses `caption` and the same color rules as the hourly chart.
+4. **Precipitation.** Probability for today and later (Cordova rule: shown when `fromToday >= 0` and truthy; otherwise the cell is empty, as native, and the table shows a dash), plus an amount when present. Uses `caption` and the same color rules as the hourly chart.
 5. **Min–max bars on one y scale shared by all days.** This scale is what makes week-to-week change visible, and it is the Cordova signature.
-   - **Bar (D8).** Width 0.375rem (6 px, rounded caps); Cordova used 2 px. The fill is the PWA daily list's temperature gradient (`web/src/style.css:1058`) turned vertical:
+   - **Bar (D8).** Width 0.625rem (10 px, rounded caps); Cordova used 2 px. The fill is the PWA daily list's temperature gradient (`web/src/style.css:1058`) turned vertical:
      - bottom (min) `chart.range.cool` `#9bcdf0`
      - top (max) `chart.range.warm` `#f0c77f`
      - The same gradient is used in dark mode, where it reaches 7.62–9.68 on surface and raised.
      - In light mode the stops are 1.70 and 1.59 on white. The printed min/max values carry the information, and a 1 px solid outline `chart.range.edge` (`#637088` light / `#94a3b8` dark) keeps the bar shape visible.
    - **Values.** The maximum sits above the bar and the minimum below it, each as `N°` in `chart-value`.
-   - **Current temperature.** A `chart.now` dot on today's bar.
+   - **Current temperature.** A `chart.now` dot on today's bar, 1.4 times the bar width across (14 px), with no vertical line through the column.
    - **Past days** (new addition; Cordova does not distinguish them). Bars keep the D8 gradient at 55% opacity, and labels use `text.secondary`, which is the non-color cue.
    - **Y domain** (deviation from Cordova, which uses only `tmn`/`tmx`, `app.js:1197-1204`). The domain includes the current temperature, so today's dot can never fall off the scale.
 

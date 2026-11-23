@@ -23,7 +23,8 @@ const fixture = JSON.parse(
 // current temperature sits between columns, as in the apps.
 const shape = [0, -1, -2, 1, 4, 6, 4, 2];
 const sky = ["moon", "moon", "sun", "sun", "sun", "sun", "sun", "moon"];
-const base = { 21: 9, 22: 11, 23: 17, 24: 13, 25: 12, 26: 12 };
+// Today's rows span 18 to 26, the fixture's daily range for 09-23.
+const base = { 21: 12, 22: 14, 23: 20, 24: 16, 25: 15, 26: 15 };
 fixture.short = Array.from({ length: 41 }, (_, i) => {
   const day = 21 + Math.floor(i / 8),
     slot = i % 8,
@@ -44,12 +45,12 @@ Object.assign(fixture.current, {
   time: 7,
   liveTime: "0730",
   stnDateTime: "2026.09.23.07:30",
-  t1h: 17,
+  t1h: 20,
   yesterday: {
     ...fixture.current.yesterday,
     time: 7,
     dateObj: "2026.09.22 07:00",
-    t1h: 9,
+    t1h: 13,
   },
 });
 const page = await browser.newPage({
@@ -130,7 +131,7 @@ try {
         browser: browser.version(),
         viewport: [820, 1180],
         fixture: "docs/rewrite/examples/client-kma-response.json",
-        fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 17, yesterday 9",
+        fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 20, yesterday 13",
         externalRequests: "blocked except fixture fulfilment",
         csp: "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
         // Keep entries written by other capture scripts (precipitation-*.png).

@@ -203,7 +203,8 @@ function dailyHeader(at: string, lang: string) {
       weekday: "short",
       timeZone: "UTC",
     }).format(d),
-    secondary: String(d.getUTCDate()),
+    // Native: the two-digit day of the month ("01").
+    secondary: String(d.getUTCDate()).padStart(2, "0"),
   };
 }
 
@@ -640,6 +641,8 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       rem * 1.5 +
       ((model.domain[1] - v) / (model.domain[1] - model.domain[0])) *
         (height - rem * 3.5);
+  // A 10 px bar; the current-temperature dot is sized to it (14 px across).
+  const barWidth = rem * 0.625;
   const { cursor, setCursor, keyDown } = useCursor(n, x, ref, model.todayIndex),
     id = useId(),
     readoutId = useId();
@@ -779,7 +782,12 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                     </span>
                   )}
                 </div>
-                <span className="chart-probability">{probability(r)}</span>
+                {/* Native: no probability is an empty cell (the table keeps the dash). */}
+                <span className="chart-probability">
+                  {!r.past && r.point.rainProbability
+                    ? probability(r)
+                    : "\u00a0"}
+                </span>
                 <span className="chart-amount">
                   <ChartAmount
                     point={r.point}
@@ -849,14 +857,14 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                 {r.validRange && (
                   <rect
                     className="range"
-                    x={x(i) - rem * 0.1875}
+                    x={x(i) - barWidth / 2}
                     y={y(r.point.high!)}
-                    width={rem * 0.375}
+                    width={barWidth}
                     height={Math.max(
-                      rem * 0.375,
+                      barWidth,
                       y(r.point.low!) - y(r.point.high!),
                     )}
-                    rx={rem * 0.1875}
+                    rx={barWidth / 2}
                     fill={`url(#${id})`}
                   />
                 )}
@@ -881,21 +889,12 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                   {formatValue(r.point.low)}°
                 </text>
                 {r.today && model.current !== null && (
-                  <>
-                    <line
-                      className="now-line"
-                      x1={x(i)}
-                      x2={x(i)}
-                      y1={0}
-                      y2={height}
-                    />
-                    <circle
-                      className="now"
-                      cx={x(i)}
-                      cy={y(model.current)}
-                      r={rem * 0.26}
-                    />
-                  </>
+                  <circle
+                    className="now"
+                    cx={x(i)}
+                    cy={y(model.current)}
+                    r={barWidth * 0.7}
+                  />
                 )}
               </g>
             ))}

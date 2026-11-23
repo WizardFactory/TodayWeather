@@ -2491,11 +2491,6 @@ textarea {
 .hourly-chart .today-point.now-point {
   fill: var(--tw-status-danger-text);
 }
-.now-line {
-  stroke: var(--tw-chart-now);
-  stroke-width: 1;
-  stroke-dasharray: 3 5;
-}
 .cursor-line {
   stroke: var(--tw-border-strong);
   stroke-width: 1;
@@ -2642,8 +2637,7 @@ textarea {
   .chart-grid,
   .range,
   .now,
-  .cursor-line,
-  .now-line {
+  .cursor-line {
     stroke: CanvasText;
   }
   .range,

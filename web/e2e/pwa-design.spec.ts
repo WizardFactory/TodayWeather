@@ -153,6 +153,39 @@ test("daily AM/PM conditions include column zero, merged icons and reading alter
   await expect(row).toContainText("오전 맑음");
   await expect(row).toContainText("오후 비");
 });
+test("daily chart keeps the native cells: empty probability, two-digit day, a 10 px bar and a sized current dot without a line", async ({
+  page,
+}) => {
+  const raw = dailyFixture();
+  // 09-23 (today) has no probability; 10-01 checks the two-digit day.
+  raw.midData.dailyData = Array.from({ length: 9 }, (_, i) => ({
+    ...raw.midData.dailyData[0],
+    date: i < 8 ? `202609${23 + i}` : "20261001",
+    pop: i === 0 ? 0 : 60,
+  }));
+  await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
+  await page.goto("/weather/seoul/daily");
+  const daily = page.locator(".daily-chart");
+  const columns = daily.locator(".daily-columns .chart-column");
+  await expect(columns).toHaveCount(9);
+  await expect(columns.nth(8).locator(".chart-day-date")).toHaveText("01");
+  expect(
+    (await columns.nth(0).locator(".chart-probability").textContent())!.trim(),
+  ).toBe("");
+  await expect(columns.nth(1).locator(".chart-probability")).toHaveText("60%");
+  await expect(daily.locator(".now-line")).toHaveCount(0);
+  const sizes = await daily.evaluate((el) => ({
+    bar: Number(el.querySelector("rect.range")!.getAttribute("width")),
+    dot: Number(el.querySelector("circle.now")!.getAttribute("r")),
+  }));
+  expect(sizes.bar).toBe(10);
+  expect(sizes.dot).toBe(7);
+  // The table keeps the dash for a missing probability.
+  await page.locator(".daily-chart-panel summary").click();
+  await expect(
+    page.locator(".daily-chart-panel tbody tr").first(),
+  ).toContainText("—");
+});
 test("daily chart opens with today third below a 640 px screen and at the first day from 640 px (native)", async ({
   page,
 }) => {

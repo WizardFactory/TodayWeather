@@ -6,7 +6,7 @@
     1180
   ],
   "fixture": "docs/rewrite/examples/client-kma-response.json",
-  "fixturePatch": "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 17, yesterday 9",
+  "fixturePatch": "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 20, yesterday 13",
   "externalRequests": "blocked except fixture fulfilment",
   "csp": "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
   "images": [
@@ -16,11 +16,11 @@
     },
     {
       "file": "hourly.png",
-      "sha256": "6a4b375946435442168df4c47c39aa90f55c38b2afebeb20616ebfa2373f5e60"
+      "sha256": "b9f6d269100b5c86e3212a8c3c00d9937f89566da3378227dac6dd36a5eaac3a"
     },
     {
       "file": "daily.png",
-      "sha256": "c8ab9046596c95c64fa9999039bf77039cb67014969b5aef2bf39d7c6420aa53"
+      "sha256": "aea8ec607775e7569d40acc717b7d0777d945afafc8380fc42ff9651ecc2033f"
     },
     {
       "file": "air.png",
