@@ -460,12 +460,6 @@ on:
     paths:
       - "server2/**"
       - ".github/workflows/server2.yml"
-  push:
-    branches: [master]
-    paths:
-      - "server2/**"
-      - ".github/workflows/server2.yml"
-  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -492,28 +486,8 @@ jobs:
         with:
           fetch-depth: 0
       - run: bash tools/ci.sh python
-  shadow:
-    needs: placement
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    defaults:
-      run:
-        working-directory: server2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - run: bash tools/ci.sh shadow-${{ matrix.shard }}
   rust:
     needs: placement
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     defaults:
@@ -523,15 +497,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: server2
-          key: test
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest@0.9.152
-      - run: bash tools/ci.sh rust-${{ matrix.shard }}
+      - run: bash tools/ci.sh rust
   gnu:
     needs: placement
     runs-on: ubuntu-24.04
@@ -543,15 +509,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: server2
-          key: release
-          save-if: ${{ github.ref == 'refs/heads/master' }}
       - run: bash tools/ci.sh gnu
   musl:
     needs: placement
-    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     outputs:
@@ -572,7 +532,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
   foundation:
-    needs: [placement, python, shadow, rust, gnu, musl]
+    needs: [placement, python, rust, gnu, musl]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -584,33 +544,21 @@ jobs:
         if: >-
           ${{ needs.placement.result != 'success' ||
               needs.python.result != 'success' ||
-              needs.shadow.result != 'success' ||
               needs.rust.result != 'success' ||
               needs.gnu.result != 'success' ||
-              (github.event_name == 'pull_request' && needs.musl.result != 'skipped') ||
-              (github.event_name != 'pull_request' && needs.musl.result != 'success') }}
+              needs.musl.result != 'success' }}
         working-directory: .
         run: exit 1
-      - if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: server2-linux-musl-candidate
           path: reports/verification/server2-local-first/artifact-native/
-      - if: ${{ github.event_name != 'pull_request' }}
-        run: bash tools/ci.sh promote
+      - run: bash tools/ci.sh promote
         env:
           SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}
-      - if: ${{ github.event_name != 'pull_request' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: server2-linux-musl-verified
-          path: reports/verification/server2-local-first/artifact-native/
-          if-no-files-found: error
-          retention-days: 7
 """
 
 
@@ -619,7 +567,7 @@ def audit_workflow(body):
     if re.search(r'^jobs:\s*$', body, re.M):
         expected_foundation='name: Server2\non:\n  pull_request:\n    paths:\n      - "server2/**"\n      - ".github/workflows/server2.yml"\npermissions:\n  contents: read\njobs:\n  foundation:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 90\n    defaults:\n      run:\n        working-directory: server2\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n      - run: bash tools/ci.sh\n'
         # Accept only the reviewed job, dependency, guard, and action wiring.
-        if body.strip() in {(PARALLEL_WORKFLOW_PREFIX + GOLDEN_JOB).strip(),
+        if body.strip() in {(PARALLEL_WORKFLOW_PREFIX + VERIFIED_UPLOAD + GOLDEN_JOB).strip(),
                             expected_foundation.strip(), (expected_foundation+GOLDEN_JOB).strip(),
                             (expected_foundation+VERIFIED_UPLOAD+GOLDEN_JOB).strip()}:
             return []

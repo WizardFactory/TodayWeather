@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import ci
 
+STAGES = ('placement', 'python', 'rust', 'gnu', 'musl', 'promote')
 ROOT = Path('/checkout')
 REVISION = 'a' * 40
 
@@ -138,44 +139,26 @@ def expected_serial(platform, has_local_pair):
 
 
 class CommandPlanTests(unittest.TestCase):
-    def test_hosted_stages_cover_the_frozen_serial_inventory_once(self):
+    def test_parallel_jobs_cover_the_frozen_serial_inventory_once(self):
         event = {'pull_request': {'head': {'sha': REVISION}}}
-        workspace_tests = ('env', 'RUST_MIN_STACK=8388608', 'cargo', 'test', '--locked', '--workspace')
-        simulation = (sys.executable, ci.SHADOW_SIMULATION)
         for platform in ('linux', 'darwin'):
             for has_local_pair in (False, True):
                 with (self.subTest(platform=platform, has_local_pair=has_local_pair),
-                      patch.object(ci, 'placement_command', return_value=['<PLACEMENT>']),
+                      patch.object(ci, 'placement_command', return_value=['<PLACEMENT>']) as placement,
                       patch.object(sys, 'platform', platform),
                       patch.object(Path, 'is_file', return_value=has_local_pair)):
                     expected = expected_serial(platform, has_local_pair)
                     self.assertEqual(expected, list(ci.command_plan(ROOT, event, 'all')))
-                    hosted = Counter(tuple(cmd) for stage in ci.HOSTED_STAGES
-                                     for cmd in ci.stage_commands(ROOT, event, stage))
-                    serial = Counter(tuple(cmd) for _, cmd in expected)
-                    self.assertTrue(all(count == 1 for count in serial.values()))
-                    # Two serial commands are replaced by disjoint hosted partitions.
-                    for command in serial:
-                        self.assertEqual(0 if command in (workspace_tests, simulation) else 1,
-                                         hosted[command], command)
-                    extras = hosted - Counter(c for c in serial if c not in (workspace_tests, simulation))
-                    nextest = sorted(c[-1] for c in extras if 'nextest' in c)
-                    self.assertEqual([f'count:{k}/{ci.RUST_SHARDS}' for k in range(1, ci.RUST_SHARDS + 1)],
-                                     nextest)
-                    self.assertEqual(1, extras[('cargo', 'test', '--locked', '--workspace', '--doc')])
-                    shards = [c for c in extras if c[:2] == simulation]
-                    self.assertEqual(len(ci.SHADOW_SHARDS), len(shards))
-                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 1 + len(shards))
-
-    def test_shadow_shards_run_every_simulation_test_exactly_once(self):
-        path = Path(__file__).parents[1] / ci.SHADOW_SIMULATION
-        tests = ci.simulation_tests(path)
-        shards = [ci.shadow_shard(path, k) for k in range(1, len(ci.SHADOW_SHARDS) + 1)]
-        self.assertEqual(sorted(tests), sorted(name for shard in shards for name in shard))
-        self.assertEqual(len(tests), len({name for shard in shards for name in shard}))
-        with patch.object(ci, 'SHADOW_SHARDS', ci.SHADOW_SHARDS + (('test_removed_name',),)):
-            with self.assertRaisesRegex(SystemExit, 'unique existing tests'):
-                ci.shadow_shard(path, 1)
+                    actual = []
+                    for stage in STAGES:
+                        selected = [(group, cmd) for group, cmd in ci.command_plan(ROOT, event, stage)
+                                    if group == stage]
+                        self.assertEqual([item for item in expected if item[0] == stage], selected)
+                        actual += selected
+                    self.assertEqual(2, placement.call_count)
+                    counts = Counter((group, tuple(cmd)) for group, cmd in actual)
+                    self.assertEqual(Counter((group, tuple(cmd)) for group, cmd in expected), counts)
+                    self.assertTrue(all(count == 1 for count in counts.values()))
 
     def test_missing_local_test_or_smoke_fails_closed(self):
         for outcomes in ([True, False], [False, True]):
