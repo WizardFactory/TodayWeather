@@ -475,6 +475,9 @@ on:
         description: "Task declaration under server2/ when the range changes none"
         required: false
         default: ""
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
