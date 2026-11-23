@@ -363,7 +363,7 @@ The build and the unit tests run without them.
 
 ## Version
 
-`versionCode` 200000 and `versionName` 2.0.0 keep the native debug build installable over the Cordova 1.1.1 build (100091). The 2.0.0 release on Play is `versionCode` 200003 ([`android/v2.0.0`](https://github.com/WizardFactory/TodayWeather/releases/tag/android/v2.0.0)); 200000–200003 are spent. A release sets both values in a pull request, with a `versionCode` above every active Play track that has not been uploaded before; 2.0.1 starts at 200010 ([runbook, step 1](../docs/operations/android-release.md#1-freeze-the-version)).
+`versionCode` 200010 and `versionName` 2.0.1 are the next release (2.0.1 candidate 1). Debug builds carry the same values and install over earlier native and Cordova builds. The 2.0.0 release on Play is `versionCode` 200003 ([`android/v2.0.0`](https://github.com/WizardFactory/TodayWeather/releases/tag/android/v2.0.0)); 200000–200003 are spent. A release sets both values in a pull request, with a `versionCode` above every active Play track that has not been uploaded before ([runbook, step 1](../docs/operations/android-release.md#1-freeze-the-version)).
 
 ## Release
 

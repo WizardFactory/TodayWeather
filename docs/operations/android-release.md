@@ -19,7 +19,7 @@ How a commit of the native Android app (`android/`) becomes a Google Play releas
 | 5 | [Device gate](#5-device-gate) | The signed APK passed the physical-device checks | AK |
 | 6 | [Tag the candidate](#6-tag-the-candidate-and-publish-its-notes) | `android/vX.Y.Z-rc.N` and its pre-release exist; `--check` passes | AK |
 | 7 | [Store declarations and test tracks](#7-store-declarations-and-test-tracks) | Internal and open testing accepted | AK |
-| 8 | [Production](#8-production-rollout) | `android/vX.Y.Z` released; staged rollout at 100% without a halt | AK |
+| 8 | [Production](#8-production-rollout) | `android/vX.Y.Z` released to 100%; no halt signal in the first week | AK |
 | 9 | [Close](#9-close-the-release) | Notes say `deployed`; #2898 or the release issue updated | AK or agent |
 
 A failure at any step ends the candidate. Fix on `master`, then start again at step 1 with the next candidate number and a higher `versionCode`. Keep the failed candidate's tag, Release and evidence.
@@ -30,7 +30,6 @@ A failure at any step ends the candidate. Fix on `master`, then start again at s
 
 - `versionName` is `MAJOR.MINOR.PATCH`, the version of the tag.
 - `versionCode` must be above every code on every active Play track, the Cordova builds included, and must not have been uploaded before. Read the tracks and the uploaded codes in the Play Console before choosing. 200000–200003 are spent (2.0.0); 2.0.1 candidate 1 is 200010. The default is `MAJOR × 100000 + MINOR × 1000 + PATCH × 10 + (candidate − 1)`: 2.0.0 candidate 1 is 200000, candidate 2 is 200001, and 2.0.1 starts at 200010. Play accepts a code once, so each candidate that was uploaded needs a new one.
-- A Cordova fallback build for a rollback needs a code above the native release it replaces ([hand-back](../../android/README.md#rollback-hand-back-to-a-cordova-build-an-17)).
 
 ### 2. Release CI
 
@@ -61,6 +60,8 @@ The gates need two builds, each from the candidate commit with the inputs of [Pr
 | --- | --- | --- |
 | Full | `app/google-services.json`, `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`, `TW_MAIL_TO` | Every gate but the menu hand-offs. The test application sends weather requests to the production server only in the production gates, and never sends a push request |
 | Without a server | `TW_MAIL_TO`; `TW_SERVER_URL` removed from the environment and `android/private.properties` | Menu hand-offs: its runner requires a build without a server URL |
+
+Releases do not consider Cordova compatibility (AK, 2026-11-24): the four gates that need a Cordova 1.1.1 APK (upgrade, hand-back, backup and restore, notification after the upgrade) are not run. They stay listed for the record.
 
 | Gate | Command under `android/tools/` | Needs | Emulators |
 | --- | --- | --- | --- |
@@ -119,8 +120,6 @@ On a physical phone that has the current store release installed with real state
 5. Current position, place search, the weather, air and nationwide pages, sharing and the widget work against production.
 6. The app starts without a crash after a restart of the phone.
 
-Users who never updated still have Cordova 1.1.x and go straight to the new release. Until #2898's physical-device upgrade gate has passed once, also run checks 1–6 on a second phone that has the Cordova 1.1.1 store release with real state, updated to the signed APK. 2.0.0 has no record of that gate.
-
 Uninstalling, clearing data or downgrading on AK's phone needs AK's word each time. Screenshots and backups from the phone stay private.
 
 ### 6. Tag the candidate and publish its notes
@@ -166,16 +165,7 @@ node scripts/release-notes.mjs --check "$OUT/notes-final.md" --tag "$TAG" --comm
 
 `notes-final.md` is the candidate's notes with `Tag:` set to the final tag (`--check` fails while it still says the candidate's), the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 
-Roll out in stages and hold each stage until its window has passed without a halt:
-
-| Stage | Share of users | Hold at least |
-| --- | --- | --- |
-| 1 | 5% | 48 hours |
-| 2 | 20% | 48 hours |
-| 3 | 50% | 48 hours |
-| 4 | 100% | — |
-
-Halt the rollout in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version:
+Release to 100% of users at once; there is no staged rollout (AK, 2026-11-24). Watch the signals below for the first week. Halt the release in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version:
 
 | Signal | Halt when | Read from |
 | --- | --- | --- |
@@ -186,7 +176,7 @@ Halt the rollout in the Play Console (it stops new installs of the release; inst
 | Weather requests failing | Failure share of `weather_fetch` above the previous release's by 2 points | Analytics, CloudFront logs |
 | Push registrations | Registrations per updated install clearly below the previous release's, or duplicate registrations | Push server logs |
 
-The crash and ANR limits are Google Play's bad-behavior thresholds ([crashes](https://developer.android.com/google/play/vitals/crash), [ANRs](https://developer.android.com/google/play/vitals/anr); read 2026-11-23). The stages, windows and the other limits are proposed values: AK confirms or changes them when AN-19 starts, and the release notes record the values used.
+The crash and ANR limits are Google Play's bad-behavior thresholds ([crashes](https://developer.android.com/google/play/vitals/crash), [ANRs](https://developer.android.com/google/play/vitals/anr); read 2026-11-23). The other limits are proposed values; the release notes record the values used.
 
 ### 9. Close the release
 
@@ -196,10 +186,10 @@ Set `Rollout status: deployed` in the final notes with the time 100% was reached
 
 Google Play cannot move users back to an older version code. After a halt:
 
-1. **Fix forward (default).** Fix on `master`, take the next `PATCH` with a higher `versionCode`, and run this runbook again from step 1. Resume as a new release; the halted release's notes get `Rollout status: failed` and the reason.
-2. **Cordova fallback (last resort).** When the native app cannot be fixed quickly, ship a Cordova build with a higher `versionCode` that takes the state back ([hand-back](../../android/README.md#rollback-hand-back-to-a-cordova-build-an-17)). It needs its own hand-back gate run, the release signing and AK's decision.
+1. **Fix forward.** Fix on `master`, take the next `PATCH` with a higher `versionCode`, and run this runbook again from step 1. Resume as a new release; the halted release's notes get `Rollout status: failed` and the reason.
+A Cordova fallback is no longer a rollback path: releases do not consider Cordova compatibility (AK, 2026-11-24).
 
-Record the halt time, the share reached, the signal and its value in the notes before starting either.
+Record the halt time, the signal and its value in the notes before the fix.
 
 ## Recording a release built outside the runbook
 

@@ -47,8 +47,8 @@ android {
         targetSdk = 36
         // Above the Cordova 1.1.1 build (100091) so the native build installs as an update.
         // AN-19 sets the release value above every active Play track.
-        versionCode = 200000
-        versionName = "2.0.0"
+        versionCode = 200010
+        versionName = "2.0.1"
         testInstrumentationRunner = "net.wizardfactory.todayweather.TestRunner"
         buildConfigField("String", "SERVER_URL", "\"" + serverUrl.trimEnd('/') + "\"")
         buildConfigField("String", "WEATHER_PHOTOS_URL", "\"" + weatherPhotosUrl + "\"")
