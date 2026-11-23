@@ -156,6 +156,16 @@ test('the native summaries link to the matching store fallback', () => {
   }
 });
 
+test('every open action uses the plain /open link', () => {
+  for (const page of pages) {
+    const html = readFileSync(page, 'utf8');
+    const actions = attribute(html, /<a class="primary" href="([^"]+)">/g);
+    assert.ok(actions.length >= 1, page);
+    assert.deepEqual([...new Set(actions)], ['https://link.todayweather.ai/open'], page);
+    assert.match(html, /<li><h3>웹앱<\/h3>/, `${page}: the WebApp summary title stays unlinked`);
+  }
+});
+
 test('the share image, touch icon and root files are present', () => {
   const site = 'https://todayweather.ai/';
   for (const page of pages) {
