@@ -16,6 +16,7 @@ Consumes [intent](../intent/android-release.md) and [spec](../specs/android-rele
 
 | 8 | Robolectric's runtimes through Gradle, read offline (added after the hosted runs: the download during the tests failed the reused PR job in two of three runs, and on master on 2026-11-22) | `android/app/build.gradle.kts` | `./gradlew test`; a build without the SDK 24 runtime fails the SDK 24 tests on the missing jar |
 | 9 | One result check for every release CI suite (review R5): adb's status and the raw status per test, not `OK (N tests)` | `android/tools/emulator/offline.sh`, the three existing runners, `test-instrumentation-passed.sh` and `release-ci/test-runners.sh` (adb test double) in PR CI | Recorded outputs (12 cases); every suite through `run-suites.sh` with the double (12 cases); the four local AVDs again |
+| 10 | The checkout check before the release build as a tested tool instead of inline commands (review R1, reopened twice for cases the inline form missed) | `android/tools/release/require-candidate.sh`, `test-require-candidate.sh` in PR CI | 13 cases in test repositories; the runbook's chain with stand-ins |
 
 Order: 1 and 2 are independent of 3–7. 3 precedes 4. 5 precedes the first green run of 4.
 

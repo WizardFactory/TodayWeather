@@ -17,6 +17,8 @@ Consumes [intent/android-release.md](../intent/android-release.md). The maintain
 
 `docs/operations/android-release.md` orders: version freeze; release CI on the full SHA; the manual emulator gates with their commands and prerequisites; local build and signing with `check-apk.sh`; the physical-device gate; candidate tag and notes; store declarations and test tracks; production tag, staged rollout and halt criteria; close; halt and rollback. Each step states who acts and what completes it. Steps needing private inputs, the signing key or store access are the operator's.
 
+`android/tools/release/require-candidate.sh <full SHA>` is the first command of the release build and passes only when the checkout it belongs to is exactly that commit: `HEAD` equal to the SHA, an empty `git status --porcelain --untracked-files=all`, no assume-unchanged or skip-worktree file, no ignored file under `android/*/src`, and every git command successful. Status 1 otherwise, 2 for a name that is not a full SHA. `test-require-candidate.sh` checks it in PR CI in repositories made for the test.
+
 `android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>` reports one line per check and fails (status 1) on: an invalid signature of either APK; a set of signer certificates or a package different from the store release's; an APK digest it cannot compute; a `versionCode` not above it; a `versionName`, `versionCode`, `minSdk` or `targetSdk` different from the checkout's `app/build.gradle.kts`; a debuggable APK; Google's sample AdMob app ID or none; no Firebase configuration. It prints the identity lines for the notes and changes nothing. Status 2: usage, a missing file or missing SDK tools.
 
 ## CI tiers (AC3, AC4)

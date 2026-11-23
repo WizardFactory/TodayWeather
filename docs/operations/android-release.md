@@ -84,8 +84,7 @@ CANDIDATE=<full SHA>                             # the SHA the release CI run ve
 APK="$OUT/TodayWeather-<versionName>-<versionCode>.apk"
 STORE_APK=<installed-store-release.apk>
 BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-test "$(git rev-parse HEAD)" = "$CANDIDATE" &&   # the checkout is that commit,
-  test -z "$(git status --porcelain)" &&         # nothing differs from it, untracked files included,
+android/tools/release/require-candidate.sh "$CANDIDATE" &&   # the checkout is exactly that commit
   (cd android &&
     ./gradlew clean assembleRelease &&           # which refuses sample or missing AdMob IDs
     "$BUILD_TOOLS/zipalign" -c -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk &&
@@ -96,7 +95,7 @@ test "$(git rev-parse HEAD)" = "$CANDIDATE" &&   # the checkout is that commit,
 
 The commands are one chain: a checkout of another commit, a file that differs, a failed build or a failed signature stops everything after it, and nothing is built or signed from the wrong source.
 
-- The two `test`s come first because an untracked source or resource file under `android/` would be built into the APK, and a clean checkout of another commit builds a different app with the same version numbers, and `check-apk.sh` cannot tell them apart. Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two.
+- `require-candidate.sh` comes first because an untracked source or resource file under `android/` would be built into the APK, and a clean checkout of another commit builds a different app with the same version numbers, and `check-apk.sh` cannot tell them apart. It passes only when `HEAD` is the candidate, no tracked file differs (staged or not, and none is hidden by an assume-unchanged or skip-worktree flag), no untracked file exists whatever `status.showUntrackedFiles` says, no ignored file sits in a source set, and every git command succeeded. The ignored private inputs and build output elsewhere do not count. Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two.
 - `apksigner` asks for the keystore and key passwords; do not put them on the command line, in a file of the checkout or in a log. `TW_ANDROID_KEYSTORE` and `TW_ANDROID_KEY_ALIAS` name the existing release keystore and its key. The app is not enrolled in Play App Signing, so this key is the one users' installs are signed with: a different key cannot update them.
 - `$OUT` is an absolute path outside the checkout or under ignored `reports/`. Keep the signed APK; the uploaded file and the checked file must be the same bytes.
 - `$STORE_APK` (an absolute path) is the release users have now: the Cordova 1.1.1 store APK for the first native release.
