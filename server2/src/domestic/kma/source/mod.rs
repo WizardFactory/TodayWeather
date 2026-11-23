@@ -361,7 +361,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> S3Source<T> {
     ) -> Result<Self, crate::storage::Error> {
         let store = Arc::new(CatalogStore::new(
             transport.clone(),
-            store_limits(observed),
+            CatalogLimits::default(),
         )?);
         let observations =
             observe::Observations::new(transport.clone(), store.clone(), acquire, locate);
@@ -2157,20 +2157,6 @@ const OBSERVED_WAIT: std::time::Duration = std::time::Duration::from_millis(2500
 const OBSERVED_SECTION: std::time::Duration = std::time::Duration::from_millis(2700);
 /// The narrative is added after the assembly, so it stops last.
 const OBSERVED_NARRATIVE: std::time::Duration = std::time::Duration::from_millis(2900);
-/// The request store's limits. The observed source's stored reads keep [`OBSERVED_BUDGET`]
-/// (KMA-NATION-READS): with fifteen nation cities queued for the store's admissions, the 3 s
-/// default ended their required grid reads and failed the whole nation answer in the SR-6
-/// rehearsal. Writes and repairs keep the default cap; other stores keep 3 s reads.
-pub(crate) fn store_limits(observed: bool) -> CatalogLimits {
-    if observed {
-        CatalogLimits {
-            read_deadline: OBSERVED_BUDGET,
-            ..CatalogLimits::default()
-        }
-    } else {
-        CatalogLimits::default()
-    }
-}
 /// `after` the start of an observed request, the same instant wherever it has got to: `deadline`
 /// is its budget from the start, so a KR remap's wait counts as well. A past instant stays past.
 fn observed_instant(deadline: Instant, after: std::time::Duration) -> Instant {
@@ -2688,19 +2674,3 @@ mod tests {
 mod previous_short_tests;
 #[cfg(test)]
 mod zone_retry_tests;
-#[cfg(test)]
-mod store_limits_tests {
-    use super::*;
-
-    #[test]
-    fn only_the_observed_source_keeps_its_stored_read_budget() {
-        let observed = store_limits(true);
-        assert_eq!(observed.read_deadline, OBSERVED_BUDGET);
-        assert_eq!(observed.deadline, CatalogLimits::default().deadline);
-        assert!(observed.validate().is_ok());
-        let legacy = store_limits(false);
-        assert_eq!(legacy.read_deadline, legacy.deadline);
-        // The bulk stores built from the request store keep the operation cap for reads.
-        assert_eq!(observed.background().read_deadline, observed.deadline);
-    }
-}

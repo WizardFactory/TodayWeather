@@ -1,18 +1,12 @@
 {
   "task": "KMA-NATION-READS",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2998",
-  "scope": "The observed KMA source's request catalog store ends reads at the earlier of the caller's deadline and 8 s; its bulk-lane background stores, every other store, and all writes and repairs keep the 3-second per-operation cap. Nation city reads queued for the store's admissions are then late rather than failed. Found in the SR-6 rehearsal. No deployment or production mutation.",
+  "scope": "Catalog store operations wait for an I/O admission only until their caller's deadline; the 3-second per-operation cap starts at admission. Nation city reads queued for the KMA store's admissions are then late rather than failed, and no operation holds an admission longer than before. Found in the SR-6 rehearsal. No deployment or production mutation.",
   "server2_paths": [
     "server2/config/tasks/KMA-NATION-READS.json",
-    "server2/src/domestic/kma/source/forecast_input.rs",
-    "server2/src/domestic/kma/source/life_input.rs",
-    "server2/src/domestic/kma/source/mod.rs",
-    "server2/src/domestic/kma/source/observe.rs",
     "server2/src/storage/catalog.rs",
-    "server2/src/storage/catalog_model.rs",
     "server2/tests/raw_records.rs",
-    "server2/tests/storage/catalog_wire.rs",
-    "server2/tests/storage/read_deadline.rs"
+    "server2/tests/storage/admission.rs"
   ],
   "outside": [
     {

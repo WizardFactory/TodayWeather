@@ -16,13 +16,7 @@ pub struct CatalogLimits {
     pub output_bytes: usize,
     pub io: usize,
     pub cpu: usize,
-    /// Per-operation cap of every catalog operation except the reads below.
     pub deadline: Duration,
-    /// Cap of a catalog read (lookup, page, members) within the caller's deadline
-    /// (KMA-NATION-READS). The default equals [`Self::deadline`]; only a store whose readers own a
-    /// longer stored-read budget (the observed KMA source, 8 s) raises it, so a read queued for
-    /// that store's admissions ends at its request's deadline rather than at 3 s.
-    pub read_deadline: Duration,
     pub raw: Limits,
 }
 impl Default for CatalogLimits {
@@ -41,20 +35,11 @@ impl Default for CatalogLimits {
             io: 16,
             cpu: 2,
             deadline: Duration::from_secs(3),
-            read_deadline: Duration::from_secs(3),
             raw: Limits::default(),
         }
     }
 }
 impl CatalogLimits {
-    /// These limits for background work on a bulk view: reads keep the operation cap even when
-    /// the request store raised [`Self::read_deadline`] (KMA-NATION-READS).
-    pub fn background(&self) -> Self {
-        Self {
-            read_deadline: self.deadline,
-            ..self.clone()
-        }
-    }
     pub fn validate(&self) -> Result<(), Error> {
         self.raw.validate()?;
         if self.control_bytes == 0
@@ -83,8 +68,6 @@ impl CatalogLimits {
             || self.cpu > 64
             || self.deadline.is_zero()
             || self.deadline > Duration::from_secs(9)
-            || self.read_deadline.is_zero()
-            || self.read_deadline > Duration::from_secs(9)
         {
             return Err(Error::Invalid("catalog limits"));
         }

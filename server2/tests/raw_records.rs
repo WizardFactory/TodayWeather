@@ -1,3 +1,5 @@
+#[path = "storage/admission.rs"]
+mod admission;
 #[path = "storage/bulk_lane.rs"]
 mod bulk_lane;
 #[path = "storage/codec.rs"]
@@ -8,7 +10,5 @@ mod credentials;
 mod imds;
 #[path = "storage/peer.rs"]
 mod peer;
-#[path = "storage/read_deadline.rs"]
-mod read_deadline;
 #[path = "storage/wire.rs"]
 mod wire;

@@ -346,7 +346,7 @@ impl<T: IndexListing + Clone + 'static> LifeInputs<T> {
             shared: Arc::new(Shared {
                 bulk: Reader {
                     store: Arc::new(
-                        CatalogStore::new(bulk.clone(), reader.store.limits().background())
+                        CatalogStore::new(bulk.clone(), reader.store.limits().clone())
                             .expect("the limits of a built store"),
                     ),
                     transport: bulk,

@@ -361,7 +361,7 @@ impl<T: IndexListing + Clone + Send + Sync + 'static> Observations<T> {
         Self {
             bulk: Reader {
                 store: Arc::new(
-                    CatalogStore::new(bulk.clone(), store.limits().background())
+                    CatalogStore::new(bulk.clone(), store.limits().clone())
                         .expect("the limits of a built store"),
                 ),
                 transport: bulk,

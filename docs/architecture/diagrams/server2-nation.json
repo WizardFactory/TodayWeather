@@ -240,7 +240,7 @@
       "dot": "amber",
       "title": "Deadline and ownership",
       "items": [
-        "Air and the narrative get three seconds; each city keeps its own input budget, its stored reads wait up to eight seconds for the shared S3 admissions, and it may queue for the CPU until eight seconds.",
+        "Air and the narrative get three seconds; each city keeps its own input budget, its stored reads queue for S3 admissions within that budget, and it may queue for the CPU until eight seconds.",
         "Only prepared rows are returned; acquisition continues after deadline or disconnect."
       ]
     },
