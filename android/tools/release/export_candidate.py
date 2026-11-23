@@ -123,7 +123,10 @@ def verify(entries, destination):
 def export(commit, destination, private):
     root = Path(git(Path(__file__).resolve().parent, 'rev-parse', '--show-toplevel').decode().strip()).resolve()
     # Decide about the directory before anything is created. The name itself must be free, a link included,
-    # before links on the way to it are resolved.
+    # before links on the way to it are resolved; "name/" and "name/." are the same name.
+    if '..' in Path(destination).parts:
+        raise Refused(f'name the directory without ".." ({destination})')
+    destination = os.path.normpath(os.path.abspath(destination))
     if os.path.lexists(destination):
         raise Refused(f'{destination} already exists: name a new directory')
     destination = Path(os.path.realpath(destination))

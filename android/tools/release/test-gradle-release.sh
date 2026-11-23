@@ -69,8 +69,14 @@ export_dir; mkdir -p "$TMP/other-home/init.d"; echo "// init" > "$TMP/other-home
 export_dir; run GRADLE_USER_HOME=relative/home
 [ "$status" = 1 ] && [ ! -e "$RECORD" ] && ok "a Gradle user home that is not an absolute path stops the build" || bad "a relative Gradle user home stops the build (status $status)"
 
-export_dir; printf 'org.gradle.jvmargs=-Xmx4g\nsecretToken=do-not-print\n' > "$TMP/home/.gradle/gradle.properties"; run
-[ "$status" = 0 ] && grep -q 'org.gradle.jvmargs' "$TMP/log" && grep -q 'secretToken' "$TMP/log" && ! grep -q 'do-not-print' "$TMP/log" && ok "the user's Gradle properties are named for the record, without values" || { bad "the user's Gradle properties are named for the record"; cat "$TMP/log"; }
+# The user's gradle.properties is reported by its path only: a value continued over lines (Java properties
+# allow that) would otherwise show as a key.
+export_dir; printf 'org.gradle.jvmargs=-Xmx4g\nsecretToken=first-part \\\n    continued=do-not-print\n' > "$TMP/home/.gradle/gradle.properties"; run
+[ "$status" = 0 ] && grep -q "$TMP/home/.gradle/gradle.properties" "$TMP/log" && ! grep -Eq 'do-not-print|first-part|continued|secretToken' "$TMP/log" && ok "the user's gradle.properties is named by its path, nothing of its content is shown" || { bad "the user's gradle.properties is named by its path only"; cat "$TMP/log"; }
+# A value of several lines whose second line looks like NAME=value: only real names are listed, no part of a value.
+export_dir; run "MULTI_LINE=first
+SECOND_LINE_SECRET=do-not-print"
+[ "$status" = 0 ] && grep -q 'MULTI_LINE' "$TMP/log" && ! grep -Eq 'SECOND_LINE_SECRET|do-not-print' "$TMP/log" && ! grep -Eq 'SECOND_LINE_SECRET|do-not-print' "$RECORD" && ok "a value of several lines is neither shown nor passed, and its lines are not taken for names" || { bad "a value of several lines is neither shown nor passed"; cat "$TMP/log"; }
 
 export_dir; rm "$TMP/export/CANDIDATE"; run
 [ "$status" = 1 ] && grep -q "not an export" "$TMP/log" && [ ! -e "$RECORD" ] && ok "refuses to build outside an export" || { bad "refuses to build outside an export (status $status)"; cat "$TMP/log"; }

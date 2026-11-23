@@ -151,6 +151,17 @@ jobs:
           node --test android/tools/emulator/reference-view.test.mjs android/tools/parity-reference/check.test.mjs
           python3 android/tools/parity-reference/test_check_results.py
           node android/tools/parity-reference/check.mjs
+      - name: Robolectric runtimes
+        working-directory: android
+        # Maven Central answers some downloads of these large jars with 429 Too Many Requests; the tests need
+        # them, so they are fetched first and a refused download is tried again.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            ./gradlew :app:copyRobolectricRuntimes && exit 0
+            echo "attempt $attempt failed"
+            sleep $((attempt * 30))
+          done
+          exit 1
       - name: Build and unit tests
         working-directory: android
         run: |
@@ -181,6 +192,17 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Robolectric runtimes
+        working-directory: android
+        # Maven Central answers some downloads of these large jars with 429 Too Many Requests; the tests need
+        # them, so they are fetched first and a refused download is tried again.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            ./gradlew :app:copyRobolectricRuntimes && exit 0
+            echo "attempt $attempt failed"
+            sleep $((attempt * 30))
+          done
+          exit 1
       - name: Build and unit tests
         working-directory: android
         run: |

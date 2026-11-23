@@ -7,8 +7,8 @@
 # whatever else the shell has (TW_*, ORG_GRADLE_PROJECT_*, GRADLE_OPTS, JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, ...)
 # does not reach the build. A Gradle init script in the Gradle user home runs in every build and can change it:
 # with one present the build does not start, and the home that was inspected is the home Gradle is given, as
-# GRADLE_USER_HOME and --gradle-user-home. The names kept from the build and the keys of the user's
-# gradle.properties are printed for the build record; values are not shown. The wrapper runs only where
+# GRADLE_USER_HOME and --gradle-user-home. The names kept from the build are printed for the build record, and
+# the path of the user's gradle.properties when there is one; no value and nothing of that file is shown. The wrapper runs only where
 # export_candidate.py wrote CANDIDATE and never in a checkout. It runs
 # ./gradlew --no-daemon --no-build-cache --gradle-user-home <home> assembleRelease and ends with its status.
 set -eu
@@ -25,13 +25,13 @@ case "$GRADLE_HOME_DIR" in /*) ;; *) refuse "the Gradle user home must be an abs
 for script in "$GRADLE_HOME_DIR"/init.gradle "$GRADLE_HOME_DIR"/init.gradle.kts "$GRADLE_HOME_DIR"/init.d/*; do
     [ -e "$script" ] && refuse "the Gradle init script $script would run in the release build; move it away for the build"
 done
+# Its content is not read here: a value can continue over lines and would show as a key.
 if [ -f "$GRADLE_HOME_DIR/gradle.properties" ]; then
-    echo "Gradle user properties in effect ($GRADLE_HOME_DIR/gradle.properties): $(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\)[[:space:]]*[=:].*/\1/p' "$GRADLE_HOME_DIR/gradle.properties" | tr '\n' ' ')"
+    echo "the user's Gradle properties apply to the build: read $GRADLE_HOME_DIR/gradle.properties before trusting it"
 fi
-# Every name of the shell's environment that is not passed on, for the record (names only).
-kept_out=$(env | sed -n 's/^\([A-Za-z_][A-Za-z0-9_.]*\)=.*/\1/p' | while IFS= read -r name; do
-    case " $PASSED GRADLE_USER_HOME " in (*" $name "*) ;; (*) printf '%s ' "$name" ;; esac
-done)
+# Every name of the shell's environment that is not passed on, for the record. awk has the environment as names
+# and values; the text of `env` would show the later lines of a value of several lines as names.
+kept_out=$(awk -v passed=" $PASSED GRADLE_USER_HOME " 'BEGIN { for (name in ENVIRON) if (index(passed, " " name " ") == 0) printf "%s ", name }')
 set -- "GRADLE_USER_HOME=$GRADLE_HOME_DIR"
 for name in $PASSED; do
     eval "value=\${$name-}"

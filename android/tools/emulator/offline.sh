@@ -49,15 +49,20 @@ airplane() {
     fi
 }
 
-# Airplane mode plus Wi-Fi and data off; exits 3 if a default network is still active.
+# Airplane mode plus Wi-Fi and data off; exits 3 if a default network is still active after half a minute.
 go_offline() {
     airplane 1
     adb shell svc wifi disable || true
     adb shell svc data disable || true
     sleep 3
-    if ! adb shell dumpsys connectivity | grep -q "Active default network: none"; then
-        echo "The emulator still has a network; refusing to install the apps" >&2; exit 3
-    fi
+    # A device that just booted can take longer to drop its network (a hosted tablet emulator did): look again
+    # for half a minute before refusing.
+    waited=0
+    until adb shell dumpsys connectivity | grep -q "Active default network: none"; do
+        waited=$((waited + 1))
+        [ "$waited" -lt 10 ] || { echo "The emulator still has a network; refusing to install the apps" >&2; exit 3; }
+        sleep 3
+    done
 }
 
 # Whether both packages are gone: the package query succeeds, its whole answer is a package list with the

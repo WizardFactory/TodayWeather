@@ -260,6 +260,18 @@ class ExportCandidateTest(unittest.TestCase):
         self.assertRegex(result.stderr, 'already exists')
         self.assertTrue(self.out.is_symlink())
         self.assertFalse(target.exists())
+        # The same link named with a trailing separator or "/." is the same name.
+        for suffix in ('/', '/.', '//', '/./'):
+            result = self.export(out=str(self.out) + suffix)
+            self.assertEqual(1, result.returncode, suffix + result.stdout + result.stderr)
+            self.assertRegex(result.stderr, 'already exists', suffix)
+            self.assertFalse(target.exists(), suffix)
+        self.assertTrue(self.out.is_symlink())
+        # A path with ".." would mean something else once links are resolved: it is not accepted.
+        result = self.export(out=str(self.temp / 'a' / '..' / 'export'))
+        self.assertEqual(1, result.returncode)
+        self.assertRegex(result.stderr, r'without "\.\."')
+        self.assertFalse((self.temp / 'export').exists())
         # A link in the middle of the path that leads into the checkout is refused as inside it.
         self.out.unlink()
         os.symlink(self.repo, self.temp / 'into-checkout')
