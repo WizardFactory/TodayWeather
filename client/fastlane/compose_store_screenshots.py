@@ -5,11 +5,12 @@ Play: each Android capture (android/tools/store/capture.sh) is cropped to the ap
 navigation bars removed, no pixel of the app changed) and placed in screenshot-frame.html with the locale's heading,
 then rendered at 1080x1920 by headless Chromium and saved as JPEG.
 App Store: each iOS capture (ios/tools/manual/run-manual-capture.sh --no-ads --store) is placed whole (the full native
-frame, no pixel changed, only its alpha channel dropped) in screenshot-frame-ios.html with the Korean heading, then
-rendered at the capture's own size (the display size the App Store asks for) and saved as an opaque PNG.
+frame as a rectangle, nothing cropped or masked, only its alpha channel dropped) in screenshot-frame-ios.html with the
+Korean heading; the capture is scaled down to fit inside the frame's white border. The page is rendered at the
+capture's own size (the display size the App Store asks for) and saved as an opaque PNG.
 
 Usage (Pillow required; run from the repository root):
-  compose_store_screenshots.py --out <new dir> --android <dir with device.txt, ko-KR/ en-US/ ja-JP/> \
+  python3 client/fastlane/compose_store_screenshots.py --out <new dir> --android <dir with device.txt, ko-KR/ en-US/ ja-JP/> \
       --crop-top N --crop-bottom N --iphone <raw dir> --ipad <raw dir> --chromium <chrome-headless-shell> \
       --commit <app source sha> --capture-commit <capture tooling sha> --captured-on <date>
 Writes the whole package into --out, which must not exist yet, with the layout of client/fastlane:
@@ -71,6 +72,16 @@ def android_display(path):
     return tuple(int(v) for v in sizes[-1]), int(density.group(1)), release.group(1)
 
 
+def opaque(shot, size):
+    """The rendered page as an RGB image without transparency data; a render of another size stops the run."""
+    with Image.open(shot) as rendered:
+        if rendered.size != size:
+            raise SystemExit(f"{shot}: rendered {rendered.size}, expected {size}")
+        image = rendered.convert("RGB")
+    image.info.pop("transparency", None)
+    return image
+
+
 def play(args, stage, work, files, display):
     template = (FASTLANE / "screenshot-frame.html").read_text()
     for locale, (lang, brand, headings, note) in TEXT.items():
@@ -96,9 +107,7 @@ def play(args, stage, work, files, display):
                             "--window-size=1080,1920", f"--screenshot={shot}", page.as_uri()],
                            check=True, capture_output=True)
             out = out_dir / f"{screen}.jpg"
-            with Image.open(shot) as rendered:
-                assert rendered.size == (1080, 1920), rendered.size
-                rendered.convert("RGB").save(out, quality=92, optimize=True)
+            opaque(shot, (1080, 1920)).save(out, quality=92, optimize=True)
             files.append({"file": str(out.relative_to(stage)), "platform": "android", "locale": locale,
                           "display_type": "phoneScreenshots", "width": 1080, "height": 1920, "sha256": sha(out),
                           "raw_source_sha256": sha(raw)})
@@ -119,6 +128,7 @@ def ios(args, stage, work, files):
                 if image.size != size:
                     raise SystemExit(f"{raw}: {image.size}, expected {size}")
                 view = image.convert("RGB")
+            view.info.pop("transparency", None)
             view_path = work / f"{prefix}-{screen}.png"
             view.save(view_path)
             page = work / f"{prefix}-{screen}.html"
@@ -132,9 +142,7 @@ def ios(args, stage, work, files):
             subprocess.run([args.chromium, "--headless", "--hide-scrollbars", "--force-device-scale-factor=1",
                             f"--window-size={size[0]},{size[1]}", f"--screenshot={shot}", page.as_uri()],
                            check=True, capture_output=True)
-            with Image.open(shot) as rendered:
-                assert rendered.size == size, rendered.size
-                rendered.convert("RGB").save(out, optimize=True)
+            opaque(shot, size).save(out, optimize=True)
             files.append({"file": str(out.relative_to(stage)), "platform": "ios", "locale": "ko",
                           "display_type": display, "width": size[0], "height": size[1], "sha256": sha(out),
                           "raw_source_sha256": sha(raw)})
@@ -189,8 +197,8 @@ def write_manifest(args, stage, files, display, density, release):
                        f"({args.crop_top} px) and navigation bar ({args.crop_bottom} px) removed: the app for 01-04, the "
                        f"launcher's home-screen pages with the pinned widgets for 05-06; UI/data not retouched.",
             "ios": "HTML marketing frame (screenshot-frame-ios.html) with the Korean heading around the full native "
-                   "framebuffer (the app for 01-04, the Home Screen with the added widgets for 05), scaled to fit; "
-                   "UI/data not retouched.",
+                   "framebuffer (the app for 01-04, the Home Screen with the added widgets for 05), scaled down to fit "
+                   "inside the frame's border, not cropped or masked; UI/data not retouched.",
         },
         "advertising": "Ad-free captures (#3122): Android NoAdsPlatform (test APK only), iOS build without ad units; "
                        "the shipped apps show ads.",
