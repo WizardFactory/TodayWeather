@@ -19,7 +19,7 @@
   },
   "composition": {
     "android": "HTML marketing frame (screenshot-frame.html) around the actual screen with the status bar (106 px) and navigation bar (63 px) removed: the app for 01-04, the launcher's home-screen pages with the pinned widgets for 05-06; UI/data not retouched.",
-    "ios": "Full native framebuffer (the app for 01-04, the Home Screen with the added widgets for 05); opaque alpha removal only; RGB pixels unchanged."
+    "ios": "HTML marketing frame (screenshot-frame-ios.html) with the Korean heading around the full native framebuffer (the app for 01-04, the Home Screen with the added widgets for 05), scaled to fit; UI/data not retouched."
   },
   "advertising": "Ad-free captures (#3122): Android NoAdsPlatform (test APK only), iOS build without ad units; the shipped apps show ads.",
   "locale_fallbacks": {
@@ -224,7 +224,7 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "454aeda048013ce08c3ef8587af6a95b96006dd82ec7bae5c54576988289b3c4",
+      "sha256": "3a9782dbe09052284fd7c00120ccd880bd90b5d6d3fea716b99898f72a680fb5",
       "raw_source_sha256": "7c88951cf465da84e05b756a09a24755c7658101915ef91aa72e28578e53c918"
     },
     {
@@ -234,7 +234,7 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "8160d03fca5a5188fa5ec176944bafe781a9035d5b8ba1b4acc544386cfbca89",
+      "sha256": "e85edf68e26e656475e8c5defb671f968b82f92595e68336b55fcdfb4b8a4899",
       "raw_source_sha256": "5559a5ab042fb98b758c1888c8f0a065ac1618d53a90b715c40baefd8b578cc0"
     },
     {
@@ -244,7 +244,7 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "eaff5be78342e21c217b51bf2a552fc3bf4b536ea9136b7db81d8fea937ef72f",
+      "sha256": "f240a25c67d243466c1162dd90481b3470b9816cdba2696c696286ae0e0d556b",
       "raw_source_sha256": "98b1079968ebc0f8a7d53b1bba58392df7c1db031cef995cbc88c48cac0975e2"
     },
     {
@@ -254,7 +254,7 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "16558b00d97fd8325c30800b3837b2199893dd3f0b313d428b4af67870cf22d0",
+      "sha256": "6c93a7ff2720ad60889d027618dd68a44b875d7779a2bead1f9ad8d529dfd384",
       "raw_source_sha256": "5e7633d7d105eea4e4dd89b7ae5636dcc76513477c503a6b4637482616618cd7"
     },
     {
@@ -264,7 +264,7 @@
       "display_type": "APP_IPAD_PRO_3GEN_129",
       "width": 2064,
       "height": 2752,
-      "sha256": "7377245276f17f227e12d9ccdd88dc9506439850a485a4d6a781d332b977d666",
+      "sha256": "694ea996547716d628170c4f098889648bd4dd525c4250f5a863a708f42f5b46",
       "raw_source_sha256": "988a6a73a7c872284d2b5b907789f0479bf893c99944d31f2fee29a9ff618725"
     },
     {
@@ -274,7 +274,7 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "59e6aa6f13affad86dd64d514416d433aef54a96a79580d5c055928338a59510",
+      "sha256": "6228760715b73f3105e1fed9a2d36da7d0baf5be71bb4f7fdf059632e6726fcb",
       "raw_source_sha256": "1fcf90dde46426be76d99295bc1b85966dce655288c08cf79d5184a5185c4dd6"
     },
     {
@@ -284,7 +284,7 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "b6d0b44dfd400ebad1456691a56ef26933a8f3e9bd433a64bad7ebc79f4de636",
+      "sha256": "903a228291efaceb755038cb4f95e290411c8395c73f3c3e02495b0ccac3af18",
       "raw_source_sha256": "2f815f0805af14ce311f3f89ece277ff86b5dc75bbdfe4f23d5a4a6c45042bcb"
     },
     {
@@ -294,7 +294,7 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "20c47a8e1bd9fde2fe6546238087b1eadd47d119fabb27d91772c16b47d0f1a6",
+      "sha256": "20c3d0cf14e6d2395adea93889a3bc09fba85bf22bd0d993a243091e26ee5ec1",
       "raw_source_sha256": "ade0c2205c6702ee761a713864a3ed0901c8546f0329d9adc4184e6c6403de7a"
     },
     {
@@ -304,7 +304,7 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "42e500deb8c883b3e7781cdeb08d719a70400d40abe3a5ff5c7ccb3eefb5dc76",
+      "sha256": "0ad871fbd48a7ff9b9dbb9e64f71418fb3fb4b87f215f7353a6b38b3b51316bd",
       "raw_source_sha256": "216bc7ec2afbc1524743fd37d8d15e753f9dcdee9740bf48c6ba534fcacbf11e"
     },
     {
@@ -314,7 +314,7 @@
       "display_type": "APP_IPHONE_67",
       "width": 1320,
       "height": 2868,
-      "sha256": "246d633603d73c751e943e9e1239d637d098297fc89e350f82441d665f938ac6",
+      "sha256": "960e30eec25cc60274522d3c2b9aefec8c83a217d7fe0a949151816b3071161d",
       "raw_source_sha256": "40d7ca8871d0f5fcafa25c2d7cb8d787c445709ef7d3f6b9f9487e59dcd7df23"
     }
   ]

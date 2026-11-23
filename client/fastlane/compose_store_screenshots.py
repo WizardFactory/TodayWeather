@@ -4,8 +4,9 @@
 Play: each Android capture (android/tools/store/capture.sh) is cropped to the app's viewport (the status and
 navigation bars removed, no pixel of the app changed) and placed in screenshot-frame.html with the locale's heading,
 then rendered at 1080x1920 by headless Chromium and saved as JPEG.
-App Store: each iOS capture (ios/tools/manual/run-manual-capture.sh --no-ads --store) is kept as the full native
-frame; only its alpha channel is dropped (RGB unchanged).
+App Store: each iOS capture (ios/tools/manual/run-manual-capture.sh --no-ads --store) is placed whole (the full native
+frame, no pixel changed, only its alpha channel dropped) in screenshot-frame-ios.html with the Korean heading, then
+rendered at the capture's own size (the display size the App Store asks for) and saved as an opaque PNG.
 
 Usage (Pillow required; run from the repository root):
   compose_store_screenshots.py --out <new dir> --android <dir with device.txt, ko-KR/ en-US/ ja-JP/> \
@@ -45,7 +46,12 @@ TEXT = {
                                "予報と時計のウィジェット", "天気と空気質のウィジェット"],
               "表示される情報は地域やデータ提供状況によって異なります。"),
 }
-IOS = {"iphone69": ("APP_IPHONE_67", (1320, 2868)), "ipad13": ("APP_IPAD_PRO_3GEN_129", (2064, 2752))}
+# App Store display type, capture and output size, and the frame's unit in pixels (the Play frame is laid out in 1 px
+# units on a 1080 px wide canvas; the iPhone canvas keeps that proportion, the wider iPad canvas uses a smaller one).
+IOS = {"iphone69": ("APP_IPHONE_67", (1320, 2868), 1320 / 1080), "ipad13": ("APP_IPAD_PRO_3GEN_129", (2064, 2752), 1.5)}
+# The App Store package has Korean screens only (the other locales fall back to them): the four app headings of Play's
+# ko-KR set and one for the Home Screen with the widgets.
+IOS_TEXT = ("ko", TEXT["ko-KR"][1], TEXT["ko-KR"][2][:4] + ["홈 화면 날씨 위젯"], TEXT["ko-KR"][3])
 
 
 def sha(path):
@@ -98,18 +104,37 @@ def play(args, stage, work, files, display):
                           "raw_source_sha256": sha(raw)})
 
 
-def ios(args, stage, files):
+def ios(args, stage, work, files):
+    template = (FASTLANE / "screenshot-frame-ios.html").read_text()
+    lang, brand, headings, note = IOS_TEXT
+    assert len(headings) == len(IOS_SCREENS)
     out_dir = stage / "screenshots/ios/ko"
     out_dir.mkdir(parents=True)
     for prefix, source in (("iphone69", args.iphone), ("ipad13", args.ipad)):
-        display, size = IOS[prefix]
-        for screen in IOS_SCREENS:
+        display, size, unit = IOS[prefix]
+        for screen, heading in zip(IOS_SCREENS, headings):
             raw = Path(source) / f"store-{screen}.png"
             out = out_dir / f"{prefix}-{screen}.png"
             with Image.open(raw) as image:
                 if image.size != size:
                     raise SystemExit(f"{raw}: {image.size}, expected {size}")
-                image.convert("RGB").save(out, optimize=True)
+                view = image.convert("RGB")
+            view_path = work / f"{prefix}-{screen}.png"
+            view.save(view_path)
+            page = work / f"{prefix}-{screen}.html"
+            page.write_text(template.replace("{{LANG}}", lang).replace("{{BRAND}}", html.escape(brand))
+                            .replace("{{HEADING}}", html.escape(heading)).replace("{{NOTE}}", html.escape(note))
+                            .replace("{{ALT}}", html.escape(heading)).replace("{{IMAGE}}", view_path.name)
+                            .replace("{{WIDTH}}", str(size[0])).replace("{{HEIGHT}}", str(size[1]))
+                            .replace("{{UNIT}}", f"{unit:.4f}")
+                            .replace("{{VIEW_WIDTH}}", str(view.width)).replace("{{VIEW_HEIGHT}}", str(view.height)))
+            shot = work / f"{prefix}-{screen}.render.png"
+            subprocess.run([args.chromium, "--headless", "--hide-scrollbars", "--force-device-scale-factor=1",
+                            f"--window-size={size[0]},{size[1]}", f"--screenshot={shot}", page.as_uri()],
+                           check=True, capture_output=True)
+            with Image.open(shot) as rendered:
+                assert rendered.size == size, rendered.size
+                rendered.convert("RGB").save(out, optimize=True)
             files.append({"file": str(out.relative_to(stage)), "platform": "ios", "locale": "ko",
                           "display_type": display, "width": size[0], "height": size[1], "sha256": sha(out),
                           "raw_source_sha256": sha(raw)})
@@ -136,7 +161,7 @@ def main():
         stage, work = Path(tmp) / "stage", Path(tmp) / "work"
         work.mkdir()
         play(args, stage, work, files, display)
-        ios(args, stage, files)
+        ios(args, stage, work, files)
         write_manifest(args, stage, files, display, density, release)
         stage.rename(out)
     print(f"wrote {len(files)} images and screenshots/manifest.json to {out}")
@@ -163,8 +188,9 @@ def write_manifest(args, stage, files, display, density, release):
             "android": f"HTML marketing frame (screenshot-frame.html) around the actual screen with the status bar "
                        f"({args.crop_top} px) and navigation bar ({args.crop_bottom} px) removed: the app for 01-04, the "
                        f"launcher's home-screen pages with the pinned widgets for 05-06; UI/data not retouched.",
-            "ios": "Full native framebuffer (the app for 01-04, the Home Screen with the added widgets for 05); opaque "
-                   "alpha removal only; RGB pixels unchanged.",
+            "ios": "HTML marketing frame (screenshot-frame-ios.html) with the Korean heading around the full native "
+                   "framebuffer (the app for 01-04, the Home Screen with the added widgets for 05), scaled to fit; "
+                   "UI/data not retouched.",
         },
         "advertising": "Ad-free captures (#3122): Android NoAdsPlatform (test APK only), iOS build without ad units; "
                        "the shipped apps show ads.",
