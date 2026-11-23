@@ -16,14 +16,6 @@ object WeatherRequests {
     const val TIMEOUT_MS = 10_000L
 
     /**
-     * The URL for [place], or null when it has neither coordinates nor an address (Cordova rejects with
-     * `invalid_input`). Coordinates win when the latitude is truthy (A05: latitude 0 falls back to the address). An
-     * address gets `대한민국 ` when it lacks it and is split into a KMA town; when no part is left, the free-form route
-     * gets the address as stored, which the legacy server does not serve (its gateway answers 404; the AWS Lambda
-     * answered 501; exception E1 of `RequestPathsTest`). Nothing is encoded here, as in Cordova; the HTTP client
-     * encodes spaces and non-ASCII characters as the WebView did.
-     */
-    /**
      * Whether [place]'s coordinates are its location: Cordova's `if (location.lat)` prefers the address at latitude 0;
      * without an address the coordinates stand (a linked equator place). The request, the weather key and
      * `updateCity`'s location all follow this one rule (CODEX-3164-5, -11, -13).
@@ -33,6 +25,14 @@ object WeatherRequests {
         return location.lat != 0.0 || place.address.isNullOrEmpty()
     }
 
+    /**
+     * The URL for [place], or null when it has neither coordinates nor an address (Cordova rejects with
+     * `invalid_input`). Coordinates win when they are the place's location ([usesCoordinates]; A05: latitude 0 falls
+     * back to the address when there is one). An address gets `대한민국 ` when it lacks it and is split into a KMA town;
+     * when no part is left, the free-form route gets the address as stored, which the legacy server does not serve (its
+     * gateway answers 404; the AWS Lambda answered 501; exception E1 of `RequestPathsTest`). Nothing is encoded here, as
+     * in Cordova; the HTTP client encodes spaces and non-ASCII characters as the WebView did.
+     */
     fun url(baseUrl: String, place: Place, units: UnitSettings): String? {
         val location = place.location
         if (location != null && usesCoordinates(place)) {
