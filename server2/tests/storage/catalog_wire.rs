@@ -1157,6 +1157,7 @@ async fn slow_valid_history_must_not_poison_new_publication() {
         peer.transport(),
         CatalogLimits {
             deadline: Duration::from_millis(100),
+            read_deadline: Duration::from_millis(100),
             ..CatalogLimits::default()
         },
     )
@@ -1437,6 +1438,7 @@ async fn targeted_members_read_one_catalog_and_only_their_groups() {
         peer.transport(),
         CatalogLimits {
             deadline: Duration::from_millis(100),
+            read_deadline: Duration::from_millis(100),
             ..CatalogLimits::default()
         },
     )

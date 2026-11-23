@@ -49,6 +49,15 @@ three-second budget; the next request includes the newly saved observation.
 
 ![Capture of actual local HTTP verification output](assets/server2-nation-http.png)
 
+## Stored reads under concurrency
+
+The fifteen city assemblies read their stored grids at the same time and wait for
+the same S3 admissions. Catalog reads keep the caller's deadline up to 8 s, so a
+read that queues is late rather than failed. In the November 21–22 SR-6 rehearsal,
+before this bound, the reads ended at the 3 s storage cap once the store held history,
+and the nation route answered the legacy 500 page in 23 of 24 hourly samples. The
+regression tests are in `server2/tests/storage/read_deadline.rs`.
+
 Run the maintained checks from the repository root:
 
 ```sh

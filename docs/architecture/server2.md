@@ -364,7 +364,11 @@ remains durable-before-visible. The public gateway stays 9 s; ASOS-primary KMA g
 an 8 s budget for stored reads, and everything it waits for ends 2.5 s after the gateway
 accepted the request (2.7 s for air and life, 2.9 s for the narrative). Geocode retains its own
 3 s cap and, since the [accept clock](#restart-allocator-and-the-accept-clock-2026-11-10), counts
-toward those waits. Other handlers keep their existing budgets. These are limits, not latency
+toward those waits. Other handlers keep their existing budgets. The catalog store bounds each
+read (lookup, page and member lookups) by the caller's deadline up to `read_deadline` (8 s); its
+3 s per-operation cap now applies to writes and repairs only. Before KMA-NATION-READS that cap
+also ended reads that waited for the shared S3 admissions, so the fifteen concurrent nation
+cities failed after about 3 s in 23 of 24 SR-6 samples. These are limits, not latency
 measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
 and [selected protocol](server2-kma-data-design.md#response-first-durability-and-recovery).
 

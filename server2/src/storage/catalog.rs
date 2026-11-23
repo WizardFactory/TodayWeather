@@ -208,6 +208,12 @@ impl<T: CatalogTransport> CatalogStore<T> {
     fn deadline(&self, deadline: Instant) -> Instant {
         deadline.min(Instant::now() + self.limits.deadline)
     }
+    /// A read's end: the caller's deadline, capped at [`CatalogLimits::read_deadline`]. A read
+    /// queued for the admissions behind other readers is late, not failed at the write cap
+    /// (KMA-NATION-READS).
+    fn read_deadline(&self, deadline: Instant) -> Instant {
+        deadline.min(Instant::now() + self.limits.read_deadline)
+    }
     async fn cpu<F, R>(&self, f: F) -> Result<R, Error>
     where
         F: FnOnce() -> Result<R, Error> + Send + 'static,
@@ -552,7 +558,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
                 return Err(Error::Invalid("targeted member namespace"));
             }
         }
-        timeout_at(self.deadline(deadline), async {
+        timeout_at(self.read_deadline(deadline), async {
             let _admission = self.admit().await?;
             let mut c = Context::new();
             self.pin(id, &mut c).await?;
@@ -629,7 +635,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
         if maximum_acquisitions == 0 || maximum_acquisitions > self.limits.entries {
             return Err(Error::Invalid("page acquisition limit"));
         }
-        timeout_at(self.deadline(deadline), async {
+        timeout_at(self.read_deadline(deadline), async {
             let _admission = self.admit().await?;
             let mut c = Context::new();
             self.pin(id, &mut c).await?;
@@ -778,7 +784,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             crate::observability::Stage::Lookup,
             async {
                 id.validate()?;
-                timeout_at(self.deadline(deadline), async {
+                timeout_at(self.read_deadline(deadline), async {
                     let _admission = self.admit().await?;
                     self.lookup_inner(id, &mut Context::new()).await
                 })
@@ -811,7 +817,7 @@ impl<T: CatalogTransport> CatalogStore<T> {
             crate::observability::Stage::Lookup,
             async {
                 id.validate()?;
-                timeout_at(self.deadline(deadline), async {
+                timeout_at(self.read_deadline(deadline), async {
                     let _admission = self.admit().await?;
                     let extra = (1..width).rev().find_map(|n| {
                         let permits = self.io.clone().try_acquire_many_owned(n as u32).ok()?;

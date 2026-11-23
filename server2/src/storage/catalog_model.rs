@@ -16,7 +16,12 @@ pub struct CatalogLimits {
     pub output_bytes: usize,
     pub io: usize,
     pub cpu: usize,
+    /// Per-operation cap of every catalog operation except the reads below.
     pub deadline: Duration,
+    /// Cap of a catalog read (lookup, page, members), whose caller already bounds it with the
+    /// request deadline (KMA-NATION-READS). Queued reads may then wait up to the request's own
+    /// deadline instead of failing at [`Self::deadline`].
+    pub read_deadline: Duration,
     pub raw: Limits,
 }
 impl Default for CatalogLimits {
@@ -35,6 +40,7 @@ impl Default for CatalogLimits {
             io: 16,
             cpu: 2,
             deadline: Duration::from_secs(3),
+            read_deadline: Duration::from_secs(8),
             raw: Limits::default(),
         }
     }
@@ -68,6 +74,8 @@ impl CatalogLimits {
             || self.cpu > 64
             || self.deadline.is_zero()
             || self.deadline > Duration::from_secs(9)
+            || self.read_deadline.is_zero()
+            || self.read_deadline > Duration::from_secs(9)
         {
             return Err(Error::Invalid("catalog limits"));
         }
