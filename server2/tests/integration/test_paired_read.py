@@ -132,6 +132,17 @@ class PairedReadTests(unittest.TestCase):
             with self.subTest(path=other), self.assertRaisesRegex(ValueError, 'outside fixed public inventory'):
                 validate_path(other)
 
+    def test_week_schedule_fits_the_raised_production_cap(self):
+        # AK 2026-11-23: 6,700 production reads per origin; the measured week plans 6,356.
+        m = manifest(duration=168 * 3600)
+        m['max_attempts'] = 6700
+        m['cases'][0]['interval_seconds'] = 91
+        planned = capture.validate(m, 'http://127.0.0.1:80', capture.PRODUCTION)
+        self.assertEqual(planned['planned_attempts_per_origin'], 6647)
+        m['cases'][0]['interval_seconds'] = 90
+        with self.assertRaisesRegex(ValueError, 'planned attempts exceed cap'):
+            capture.validate(m, 'http://127.0.0.1:80', capture.PRODUCTION)
+
     def test_manifest_rejects_routes_methods_types_and_caps(self):
         for mutation in (
             lambda m: m['cases'][0].update(path='/gather/town'),
@@ -139,7 +150,7 @@ class PairedReadTests(unittest.TestCase):
             lambda m: m['cases'][0].update(method='POST'),
             lambda m: m['cases'][0].update(conditional=1),
             lambda m: m.update(duration_seconds=604801),
-            lambda m: m.update(max_attempts=6001),
+            lambda m: m.update(max_attempts=6701),
             lambda m: m.update(min_spacing_seconds=0),
             lambda m: m.update(duration_seconds=True),
             lambda m: m.update(duration_seconds=30),

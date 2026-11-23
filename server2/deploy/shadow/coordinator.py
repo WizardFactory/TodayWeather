@@ -1575,7 +1575,8 @@ def check_reader_binding(path,launch):
     reader=json.loads(path.read_text())
     require(type(reader) is dict and reader.get('candidate_sha256')==launch['plan']['artifacts']['server2'],
             'reader executable binding')
-    for key,limit in [('duration_seconds',168*3600),('max_attempts',6000),('min_spacing_seconds',168*3600)]:
+    # max_attempts matches paired_read.MAX_ATTEMPTS (6,700 per origin, AK 2026-11-23).
+    for key,limit in [('duration_seconds',168*3600),('max_attempts',6700),('min_spacing_seconds',168*3600)]:
         require(type(reader.get(key)) is int and 0<reader[key]<=limit,'reader bounds')
     # The paired reader validates its fixed method/path inventory before opening
     # its ledger or sending. The independent host timer shortens a delayed start.
