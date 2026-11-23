@@ -8,6 +8,7 @@
     "server2/src/warnings/service.rs",
     "server2/tests/raw_records.rs",
     "server2/tests/storage/admission.rs",
+    "server2/tests/storage/catalog_wire.rs",
     "server2/tests/warnings/recovery.rs"
   ],
   "outside": [
