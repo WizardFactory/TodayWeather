@@ -178,7 +178,13 @@ test('the desktop store QR is the WebApp QR for the store fallback link', () => 
   assert.equal(shows.length, 1);
   const query = css.lastIndexOf('@media', shows[0].index);
   assert.equal(css.slice(query, css.indexOf('{', query)).trim(), '@media (min-width: 64rem) and (hover: hover) and (pointer: fine)');
-  assert.ok(css.indexOf('\n}', query) > shows[0].index, 'the display rule sits inside that media query');
+  let depth = 0;
+  let end = css.indexOf('{', query);
+  for (; end < css.length; end += 1) {
+    if (css[end] === '{') depth += 1;
+    if (css[end] === '}' && --depth === 0) break;
+  }
+  assert.ok(shows[0].index < end, 'the display rule sits inside that media query');
 });
 
 test('every open action uses the plain /open link', () => {
