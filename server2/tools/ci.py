@@ -31,11 +31,6 @@ def pull_request_base(event):
 def placement_command(event):
     if 'pull_request' in event:
         base=pull_request_base(event)
-    elif 'before' in event and 'after' in event:
-        # A push is checked as the change its head commit brings. Master moves by merge
-        # commits whose pull request already passed placement, and one push can carry
-        # several of them, each with its own declaration (#3139).
-        base=output('git','rev-parse','HEAD^1')
     elif os.environ.get('SERVER2_BASE'):
         base=os.environ['SERVER2_BASE']
     else:
@@ -51,6 +46,44 @@ def placement_command(event):
     if len(declared)!=1: raise SystemExit('one reviewed task declaration is required per PR')
     return [sys.executable, 'tools/check_placement.py', '--root', '..',
             '--declaration', str(declared[0]), '--base', base]
+
+
+def push_placement_commands(root, event):
+    """Check each first-parent commit of a push that changes Server2 against its own parent.
+
+    A push can carry several merged tasks, each with its own declaration (#3139). Every such
+    commit is checked out in its own worktree and checked with its own placement checker and
+    the one declaration it adds or changes.
+    """
+    before = event['before']
+    if set(before) == {'0'}:
+        commits = [output('git', 'rev-parse', 'HEAD')]
+    else:
+        commits = output('git', 'rev-list', '--first-parent', '--reverse', f'{before}..HEAD').split()
+    commands = []
+    for commit in commits:
+        parent = output('git', 'rev-parse', f'{commit}^1')
+        paths = output('git', 'diff', '--name-only', parent, commit).splitlines()
+        if not any(path.startswith('server2/') or path == '.github/workflows/server2.yml' for path in paths):
+            continue
+        declared = output('git', 'diff', '--name-only', '--diff-filter=d', parent, commit, '--',
+                          ':(top)server2/config/tasks/*.json').splitlines()
+        if len(declared) != 1:
+            raise SystemExit(f'{commit}: one reviewed task declaration is required, found {len(declared)}')
+        tree = root / 'reports/placement' / commit
+        commands += [['git', 'worktree', 'add', '--detach', str(tree), commit],
+                     [sys.executable, str(tree / 'server2/tools/check_placement.py'), '--root', str(tree),
+                      '--declaration', str(tree / declared[0]), '--base', parent],
+                     ['git', 'worktree', 'remove', '--force', str(tree)]]
+    if not commands:
+        raise SystemExit('the push changes no Server2 path')
+    return commands
+
+
+def placement_commands(root, event):
+    if 'before' in event and 'after' in event and 'pull_request' not in event:
+        return push_placement_commands(root, event)
+    return [placement_command(event)]
 
 
 RUST_SHARDS = 3
@@ -101,13 +134,15 @@ def stage_commands(root, event, stage):
         commands = []
         if shard == 1:
             commands += [[python, 'tools/test_placement.py'], [python, 'tools/test_ci.py'],
+                         [python, 'tools/check_test_partitions.py', '--shards', str(RUST_SHARDS)],
                          ['cargo', 'test', '--locked', '--workspace', '--doc']]
         # nextest partitions are disjoint and complete; doc tests run once above.
         commands.append(['env', 'RUST_MIN_STACK=8388608', 'cargo', 'nextest', 'run', '--locked',
                          '--workspace', '--no-fail-fast', '--partition', f'count:{shard}/{RUST_SHARDS}'])
         return commands
     if stage.startswith('shadow-'):
-        return [[python, SHADOW_SIMULATION, *shadow_shard(SHADOW_SIMULATION, int(stage.removeprefix('shadow-')))]]
+        source = Path(__file__).resolve().parents[1] / SHADOW_SIMULATION
+        return [[python, SHADOW_SIMULATION, *shadow_shard(source, int(stage.removeprefix('shadow-')))]]
     return [command for group, command in command_plan(root, event, stage) if group == stage
             and command != [python, SHADOW_SIMULATION]]
 
@@ -115,7 +150,8 @@ def stage_commands(root, event, stage):
 def command_plan(root, event, stage):
     python = sys.executable
     if stage in ('all', 'placement'):
-        yield 'placement', placement_command(event)
+        for command in placement_commands(root, event):
+            yield 'placement', command
     if stage == 'placement':
         return
 

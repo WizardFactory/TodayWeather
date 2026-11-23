@@ -1,6 +1,5 @@
 """Check the command partition without starting subprocesses or providers."""
 from collections import Counter
-import re
 from pathlib import Path
 import subprocess
 import sys
@@ -166,30 +165,48 @@ class CommandPlanTests(unittest.TestCase):
                                                     '--locked', '--workspace', '--no-fail-fast', '--partition',
                                                     f'count:{k}/{ci.RUST_SHARDS}')])
                     self.assertEqual(1, extras[('cargo', 'test', '--locked', '--workspace', '--doc')])
+                    self.assertEqual(1, extras[(sys.executable, 'tools/check_test_partitions.py', '--shards',
+                                                str(ci.RUST_SHARDS))])
                     shards = [c for c in extras if c[:2] == simulation]
                     self.assertEqual(len(ci.SHADOW_SHARDS), len(shards))
-                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 1 + len(shards))
+                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 2 + len(shards))
 
     def test_in_process_test_locks_keep_their_limit_under_nextest(self):
         server2 = Path(__file__).parents[1]
         config = (server2 / '.config/nextest.toml').read_text()
-        modules = set(re.search(r"binary\(domestic\) & test\(/\^\(([^)]*)\)::/\)", config).group(1).split('|'))
-        holders = {path.stem for path in (server2 / 'tests/domestic').glob('*.rs')
-                   if 'S3_PEERS.lock' in path.read_text()}
-        self.assertTrue(holders)
-        self.assertEqual(set(), holders - modules, 'S3_PEERS users outside the s3-peers group')
-        self.assertIn("filter = 'binary(integration)'", config)
+        settings = [line for line in config.splitlines() if not line.lstrip().startswith('#')]
+        self.assertFalse([line for line in settings if 'default-filter' in line])
+        # The S3 peer lock is host-wide, so every holder is serialised under nextest too.
+        source = (server2 / 'tests/domestic/source_s3.rs').read_text()
+        self.assertIn('pub static S3_PEERS: PeerLock = PeerLock::new();', source)
+        self.assertIn('file.lock().expect("take the S3 test peer lock")', source)
         self.assertIn('SERIAL.lock', (server2 / 'tests/integration/main.rs').read_text())
-        for group in ('s3-peers', 'integration-serial'):
-            self.assertIn(f'{group} = {{ max-threads = 1 }}', config)
+        self.assertIn("filter = 'binary(integration)'", config)
+        self.assertIn('integration-serial = { max-threads = 1 }', config)
 
-    def test_a_push_checks_the_change_its_head_commit_brings(self):
-        event = {'before': 'b' * 40, 'after': 'a' * 40}
-        with (patch.object(ci, 'output', side_effect=['f' * 40, 'config/tasks/Task.json']) as output,
-              patch.object(Path, 'exists', return_value=True)):
-            command = ci.placement_command(event)
-        self.assertEqual(('git', 'rev-parse', 'HEAD^1'), output.call_args_list[0].args)
-        self.assertEqual(['--base', 'f' * 40], command[-2:])
+    def test_a_push_checks_each_server2_commit_against_its_parent(self):
+        diffs = {('p1', 'm1'): ['server2/src/lib.rs', 'server2/config/tasks/A.json'],
+                 ('p2', 'm2'): ['ios/App.swift'],
+                 ('p3', 'm3'): ['.github/workflows/server2.yml', 'server2/config/tasks/B.json']}
+        def git(*args):
+            if args[1] == 'rev-list':
+                return 'm1\nm2\nm3'
+            if args[1] == 'rev-parse':
+                return 'p' + args[2][1]
+            if '--diff-filter=d' in args:
+                return '\n'.join(p for p in diffs[(args[4], args[5])] if p.startswith('server2/config/tasks/'))
+            return '\n'.join(diffs[(args[3], args[4])])
+        with patch.object(ci, 'output', side_effect=git):
+            commands = ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
+        checks = [c for c in commands if c[0] == sys.executable]
+        self.assertEqual([['--declaration', str(ROOT / 'reports/placement/m1/server2/config/tasks/A.json'),
+                           '--base', 'p1'],
+                          ['--declaration', str(ROOT / 'reports/placement/m3/server2/config/tasks/B.json'),
+                           '--base', 'p3']], [c[-4:] for c in checks])
+        self.assertEqual(6, len(commands))
+        diffs[('p1', 'm1')] = ['server2/src/lib.rs']
+        with patch.object(ci, 'output', side_effect=git), self.assertRaisesRegex(SystemExit, 'm1: one reviewed'):
+            ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
 
     def test_shadow_shards_run_every_simulation_test_exactly_once(self):
         path = Path(__file__).parents[1] / ci.SHADOW_SIMULATION

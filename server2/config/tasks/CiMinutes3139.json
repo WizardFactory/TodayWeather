@@ -5,7 +5,12 @@
   "server2_paths": [
     "server2/.config/nextest.toml",
     "server2/config/tasks/CiMinutes3139.json",
+    "server2/tests/domestic/air_forecast_s3.rs",
+    "server2/tests/domestic/life_s3.rs",
+    "server2/tests/domestic/source_s3.rs",
+    "server2/tests/domestic/support.rs",
     "server2/tools/check_placement.py",
+    "server2/tools/check_test_partitions.py",
     "server2/tools/ci.py",
     "server2/tools/prepare-ci.sh",
     "server2/tools/test_ci.py",
