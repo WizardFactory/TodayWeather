@@ -364,7 +364,7 @@ class WeatherRepository(
         fun locationKey(place: Place): String {
             val location = place.location
             return when {
-                location != null && (location.lat != 0.0 || place.address.isNullOrEmpty()) ->
+                location != null && WeatherRequests.usesCoordinates(place) ->
                     "coord:${WeatherRequests.jsNumber(location.lat)},${WeatherRequests.jsNumber(location.long)}"
                 else -> "addr:${place.address.orEmpty()}"
             }
@@ -392,9 +392,7 @@ class WeatherRepository(
                     location = location ?: place.location,
                 )
             }
-            val own = place.location
-            val hasLocation = own != null && own.lat != 0.0
-            return if (!hasLocation && location != null && location.lat != 0.0) place.copy(location = location) else place
+            return if (!WeatherRequests.usesCoordinates(place) && location != null && location.lat != 0.0) place.copy(location = location) else place
         }
 
         private val zoneIds by lazy { java.util.TimeZone.getAvailableIDs().toHashSet() }

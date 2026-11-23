@@ -74,8 +74,15 @@ class WeatherSessionTest {
         t.session.reload(WeatherSession.Sender.INIT)
         runCurrent()
         assertTrue("/coord/0,60" in t.requests.last(), t.requests.last())
-        // The response's own location goes to the place that asked (the fixture answers with Seoul's), to no other.
         assertEquals(Location(0.0, 30.0), t.state.value.places[0].location, "the other place keeps its longitude")
+        // CODEX-3164-13: the place that asked keeps its own coordinates too, though the fixture answers with Seoul's.
+        assertEquals(Location(0.0, 60.0), t.state.value.places[1].location)
+        // A legacy place with an address and latitude 0 still takes the response's location (#1971).
+        val legacy = Place(currentPosition = false, disable = false, name = "C", address = "대한민국 서울특별시", location = Location(0.0, 0.0))
+        t.state.value = t.state.value.copy(places = listOf(legacy), placeIndex = 0)
+        t.session.reload(WeatherSession.Sender.INIT)
+        runCurrent()
+        assertTrue(t.state.value.places[0].location!!.lat != 0.0, "the address place got the response's location")
     }
 
     /** `branchInit` (A20): `setCityIndex` within the list, then `reloadEvent 'deeplink'`, which loads at once. */

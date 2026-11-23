@@ -229,9 +229,8 @@ class StartFlow(
                     location = city.location ?: place.location,
                 )
             }
-            val own = place.location
             val found = city.location
-            return if ((own == null || own.lat == 0.0) && found != null && found.lat != 0.0) withSource.copy(location = found) else withSource
+            return if (!WeatherRequests.usesCoordinates(place) && found != null && found.lat != 0.0) withSource.copy(location = found) else withSource
         }
 
     }

@@ -23,10 +23,19 @@ object WeatherRequests {
      * answered 501; exception E1 of `RequestPathsTest`). Nothing is encoded here, as in Cordova; the HTTP client
      * encodes spaces and non-ASCII characters as the WebView did.
      */
+    /**
+     * Whether [place]'s coordinates are its location: Cordova's `if (location.lat)` prefers the address at latitude 0;
+     * without an address the coordinates stand (a linked equator place). The request, the weather key and
+     * `updateCity`'s location all follow this one rule (CODEX-3164-5, -11, -13).
+     */
+    fun usesCoordinates(place: Place): Boolean {
+        val location = place.location ?: return false
+        return location.lat != 0.0 || place.address.isNullOrEmpty()
+    }
+
     fun url(baseUrl: String, place: Place, units: UnitSettings): String? {
         val location = place.location
-        // Cordova's `if (location.lat)` prefers the address at latitude 0; without one, the coordinates (CODEX-3164-5).
-        if (location != null && (location.lat != 0.0 || place.address.isNullOrEmpty())) {
+        if (location != null && usesCoordinates(place)) {
             return "$baseUrl/weather/$VERSION/coord/${jsNumber(location.lat)},${jsNumber(location.long)}${unitsQuery(units)}"
         }
         val address = place.address
