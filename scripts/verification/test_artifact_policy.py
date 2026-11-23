@@ -67,12 +67,21 @@ class ArtifactPolicyTests(unittest.TestCase):
         self.assertEqual(self.check('--staged').returncode, 0)
 
     def test_forced_generated_file_is_rejected(self):
-        for prefix in ['reports', '.archify', '.planning', 'test-results', 'playwright-report']:
+        for prefix in ['reports', '.archify', '.planning', 'test-results', 'playwright-report', 'gtm/data']:
             with self.subTest(prefix=prefix):
                 self.write(prefix + '/run.json', '{}')
                 self.git('add', '-f', prefix + '/run.json')
                 self.assertNotEqual(self.check('--staged').returncode, 0)
                 self.git('rm', '--cached', prefix + '/run.json')
+
+    def test_gtm_documents_are_link_checked(self):
+        self.write('gtm/README.md', '[sources](sources.md)\n')
+        self.write('gtm/sources.md', '# Sources\n')
+        self.git('add', 'gtm')
+        self.assertEqual(self.check('--staged').returncode, 0)
+        self.write('gtm/README.md', '[missing](missing.md)\n')
+        self.git('add', 'gtm/README.md')
+        self.assertNotEqual(self.check('--staged').returncode, 0)
 
     def test_untracked_link_target_is_not_delivery(self):
         self.write('docs/README.md', '[data](data.json)\n')

@@ -11,6 +11,7 @@ Keep maintained knowledge, reusable tools and selected evidence in Git. Generate
 | Reference screenshots and fixtures | Their existing documented locations, with manifests |
 | Stage state and raw runs | `reports/sdlc/<task>/`, `reports/verification/<suite>/` |
 | Planning and diagram scratch | `.planning/`, `.archify/` |
+| Go-to-market definitions, access inventory and logs | `gtm/`; daily figures and review bodies live in the private bucket named in [`gtm/sources.md`](../../gtm/sources.md), with `gtm/data/` as an ignored local cache |
 
 Retain evidence when a maintained claim, an accepted reference baseline, an incident/release decision or required verification depends on it. Record date/revision, commands, environment and limitations. Do not move entire execution directories into `docs/evidence/`. Preserve active gate inputs and Archify recovery/provenance files until their consumers finish. Intent/spec/plan documents keep their existing locations.
 
@@ -26,7 +27,7 @@ python3 scripts/check-artifact-policy.py --range <base-commit> <tip-commit>
 python3 scripts/verification/test_artifact_policy.py
 ```
 
-The checker reads Git blobs, checks maintained Markdown/HTML links and screenshot manifests, and rejects tracked local-output paths. It does not check every prose claim, external link, source-line anchor or runtime behavior. Link scanning covers `.md`/`.html` under `docs/`, `intent/`, `specs/`, `plans/` and `scripts/verification/`, plus root `README.md`, `AGENTS.md`, `CLAUDE.md` and `server/test/offline/README.md`. Other documents under `web/`, `client/` and `server/` are outside this gate; validate those with their relevant package checks. Code examples are excluded from link checks. It never modifies files/index, starts a service, fetches remote data or uploads evidence.
+The checker reads Git blobs, checks maintained Markdown/HTML links and screenshot manifests, and rejects tracked local-output paths. It does not check every prose claim, external link, source-line anchor or runtime behavior. Link scanning covers `.md`/`.html` under `docs/`, `intent/`, `specs/`, `plans/`, `scripts/verification/` and `gtm/`, plus root `README.md`, `AGENTS.md`, `CLAUDE.md` and `server/test/offline/README.md`. Other documents under `web/`, `client/` and `server/` are outside this gate; validate those with their relevant package checks. Code examples are excluded from link checks. It never modifies files/index, starts a service, fetches remote data or uploads evidence.
 
 Explicit `--range` checks (including CI) and updates to existing pre-push refs
 check every commit reachable from the selected tip but not the supplied non-zero

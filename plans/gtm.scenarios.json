@@ -1,0 +1,44 @@
+{
+  "scenarios": [
+    {
+      "id": "S1",
+      "user": "An agent or maintainer new to GTM work",
+      "goal": "Find where the daily records and credentials are and what each source needs",
+      "prerequisites": "A checkout of the repository; no private files",
+      "steps": [
+        "Open AGENTS.md and follow the go-to-market row to gtm/README.md",
+        "Follow the link to gtm/sources.md",
+        "Read the location table, the bucket section and the per-source access table"
+      ],
+      "expected": "The reader knows the bucket, the private directory and its files, the variables and the permission each source relies on, without any secret value",
+      "failure": "A link is broken or a source has no stated location: the artifact checker fails, or the document review records the gap",
+      "criteria": ["AC1", "AC4"]
+    },
+    {
+      "id": "S2",
+      "user": "A contributor running collectors locally",
+      "goal": "Be stopped before private records or a broken GTM link reach a commit",
+      "prerequisites": "Local records cached under gtm/data/",
+      "steps": [
+        "Force-add a file under gtm/data/ and run python3 scripts/check-artifact-policy.py --staged",
+        "Stage a gtm document with a link to a missing file and run the checker again"
+      ],
+      "expected": "Both runs exit non-zero and name the offending path; a normal git add does not stage gtm/data/ because it is ignored",
+      "failure": "The checker accepts either case: the regression tests fail",
+      "criteria": ["AC2"]
+    },
+    {
+      "id": "S3",
+      "user": "A reviewer of the pull request",
+      "goal": "Confirm that the public change discloses no private value",
+      "prerequisites": "The outgoing commits and the private variable file on the author's machine",
+      "steps": [
+        "Scan the outgoing diff for the private values and for key, token and identifier patterns",
+        "Read gtm/sources.md and gtm/log.md for figures or identifiers"
+      ],
+      "expected": "No credential, account identifier, download count, ad statistic or review body appears; only public store values with dates",
+      "failure": "A match is found: the value is removed before push and the scan is repeated",
+      "criteria": ["AC3"]
+    }
+  ]
+}
