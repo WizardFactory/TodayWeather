@@ -21,15 +21,15 @@
       "id": "S2",
       "user": "Operator releasing the Android app",
       "goal": "Take a commit to a signed, checked APK and a tagged candidate by following the runbook",
-      "prerequisites": "Private inputs, the release keystore, the installed store release's APK, Android SDK build tools",
+      "prerequisites": "python3, the Android SDK and JDK 17; a directory with the two private inputs, the release keystore, the installed store release's APK",
       "steps": [
         "Merge the version change",
         "Run release CI for the full SHA and the manual gates",
-        "android/tools/release/export-candidate.sh <full SHA> <new directory> && copy the two private inputs && (cd <new directory>/android && ./gradlew assembleRelease && zipalign -c ... && apksigner sign ... && tools/release/check-apk.sh <signed> <store>)",
+        "android/tools/release/export_candidate.py <full SHA> <new directory> --private <directory> && (cd <new directory>/android && tools/release/gradle-release.sh && zipalign -c ... && apksigner sign ... && tools/release/check-apk.sh <signed> <store>)",
         "Device gate, then local tag, notes check, push and pre-release"
       ],
-      "expected": "The export is the commit's android/ tree (equal tree hash) whatever the checkout holds; every step states who acts and what completes it; check-apk prints ok for each check and the identity lines",
-      "failure": "An unknown commit, a used directory or an export that is not the commit's tree stops before the build; a wrong key, a versionCode that is not higher, a debuggable APK, the sample AdMob ID or a build without Firebase makes check-apk fail; the candidate ends and the next one starts at step 1",
+      "expected": "The export holds the commit's android/ files byte for byte and the two private inputs, whatever the checkout or the shell holds; the build takes its inputs from private.properties; check-apk prints ok for each check and the identity lines",
+      "failure": "An unknown commit, an existing directory, a tree with a symbolic link or an export that does not read back as the commit stops before the build; a Gradle init script stops the build; a wrong key, a versionCode that is not higher, a debuggable APK, the sample AdMob ID or a build without Firebase makes check-apk fail; the candidate ends and the next one starts at step 1",
       "criteria": [
         "AC2"
       ]

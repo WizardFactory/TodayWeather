@@ -77,29 +77,28 @@ Keep each gate's output directory under ignored `reports/`; it can show private 
 
 ### 4. Build and sign
 
-On the operator's machine, at the root of a checkout that has the candidate commit (any branch; the checkout itself is not built). The release is built from an export of the commit in a new directory, never from a checkout: a checkout can hold changed, untracked, ignored or index-flagged files that a build would take in, and an export holds the commit's files only.
+On the operator's machine, at the root of a checkout that has the candidate commit (any branch; the checkout itself is not built). The release is built from an export of the commit in a new directory, never from a checkout: a checkout can hold changed, untracked, ignored or index-flagged files that a build would take in, and Git can convert files on the way out. Needs `python3`, the Android SDK (`ANDROID_HOME`) and JDK 17.
 
 ```sh
 CANDIDATE=<full SHA>                             # the SHA the release CI run verified
-BUILD=<new directory outside the checkout>       # absolute; it must not exist or be empty
+BUILD=<new directory outside the checkout>       # absolute; it must not exist
 PRIVATE=<directory with google-services.json and private.properties>
 APK="$OUT/TodayWeather-<versionName>-<versionCode>.apk"
 STORE_APK=<installed-store-release.apk>
 BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-android/tools/release/export-candidate.sh "$CANDIDATE" "$BUILD" &&   # the commit's android/ tree, verified
-  cp "$PRIVATE/google-services.json" "$BUILD/android/app/" &&
-  cp "$PRIVATE/private.properties" "$BUILD/android/" &&
+android/tools/release/export_candidate.py "$CANDIDATE" "$BUILD" --private "$PRIVATE" &&
   (cd "$BUILD/android" &&
-    ./gradlew assembleRelease &&                 # which refuses sample or missing AdMob IDs
+    tools/release/gradle-release.sh &&           # assembleRelease; refuses sample or missing AdMob IDs
     "$BUILD_TOOLS/zipalign" -c -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk &&
     "$BUILD_TOOLS/apksigner" sign --ks "$TW_ANDROID_KEYSTORE" --ks-key-alias "$TW_ANDROID_KEY_ALIAS" \
       --out "$APK" app/build/outputs/apk/release/app-release-unsigned.apk &&
     tools/release/check-apk.sh "$APK" "$STORE_APK")
 ```
 
-The commands are one chain: a failed export, a missing private input, a failed build or a failed signature stops everything after it.
+The commands are one chain: a failed export, a failed build or a failed signature stops everything after it. Everything after the export runs the export's own tools, those of the candidate.
 
-- `export-candidate.sh` writes the commit's `android/` directory to `$BUILD` with `git archive`, then computes Git's tree hash of what it wrote and requires it to equal the commit's. The build directory is therefore that commit's tree, or the tool fails and removes it. It refuses a name that is not a full SHA, a commit the repository does not have, a directory with content and a directory inside the checkout, and it records the SHA in `$BUILD/CANDIDATE`. The two private inputs are the only files added to the export; `ANDROID_HOME` names the SDK, since the export has no `local.properties`.
+- **`export_candidate.py`** reads every file of `<SHA>:android` as a blob from Git's object database and writes it with its bytes and mode. No checkout, archive, attribute, line-ending conversion or replaced object is involved. It refuses a tree with a symbolic link or a submodule, then reads the directory back: it must hold exactly the commit's paths, each with the blob's hash and mode. Only then does it write the two private inputs as new files (a commit that already has a file there is refused) and `CANDIDATE` with the SHA. It refuses a name that is not a full SHA, an unknown commit, a directory that exists and a directory inside the checkout before it writes anything, and removes its directory when it fails.
+- **`gradle-release.sh`** runs `./gradlew --no-daemon --no-build-cache assembleRelease` in the export. The build reads each private input from the environment before `private.properties`, so a variable left in the shell would replace the reviewed value: the wrapper removes every `TW_*` and `ORG_GRADLE_PROJECT_*` variable and the JVM option variables for the build and names them. The Gradle user home is the operator's (`GRADLE_USER_HOME` or `~/.gradle`), for the wrapper and dependency caches; an init script there (`init.gradle`, `init.gradle.kts`, `init.d/`) would run in the build, so with one present the build does not start. The keys of the user's `gradle.properties` are printed for the build record, without values; read them before trusting the build.
 - Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two. Keep `$BUILD` until the release is closed.
 - `apksigner` asks for the keystore and key passwords; do not put them on the command line, in a file of the checkout or in a log. `TW_ANDROID_KEYSTORE` and `TW_ANDROID_KEY_ALIAS` name the existing release keystore and its key. The app is not enrolled in Play App Signing, so this key is the one users' installs are signed with: a different key cannot update them.
 - `$OUT`, `$PRIVATE` and `$BUILD` are absolute paths outside the checkout (`$OUT` may be under ignored `reports/`). Keep the signed APK; the uploaded file and the checked file must be the same bytes.

@@ -162,8 +162,10 @@ jobs:
         run: |
           sh android/tools/emulator/test-instrumentation-passed.sh
           sh android/tools/release-ci/test-runners.sh
-      - name: Release candidate export (test repository)
-        run: sh android/tools/release/test-export-candidate.sh
+      - name: Release export and build wrapper (test repositories, stand-in gradlew)
+        run: |
+          python3 android/tools/release/test_export_candidate.py
+          sh android/tools/release/test-gradle-release.sh
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
