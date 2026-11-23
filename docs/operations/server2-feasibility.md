@@ -41,11 +41,13 @@ the Linux-only isolated operational or musl execution results.
 
 ## Docker preflight using the CI artifact
 
-Pull request runs no longer build this artifact. A Server2 push to `master` builds
-it after every check passes, and so does a manual run of the Server2 workflow
-(`gh workflow run server2.yml --ref BRANCH`) for a branch that is not merged yet.
-Download the successful run's `server2-linux-musl-verified` artifact, then check
-out that run's source:
+Pull request runs no longer build this artifact. On a Server2 push to `master`
+or a manual run (`gh workflow run server2.yml --ref BRANCH`, for a branch that is
+not merged yet), the `musl` job builds and verifies it in parallel with the other
+checks. `foundation` publishes it only after every check, including `goldens`,
+has passed. The artifact records the commit that the run checked out. Download
+the successful run's `server2-linux-musl-verified` artifact, then check out that
+commit's source:
 the exact `source.revision`, full tracked `server2/` Git tree, verification scripts, fixtures and binaries must match its manifest. Dirty tracked sources reject before Docker. CI records the PR head and rejects a merge checkout with different server2 inputs. The native
 Linux checks and Docker use the same `tools/verify_artifact.py` entrypoint. No
 local rebuild is required when the CI bundle is available.
