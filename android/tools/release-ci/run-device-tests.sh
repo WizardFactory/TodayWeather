@@ -46,10 +46,10 @@ for spec in "$@"; do
     adb shell input keyevent KEYCODE_WAKEUP
     adb shell wm dismiss-keyguard
     # shellcheck disable=SC2086
-    adb shell am instrument -w -r $argument -e class "$PKG.$class" "$PKG.test/$PKG.TestRunner" > "$OUT/$class.txt" || true
-    if ! instrumentation_passed "$OUT/$class.txt" "$declared"; then
+    instrument "$OUT/$class.txt" $argument -e class "$PKG.$class" "$PKG.test/$PKG.TestRunner" > /dev/null
+    if ! instrumentation_passed "$OUT/$class.txt" "$declared" "$INSTRUMENT_STATUS"; then
         tr -d '\r' < "$OUT/$class.txt" | grep -E '^INSTRUMENTATION_(STATUS: (test|stack)=|STATUS_CODE: -|RESULT|FAILED|CODE)|Exception|Error' | head -n 40 >&2 || true
-        echo "$class: not all of its $declared declared tests passed (failed, skipped or unfinished)" >&2
+        echo "$class: not all of its $declared declared tests passed (failed, skipped or unfinished), or adb failed (status $INSTRUMENT_STATUS)" >&2
         exit 1
     fi
     echo "$class: $declared of $declared declared tests passed"

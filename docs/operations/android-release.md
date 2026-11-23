@@ -81,21 +81,25 @@ On the operator's machine, at the root of a clean checkout of the candidate comm
 
 ```sh
 CANDIDATE=<full SHA>                             # the SHA the release CI run verified
-test "$(git rev-parse HEAD)" = "$CANDIDATE"      # the checkout is that commit, and
-test -z "$(git status --porcelain)"              # nothing differs from it, untracked files included
-cd android
-./gradlew clean assembleRelease                  # refuses sample or missing AdMob IDs
+APK="$OUT/TodayWeather-<versionName>-<versionCode>.apk"
+STORE_APK=<installed-store-release.apk>
 BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-"$BUILD_TOOLS/zipalign" -c -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk
-"$BUILD_TOOLS/apksigner" sign --ks "$TW_ANDROID_KEYSTORE" --ks-key-alias "$TW_ANDROID_KEY_ALIAS" \
-  --out "$OUT/TodayWeather-<versionName>-<versionCode>.apk" app/build/outputs/apk/release/app-release-unsigned.apk
-tools/release/check-apk.sh "$OUT/TodayWeather-<versionName>-<versionCode>.apk" <installed-store-release.apk>
+test "$(git rev-parse HEAD)" = "$CANDIDATE" &&   # the checkout is that commit,
+  test -z "$(git status --porcelain)" &&         # nothing differs from it, untracked files included,
+  (cd android &&
+    ./gradlew clean assembleRelease &&           # which refuses sample or missing AdMob IDs
+    "$BUILD_TOOLS/zipalign" -c -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk &&
+    "$BUILD_TOOLS/apksigner" sign --ks "$TW_ANDROID_KEYSTORE" --ks-key-alias "$TW_ANDROID_KEY_ALIAS" \
+      --out "$APK" app/build/outputs/apk/release/app-release-unsigned.apk &&
+    tools/release/check-apk.sh "$APK" "$STORE_APK")
 ```
 
-- Stop when either `test` fails: an untracked source or resource file under `android/` would be built into the APK, and a clean checkout of another commit builds a different app with the same version numbers, and `check-apk.sh` cannot tell them apart. Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two.
+The commands are one chain: a checkout of another commit, a file that differs, a failed build or a failed signature stops everything after it, and nothing is built or signed from the wrong source.
+
+- The two `test`s come first because an untracked source or resource file under `android/` would be built into the APK, and a clean checkout of another commit builds a different app with the same version numbers, and `check-apk.sh` cannot tell them apart. Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two.
 - `apksigner` asks for the keystore and key passwords; do not put them on the command line, in a file of the checkout or in a log. `TW_ANDROID_KEYSTORE` and `TW_ANDROID_KEY_ALIAS` name the existing release keystore and its key. The app is not enrolled in Play App Signing, so this key is the one users' installs are signed with: a different key cannot update them.
-- `$OUT` is outside the checkout or under ignored `reports/`. Keep the signed APK; the uploaded file and the checked file must be the same bytes.
-- `<installed-store-release.apk>` is the release users have now: the Cordova 1.1.1 store APK for the first native release.
+- `$OUT` is an absolute path outside the checkout or under ignored `reports/`. Keep the signed APK; the uploaded file and the checked file must be the same bytes.
+- `$STORE_APK` (an absolute path) is the release users have now: the Cordova 1.1.1 store APK for the first native release.
 - `check-apk.sh` verifies both signatures, compares every signer's certificate and the package with the store release, requires a higher `versionCode`, compares `versionName`, `versionCode`, `minSdk` and `targetSdk` with the checkout, and refuses a debuggable APK, Google's sample AdMob app ID and a build without the Firebase configuration. It prints the identity lines of the release notes. A `FAIL` line ends the candidate.
 - A release build that fails after an earlier success removes the earlier APK from `app/build/outputs`; copy the APK out before building again.
 
@@ -122,12 +126,12 @@ node scripts/release-notes.mjs --scope android --version <X.Y.Z>-rc.<N> --commit
 $EDITOR "$OUT/notes.md"                          # replace every <fill in>; trim the change list to what users get
 TAG=android/v<X.Y.Z>-rc.<N>
 git tag -a "$TAG" <full SHA> -m "Android <X.Y.Z> candidate <N>"   # local only so far
-node scripts/release-notes.mjs --check "$OUT/notes.md" &&
+node scripts/release-notes.mjs --check "$OUT/notes.md" --tag "$TAG" --commit <full SHA> &&
   git push origin "$TAG" &&
   gh release create "$TAG" --verify-tag --prerelease --latest=false --title "$TAG" --notes-file "$OUT/notes.md"
 ```
 
-The tag is pushed only after `--check` passes on the local tag, and the Release is created only after the push. When `--check` fails, fix the notes, or delete the local tag (`git tag -d "$TAG"`) when it names the wrong commit, and run the chain again. A pushed tag is never moved or reused.
+`--check` is told the tag and the commit that are about to be published: it fails when the notes are of another tag, name another commit or have an unfilled field, or when the local tag is missing or elsewhere. The tag is pushed only after it passes, and the Release is created only after the push. When `--check` fails, fix the notes, or delete the local tag (`git tag -d "$TAG"`) when it names the wrong commit, and run the chain again. A pushed tag is never moved or reused.
 
 The notes carry the release CI run, the `check-apk.sh` identity lines and the references of the manual and device gates. No APK is attached: Google Play is the only distribution, and the notes identify the file by its SHA-256.
 
@@ -147,12 +151,12 @@ When the open test is accepted, the same file goes to production. From the repos
 ```sh
 TAG=android/v<X.Y.Z>
 git tag -a "$TAG" <full SHA> -m "Android <X.Y.Z>"                   # the candidate's commit; local only so far
-node scripts/release-notes.mjs --check "$OUT/notes-final.md" &&
+node scripts/release-notes.mjs --check "$OUT/notes-final.md" --tag "$TAG" --commit <full SHA> &&
   git push origin "$TAG" &&
   gh release create "$TAG" --verify-tag --latest=false --title "$TAG" --notes-file "$OUT/notes-final.md"
 ```
 
-`notes-final.md` is the candidate's notes with `Tag:` set to the final tag, the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
+`notes-final.md` is the candidate's notes with `Tag:` set to the final tag (`--check` fails while it still says the candidate's), the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 
 Roll out in stages and hold each stage until its window has passed without a halt:
 

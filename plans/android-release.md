@@ -15,7 +15,7 @@ Consumes [intent](../intent/android-release.md) and [spec](../specs/android-rele
 | 7 | Runbook and tiers | `docs/operations/android-release.md`, `docs/development/ci-tiers.md`, `android/README.md`, one bullet in `AGENTS.md` | Links (`check-artifact-policy.py`), commands run where no private input is needed |
 
 | 8 | Robolectric's runtimes through Gradle, read offline (added after the hosted runs: the download during the tests failed the reused PR job in two of three runs, and on master on 2026-11-22) | `android/app/build.gradle.kts` | `./gradlew test`; a build without the SDK 24 runtime fails the SDK 24 tests on the missing jar |
-| 9 | One result check for every release CI suite (review R5): raw status per test, not `OK (N tests)` | `android/tools/emulator/offline.sh`, the three existing runners, `test-instrumentation-passed.sh` in PR CI | Recorded outputs (11 cases); the four local AVDs again |
+| 9 | One result check for every release CI suite (review R5): adb's status and the raw status per test, not `OK (N tests)` | `android/tools/emulator/offline.sh`, the three existing runners, `test-instrumentation-passed.sh` and `release-ci/test-runners.sh` (adb test double) in PR CI | Recorded outputs (12 cases); every suite through `run-suites.sh` with the double (12 cases); the four local AVDs again |
 
 Order: 1 and 2 are independent of 3–7. 3 precedes 4. 5 precedes the first green run of 4.
 

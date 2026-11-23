@@ -1,0 +1,27 @@
+#!/bin/sh
+# adb test double for test-runners.sh: an emulator that is offline, has neither package and answers every other
+# command with nothing. An instrumentation prints the raw output of $FAKE_ADB_CASE (passed: every test passes;
+# skipped: the test is skipped by an assumption) and exits with $FAKE_ADB_STATUS.
+case "$*" in
+    "get-state") echo device ;;
+    "emu avd name") printf 'tw_fake_fold\r\nOK\r\n' ;;
+    "shell dumpsys connectivity") echo "Active default network: none" ;;
+    "shell pm list packages"*) printf 'package:android\r\n' ;;
+    "shell cmd overlay list android") printf '[x] com.android.internal.systemui.navbar.gestural\r\n' ;;
+    "shell settings get "*) printf 'null\r\n' ;;
+    "shell getprop ro.build.version.sdk") printf '36\r\n' ;;
+    "exec-out run-as "*) tar -cf - -C "$FAKE_ADB_EMPTY" . ;;
+    "shell am instrument "*)
+        case "$*" in *CoreOnDeviceTest*) tests=2 ;; *) tests=1 ;; esac
+        code=0
+        [ "$FAKE_ADB_CASE" = skipped ] && code=-4
+        i=0
+        while [ "$i" -lt "$tests" ]; do
+            printf 'INSTRUMENTATION_STATUS: test=t%s\r\nINSTRUMENTATION_STATUS_CODE: 1\r\n' "$i"
+            printf 'INSTRUMENTATION_STATUS: test=t%s\r\nINSTRUMENTATION_STATUS_CODE: %s\r\n' "$i" "$code"
+            i=$((i + 1))
+        done
+        printf 'INSTRUMENTATION_RESULT: stream=\r\n\r\nOK (%s tests)\r\n\r\nINSTRUMENTATION_CODE: -1\r\n' "$tests"
+        exit "${FAKE_ADB_STATUS:-0}" ;;
+esac
+exit 0

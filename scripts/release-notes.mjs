@@ -2,11 +2,12 @@
 // Drafts and checks the notes of a target-specific GitHub Release (docs/operations/github-releases.md).
 //
 //   node scripts/release-notes.mjs --scope android --version 2.0.0-rc.1 [--commit <ref>] [--from <ref>]
-//   node scripts/release-notes.mjs --check <notes file>
+//   node scripts/release-notes.mjs --check <notes file> --tag <tag to publish> [--commit <ref>]
 //
 // The draft lists what was merged under the scope's paths since its previous final tag, read from the local Git
 // history only, and leaves `<fill in>` where the operator records what Git cannot know. --check passes when nothing
-// is left to fill in and the tag exists at the commit the notes name. Neither mode creates a tag or a Release.
+// is left to fill in, the notes are of the tag that is about to be published, and that tag exists at the commit
+// the notes name (and at --commit, when given). Neither mode creates a tag or a Release.
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
@@ -211,7 +212,26 @@ function draft(options) {
   return `${lines.join("\n")}\n`;
 }
 
-function check(file) {
+// A tag name of this convention, read as a name only and never as a Git revision expression (android/v2.0.0^):
+// its scope and version, or null.
+function releaseTag(tag) {
+  const named = /^(.+)\/v([^/]+)$/.exec(tag ?? "");
+  if (named === null || !Object.hasOwn(SCOPES, named[1])) return null;
+  const version = parseVersion(named[2]);
+  return version === null ? null : { scope: named[1], version };
+}
+
+// Checks the notes in `file` for the Release of `publish`, the tag about to be pushed, at `expected`, its commit
+// when the caller names one.
+function check(file, publish, expected) {
+  if (!publish) throw new UsageError("--check needs --tag <the tag to publish>");
+  const wanted = releaseTag(publish);
+  if (wanted === null) throw new UsageError(`${publish} is not a release tag (<scope>/vMAJOR.MINOR.PATCH or -rc.N)`);
+  let expectedCommit = null;
+  if (expected !== undefined) {
+    expectedCommit = tryGit(["rev-parse", "--verify", "--quiet", `${expected}^{commit}`]);
+    if (!expectedCommit) throw new UsageError(`cannot resolve the commit ${expected}`);
+  }
   let text;
   try {
     text = readFileSync(file, "utf8");
@@ -222,37 +242,40 @@ function check(file) {
   const field = (name) => new RegExp(`^${name}: (.+)$`, "m").exec(text)?.[1].trim();
   const tag = field("Tag");
   const commit = field("Source commit");
-  // The tag is read as a name of this convention only, never as a Git revision expression (android/v2.0.0^).
-  const named = /^(.+)\/v([^/]+)$/.exec(tag ?? "");
-  const releaseTag = named !== null && Object.hasOwn(SCOPES, named[1]) && parseVersion(named[2]) !== null;
   if (!tag) problems.push("no Tag line");
-  else if (!releaseTag) problems.push(`${tag} is not a release tag (<scope>/vMAJOR.MINOR.PATCH or -rc.N)`);
-  else if (field("Delivery scope") !== named[1]) {
-    problems.push(`the tag is of scope ${named[1]}, the notes say Delivery scope ${field("Delivery scope") ?? "nothing"}`);
+  else if (releaseTag(tag) === null) problems.push(`${tag} is not a release tag (<scope>/vMAJOR.MINOR.PATCH or -rc.N)`);
+  if (tag && tag !== publish) problems.push(`the notes are of ${tag}, not of ${publish}`);
+  if (wanted.version.candidate !== null && !SCOPES[wanted.scope].candidates) {
+    problems.push(`${wanted.scope} has no release candidates: ${publish} cannot be released`);
+  }
+  if (field("Delivery scope") !== wanted.scope) {
+    problems.push(`the tag is of scope ${wanted.scope}, the notes say Delivery scope ${field("Delivery scope") ?? "nothing"}`);
   }
   if (!commit || !/^[0-9a-f]{40}$/.test(commit)) problems.push("Source commit is not a full 40-character SHA");
+  else if (expectedCommit !== null && commit !== expectedCommit) {
+    problems.push(`Source commit ${commit} is not the commit ${expectedCommit} named with --commit`);
+  }
   const unfilled = text.split("\n").filter((line) => line.includes("<fill in")).map((line) => line.trim());
   if (unfilled.length) problems.push(`unfilled: ${unfilled.join(" | ")}`);
-  if (releaseTag && commit) {
-    const tagged = tryGit(["rev-parse", "--verify", "--quiet", `refs/tags/${tag}^{commit}`]);
-    if (tagged === null) problems.push(`tag ${tag} does not exist`);
-    else if (tagged !== commit) problems.push(`tag ${tag} points at ${tagged}, the notes say ${commit}`);
-  }
-  return { tag, problems };
+  // The tag that will be pushed must exist here, at the commit the notes name.
+  const tagged = tryGit(["rev-parse", "--verify", "--quiet", `refs/tags/${publish}^{commit}`]);
+  if (tagged === null) problems.push(`tag ${publish} does not exist`);
+  else if (commit && tagged !== commit) problems.push(`tag ${publish} points at ${tagged}, the notes say ${commit}`);
+  return { tag: publish, problems };
 }
 
 function main(argv) {
-  const options = { commit: "HEAD" };
+  const options = {};
   for (let i = 0; i < argv.length; i += 2) {
     const name = argv[i];
-    if (!["--scope", "--version", "--commit", "--from", "--check"].includes(name) || argv[i + 1] === undefined) {
+    if (!["--scope", "--version", "--commit", "--from", "--check", "--tag"].includes(name) || argv[i + 1] === undefined) {
       throw new UsageError(`usage: release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]
-       release-notes.mjs --check <notes file>`);
+       release-notes.mjs --check <notes file> --tag <tag to publish> [--commit <ref>]`);
     }
     options[name.slice(2)] = argv[i + 1];
   }
   if (options.check) {
-    const { tag, problems } = check(options.check);
+    const { tag, problems } = check(options.check, options.tag, options.commit);
     if (problems.length) {
       process.stderr.write(`${problems.join("\n")}\n`);
       return 1;
@@ -261,7 +284,7 @@ function main(argv) {
     return 0;
   }
   if (!options.scope) throw new UsageError("--scope and --version are required");
-  process.stdout.write(draft(options));
+  process.stdout.write(draft({ commit: "HEAD", ...options }));
   return 0;
 }
 

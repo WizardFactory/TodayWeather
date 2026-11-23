@@ -28,7 +28,7 @@ TAG=<scope>/v<version>
 node scripts/release-notes.mjs --scope <scope> --version <version> --commit <full SHA> > notes.md   # refuses an existing tag
 $EDITOR notes.md                                    # replace every <fill in>
 git tag -a "$TAG" <full SHA> -m "<target> <version>"
-node scripts/release-notes.mjs --check notes.md &&
+node scripts/release-notes.mjs --check notes.md --tag "$TAG" --commit <full SHA> &&
   git push origin "$TAG" &&
   gh release create "$TAG" --verify-tag --latest=false --title "$TAG" --notes-file notes.md
 # a store-app candidate: add --prerelease
@@ -45,7 +45,7 @@ gh release list --limit 100 --json tagName,isPrerelease,publishedAt \
 
 ## Release-note template
 
-Draft the notes with `node scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]`. It writes the fields below with the scope's identity lines and lists what was merged under the scope's paths since its previous final tag, from the local Git history (`android/`; `ios/`; `web/` and `packages/`; `server/`; `server2/`). The list is a draft: a pull request that only refreshed a snapshot under those paths is listed too, so trim it to what the release changes and write the user impact. Replace every `<fill in>`, then run `node scripts/release-notes.mjs --check notes.md` once the local tag exists and before it is pushed: it fails while a field is unfilled or the tag is missing or at another commit. The first Release of a scope has no previous tag and needs `--from <commit>`.
+Draft the notes with `node scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]`. It writes the fields below with the scope's identity lines and lists what was merged under the scope's paths since its previous final tag, from the local Git history (`android/`; `ios/`; `web/` and `packages/`; `server/`; `server2/`). The list is a draft: a pull request that only refreshed a snapshot under those paths is listed too, so trim it to what the release changes and write the user impact. Replace every `<fill in>`, then run `node scripts/release-notes.mjs --check notes.md --tag <tag> [--commit <full SHA>]` once the local tag exists and before it is pushed. It is told the tag (and commit) about to be published and fails while a field is unfilled, the notes are of another tag or scope or name another commit, the scope has no candidates for an `-rc.N` tag, or the tag is missing or at another commit. The first Release of a scope has no previous tag and needs `--from <commit>`.
 
 Use this template for all targets, with a scope-specific identity section. Update rollout status with a dated evidence reference; preserve previous attempts. Keep account/resource IDs, secrets and private backups in the operator inventory, not public notes.
 

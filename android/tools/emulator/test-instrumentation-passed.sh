@@ -6,12 +6,13 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 failed=0
-# name, expected tests, expected status (0 passes), then the output's lines
+# name, expected tests, expected status (0 passes), then the output's lines; $ADB is the status adb ended with
+ADB=0
 check() {
     name=$1; count=$2; want=$3; shift 3
     printf '%s\r\n' "$@" > "$TMP/$name.txt"
     got=0
-    instrumentation_passed "$TMP/$name.txt" "$count" || got=1
+    instrumentation_passed "$TMP/$name.txt" "$count" "$ADB" || got=1
     if [ "$got" = "$want" ]; then echo "ok   $name"; else echo "FAIL $name: status $got, want $want"; failed=1; fi
 }
 START="INSTRUMENTATION_STATUS_CODE: 1"
@@ -27,4 +28,7 @@ check more-than-expected 1 1 "$START" "INSTRUMENTATION_STATUS_CODE: 0" "$START" 
 check process-crashed 1 1 "$START" "INSTRUMENTATION_RESULT: shortMsg=Process crashed." "INSTRUMENTATION_CODE: 0"
 check unfinished 1 1 "$START" "INSTRUMENTATION_STATUS_CODE: 0"
 check empty 1 1 ""
+# A passing output does not make up for an adb that failed.
+ADB=7
+check passed-but-adb-failed 2 1 "$START" "INSTRUMENTATION_STATUS_CODE: 0" "$START" "INSTRUMENTATION_STATUS_CODE: 0" "OK (2 tests)" "$DONE"
 exit $failed

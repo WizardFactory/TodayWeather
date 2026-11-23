@@ -63,7 +63,7 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 | `shell-fit` | `large-screen/run-shell-fit.sh` | `ShellFitDeviceTest` with gesture and three-button navigation, on the tablet and the foldable |
 | `window-fit` | `large-screen/run-window-fit.sh` | `WindowFitDeviceTest`: split screen, rotation, fold, font scale 1.0 and 1.3 |
 
-`release-ci/run-suites.sh` runs a job's suites in turn and reports each, so one run shows every failure. Every suite reads the raw instrumentation status of each test (`instrumentation_passed` in `emulator/offline.sh`): a failed, crashed, ignored or assumption-skipped test fails it, where the plain `OK (N tests)` line would count a skipped test as run.
+`release-ci/run-suites.sh` runs a job's suites in turn and reports each, so one run shows every failure. Every suite reads adb's status and the raw instrumentation status of each test (`instrument` and `instrumentation_passed` in `emulator/offline.sh`): a failed adb, or a failed, crashed, ignored or assumption-skipped test fails it, where the plain `OK (N tests)` line would count a skipped test as run. PR CI checks this with recorded outputs and an adb test double (`emulator/test-instrumentation-passed.sh`, `release-ci/test-runners.sh`).
 
 Start a run for a commit and read its result:
 

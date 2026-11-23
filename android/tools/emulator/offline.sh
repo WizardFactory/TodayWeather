@@ -11,11 +11,23 @@
 # run that needs the network: when the removal cannot be confirmed it takes the device offline and exits 5.
 PKG=net.wizardfactory.todayweather
 
-# Whether the `am instrument -w -r` output in file $1 shows $2 passed tests and nothing else: no failed, crashed,
-# ignored or assumption-skipped test (the plain `OK (N tests)` line counts a skipped test as run), and an
-# instrumentation that finished. Raw status per test: 1 started, 0 passed, -1 error, -2 failure, -3 ignored,
-# -4 assumption not met.
+# Runs `adb shell am instrument -w -r` with the arguments after $1, writes its output to file $1 and shows it.
+# adb's status goes to INSTRUMENT_STATUS for instrumentation_passed; the function itself succeeds, so a runner can
+# still collect what a failed test left on the device before it decides.
+instrument() {
+    instrument_file=$1
+    shift
+    INSTRUMENT_STATUS=0
+    adb shell am instrument -w -r "$@" > "$instrument_file" || INSTRUMENT_STATUS=$?
+    cat "$instrument_file"
+}
+
+# Whether an instrumentation passed: adb's status $3 is 0, and the `am instrument -w -r` output in file $1 shows
+# $2 passed tests and nothing else: no failed, crashed, ignored or assumption-skipped test (the plain
+# `OK (N tests)` line counts a skipped test as run), and an instrumentation that finished. Raw status per test:
+# 1 started, 0 passed, -1 error, -2 failure, -3 ignored, -4 assumption not met.
 instrumentation_passed() {
+    [ "${3:?pass the status of adb}" = 0 ] || return 1
     [ "$(tr -d '\r' < "$1" | grep -c '^INSTRUMENTATION_STATUS_CODE: 0$')" = "$2" ] || return 1
     if tr -d '\r' < "$1" | grep -q '^INSTRUMENTATION_STATUS_CODE: -'; then return 1; fi
     tr -d '\r' < "$1" | grep -q '^INSTRUMENTATION_CODE: -1$'

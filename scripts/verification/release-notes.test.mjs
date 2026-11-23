@@ -144,24 +144,24 @@ test("check passes complete notes for the tagged commit and names what is missin
   const notes = join(r.dir, "notes.md");
 
   writeFileSync(notes, draft);
-  const unfilled = r.run("--check", notes);
+  const unfilled = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(unfilled.code, 1);
   assert.match(unfilled.err, /unfilled: .*versionCode/s);
 
   const filled = draft.replace(/<fill in[^>]*>/g, "done");
   writeFileSync(notes, filled);
-  const untagged = r.run("--check", notes);
+  const untagged = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(untagged.code, 1);
   assert.match(untagged.err, /tag android\/v2\.0\.0 does not exist/);
 
   r.git("tag", "-a", "android/v2.0.0", "-m", "release", first);
-  const moved = r.run("--check", notes);
+  const moved = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(moved.code, 1);
   assert.match(moved.err, new RegExp(`points at ${first}, the notes say ${head}`));
 
   r.git("tag", "-d", "android/v2.0.0");
   r.git("tag", "-a", "android/v2.0.0", "-m", "release", head);
-  const complete = r.run("--check", notes);
+  const complete = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(complete.code, 0, complete.err);
   assert.match(complete.out, /android\/v2\.0\.0: notes complete/);
 });
@@ -215,23 +215,66 @@ test("check takes the tag as an exact release tag of the notes' scope", (t) => {
 
   // A revision expression is not a tag: android/v2.0.0^ resolves to the parent commit.
   complete("android/v2.0.0^", first);
-  const expression = r.run("--check", notes);
+  const expression = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(expression.code, 1);
   assert.match(expression.err, /is not a release tag/);
 
   complete("android/v2.0.0", head, "ios");
-  const scope = r.run("--check", notes);
+  const scope = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(scope.code, 1);
   assert.match(scope.err, /Delivery scope ios/);
 
   complete("refs/heads/master", head);
-  assert.equal(r.run("--check", notes).code, 1);
+  assert.equal(r.run("--check", notes, "--tag", "android/v2.0.0").code, 1);
 
   complete("android/v2.0.0", head);
-  const exact = r.run("--check", notes);
+  const exact = r.run("--check", notes, "--tag", "android/v2.0.0");
   assert.equal(exact.code, 0, exact.err);
 
-  const missing = r.run("--check", join(r.dir, "no-such-notes.md"));
+  const missing = r.run("--check", join(r.dir, "no-such-notes.md"), "--tag", "android/v2.0.0");
   assert.equal(missing.code, 2);
   assert.match(missing.err, /cannot read the notes/);
+});
+
+test("check is of the tag and commit that are about to be published", (t) => {
+  const r = repository(t);
+  r.commit("android/a.txt", "start");
+  const head = r.commit("android/b.txt", "next");
+  r.git("tag", "-a", "android/v2.0.0-rc.1", "-m", "candidate", head);
+  r.git("tag", "-a", "android/v2.0.0", "-m", "final", head);
+  const notes = join(r.dir, "notes.md");
+  // The candidate's notes copied for the final Release, with the candidate's tag left in them.
+  writeFileSync(notes, `Source commit: ${head}\nDelivery scope: android\nTag: android/v2.0.0-rc.1\n`);
+
+  const stale = r.run("--check", notes, "--tag", "android/v2.0.0");
+  assert.equal(stale.code, 1);
+  assert.match(stale.err, /the notes are of android\/v2\.0\.0-rc\.1, not of android\/v2\.0\.0/);
+
+  const candidate = r.run("--check", notes, "--tag", "android/v2.0.0-rc.1", "--commit", head);
+  assert.equal(candidate.code, 0, candidate.err);
+
+  const other = r.run("--check", notes, "--tag", "android/v2.0.0-rc.1", "--commit", `${head}~1`);
+  assert.equal(other.code, 1);
+  assert.match(other.err, /not the commit/);
+
+  const untold = r.run("--check", notes);
+  assert.equal(untold.code, 2);
+  assert.match(untold.err, /--tag/);
+});
+
+test("check refuses a release candidate of a scope without candidates", (t) => {
+  const r = repository(t);
+  const head = r.commit("web/a.txt", "start");
+  r.git("tag", "-a", "webapp/v1.2.3-rc.1", "-m", "not allowed", head);
+  r.git("tag", "-a", "ios/v2.0.2-rc.1", "-m", "candidate", head);
+  const notes = join(r.dir, "notes.md");
+
+  writeFileSync(notes, `Source commit: ${head}\nDelivery scope: webapp\nTag: webapp/v1.2.3-rc.1\n`);
+  const webapp = r.run("--check", notes, "--tag", "webapp/v1.2.3-rc.1");
+  assert.equal(webapp.code, 1);
+  assert.match(webapp.err, /webapp has no release candidates/);
+
+  writeFileSync(notes, `Source commit: ${head}\nDelivery scope: ios\nTag: ios/v2.0.2-rc.1\n`);
+  const ios = r.run("--check", notes, "--tag", "ios/v2.0.2-rc.1");
+  assert.equal(ios.code, 0, ios.err);
 });

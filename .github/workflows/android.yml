@@ -158,8 +158,10 @@ jobs:
           python3 tools/parity-reference/check-results.py
       - name: Upgrade test cleanup (adb test double)
         run: sh android/tools/upgrade/test-cleanup.sh
-      - name: Instrumentation result check (recorded outputs)
-        run: sh android/tools/emulator/test-instrumentation-passed.sh
+      - name: Instrumentation result check (recorded outputs, adb test double)
+        run: |
+          sh android/tools/emulator/test-instrumentation-passed.sh
+          sh android/tools/release-ci/test-runners.sh
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
