@@ -1,0 +1,17 @@
+{
+  "task": "CancelSuperseded3139",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3139",
+  "scope": "Cancel a pull request's superseded workflow runs so queued jobs do not delay its newest run; pushes and manual runs are never cancelled.",
+  "server2_paths": [
+    "server2/config/tasks/CancelSuperseded3139.json",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Cancel superseded pull request runs"
+    }
+  ]
+}

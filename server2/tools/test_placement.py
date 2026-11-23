@@ -352,6 +352,13 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
             body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
             body.replace("save-if: ${{ github.ref == 'refs/heads/master' }}", 'save-if: true', 1),
             body.replace('cargo-nextest@0.9.152', 'cargo-nextest'),
+            # Only pull request runs may cancel superseded runs; a master push must never be lost.
+            body.replace("cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}",
+                         'cancel-in-progress: true'),
+            # A re-run of an older commit must not join the pull request's group.
+            body.replace("github.event_name == 'pull_request' && github.run_attempt == '1' && format(",
+                         "github.event_name == 'pull_request' && format("),
+            body.replace("format('{0}-run-{1}', github.workflow, github.run_id)", "format('{0}-run-{1}', github.workflow, github.ref)"),
             body.replace('rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0', 'rust-cache@v2', 1),
             body.replace('name: server2-linux-musl-candidate\n          path', 'name: server2-linux-musl-verified\n          path', 1),
             body.replace('retention-days: 1', 'retention-days: 7'),

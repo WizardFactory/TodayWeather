@@ -1,5 +1,7 @@
 TodayWeather helps you compare today's temperature with yesterday and check hourly forecasts, daily weather and air quality for your current location or saved cities. Information availability varies by region and provider.
 
+Home-screen widgets: add Current weather, Forecast (hourly or daily), Clock and weather, and Air quality widgets. Enlarge the Forecast or Clock and weather widget to see more forecast periods. For each widget, choose Classic Black, Morning Paper or Blue Hour, the place, and automatic or manual updates. Open the app at least once every five days to keep the widgets updated.
+
 Data sources
 Korean weather: Korea Meteorological Administration (KMA).
 Korean air observations: Korea Environment Corporation, AirKorea. Real-time observations are provisional and may contain errors, gaps or delays due to station conditions, maintenance or communications.
@@ -15,6 +17,5 @@ Korea Astronomy and Space Science Institute (KASI): https://astro.kasi.re.kr
 
 Weather and air information can be inaccurate, incomplete or delayed; forecasts can differ from actual conditions. TodayWeather is not an official government app and does not replace official weather warnings, emergency alerts, evacuation instructions or professional advice. Check the relevant authorities' latest guidance for safety-critical decisions.
 
-Home-screen widgets: add Current weather, Forecast (hourly or daily), Clock and weather, and Air quality widgets. Enlarge the Forecast or Clock and weather widget to see more forecast periods. For each widget, choose Classic Black, Morning Paper or Blue Hour, the place, and automatic or manual updates. Open the app at least once every five days to keep the widgets updated.
 Location permission is used when you choose to find weather for your current location.
 Support: todayweather@wizardfactory.net

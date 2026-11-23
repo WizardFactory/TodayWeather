@@ -111,6 +111,19 @@ on:
       - "server/routes/**"
       - "server/package-lock.json"
       - ".github/workflows/android.yml"
+  # Android release verification (android-release.yml) runs these jobs on the commit it verifies.
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit to check out (empty: the commit of the calling event)"
+        required: false
+        type: string
+concurrency:
+  # First attempts of a pull request's runs share a group and cancel older ones. Re-runs,
+  # pushes and manual runs get their own group, so a re-run of an older commit can never
+  # cancel or replace the newest commit's run.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-run-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 permissions:
   contents: read
 jobs:
@@ -122,6 +135,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -143,6 +157,17 @@ jobs:
           node --test android/tools/emulator/reference-view.test.mjs android/tools/parity-reference/check.test.mjs
           python3 android/tools/parity-reference/test_check_results.py
           node android/tools/parity-reference/check.mjs
+      - name: Robolectric runtimes
+        working-directory: android
+        # Maven Central answers some downloads of these large jars with 429 Too Many Requests; the tests need
+        # them, so they are fetched first and a refused download is tried again.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            ./gradlew :app:copyRobolectricRuntimes && exit 0
+            echo "attempt $attempt failed"
+            [ "$attempt" = 5 ] || sleep $((attempt * 30))
+          done
+          exit 1
       - name: Build and unit tests
         working-directory: android
         run: |
@@ -150,12 +175,22 @@ jobs:
           python3 tools/parity-reference/check-results.py
       - name: Upgrade test cleanup (adb test double)
         run: sh android/tools/upgrade/test-cleanup.sh
+      - name: Instrumentation result check (recorded outputs, adb test double)
+        run: |
+          sh android/tools/emulator/test-instrumentation-passed.sh
+          sh android/tools/release-ci/test-runners.sh
+      - name: Release export and build wrapper (test repositories, stand-in gradlew)
+        run: |
+          python3 android/tools/release/test_export_candidate.py
+          sh android/tools/release/test-gradle-release.sh
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Remove client/
         run: rm -rf client && test ! -e client
       - uses: actions/setup-java@v4
@@ -163,6 +198,17 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Robolectric runtimes
+        working-directory: android
+        # Maven Central answers some downloads of these large jars with 429 Too Many Requests; the tests need
+        # them, so they are fetched first and a refused download is tried again.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            ./gradlew :app:copyRobolectricRuntimes && exit 0
+            echo "attempt $attempt failed"
+            [ "$attempt" = 5 ] || sleep $((attempt * 30))
+          done
+          exit 1
       - name: Build and unit tests
         working-directory: android
         run: |
