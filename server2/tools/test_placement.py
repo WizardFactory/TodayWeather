@@ -329,13 +329,18 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
 
     def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
         body = placement.PARALLEL_WORKFLOW_PREFIX + placement.GOLDEN_JOB
-        self.assertIn('needs: [placement, python, shadow, rust, gnu, musl, goldens]', body)
+        self.assertIn('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]', body)
         self.assertEqual([], placement.audit_workflow(body))
         for bad in (
-            body.replace('needs: [placement, python, shadow, rust, gnu, musl, goldens]',
-                         'needs: [placement, python, rust, gnu, musl, goldens]'),
-            body.replace('needs: [placement, python, shadow, rust, gnu, musl, goldens]',
-                         'needs: [placement, python, shadow, rust, gnu, musl]'),
+            body.replace('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, rust-build, rust, gnu, musl, goldens]'),
+            body.replace('needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, shadow, rust-build, rust, gnu, musl]'),
+            body.replace("              needs.rust-build.result != 'success' ||\n", ''),
+            body.replace('    needs: rust-build\n', '    needs: placement\n'),
+            body.replace('shard: [1, 2, 3, 4, 5, 6]', 'shard: [1, 2, 3, 4, 5]'),
+            body.replace('name: server2-nextest-archive\n          path: reports/nextest/\n          if-no-files-found',
+                         'name: server2-nextest-archive\n          path: reports/\n          if-no-files-found'),
             body.replace(" ||\n              (github.event_name != 'pull_request' && needs.goldens.result != 'success')", ''),
             body.replace('          SERVER2_DECLARATION: ${{ inputs.declaration }}\n', ''),
             body.replace('if: ${{ always() }}', 'if: ${{ success() }}'),
@@ -344,7 +349,6 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
             body.replace("(github.event_name != 'pull_request' && needs.musl.result != 'success') ", ''),
             body.replace("    if: ${{ github.event_name != 'pull_request' }}\n    runs-on", '    runs-on'),
             body.replace('shard: [1, 2, 3, 4]', 'shard: [1, 2, 3]'),
-            body.replace('shard: [1, 2, 3]\n', 'shard: [1, 2]\n'),
             body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
             body.replace("save-if: ${{ github.ref == 'refs/heads/master' }}", 'save-if: true', 1),
             body.replace('cargo-nextest@0.9.152', 'cargo-nextest'),

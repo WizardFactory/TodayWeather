@@ -48,3 +48,17 @@ The local default `tools/ci.sh` keeps the serial inventory, including `cargo tes
 4. After merge, the first `master` push must publish a verified artifact that `promote_artifact.py` accepts.
 
 Revert the PR to restore the #3129 workflow.
+
+## Step 1 result (#3140, merged 2026-11-23)
+
+Measured with cold caches while several runs overlapped, the candidate took 16.7, 19.6, 28.0 and 25.4 minutes against 25.6, 29.7, 28.5 and 27.2 for the #3129 workflow. The first `master` push (run 45106001837) published a verified artifact whose revision and `server2` tree match the merge commit, with executable binaries, and saved the `test` and `release` Cargo caches. Three bottlenecks remained:
+
+- Each Rust shard built the tests itself, which took about 5 minutes cold.
+- The domestic S3 tests ran one at a time on each runner, which took 9–13 minutes per shard.
+- Jobs waited for runners while runs overlapped.
+
+## Step 2: one test build shared by six shards
+
+A `rust-build` job restores the `test` cache and runs the placement and CI tool tests, the partition proof (now for 6 shards) and the doc tests. It then writes `cargo nextest archive` without debug info (process-scoped `CARGO_PROFILE_*_DEBUG=0`) and uploads it as a same-run artifact with one-day retention. Six `rust` shards download it and run `cargo-nextest nextest run --archive-file … --extract-to . --extract-overwrite --partition count:k/6` without compiling. Extracting into the checkout recreates the build job's `target` path, which `env!("CARGO_BIN_EXE_*")` in the tests refers to. Extracting elsewhere fails 3 of the binary-spawning tests locally, while in place they all pass. `foundation` also requires `rust-build`.
+
+Adopt with lower PR waits than step 1 on comparable runs, measured with the `master` cache. Concurrent S3 tests per runner is a separate, later decision.

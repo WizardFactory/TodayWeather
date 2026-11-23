@@ -159,17 +159,23 @@ class CommandPlanTests(unittest.TestCase):
                         self.assertEqual(0 if command in (workspace_tests, simulation) else 1,
                                          hosted[command], command)
                     extras = hosted - Counter(c for c in serial if c not in (workspace_tests, simulation))
-                    # The whole command is frozen, so a narrowing flag such as --lib cannot slip in.
+                    # The whole commands are frozen, so a narrowing flag such as --lib cannot slip in.
+                    archive = str(ROOT / ci.NEXTEST_ARCHIVE)
+                    self.assertEqual(1, extras[('cargo', 'nextest', 'archive', '--locked', '--workspace',
+                                                '--archive-file', archive)])
                     for k in range(1, ci.RUST_SHARDS + 1):
-                        self.assertEqual(1, extras[('env', 'RUST_MIN_STACK=8388608', 'cargo', 'nextest', 'run',
-                                                    '--locked', '--workspace', '--no-fail-fast', '--partition',
-                                                    f'count:{k}/{ci.RUST_SHARDS}')])
+                        self.assertEqual(1, extras[('env', 'RUST_MIN_STACK=8388608', 'cargo-nextest', 'nextest',
+                                                    'run', '--archive-file', archive, '--workspace-remap', '.',
+                                                    '--extract-to', '.', '--extract-overwrite', '--no-fail-fast',
+                                                    '--partition', f'count:{k}/{ci.RUST_SHARDS}')])
                     self.assertEqual(1, extras[('cargo', 'test', '--locked', '--workspace', '--doc')])
                     self.assertEqual(1, extras[(sys.executable, 'tools/check_test_partitions.py', '--shards',
                                                 str(ci.RUST_SHARDS))])
                     shards = [c for c in extras if c[:2] == simulation]
                     self.assertEqual(len(ci.SHADOW_SHARDS), len(shards))
-                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 2 + len(shards))
+                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 3 + len(shards))
+        self.assertEqual({'CARGO_PROFILE_DEV_DEBUG': '0', 'CARGO_PROFILE_TEST_DEBUG': '0'},
+                         ci.STAGE_ENV['rust-build'])
 
     def test_in_process_test_locks_keep_their_limit_under_nextest(self):
         server2 = Path(__file__).parents[1]
