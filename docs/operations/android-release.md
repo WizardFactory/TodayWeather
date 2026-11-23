@@ -33,7 +33,7 @@ A failure at any step ends the candidate. Fix on `master`, then start again at s
 ### 2. Release CI
 
 ```sh
-gh workflow run android-release.yml --ref master -f ref=<full SHA>
+gh workflow run android-release.yml --ref <branch or tag at the candidate> -f ref=<full SHA>   # master, while it is the candidate
 gh run list --workflow android-release.yml --limit 5
 gh run view <run id> --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.name): \(.conclusion)")'
 ```

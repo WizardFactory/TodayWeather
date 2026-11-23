@@ -41,7 +41,7 @@ export const SCOPES = {
       ["Marketing version", null],
       ["Build number", FILL],
       ["Archive / IPA SHA-256", FILL],
-      ["Release verification", `${FILL} (run or log reference on the source commit)`],
+      ["Release CI run", `${FILL} (iOS release verification, passed on the source commit)`],
       ["Device acceptance", `${FILL} (private evidence reference)`],
     ],
     status: storeStatus,
