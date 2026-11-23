@@ -460,6 +460,7 @@ mod wire_tests {
 
     #[test]
     fn additional_transport_and_reinstallation_cannot_replenish_process() {
+        let _spawn = crate::test_spawn::exclusive();
         let result = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
@@ -527,6 +528,7 @@ mod wire_tests {
     }
     #[test]
     fn guard_metrics_survive_log_filter_without_reset() {
+        let _spawn = crate::test_spawn::exclusive();
         let result = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
@@ -738,6 +740,7 @@ mod wire_tests {
     }
     #[test]
     fn provider_transports_count_each_rejection_once_by_source() {
+        let _spawn = crate::test_spawn::exclusive();
         let result = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
@@ -757,6 +760,7 @@ mod wire_tests {
     }
     #[test]
     fn diagnostic_metrics_retain_first_origin_and_paid_units() {
+        let _spawn = crate::test_spawn::exclusive();
         for mode in ["event", "local"] {
             let result = std::process::Command::new(std::env::current_exe().unwrap())
                 .args([
