@@ -63,12 +63,13 @@ def push_placement_commands(root, event):
     commands = []
     for commit in commits:
         parent = output('git', 'rev-parse', f'{commit}^1')
-        # Without rename detection a move out of server2/ reports its source path too.
-        paths = output('git', 'diff', '--no-renames', '--name-only', parent, commit).splitlines()
+        # Without rename detection a move out of server2/ reports its source path too; -z keeps
+        # non-ASCII paths unquoted.
+        paths = [p for p in output('git', 'diff', '--no-renames', '--name-only', '-z', parent, commit).split('\0') if p]
         if not any(path.startswith('server2/') or path == '.github/workflows/server2.yml' for path in paths):
             continue
-        declared = output('git', 'diff', '--no-renames', '--name-only', '--diff-filter=d', parent, commit, '--',
-                          ':(top)server2/config/tasks/*.json').splitlines()
+        declared = [p for p in output('git', 'diff', '--no-renames', '--name-only', '-z', '--diff-filter=d',
+                                      parent, commit, '--', ':(top)server2/config/tasks/*.json').split('\0') if p]
         if len(declared) != 1:
             raise SystemExit(f'{commit}: one reviewed task declaration is required, found {len(declared)}')
         tree = root / 'reports/placement' / commit
