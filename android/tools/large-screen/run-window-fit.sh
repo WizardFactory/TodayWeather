@@ -43,9 +43,9 @@ for mode in gestural:1.0 gestural:1.3 threebutton:1.3; do
     # An unlocked, awake screen, so the test's activity comes to the front.
     adb shell input keyevent KEYCODE_WAKEUP
     adb shell wm dismiss-keyguard
-    adb shell am instrument -w -e screens "${SCREENS:-true}" -e expectedFont "$font" -e fold "$FOLD" -e class $PKG.WindowFitDeviceTest $PKG.test/$PKG.TestRunner | tee "$OUT/$mode.txt"
+    instrument "$OUT/$mode.txt" -e screens "${SCREENS:-true}" -e expectedFont "$font" -e fold "$FOLD" -e class $PKG.WindowFitDeviceTest $PKG.test/$PKG.TestRunner
     mkdir -p "$OUT/$mode"
     adb exec-out run-as $PKG tar -C files -cf - window-fit | tar -xf - -C "$OUT/$mode"
-    grep -q "^OK (1 test)" "$OUT/$mode.txt"
+    instrumentation_passed "$OUT/$mode.txt" 1 "$INSTRUMENT_STATUS"
 done
 echo "actual split-screen shell checks passed; images in $OUT"

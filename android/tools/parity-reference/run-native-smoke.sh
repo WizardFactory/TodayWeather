@@ -43,10 +43,9 @@ for lang in ko-KR en-US; do
     adb shell cmd locale set-app-locales "$PKG" --locales "$lang"
     adb shell input keyevent KEYCODE_WAKEUP
     adb shell wm dismiss-keyguard
-    adb shell am instrument -w -e class "$PKG.ParityDeviceTest" "$PKG.test/$PKG.TestRunner" > "$OUT/$lang.txt"
-    cat "$OUT/$lang.txt"
+    instrument "$OUT/$lang.txt" -e class "$PKG.ParityDeviceTest" "$PKG.test/$PKG.TestRunner"
     mkdir -p "$OUT/$lang"
     adb exec-out run-as "$PKG" tar -C files -cf - parity-smoke | tar -xf - -C "$OUT/$lang"
-    grep -q '^OK (1 test)' "$OUT/$lang.txt"
+    instrumentation_passed "$OUT/$lang.txt" 1 "$INSTRUMENT_STATUS"
 done
 echo 'native parity smoke passed in Korean 320x694 and English 412x892'
