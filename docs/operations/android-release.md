@@ -14,7 +14,7 @@ How a commit of the native Android app (`android/`) becomes a Google Play releas
 | --- | --- | --- | --- |
 | 1 | [Freeze the version](#1-freeze-the-version) | The version change is merged; its commit is the candidate | Agent or AK |
 | 2 | [Release CI](#2-release-ci) | `Android release verification` passed for the candidate's full SHA | Agent or AK |
-| 3 | [Manual gates on emulators](#manual-gates) | Every gate passed on the candidate, evidence kept | Agent or AK |
+| 3 | [Manual gates on emulators](#manual-gates) | Every gate that is run passed on the candidate, evidence kept (the Cordova gates are not run) | Agent or AK |
 | 4 | [Build and sign](#4-build-and-sign) | The export of the candidate is built and signed; `check-apk.sh` passes on the signed APK | AK |
 | 5 | [Device gate](#5-device-gate) | The signed APK passed the physical-device checks | AK |
 | 6 | [Tag the candidate](#6-tag-the-candidate-and-publish-its-notes) | `android/vX.Y.Z-rc.N` and its pre-release exist; `--check` passes | AK |
@@ -58,17 +58,17 @@ The gates need two builds, each from the candidate commit with the inputs of [Pr
 
 | Build | Private inputs | Gates |
 | --- | --- | --- |
-| Full | `app/google-services.json`, `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`, `TW_MAIL_TO` | Every gate but the menu hand-offs. The test application sends weather requests to the production server only in the production gates, and never sends a push request |
+| Full | `app/google-services.json`, `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`, `TW_MAIL_TO` | Every gate that is run but the menu hand-offs. The test application sends weather requests to the production server only in the production gates, and never sends a push request |
 | Without a server | `TW_MAIL_TO`; `TW_SERVER_URL` removed from the environment and `android/private.properties` | Menu hand-offs: its runner requires a build without a server URL |
 
 Releases do not consider Cordova compatibility (AK, 2026-11-24): the four gates that need a Cordova 1.1.1 APK (upgrade, hand-back, backup and restore, notification after the upgrade) are not run. They stay listed for the record.
 
 | Gate | Command under `android/tools/` | Needs | Emulators |
 | --- | --- | --- | --- |
-| Upgrade from Cordova 1.1.1: state, push re-registration, token work, entry intents | `upgrade/run-upgrade-test.sh <cordova-1.1.1-debug.apk> [out] [token-a\|token-b]` | Cordova 1.1.1 debug APK signed with the same debug key; `app/google-services.json` | API 36 and API 24 |
-| Rollback hand-back to a Cordova fallback and back | `upgrade/run-handback-test.sh <cordova-1.1.1-debug.apk> <fallback-debug.apk> [out]` | The two Cordova APKs; the fallback's `versionCode` above this build's | API 36 |
-| Backup and restore, a Cordova backup included; entry links | `backup/run-backup-test.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK | API 36 and API 24 |
-| Notification after the upgrade | `emulator/run-notification-check.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK; `app/google-services.json`; a Google APIs image | API 36 and API 24 |
+| **Not run.** Upgrade from Cordova 1.1.1: state, push re-registration, token work, entry intents | `upgrade/run-upgrade-test.sh <cordova-1.1.1-debug.apk> [out] [token-a\|token-b]` | Cordova 1.1.1 debug APK signed with the same debug key; `app/google-services.json` | API 36 and API 24 |
+| **Not run.** Rollback hand-back to a Cordova fallback and back | `upgrade/run-handback-test.sh <cordova-1.1.1-debug.apk> <fallback-debug.apk> [out]` | The two Cordova APKs; the fallback's `versionCode` above this build's | API 36 |
+| **Not run.** Backup and restore, a Cordova backup included; entry links | `backup/run-backup-test.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK | API 36 and API 24 |
+| **Not run.** Notification after the upgrade | `emulator/run-notification-check.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK; `app/google-services.json`; a Google APIs image | API 36 and API 24 |
 | Ads, consent and analytics choice | `emulator/run-ads-check.sh [out]` | `app/google-services.json`; network | API 36 |
 | Weather, air and nationwide pages from production | `emulator/run-production-weather.sh [out]` | `TW_SERVER_URL`; network | API 36 and API 24 |
 | New install: position or search reaches the weather | `emulator/run-production-start.sh [out]` | `TW_SERVER_URL`, and `TW_PLACES_API_KEY_ANDROID` for the search with Google's predictions; Google Play services; network | API 36 |
@@ -165,7 +165,7 @@ node scripts/release-notes.mjs --check "$OUT/notes-final.md" --tag "$TAG" --comm
 
 `notes-final.md` is the candidate's notes with `Tag:` set to the final tag (`--check` fails while it still says the candidate's), the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 
-Release to 100% of users at once; there is no staged rollout (AK, 2026-11-24). Watch the signals below for the first week. Halt the release in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version:
+Release to 100% of users at once; there is no staged rollout (AK, 2026-11-24). Watch the signals below for the first week. Halt the release in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version. Halt it on every track that serves it: the internal and open testing tracks hold the same version code, and their eligible accounts keep receiving it until it is halted or replaced there too.
 
 | Signal | Halt when | Read from |
 | --- | --- | --- |
@@ -180,7 +180,7 @@ The crash and ANR limits are Google Play's bad-behavior thresholds ([crashes](ht
 
 ### 9. Close the release
 
-Set `Rollout status: deployed` in the final notes with the time 100% was reached and the vitals read then. Update the release issue. Keep the signed APK, the private evidence and the previous release's APK: the next release's `check-apk.sh` and device gate start from them.
+One week after the release reached 100%, read the signals of step 8 and close the release. Set `Rollout status: deployed` in the final notes with the time 100% was reached, the end of the week and the values read then; a halt within the week sets `failed` instead. Update the release issue. For #2898, AK's decisions of 2026-11-24 (one full rollout; no Cordova compatibility) replace its staged-rollout and Cordova-upgrade criteria. Keep the signed APK, the private evidence and the previous release's APK: the next release's `check-apk.sh` and device gate start from them.
 
 ## Halt and rollback
 
