@@ -4,15 +4,17 @@
   "scope": "Assess SR-6 retained evidence for the SR-7 local decision report.",
   "server2_paths": [
     "server2/config/tasks/ShadowQualification3005.json",
+    "server2/tests/integration/test_qualification_evaluator.py",
+    "server2/tools/ci.py",
     "server2/tools/shadow/qualification_criteria.md",
     "server2/tools/shadow/qualification_evaluator.py",
-    "server2/tests/integration/test_qualification_evaluator.py"
+    "server2/tools/test_ci.py"
   ],
   "outside": [
     {
       "path": "docs/evidence/tasks/issue-3005/qualification.md",
       "category": "documentation",
-      "reason": "Record the decision on the November 21\u201322 local workload and the outstanding cloud evidence."
+      "reason": "Record the decision on the November 21–22 local workload and the outstanding cloud evidence."
     },
     {
       "path": "docs/evidence/tasks/issue-3005/criteria.observation-only.json",
