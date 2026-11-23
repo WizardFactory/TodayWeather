@@ -12,6 +12,7 @@ const ROUTE_FUNCTION = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../infra/web/static/route-request.js",
 );
+const FONT_LICENSE = "assets/Pretendard-OFL.txt";
 const types = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -22,6 +23,9 @@ const types = {
   ".png": "image/png",
   ".woff2": "font/woff2",
 };
+const contentType = (file) =>
+  file === FONT_LICENSE ? "text/plain; charset=utf-8" : types[extname(file)];
+
 export async function planUpload({ dir = "web/dist", bucket, distribution }) {
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket ?? ""))
     throw new Error("Supply --bucket with the stack BucketName output");
@@ -70,7 +74,7 @@ export async function planUpload({ dir = "web/dist", bucket, distribution }) {
     throw new Error("Run the complete web build including precache generation");
   for (const file of files)
     if (
-      !types[extname(file)] ||
+      !contentType(file) ||
       (!file.startsWith("assets/") &&
         !file.startsWith("icons/") &&
         ![
@@ -99,9 +103,9 @@ export async function planUpload({ dir = "web/dist", bucket, distribution }) {
       resolve(dir, file),
       `s3://${bucket}/${file}`,
       "--content-type",
-      types[extname(file)],
+      contentType(file),
       "--cache-control",
-      file.startsWith("assets/")
+      file.startsWith("assets/") && file !== FONT_LICENSE
         ? "public,max-age=31536000,immutable"
         : "no-cache",
       "--only-show-errors",
