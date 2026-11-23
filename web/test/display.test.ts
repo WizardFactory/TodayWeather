@@ -11,6 +11,7 @@ import {
 import {
   amount,
   approxAmount,
+  chartAmountText,
   dayLabel,
   iconKind,
   relativeDay,
@@ -255,5 +256,20 @@ describe("display formatting", () => {
     expect(
       upcomingPrecipitation({ current: invalid, hourly, daily }, "daily").map((p) => p.at),
     ).toEqual(daily.slice(0, 8).map((p) => p.at));
+  });
+});
+
+describe("native chart precipitation cell", () => {
+  const p = (precipitation: number | null, snowfall: number | null) =>
+    ({ precipitation, snowfall }) as Point;
+  it("shows the first positive amount with the unit's digits and never zero", () => {
+    expect(chartAmountText(p(0, null), "mm")).toBeNull();
+    expect(chartAmountText(p(null, null), "mm")).toBeNull();
+    expect(chartAmountText(p(2.5, null), "mm")).toBe("2.5");
+    expect(chartAmountText(p(40.5, null), "mm")).toBe("41");
+    expect(chartAmountText(p(0, 3), "mm")).toBe("3");
+    expect(chartAmountText(p(0.02, null), "in")).toBe("0.02");
+    expect(chartAmountText(p(0.004, null), "in")).toBe("<0.01");
+    expect(chartAmountText(p(0.04, null), "mm")).toBe("<0.1");
   });
 });

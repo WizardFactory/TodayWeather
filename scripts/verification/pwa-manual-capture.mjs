@@ -1,7 +1,7 @@
 /** Actual scenario screenshots; static build and synthetic KMA fixture only. */
 import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 const out = "docs/webapp/manual-images";
 mkdirSync(out, { recursive: true });
@@ -17,6 +17,70 @@ const browser = await chromium.launch();
 const fixture = JSON.parse(
   readFileSync("docs/rewrite/examples/client-kma-response.json"),
 ).response;
+// The live API sends 41 three-hour rows, from the day before yesterday 00h to
+// the day after tomorrow 24h, so the chart has yesterday's comparison values.
+// Live KMA observations come a few minutes after the hour (liveTime), so the
+// current temperature sits between columns, as in the apps.
+const shape = [0, -1, -2, 1, 4, 6, 4, 2];
+const sky = ["moon", "moon", "sun", "sun", "sun", "sun", "sun", "moon"];
+// Today's rows span 18 to 26, the fixture's daily range for 09-23.
+const base = { 21: 12, 22: 14, 23: 20, 24: 16, 25: 15, 26: 15 };
+fixture.short = Array.from({ length: 41 }, (_, i) => {
+  const day = 21 + Math.floor(i / 8),
+    slot = i % 8,
+    rainy = day === 24 && slot >= 3 && slot <= 6;
+  return {
+    ...fixture.short[0],
+    date: `202609${day}`,
+    time: slot * 3,
+    dateObj: `2026.09.${day} ${String(slot * 3).padStart(2, "0")}:00`,
+    fromToday: day - 23,
+    t3h: base[day] + shape[slot],
+    skyIcon: rainy ? "rain" : sky[slot],
+    pop: rainy ? 60 : day === 24 ? 30 : 0,
+    ...(rainy ? { r06: 4, pty: 1 } : {}),
+  };
+});
+// The live API sends 18 daily rows, from seven days back to ten days ahead.
+// Yesterday, today and tomorrow match the hourly rows above.
+const days = [
+  [13, 22, "sun"], [12, 21, "sun_bigcloud"], [11, 19, "cloud"], [10, 18, "sun"],
+  [10, 17, "sun"], [10, 18, "sun"], [12, 20, "sun"], [18, 26, "sun"],
+  [14, 22, "sun", "rain", 60, 16], [13, 21, "sun_bigcloud", "sun", 20], [12, 20, "sun"],
+  [11, 21, "sun", "sun_bigcloud", 30], [12, 22, "sun"], [13, 23, "cloud", "rain", 60, 8],
+  [12, 21, "sun_bigcloud"], [11, 20, "sun"], [10, 19, "sun"], [10, 20, "sun"],
+];
+fixture.midData.dailyData = days.map(([tmn, tmx, skyAm, skyPm, pop, r06], i) => {
+  const d = new Date(Date.UTC(2026, 8, 16 + i)),
+    ymd = d.toISOString().slice(0, 10);
+  return {
+    ...fixture.midData.dailyData[1],
+    date: ymd.replaceAll("-", ""),
+    dateObj: `${ymd.replaceAll("-", ".")} 00:00`,
+    fromToday: i - 7,
+    dayOfWeek: d.getUTCDay(),
+    tmn,
+    tmx,
+    skyAm,
+    skyPm: skyPm ?? skyAm,
+    pop: pop ?? 0,
+    ...(r06 ? { r06 } : {}),
+    sunrise: `${ymd.replaceAll("-", ".")} 06:20`,
+    sunset: `${ymd.replaceAll("-", ".")} 18:25`,
+  };
+});
+Object.assign(fixture.current, {
+  time: 7,
+  liveTime: "0730",
+  stnDateTime: "2026.09.23.07:30",
+  t1h: 20,
+  yesterday: {
+    ...fixture.current.yesterday,
+    time: 7,
+    dateObj: "2026.09.22 07:00",
+    t1h: 13,
+  },
+});
 const page = await browser.newPage({
   viewport: { width: 820, height: 1180 },
   hasTouch: true,
@@ -91,13 +155,22 @@ try {
     `${out}/provenance.json`,
     JSON.stringify(
       {
-        date: "2026-10-01",
+        date: "2026-11-23",
         browser: browser.version(),
         viewport: [820, 1180],
         fixture: "docs/rewrite/examples/client-kma-response.json",
+        fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); 18 daily rows (09-16 to 10-03); current time 7, liveTime 0730, t1h 20, yesterday 13",
         externalRequests: "blocked except fixture fulfilment",
         csp: "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
-        images,
+        // Keep entries written by other capture scripts (precipitation-*.png).
+        images: [
+          ...images,
+          ...(existsSync(`${out}/provenance.json`)
+            ? JSON.parse(readFileSync(`${out}/provenance.json`)).images.filter(
+                (old) => !images.some((img) => img.file === old.file),
+              )
+            : []),
+        ],
       },
       null,
       2,

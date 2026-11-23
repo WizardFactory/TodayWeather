@@ -2328,31 +2328,13 @@ textarea {
   position: relative;
   --hourly-columns-h: 9rem;
 }
-.chart-y-axis {
-  position: absolute;
-  top: var(--hourly-columns-h);
-  left: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.chart-y-tick {
-  position: absolute;
-  left: var(--tw-space-1);
-  transform: translateY(-50%);
-  padding: 0 var(--tw-space-1);
-  border-radius: var(--tw-radius-sm);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  color: var(--tw-text-secondary);
-  font-size: max(var(--tw-type-chart-axis-size), var(--font-floor));
-  line-height: var(--tw-type-chart-axis-leading);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 .chart-hit {
   fill: transparent;
   cursor: pointer;
 }
 .chart-scroll {
+  /* Time runs left to right whatever the document direction. */
+  direction: ltr;
   overflow-x: auto;
   overflow-y: hidden;
   max-width: 100%;
@@ -2400,8 +2382,27 @@ textarea {
   max-width: 100%;
   white-space: nowrap;
 }
+/* Native: the day label starts at its column and runs over the next ones. */
+/* Native: sky, probability and amount of a row sit on the boundary before it. */
+.chart-between {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tw-space-2);
+  /* The whole column, padding included, so -50% lands on its left edge. */
+  width: calc(100% + 2 * var(--tw-space-1));
+  flex-shrink: 0;
+  transform: translateX(-50%);
+}
+.chart-between > span {
+  white-space: nowrap;
+}
 .chart-column .chart-date {
   min-height: 1.5em;
+  align-self: flex-start;
+  max-width: none;
+  position: relative;
+  z-index: 1;
 }
 .chart-icons {
   display: flex;
@@ -2414,9 +2415,17 @@ textarea {
   flex-direction: column;
   align-items: center;
 }
-.chart-period {
-  min-height: 1.5em;
-  white-space: nowrap;
+.chart-icons.split {
+  flex-direction: column;
+  gap: 0;
+}
+/* Keep the probability and amount rows aligned when some days split AM/PM. */
+.daily-columns:not(.merged-only) .chart-icons {
+  min-height: 3rem;
+}
+.chart-unit {
+  margin-inline-start: 1px;
+  font-size: 0.75em;
 }
 [data-weather-section="hourly"],
 [data-weather-section="daily"] {
@@ -2466,21 +2475,21 @@ textarea {
   stroke: var(--tw-bg-surface);
   stroke-width: 2;
 }
-.hourly-chart .now {
-  fill: none;
-  stroke: var(--tw-chart-now);
-  stroke-width: 2.5;
-}
 .hourly-chart .today-value {
   fill: var(--tw-chart-today-on);
 }
 .hourly-chart .yesterday-value {
   fill: var(--tw-chart-yesterday-on);
 }
-.now-line {
-  stroke: var(--tw-chart-now);
-  stroke-width: 1;
-  stroke-dasharray: 3 5;
+.now-point {
+  fill: var(--tw-chart-now);
+  stroke: var(--tw-bg-surface);
+  stroke-width: 1.5;
+}
+/* The red current dot that holds its value keeps text contrast >= 4.5:1
+   (white on #b3261e 6.54; ink on #ff8a80 7.87). */
+.hourly-chart .today-point.now-point {
+  fill: var(--tw-status-danger-text);
 }
 .cursor-line {
   stroke: var(--tw-border-strong);
@@ -2628,23 +2637,29 @@ textarea {
   .chart-grid,
   .range,
   .now,
-  .cursor-line,
-  .now-line {
+  .cursor-line {
     stroke: CanvasText;
   }
   .range,
   .today-point,
   .yesterday-point,
-  .now {
+  .now,
+  .now-point {
     fill: CanvasText;
-  }
-  .hourly-chart .now {
-    fill: none;
-    stroke: CanvasText;
   }
   .hourly-chart .today-value,
   .hourly-chart .yesterday-value {
     fill: Canvas;
+  }
+  /* The current dot stays distinct from forecast dots; its value uses the
+     paired HighlightText. */
+  .now-point,
+  .hourly-chart .today-point.now-point {
+    fill: Highlight;
+    stroke: CanvasText;
+  }
+  .hourly-chart .today-point.now-point + .today-value {
+    fill: HighlightText;
   }
   .hero-card {
     background: Canvas;

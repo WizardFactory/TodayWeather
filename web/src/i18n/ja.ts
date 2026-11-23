@@ -494,6 +494,7 @@ const ja: Catalog = {
     "観測時刻が古いデータです。外出前に最新の気象情報をご確認ください。",
   "chart.label": "時間別の気温の推移（数値は下の表で確認できます）",
   "chart.empty": "時間別予報はありません",
+  "chart.hour": "{hour}時",
   "chart.table": "時間別の詳細な数値を見る",
   "chart.col.time": "時刻",
   "chart.col.temperature": "気温 (°{unit})",

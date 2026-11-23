@@ -19,8 +19,9 @@ probes. It exports `bin/`, `source/server2/`, `artifacts.json` and `bundle.json`
 Only regular tracked server2 source and fixtures are copied; installed packages,
 ignored caches and account files are excluded. The optional archive contains a
 `native/` directory, including hidden tracked inputs and directory/executable
-modes. CI retains `native.tar.gz` inside the existing
-`server2-linux-musl-verified` artifact; the shared upload is unchanged. Compare
+modes. CI retains `native.tar.gz` inside the
+`server2-linux-musl-verified` artifact, which Server2 pushes to `master` and
+manual workflow runs publish; pull request runs do not build it. Compare
 the archive SHA-256 with the trusted producer/CI receipt before extracting it
 into a fresh owned directory. The original
 two-binary export remains unchanged. Seven-day CI retention is transport only;

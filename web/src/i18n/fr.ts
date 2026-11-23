@@ -514,6 +514,7 @@ const fr: Catalog = {
   "chart.label":
     "Évolution horaire de la température ; valeurs dans le tableau ci-dessous",
   "chart.empty": "Aucune prévision par heure",
+  "chart.hour": "{hour}h",
   "chart.table": "Voir les valeurs heure par heure",
   "chart.col.time": "Heure",
   "chart.col.temperature": "Température (°{unit})",

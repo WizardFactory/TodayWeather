@@ -1,0 +1,69 @@
+{
+  "title": "TodayWeather for iOS · iPad",
+  "scenario": "TodayWeather 2.0 on an iPad Pro 13-inch (M5) simulator (iOS 26.5), Korean screens, default text size, position at Seoul City Hall, captured on 22 November 2026 without ads by the same UI test as the iPhone manual. Live weather of the capture time. The steps match the iPhone manual; only the layout is wider.",
+  "steps": [
+    {
+      "title": "Read hourly weather",
+      "instruction": "On the start page tap 현재위치 날씨보기 (Weather at my location), or open a saved place. 시간별날씨 (Hourly) opens.",
+      "screenshot": "screenshots/01-hourly.png",
+      "caption": "On iPad the chart shows more hours at once (명동 here, from the simulated position at Seoul City Hall).",
+      "expected": "The current temperature, yesterday's comparison and the hourly chart appear."
+    },
+    {
+      "title": "Expand the chart details",
+      "instruction": "Tap the small arrow row under the hourly chart. Tap it again to fold the rows.",
+      "screenshot": "screenshots/02-hourly-expanded.png",
+      "caption": "Wind and humidity rows appear under the chart.",
+      "expected": "The detail rows stay open until you fold them."
+    },
+    {
+      "title": "Read daily weather",
+      "instruction": "Tap 일별날씨 (Daily) in the tab bar.",
+      "screenshot": "screenshots/03-daily.png",
+      "caption": "Sky, rain and each day's highest and lowest temperatures across the wide screen.",
+      "expected": "The daily chart opens around today."
+    },
+    {
+      "title": "Read the air-quality summary",
+      "instruction": "Tap 대기정보 (Air) in the tab bar.",
+      "screenshot": "screenshots/04-air.png",
+      "caption": "The overall air index with its grade, advice and scale, the hourly air chart and the pollutant details.",
+      "expected": "The air page shows the selected place."
+    },
+    {
+      "title": "Open your saved places",
+      "instruction": "Tap 즐겨찾기 (Locations) in the tab bar.",
+      "screenshot": "screenshots/05-places.png",
+      "caption": "Saved places with their sky, temperature and today's range.",
+      "expected": "Tapping a row opens its weather."
+    },
+    {
+      "title": "Search for a place",
+      "instruction": "Tap the search field, type a name (부산) and close the keyboard.",
+      "screenshot": "screenshots/06-place-search.png",
+      "caption": "The app's list of Korean towns first, Google's suggestions further down.",
+      "expected": "Tap a result to add it, or tap 취소 (Cancel) to return to your saved places."
+    },
+    {
+      "title": "Open the menu",
+      "instruction": "Tap the menu button (three lines) at the top left.",
+      "screenshot": "screenshots/07-menu.png",
+      "caption": "Korea-only pages, settings, feedback, review, version and information, then the privacy choices.",
+      "expected": "The back arrow closes the menu."
+    },
+    {
+      "title": "Use the dark theme",
+      "instruction": "In the menu open 테마 설정 (Theme) and choose 어두운 테마 (Dark).",
+      "screenshot": "screenshots/08-dark-weather.png",
+      "caption": "The weather pages in dark colors.",
+      "expected": "The theme stays until you choose another one."
+    },
+    {
+      "title": "View nationwide weather",
+      "instruction": "In the menu tap 전국날씨 (Nationwide weather).",
+      "screenshot": "screenshots/09-national-weather.png",
+      "caption": "Cities on the map with sky and temperature.",
+      "expected": "The page loads with a spinner first."
+    }
+  ]
+}
