@@ -170,6 +170,8 @@ internal fun rememberWeatherTab(tab: Tab, state: AppState, entries: Map<String, 
         delay((expiry - System.currentTimeMillis()).coerceAtLeast(0))
         expiredAt = expiry
     }
+    // Runs during composition when the visit or its photo changes, as before; the value is not used.
+    //noinspection RememberReturnType
     remember(visit, record?.get("photo")) { visit.photoLoaded(record) }
     val units = state.units
     val page = remember(applied, units, texts) {

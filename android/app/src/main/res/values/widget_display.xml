@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="widget_display_current">Current weather</string>
     <string name="widget_display_forecast">Forecast</string>
     <string name="widget_display_clock">Clock and weather</string>
@@ -7,7 +7,8 @@
     <string name="widget_display_no_place">Select a saved place in widget settings</string>
     <string name="widget_display_no_weather">Open the app to load weather</string>
     <string name="widget_display_expired_compact">Weather in app</string>
-    <item type="string" name="widget_display_expired_card">@string/widget_display_expired</item>
+    <!-- An alias: each language shows its own widget_display_expired; Korean alone sets the line break. -->
+    <item type="string" name="widget_display_expired_card" tools:ignore="MissingTranslation">@string/widget_display_expired</item>
     <string name="widget_style_title">Widget style</string>
     <string name="widget_style_classic">Classic Black</string>
     <string name="widget_style_paper">Morning Paper</string>
