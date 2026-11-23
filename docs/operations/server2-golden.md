@@ -319,3 +319,29 @@ instrumented executions. Response comparisons exclude no changed fields.
 The source-map, runtime labels, and the packaging of raw JSON are distinct
 from HTTP behavior. The complete selected captures and failure receipts
 are retained in the operator's ignored verification evidence.
+
+## November 23 gateway source renewal
+
+PRs #3083 and #3107 added the opt-in France Vigilance and AEMET warning route to
+`server/routes/gateway.js`. The route registers only when
+`METEOFRANCE_VIGILANCE_ENABLED` or `AEMET_WARNINGS_ENABLED` is `true`, and both
+are unset in the recorders. The provenance audit reported drift in the two
+fixtures that map this file: S02 (`server2/tests/golden/records.json`) and rich
+domestic S3 (`server2/tests/domestic/fixtures/s3-rich-response.json.gz`). See
+[#3132](https://github.com/WizardFactory/TodayWeather/issues/3132).
+
+The two HTTP policies pinned the previous `gateway.js` digest, so the recorders
+blocked the new source until it was repinned. With the new pin, the Apple
+Silicon qualification script from the November 21 recordings ran all eight
+profiles twice on a local Darwin ARM64 host. It used the official Node 16.20.2
+binary (SHA256
+`83325958463d59cb0b16433eefab0a03fd1ce7d565a27e0274f507b1f3839a6e`) with TZ
+UTC. Every pair matched byte for byte. S02 and rich each showed exactly one
+typed difference: the `source.files` digest of `server/routes/gateway.js`.
+The other six profiles showed none. No status, body or header changed.
+
+The second recording of each changed profile became the fixture. The new
+digests are repinned in the registry, the delivery static input and the KMA
+rich replay manifest. The delivery fixtures record no S02 digest and were not
+re-recorded. Golden CI passed locally: 22 fixtures source-current, 27
+provenance tests, 18 golden checks and S02 verification over 76 cases.
