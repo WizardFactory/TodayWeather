@@ -47,6 +47,13 @@ test.describe("shared location", () => {
     expect(await places()).toEqual([]);
     await save.click();
     await expect(page).toHaveURL(/\/weather\/p_0_0\/daily\?from=link$/);
+    // The router marks the place saved, so the screen shows it and the app link is its link.
+    await expect(
+      page.locator('meta[name="apple-itunes-app"]'),
+    ).toHaveAttribute(
+      "content",
+      "app-id=1041700694, app-argument=https://link.todayweather.ai/loc?lat=0&lon=0&name=%EC%A0%81%EB%8F%84&view=daily",
+    );
     await expect.poll(places).toMatchObject([{ id: "p_0_0", lat: 0, lon: 0 }]);
     await page.reload();
     await expect(page.getByRole("heading", { name: "적도" })).toBeVisible();
@@ -75,6 +82,22 @@ test.describe("shared location", () => {
     ).toHaveAttribute(
       "content",
       "app-id=1041700694, app-argument=https://link.todayweather.ai/loc?lat=0&lon=0&view=daily",
+    );
+  });
+
+  // CODEX-3155-3: a link arrival without router state (a new tab) shows no place, and its app link opens the app only.
+  test("a link arrival that shows no place does not link to one", async ({
+    page,
+  }) => {
+    await page.goto("/weather/p_0_0/daily?from=link");
+    await expect(
+      page.getByText("공유한 지역을 찾을 수 없습니다"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "앱에서 보기" }),
+    ).toHaveAttribute(
+      "href",
+      "https://link.todayweather.ai/open?fallback=store",
     );
   });
 

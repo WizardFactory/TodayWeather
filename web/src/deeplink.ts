@@ -175,13 +175,16 @@ export function coordinateIdPoint(
 }
 
 /**
- * The place a weather or air route shows, as the screens resolve it (`resolvePlace`): a saved place, a catalog city,
- * or the point of a coordinate id that is not saved, which has no name to share.
+ * The place a weather or air route shows, as the screen chooses it: catalog cities only for a link arrival
+ * ([catalogOnlyRoute]); otherwise a saved place, a catalog city, or the point of a coordinate id that is not saved
+ * (`resolvePlace`), which has no name to share. Undefined when the screen shows no place.
  */
 function routePlace(
   places: Place[],
   id: string,
+  catalogOnly: boolean,
 ): Partial<Pick<Place, "id" | "name" | "lat" | "lon">> | undefined {
+  if (catalogOnly) return PLACES.find((p) => p.id === id);
   return (
     places.find((p) => p.id === id) ??
     PLACES.find((p) => p.id === id) ??
@@ -189,10 +192,27 @@ function routePlace(
   );
 }
 
+/** What the router knows about a link arrival's place: a catalog city, or a place the user has saved. */
+export type LinkPlaceKind = "catalog" | "saved";
+
+/**
+ * Whether a weather or air route shows catalog cities only: a link arrival (`from=link`) must never open an unrelated
+ * favorite with the same id, unless the router marked the place saved. The screen and its app link share this rule.
+ */
+export function catalogOnlyRoute(
+  search: string | URLSearchParams,
+  kind?: LinkPlaceKind,
+): boolean {
+  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  return kind === "catalog" || (params.get("from") === "link" && kind !== "saved");
+}
+
 export function canonicalLinkForRoute(
   pathname: string,
   search: string,
   places: Place[],
+  /** The router state of a link arrival (`linkPlaceKind`), when there is one. */
+  kind?: LinkPlaceKind,
 ): string {
   const clean =
     pathname.length > 1 && pathname.endsWith("/")
@@ -220,14 +240,14 @@ export function canonicalLinkForRoute(
   if (weatherMatch) {
     const id = decodeSegment(weatherMatch[1]);
     const view = weatherMatch[2] === "daily" ? "daily" : "hourly";
-    const place = routePlace(places, id);
+    const place = routePlace(places, id, catalogOnlyRoute(params, kind));
     return place ? shareLink(place, view) : `${LINK_ORIGIN}/open`;
   }
 
   const airMatch = /^\/air\/([^/]+)$/.exec(clean);
   if (airMatch) {
     const id = decodeSegment(airMatch[1]);
-    const place = routePlace(places, id);
+    const place = routePlace(places, id, catalogOnlyRoute(params, kind));
     return place
       ? shareLink(place, "air", params.get("pollutant") ?? undefined)
       : `${LINK_ORIGIN}/open`;

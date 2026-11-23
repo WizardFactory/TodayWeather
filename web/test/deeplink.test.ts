@@ -7,6 +7,7 @@ import {
   appOpenHref,
   appPromptFor,
   canonicalLinkForRoute,
+  catalogOnlyRoute,
   detectMobilePlatform,
   nearbySaved,
   parseCoordinateLink,
@@ -93,6 +94,7 @@ describe("web deep-link contract", () => {
         "/weather/p_37.383_127.119/daily",
         "?from=link",
         saved,
+        "saved",
       ),
     ).toBe(
       "https://link.todayweather.ai/loc?lat=37.383&lon=127.119&name=%EB%B6%84%EB%8B%B9%EA%B5%AC&view=daily",
@@ -139,6 +141,38 @@ describe("web deep-link contract", () => {
         "https://link.todayweather.ai/open",
       );
     }
+  });
+
+  // CODEX-3155-3: the link follows the screen's own choice. A link arrival (`from=link`) shows catalog cities only,
+  // unless the router marked the place as saved; without a place the screen shows "not found" and the link opens the app.
+  it("opens what the screen of a link arrival shows", () => {
+    const home = { id: "p_0_0", name: "적도", address: "", country: "", lat: 0, lon: 0 };
+    const sameIdAsSlug = { id: "custom-place", name: "우리집", address: "", country: "KR", lat: 37.4, lon: 127.1 };
+    // A new tab or a reload without router state: the screen finds no catalog city.
+    for (const [path, search] of [
+      ["/weather/p_0_0/daily", "?from=link"],
+      ["/air/p_0_0", "?from=link&pollutant=pm25"],
+      ["/weather/custom-place/hourly", "?from=link"],
+    ]) {
+      expect(canonicalLinkForRoute(path, search, [home, sameIdAsSlug])).toBe(
+        "https://link.todayweather.ai/open",
+      );
+    }
+    expect(
+      canonicalLinkForRoute("/weather/custom-place/hourly", "", [sameIdAsSlug], "catalog"),
+    ).toBe("https://link.todayweather.ai/open");
+    // The router marked the place saved (after Add to favorites, or a nearby saved place): its link.
+    expect(
+      canonicalLinkForRoute("/weather/p_0_0/daily", "?from=link", [home], "saved"),
+    ).toBe("https://link.todayweather.ai/loc?lat=0&lon=0&name=%EC%A0%81%EB%8F%84&view=daily");
+    // A catalog city is the same either way.
+    expect(canonicalLinkForRoute("/weather/seoul/daily", "?from=link", [])).toBe(
+      "https://link.todayweather.ai/place/seoul?view=daily",
+    );
+    expect(catalogOnlyRoute("?from=link")).toBe(true);
+    expect(catalogOnlyRoute("?from=link", "saved")).toBe(false);
+    expect(catalogOnlyRoute("", "catalog")).toBe(true);
+    expect(catalogOnlyRoute("")).toBe(false);
   });
 
   it("builds OS-specific app-open URLs preserving the current place and store fallback", () => {

@@ -738,10 +738,12 @@ function LinkArrivalBanner({ compact }: { compact: boolean }) {
       return false;
     }
   });
+  // The same place the screen shows: a link arrival without a place links to the app only.
   const canonicalUrl = canonicalLinkForRoute(
     location.pathname,
     location.search,
     state.places,
+    location.state?.linkPlaceKind,
   );
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>(
