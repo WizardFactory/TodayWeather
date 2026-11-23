@@ -16,7 +16,6 @@ const VALID_POLLUTANTS = new Set(contract.validPollutants);
 const STATIC_PASSTHROUGH = new Set([
   "/.well-known/apple-app-site-association",
   "/.well-known/assetlinks.json",
-  "/open.html",
 ]);
 
 function roundCoord(value) {
@@ -161,7 +160,17 @@ function referenceParseNative(rawUrl) {
   return null;
 }
 
-function referenceRouteEdge(method, rawUrl) {
+function resolveStoreFallback(params, userAgent = "") {
+  if (params.get("fallback") !== "store") return null;
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return contract.appStoreUrl;
+  if (/Android/i.test(userAgent)) return contract.playStoreUrl;
+  const hint = params.get("store");
+  if (hint === "ios") return contract.appStoreUrl;
+  if (hint === "android") return contract.playStoreUrl;
+  return null;
+}
+
+function referenceRouteEdge(method, rawUrl, userAgent = "") {
   if (method !== "GET" && method !== "HEAD") {
     return { action: "error", status: 405 };
   }
@@ -170,10 +179,7 @@ function referenceRouteEdge(method, rawUrl) {
   const decodedPath = decodeSafePath(rawParts.rawPath);
   if (decodedPath === null) return { action: "error", status: 400 };
 
-  if (
-    STATIC_PASSTHROUGH.has(decodedPath) ||
-    /^\/assets\/[^/]+$/.test(decodedPath)
-  ) {
+  if (STATIC_PASSTHROUGH.has(decodedPath)) {
     return { action: "passthrough", status: 200, uri: decodedPath };
   }
 
@@ -181,33 +187,32 @@ function referenceRouteEdge(method, rawUrl) {
     decodedPath.length > 1 && decodedPath.endsWith("/")
       ? decodedPath.slice(0, -1)
       : decodedPath;
+  const params = new URLSearchParams(rawParts.rawQuery);
+  const storeFallback = params.get("fallback") === "store";
+  const storeUrl = resolveStoreFallback(params, userAgent);
+
+  function redirectResult(pwaLocation) {
+    const res = {
+      action: "redirect",
+      status: 302,
+      location: storeUrl ?? pwaLocation,
+    };
+    if (storeFallback) res.vary = "User-Agent";
+    return res;
+  }
 
   if (decodedPath === "/" || trimmed === "/open") {
-    return { action: "rewrite", status: 200, uri: "/open.html" };
+    return redirectResult(`${contract.pwaOrigin}/`);
   }
-
-  const params = new URLSearchParams(rawParts.rawQuery);
 
   if (trimmed === "/nation/weather") {
-    return {
-      action: "redirect",
-      status: 302,
-      location: `${contract.pwaOrigin}/nation/weather?from=link`,
-    };
+    return redirectResult(`${contract.pwaOrigin}/nation/weather?from=link`);
   }
   if (trimmed === "/nation/air") {
-    return {
-      action: "redirect",
-      status: 302,
-      location: `${contract.pwaOrigin}/nation/air?from=link`,
-    };
+    return redirectResult(`${contract.pwaOrigin}/nation/air?from=link`);
   }
   if (trimmed === "/warnings") {
-    return {
-      action: "redirect",
-      status: 302,
-      location: `${contract.pwaOrigin}/warnings?from=link`,
-    };
+    return redirectResult(`${contract.pwaOrigin}/warnings?from=link`);
   }
   if (trimmed.startsWith("/place/")) {
     const slug = trimmed.slice("/place/".length);
@@ -216,38 +221,22 @@ function referenceRouteEdge(method, rawUrl) {
     if (view === "air") {
       const pollutant = normalizePollutant(params.get("pollutant"));
       const q = pollutant !== "aqi" ? `pollutant=${pollutant}&from=link` : "from=link";
-      return {
-        action: "redirect",
-        status: 302,
-        location: `${contract.pwaOrigin}/air/${slug}?${q}`,
-      };
+      return redirectResult(`${contract.pwaOrigin}/air/${slug}?${q}`);
     }
-    return {
-      action: "redirect",
-      status: 302,
-      location: `${contract.pwaOrigin}/weather/${slug}/${view}?from=link`,
-    };
+    return redirectResult(`${contract.pwaOrigin}/weather/${slug}/${view}?from=link`);
   }
   if (trimmed.startsWith("/air/")) {
     const slug = trimmed.slice("/air/".length);
     if (!SLUG_RE.test(slug)) return { action: "error", status: 404 };
     const pollutant = normalizePollutant(params.get("pollutant"));
     const q = pollutant !== "aqi" ? `pollutant=${pollutant}&from=link` : "from=link";
-    return {
-      action: "redirect",
-      status: 302,
-      location: `${contract.pwaOrigin}/air/${slug}?${q}`,
-    };
+    return redirectResult(`${contract.pwaOrigin}/air/${slug}?${q}`);
   }
   if (trimmed === "/loc") {
     const lat = parseFiniteCoord(params.get("lat"), -90, 90);
     const lon = parseFiniteCoord(params.get("lon"), -180, 180);
     if (lat === null || lon === null) {
-      return {
-        action: "redirect",
-        status: 302,
-        location: `${contract.canonicalOrigin}/open`,
-      };
+      return redirectResult(`${contract.pwaOrigin}/`);
     }
     const name = sanitizeName(params.get("name"));
     const view = normalizeView(params.get("view"));
@@ -260,11 +249,7 @@ function referenceRouteEdge(method, rawUrl) {
       parts.push(`pollutant=${pollutant}`);
     }
     parts.push("from=link");
-    return {
-      action: "redirect",
-      status: 302,
-      location: `${contract.pwaOrigin}/loc?${parts.join("&")}`,
-    };
+    return redirectResult(`${contract.pwaOrigin}/loc?${parts.join("&")}`);
   }
   return { action: "error", status: 404 };
 }
@@ -357,12 +342,24 @@ test("every parseCase matches the reference native parser and edge router", () =
       assert.equal(catalog.some(({ id }) => id === target.slug), tc.catalogResolved, tc.id);
     }
     if (tc.edge !== null) {
+      const actual = referenceRouteEdge("GET", tc.url);
+      if (tc.edge.vary === undefined) delete actual.vary;
       assert.deepEqual(
-        referenceRouteEdge("GET", tc.url),
+        actual,
         tc.edge,
         `edge mismatch on case ${tc.id}`,
       );
     }
+  }
+});
+
+test("every edgeStoreFallbackCase routes by User-Agent or iPadOS hint", () => {
+  for (const tc of golden.edgeStoreFallbackCases) {
+    assert.deepEqual(
+      referenceRouteEdge("GET", tc.url, tc.userAgent),
+      tc.edge,
+      `store fallback mismatch on case ${tc.id}`,
+    );
   }
 });
 

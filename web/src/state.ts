@@ -10,6 +10,7 @@ import {
   type Units,
   type Weather,
 } from "@todayweather/core";
+import { coordinateIdPoint } from "./deeplink";
 import { isLanguage, language, t, type Language } from "./i18n";
 import { autoUnits } from "./locale";
 export type Settings = {
@@ -137,19 +138,9 @@ export function resolvePlace(
   const known =
     state.places.find((p) => p.id === id) ?? PLACES.find((p) => p.id === id);
   if (known) return known;
-  const match = id?.match(/^p_(-?\d+(?:\.\d+)?)_(-?\d+(?:\.\d+)?)$/);
-  if (!match) return;
-  try {
-    return {
-      id: id!,
-      name: "선택한 지역",
-      address: "",
-      country: "",
-      ...coordinates(match[1], match[2]),
-    };
-  } catch {
-    return;
-  }
+  // The same rule the "open in app" link uses for this route (canonicalLinkForRoute).
+  const point = coordinateIdPoint(id);
+  return point && { id: id!, name: "선택한 지역", address: "", country: "", ...point };
 }
 export function saveState(
   state: SavedState,

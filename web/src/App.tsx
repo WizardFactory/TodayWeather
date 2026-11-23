@@ -76,8 +76,12 @@ import {
   kstTime,
 } from "./components";
 import WeatherPage from "./Weather";
+import { AppQrCode } from "./AppQrCode";
 import {
-  LINK_ORIGIN,
+  appOpenHref,
+  appPromptFor,
+  canonicalLinkForRoute,
+  detectMobilePlatform,
   linkedWeatherPath,
   linkPollutant,
   linkView,
@@ -543,6 +547,7 @@ export default function App() {
             <NavLink className="nav-item" to="/help">
               <HelpCircle size={19} /> {t("nav.help")}
             </NavLink>
+            <DesktopAppQrCard compact={compact} />
             <div className="install-card">
               <Download size={20} />
               <strong>{t("install.title")}</strong>
@@ -694,9 +699,38 @@ export default function App() {
   );
 }
 const LINK_BANNER_DISMISSED = "tw.web.v1.link-banner-dismissed";
+const IOS_APP_ID = "1041700694";
+
+function runsAsInstalledApp() {
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function appPrompt(compact: boolean) {
+  return appPromptFor(
+    detectMobilePlatform(navigator.userAgent, navigator.maxTouchPoints),
+    { compact, standalone: runsAsInstalledApp() },
+  );
+}
+
+function DesktopAppQrCard({ compact }: { compact: boolean }) {
+  if (appPrompt(compact) !== "qr") return null;
+  return (
+    <div className="app-qr-card" aria-label={t("link.qrTitle")}>
+      <div className="app-qr-frame">
+        <AppQrCode label={t("link.qrAlt")} />
+      </div>
+      <strong>{t("link.qrTitle")}</strong>
+      <p>{t("link.qrBody")}</p>
+    </div>
+  );
+}
 
 function LinkArrivalBanner({ compact }: { compact: boolean }) {
-  const [search] = useSearchParams();
+  const { state } = useApp();
+  const location = useLocation();
   const [dismissed, setDismissed] = useState(() => {
     try {
       return sessionStorage.getItem(LINK_BANNER_DISMISSED) === "1";
@@ -704,12 +738,35 @@ function LinkArrivalBanner({ compact }: { compact: boolean }) {
       return false;
     }
   });
-  const mobile =
-    compact || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  if (!mobile || dismissed || search.get("from") !== "link") return null;
+  // The same place the screen shows: a link arrival without a place links to the app only.
+  const canonicalUrl = canonicalLinkForRoute(
+    location.pathname,
+    location.search,
+    state.places,
+    location.state?.linkPlaceKind,
+  );
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>(
+      'meta[name="apple-itunes-app"]',
+    );
+    if (meta) {
+      meta.setAttribute(
+        "content",
+        `app-id=${IOS_APP_ID}, app-argument=${canonicalUrl}`,
+      );
+    }
+  }, [canonicalUrl]);
+  if (appPrompt(compact) !== "bar" || dismissed) return null;
+  const href = appOpenHref(
+    canonicalUrl,
+    navigator.userAgent,
+    navigator.maxTouchPoints,
+  );
   return (
     <div className="notice link-arrival" aria-label={t("link.appOption")}>
-      <a href={LINK_ORIGIN + "/open"}>{t("link.appOption")}</a>
+      <a href={href}>
+        {t("link.appOption")} <ArrowUpRight size={14} aria-hidden="true" />
+      </a>
       <button
         type="button"
         onClick={() => {

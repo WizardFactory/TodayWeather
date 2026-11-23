@@ -23,8 +23,8 @@ GitHub owns live task status via parent [#3092](https://github.com/WizardFactory
 
 Because iOS and Android `ShareMessage` switch immediately from `twa.app.link` to `https://link.todayweather.ai/...`, **infrastructure and Web PWA fallback MUST be deployed and live-verified before shipping updated mobile app builds**:
 
-1. Deploy and verify `link.todayweather.ai` S3 + CloudFront + `.well-known` files + `/open.html` + redirect function.
-2. Deploy `app.todayweather.ai` PWA update (`/loc` route, `from=link` banner, updated `route-request.js`, share URLs).
+1. Deploy and verify `link.todayweather.ai` S3 + CloudFront + `.well-known` files + direct WebApp/store redirect function.
+2. Deploy `app.todayweather.ai` PWA update (`/loc` route, mobile current-route "Open in app" banner, desktop fixed QR code, default OG tags, updated `route-request.js`, share URLs).
 3. Verify live Universal Link / App Link resolution on physical iOS and Android devices (TestFlight / Internal Testing).
 4. Ship iOS and Android releases containing both deep-link receiving and immediate `ShareMessage` cutover to `https://link.todayweather.ai/...`.
 5. Keep legacy Branch forwarding active during a post-release grace period for historical messages already shared by older app versions.
@@ -36,7 +36,7 @@ Gather these operator-supplied values before deploying `infra/deeplink/` (never 
 - **Google Play App Signing SHA-256 fingerprint** (`PLAY_APP_SIGNING_SHA256`, plus any authorized internal-test key fingerprint).
 - **ACM certificate ARN in `us-east-1`** covering `link.todayweather.ai` (existing `*.todayweather.ai` wildcard certificate may be reused if already `ISSUED`).
 - **DNS control** for `todayweather.ai` (Route 53 Hosted Zone ID or external DNS CNAME/Alias for `link.todayweather.ai`).
-- **Canonical store URLs** for App Store and Google Play (used by `/open.html` and PWA app banner).
+- **Canonical store URLs** for App Store and Google Play (used by `link.todayweather.ai` `?fallback=store` redirects and PWA mobile app-open links).
 
 ## Milestones and tasks
 
@@ -46,18 +46,17 @@ Gather these operator-supplied values before deploying `infra/deeplink/` (never 
 
 ### M2. `link.todayweather.ai` static edge stack (`infra/deeplink/`)
 1. Author CloudFormation template `infra/deeplink/stack.json` (private S3 + OAC + CloudFront + strict response headers/CSP + `cloudfront-js-2.0` viewer-request function, following [infra/web/static/stack.json](../infra/web/static/stack.json)).
-2. Implement `infra/deeplink/route-request.js` and Node unit tests running directly against `specs/deeplink.golden.json`.
-3. Create static `/open.html` (localized Korean/English smart fallback with App Store / Google Play / Web PWA buttons, OG metadata, external CSS/JS compliant with strict CSP, in-app browser open action).
-4. Create deployment/generation scripts (`scripts/deploy-deeplink-static.mjs` dry-run by default + `--execute` preflight checks; parameterized `.well-known` generator; read-only live smoke script `scripts/deeplink-live-smoke.mjs` checking `200`/`application/json`/no-redirect on both `.well-known` files, `200` on `/open`, `302` mappings, and `404` on unknown paths).
-5. Document runbook in `infra/deeplink/README.md`.
+2. Implement `infra/deeplink/route-request.js` (`.well-known/*` passthrough, direct WebApp `302` for `/`·`/open` and content routes, OS-aware `?fallback=store` redirects) and Node unit tests running directly against `specs/deeplink.golden.json`.
+3. Create deployment/generation scripts (`scripts/deploy-deeplink-static.mjs` dry-run by default + `--execute` preflight checks; parameterized `.well-known` generator; read-only live smoke script `scripts/deeplink-live-smoke.mjs` checking `200`/`application/json`/no-redirect on both `.well-known` files, `302` on `/`·`/open` and `?fallback=store`, `302` content mappings, and `404` on unknown paths).
+4. Document runbook in `infra/deeplink/README.md`.
 
 ### M3. Web PWA integration (`web/` + `infra/web/static/`)
 1. Extend [infra/web/static/route-request.js](../infra/web/static/route-request.js) and its tests to allow `/loc\/?$`.
 2. Add `/loc` route and `CoordinatePlace` ephemeral preview view to [web/src/App.tsx](../web/src/App.tsx) with nearby saved-place matching and explicit "Add to favorites" button.
 3. Enhance `/place/:publicId` to honor optional `view` and `pollutant` query parameters.
-4. Add dismissible "Open in app / Install" top banner triggered on `from=link` arrivals (mobile & in-app browsers).
+4. Add mobile "Open in app" (`앱에서 보기`) banner preserving the current screen's canonical deep link (Android `intent://` with Play Store fallback, iOS `?fallback=store` + Safari Smart App Banner) and a desktop sidebar fixed QR code (`https://link.todayweather.ai/open?fallback=store`) plus default OG metadata in `web/index.html`.
 5. Update [web/src/Weather.tsx](../web/src/Weather.tsx) share logic to emit `https://link.todayweather.ai/place/{slug}` or `https://link.todayweather.ai/loc?...`.
-6. Add Vitest unit tests (against `specs/deeplink.golden.json`) and Playwright E2E tests covering `/loc`, ephemeral preview → add favorite, `from=link` banner dismissal, and share URLs without live network requests.
+6. Add Vitest unit tests (against `specs/deeplink.golden.json`) and Playwright E2E tests covering `/loc`, ephemeral preview → add favorite, mobile "Open in app" href/dismissal, desktop QR card, and share URLs without live network requests.
 
 ### M4. Android native integration (`android/`)
 1. Implement `DeepLink` parser & URL builder in `android/core-domain/` and verify against `specs/deeplink.golden.json` (`DeepLinkTest.kt`).
@@ -90,8 +89,8 @@ Gather these operator-supplied values before deploying `infra/deeplink/` (never 
 | S1 | Existing mobile app user taps shared city link | App installed (cold or warm). Tap `https://link.todayweather.ai/place/seoul?view=daily` from Messages/KakaoTalk | OS opens TodayWeather directly (no browser bounce); opens Daily tab for Seoul (matched favorite or ephemeral preview with Add button). Unknown slug opens safely to default screen | AC1, AC3, AC4, AC8, AC9 |
 | S2 | Existing mobile app user taps shared neighborhood coordinate link | App installed. Tap `https://link.todayweather.ai/loc?lat=37.556&lon=126.979&name=회현동` | Nearby saved place opens if within `0.01°`; otherwise ephemeral preview renders without mutating saved list, offering 1-tap "Add to favorites". Invalid coords fall back safely | AC1, AC8, AC9 |
 | S3 | Freshly installed user opens location deep link | Fresh install with 0 saved places (`S01` not completed). Open `/place/busan` or `/loc?...` | Temporarily bypasses `S01` and opens a preview. Explicit Add saves the first location and completes onboarding. Leaving without adding returns to `S01` with zero saved places | AC8, AC9 |
-| S4 | Browser user without app taps shared weather link | No native app (or desktop). Open `https://link.todayweather.ai/loc?...` or `/place/seoul` | Edge redirects `302` to `https://app.todayweather.ai/...`; weather renders immediately with a dismissible "Open in app / Install" banner. Invalid coords recover cleanly | AC5, AC6, AC7, AC12 |
-| S5 | User taps general app link or QR code | Tap `https://link.todayweather.ai/` or `/open` | Installed mobile opens app directly; uninstalled mobile or desktop receives `/open.html` with App Store, Google Play, and Web PWA buttons plus OG preview | AC3, AC4, AC5, AC8, AC9 |
+| S4 | Browser user without app taps shared weather link | No native app (or desktop). Open `https://link.todayweather.ai/loc?...` or `/place/seoul` | Edge redirects `302` to `https://app.todayweather.ai/...`; weather renders immediately. Mobile offers a dismissible "Open in app" action preserving the current location (app launch or OS store fallback); desktop offers a fixed QR code (`https://link.todayweather.ai/open?fallback=store`) to scan and visit the store on a phone. Invalid coords recover cleanly | AC5, AC6, AC7, AC12 |
+| S5 | User taps general app link or scans desktop QR code | Tap `https://link.todayweather.ai/` or `/open` (or scan desktop QR `https://link.todayweather.ai/open?fallback=store`) | Installed mobile opens app directly; `/`·`/open` in a browser redirects `302` straight to `https://app.todayweather.ai/`; scanning `?fallback=store` on an uninstalled mobile redirects `302` to App Store (iOS) or Google Play (Android) | AC3, AC4, AC5, AC8, AC9 |
 | S6 | User shares current place from iOS, Android, or Web | Tap share on Hourly/Daily/Air screen | Share sheet/clipboard contains `https://link.todayweather.ai/...` (zero `twa.app.link`), rounded to 3 decimals for coordinates; tapping that link re-opens the same location | AC7, AC11 |
 | S7 | User taps policy link in app or visits PWA directly | Tap Privacy/Terms in app settings (`todayweather.ai/mobile/*`) or visit `app.todayweather.ai` in mobile Safari/Chrome | Always opens in browser/PWA; never triggers Universal Links or App Links | AC10 |
 | S8 | Existing widget user taps home-screen widget | Tap iOS widget (`todayweather://widget?place=...`) or Android widget (`todayweather://N`) | Existing widget navigation continues unchanged with zero regression | AC8, AC9 |

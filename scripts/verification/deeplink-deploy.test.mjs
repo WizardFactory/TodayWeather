@@ -13,6 +13,7 @@ const route = readFileSync(new URL("../../infra/deeplink/route-request.js", impo
 const files = planUpload(identity);
 
 test("association objects contain only the declared app identities and routes", () => {
+  assert.deepEqual(files.map(({ key }) => key), [AASA, ASSET_LINKS]);
   const byKey = new Map(files.map((file) => [file.key, file]));
   for (const key of [AASA, ASSET_LINKS]) {
     assert.equal(byKey.get(key).contentType, "application/json");
