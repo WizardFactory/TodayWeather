@@ -74,25 +74,30 @@ class LinkOpenerTest {
         assertNull(t.opener.requests.value)
     }
 
+    /**
+     * CODEX-3164-1: on S01 a place link previews at once; a page link or `/open` is ignored there (spec §6.2.3 "defer or
+     * ignore") and never holds back the links after it; a saved place within 0.01° also previews, as S01 stays.
+     */
     @Test
-    fun onTheStartPageALocationLinkPreviewsAtOnceWhileAPageWaitsForTheStartToClose() = runTest {
-        val t = setup(AppState())
+    fun onTheStartPageAPlaceLinkPreviewsAndNothingWaits() = runTest {
+        val seoulSaved = Place(false, false, "중구", location = Location(37.567, 126.978))
+        val t = setup(AppState(places = listOf(Place.currentPositionPlaceholder(), seoulSaved)))
+        t.opener.open(DeepLinkTarget.Warnings)
+        t.opener.open(DeepLinkTarget.Open(null))
+        assertNull(t.opener.requests.value, "S01 stays")
         t.opener.open(DeepLinkTarget.Place("seoul", WeatherView.HOURLY, null))
-        assertEquals("서울", t.preview.place.value?.name, "S01 is bypassed by a preview")
+        assertEquals("서울", t.preview.place.value?.name, "S01 is bypassed by a preview, also with a saved place nearby")
         assertEquals(listOf("reload"), t.calls)
-        val page = launch { t.opener.open(DeepLinkTarget.Warnings) }
-        runCurrent()
-        assertEquals(LinkRoute.Weather(WeatherView.HOURLY, null, null, t.preview.place.value), t.opener.requests.value?.route,
-            "S12 waits while S01 is pending")
-        t.saved.change { it.copy(cordovaExtras = closed) }
-        page.join()
-        assertEquals(LinkRoute.Page(LinkPage.WARNINGS), t.opener.requests.value?.route)
+        assertEquals(LinkRoute.Weather(WeatherView.HOURLY, null, null, t.preview.place.value), t.opener.requests.value?.route)
     }
 
+    /** CODEX-3164-7: `/open` changes no place but still asks the screens to close the menu and pages. */
     @Test
-    fun openAndUnknownCitiesChangeNothing() = runTest {
+    fun openClosesThePagesAndUnknownCitiesChangeNothing() = runTest {
         val t = setup(started)
         t.opener.open(DeepLinkTarget.Open("ko"))
+        assertEquals(LinkRoute.App, t.opener.requests.value?.route)
+        t.opener.handled(t.opener.requests.value!!.id)
         t.opener.open(DeepLinkTarget.Place("not-in-catalog", WeatherView.DAILY, null))
         assertEquals(emptyList(), t.calls)
         assertNull(t.opener.requests.value)

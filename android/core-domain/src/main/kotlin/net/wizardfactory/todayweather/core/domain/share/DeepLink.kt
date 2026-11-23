@@ -83,7 +83,7 @@ object DeepLink {
     private val COORDINATE = Regex("""^-?(?:\d+\.?\d*|\.\d+)$""")
     private val LANG = Regex("^[a-z]{2,3}$")
     private val URL = Regex("""^([A-Za-z][A-Za-z0-9+.-]*)://([^/?#]*)([^#]*)""")
-    private val PORT = Regex(""":\d*$""")
+    private val PORT = Regex(""":(\d*)$""")
 
     /** The target of [url], or null for another host or scheme, an unknown path or invalid required parameters. */
     fun parse(url: String): DeepLinkTarget? {
@@ -97,7 +97,11 @@ object DeepLink {
         val match = URL.find(url) ?: return null
         val (scheme, authority, pathAndQuery) = match.destructured
         if (!scheme.equals("https", ignoreCase = true)) return null
-        if (!authority.substringAfterLast('@').replace(PORT, "").equals(HOST, ignoreCase = true)) return null
+        val hostAndPort = authority.substringAfterLast('@')
+        // `new URL`: an empty port or one up to 65535; anything else after a colon is no URL.
+        val port = PORT.find(hostAndPort)
+        if (port != null && port.groupValues[1].isNotEmpty() && port.groupValues[1].toBigInteger() > 65535.toBigInteger()) return null
+        if (!(if (port != null) hostAndPort.removeRange(port.range) else hostAndPort).equals(HOST, ignoreCase = true)) return null
         val rawPath = pathAndQuery.substringBefore('?').ifEmpty { "/" }
         val query = Query(if ('?' in pathAndQuery) pathAndQuery.substringAfter('?') else "")
         val path = decodePath(rawPath) ?: return null
@@ -209,21 +213,29 @@ object DeepLink {
      */
     private fun percentDecode(s: String, strict: Boolean, plusIsSpace: Boolean): String? {
         val bytes = ByteArrayOutputStream()
+        // Unescaped text is encoded a run at a time, so a surrogate pair stays one character (CODEX-3164-8).
+        val literal = StringBuilder()
+        fun flush() {
+            if (literal.isNotEmpty()) bytes.write(literal.toString().toByteArray(Charsets.UTF_8))
+            literal.setLength(0)
+        }
         var i = 0
         while (i < s.length) {
             val c = s[i]
             when {
                 c == '%' && i + 2 < s.length && hex(s[i + 1]) >= 0 && hex(s[i + 2]) >= 0 -> {
+                    flush()
                     bytes.write(hex(s[i + 1]) * 16 + hex(s[i + 2]))
                     i += 3
                     continue
                 }
                 c == '%' && strict -> return null
-                c == '+' && plusIsSpace -> bytes.write(' '.code)
-                else -> bytes.write(c.toString().toByteArray(Charsets.UTF_8))
+                c == '+' && plusIsSpace -> literal.append(' ')
+                else -> literal.append(c)
             }
             i++
         }
+        flush()
         val array = bytes.toByteArray()
         if (!strict) return String(array, Charsets.UTF_8)
         val decoder = Charsets.UTF_8.newDecoder()

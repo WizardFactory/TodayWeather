@@ -25,7 +25,8 @@ object WeatherRequests {
      */
     fun url(baseUrl: String, place: Place, units: UnitSettings): String? {
         val location = place.location
-        if (location != null && location.lat != 0.0) {
+        // Cordova's `if (location.lat)` prefers the address at latitude 0; without one, the coordinates (CODEX-3164-5).
+        if (location != null && (location.lat != 0.0 || place.address.isNullOrEmpty())) {
             return "$baseUrl/weather/$VERSION/coord/${jsNumber(location.lat)},${jsNumber(location.long)}${unitsQuery(units)}"
         }
         val address = place.address

@@ -29,28 +29,34 @@ sealed interface LinkRoute {
 object LinkRoutes {
     /**
      * A catalog city or coordinates go to the first enabled saved place within 0.01° (not the current position, which
-     * moves), else to a preview of the place; an unknown catalog city goes nowhere (null), as does a widget index,
-     * which [EntryLink][net.wizardfactory.todayweather.core.domain.share.EntryLink] handles.
+     * moves), else to a preview of the place; without [matchSaved] always to a preview. An unknown catalog city goes
+     * nowhere (null), as does a widget index, which [EntryLink][net.wizardfactory.todayweather.core.domain.share.EntryLink] handles.
      */
-    fun of(target: DeepLinkTarget, state: AppState): LinkRoute? = when (target) {
+    fun of(target: DeepLinkTarget, state: AppState, matchSaved: Boolean = true): LinkRoute? = when (target) {
         is DeepLinkTarget.Open -> LinkRoute.App
         DeepLinkTarget.NationWeather -> LinkRoute.Page(LinkPage.NATION_WEATHER)
         DeepLinkTarget.NationAir -> LinkRoute.Page(LinkPage.NATION_AIR)
         DeepLinkTarget.Warnings -> LinkRoute.Page(LinkPage.WARNINGS)
         is DeepLinkTarget.LegacyWidgetIndex -> null
         is DeepLinkTarget.Place -> DeepLinkCatalog.find(target.slug)?.let { city ->
-            weather(state, target.view, target.pollutant, Place(false, false, city.name, city.address, city.country, Location(city.lat, city.lon)))
+            weather(state, matchSaved, target.view, target.pollutant,
+                Place(false, false, city.name, city.address, city.country, Location(city.lat, city.lon)))
         }
-        is DeepLinkTarget.Coordinate -> weather(state, target.view, target.pollutant,
+        is DeepLinkTarget.Coordinate -> weather(state, matchSaved, target.view, target.pollutant,
             Place(false, false, target.name ?: DeepLink.coordinateText(target.lat, target.lon), location = Location(target.lat, target.lon)))
     }
 
-    private fun weather(state: AppState, view: WeatherView, pollutant: String?, place: Place): LinkRoute.Weather {
-        val at = place.location!!
-        val index = state.places.indexOfFirst { saved ->
+    /** The first enabled saved place within 0.01° of [place] (never the current position); -1 when none is. */
+    fun nearbySaved(state: AppState, place: Place): Int {
+        val at = place.location ?: return -1
+        return state.places.indexOfFirst { saved ->
             val location = saved.location
             !saved.currentPosition && !saved.disable && location != null && DeepLink.nearSaved(location.lat, location.long, at.lat, at.long)
         }
+    }
+
+    private fun weather(state: AppState, matchSaved: Boolean, view: WeatherView, pollutant: String?, place: Place): LinkRoute.Weather {
+        val index = if (matchSaved) nearbySaved(state, place) else -1
         return if (index >= 0) LinkRoute.Weather(view, pollutant, index, null) else LinkRoute.Weather(view, pollutant, null, place)
     }
 }

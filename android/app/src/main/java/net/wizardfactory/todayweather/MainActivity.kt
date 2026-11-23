@@ -344,6 +344,9 @@ fun AppContent(
     // `?code=` of /tab/air: the pollutant S03 or S04 opened S05 on. The weather tabs keep it in the URL (`$location.path`),
     // so S05 opens on it again; the Locations tab replaces the URL (`href="#/tab/search"`) and clears it.
     var airCode by rememberSaveable { mutableStateOf<String?>(null) }
+    // The pollutant S05 shows, which a share from it sends; an Air link opens S05 anew on its pollutant (`airLinks`).
+    var airShown by remember { mutableStateOf<String?>(null) }
+    var airLinks by rememberSaveable { mutableIntStateOf(0) }
     // The settings pages (SettingsRoutes) and the nationwide and warning pages (NationRoutes) open over the tabs, last on
     // top; a saved route this version does not have is dropped. About is a popup over the menu (O10).
     val known = { route: String -> SettingsRoutes.known(route) || NationRoutes.known(route) || (alarms != null && AlarmRoutes.known(route)) }
@@ -405,7 +408,7 @@ fun AppContent(
     val selectedIndex by rememberUpdatedState(state.placeIndex)
     val previewShown by rememberUpdatedState(preview)
     val shareTab by rememberUpdatedState(navigation.selected)
-    val sharePollutant by rememberUpdatedState(airCode)
+    val sharePollutant by rememberUpdatedState(airShown ?: airCode)
     val bellHost = remember(host, alarms, share) {
         if (alarms == null && share == null) host else WeatherTabHost(host.texts, host.photos, host.readCache, host.onPrevious, host.onNext, host.onExpand,
             onBell = if (alarms == null) host.onBell else ({ if (!previewShown) open(AlarmRoutes.of(selectedIndex)) }),
@@ -440,6 +443,7 @@ fun AppContent(
                 is LinkRoute.Weather -> {
                     closeForLink()
                     airCode = if (route.view == WeatherView.AIR) route.pollutant else null
+                    if (route.view == WeatherView.AIR) airLinks++
                     navigation.selected = when (route.view) {
                         WeatherView.HOURLY -> Tab.HOURLY
                         WeatherView.DAILY -> Tab.DAILY
@@ -454,7 +458,7 @@ fun AppContent(
                         LinkPage.WARNINGS -> NationRoutes.WARNINGS
                     })
                 }
-                LinkRoute.App -> {}
+                LinkRoute.App -> closeForLink()
             }
             onLinkHandled(link.id)
         }
@@ -647,8 +651,10 @@ fun AppContent(
                 navigation.selected = Tab.AIR
             }, onUnits = openUnits, applies = applies, locating = locating, onNoPlace = session::openStartPopup, nativeAd = visibleAd,
                 onForecastRead = { if (it == selected) forecastRead = true })
-            Tab.AIR -> rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
-                onUnits = openUnits, locating = locating, nativeAd = visibleAd)
+            Tab.AIR -> key(airLinks) {
+                rememberAirTab(state, entries, loading, theme, bellHost, airCode, applies, onWeather = { navigation.selected = Tab.HOURLY },
+                    onUnits = openUnits, locating = locating, nativeAd = visibleAd, onShown = { airShown = it })
+            }
             else -> placesPage?.let { page ->
                 // A new visit gets a new tab: its state and its opening run again.
                 key(page) {

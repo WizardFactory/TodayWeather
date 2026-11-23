@@ -96,4 +96,16 @@ class DeepLinkTest {
         assertEquals("seoul", DeepLinkCatalog.find("seoul")?.id)
         assertNull(DeepLinkCatalog.find("not-in-catalog"))
     }
+
+    /** CODEX-3164-8, -9: raw and escaped names decode alike (supplementary characters too); ports follow `new URL`. */
+    @Test
+    fun rawNamesDecodeAsEscapedOnesAndPortsMustBeValid() {
+        val raw = DeepLink.parse("https://link.todayweather.ai/loc?lat=1&lon=2&name=😀 서울")
+        assertEquals(DeepLinkTarget.Coordinate(1.0, 2.0, "😀 서울", WeatherView.HOURLY, null), raw)
+        assertEquals(raw, DeepLink.parse("https://link.todayweather.ai/loc?lat=1&lon=2&name=%F0%9F%98%80%20%EC%84%9C%EC%9A%B8"))
+        assertNull(DeepLink.parse("https://link.todayweather.ai:65536/open"))
+        assertNull(DeepLink.parse("https://link.todayweather.ai:x/open"))
+        assertEquals(DeepLinkTarget.Open(null), DeepLink.parse("https://link.todayweather.ai:8443/open"))
+        assertEquals(DeepLinkTarget.Open(null), DeepLink.parse("https://link.todayweather.ai:/open"))
+    }
 }

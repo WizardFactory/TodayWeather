@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Place
-import net.wizardfactory.todayweather.core.storage.PlaceList
 import net.wizardfactory.todayweather.core.storage.closeStart
 import net.wizardfactory.todayweather.core.storage.startShows
 
@@ -33,16 +32,19 @@ class LinkPreview(private val saved: StateAccess) : StateAccess {
     }
 
     /**
-     * Saves the preview as a place (`addCity`) and selects it, or selects the saved place it matches ([PlaceList.indexOf]);
-     * on the start page the add closes S01 (`closeStart`). The selected index, or null when no preview shows.
+     * Saves the preview as an enabled place appended to the list and selects it, or selects the saved place within 0.01°
+     * ([LinkRoutes.nearbySaved]: by coordinates, as the link matched, not `getIndexOfCity`'s name and address, which an
+     * address-less coordinate link would match by name alone, CODEX-3164-4). On the start page the add closes S01
+     * (`closeStart`), keeping that selection. The selected index, or null when no preview shows. The app has no
+     * place limit (S02 neither).
      */
     fun add(): Int? {
         val place = shown.value ?: return null
         saved.change { s ->
-            val existing = PlaceList.indexOf(s.places, place)
+            val existing = LinkRoutes.nearbySaved(s, place)
             val added = if (existing >= 0) s.copy(placeIndex = existing)
-            else PlaceList.add(s, place)!!.let { it.copy(placeIndex = it.places.size - 1) }
-            if (added.startShows) added.closeStart() else added
+            else s.copy(places = s.places + place, placeIndex = s.places.size)
+            if (added.startShows) added.closeStart().copy(placeIndex = added.placeIndex) else added
         }
         // After the save, so the start page never shows in between.
         shown.value = null

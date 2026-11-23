@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +52,9 @@ import net.wizardfactory.todayweather.ui.shell.line
 @Composable
 fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading: Set<String>, theme: Theme, host: WeatherTabHost,
                    code: String?, applies: Int, onWeather: () -> Unit, onUnits: () -> Unit = {}, locating: Boolean = false,
-                   nativeAd: (@Composable () -> Unit)? = null): TabContent {
+                   nativeAd: (@Composable () -> Unit)? = null,
+                   /** The pollutant shown ([AirScope.aqiCode]) after each apply or tap: what a share from S05 sends. */
+                   onShown: (String?) -> Unit = {}): TabContent {
     val metrics = rememberScreenMetrics()
     val texts = host.texts
     val airUnit = state.units.airUnit
@@ -78,6 +81,8 @@ fun rememberAirTab(state: AppState, entries: Map<String, WeatherEntry>, loading:
         Any()
     }
     var taps by remember(visit) { mutableIntStateOf(0) }
+    val shown = visit.aqiCode
+    SideEffect { onShown(shown) }
     val page = remember(applied, taps, texts, airUnit) { AirPage(visit, texts) }
     val content = remember(page, metrics) { AirContent(page, metrics, visit.airChart, visit.standard, texts["LOC_HOUR"]) }
     val scroll = rememberScrollState()

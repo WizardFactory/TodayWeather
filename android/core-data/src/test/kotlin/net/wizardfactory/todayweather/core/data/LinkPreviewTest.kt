@@ -131,4 +131,20 @@ class LinkPreviewTest {
         preview.show(seoul.copy(disable = true))
         assertEquals(seoul, preview.current()!!.places.last())
     }
+
+    /** CODEX-3164-4: an add matches a saved place by its coordinates, not by a name without an address. */
+    @Test
+    fun addingAPlaceWithTheNameOfAFarPlaceAddsIt() = runTest {
+        val home = Place(false, false, "Home", location = Location(10.0, 20.0))
+        val saved = Memory(started.copy(places = started.places + home, placeIndex = 0))
+        val preview = LinkPreview(saved)
+        val other = Place(false, false, "Home", location = Location(40.0, 50.0))
+        preview.show(other)
+        assertEquals(3, preview.add())
+        assertEquals(listOf(current, london, home, other), saved.value.places)
+        // Within 0.01°, the saved place is selected instead.
+        preview.show(Place(false, false, "Home 2", location = Location(10.004, 20.004)))
+        assertEquals(2, preview.add())
+        assertEquals(4, saved.value.places.size)
+    }
 }

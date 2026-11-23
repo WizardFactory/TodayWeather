@@ -30,7 +30,11 @@ import net.wizardfactory.todayweather.core.data.StateAccess
 import net.wizardfactory.todayweather.core.data.WeatherRepository
 import net.wizardfactory.todayweather.core.data.WeatherSession
 import net.wizardfactory.todayweather.core.domain.share.DeepLink
+import net.wizardfactory.todayweather.core.domain.share.WeatherView
 import net.wizardfactory.todayweather.core.domain.shell.Tab
+import net.wizardfactory.todayweather.ui.air.AirTags
+import net.wizardfactory.todayweather.ui.forecast.WeatherTabTags
+import androidx.compose.ui.test.assertIsSelected
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.Location
 import net.wizardfactory.todayweather.core.storage.Place
@@ -72,6 +76,9 @@ abstract class DeepLinkScreens {
     protected lateinit var preview: LinkPreview
     private lateinit var opener: LinkOpener
 
+    /** What the share button sent: the tab shared from and its pollutant. */
+    protected val shared = mutableListOf<Pair<WeatherView, String?>>()
+
     protected fun show(places: List<Place>) {
         memory = Memory(AppState(places = places, placeIndex = 0, units = UnitSettings.defaults("KR"),
             cordovaExtras = mapOf("startVersion" to JsonPrimitive(1))))
@@ -91,7 +98,7 @@ abstract class DeepLinkScreens {
             val host = WeatherTabHost(forecastTexts(context), PhotoLoader(context), { repository.cached(it) }, session::previous, session::next, {})
             AppContent(preview.overlay(saved!!), entries, loading, retry, session, host, "test", onExit = {},
                 link = link, onLinkHandled = opener::handled, preview = shown != null, onAddPreview = { preview.add() },
-                onLeavePreview = preview::clear)
+                onLeavePreview = preview::clear, share = { view, pollutant -> shared += view to pollutant })
         }
         session.reload(WeatherSession.Sender.INIT)
         rule.waitForIdle()
@@ -162,6 +169,39 @@ class DeepLinkScreenTest : DeepLinkScreens() {
         rule.onNodeWithTag(SettingsTags.PAGE).assertDoesNotExist()
         rule.onNodeWithTag(NationTags.PAGE).assertExists()
         rule.onNodeWithTag(ShellTags.MENU).assertDoesNotExist()
+    }
+
+    /**
+     * CODEX-3164-3, -2: an Air link opens its pollutant also while Air shows, and a share from Air sends the pollutant
+     * shown, also after a tap on another one.
+     */
+    @Test
+    fun airLinksOpenTheirPollutantAndShareWhatAirShows() {
+        show(listOf(hoehyeon, london))
+        open("https://link.todayweather.ai/air/seoul?pollutant=pm10")
+        rule.onNodeWithTag(AirTags.code("pm10")).assertIsSelected()
+        open("https://link.todayweather.ai/air/seoul?pollutant=pm25")
+        rule.onNodeWithTag(AirTags.code("pm25")).assertIsSelected()
+        rule.onNodeWithTag(WeatherTabTags.SHARE).performClick()
+        rule.onNodeWithTag(AirTags.code("pm10")).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(WeatherTabTags.SHARE).performClick()
+        rule.waitForIdle()
+        assertEquals(listOf<Pair<WeatherView, String?>>(WeatherView.AIR to "pm25", WeatherView.AIR to "pm10"), shared.toList())
+    }
+
+    /** CODEX-3164-7: `/open` closes the menu and the pages over the tabs and keeps the tab and place. */
+    @Test
+    fun anOpenLinkClosesThePagesOverTheTabs() {
+        show(listOf(hoehyeon))
+        rule.onNodeWithTag(ShellTags.MENU_BUTTON).performClick()
+        rule.onNodeWithTag(ShellTags.row(MenuRow.UNITS)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(SettingsTags.PAGE).assertExists()
+        open("https://link.todayweather.ai/open")
+        rule.onNodeWithTag(SettingsTags.PAGE).assertDoesNotExist()
+        rule.onNodeWithTag(ShellTags.page(Tab.HOURLY)).assertExists()
+        assertEquals(0, memory.current()!!.placeIndex)
     }
 }
 
