@@ -13,7 +13,7 @@ How a commit of the native Android app (`android/`) becomes a Google Play releas
 | 1 | [Freeze the version](#1-freeze-the-version) | The version change is merged; its commit is the candidate | Agent or AK |
 | 2 | [Release CI](#2-release-ci) | `Android release verification` passed for the candidate's full SHA | Agent or AK |
 | 3 | [Manual gates on emulators](#manual-gates) | Every gate passed on the candidate, evidence kept | Agent or AK |
-| 4 | [Build and sign](#4-build-and-sign) | `check-apk.sh` passes on the signed APK | AK |
+| 4 | [Build and sign](#4-build-and-sign) | The export of the candidate is built and signed; `check-apk.sh` passes on the signed APK | AK |
 | 5 | [Device gate](#5-device-gate) | The signed APK passed the physical-device checks | AK |
 | 6 | [Tag the candidate](#6-tag-the-candidate-and-publish-its-notes) | `android/vX.Y.Z-rc.N` and its pre-release exist; `--check` passes | AK |
 | 7 | [Store declarations and test tracks](#7-store-declarations-and-test-tracks) | Internal, closed and open testing accepted | AK |
@@ -77,30 +77,35 @@ Keep each gate's output directory under ignored `reports/`; it can show private 
 
 ### 4. Build and sign
 
-On the operator's machine, at the root of a clean checkout of the candidate commit with `android/app/google-services.json` and `android/private.properties` in place (both are ignored by Git, so they do not show as changes):
+On the operator's machine, at the root of a checkout that has the candidate commit (any branch; the checkout itself is not built). The release is built from an export of the commit in a new directory, never from a checkout: a checkout can hold changed, untracked, ignored or index-flagged files that a build would take in, and an export holds the commit's files only.
 
 ```sh
 CANDIDATE=<full SHA>                             # the SHA the release CI run verified
+BUILD=<new directory outside the checkout>       # absolute; it must not exist or be empty
+PRIVATE=<directory with google-services.json and private.properties>
 APK="$OUT/TodayWeather-<versionName>-<versionCode>.apk"
 STORE_APK=<installed-store-release.apk>
 BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
-android/tools/release/require-candidate.sh "$CANDIDATE" &&   # the checkout is exactly that commit
-  (cd android &&
-    ./gradlew clean assembleRelease &&           # which refuses sample or missing AdMob IDs
+android/tools/release/export-candidate.sh "$CANDIDATE" "$BUILD" &&   # the commit's android/ tree, verified
+  cp "$PRIVATE/google-services.json" "$BUILD/android/app/" &&
+  cp "$PRIVATE/private.properties" "$BUILD/android/" &&
+  (cd "$BUILD/android" &&
+    ./gradlew assembleRelease &&                 # which refuses sample or missing AdMob IDs
     "$BUILD_TOOLS/zipalign" -c -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk &&
     "$BUILD_TOOLS/apksigner" sign --ks "$TW_ANDROID_KEYSTORE" --ks-key-alias "$TW_ANDROID_KEY_ALIAS" \
       --out "$APK" app/build/outputs/apk/release/app-release-unsigned.apk &&
     tools/release/check-apk.sh "$APK" "$STORE_APK")
 ```
 
-The commands are one chain: a checkout of another commit, a file that differs, a failed build or a failed signature stops everything after it, and nothing is built or signed from the wrong source.
+The commands are one chain: a failed export, a missing private input, a failed build or a failed signature stops everything after it.
 
-- `require-candidate.sh` comes first because an untracked source or resource file under `android/` would be built into the APK, and a clean checkout of another commit builds a different app with the same version numbers, and `check-apk.sh` cannot tell them apart. It passes only when `HEAD` is the candidate, no tracked file differs (staged or not, and none is hidden by an assume-unchanged or skip-worktree flag), no untracked file exists whatever `status.showUntrackedFiles` says, no ignored file sits in a source set, and every git command succeeded. The ignored private inputs and build output elsewhere do not count. Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two.
+- `export-candidate.sh` writes the commit's `android/` directory to `$BUILD` with `git archive`, then computes Git's tree hash of what it wrote and requires it to equal the commit's. The build directory is therefore that commit's tree, or the tool fails and removes it. It refuses a name that is not a full SHA, a commit the repository does not have, a directory with content and a directory inside the checkout, and it records the SHA in `$BUILD/CANDIDATE`. The two private inputs are the only files added to the export; `ANDROID_HOME` names the SDK, since the export has no `local.properties`.
+- Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two. Keep `$BUILD` until the release is closed.
 - `apksigner` asks for the keystore and key passwords; do not put them on the command line, in a file of the checkout or in a log. `TW_ANDROID_KEYSTORE` and `TW_ANDROID_KEY_ALIAS` name the existing release keystore and its key. The app is not enrolled in Play App Signing, so this key is the one users' installs are signed with: a different key cannot update them.
-- `$OUT` is an absolute path outside the checkout or under ignored `reports/`. Keep the signed APK; the uploaded file and the checked file must be the same bytes.
+- `$OUT`, `$PRIVATE` and `$BUILD` are absolute paths outside the checkout (`$OUT` may be under ignored `reports/`). Keep the signed APK; the uploaded file and the checked file must be the same bytes.
 - `$STORE_APK` (an absolute path) is the release users have now: the Cordova 1.1.1 store APK for the first native release.
-- `check-apk.sh` verifies both signatures, compares every signer's certificate and the package with the store release, requires a higher `versionCode`, compares `versionName`, `versionCode`, `minSdk` and `targetSdk` with the checkout, and refuses a debuggable APK, Google's sample AdMob app ID and a build without the Firebase configuration. It prints the identity lines of the release notes. A `FAIL` line ends the candidate.
-- A release build that fails after an earlier success removes the earlier APK from `app/build/outputs`; copy the APK out before building again.
+- `check-apk.sh` verifies both signatures, compares every signer's certificate and the package with the store release, requires a higher `versionCode`, compares `versionName`, `versionCode`, `minSdk` and `targetSdk` with the export's `app/build.gradle.kts`, and refuses a debuggable APK, Google's sample AdMob app ID and a build without the Firebase configuration. It prints the identity lines of the release notes. A `FAIL` line ends the candidate.
+- A candidate is exported and built once. For another attempt, export to a new directory.
 
 ### 5. Device gate
 

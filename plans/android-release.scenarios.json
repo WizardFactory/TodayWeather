@@ -25,11 +25,11 @@
       "steps": [
         "Merge the version change",
         "Run release CI for the full SHA and the manual gates",
-        "android/tools/release/require-candidate.sh <full SHA> && (cd android && ./gradlew clean assembleRelease && zipalign -c ... && apksigner sign ... && tools/release/check-apk.sh <signed> <store>)",
+        "android/tools/release/export-candidate.sh <full SHA> <new directory> && copy the two private inputs && (cd <new directory>/android && ./gradlew assembleRelease && zipalign -c ... && apksigner sign ... && tools/release/check-apk.sh <signed> <store>)",
         "Device gate, then local tag, notes check, push and pre-release"
       ],
-      "expected": "Every step states who acts and what completes it; check-apk prints ok for each check and the identity lines",
-      "failure": "A checkout of another commit, a changed, untracked or hidden file stops before the build; a wrong key, a versionCode that is not higher, a debuggable APK, the sample AdMob ID or a build without Firebase makes check-apk fail; the candidate ends and the next one starts at step 1",
+      "expected": "The export is the commit's android/ tree (equal tree hash) whatever the checkout holds; every step states who acts and what completes it; check-apk prints ok for each check and the identity lines",
+      "failure": "An unknown commit, a used directory or an export that is not the commit's tree stops before the build; a wrong key, a versionCode that is not higher, a debuggable APK, the sample AdMob ID or a build without Firebase makes check-apk fail; the candidate ends and the next one starts at step 1",
       "criteria": [
         "AC2"
       ]

@@ -162,8 +162,8 @@ jobs:
         run: |
           sh android/tools/emulator/test-instrumentation-passed.sh
           sh android/tools/release-ci/test-runners.sh
-      - name: Release candidate check (test repositories)
-        run: sh android/tools/release/test-require-candidate.sh
+      - name: Release candidate export (test repository)
+        run: sh android/tools/release/test-export-candidate.sh
   without-client:
     name: Build and test without client/
     runs-on: ubuntu-latest
