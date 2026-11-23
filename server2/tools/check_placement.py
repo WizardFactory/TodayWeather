@@ -520,10 +520,14 @@ jobs:
         with:
           fetch-depth: 0
       - run: bash tools/ci.sh shadow-${{ matrix.shard }}
-  rust-build:
+  rust:
     needs: placement
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: server2
@@ -539,35 +543,6 @@ jobs:
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
           tool: cargo-nextest@0.9.152
-      - run: bash tools/ci.sh rust-build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: server2-nextest-archive
-          path: reports/nextest/
-          if-no-files-found: error
-          retention-days: 1
-  rust:
-    needs: rust-build
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    defaults:
-      run:
-        working-directory: server2
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
-        with:
-          tool: cargo-nextest@0.9.152
-      - uses: actions/download-artifact@v4
-        with:
-          name: server2-nextest-archive
-          path: reports/nextest/
       - run: bash tools/ci.sh rust-${{ matrix.shard }}
   gnu:
     needs: placement
@@ -609,7 +584,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
   foundation:
-    needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]
+    needs: [placement, python, shadow, rust, gnu, musl, goldens]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -622,7 +597,6 @@ jobs:
           ${{ needs.placement.result != 'success' ||
               needs.python.result != 'success' ||
               needs.shadow.result != 'success' ||
-              needs.rust-build.result != 'success' ||
               needs.rust.result != 'success' ||
               needs.gnu.result != 'success' ||
               (github.event_name == 'pull_request' && needs.musl.result != 'skipped') ||
