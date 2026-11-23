@@ -180,6 +180,21 @@ test("daily chart keeps the native cells: empty probability, two-digit day, a 10
   await daily.press("ArrowRight");
   await expect(daily).toHaveAttribute("data-cursor", "1");
   await expect(daily.locator(".cursor-line")).toHaveCount(1);
+  // The pick does not follow the user to another place whose weather is
+  // already loaded (the chart stays mounted): load Busan, pick there, go back.
+  await page.evaluate(() => {
+    history.pushState({}, "", "/weather/busan/daily");
+    dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("부산");
+  await expect(columns).toHaveCount(9);
+  await expect(daily.locator(".cursor-line")).toHaveCount(0);
+  await daily.focus();
+  await daily.press("ArrowRight");
+  await expect(daily.locator(".cursor-line")).toHaveCount(1);
+  await page.goBack();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("서울");
+  await expect(daily.locator(".cursor-line")).toHaveCount(0);
   const sizes = await daily.evaluate((el) => ({
     bar: Number(el.querySelector("rect.range")!.getAttribute("width")),
     dot: Number(el.querySelector("circle.now")!.getAttribute("r")),

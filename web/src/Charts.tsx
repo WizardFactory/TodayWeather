@@ -715,14 +715,16 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
   };
   // The cursor starts on today; its line shows only once the user picks a
   // day, so no line runs through today's column on first view (native).
-  const [picked, setPicked] = useState(false);
+  // The pick belongs to one place and language: another place starts clean.
+  const [pickedFor, setPickedFor] = useState<string | null>(null);
+  const picked = pickedFor === identity;
   const setCursor = (i: number) => {
-    setPicked(true);
+    setPickedFor(identity);
     moveCursor(i);
   };
   const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (["Home", "End", "ArrowLeft", "ArrowRight"].includes(event.key))
-      setPicked(true);
+      setPickedFor(identity);
     cursorKeyDown(event);
   };
   if (!n)
