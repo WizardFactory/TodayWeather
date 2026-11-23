@@ -314,7 +314,7 @@ impl<T: IndexListing + Clone + 'static> ImageForecasts<T> {
             shared: Arc::new(Shared {
                 bulk: Reader {
                     store: Arc::new(
-                        CatalogStore::new(bulk.clone(), store.limits().clone())
+                        CatalogStore::new(bulk.clone(), store.limits().background())
                             .expect("the limits of a built store"),
                     ),
                     transport: bulk,

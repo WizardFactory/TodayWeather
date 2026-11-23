@@ -7,7 +7,7 @@ use server2::storage::{
     CatalogId, CatalogLimits, CatalogStore, CatalogTransport, ControlObject, Error, Object,
     ObjectTransport, PreparedRecord, WriteCondition,
 };
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::time::Instant;
 
 /// Every control read takes `delay` and finds nothing.
@@ -79,10 +79,11 @@ async fn lookup(delay: Duration, budget: Duration) -> Result<(), Error> {
 #[tokio::test(start_paused = true)]
 async fn a_read_slower_than_three_seconds_answers_within_the_request_deadline() {
     // Before KMA-NATION-READS the per-operation cap ended this read at 3 s.
-    assert!(!matches!(
-        lookup(Duration::from_secs(4), Duration::from_secs(8)).await,
-        Err(Error::Timeout)
-    ));
+    assert!(
+        lookup(Duration::from_secs(4), Duration::from_secs(8))
+            .await
+            .is_ok()
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -132,5 +133,53 @@ fn read_deadline_defaults_to_the_operation_cap_and_is_bounded() {
             ..CatalogLimits::default()
         };
         assert!(bad.validate().is_err());
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_read_queued_behind_another_completes_within_the_request_deadline() {
+    // One admission: the second lookup waits for the first, as nation cities do for the store.
+    let started = Instant::now();
+    lookup(Duration::from_secs(1), Duration::from_secs(8))
+        .await
+        .unwrap();
+    let operations = started.elapsed().as_secs();
+    assert!(operations >= 1);
+    // Each lookup alone takes 2 s; queued behind another it ends at 4 s.
+    let delay = Duration::from_millis(2000 / operations);
+    for (read_deadline, queued_completes) in [
+        (Duration::from_secs(8), true),
+        (Duration::from_secs(3), false),
+    ] {
+        let limits = CatalogLimits {
+            io: 1,
+            read_deadline,
+            ..CatalogLimits::default()
+        };
+        let store = Arc::new(CatalogStore::new(Slow(delay), limits).unwrap());
+        let start = Instant::now();
+        let first = {
+            let store = store.clone();
+            tokio::spawn(async move {
+                store
+                    .lookup(&id(), Instant::now() + Duration::from_secs(8))
+                    .await
+                    .map(|_| ())
+            })
+        };
+        tokio::task::yield_now().await;
+        let queued = store
+            .lookup(&id(), Instant::now() + Duration::from_secs(8))
+            .await
+            .map(|_| ());
+        let elapsed = start.elapsed();
+        assert!(first.await.unwrap().is_ok());
+        if queued_completes {
+            assert!(queued.is_ok());
+            assert_eq!(elapsed, Duration::from_secs(4));
+        } else {
+            assert!(matches!(queued, Err(Error::Timeout)));
+            assert_eq!(elapsed, Duration::from_secs(3));
+        }
     }
 }

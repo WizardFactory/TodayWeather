@@ -2700,5 +2700,7 @@ mod store_limits_tests {
         assert!(observed.validate().is_ok());
         let legacy = store_limits(false);
         assert_eq!(legacy.read_deadline, legacy.deadline);
+        // The bulk stores built from the request store keep the operation cap for reads.
+        assert_eq!(observed.background().read_deadline, observed.deadline);
     }
 }

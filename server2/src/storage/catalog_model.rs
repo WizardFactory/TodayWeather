@@ -47,6 +47,14 @@ impl Default for CatalogLimits {
     }
 }
 impl CatalogLimits {
+    /// These limits for background work on a bulk view: reads keep the operation cap even when
+    /// the request store raised [`Self::read_deadline`] (KMA-NATION-READS).
+    pub fn background(&self) -> Self {
+        Self {
+            read_deadline: self.deadline,
+            ..self.clone()
+        }
+    }
     pub fn validate(&self) -> Result<(), Error> {
         self.raw.validate()?;
         if self.control_bytes == 0

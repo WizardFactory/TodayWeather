@@ -366,8 +366,9 @@ accepted the request (2.7 s for air and life, 2.9 s for the narrative). Geocode 
 3 s cap and, since the [accept clock](#restart-allocator-and-the-accept-clock-2026-11-10), counts
 toward those waits. Other handlers keep their existing budgets. The observed KMA source's
 catalog store ends each read (lookup, page and member lookups) at the earlier of the caller's
-deadline and 8 s after the lookup starts (`read_deadline`, KMA-NATION-READS); every other store,
-and every write and repair, keeps the 3 s per-operation cap, and each S3 HTTP request keeps its
+deadline and 8 s after the lookup starts (`read_deadline`, KMA-NATION-READS); its bulk-lane
+stores for background restores, KASI and image production, every other store, and every write
+and repair keep the 3 s per-operation cap, and each S3 HTTP request keeps its
 own 3 s limit. Before this bound the 3 s cap also counted the wait for the store's admissions:
 in 23 of 24 SR-6 samples a nation city read timed out at about 3 s and the nation answer was the
 legacy 500 page after 3.3–4.6 s. These are limits, not latency measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)

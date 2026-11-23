@@ -54,8 +54,8 @@ three-second budget; the next request includes the newly saved observation.
 The fifteen city assemblies read their stored grids at the same time and wait for
 the same S3 admissions of the KMA source's store. A queued read ends at the earlier
 of its request's deadline and 8 s after it started; it still fails when that bound
-passes, and each S3 HTTP request keeps its own 3 s limit. Other stores keep the 3 s
-cap. In the November 21–22 SR-6 rehearsal, before this bound, the reads ended at
+passes, and each S3 HTTP request keeps its own 3 s limit. Background work on the
+KMA bulk lane and all other stores keep the 3 s cap. In the November 21–22 SR-6 rehearsal, before this bound, the reads ended at
 3 s once the store held history, and the nation route answered the legacy 500 page in
 23 of 24 hourly samples. The regression tests are in
 `server2/tests/storage/read_deadline.rs`.
