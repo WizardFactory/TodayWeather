@@ -1,6 +1,6 @@
 {
   "title": "TodayWeather for Android: native app user manual",
-  "scenario": "Version 2.0.0 preview on Android. Screens are in Korean. Tab and refresh examples use sample Seoul data. Weather, ads and system dialogs may vary.",
+  "scenario": "TodayWeather 2.0 on Android. Screens are in Korean. All journey screens were captured without ads on 23 November 2026 from live data; the pull-to-refresh example uses sample Seoul data. Weather values and system dialogs may vary.",
   "steps": [
     {
       "title": "Read the first-launch notice",

@@ -2,13 +2,14 @@
 
 [Read the PDF](manual.pdf) · [Editable source](manual.json) · [Capture provenance](provenance.json)
 
+The released app shows ads; this manual's screens are captured without them (#3122).
 The [forecast advertising supplement](forecast-ads/manual.pdf) shows the Android
-native cards on Hourly, Daily, Locations and AQI. Its four device captures from
-18 November replace the older manual’s bottom-banner depiction for those pages.
+native ad cards on Hourly, Daily, Locations and AQI in four device captures from
+18 November.
 The [editable supplement](forecast-ads/manual.json) and [capture record](forecast-ads/provenance.json)
 identify the Android 14 Google Play emulator, sample ads and saved Seoul fixture.
 
-This is the **native Kotlin / Jetpack Compose app**, version 2.0.0 preview. Its
+This is the **native Kotlin / Jetpack Compose app**, version 2.0. Its
 45 illustrated steps cover first launch and permissions, current location,
 hourly/daily charts, air quality and stations, saved places, alarms, units,
 startup/refresh settings, themes, nationwide information, privacy, sharing and exit.
@@ -16,14 +17,15 @@ The app screens are Korean; the instructions are English with Korean control lab
 The [home-screen widget guide](widgets/README.md) covers configuration, resizing, the five-day visit interval and recovery.
 The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1.
 
-The original 44 screenshots were captured from the running native app on 15 November 2026
-(all 44 again after the privacy rows moved to the end of the menu, #2990),
-using an owned API36 emulator at 1080×2400 pixels, 420dpi, font scale 1.0,
-Korean app/system language and Asia/Seoul time. Saved places are seeded for later
-sections. Weather, geocoding, nationwide data and Google Places search use the
+All 44 journey screenshots were captured from the running native app on 23 November 2026
+**without ads** (`capture.sh --no-ads`: the test application replaces the consent and
+Ads SDK platform, and every capture asserts that the SDK did not start and that no
+native ad card is on screen), using an owned API36 emulator at 1080×2400 pixels, 420dpi,
+font scale 1.0, Korean app/system language and Asia/Seoul time. Saved places are seeded
+for later sections. Weather, geocoding, nationwide data and Google Places search use the
 configured live services; weather values and warnings are dated examples. Images
 are reduced to 720×1600 and a 256-color palette without replacing screen content.
-Debug banners are Google's test ads; their availability and contents vary.
+The pull-to-refresh page keeps its 19 November capture with sample Seoul weather.
 
 [Read the current-temperature supplement](current-temperature/manual.pdf) for the updated fractional reading in the forecast header. Its [editable source](current-temperature/manual.json) uses a Korean Seoul fixture rendered with the native Android Compose screen under Robolectric SDK 34.
 
@@ -36,11 +38,9 @@ The bottom tabs switch between pages. You can set the automatic refresh interval
 under 업데이트 주기 in the menu.
 
 All four tabs use outline icons. On the selected tab, the icon and its label
-use the theme’s accent color, with a short line above the icon. The hourly,
-daily, air and refresh examples show the updated navigation in the running app
-with sample Seoul weather. Earlier captures of other tasks are cropped to the
-page content wherever they showed the previous tab bar. The capture record
-lists the replacement images and the crop bounds.
+use the theme’s accent color, with a short line above the icon. Every page of
+this edition shows that navigation as full device frames; the earlier cropped
+captures are in the previous edition named in the capture record.
 
 ## Reader notes
 
@@ -49,6 +49,8 @@ lists the replacement images and the crop bounds.
   present different system dialogs.
 - Optional usage analytics stays off throughout this manual. Advertising privacy
   choices depend on region and the consent service; they are separate from analytics.
+  In Korea no consent form is required, so the 광고 개인정보 선택 page shows the same
+  message with or without ads.
 - The alarm example edits settings and discards them. Product push requests were
   intercepted by the test application; **real notification delivery was not tested**.
   The inherited noon-picker behavior is called out on its page. Android Back does
