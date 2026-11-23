@@ -141,19 +141,50 @@ test('the stylesheet loads the subset font beside it', () => {
   assert.deepEqual(attribute(css, /url\("([^"]+)"\)/g), ['assets/landing-sans.woff2']);
 });
 
-test('the native summaries link to the matching store fallback', () => {
-  const expected = new Map([['iPhone 앱', 'ios'], ['Android 앱', 'android']]);
+test('the native summaries link straight to their stores', () => {
+  const expected = new Map([
+    ['iPhone 앱', 'https://apps.apple.com/kr/app/id1041700694'],
+    ['Android 앱', 'https://play.google.com/store/apps/details?id=net.wizardfactory.todayweather'],
+  ]);
   for (const page of pages) {
     const html = readFileSync(page, 'utf8');
-    const links = [...html.matchAll(/<h3><a href="(https:\/\/link\.todayweather\.ai\/[^"]+)">([^<]+)</g)]
-      .map((match) => [match[2].trim(), new URL(match[1].replace(/&amp;/g, '&'))]);
-    assert.deepEqual(links.map(([title]) => title).sort(), [...expected.keys()].sort(), page);
-    for (const [title, url] of links) {
-      assert.equal(url.pathname, '/open', `${page}: ${title}`);
-      assert.equal(url.searchParams.get('fallback'), 'store', `${page}: ${title}`);
-      assert.equal(url.searchParams.get('store'), expected.get(title), `${page}: ${title}`);
-    }
+    const links = [...html.matchAll(/<h3><a href="([^"]+)">([^<]+)</g)]
+      .map((match) => [match[2].trim(), match[1].replace(/&amp;/g, '&')]);
+    assert.deepEqual(new Map(links), expected, page);
+    assert.doesNotMatch(html, /name="apple-itunes-app"/, `${page}: no Smart App Banner on the landing`);
   }
+});
+
+test('the desktop store QR is the WebApp QR for the store fallback link', () => {
+  const source = readFileSync(join(root, 'web/src/AppQrCode.tsx'), 'utf8');
+  assert.match(source, /encoding https:\/\/link\.todayweather\.ai\/open\?fallback=store\n/);
+  const viewBox = /APP_QR_VIEWBOX = "([^"]+)"/.exec(source)[1];
+  const path = [...source.slice(source.indexOf('APP_QR_PATH ='), source.indexOf('export function')).matchAll(/"([^"]+)"/g)]
+    .map((match) => match[1]).join('');
+  const svg = readFileSync(join(landing, 'assets/store-qr.svg'), 'utf8');
+  assert.equal(/viewBox="([^"]+)"/.exec(svg)[1], viewBox);
+  assert.equal(/<path d="([^"]+)"/.exec(svg)[1], path);
+  for (const page of pages) {
+    const html = readFileSync(page, 'utf8');
+    const items = html.slice(html.indexOf('<ul class="platforms">'), html.indexOf('</ul>', html.indexOf('<ul class="platforms">')))
+      .match(/<li[^>]*>/g);
+    assert.deepEqual(items, ['<li>', '<li>', '<li>', '<li class="scan">'], `${page}: the QR is the fourth summary item`);
+    assert.match(html, /<li class="scan">.*src="\.\.\/assets\/store-qr\.svg"/, page);
+  }
+  // Shown only on wide windows with a mouse or trackpad; hidden everywhere else.
+  const css = readFileSync(join(landing, 'landing.css'), 'utf8');
+  const shows = [...css.matchAll(/\.scan \{ display: block; \}/g)];
+  assert.match(css, /^\.scan \{ display: none; \}$/m);
+  assert.equal(shows.length, 1);
+  const query = css.lastIndexOf('@media', shows[0].index);
+  assert.equal(css.slice(query, css.indexOf('{', query)).trim(), '@media (min-width: 64rem) and (hover: hover) and (pointer: fine)');
+  let depth = 0;
+  let end = css.indexOf('{', query);
+  for (; end < css.length; end += 1) {
+    if (css[end] === '{') depth += 1;
+    if (css[end] === '}' && --depth === 0) break;
+  }
+  assert.ok(shows[0].index < end, 'the display rule sits inside that media query');
 });
 
 test('every open action uses the plain /open link', () => {
