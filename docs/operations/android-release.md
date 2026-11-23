@@ -165,7 +165,7 @@ node scripts/release-notes.mjs --check "$OUT/notes-final.md" --tag "$TAG" --comm
 
 `notes-final.md` is the candidate's notes with `Tag:` set to the final tag (`--check` fails while it still says the candidate's), the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 
-Release to 100% of users at once; there is no staged rollout (AK, 2026-11-24). Watch the signals below for the first week. Halt the release in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version. Halt it on every track that serves it: the internal and open testing tracks hold the same version code, and their eligible accounts keep receiving it until it is halted or replaced there too.
+Release to 100% of users at once; there is no staged rollout (AK, 2026-11-24). Watch the signals below for the first week. Halt the release in the Play Console (it stops new installs of the release; installed users keep it) when any of these holds for the new version. Stop it on every track that serves it, because the testing tracks hold the same version code: halt the rollout on production and open testing, and pause the internal testing track (internal testing has no halt). Then check that no track still serves the version code.
 
 | Signal | Halt when | Read from |
 | --- | --- | --- |
