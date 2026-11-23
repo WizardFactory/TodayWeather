@@ -100,8 +100,8 @@ android {
 // from Maven Central while the tests run, and a refused download fails every Robolectric class (IOException in
 // MavenArtifactFetcher). Maven Central refuses these large jars to CI runners often enough (429) that CI keeps the
 // directory in its cache, keyed by robolectric-runtimes.txt. That file lists each version with the SHA-256 of its
-// jar: a jar that is there with that hash is used as it is, any other is fetched again and must match, and a jar of
-// a version no longer listed is removed. Without a listed version the tests of its SDK level fail naming the jar.
+// jar: a jar that is there with that hash is used as it is, and any other is fetched again and must match. Without a
+// listed version the tests of its SDK level fail naming the jar.
 data class RobolectricRuntime(val version: String, val sha256: String)
 val robolectricRuntimes = file("robolectric-runtimes.txt").readLines().map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }
     .map { line -> line.split(Regex("\\s+")).let { RobolectricRuntime(it[0], it[1].lowercase()) } }
@@ -112,13 +112,6 @@ val robolectricDownloads = robolectricRuntimes.associate { runtime ->
     runtime.version to configurations.detachedConfiguration(dependencies.create("org.robolectric:android-all-instrumented:${runtime.version}"))
         .apply { isTransitive = false }.incoming.files
 }
-fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").let { digest ->
-    file.inputStream().use { input ->
-        val buffer = ByteArray(1 shl 16)
-        while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
-    }
-    digest.digest().joinToString("") { "%02x".format(it) }
-}
 val copyRobolectricRuntimes = tasks.register("copyRobolectricRuntimes") {
     description = "Puts the listed Robolectric runtimes, with their recorded hashes, in android/.gradle/robolectric-runtimes"
     val runtimes = robolectricRuntimes
@@ -126,11 +119,21 @@ val copyRobolectricRuntimes = tasks.register("copyRobolectricRuntimes") {
     val downloads = robolectricDownloads
     inputs.property("runtimes", runtimes.map { "${it.version} ${it.sha256}" })
     outputs.dir(directory)
+    // Always checks the hashes (about a second): a jar changed on disk must not pass because Gradle took the task as
+    // up to date.
+    outputs.upToDateWhen { false }
     doLast {
+        // Local to the action, so the action captures no build script object.
+        fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").let { digest ->
+            file.inputStream().use { input ->
+                val buffer = ByteArray(1 shl 16)
+                while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        }
         directory.mkdirs()
-        val wanted = runtimes.associateBy { "android-all-instrumented-${it.version}.jar" }
-        directory.listFiles().orEmpty().filter { it.isFile && it.name !in wanted }.forEach { it.delete() }
-        for ((name, runtime) in wanted) {
+        for (runtime in runtimes) {
+            val name = "android-all-instrumented-${runtime.version}.jar"
             val target = File(directory, name)
             if (target.isFile && sha256(target) == runtime.sha256) continue
             val fetched = downloads.getValue(runtime.version).singleFile

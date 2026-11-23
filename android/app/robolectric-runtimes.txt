@@ -1,5 +1,5 @@
 # The android-all-instrumented versions Robolectric 4.17 asks for, one per SDK level the tests name in @Config, each
-# with the SHA-256 of its jar (equal to Maven Central's published SHA-512 when recorded). A jar in
+# with the SHA-256 of its jar (the same jars' SHA-512 equals Maven Central's published .sha512). A jar in
 # android/.gradle/robolectric-runtimes with another hash is fetched again. CI caches that directory by the hash of
 # this file (.github/workflows/android.yml).
 14-robolectric-10818077-i7 3fdac2d463f431c6b8d83b9d0ca739e795de75fffedee648c6761bd4bd864701 # SDK 34
