@@ -46,17 +46,20 @@ export const DEEP_LINKS = [
   "/settings",
   "/help",
 ];
-/** Suffixes produced by rainSuffix in web/src/Weather.tsx for KMA data. */
+/**
+ * Suffixes of the `rain.suffix.*` messages (web/src/i18n/ko.ts) for KMA data.
+ * Observed and forecast amounts carry the hours the service covers
+ * (`{hours}시간 관측`, `{hours}시간 예보`: 1, 3, 6 or 24), matched by RAIN_HOURS.
+ */
 export const RAIN_LABELS = [
-  "1시간 관측",
-  "3시간 관측",
   "지금까지 관측",
   "관측 누적",
   "1시간 예보(근사)",
-  "3시간 예보",
-  "24시간 예보",
   "예보",
 ];
+const RAIN_HOURS = /^[1-9]\d?시간 (관측|예보)$/;
+const knownRainLabel = (label) =>
+  RAIN_LABELS.includes(label) || RAIN_HOURS.test(label);
 /** Weather request paths of the probed places (coordinates from PLACES). */
 const SEOUL_WEATHER = "/weather/v000903/coord/37.567";
 const TOKYO_WEATHER = "/weather/v000903/coord/35.69";
@@ -89,8 +92,8 @@ export function unknownRainLabels(texts) {
     const m = text.match(/^(강수량|강수 .+?)(?: · (.+))?$/);
     if (!m) return true;
     if (m[1] === "강수량")
-      return m[2] !== undefined && !RAIN_LABELS.includes(m[2]);
-    return m[2] === undefined || !RAIN_LABELS.includes(m[2]);
+      return m[2] !== undefined && !knownRainLabel(m[2]);
+    return m[2] === undefined || !knownRainLabel(m[2]);
   });
 }
 /** True when a KMA "YYYY.MM.DD.HH:MM" time was shown without parsing. */
