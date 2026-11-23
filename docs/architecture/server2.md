@@ -368,7 +368,11 @@ toward those waits. Other handlers keep their existing budgets. Every catalog st
 (lookups, publications and repairs) waits for one of its store's I/O admissions only until its
 caller's deadline; the 3 s per-operation cap then starts at admission, and each S3 HTTP request
 keeps its own 3 s limit (KMA-NATION-READS). A caller whose deadline passes while queued gets a
-timeout before any S3 work, and a publication that times out while queued wrote nothing. Before
+timeout before any S3 work, and a publication that times out while queued wrote nothing. Because
+queueing no longer shortens the cap, an operation that waited can hold its admission for up to
+3 s after admission, longer than before, and later callers can wait longer. The warnings API
+waits for another request's latest-bulletin walk only until its own deadline and then answers
+from memory younger than five minutes. Before
 this rule the cap also counted the queue: in 23 of 24 SR-6 samples a nation city read queued
 past 3 s and timed out, and the nation answer was the legacy 500 page after 3.3–4.6 s. These are
 limits, not latency measurements. See the [current implementation record](../evidence/research/kma-full-response-implementation-2026-10-25.md)
