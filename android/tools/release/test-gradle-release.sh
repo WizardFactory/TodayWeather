@@ -29,10 +29,11 @@ GRADLEW
     chmod +x "$TMP/export/android/gradlew"
 }
 # Runs the wrapper from a shell that holds leftovers of every kind; extra NAME=value arguments are added to them.
+# The Gradle user home is the test's own: a CI runner names its own, with init scripts, in GRADLE_USER_HOME.
 run() { # status in $status, output in $TMP/log
     status=0
     ( cd "$TMP"
-      env HOME="$TMP/home" ANDROID_HOME=/sdk JAVA_HOME=/jdk LANG=ko_KR.UTF-8 \
+      env -u GRADLE_USER_HOME HOME="$TMP/home" ANDROID_HOME=/sdk JAVA_HOME=/jdk LANG=ko_KR.UTF-8 \
           TW_SERVER_URL=https://leftover.invalid TW_ADMOB_APP_ID_ANDROID=leftover TW_ANDROID_KEYSTORE=/keys/release.jks \
           ORG_GRADLE_PROJECT_versionCode=1 'ORG_GRADLE_PROJECT_demo.option=1' GRADLE_OPTS=-Dleft=over \
           JAVA_TOOL_OPTIONS=-Dleft=over "JDK_JAVA_OPTIONS=-Dgradle.user.home=$TMP/other-home" UNRELATED_SETTING=leftover \

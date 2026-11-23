@@ -159,7 +159,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             ./gradlew :app:copyRobolectricRuntimes && exit 0
             echo "attempt $attempt failed"
-            sleep $((attempt * 30))
+            [ "$attempt" = 5 ] || sleep $((attempt * 30))
           done
           exit 1
       - name: Build and unit tests
@@ -200,7 +200,7 @@ jobs:
           for attempt in 1 2 3 4 5; do
             ./gradlew :app:copyRobolectricRuntimes && exit 0
             echo "attempt $attempt failed"
-            sleep $((attempt * 30))
+            [ "$attempt" = 5 ] || sleep $((attempt * 30))
           done
           exit 1
       - name: Build and unit tests

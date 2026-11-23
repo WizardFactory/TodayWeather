@@ -73,6 +73,8 @@ gh run list --workflow android-release.yml --limit 5
 gh run view <run id> --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.name): \(.conclusion)")'
 ```
 
+A device job can fail for a reason of the hosted runner: an emulator that does not finish booting, or a slow one on which a test's own time limit runs out. Run the failed jobs again once with `gh run rerun <run id> --failed`; a job that fails again is a finding to look into, not something to rerun until it passes.
+
 The run's title and its `Verified commit` job name the commit. `ref` is required and must be the full 40-character SHA of the commit that gets checked out: a run of a branch name would not say which commit it verified, so it fails. The nightly run starts at 02:30 Asia/Seoul and does nothing when no input of the Android PR workflow (the paths that start it: `android/`, the client sources it imports, the server routes it reads) and neither workflow changed since the last passed nightly run.
 
 The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, an emulator of the reference captures' type, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates).

@@ -125,11 +125,11 @@ jobs:
             avd: tw_api36_phone
             suites: device-tests parity window-fit
           # API 24: the 32-bit image. The x86_64 images (google_apis and default) stopped answering adb during
-          # boot on the hosted runner, with 4 and with 2 cores (runs of 2026-11-23).
+          # boot on the hosted runner, with 4 and with 2 cores (runs of 2026-11-23). With 2 cores the 32-bit image
+          # once ran so slowly that a test's 10 s wait ran out; it gets the 4 cores of the other jobs.
           - name: phone-api24
             api: 24
             arch: x86
-            cores: 2
             profile: pixel
             avd: tw_api24
             suites: device-tests
