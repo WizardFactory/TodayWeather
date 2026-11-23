@@ -3,7 +3,7 @@
 #   android/tools/release/require-candidate.sh <full 40-character SHA of the commit release CI verified>
 # HEAD is that commit, no tracked file differs from it (staged or not, and no file is hidden from that comparison by
 # an assume-unchanged or skip-worktree flag), no untracked file exists whatever status.showUntrackedFiles says, and
-# no ignored file sits in a source set (android/*/src), where the build would compile it. Ignored files elsewhere
+# no ignored file sits anywhere below a module's source set (android/<module>/src/), where the build would compile it. Ignored files elsewhere
 # are the private inputs and build output and do not count. Every git command must succeed.
 # Status 1: the checkout is not the candidate, or git failed; 2: usage. It changes nothing.
 set -eu
@@ -24,7 +24,10 @@ flags=$(git ls-files -v) || refuse "git ls-files failed"
 hidden=$(printf '%s\n' "$flags" | grep '^[a-zS] ' || true)
 [ -z "$hidden" ] || refuse "files are hidden from git status by an index flag:
 $hidden"
-ignored=$(git ls-files --others --ignored --exclude-standard -- 'android/*/src') || refuse "git ls-files failed"
-[ -z "$ignored" ] || refuse "ignored files in a source set would be built:
-$ignored"
+# Every ignored file under android/, then those in a module's source set: a pathspec with a wildcard would not
+# reach the files below it.
+ignored=$(git ls-files --others --ignored --exclude-standard -- android) || refuse "git ls-files failed"
+in_sources=$(printf '%s\n' "$ignored" | grep -E '^android/[^/]+/src/' || true)
+[ -z "$in_sources" ] || refuse "ignored files in a source set would be built:
+$in_sources"
 echo "the checkout is the candidate $CANDIDATE"
