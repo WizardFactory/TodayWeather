@@ -442,7 +442,7 @@ const ko = {
   "rain.suffix.observed": "관측 누적",
   "rain.suffix.observedHours": "{hours}시간 관측",
   "rain.suffix.hours": "{hours}시간",
-  "daily.title": "일별 예보",
+  "daily.title": "일별 날씨",
   "daily.legend": "최저 / 최고 기온",
   "daily.empty": "일별 예보가 없습니다",
   // Air quality details.
