@@ -564,6 +564,11 @@ def absolute_criteria(policy, families, elapsed_samples):
     ]
 
 
+# The reader ran its whole duration, or an outside deadline stopped it without a reason of its own
+# (`None`, the SR-6 timer). Every other recorded reason ends the run early.
+COMPLETE_TERMINALS = (None, 'duration-complete')
+
+
 def evaluate(policy, criteria_sha, evidence):
     report = {'schema': 1, 'criteria_reference': 'qualification_criteria.md', 'profile': policy['profile'], 'profile_provenance': 'declared_by_criteria',
               'run_id': policy['run_id'],
@@ -591,12 +596,19 @@ def evaluate(policy, criteria_sha, evidence):
         integrity.update(status='pass', reason='retained_launch_reader_ledger_and_pairs_verified')
         scope.update(status=outcomes_status(families.values()), reason='usable_pairs_against_declared_count_minima',
                      families=families, period_coverage='unassessed')
+        if terminal not in COMPLETE_TERMINALS:
+            # SR7-R1: the reader ended before its duration; the verified evidence keeps C1, but
+            # coverage and the absolute bounds describe a partial run and cannot pass. A bound
+            # already exceeded by known errors stays a failure.
+            for row in (scope, *absolute):
+                if row['status'] != 'fail':
+                    row.update(status='unassessed', reason='reader_stopped_early')
     except (EvidenceMissing, FileNotFoundError) as error:
         if isinstance(error, EvidenceMissing):
             integrity['reason'] = str(error)
     except EvidenceError as error:
         integrity.update(status='fail', reason=str(error))
-    except (ValueError, TypeError, KeyError, AttributeError, OSError, sqlite3.Error):
+    except (ValueError, TypeError, KeyError, AttributeError, OSError, RecursionError, sqlite3.Error):
         integrity.update(status='fail', reason='invalid_retained_evidence')
     comparison = ('local_peer_is_not_production' if policy['profile'] == 'local_peer' else
                   'synthetic_profile' if policy['profile'] == 'synthetic' else 'response_policy_required')

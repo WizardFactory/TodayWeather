@@ -251,6 +251,50 @@ class QualificationEvaluatorTests(unittest.TestCase):
         for key in ('C5', 'C6'):
             self.assertEqual(criteria[key]['reason'], 'evidence_required')
 
+    def set_reader_terminal(self, terminal):
+        db = sqlite3.connect(self.bundle / 'data/paired/ledger.sqlite3')
+        try:
+            with db:
+                db.execute('INSERT OR REPLACE INTO meta(key,value) VALUES (?,?)',
+                           ('terminal', json.dumps(terminal)))
+        finally:
+            db.close()
+
+    def test_reader_stop_before_the_deadline_leaves_coverage_and_bounds_unassessed(self):
+        # SR7-R1: a run the reader ended early must not show green coverage or bound rows.
+        self.configure_absolute_limits(error_bps=10000, within_bps=0)
+        for terminal in ('origin-outage', 'attempt-cap', 'clock-rollback', 'operator-error'):
+            with self.subTest(terminal=terminal):
+                self.set_reader_terminal(terminal)
+                (self.root / 'qualification.json').unlink(missing_ok=True)
+                report = self.run_evaluator()
+                criteria = {row['id']: row for row in report['criteria']}
+                self.assertEqual(report['recommendation'], 'hold')
+                self.assertEqual(report['evidence']['terminal'], terminal)
+                self.assertEqual(criteria['C1']['status'], 'pass')
+                for key in ('C2', 'C5', 'C6'):
+                    self.assertEqual((criteria[key]['status'], criteria[key]['reason']),
+                                     ('unassessed', 'reader_stopped_early'))
+
+    def test_completed_or_externally_stopped_reader_keeps_its_scores(self):
+        self.configure_absolute_limits(error_bps=10000, within_bps=0)
+        for terminal in ('duration-complete', None):
+            with self.subTest(terminal=terminal):
+                self.set_reader_terminal(terminal)
+                (self.root / 'qualification.json').unlink(missing_ok=True)
+                criteria = {row['id']: row for row in self.run_evaluator()['criteria']}
+                self.assertEqual(criteria['C2']['status'], 'pass')
+                self.assertEqual(criteria['C5']['reason'], 'absolute_admitted_attempt_error_fraction')
+
+    def test_deeply_nested_evidence_is_an_evidence_failure(self):
+        # SR7-R5: the evidence, not the policy, is reported as invalid.
+        (self.finish / 'result.json').write_text('[' * 100000 + ']' * 100000)
+        report = self.run_evaluator()
+        criteria = {row['id']: row for row in report['criteria']}
+        self.assertEqual((criteria['C1']['status'], criteria['C1']['reason']),
+                         ('fail', 'invalid_retained_evidence'))
+        self.assertEqual(report['recommendation'], 'no_go')
+
     def test_tampered_evidence_cannot_pass(self):
         (self.files / '1.body').write_bytes(b'body x')
         report = self.run_evaluator()
