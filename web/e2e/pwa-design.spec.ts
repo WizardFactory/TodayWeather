@@ -173,7 +173,13 @@ test("daily chart keeps the native cells: empty probability, two-digit day, a 10
     (await columns.nth(0).locator(".chart-probability").textContent())!.trim(),
   ).toBe("");
   await expect(columns.nth(1).locator(".chart-probability")).toHaveText("60%");
+  // No line runs through today's column until the user picks a day.
   await expect(daily.locator(".now-line")).toHaveCount(0);
+  await expect(daily.locator("svg line:not(.chart-grid)")).toHaveCount(0);
+  await daily.focus();
+  await daily.press("ArrowRight");
+  await expect(daily).toHaveAttribute("data-cursor", "1");
+  await expect(daily.locator(".cursor-line")).toHaveCount(1);
   const sizes = await daily.evaluate((el) => ({
     bar: Number(el.querySelector("rect.range")!.getAttribute("width")),
     dot: Number(el.querySelector("circle.now")!.getAttribute("r")),

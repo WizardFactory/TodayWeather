@@ -643,7 +643,16 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
         (height - rem * 3.5);
   // A 10 px bar; the current-temperature dot is sized to it (14 px across).
   const barWidth = rem * 0.625;
-  const { cursor, setCursor, keyDown } = useCursor(n, x, ref, model.todayIndex),
+  // A very narrow range keeps a visible bar, centred on the real range.
+  const barHeight = (high: number, low: number) =>
+    Math.max(rem * 0.375, y(low) - y(high));
+  const barTop = (high: number, low: number) =>
+    y(high) - (barHeight(high, low) - (y(low) - y(high))) / 2;
+  const {
+      cursor,
+      setCursor: moveCursor,
+      keyDown: cursorKeyDown,
+    } = useCursor(n, x, ref, model.todayIndex),
     id = useId(),
     readoutId = useId();
   const identity = `${w.location.id}|${lang}|${w.units.temperatureUnit}|${w.units.precipitationUnit}`;
@@ -703,6 +712,18 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       at: model.rows[idx].point.at,
       offset: idx * cell - el.scrollLeft,
     };
+  };
+  // The cursor starts on today; its line shows only once the user picks a
+  // day, so no line runs through today's column on first view (native).
+  const [picked, setPicked] = useState(false);
+  const setCursor = (i: number) => {
+    setPicked(true);
+    moveCursor(i);
+  };
+  const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (["Home", "End", "ArrowLeft", "ArrowRight"].includes(event.key))
+      setPicked(true);
+    cursorKeyDown(event);
   };
   if (!n)
     return (
@@ -830,13 +851,15 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                 />
               );
             })}
-            <line
-              className="cursor-line"
-              x1={x(cursor)}
-              x2={x(cursor)}
-              y1={0}
-              y2={height}
-            />
+            {picked && (
+              <line
+                className="cursor-line"
+                x1={x(cursor)}
+                x2={x(cursor)}
+                y1={0}
+                y2={height}
+              />
+            )}
             {model.rows.map((r, i) => (
               <g
                 key={r.point.at}
@@ -858,12 +881,9 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
                   <rect
                     className="range"
                     x={x(i) - barWidth / 2}
-                    y={y(r.point.high!)}
+                    y={barTop(r.point.high!, r.point.low!)}
                     width={barWidth}
-                    height={Math.max(
-                      barWidth,
-                      y(r.point.low!) - y(r.point.high!),
-                    )}
+                    height={barHeight(r.point.high!, r.point.low!)}
                     rx={barWidth / 2}
                     fill={`url(#${id})`}
                   />

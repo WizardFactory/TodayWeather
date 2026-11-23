@@ -366,7 +366,7 @@ Both charts keep the Cordova information model and reading order. The design sys
      - The same gradient is used in dark mode, where it reaches 7.62–9.68 on surface and raised.
      - In light mode the stops are 1.70 and 1.59 on white. The printed min/max values carry the information, and a 1 px solid outline `chart.range.edge` (`#637088` light / `#94a3b8` dark) keeps the bar shape visible.
    - **Values.** The maximum sits above the bar and the minimum below it, each as `N°` in `chart-value`.
-   - **Current temperature.** A `chart.now` dot on today's bar, 1.4 times the bar width across (14 px), with no vertical line through the column.
+   - **Current temperature.** A `chart.now` dot on today's bar, 1.4 times the bar width across (14 px), with no vertical line through the column: the cursor line appears only after the user picks a day (keyboard, click or hover). A range narrower than 0.375rem keeps that minimum bar height, centred on the real range.
    - **Past days** (new addition; Cordova does not distinguish them). Bars keep the D8 gradient at 55% opacity, and labels use `text.secondary`, which is the non-color cue.
    - **Y domain** (deviation from Cordova, which uses only `tmn`/`tmx`, `app.js:1197-1204`). The domain includes the current temperature, so today's dot can never fall off the scale.
 
