@@ -3,6 +3,7 @@
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/3139",
   "scope": "Shard Rust and shadow-simulation tests across parallel jobs, cache Cargo builds, and build the verified musl artifact only on master pushes and manual runs.",
   "server2_paths": [
+    "server2/.config/nextest.toml",
     "server2/config/tasks/CiMinutes3139.json",
     "server2/tools/check_placement.py",
     "server2/tools/ci.py",
@@ -11,9 +12,25 @@
     "server2/tools/test_placement.py"
   ],
   "outside": [
-    {"path": ".github/workflows/server2.yml", "category": "ci-wiring", "reason": "Run the sharded jobs and gate artifact publication by event"},
-    {"path": "plans/issue-3139.md", "category": "documentation", "reason": "Record measurements, decisions and adoption criteria"},
-    {"path": "docs/operations/server2-feasibility.md", "category": "documentation", "reason": "Point artifact consumers at master or manual runs"},
-    {"path": "docs/operations/server2-native-verification.md", "category": "documentation", "reason": "Point artifact consumers at master or manual runs"}
+    {
+      "path": ".github/workflows/server2.yml",
+      "category": "ci-wiring",
+      "reason": "Run the sharded jobs and gate artifact publication by event"
+    },
+    {
+      "path": "plans/issue-3139.md",
+      "category": "documentation",
+      "reason": "Record measurements, decisions and adoption criteria"
+    },
+    {
+      "path": "docs/operations/server2-feasibility.md",
+      "category": "documentation",
+      "reason": "Point artifact consumers at master or manual runs"
+    },
+    {
+      "path": "docs/operations/server2-native-verification.md",
+      "category": "documentation",
+      "reason": "Point artifact consumers at master or manual runs"
+    }
   ]
 }

@@ -329,11 +329,15 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
 
     def test_parallel_ci_requires_every_job_and_a_failure_gate(self):
         body = placement.PARALLEL_WORKFLOW_PREFIX + placement.GOLDEN_JOB
-        self.assertIn('needs: [placement, python, shadow, rust, gnu, musl]', body)
+        self.assertIn('needs: [placement, python, shadow, rust, gnu, musl, goldens]', body)
         self.assertEqual([], placement.audit_workflow(body))
         for bad in (
-            body.replace('needs: [placement, python, shadow, rust, gnu, musl]',
-                         'needs: [placement, python, rust, gnu, musl]'),
+            body.replace('needs: [placement, python, shadow, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, rust, gnu, musl, goldens]'),
+            body.replace('needs: [placement, python, shadow, rust, gnu, musl, goldens]',
+                         'needs: [placement, python, shadow, rust, gnu, musl]'),
+            body.replace(" ||\n              (github.event_name != 'pull_request' && needs.goldens.result != 'success')", ''),
+            body.replace('          SERVER2_DECLARATION: ${{ inputs.declaration }}\n', ''),
             body.replace('if: ${{ always() }}', 'if: ${{ success() }}'),
             body.replace('needs.shadow.result', 'needs.placement.result'),
             body.replace("needs.musl.result != 'skipped'", "needs.musl.result == 'failure'"),
@@ -344,6 +348,7 @@ fn main(){println!("{}",identity(include_str!("../config/owned.txt")));}'''
             body.replace('tools/ci.sh promote', 'tools/ci.sh musl'),
             body.replace("save-if: ${{ github.ref == 'refs/heads/master' }}", 'save-if: true', 1),
             body.replace('cargo-nextest@0.9.152', 'cargo-nextest'),
+            body.replace('rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0', 'rust-cache@v2', 1),
             body.replace('name: server2-linux-musl-candidate\n          path', 'name: server2-linux-musl-verified\n          path', 1),
             body.replace('retention-days: 1', 'retention-days: 7'),
             body.replace('retention-days: 7', 'retention-days: 90'),

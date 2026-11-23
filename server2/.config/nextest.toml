@@ -1,0 +1,17 @@
+# Hosted CI runs the workspace tests with cargo-nextest, which starts every test in its own
+# process. Tests that `cargo test` kept apart with an in-process lock keep that limit here
+# (#3139); tools/test_ci.py checks that every user of those locks is covered.
+
+[test-groups]
+# tests/domestic/source_s3.rs S3_PEERS: one loopback S3 test peer set at a time.
+s3-peers = { max-threads = 1 }
+# tests/integration/main.rs SERIAL.
+integration-serial = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'binary(domestic) & test(/^(full_response|late_publication|nowcast_fill|observe|observe_product|quota|shown_publication|source_s3|source_s3_oracle|summary_s3|towns)::/)'
+test-group = 's3-peers'
+
+[[profile.default.overrides]]
+filter = 'binary(integration)'
+test-group = 'integration-serial'

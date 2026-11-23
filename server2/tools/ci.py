@@ -31,8 +31,11 @@ def pull_request_base(event):
 def placement_command(event):
     if 'pull_request' in event:
         base=pull_request_base(event)
-    elif event.get('before') and set(event['before']) != {'0'}:
-        base=event['before']
+    elif 'before' in event and 'after' in event:
+        # A push is checked as the change its head commit brings. Master moves by merge
+        # commits whose pull request already passed placement, and one push can carry
+        # several of them, each with its own declaration (#3139).
+        base=output('git','rev-parse','HEAD^1')
     elif os.environ.get('SERVER2_BASE'):
         base=os.environ['SERVER2_BASE']
     else:

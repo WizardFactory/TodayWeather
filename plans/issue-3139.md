@@ -30,7 +30,11 @@ Locally, `test_shadow_simulation.py` took 510 s, and seven of its 18 tests took 
 | `rust` × 3 | all | `cargo nextest run --partition count:k/3`, plus `cargo test --doc`, `test_placement.py` and `test_ci.py` in shard 1. |
 | `gnu` | all | Unchanged commands, with the release Cargo cache. |
 | `musl` | push, manual | Unchanged musl commands and the candidate upload from #3129. |
-| `foundation` | all | Fails unless every required job succeeded. On pull requests it also requires `musl` to be skipped. On a push or manual run it requires `musl` to succeed, then promotes and publishes the verified artifact. |
+| `foundation` | all | Fails unless every required job succeeded. On pull requests it also requires `musl` to be skipped. On a push or manual run it also requires `musl` and `goldens` to succeed, then promotes and publishes the verified artifact. |
+
+Placement on a push checks the change that the head commit brings, against its first parent. Master moves by merge commits whose pull requests already passed placement, and one push can carry several of them. A manual run accepts `base` and `declaration` inputs, so a run on `master` can name the task it checks.
+
+nextest runs each test in its own process. Tests that `cargo test` kept apart with an in-process lock therefore get a nextest test group with one thread: the domestic modules that take `S3_PEERS` and the `integration` binary that takes `SERIAL` (`server2/.config/nextest.toml`). `tools/test_ci.py` fails if a module that takes `S3_PEERS` is missing from that group.
 
 The local default `tools/ci.sh` keeps the serial inventory, including `cargo test --workspace` and the whole simulation file. `tools/test_ci.py` proves that the hosted stages run every serial command exactly once, except those two. The nextest partitions replace the workspace test run, and the simulation shards cover every simulation test exactly once. nextest runs every test in its own process. It lists the same 1,428 tests that `cargo test` runs, and doc tests run separately.
 
