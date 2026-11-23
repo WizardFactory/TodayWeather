@@ -1,13 +1,9 @@
 {
   "task": "ShadowWeekPrep3005",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/3005",
-  "scope": "Record the November 23 cloud canary and its findings, raise the paired reader's production read cap to 6,700 per origin (owner decision 2026-11-23) and document the failed-start procedure. No cloud launch, deployment or production mutation.",
+  "scope": "Record the November 23 cloud canary and its findings and document the key-list format and the failed-start procedure. No code change, cloud launch, deployment or production mutation.",
   "server2_paths": [
     "server2/config/tasks/ShadowWeekPrep3005.json",
-    "server2/deploy/shadow/coordinator.py",
-    "server2/tests/integration/test_paired_read.py",
-    "server2/tests/integration/test_shadow_supervisor.py",
-    "server2/tools/shadow/paired_read.py",
     "server2/tools/shadow/qualification_criteria.md"
   ],
   "outside": [
