@@ -112,12 +112,28 @@ jobs:
             api: 36
             profile: pixel_8
             avd: tw_api36_phone
-            suites: device-tests chart parity window-fit
+            suites: device-tests parity window-fit
           - name: phone-api24
             api: 24
             profile: pixel
             avd: tw_api24
             suites: device-tests
+            cores: 2
+          # Trial entries: which API 24 image boots on the hosted runner (the first run hung at boot with 4 cores).
+          - name: phone-api24-default
+            api: 24
+            target: default
+            profile: pixel
+            avd: tw_api24
+            suites: device-tests
+            cores: 2
+          - name: phone-api24-x86
+            api: 24
+            arch: x86
+            profile: pixel
+            avd: tw_api24
+            suites: device-tests
+            cores: 2
           - name: tablet-api36
             api: 36
             profile: pixel_tablet
@@ -146,16 +162,18 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Device suites
+        # A guest that stops answering adb would otherwise hold the job until its own limit.
+        timeout-minutes: 45
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
           ANDROID_SERIAL: emulator-5554
         with:
           api-level: ${{ matrix.api }}
-          target: google_apis
-          arch: x86_64
+          target: ${{ matrix.target || 'google_apis' }}
+          arch: ${{ matrix.arch || 'x86_64' }}
           profile: ${{ matrix.profile }}
           avd-name: ${{ matrix.avd }}
-          cores: 4
+          cores: ${{ matrix.cores || 4 }}
           ram-size: 4096M
           disk-size: 6G
           disable-animations: false
@@ -170,11 +188,15 @@ jobs:
             cat "$RUNNER_TEMP/device-suites/summary.txt" 2>/dev/null || echo "no suite ran"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Pack the evidence
+        if: always()
+        # One archive: the runners name directories with characters an artifact path may not contain.
+        run: tar -czf "$RUNNER_TEMP/device-suites-${{ matrix.name }}.tar.gz" -C "$RUNNER_TEMP" device-suites
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-release-devices-${{ matrix.name }}
-          path: ${{ runner.temp }}/device-suites
+          path: ${{ runner.temp }}/device-suites-${{ matrix.name }}.tar.gz
           retention-days: 14
 
   verified:

@@ -50,7 +50,7 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 | --- | --- |
 | PR checks on the commit | Both jobs of the PR workflow, on the verified commit |
 | Release lint | `./gradlew lintRelease` for every module |
-| Device suites, phone API 36 | `device-tests`, `chart`, `parity`, `window-fit` |
+| Device suites, phone API 36 | `device-tests`, `parity`, `window-fit` |
 | Device suites, phone API 24 | `device-tests` |
 | Device suites, tablet API 36 | `shell-fit`, `window-fit` |
 | Device suites, foldable API 36 | `shell-fit`, `window-fit` with the fold steps |
@@ -59,7 +59,6 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 | Suite | Runner under `android/tools/` | Tests |
 | --- | --- | --- |
 | `device-tests` | `release-ci/run-device-tests.sh` | `CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held. A skipped test fails the suite |
-| `chart` | `chart-reference/device-smoke.sh` | `ChartDeviceTest` at three sizes against the Cordova captures |
 | `parity` | `parity-reference/run-native-smoke.sh` | `ParityDeviceTest` in Korean and English |
 | `shell-fit` | `large-screen/run-shell-fit.sh` | `ShellFitDeviceTest` with gesture and three-button navigation, on the tablet and the foldable |
 | `window-fit` | `large-screen/run-window-fit.sh` | `WindowFitDeviceTest`: split screen, rotation, fold, font scale 1.0 and 1.3 |

@@ -24,8 +24,8 @@ Alternative evidence for the workflow, the shell runners and the documents (no p
 
 The device classes were sorted by what they need (source reading, then local runs on 2026-11-23):
 
-- In release CI: `CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` (migration held), `ChartDeviceTest`, `ParityDeviceTest`, `WindowFitDeviceTest`, `ShellFitDeviceTest` (tablet and foldable).
-- Manual gates of the runbook, with the reason: Cordova APK (`CordovaUpgradeTest`, `PushTokenWorkTest`, `HandBackDeviceTest`, the Cordova half of `BackupRestoreTest`, the notification check); Firebase configuration (`AdsDeviceTest`); production server and keys (`Production*Test`, the manual captures); a Play Store image (`SettingsHandoffTest` with `store`); a phone and the signed APK (the device gate).
+- In release CI: `CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` (migration held), `ParityDeviceTest`, `WindowFitDeviceTest`, `ShellFitDeviceTest` (tablet and foldable).
+- Manual gates of the runbook, with the reason: Cordova APK (`CordovaUpgradeTest`, `PushTokenWorkTest`, `HandBackDeviceTest`, the Cordova half of `BackupRestoreTest`, the notification check); Firebase configuration (`AdsDeviceTest`); production server and keys (`Production*Test`, the manual captures); a Play Store image (`SettingsHandoffTest` with `store`); an emulator of the reference captures' type (`ChartDeviceTest`: on the hosted x86_64 emulator the chart heights differed by 9 px, first hosted run of 2026-11-23); a phone and the signed APK (the device gate).
 
 ## Risks, rollback
 

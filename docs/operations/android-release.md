@@ -54,6 +54,7 @@ Release CI has no secret, no Cordova build, no Play Store image and no phone. Th
 | Weather, air and nationwide pages from production | `emulator/run-production-weather.sh [out]` | `TW_SERVER_URL`; network | API 36 and API 24 |
 | New install: position or search reaches the weather | `emulator/run-production-start.sh [out]` | `TW_SERVER_URL`; Google Play services; network | API 36 |
 | Places from production: add, swipe, delete | `emulator/run-production-places.sh [out]` | `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`; network | API 36 |
+| Charts against the Cordova captures of the same emulator type | `chart-reference/device-smoke.sh [out]` | An emulator of the type the references were captured on (arm64 Google APIs image): on the hosted x86_64 emulator the chart heights differed by 9 px and the comparison failed (2026-11-23) | API 36 |
 | Menu hand-offs to the browser, the mail app and the store | `emulator/run-settings-handoffs.sh [out] store` | `TW_MAIL_TO`; an image with the Play Store for `store` | API 34 Play image; without `store` on API 36 |
 
 Keep each gate's output directory under ignored `reports/`; it can show private configuration. The release notes name the evidence by a private reference, never by its contents.

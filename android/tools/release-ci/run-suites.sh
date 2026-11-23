@@ -2,8 +2,8 @@
 # Runs the named device suites of release CI on one emulator and reports every result
 # (docs/development/ci-tiers.md, .github/workflows/android-release.yml):
 #   ANDROID_SERIAL=emulator-5554 android/tools/release-ci/run-suites.sh <out-dir> <suite> [<suite> ...]
-# Suites: device-tests (run-device-tests.sh), chart, parity, shell-fit, window-fit (the existing runners named
-# below; shell-fit is for a tablet or a foldable). A failed suite does not stop the next one, so one run shows
+# Suites: device-tests (run-device-tests.sh), parity, shell-fit, window-fit (the existing runners named below;
+# shell-fit is for a tablet or a foldable). A failed suite does not stop the next one, so one run shows
 # every failure; the status is 1 when any suite failed and 2 for an unknown suite. Each runner refuses anything
 # but an emulator, keeps it offline while the app is installed and removes the app. Requires ./gradlew
 # assembleDebug assembleDebugAndroidTest.
@@ -14,7 +14,7 @@ OUT=${1:?pass an evidence directory}
 shift
 [ $# -gt 0 ] || { echo "name at least one suite" >&2; exit 2; }
 for suite in "$@"; do
-    case "$suite" in device-tests|chart|parity|shell-fit|window-fit) ;; *) echo "unknown suite $suite" >&2; exit 2 ;; esac
+    case "$suite" in device-tests|parity|shell-fit|window-fit) ;; *) echo "unknown suite $suite" >&2; exit 2 ;; esac
 done
 mkdir -p "$OUT"
 : > "$OUT/summary.txt"
@@ -22,7 +22,6 @@ failed=0
 for suite in "$@"; do
     case "$suite" in
         device-tests) runner=$HERE/run-device-tests.sh ;;
-        chart) runner=$TOOLS/chart-reference/device-smoke.sh ;;
         parity) runner=$TOOLS/parity-reference/run-native-smoke.sh ;;
         shell-fit) runner=$TOOLS/large-screen/run-shell-fit.sh ;;
         window-fit) runner=$TOOLS/large-screen/run-window-fit.sh ;;
