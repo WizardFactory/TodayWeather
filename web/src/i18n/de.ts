@@ -511,6 +511,7 @@ const de: Catalog = {
   "chart.label":
     "Temperaturverlauf nach Stunden; Werte in der Tabelle darunter",
   "chart.empty": "Keine stündliche Vorhersage",
+  "chart.hour": "{hour}Uhr",
   "chart.table": "Stündliche Werte anzeigen",
   "chart.col.time": "Uhrzeit",
   "chart.col.temperature": "Temperatur (°{unit})",

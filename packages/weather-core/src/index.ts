@@ -132,6 +132,18 @@ export type Weather = {
   current: Point;
   yesterday: Point | null;
   hourly: Point[];
+  /**
+   * The three-hour forecast series the native apps chart (KMA `short`,
+   * overseas `hourly`), without the merged one-hour `shortest` rows. Absent
+   * in snapshots saved before it existed; the chart then uses `hourly`.
+   */
+  chartHourly?: Point[];
+  /**
+   * KMA `current.liveTime` as a wall time: when the observation was made. The
+   * hourly chart puts the current temperature on a column only when this
+   * equals the column time (native `sharp` rule).
+   */
+  liveAt?: string;
   hourlyDetails?: HourlyDetails[];
   daily: Point[];
   air: AirStation[];
@@ -736,19 +748,22 @@ export function normalizeWeather(
   // Overseas hourly rows sum three provider hours (server _makeHourlyDataFromDSF).
   // The observed three-hour slot that ends after the current observation is
   // still accumulating (D45): label it partial, not a complete 3-hour total.
+  const accumulating = (p: Point): Point =>
+    p.precipitationBasis === "observed" &&
+    p.precipitationHours === 3 &&
+    p.at > current.at
+      ? {
+          ...p,
+          precipitationBasis: "partial" as const,
+          precipitationHours: null,
+        }
+      : p;
   const hourly = kma
-      ? kmaForecast(raw.short, raw.shortest, source, target).map((p) =>
-          p.precipitationBasis === "observed" &&
-          p.precipitationHours === 3 &&
-          p.at > current.at
-            ? {
-                ...p,
-                precipitationBasis: "partial" as const,
-                precipitationHours: null,
-              }
-            : p,
-        )
+      ? kmaForecast(raw.short, raw.shortest, source, target).map(accumulating)
       : points(raw.hourly, 3),
+    chartHourly = kma
+      ? kmaForecast(raw.short, [], source, target).map(accumulating)
+      : hourly,
     daily = points(kma ? record(raw.midData).dailyData : raw.daily, 24);
   // Keep station emptiness authoritative; never carry an old station into a new result.
   const airRaw = Array.isArray(raw.airInfoList)
@@ -792,6 +807,19 @@ export function normalizeWeather(
     current,
     yesterday,
     hourly,
+    chartHourly,
+    ...(kma && /^\d{4}$/.test(str(currentRaw.liveTime))
+      ? (() => {
+          const live = str(currentRaw.liveTime);
+          // The server writes 00h as the previous day's 24h; its liveTime
+          // minutes then belong to the hour of current.at.
+          const liveAt =
+            live.slice(0, 2) === current.at.slice(11, 13)
+              ? `${current.at.slice(0, 11)}${live.slice(0, 2)}:${live.slice(2)}`
+              : rowTime({ date: currentRaw.date, time: live });
+          return liveAt && /:[0-5]\d$/.test(liveAt) ? { liveAt } : {};
+        })()
+      : {}),
     ...(!kma && Array.isArray(raw.hourlyDetails)
       ? { hourlyDetails: raw.hourlyDetails.flatMap(hourlyDetail) }
       : {}),
@@ -1012,7 +1040,6 @@ export function formatValue(v: number | null | undefined, digits = 0): string {
 
 export {
   hourlyChart,
-  hourlyXPositions,
   dailyChart,
   wallTime,
   linePath,

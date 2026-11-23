@@ -18,6 +18,21 @@ export function amount(value: number | null, unit: string) {
     : formatValue(value, digits);
 }
 /**
+ * Native chart precipitation cell: the first positive amount (rain, then
+ * snow); 10 mm or more is whole, smaller values keep the unit's digits.
+ * Null when there is nothing to show.
+ */
+export function chartAmountText(point: Point, unit: string): string | null {
+  const value =
+    point.precipitation !== null && point.precipitation > 0
+      ? point.precipitation
+      : point.snowfall !== null && point.snowfall > 0
+        ? point.snowfall
+        : null;
+  if (value === null) return null;
+  return unit !== "in" && value >= 10 ? formatValue(value, 0) : amount(value, unit);
+}
+/**
  * KMA shortest rn1 is a 1-hour category representative after #2597. The
  * current deployment still sends lower bounds until #2597 is deployed.
  * Both use approximate labels and ranges for the 30~50 / 50+ categories.
