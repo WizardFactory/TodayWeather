@@ -99,7 +99,7 @@ try {
       sha256: createHash("sha256")
         .update(readFileSync(`${out}/${file}`))
         .digest("hex"),
-      date: "2026-10-03",
+      date: "2026-11-22",
       browser: browser.version(),
       fixture: "scripts/verification/precipitation-manual-capture.mjs",
       scenario: view === "hourly" ? "2598-S1/S3" : "2598-S2",

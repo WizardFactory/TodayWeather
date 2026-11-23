@@ -1,0 +1,16 @@
+{
+  "task": "NextestArchive3139",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3139",
+  "scope": "Build the Rust tests once into a nextest archive and run six partitions from it without recompiling.",
+  "server2_paths": [
+    "server2/config/tasks/NextestArchive3139.json",
+    "server2/tools/check_placement.py",
+    "server2/tools/ci.py",
+    "server2/tools/test_ci.py",
+    "server2/tools/test_placement.py"
+  ],
+  "outside": [
+    {"path": ".github/workflows/server2.yml", "category": "ci-wiring", "reason": "Add the archive build job and run six shards from its artifact"},
+    {"path": "plans/issue-3139.md", "category": "documentation", "reason": "Record the merged first step and this follow-up"}
+  ]
+}

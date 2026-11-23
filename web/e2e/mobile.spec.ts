@@ -14,7 +14,7 @@ const overlaps = (a: Box, b: Box, gap = 4) =>
 const pairs = (boxes: Box[]) =>
   boxes.flatMap((a, i) => boxes.slice(i + 1).filter((b) => overlaps(a, b)));
 
-test("hourly chart labels stay apart when 1-hour and 3-hour rows mix", async ({
+test("hourly chart shows the native three-hour columns, seven to a phone screen, with labels apart", async ({
   page,
 }) => {
   const raw: any = structuredClone(fixture.response);
@@ -47,8 +47,19 @@ test("hourly chart labels stay apart when 1-hour and 3-hour rows mix", async ({
     .evaluateAll((els) =>
       els.map((e) => (e as SVGGraphicsElement).getBoundingClientRect()),
     );
-  expect(labels.length).toBe(16);
+  // The 1-hour rows stay out of the chart, as in the native apps.
+  expect(labels.length).toBe(12);
   expect(pairs(labels)).toEqual([]);
+  const visible = await page.locator(".hourly-chart").evaluate((el) => {
+    const sb = el.getBoundingClientRect();
+    return [...el.querySelectorAll(".hourly-columns .chart-column")].filter(
+      (c) => {
+        const r = c.getBoundingClientRect();
+        return r.left >= sb.left - 1 && r.right <= sb.right + 1;
+      },
+    ).length;
+  });
+  expect(visible).toBe(7);
 });
 
 test("form fields use 16px text on phones so iOS does not zoom on focus", async ({

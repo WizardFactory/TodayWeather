@@ -60,7 +60,11 @@ pub struct WarningService<T> {
     store: Arc<WarningStore<T>>,
     clock: Arc<dyn Clock>,
     config: ServiceConfig,
-    latest: Mutex<HashMap<u8, Cached<Option<Bulletin>>>>,
+    /// Latest bulletins by kind; held only to copy or replace an entry, never across a read.
+    latest: std::sync::Mutex<HashMap<u8, Cached<Option<Bulletin>>>>,
+    /// One latest-bulletin walk at a time. `latest` takes it once per type, so a request waits
+    /// for it only until its own deadline (KMA-NATION-READS review NR-1).
+    latest_refresh: Mutex<()>,
     zones: ZoneSlot,
     zone_refresh: Arc<Mutex<()>>,
     zone_owner: Arc<crate::observability::SharedOwner>,
@@ -87,7 +91,8 @@ impl<T: CatalogTransport> WarningService<T> {
             store,
             clock,
             config,
-            latest: Mutex::new(HashMap::new()),
+            latest: std::sync::Mutex::new(HashMap::new()),
+            latest_refresh: Mutex::new(()),
             zones: Arc::new(std::sync::Mutex::new(None)),
             zone_refresh: Arc::new(Mutex::new(())),
             zone_owner: Arc::new(crate::observability::SharedOwner::default()),
@@ -101,8 +106,14 @@ impl<T: CatalogTransport> WarningService<T> {
     }
     /// Drop memory results (tests and replacement simulation).
     pub async fn clear_memory(&self) {
-        self.latest.lock().await.clear();
+        self.latest_memory().clear();
         *self.zones.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+    fn latest_memory(&self) -> std::sync::MutexGuard<'_, HashMap<u8, Cached<Option<Bulletin>>>> {
+        self.latest.lock().unwrap_or_else(|e| e.into_inner())
+    }
+    fn latest_cached(&self, kind: u8) -> Option<Cached<Option<Bulletin>>> {
+        self.latest_memory().get(&kind).cloned()
     }
     async fn latest_of(
         &self,
@@ -110,11 +121,20 @@ impl<T: CatalogTransport> WarningService<T> {
         now_ms: i64,
         deadline: Instant,
     ) -> Result<Option<Bulletin>, ServeError> {
-        let mut memory = self.latest.lock().await;
-        let cached = memory.get(&kind).cloned();
-        if let Some(c) = &cached
-            && c.at.elapsed() < self.config.refresh
-        {
+        let fresh = |c: &Cached<Option<Bulletin>>| c.at.elapsed() < self.config.refresh;
+        if let Some(c) = self.latest_cached(kind).filter(fresh) {
+            return Ok(c.value);
+        }
+        // Another request's walk may hold the refresh: wait for it only until this request's
+        // deadline, then answer as a failed walk would (memory younger than `stale`).
+        let Ok(_walk) = tokio::time::timeout_at(deadline, self.latest_refresh.lock()).await else {
+            return match self.latest_cached(kind) {
+                Some(c) if c.at.elapsed() < self.config.stale => Ok(c.value),
+                _ => Err(ServeError::Storage(Error::Timeout)),
+            };
+        };
+        let cached = self.latest_cached(kind);
+        if let Some(c) = cached.as_ref().filter(|c| fresh(c)) {
             return Ok(c.value.clone());
         }
         // A refresh only walks partitions at or above the cached one.
@@ -132,7 +152,7 @@ impl<T: CatalogTransport> WarningService<T> {
                         .and_then(|c| c.value.clone())
                         .filter(|_| kind != 4)
                 });
-                memory.insert(
+                self.latest_memory().insert(
                     kind,
                     Cached {
                         value: value.clone(),

@@ -36,9 +36,11 @@ test("KMA mixed intervals and unverified air summary survive static offline relo
   await expect(page.locator(".temperature")).toBeVisible();
   await page.locator('[data-weather-section="hourly"] details summary').click();
   const rows = page.locator('[data-weather-section="hourly"] .data-table tbody tr');
-  await expect(rows).toHaveCount(5);
-  await expect(rows.nth(1)).toContainText("01");
-  await expect(rows.nth(1).locator("td").nth(0)).toHaveText("11°");
+  // The chart and its table keep the native three-hour rows; the one-hour
+  // rows remain in the rain and snow card below.
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(1)).toContainText("3:00");
+  await expect(rows.nth(1).locator("td").nth(0)).toHaveText("14°");
   const rain = page.locator("section.panel").filter({
     has: page.getByRole("heading", { name: "강수·눈 예보", exact: true }),
   });

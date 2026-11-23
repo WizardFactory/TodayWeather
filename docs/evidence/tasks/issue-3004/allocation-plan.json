@@ -1,0 +1,59 @@
+{
+  "allowance": {
+    "put_bytes": 293838552,
+    "reads": 1738352,
+    "writes": 332388
+  },
+  "cost_policy": {
+    "ceiling_usd": "300",
+    "finish_reserve_usd": "14",
+    "observed_at": 1795140725,
+    "prices_sha256": "0af277774c301368e9d063f256830cc7bed31934ced410a4584f63a080781f5f",
+    "prior_spend_usd": "82.48",
+    "rates": {
+      "cpu_vcpu_hour": "0.05",
+      "ec2_hour": "0.026",
+      "gp3_gb_month": "0.0912",
+      "ipv4_hour": "0.005",
+      "outbound_gb": "0.126",
+      "s3_gb_month": "0.025",
+      "s3_read": "0.00000035",
+      "s3_write": "0.0000045"
+    },
+    "schema": 2
+  },
+  "measurement_sha256": "8bb3c01149a56eefebbf3c4e21588f823473e9848620345afcaabebe89f49cd2",
+  "paid_policy": {
+    "grants": {
+      "initial": {
+        "google_air": 0,
+        "google_geocode": 0,
+        "openweather": 0,
+        "visual_crossing": 0
+      },
+      "restart-1": {
+        "google_air": 0,
+        "google_geocode": 0,
+        "openweather": 0,
+        "visual_crossing": 0
+      },
+      "restart-2": {
+        "google_air": 0,
+        "google_geocode": 0,
+        "openweather": 0,
+        "visual_crossing": 0
+      }
+    },
+    "observed_at": 1795140726,
+    "prices_sha256": "f275b86a775aeba2e2897291964e0944abd6566ccd5b3f6e0549b46056231fad",
+    "schema": 1,
+    "usd_per_unit": {
+      "google_air": "0.005",
+      "google_geocode": "0.005",
+      "openweather": null,
+      "visual_crossing": "0.0001"
+    }
+  },
+  "planned_epoch": 1795337232,
+  "schema": 1
+}

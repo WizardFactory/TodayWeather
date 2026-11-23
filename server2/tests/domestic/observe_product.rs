@@ -832,8 +832,10 @@ async fn a_failed_full_read_keeps_answers_unsettled_until_it_is_tried_again() {
     const FAILING: &str = "raw/v2/kma-web/aws-hourly/2026/09/17";
     c_counted.fail_gets(Some(FAILING));
     let attempts = || c_counted.get(&format!("GET {FAILING}"));
-    // A first attempt can end before its raw GET; the retry comes after EXPAND_RETRY (60 s).
-    until_within(&c, Duration::from_secs(90), || attempts() > 0).await;
+    // A first attempt can end before its raw GET; the retry comes after EXPAND_RETRY (60 s) and
+    // its restore runs within READ_DEADLINE (30 s). Allow both, plus setup, under a loaded host:
+    // 90 s failed intermittently under the full suite and hosted CI.
+    until_within(&c, Duration::from_secs(150), || attempts() > 0).await;
     for _ in 0..20 {
         let folded = answer(&c).await;
         assert!(

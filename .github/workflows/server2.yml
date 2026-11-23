@@ -4,10 +4,117 @@ on:
     paths:
       - "server2/**"
       - ".github/workflows/server2.yml"
+  push:
+    branches: [master]
+    paths:
+      - "server2/**"
+      - ".github/workflows/server2.yml"
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Placement base revision (defaults to the merge base with master)"
+        required: false
+        default: ""
+      declaration:
+        description: "Task declaration under server2/ when the range changes none"
+        required: false
+        default: ""
 permissions:
   contents: read
 jobs:
-  foundation:
+  placement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh placement
+        env:
+          SERVER2_BASE: ${{ inputs.base }}
+          SERVER2_DECLARATION: ${{ inputs.declaration }}
+  python:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh python
+  shadow:
+    needs: placement
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: bash tools/ci.sh shadow-${{ matrix.shard }}
+  rust-build:
+    needs: placement
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: server2
+          shared-key: test-archive
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
+        with:
+          tool: cargo-nextest@0.9.152
+      - run: bash tools/ci.sh rust-build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server2-nextest-archive
+          path: reports/nextest/
+          if-no-files-found: error
+          retention-days: 1
+  rust:
+    needs: rust-build
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
+        with:
+          tool: cargo-nextest@0.9.152
+      - uses: actions/download-artifact@v4
+        with:
+          name: server2-nextest-archive
+          path: reports/nextest/
+      - run: bash tools/ci.sh rust-${{ matrix.shard }}
+  gnu:
+    needs: placement
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     defaults:
@@ -17,8 +124,71 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: bash tools/ci.sh
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: server2
+          key: release
+          save-if: ${{ github.ref == 'refs/heads/master' }}
+      - run: bash tools/ci.sh gnu
+  musl:
+    needs: placement
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    outputs:
+      digest: ${{ steps.musl.outputs.digest }}
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: musl
+        run: bash tools/ci.sh musl
       - uses: actions/upload-artifact@v4
+        with:
+          name: server2-linux-musl-candidate
+          path: reports/verification/server2-local-first/artifact-native/
+          if-no-files-found: error
+          retention-days: 1
+  foundation:
+    needs: [placement, python, shadow, rust-build, rust, gnu, musl, goldens]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server2
+    steps:
+      - name: Require all verification jobs to pass
+        if: >-
+          ${{ needs.placement.result != 'success' ||
+              needs.python.result != 'success' ||
+              needs.shadow.result != 'success' ||
+              needs.rust-build.result != 'success' ||
+              needs.rust.result != 'success' ||
+              needs.gnu.result != 'success' ||
+              (github.event_name == 'pull_request' && needs.musl.result != 'skipped') ||
+              (github.event_name != 'pull_request' && needs.musl.result != 'success') ||
+              (github.event_name != 'pull_request' && needs.goldens.result != 'success') }}
+        working-directory: .
+        run: exit 1
+      - if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: server2-linux-musl-candidate
+          path: reports/verification/server2-local-first/artifact-native/
+      - if: ${{ github.event_name != 'pull_request' }}
+        run: bash tools/ci.sh promote
+        env:
+          SERVER2_CANDIDATE_DIGEST: ${{ needs.musl.outputs.digest }}
+      - if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v4
         with:
           name: server2-linux-musl-verified
           path: reports/verification/server2-local-first/artifact-native/

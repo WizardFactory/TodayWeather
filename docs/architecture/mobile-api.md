@@ -169,6 +169,50 @@ attribution](https://developers.google.com/maps/documentation/pollen/policies)
 at display time. See the [request sequence](diagrams/coordinate-pollen-forecast.html)
 and its [editable source](diagrams/coordinate-pollen-forecast.json).
 
+### Météo-France Vigilance by coordinate
+
+`GET /weather/v000903/coord/{lat},{lon}/warnings` is a separate `no-store`
+read for metropolitan land departments. Enable it with
+`METEOFRANCE_VIGILANCE_ENABLED=true` and configure
+`METEOFRANCE_VIGILANCE_API_KEY` on server1. The code defaults to disabled.
+The coordinate is validated without rounding and the official French
+[administrative API](https://geo.api.gouv.fr/decoupage-administratif/communes)
+resolves the containing municipality and department. Points with no match
+include ocean and points outside the territory. Four-digit coastal product
+domains and overseas bulletins are outside this route's scope.
+
+The [provider adapter](../../server/lib/warnings/franceVigilance.js)
+shares one national map refresh among concurrent requests in each worker.
+Successful reads are reused for up to five minutes, bounded by product
+validity and a 16-hour age ceiling. Failed or regressing refreshes and conflicting snapshot IDs with equal
+publication times enter a one-minute cooldown and return unavailable coverage.
+Malformed color and phenomenon codes leave the affected coverage unavailable. No provider data enter
+the normal weather cache. Météo-France requests have a bounded timeout and
+body size. The API key is attached to the Météo-France host only.
+
+The response is `{location, checkedAt, sources, warnings}`. A matching
+department sets `location.country` to `FR`; the source reports the actual
+department code and, where available, publication and freshness times.
+A current source and empty warnings are a successful clear result for the
+covered scope. Unsupported and unavailable coverage are explicit. One
+incomplete period can produce unavailable coverage alongside independently
+validated intervals from another period.
+
+The map provides department-specific warning intervals in UTC. Upcoming
+intervals carry their actual onset while `effectiveAt` records the source
+product's effective time. For un-timed river-flood maxima, `timing` is
+`period-maximum` and `periodStartsAt` and `expiresAt` bound the reported
+window. These are summary values without a known hazard onset. French
+bulletin text is optional and must match the map snapshot, department,
+hazard, severity and validity. Render issuer text as text and show the
+official source and publication time.
+
+See the [request sequence](diagrams/france-vigilance.html),
+[editable source](diagrams/france-vigilance.json), and
+[illustrated API examples](../user/weather-api/france-vigilance/manual.pdf).
+The [issuer record](../reference/regional-weather/official-warnings.md#direct-france-sample)
+documents the earlier report, product reference and territory resolution.
+
 ### Current public-origin check, 2026-11-12 (#2937)
 
 A read-only recheck found CloudFront `weather/*` and `geocode/*` targeting
@@ -761,3 +805,14 @@ The four native widgets use the app's place-keyed weather repository. Each cache
 The clock widget reads the selected place's optional `timeZoneId` from the same cache entry. The repository stores `Asia/Seoul` for KMA and a recognized `timezone.timezoneId` from a world weather response. Older KMA entries also resolve to `Asia/Seoul` from their cached source. Android's native clocks show the time and date in that zone, including daylight-saving changes and local midnight, without a weather request. If the zone is unknown, the clock shows a dash and omits the date while the forecast stays visible. Forecast hours come from the provider. The update stamp uses the phone's time zone. [Weather repository](../../android/core-data/src/main/kotlin/net/wizardfactory/todayweather/core/data/WeatherRepository.kt) · [Widget clock](../../android/app/src/main/java/net/wizardfactory/todayweather/widget/WeatherWidgets.kt)
 
 Only a main-activity visit renews the device-local 120-hour window. The expiry worker redraws offline; Android controls when it runs. The [access lifecycle](diagrams/android-widget-access.html) shows the product rule. See the [widget sources](../../android/app/src/main/java/net/wizardfactory/todayweather/widget/) and [launcher guide](../user/android-app/widgets/README.md).
+
+
+## Spain AEMET CAP data
+
+Server1's existing `GET /weather/v000903/coord/{lat},{lon}/warnings` route selects AEMET when the exact viewed coordinate matches a qualified Spanish Meteoalerta zone. Other points can use the existing France adapter when enabled. `AEMET_WARNINGS_ENABLED` defaults to false. The public warnings feed uses no key. The separately configured OpenData key is for authorized verification and other OpenData products.
+
+The AEMET adapter follows the first official national Atom archive link, verifies the declared archive revision and the inventory of all 233 official zone identifiers, and atomically replaces its worker-local snapshot. A five-minute lease bounds rechecks on demand. For a selected zone, the reported lease also ends at the last surviving issuer validity boundary. An unchanged archive cannot extend that boundary. Worker requests coalesce within each process. Failed refreshes return unavailable outside the lease and use a bounded cooldown. There is no intermediary caching of the coordinate response. Separate source time, effective time, onset and expiry allow consumers to distinguish upcoming warnings, current empty coverage and unavailable coverage.
+
+WebApp desktop/PWA and native iOS/Android can read the response through their existing transport boundaries. The decoded result retains its requested coordinates. Web search and GPS keep their unrounded warning point across saved place restoration without changing ordinary weather keys. Reevaluate expiry and source freshness when consuming a retained response. The ordinary weather cache does not confer warning status. This integration adds no page or notification behavior.
+
+[AEMET CAP request flow](diagrams/aemet-cap.html) · [Diagram source](diagrams/aemet-cap.json) · [Official warning contract](../reference/regional-weather/official-warnings.md) · [API manual](../user/weather-api/aemet-cap/manual.pdf)

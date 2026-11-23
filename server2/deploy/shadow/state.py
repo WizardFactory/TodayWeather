@@ -214,7 +214,7 @@ def launch_user_data(run_id, epoch):
 class Journal:
     """Exclusive coordinator journal; explicit create and resume cannot be confused."""
     # The server's own parse caps (storage/allowance.rs); allocations are sized in SR-6.
-    CAPS = {'reads': 900_000, 'writes': 900_000, 'put_bytes': 2 * 1024**3}
+    CAPS = {'reads': 1_740_000, 'writes': 900_000, 'put_bytes': 2 * 1024**3}
 
     def __init__(self, directory: Path, *, create: bool = False,
                  run_id: str | None = None, manifest_sha: str | None = None,

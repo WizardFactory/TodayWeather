@@ -8,6 +8,7 @@ pub mod observability;
 pub mod process;
 pub mod resolver;
 pub mod runtime_services;
+pub mod solar_terms;
 pub mod startup;
 pub mod storage;
 
@@ -324,6 +325,8 @@ pub fn public_router_with_routes(state: Arc<SharedState>, routes: Router) -> Rou
         .layer(middleware::from_fn(observability::http))
 }
 
+#[cfg(test)]
+mod test_spawn;
 #[cfg(test)]
 mod allocator_tests {
     /// KMA-RESTART-BOUND: heap allocations, small and large, on this thread and on others, come

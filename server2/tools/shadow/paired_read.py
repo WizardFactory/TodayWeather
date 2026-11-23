@@ -30,6 +30,7 @@ OUTAGE_SECONDS = 1800
 COORDINATES = ('37.566,126.978', '35.1796,129.0756', '37.7519,128.8761',
                '33.4996,126.5312', '40.7128,-74.006', '35.6762,139.6503')
 ADDRESS = quote('서울특별시 종로구 송월동', safe='')
+TOWN_SEGMENTS = '/'.join(quote(component, safe='') for component in ('서울특별시', '종로구', '청운효자동'))
 PATHS = frozenset(
     [f'/weather{v}/coord/{c}' for v in ('', '/v000901', '/v000902', '/v000903')
      for c in COORDINATES]
@@ -37,6 +38,8 @@ PATHS = frozenset(
     + [f'/geocode/{v}/addr/{ADDRESS}' for v in ('v000901', 'v000903')]
     + [f'/{v}/kma/addr/{ADDRESS}' for v in ('v000901', 'v000903')]
     + [f'/{v}/town/{ADDRESS}' for v in ('v000705', 'v000803')]
+    + [f'/{v}/kma/addr/{TOWN_SEGMENTS}' for v in ('v000901', 'v000903')]
+    + [f'/{v}/town/{TOWN_SEGMENTS}' for v in ('v000705', 'v000803')]
     + [f'/{v}/nation/KR' for v in ('v000901', 'v000903')]
     + ['/v000903/kma/special', '/v000903/notice/latest',
        '/ww/010000/current/2?gcode=40.7128,-74.006'])

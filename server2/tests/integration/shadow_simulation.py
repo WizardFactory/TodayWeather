@@ -14,6 +14,7 @@ not generated. Process death and host reboot are not modelled. Fault rates are
 scenario inputs.
 
 Usage: python3 tests/integration/shadow_simulation.py [--seeds N] [--scenario NAME] [--output FILE]
+Measured mode: add --measurement REPORT.json --measured-policy PLAN.json, with no --scenario.
 """
 from __future__ import annotations
 
@@ -47,10 +48,10 @@ fake_aws = importlib.util.module_from_spec(spec_aws)
 spec_aws.loader.exec_module(fake_aws)
 # The CLI fixture's external pause injection belongs to interrupted CLI replay.
 fake_aws.pause_get = lambda root: False
+sys.path.insert(0, str(HERE))
 
 HOUR = 3600
 EPOCH = 1000
-DEADLINE = EPOCH + 168 * HOUR
 GIB = 1024 ** 3
 # Frozen tariffs used for the 2026-11-13 run (official-tariffs-20261113.json).
 RATES = {'ec2_hour': '0.026', 'ipv4_hour': '0.005', 'gp3_gb_month': '0.0912', 's3_gb_month': '0.025',
@@ -123,10 +124,25 @@ SCENARIOS = {
 }
 
 
+def measured_scenario(measurement, policy):
+    from shadow_measured_input import load_measurement
+
+    trace, evidence = load_measurement(measurement, policy)
+    scenario = SCENARIOS['realistic-combined'] | dict(name='measured-24h', measured=trace, quota_events_per_hour=0.0)
+    evidence['modeled_faults'] = {key: scenario[key] for key in
+                                  ('poll_failure', 'sample_failure', 'ssh_down', 'candidate_5xx', 'candidate_timeout',
+                                   'production_5xx', 'production_timeout', 'production_429')}
+    evidence['provider_fault_assumption'] = ('observed source/status counts, spread evenly within their hour; '
+                                             'no inferred provider failure rate')
+    return scenario, evidence
+
+
 class SimTime:
     """One clock shared by the operator, guard and reader models."""
-    def __init__(self):
-        self.now = float(EPOCH + 1)
+    def __init__(self, epoch=EPOCH):
+        self.epoch = epoch
+        self.deadline = epoch + 168 * HOUR
+        self.now = float(epoch + 1)
 
     def time(self):
         return self.now
@@ -157,35 +173,41 @@ class Host:
     """
     def __init__(self, sc, rng, clock, workdir, evidence=None, manifest=None, identity=None):
         self.sc, self.rng, self.clock = sc, rng, clock
+        epoch = clock.epoch
+        self.measured = sc.get('measured')
         self.manifest = fx.host_manifest()
-        self.manifest.update(epoch=EPOCH, tx_origin=0,
-                             allowance=dict(reads=90000, writes=90000, put_bytes=2 * GIB))
-        self.manifest['cost_policy']['rates'] = dict(RATES)
-        self.manifest['cost_policy']['observed_at'] = EPOCH
+        self.manifest.update(epoch=epoch, tx_origin=0)
+        if self.measured is None:
+            self.manifest['allowance'] = dict(reads=90000, writes=90000, put_bytes=2 * GIB)
+            self.manifest['cost_policy']['rates'] = dict(RATES)
+            self.manifest['cost_policy']['observed_at'] = epoch
+        else:
+            self.manifest.update(allowance=self.measured.allowance, cost_policy=self.measured.cost_policy,
+                                 paid_usd_per_unit=operator.paid_prices_by_metric(self.measured.paid_policy))
         guard.validate(self.manifest)
         self.decision = None
-        self.stepped = EPOCH          # time of the last guard step
+        self.stepped = epoch          # time of the last guard step
         self.events = []              # (time, order, cause)
         self.group_end = None         # candidate and guard (and reader) stopped
         self.reader_end = None        # reader process exit on its own terminal state
         self.operator_end = None
         self.terminated_at = None
-        self.candidate_exit = None if sc['candidate_exit_at'] is None else EPOCH + sc['candidate_exit_at']
+        self.candidate_exit = None if sc['candidate_exit_at'] is None else epoch + sc['candidate_exit_at']
         self.guard_samples_after_reader_exit = 0
         self.quota = 0
         if sc['quota_first_at'] is not None:
-            self.next_quota = EPOCH + sc['quota_first_at']
+            self.next_quota = epoch + sc['quota_first_at']
         else:
-            self.next_quota = self._next_event(EPOCH)
-        self.reader = ReaderModel(sc, rng, workdir, manifest, identity)
+            self.next_quota = self._next_event(epoch)
+        self.reader = ReaderModel(sc, rng, workdir, manifest, identity, epoch=epoch)
         # SR-5a: hourly (wall-clock) copies, the install-time copy, and the finalizer started
         # by the reader's stop and by the 168-hour stop.service.
         self.evidence = evidence
-        self.next_copy = (EPOCH // HOUR + 1) * HOUR
+        self.next_copy = (epoch // HOUR + 1) * HOUR
         self.deadline_finalized = False
         if evidence is not None:
             evidence.host = self
-            evidence.copy(EPOCH + 1, final=False)
+            evidence.copy(epoch + 1, final=False)
 
     def _next_event(self, start):
         rate = self.sc['quota_events_per_hour']
@@ -232,7 +254,7 @@ class Host:
 
     def collection_end(self):
         ends = [x for x in (self.reader_end, self.group_end) if x is not None]
-        return min(ends + [DEADLINE])
+        return min(ends + [self.clock.deadline])
 
     def stop_cause(self):
         return min(self.events)[2] if self.events else None
@@ -251,13 +273,17 @@ class Host:
         sc = self.sc
         if self.rng.random() < sc['sample_failure']:
             return None
-        elapsed_h = (t - EPOCH) / HOUR
+        elapsed = t - self.clock.epoch
+        s = fx.host_sample(self.manifest)
+        s['observed_at'] = int(t)
+        if self.measured is not None:
+            return self.measured.apply(s, int(elapsed))
+        elapsed_h = elapsed / HOUR
         while self.next_quota <= t:
             self.quota += 1
             self.next_quota = self._next_event(self.next_quota)
-        s = fx.host_sample(self.manifest)
-        s.update(observed_at=int(t), tx_bytes=int(sc['tx_bytes_per_hour'] * elapsed_h),
-                 cpu_seconds=int(2 * sc['cpu_busy_fraction'] * (t - EPOCH)))
+        s.update(tx_bytes=int(sc['tx_bytes_per_hour'] * elapsed_h),
+                 cpu_seconds=int(2 * sc['cpu_busy_fraction'] * elapsed))
         # Only the counters the guard under test reads; keys come from the shared fixture.
         s['metrics'].update(
             s3_reads=max(0, int(90000 - sc['s3_reads_per_hour'] * elapsed_h)),
@@ -269,8 +295,8 @@ class Host:
             s['diagnostics']['provider_http'] = {'vilage_fcst': {'429': self.quota}}
         # A broken role fails every S3 call: far more than the threshold between two samples.
         at = sc['storage_auth_at']
-        if at is not None and t >= EPOCH + at:
-            s['metrics']['storage_auth_failures'] = guard.STORAGE_AUTH_LIMIT + int((t - EPOCH - at) // 10)
+        if at is not None and elapsed >= at:
+            s['metrics']['storage_auth_failures'] = guard.STORAGE_AUTH_LIMIT + int((elapsed - at) // 10)
         return s
 
     def _reader_to(self, t):
@@ -285,6 +311,7 @@ class Host:
         """Apply every event up to `until` in time order."""
         if self.terminated_at is not None:
             return
+        deadline = self.clock.deadline
         while self.group_active():
             step = self.stepped + 10
             target = min(step, until)
@@ -303,14 +330,14 @@ class Host:
             self.decision = guard.evaluate(self.manifest, self.sample(step), self.decision, int(step))
             if self.decision['stop']:
                 self._end_group(step, 'guard:' + self.decision['stop'])
-            elif step >= DEADLINE:
+            elif step >= deadline:
                 # The 168-hour stop.service stops the units whatever the guard decided.
-                self._end_group(DEADLINE, 'stop-timer')
-        if until >= DEADLINE and not self.deadline_finalized:
-            self._copies_to(DEADLINE)
+                self._end_group(deadline, 'stop-timer')
+        if until >= deadline and not self.deadline_finalized:
+            self._copies_to(deadline)
             # The stop.service also starts the finalizer after its stop requests.
             self.deadline_finalized = True
-            self._finalize(DEADLINE)
+            self._finalize(deadline)
         self._copies_to(until)
 
 
@@ -323,19 +350,19 @@ class ReaderModel:
     reader is not advanced again. The reader runs concurrently with the operator and the
     guard, so its request durations advance its own clock only.
     """
-    def __init__(self, sc, rng, workdir, manifest=None, identity=None):
+    def __init__(self, sc, rng, workdir, manifest=None, identity=None, *, epoch=EPOCH):
         self.sc, self.rng = sc, rng
         manifest = manifest or reader_manifest('a' * 64)
         self.cases = manifest['cases']
         identity = identity or {'manifest': manifest, 'candidate': 'c', 'production': 'p', 'loopback_test': True,
                                 'sampler_sha256': 'b' * 64}
         self.directory = Path(workdir)
-        self.clock = SimTime()
+        self.clock = SimTime(epoch)
         self.fake = types.SimpleNamespace(time=self.clock.time, monotonic=self.clock.monotonic, sleep=self.clock.sleep)
         with patch.object(reader, 'time', self.fake):
             self.ledger = reader.Ledger(Path(workdir), identity, False)
         self.ledger.db.execute('PRAGMA synchronous=OFF')
-        self.cursor = EPOCH + 1
+        self.cursor = epoch + 1
         self.terminal = None
         self.end_at = None
         self.completed = {'candidate': 0, 'production': 0}
@@ -368,10 +395,11 @@ class ReaderModel:
 
     def _schedule(self):
         """Generator: yields the time of the next event and applies it when resumed."""
+        schedule_epoch = self.clock.epoch + 1
         while True:
             pass_start = self.cursor
             yield pass_start
-            due = min((((pass_start - EPOCH - 1) // c['interval_seconds']) + 1) * c['interval_seconds'] + EPOCH + 1
+            due = min((((pass_start - schedule_epoch) // c['interval_seconds']) + 1) * c['interval_seconds'] + schedule_epoch
                       for c in self.cases)
             for case in self.cases:
                 self.clock.now = max(self.clock.now, self.cursor)
@@ -445,6 +473,7 @@ class EvidenceModel:
     """
     def __init__(self, root, launch, reader_bytes, sc):
         self.sc, self.root = sc, Path(root) / 'host'
+        self.epoch = launch['epoch']
         for directory in ('state', 'data/paired'):
             (self.root / directory).mkdir(parents=True, mode=0o700)
         (self.root / 'launch.json').write_text(state.canonical(launch) + '\n')
@@ -460,7 +489,7 @@ class EvidenceModel:
         self.host = None
 
     def failing(self, at):
-        t = at - EPOCH
+        t = at - self.epoch
         return any(start <= t and (end is None or t < end) for start, end in self.sc['copy_failures'])
 
     def copy(self, at, final):
@@ -481,7 +510,7 @@ class EvidenceModel:
                                    sleep=lambda s: clock.__setitem__(0, clock[0] + s), log=self.lines.append)
         self.runs.append(dict(result, at=at, final=final))
 
-def evidence_summary(report):
+def evidence_summary(report, epoch):
     final_at = report.get('at')
     newest = report.get('newest_snapshot_at')
     return dict(status=report.get('status', report.get('reason', 'unverified')),
@@ -489,8 +518,8 @@ def evidence_summary(report):
                 generation=report.get('generation'), reader=report.get('reader'),
                 pending=len(report.get('pending', [])), capture_failures=len(report.get('capture_failures', [])),
                 missing=len(report.get('missing_or_mismatched', [])), conflicts=len(report.get('conflicts', [])),
-                final_at_s=None if final_at is None else round(final_at - EPOCH, 1),
-                newest_snapshot_at_s=None if newest is None else round(newest - EPOCH, 1),
+                final_at_s=None if final_at is None else round(final_at - epoch, 1),
+                newest_snapshot_at_s=None if newest is None else round(newest - epoch, 1),
                 source='ssh' if report.get('directory') == 'ssh-paired' else 'bucket')
 
 
@@ -542,7 +571,7 @@ class Transport:
         self.requested_pairs = []
 
     def ssh_down(self):
-        t = self.clock.now - EPOCH
+        t = self.clock.now - self.clock.epoch
         return any(start <= t and (end is None or t < end) for start, end in self.sc['ssh_down'])
 
     def invoke(self, action, **kwargs):
@@ -580,8 +609,8 @@ class Transport:
                       # The log collector keeps running until the operator's stop.
                       logs=state_of(not self.drained and self.host.terminated_at is None))
         return fx.cloud_json('HostObserve', dict(
-            status='started', launch_sha256=self.launch_sha, epoch=EPOCH, collection_until=DEADLINE,
-            cleanup_until=EPOCH + 170 * HOUR, unit_states=states))
+            status='started', launch_sha256=self.launch_sha, epoch=self.clock.epoch, collection_until=self.clock.deadline,
+            cleanup_until=self.clock.epoch + 170 * HOUR, unit_states=states))
 
     def export(self, action, *, destination, limit, timeout, attempts=None):
         evidence = self.host.evidence
@@ -608,6 +637,8 @@ class Transport:
 
 def run_once(sc, seed):
     rng = random.Random(seed)
+    measured = sc.get('measured')
+    epoch = EPOCH if measured is None else measured.epoch
     with tempfile.TemporaryDirectory(prefix='shadow-sim-') as temp, contextlib.ExitStack() as stack:
         root = Path(temp)
         stack.enter_context(patch.object(provision, 'IAM_PROPAGATION_SECONDS', 0))
@@ -616,9 +647,13 @@ def run_once(sc, seed):
         manifest = reader_manifest(host_plan['artifacts']['server2'])
         (source / 'reader.json').write_text(json.dumps(manifest))
         host_plan['artifacts']['reader.json'] = operator.artifact_hash(source / 'reader.json')
-        plan = dict(host=host_plan, cloud=fx.provisioning_plan(), allowance=dict(reads=10, writes=20, put_bytes=30))
-        provision.prepare_run(plan, source, root / 'run', root / 'bundle', now=EPOCH)
-        clock = SimTime()
+        allowance = dict(reads=10, writes=20, put_bytes=30)
+        if measured is not None:
+            allowance = measured.allowance
+            host_plan.update(cost_policy=measured.cost_policy, paid_policy=measured.paid_policy)
+        plan = dict(host=host_plan, cloud=fx.provisioning_plan(), allowance=allowance)
+        provision.prepare_run(plan, source, root / 'run', root / 'bundle', now=epoch)
+        clock = SimTime(epoch)
         stack.enter_context(patch.object(provision, 'time', clock))
         launch = operator.verify_bundle(root / 'bundle')
         launch_sha = operator.hashlib.sha256((state.canonical(launch) + '\n').encode()).hexdigest()
@@ -641,7 +676,7 @@ def run_once(sc, seed):
                                          clock=clock.time, sleep=clock.sleep)
             before_retry = result['cleanup'].get('fence', {}).get('status')
             if sc['finish_retry_at'] is not None and not result['cleanup']['complete']:
-                retry_at = EPOCH + sc['finish_retry_at']
+                retry_at = epoch + sc['finish_retry_at']
                 if retry_at < clock.now:
                     raise ValueError('explicit finish retry precedes the initial finish')
                 clock.now = retry_at
@@ -649,15 +684,15 @@ def run_once(sc, seed):
                 result = dict(result, host_evidence=renewed['host_evidence'], cleanup=renewed['cleanup'])
         end = min(host.collection_end(), clock.now)
         cause = host.stop_cause()
-        retained = evidence_summary(result['host_evidence'])
+        retained = evidence_summary(result['host_evidence'], epoch)
         operations = [operation for operation, _ in cloud.calls]
         return dict(
             seed=seed,
             operator_stop=result['stop_reason'],
             failure_class=result.get('failure_class'),
             host_stop=cause,
-            collected_hours=round(max(0.0, (end - EPOCH) / HOUR), 3),
-            full_run=(result['stop_reason'] == 'collection_deadline'
+            collected_hours=round(max(0.0, (end - epoch) / HOUR), 3),
+            full_run=(end >= clock.deadline and result['stop_reason'] == 'collection_deadline'
                       and cause in (None, 'operator-stop', 'stop-timer', 'guard:collection_deadline')),
             evidence_retrievable=retained['complete'],
             qualification=result.get('qualification'),
@@ -667,7 +702,7 @@ def run_once(sc, seed):
             finish_fence_before_retry=before_retry,
             finish_fence=result['cleanup'].get('fence', {}).get('status'),
             state_disposition=result['cleanup'].get('state', {}).get('status'),
-            terminated_at_s=None if host.terminated_at is None else round(host.terminated_at - EPOCH, 1),
+            terminated_at_s=None if host.terminated_at is None else round(host.terminated_at - epoch, 1),
             bucket_get_before_terminate=('GetObject' in operations and 'TerminateInstances' in operations
                                          and operations.index('GetObject') < operations.index('TerminateInstances')),
             copy_runs=len(evidence.runs),
@@ -680,12 +715,12 @@ def run_once(sc, seed):
             guard_diagnostics=(host.decision or {}).get('diagnostics'),
             guard_stop=(host.decision or {}).get('stop'),
             guard_samples_after_reader_exit=host.guard_samples_after_reader_exit,
-            last_guard_step_s=host.stepped - EPOCH,
-            group_end_s=None if host.group_end is None else round(host.group_end - EPOCH, 1),
+            last_guard_step_s=host.stepped - epoch,
+            group_end_s=None if host.group_end is None else round(host.group_end - epoch, 1),
             operator_stop_after_group_end_s=(None if host.operator_end is None or host.group_end is None
                                              or host.group_end == host.operator_end
                                              else round(host.operator_end - host.group_end, 1)),
-            reader_last_start_s=None if host.reader.last_start is None else round(host.reader.last_start - EPOCH, 1),
+            reader_last_start_s=None if host.reader.last_start is None else round(host.reader.last_start - epoch, 1),
             reader_pending=host.reader.ledger_pending,
             operator_stop_after_reader_exit_s=(None if host.reader_end is None or host.operator_end is None
                                                else round(host.operator_end - host.reader_end, 1)),
@@ -711,17 +746,39 @@ def summarize(name, runs):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--seeds', type=int, default=5)
-    parser.add_argument('--scenario', action='append')
+    parser.add_argument('--seeds', type=int, help='number of seeds (legacy default 5, measured default 20)')
+    parser.add_argument('--scenario', action='append', choices=SCENARIOS)
+    parser.add_argument('--measurement', type=Path, help='complete 24-hour rehearsal report')
+    parser.add_argument('--measured-policy', type=Path, help='frozen allocation and pricing plan for the measured mode')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args(argv)
-    names = args.scenario or list(SCENARIOS)
-    report = {'epoch': EPOCH, 'deadline_hours': 168, 'scenarios': {}, 'runs': {}}
-    for name in names:
-        runs = [run_once(SCENARIOS[name], seed) for seed in range(args.seeds)]
+    if (args.measurement is None) != (args.measured_policy is None) or (args.measurement and args.scenario):
+        parser.error('--measurement and --measured-policy must be supplied together without --scenario')
+    if args.seeds is not None and args.seeds < 1:
+        parser.error('--seeds must be positive')
+    evidence = None
+    epoch = EPOCH
+    if args.measurement is not None:
+        try:
+            scenario, evidence = measured_scenario(args.measurement, args.measured_policy)
+        except (OSError, ValueError, RecursionError) as error:
+            parser.error(str(error))
+        selected = [scenario]
+        epoch = scenario['measured'].epoch
+    else:
+        selected = [SCENARIOS[name] for name in (args.scenario or SCENARIOS)]
+    count = args.seeds if args.seeds is not None else (20 if evidence is not None else 5)
+    report = {'epoch': epoch, 'deadline_hours': 168, 'scenarios': {}, 'runs': {}}
+    if evidence is not None:
+        report['measurement'] = evidence
+    for scenario in selected:
+        name = scenario['name']
+        runs = [run_once(scenario, seed) for seed in range(count)]
         report['scenarios'][name] = summarize(name, runs)
         report['runs'][name] = runs
         print(json.dumps(report['scenarios'][name], ensure_ascii=False), flush=True)
+    if evidence is not None:
+        evidence['seed_acceptance'] = None if count != 20 else report['scenarios']['measured-24h']['full_runs'] >= 19
     if args.output:
         args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n')
     return 0

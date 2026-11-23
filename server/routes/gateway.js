@@ -177,6 +177,12 @@ function createGatewayRouter(deps) {
         require('../lib/air/coordinateForecast').defaultService() : undefined);
     var pollenForecast = deps.pollenForecast || (airConfig.pollenMonthlyRequestCap ?
         require('../lib/pollen/coordinateForecast').defaultService(airConfig.pollenMonthlyRequestCap) : undefined);
+    var vigilance = deps.vigilance || (process.env.METEOFRANCE_VIGILANCE_ENABLED === 'true' ?
+        require('../lib/warnings/franceVigilance').createVigilanceService({
+            apiKey: process.env.METEOFRANCE_VIGILANCE_API_KEY
+        }) : undefined);
+    var aemet = deps.aemet || (process.env.AEMET_WARNINGS_ENABLED === 'true' ?
+        require('../lib/warnings/aemetCap').createAemetService() : undefined);
     var maxInflight = deps.maxInflight || positiveInt(process.env.GATEWAY_MAX_INFLIGHT, 40);
     var deadlineMs = deps.deadlineMs || 9000;
     var attemptMs = deps.attemptMs || 3000;
@@ -398,6 +404,25 @@ function createGatewayRouter(deps) {
     if (pollenForecast) {
         router.get('/weather/:version(v000903)/coord/:loc/pollen-forecast', guarded('weather-pollen-forecast',
             coordinateForecast(pollenForecast.supports, pollenForecast.fetch)));
+    }
+    if (vigilance || aemet) {
+        router.get('/weather/:version(v000903)/coord/:loc/warnings', guarded('weather-warnings', async function (req, ctx) {
+            var parts = req.params.loc.split(',');
+            if (parts.length !== 2 || parts.some(function (part) { return !part.trim(); })) {
+                throw inputError('invalid location');
+            }
+            var loc = parts.map(Number);
+            if (!loc.every(Number.isFinite) || Math.abs(loc[0]) > 90 || Math.abs(loc[1]) > 180) {
+                throw inputError('invalid location');
+            }
+            var point = {lat: loc[0], lon: loc[1]};
+            var zone = aemet ? aemet.locate(point) : null;
+            if (zone || !vigilance) {
+                var locale = String(req.get('Accept-Language') || '').split(',')[0].split(';')[0].trim();
+                return {body: await aemet.evaluate(point, zone, locale)};
+            }
+            return {body: await vigilance(point, ctx.signal)};
+        }));
     }
     router.get('/geocode/:version(v000903)/coord/:loc', guarded('geocode-coord', geocodeCoord));
     router.get('/geocode/:version(v000901|v000903)/addr/*', guarded('geocode-addr', geocodeAddr));

@@ -1,0 +1,19 @@
+{
+  "task": "MuslPromote",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3090",
+  "scope": "Build and verify the musl bundle in parallel with the other checks, then re-check and publish it only after every required job succeeded.",
+  "server2_paths": [
+    "server2/config/tasks/MuslPromote.json",
+    "server2/tools/ci.py",
+    "server2/tools/prepare-ci.sh",
+    "server2/tools/check_placement.py",
+    "server2/tools/test_placement.py",
+    "server2/tools/test_ci.py",
+    "server2/tools/promote_artifact.py",
+    "server2/tools/test_promote_artifact.py"
+  ],
+  "outside": [
+    {"path": ".github/workflows/server2.yml", "category": "ci-wiring", "reason": "Run the musl job in parallel and gate the verified upload on a same-run candidate re-check"},
+    {"path": "plans/issue-3090.md", "category": "documentation", "reason": "Record the measured bottleneck and the second experiment"}
+  ]
+}

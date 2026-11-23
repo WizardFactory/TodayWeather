@@ -25,7 +25,8 @@ import org.junit.runners.model.Statement
  * requests are recorded instead of sent, so no test reaches the production push server. With `weather`
  * `production`, weather requests go to the build's server (TW_SERVER_URL). With `transport`
  * `hold`, a recorded request never gets an answer (it stays in flight). With `migration` `hold`, the data
- * migration of the process waits until a test releases it.
+ * migration of the process waits until a test releases it. With `ads` `off`, the app gets [NoAdsPlatform]: it shows
+ * no ads (ad-free manual and store captures).
  */
 class TestRunner : AndroidJUnitRunner() {
     override fun onCreate(arguments: Bundle?) {
@@ -80,6 +81,8 @@ class TestTodayWeatherApp : TodayWeatherApp() {
     override fun weatherPhotosUrl() = if (TestRunner.args.getString("manual") == "true" &&
         TestRunner.args.getString("weather") == "production" && TestRunner.args.getString("photos") == "feed")
         BuildConfig.WEATHER_PHOTOS_URL else ""
+    // An ad-free capture (manual and store screenshots, #3122): no consent request, no SDK start, no ads.
+    override fun adsPlatform() = if (adsOff()) NoAdsPlatform else super.adsPlatform()
     override fun tokenSource() = TokenSource { TestRunner.args.getString("token") }
     override fun pushTransport() = net.wizardfactory.todayweather.core.data.PushTransport {
         sent += it

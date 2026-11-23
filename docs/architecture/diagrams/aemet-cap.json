@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Spain AEMET CAP coordinate warnings",
+    "output": "docs/architecture/diagrams/aemet-cap.html",
+    "viewBox": [
+      1080,
+      645
+    ],
+    "column_fit": "spread",
+    "animation": "trace",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "WebApp and native",
+      "sublabel": "viewed coordinates"
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "Server1 gateway",
+      "sublabel": "coordinate warnings"
+    },
+    {
+      "id": "adapter",
+      "type": "backend",
+      "label": "AEMET adapter",
+      "sublabel": "CAP and point matching"
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "Worker snapshot",
+      "sublabel": "verified revision and lease"
+    },
+    {
+      "id": "issuer",
+      "type": "external",
+      "label": "AEMET",
+      "sublabel": "national public Atom and CAP"
+    }
+  ],
+  "segments": [
+    {
+      "from": 148,
+      "to": 248,
+      "label": "Lookup"
+    },
+    {
+      "from": 258,
+      "to": 435,
+      "label": "Refresh on miss or stale lease"
+    },
+    {
+      "from": 449,
+      "to": 532,
+      "label": "Point response"
+    }
+  ],
+  "messages": [
+    {
+      "id": "get",
+      "from": "client",
+      "to": "gateway",
+      "y": 165,
+      "label": "GET coordinate warnings",
+      "variant": "emphasis"
+    },
+    {
+      "id": "resolve",
+      "from": "gateway",
+      "to": "adapter",
+      "y": 199,
+      "label": "evaluate point and locale",
+      "variant": "default"
+    },
+    {
+      "id": "cache-read",
+      "from": "adapter",
+      "to": "cache",
+      "y": 233,
+      "label": "read verified revision and lease",
+      "variant": "default"
+    },
+    {
+      "id": "get-index",
+      "from": "adapter",
+      "to": "issuer",
+      "y": 275,
+      "label": "revalidate the national Atom index",
+      "variant": "dashed"
+    },
+    {
+      "id": "index",
+      "from": "issuer",
+      "to": "adapter",
+      "y": 309,
+      "label": "current index and complete archive link",
+      "variant": "return"
+    },
+    {
+      "id": "get-cap",
+      "from": "adapter",
+      "to": "issuer",
+      "y": 343,
+      "label": "read the linked CAP archive",
+      "variant": "dashed"
+    },
+    {
+      "id": "cap",
+      "from": "issuer",
+      "to": "adapter",
+      "y": 377,
+      "label": "national archive",
+      "variant": "return"
+    },
+    {
+      "id": "publish",
+      "from": "adapter",
+      "to": "cache",
+      "y": 411,
+      "label": "publish validated revision atomically",
+      "variant": "emphasis"
+    },
+    {
+      "id": "joined",
+      "from": "adapter",
+      "to": "gateway",
+      "y": 466,
+      "label": "official area match and source state",
+      "variant": "return"
+    },
+    {
+      "id": "response",
+      "from": "gateway",
+      "to": "client",
+      "y": 508,
+      "label": "sources, warnings and validity",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "gateway",
+      "from": 163,
+      "to": 511,
+      "type": "backend"
+    },
+    {
+      "participant": "adapter",
+      "from": 197,
+      "to": 469,
+      "type": "backend"
+    },
+    {
+      "participant": "cache",
+      "from": 407,
+      "to": 425,
+      "type": "database"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Point and zone",
+      "items": [
+        "Server1 resolves the viewed coordinate against official land and coastal zones.",
+        "A valid lease serves the lookup without an AEMET request."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Failure and expiry",
+      "items": [
+        "An unqualified point is unsupported. A failed or unverified expected source is unavailable.",
+        "The source lease ends no later than the issuer’s coverage expiry for the selected point."
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Radar qualification",
+      "items": [
+        "Madrid, Almería and Barcelona imagery has a separate contract and rollout.",
+        "The warning flow uses the direct AEMET CAP source."
+      ]
+    }
+  ]
+}

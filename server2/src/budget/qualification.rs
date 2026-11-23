@@ -225,6 +225,7 @@ mod tests {
     }
     #[test]
     fn separate_process_checks_real_reservation_consumption() {
+        let _spawn = crate::test_spawn::exclusive();
         for mode in ["enabled", "ordinary"] {
             let result = std::process::Command::new(std::env::current_exe().unwrap())
                 .args([
