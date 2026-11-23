@@ -6,6 +6,7 @@
     "server2/config/tasks/KMA-NATION-READS.json",
     "server2/src/storage/catalog.rs",
     "server2/src/warnings/service.rs",
+    "server2/tests/domestic/observe_product.rs",
     "server2/tests/raw_records.rs",
     "server2/tests/storage/admission.rs",
     "server2/tests/storage/catalog_wire.rs",
