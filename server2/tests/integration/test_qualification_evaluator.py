@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 import test_shadow_supervisor as fx
+from provision import retained_finish_pairs
 
 
 EVALUATOR = Path(__file__).resolve().parents[2] / 'tools/shadow/qualification_evaluator.py'
@@ -51,10 +52,8 @@ class QualificationEvaluatorTests(unittest.TestCase):
         for file in host.paired.iterdir():
             if file.suffix in ('.json', '.body'):
                 shutil.copyfile(file, self.files / file.name)
-        (self.finish / 'result.json').write_text(json.dumps({
-            'schema': 2, 'qualification': 'not_assessed',
-            'host_evidence': {'status': 'complete', 'complete': True, 'directory': 'ssh-paired'},
-        }))
+        # The receipt is the finish's own validation of the stopped ledger and its pairs.
+        self.write_receipt(retained_finish_pairs(self.finish, host.launch_sha256))
         self.criteria = self.root / 'criteria.json'
         self.policy = {
             'schema': 1, 'profile': 'local_peer', 'run_id': 'test1',
@@ -63,6 +62,12 @@ class QualificationEvaluatorTests(unittest.TestCase):
             'minimum_usable_pairs': {'domestic': 1},
         }
         self.planned_slots = (host.reader['duration_seconds'] + host.reader['cases'][0]['interval_seconds'] - 1) // host.reader['cases'][0]['interval_seconds']
+
+    def write_receipt(self, host_evidence):
+        self.assertEqual(host_evidence['status'], 'complete')
+        (self.finish / 'result.json').write_text(json.dumps({
+            'schema': 2, 'qualification': 'not_assessed', 'host_evidence': host_evidence,
+        }))
 
     def run_evaluator(self, *, expected=0):
         self.criteria.write_text(json.dumps(self.policy))
@@ -155,6 +160,8 @@ class QualificationEvaluatorTests(unittest.TestCase):
             db.close()
         for attempt, elapsed_ms in ((1, 100), (3, 400), (5, 20)):
             self.update_candidate_capture(attempt, elapsed_ms)
+        # The finish validates the ledger it stopped with; re-derive its receipt for this ledger.
+        self.write_receipt(retained_finish_pairs(self.finish, self.host.launch_sha256))
         criteria = {row['id']: row for row in self.run_evaluator()['criteria']}
         self.assertEqual(criteria['C5']['families']['domestic']['candidate']['status'], 'pass')
         candidate = criteria['C6']['families']['domestic']['candidate']
@@ -275,6 +282,16 @@ class QualificationEvaluatorTests(unittest.TestCase):
                 for key in ('C2', 'C5', 'C6'):
                     self.assertEqual((criteria[key]['status'], criteria[key]['reason']),
                                      ('unassessed', 'reader_stopped_early'))
+                    # SR7-C1: no family or origin row keeps a pass either.
+                    self.assertNotIn('"pass"', json.dumps(criteria[key]))
+
+    def test_reader_stop_before_the_deadline_keeps_known_failures(self):
+        self.configure_absolute_limits()
+        self.update_candidate_capture(1, 1, status=501, error='deadline')
+        self.set_reader_terminal('origin-outage')
+        criteria = {row['id']: row for row in self.run_evaluator()['criteria']}
+        self.assertEqual(criteria['C6']['families']['domestic']['candidate']['status'], 'fail')
+        self.assertEqual(criteria['C6']['status'], 'fail')
 
     def test_completed_or_externally_stopped_reader_keeps_its_scores(self):
         self.configure_absolute_limits(error_bps=10000, within_bps=0)
@@ -294,6 +311,37 @@ class QualificationEvaluatorTests(unittest.TestCase):
         self.assertEqual((criteria['C1']['status'], criteria['C1']['reason']),
                          ('fail', 'invalid_retained_evidence'))
         self.assertEqual(report['recommendation'], 'no_go')
+
+    def delete_ledger_attempts(self, where):
+        db = sqlite3.connect(self.bundle / 'data/paired/ledger.sqlite3')
+        try:
+            with db:
+                db.execute('DELETE FROM attempts WHERE ' + where)
+        finally:
+            db.close()
+
+    def test_ssh_ledger_missing_receipt_attempts_fails_integrity(self):
+        # SR7-C2: rows lost from the stopped ledger after the finish validated it.
+        for where in ('id=1', '1=1'):
+            with self.subTest(where=where):
+                self.setUp()
+                self.delete_ledger_attempts(where)
+                report = self.run_evaluator()
+                criteria = {row['id']: row for row in report['criteria']}
+                self.assertEqual((criteria['C1']['status'], criteria['C1']['reason']),
+                                 ('fail', 'stopped_ledger_disagrees_with_receipt'))
+                self.assertEqual(report['recommendation'], 'no_go')
+
+    def test_oversized_ledger_start_is_an_evidence_failure(self):
+        # SR7-C3
+        db = sqlite3.connect(self.bundle / 'data/paired/ledger.sqlite3')
+        try:
+            with db:
+                db.execute("UPDATE meta SET value=? WHERE key='started'", ('1' + '0' * 1000,))
+        finally:
+            db.close()
+        criteria = {row['id']: row for row in self.run_evaluator()['criteria']}
+        self.assertEqual(criteria['C1']['status'], 'fail')
 
     def test_tampered_evidence_cannot_pass(self):
         (self.files / '1.body').write_bytes(b'body x')

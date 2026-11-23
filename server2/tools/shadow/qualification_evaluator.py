@@ -22,7 +22,7 @@ sys.path[:0] = [str(TOOLS), str(TOOLS.parents[1] / 'deploy/shadow')]
 
 from evidence_audit import audit, file_sha256
 from paired_read import MAX_ATTEMPTS, MAX_BODY, validate
-from remote import attempt_matches, ledger_identity
+from remote import assess_recovery, attempt_matches, ledger_identity
 
 DIGEST = re.compile(r'[0-9a-f]{64}')
 LABEL = re.compile(r'[A-Za-z0-9_-]{1,64}')
@@ -296,6 +296,12 @@ def retained_evidence(directory, policy):
             raise EvidenceMissing('stopped_ledger_missing')
         check(ledger.is_file() and 0 < ledger.stat().st_size <= 2*GIB, 'invalid_stopped_ledger')
         ledger_sha = file_sha256(ledger)
+        # SR7-C2: the stopped ledger and its pairs must reproduce the finish's own validation.
+        replay = assess_recovery(bundle, policy['launch_sha256'], recovered=files)
+        check(replay['status'] == 'complete' and replay['attempts'] > 0
+              and all(selected.get(key) == replay[key]
+                      for key in ('attempts', 'pending', 'capture_failures', 'files')),
+              'stopped_ledger_disagrees_with_receipt')
     else:
         bound, ledger_sha = archived_bucket(directory, policy, selected, name)
         ledger = safe_path(bundle, 'ledger.sqlite3')
@@ -569,6 +575,18 @@ def absolute_criteria(policy, families, elapsed_samples):
 COMPLETE_TERMINALS = (None, 'duration-complete')
 
 
+def withhold_passes(node):
+    """Turn every nested family or origin pass of an early-stopped run into unassessed (SR7-C1)."""
+    if isinstance(node, dict):
+        if node.get('status') == 'pass':
+            node.update(status='unassessed', reason='reader_stopped_early')
+        for value in node.values():
+            withhold_passes(value)
+    elif isinstance(node, list):
+        for value in node:
+            withhold_passes(value)
+
+
 def evaluate(policy, criteria_sha, evidence):
     report = {'schema': 1, 'criteria_reference': 'qualification_criteria.md', 'profile': policy['profile'], 'profile_provenance': 'declared_by_criteria',
               'run_id': policy['run_id'],
@@ -601,6 +619,7 @@ def evaluate(policy, criteria_sha, evidence):
             # coverage and the absolute bounds describe a partial run and cannot pass. A bound
             # already exceeded by known errors stays a failure.
             for row in (scope, *absolute):
+                withhold_passes(row)
                 if row['status'] != 'fail':
                     row.update(status='unassessed', reason='reader_stopped_early')
     except (EvidenceMissing, FileNotFoundError) as error:
@@ -608,7 +627,8 @@ def evaluate(policy, criteria_sha, evidence):
             integrity['reason'] = str(error)
     except EvidenceError as error:
         integrity.update(status='fail', reason=str(error))
-    except (ValueError, TypeError, KeyError, AttributeError, OSError, RecursionError, sqlite3.Error):
+    except (ValueError, TypeError, KeyError, AttributeError, OSError, OverflowError, RecursionError,
+            sqlite3.Error):
         integrity.update(status='fail', reason='invalid_retained_evidence')
     comparison = ('local_peer_is_not_production' if policy['profile'] == 'local_peer' else
                   'synthetic_profile' if policy['profile'] == 'synthetic' else 'response_policy_required')
