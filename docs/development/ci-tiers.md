@@ -77,7 +77,7 @@ A device job can fail for a reason of the hosted runner: an emulator that does n
 
 The run's title and its `Verified commit` job name the commit. `ref` is required and must be the full 40-character SHA of the commit that gets checked out: a run of a branch name would not say which commit it verified, so it fails. `--ref` must point at that same commit, because the jobs, the called PR workflow included, are those of the commit the run starts from; a run started from another commit fails at once. For the head of `master` use `--ref master -f ref=$(git rev-parse origin/master)`. For an earlier commit, push a branch at it first (`git push origin <full SHA>:refs/heads/verify/<name>`) and start the run from that branch. The nightly run starts at 02:30 Asia/Seoul and does nothing when no input of the Android PR workflow (the paths that start it: `android/`, the client sources it imports, the server routes it reads) and neither workflow changed since the last passed nightly run.
 
-The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, an emulator of the reference captures' type, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates).
+The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, an emulator of the reference captures' type, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates); the gates that need a Cordova APK are not run since 2026-11-24.
 
 ## iOS
 
