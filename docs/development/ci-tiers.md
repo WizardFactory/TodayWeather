@@ -75,4 +75,4 @@ gh run view <run id> --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.na
 
 The run's title and its `Verified commit` job name the commit. `ref` must be the full SHA: the run of a branch name would not say which commit it verified. The nightly run starts at 02:30 Asia/Seoul and does nothing when `android/` and both workflows are unchanged since the last passed nightly run.
 
-The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates).
+The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, an emulator of the reference captures' type, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates).

@@ -113,27 +113,15 @@ jobs:
             profile: pixel_8
             avd: tw_api36_phone
             suites: device-tests parity window-fit
+          # API 24: the 32-bit image. The x86_64 images (google_apis and default) stopped answering adb during
+          # boot on the hosted runner, with 4 and with 2 cores (runs of 2026-11-23).
           - name: phone-api24
             api: 24
-            profile: pixel
-            avd: tw_api24
-            suites: device-tests
-            cores: 2
-          # Trial entries: which API 24 image boots on the hosted runner (the first run hung at boot with 4 cores).
-          - name: phone-api24-default
-            api: 24
-            target: default
-            profile: pixel
-            avd: tw_api24
-            suites: device-tests
-            cores: 2
-          - name: phone-api24-x86
-            api: 24
             arch: x86
+            cores: 2
             profile: pixel
             avd: tw_api24
             suites: device-tests
-            cores: 2
           - name: tablet-api36
             api: 36
             profile: pixel_tablet
@@ -169,7 +157,7 @@ jobs:
           ANDROID_SERIAL: emulator-5554
         with:
           api-level: ${{ matrix.api }}
-          target: ${{ matrix.target || 'google_apis' }}
+          target: google_apis
           arch: ${{ matrix.arch || 'x86_64' }}
           profile: ${{ matrix.profile }}
           avd-name: ${{ matrix.avd }}

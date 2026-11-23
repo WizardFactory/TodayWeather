@@ -135,6 +135,12 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      # Robolectric downloads its Android runtime jars while the tests run, and a refused download fails every
+      # Robolectric class (IOException in MavenArtifactFetcher); keep them between runs.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('android/gradle/libs.versions.toml') }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -173,6 +179,12 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      # Robolectric downloads its Android runtime jars while the tests run, and a refused download fails every
+      # Robolectric class (IOException in MavenArtifactFetcher); keep them between runs.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('android/gradle/libs.versions.toml') }}
       - name: Build and unit tests
         working-directory: android
         run: |
