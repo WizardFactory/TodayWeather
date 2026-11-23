@@ -239,6 +239,36 @@ class ExportCandidateTest(unittest.TestCase):
         (self.out / 'android/gradlew').chmod(0o755)
         tool.verify(entries, self.out)
 
+    def test_the_private_inputs_and_the_export_are_for_the_owner_only(self):
+        for name in tool.PRIVATE_INPUTS:
+            (self.private / name).chmod(0o600)
+        previous = os.umask(0o022)
+        self.addCleanup(os.umask, previous)
+        self.assertEqual(0, self.export().returncode)
+        for target in tool.PRIVATE_INPUTS.values():
+            self.assertEqual(0o600, stat.S_IMODE((self.out / target).stat().st_mode), target)
+        self.assertEqual(0o700, stat.S_IMODE(self.out.stat().st_mode))
+        # The commit's own files keep the modes the commit gives them.
+        self.assertEqual(0o755, stat.S_IMODE((self.out / 'android/gradlew').stat().st_mode))
+        self.assertEqual(0o644, stat.S_IMODE((self.out / 'android/app/src/main/App.kt').stat().st_mode))
+
+    def test_refuses_a_link_as_the_directory_even_when_it_points_nowhere(self):
+        target = self.temp / 'not-there'
+        os.symlink(target, self.out)
+        result = self.export()
+        self.assertEqual(1, result.returncode, result.stdout + result.stderr)
+        self.assertRegex(result.stderr, 'already exists')
+        self.assertTrue(self.out.is_symlink())
+        self.assertFalse(target.exists())
+        # A link in the middle of the path that leads into the checkout is refused as inside it.
+        self.out.unlink()
+        os.symlink(self.repo, self.temp / 'into-checkout')
+        before = sorted(str(p) for p in self.repo.iterdir())
+        result = self.export(out=self.temp / 'into-checkout' / 'export')
+        self.assertEqual(1, result.returncode)
+        self.assertRegex(result.stderr, 'outside the checkout')
+        self.assertEqual(before, sorted(str(p) for p in self.repo.iterdir()))
+
     def test_checks_the_checkout_it_belongs_to_from_any_directory(self):
         result = self.export(cwd=self.temp)
         self.assertEqual(0, result.returncode, result.stderr)

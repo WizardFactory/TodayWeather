@@ -10,10 +10,12 @@ objects); an export written here cannot. Every file of <SHA>:android is read as 
 and written with its bytes and its mode. Symbolic links and submodules in the tree are refused. Afterwards the
 tool reads the directory back: it must hold exactly those paths, each with the blob's hash and mode. The two
 private inputs, google-services.json and private.properties from the --private directory, are then written as
-new files; a commit that already has a file there is refused. <directory>/CANDIDATE records the SHA.
+new files readable by the owner only, in a directory only the owner may enter; a commit that already has a file
+there is refused. <directory>/CANDIDATE records the SHA.
 
-The directory must not exist and must lie outside the checkout; both are checked before anything is written, and
-a failed export removes the directory it made. The checkout is never changed.
+The directory must not exist (a link of that name counts as existing) and must lie outside the checkout; both
+are checked before anything is written, and a failed export removes the directory it made. The checkout is
+never changed.
 Status 1: refused or failed; 2: usage.
 """
 import os
@@ -63,12 +65,12 @@ def tree_entries(root, commit):
     return entries
 
 
-def write_new(path, data, executable=False):
-    """Creates path as a new regular file; never follows or replaces what is there."""
+def write_new(path, data, mode=0o644):
+    """Creates path as a new regular file with exactly this mode; never follows or replaces what is there."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0),
-                         0o755 if executable else 0o644)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), mode)
     with os.fdopen(descriptor, 'wb') as file:
+        os.fchmod(descriptor, mode)  # whatever the umask is
         file.write(data)
 
 
@@ -86,7 +88,7 @@ def write_blobs(root, entries, destination):
             data = batch.stdout.read(size)
             if len(data) != size or batch.stdout.read(1) != b'\n':
                 raise Refused(f'cannot read the blob {oid} of {path}')
-            write_new(destination / path, data, executable)
+            write_new(destination / path, data, 0o755 if executable else 0o644)
         batch.stdin.close()
         if batch.wait():
             raise Refused('git cat-file failed')
@@ -120,7 +122,10 @@ def verify(entries, destination):
 
 def export(commit, destination, private):
     root = Path(git(Path(__file__).resolve().parent, 'rev-parse', '--show-toplevel').decode().strip()).resolve()
-    # Decide about the directory before anything is created.
+    # Decide about the directory before anything is created. The name itself must be free, a link included,
+    # before links on the way to it are resolved.
+    if os.path.lexists(destination):
+        raise Refused(f'{destination} already exists: name a new directory')
     destination = Path(os.path.realpath(destination))
     if os.path.lexists(destination):
         raise Refused(f'{destination} already exists: name a new directory')
@@ -140,12 +145,14 @@ def export(commit, destination, private):
         if target in entries:
             raise Refused(f'{target} is a file of the commit: the private input must be a new file')
     tree = git(root, 'rev-parse', '--verify', f'{commit}:android').decode().strip()
-    destination.mkdir(parents=True)
+    # The export holds the private inputs: the owner alone may enter it.
+    destination.mkdir(parents=True, mode=0o700)
+    os.chmod(destination, 0o700)
     try:
         write_blobs(root, entries, destination)
         verify(entries, destination)
         for name, target in PRIVATE_INPUTS.items():
-            write_new(destination / target, sources[name])
+            write_new(destination / target, sources[name], 0o600)
         write_new(destination / 'CANDIDATE', commit.encode() + b'\n')
     except BaseException:
         shutil.rmtree(destination, ignore_errors=True)
