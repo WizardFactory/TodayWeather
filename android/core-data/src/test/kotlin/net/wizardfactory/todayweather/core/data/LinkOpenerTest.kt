@@ -59,18 +59,30 @@ class LinkOpenerTest {
         assertEquals(WeatherView.DAILY, (t.opener.requests.value?.route as LinkRoute.Weather).view)
     }
 
+    /** CODEX-3164-12: requests queue, so a link the screens have not applied yet is never replaced by the next. */
     @Test
-    fun eachLinkIsOneRequestHandledOnce() = runTest {
+    fun linksAreAppliedOneAtATimeInOrder() = runTest {
         val t = setup(started)
-        t.opener.open(DeepLinkTarget.NationAir)
+        t.opener.open(DeepLinkTarget.Coordinate(37.383, 127.119, "분당구", WeatherView.DAILY, null))
         val first = t.opener.requests.value!!
+        t.opener.open(DeepLinkTarget.Open(null))
         t.opener.open(DeepLinkTarget.NationAir)
-        val second = t.opener.requests.value!!
-        assertEquals(LinkRoute.Page(LinkPage.NATION_AIR), second.route)
-        assertEquals(true, second.id != first.id, "the same link again applies again")
+        assertEquals(first, t.opener.requests.value, "the Daily tab is still to be applied")
         t.opener.handled(first.id)
-        assertEquals(second, t.opener.requests.value, "an older id does not clear a newer request")
+        val second = t.opener.requests.value!!
+        assertEquals(LinkRoute.App, second.route)
+        t.opener.handled(first.id)
+        assertEquals(second, t.opener.requests.value, "an id already handled clears nothing")
         t.opener.handled(second.id)
+        val third = t.opener.requests.value!!
+        assertEquals(LinkRoute.Page(LinkPage.NATION_AIR), third.route)
+        // The same link again applies again.
+        t.opener.open(DeepLinkTarget.NationAir)
+        t.opener.handled(third.id)
+        val fourth = t.opener.requests.value!!
+        assertEquals(LinkRoute.Page(LinkPage.NATION_AIR), fourth.route)
+        assertEquals(true, fourth.id != third.id)
+        t.opener.handled(fourth.id)
         assertNull(t.opener.requests.value)
     }
 

@@ -4,7 +4,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
 import net.wizardfactory.todayweather.core.domain.share.DeepLinkTarget
 import net.wizardfactory.todayweather.core.storage.AppState
 import net.wizardfactory.todayweather.core.storage.startShows
@@ -18,8 +17,8 @@ data class LinkRequest(val id: Long, val route: LinkRoute)
  * 'deeplink'`); another place shows as a [preview] and loads ([reload]). On the start page (S01) every place link is a
  * preview, which covers S01 without closing it, and page links and `/open` are ignored (§6.2.3 "defer or ignore"), so
  * no link waits and none holds back the next. An unknown catalog city changes nothing. The screens get each applied
- * link, `/open` included, as a [requests] value (menus and pages close, then the tab or the page opens) and report it
- * [handled].
+ * link, `/open` included, as the [requests] value (menus and pages close, then the tab or the page opens) and report
+ * it [handled]; the next one follows then, so a link not yet applied is never replaced (CODEX-3164-12).
  */
 class LinkOpener(
     private val state: StateFlow<AppState?>,
@@ -27,6 +26,8 @@ class LinkOpener(
     private val openPlace: (Int) -> Unit,
     private val reload: () -> Unit,
 ) {
+    /** The requests the screens have not applied yet, oldest first; [pending] is its head. */
+    private val queue = ArrayDeque<LinkRequest>()
     private val pending = MutableStateFlow<LinkRequest?>(null)
     private var next = 0L
 
@@ -49,9 +50,15 @@ class LinkOpener(
                 }
             }
         }
-        pending.value = LinkRequest(++next, route)
+        synchronized(queue) {
+            queue.addLast(LinkRequest(++next, route))
+            pending.value = queue.first()
+        }
     }
 
-    /** The screens applied the request [id]; a newer one stays. */
-    fun handled(id: Long) = pending.update { if (it?.id == id) null else it }
+    /** The screens applied the request [id], the oldest one: the next follows. Another id changes nothing. */
+    fun handled(id: Long) = synchronized(queue) {
+        if (queue.firstOrNull()?.id == id) queue.removeFirst()
+        pending.value = queue.firstOrNull()
+    }
 }
