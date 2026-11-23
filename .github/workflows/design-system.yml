@@ -6,8 +6,11 @@ on:
     branches: [master, main]
     paths: ['packages/design-tokens/**', 'docs/design-system/**', 'scripts/design-gallery.mjs', 'scripts/verification/design-*', 'package*.json', '.github/workflows/design-system.yml']
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # First attempts of a pull request's runs share a group and cancel older ones. Re-runs,
+  # pushes and manual runs get their own group, so a re-run of an older commit can never
+  # cancel or replace the newest commit's run.
+  group: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-run-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == '1' }}
 permissions:
   contents: read
 jobs:
