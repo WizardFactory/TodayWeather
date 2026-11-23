@@ -207,18 +207,21 @@ test("daily chart keeps the native cells: empty probability, two-digit day, a 10
     page.locator(".daily-chart-panel tbody tr").first(),
   ).toContainText("—");
 });
-test("daily chart opens with today third below a 640 px screen and at the first day from 640 px (native)", async ({
+test("daily chart opens with today third whenever the days do not all fit, and at the first day when they do", async ({
   page,
 }) => {
   const raw = dailyFixture();
+  // Today (09-23) is the sixth of 16 days.
   raw.midData.dailyData = Array.from({ length: 16 }, (_, i) => ({
     ...raw.midData.dailyData[0],
     date: `2026${i < 13 ? "09" : "10"}${String(i < 13 ? 18 + i : i - 12).padStart(2, "0")}`,
   }));
   await page.route(API + "/weather/**", (r) => r.fulfill({ json: raw }));
-  for (const [width, today3rd] of [
-    [639, true],
-    [640, false],
+  for (const [width, fits] of [
+    [402, false],
+    [768, false],
+    [1024, false],
+    [1440, true],
   ] as const) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/weather/seoul/daily");
@@ -226,19 +229,22 @@ test("daily chart opens with today third below a 640 px screen and at the first 
     await expect(daily.locator(".today-column")).toHaveCount(1);
     await page.evaluate(() => document.fonts.ready);
     const pos = await daily.evaluate((el) => {
+      const box = el.getBoundingClientRect();
       const cols = [...el.querySelectorAll(".chart-column")];
+      const today = cols.findIndex((c) => c.classList.contains("today-column"));
       return {
         scrollLeft: el.scrollLeft,
         overflow: el.scrollWidth > el.clientWidth + 1,
-        cell: cols[0].getBoundingClientRect().width,
-        today: cols.findIndex((c) => c.classList.contains("today-column")),
-        max: el.scrollWidth - el.clientWidth,
+        // 1-based position of today among the columns from the left edge.
+        todayPosition:
+          today -
+          cols.findIndex((c) => c.getBoundingClientRect().right > box.left + 1) +
+          1,
       };
     });
-    expect(pos.overflow).toBe(true);
-    const expected = today3rd ? Math.min(pos.max, (pos.today - 2) * pos.cell) : 0;
-    expect(today3rd ? expected : 1).toBeGreaterThan(0);
-    expect(Math.abs(pos.scrollLeft - expected)).toBeLessThan(2);
+    expect(pos.overflow).toBe(!fits);
+    if (fits) expect(pos.scrollLeft).toBe(0);
+    else expect(pos.todayPosition).toBe(3);
   }
 });
 test("chart route navigation scrolls and focuses on click, direct load and history", async ({

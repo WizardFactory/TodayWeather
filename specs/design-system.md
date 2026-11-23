@@ -373,8 +373,9 @@ Both charts keep the Cordova information model and reading order. The design sys
 **Geometry.**
 - Column width is the same as the hourly chart, and every supplied day is a column (the native count). The chart fills the card width when the days fit.
 - Initial scroll:
-  - On screens narrower than 640 px, today is the third column (native rule, screen width as the native `bodyWidth`).
-  - On screens 640 px and wider, the chart starts at the first day (native rule).
+  - When the days do not all fit, today is the third column (the native phone rule), as far as the chart can scroll.
+  - When they all fit, there is no scroll and the chart starts at the first day.
+  - The native tablet rule (first day from a 640 px screen) is not used: it assumes a full-width chart, and in the web card it left today at the right edge with the forecast off screen.
 
 **Interaction, accessibility and states.** Same as the hourly chart. The announcement is "Sat 26: AM cloudy, PM sunny, 30%, low 18°, high 27°".
 

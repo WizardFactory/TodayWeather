@@ -31,8 +31,6 @@ import { dateText, hourText } from "./locale";
 import { t, useLanguage } from "./i18n";
 import { useApp } from "./context";
 
-const TABLET_WIDTH = 640;
-
 let measureCtx: CanvasRenderingContext2D | null | undefined;
 function maxTextWidth(labels: string[], font: string): number {
   if (measureCtx === undefined)
@@ -673,11 +671,11 @@ export function DailyChart({ weather: w }: { weather: Weather }) {
       el.scrollLeft = 0;
       anchorDate.current = { at: model.rows[0].point.at, offset: 0 };
     } else if (!userScrolled.current || anchorDate.current === null) {
-      // Native: today opens in the third column; screens 640 px and wider open at the start.
-      const target =
-        document.documentElement.clientWidth >= TABLET_WIDTH
-          ? 0
-          : model.startIndex * cell;
+      // The days do not all fit: today opens in the third column (the
+      // native phone rule), as far as the chart can scroll. The native
+      // tablet rule (first day from 640 px) assumes a full-width chart and
+      // would leave the forecast off screen in this narrower card.
+      const target = Math.min(width - viewport, model.startIndex * cell);
       el.scrollLeft = target;
       const firstIdx = Math.max(
         0,
