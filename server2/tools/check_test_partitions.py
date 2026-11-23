@@ -34,8 +34,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--shards', type=int, required=True)
     shards = parser.parse_args().shards
-    runnable = (libtest_names('--', '--list') - libtest_names('--', '--list', '--ignored')
-                - libtest_names('--doc', '--', '--list'))
+    listed = libtest_names('--', '--list')
+    duplicates = sorted(name for name, count in listed.items() if count > 1)
+    if duplicates:
+        # Names are compared without their test binary; equal names could hide a swap.
+        sys.exit(f'test names repeat across binaries, extend this check first: {duplicates[:5]}')
+    runnable = listed - libtest_names('--', '--list', '--ignored') - libtest_names('--doc', '--', '--list')
     parts = [nextest_names(f'count:{k}/{shards}') for k in range(1, shards + 1)]
     combined = sum(parts, Counter())
     if combined != runnable:
