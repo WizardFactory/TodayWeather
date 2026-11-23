@@ -2026,18 +2026,6 @@ class HostInstallTests(unittest.TestCase):
         (source/'launch.json').write_text(json.dumps(launch));(source/'launch.json').chmod(0o600)
         return source,launch
 
-    def test_reader_binding_accepts_the_raised_production_cap(self):
-        # AK 2026-11-23: up to 6,700 production reads per origin.
-        with tempfile.TemporaryDirectory() as temp:
-            source,launch=self.bundle(Path(temp))
-            path=source/'reader.json'
-            for attempts,accepted in ((6700,True),(6701,False)):
-                reader=json.loads(path.read_text());reader['max_attempts']=attempts
-                path.write_text(json.dumps(reader))
-                if accepted:operator.check_reader_binding(path,launch)
-                else:
-                    with self.assertRaises(E):operator.check_reader_binding(path,launch)
-
     class System:
         def __init__(self, fail=None):self.calls=[];self.fail=fail
         def run(self,*args):

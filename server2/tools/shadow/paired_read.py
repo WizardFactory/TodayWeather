@@ -21,9 +21,7 @@ from urllib.parse import quote, urlsplit
 
 PRODUCTION = 'https://todayweather.wizardfactory.net'
 MAX_DURATION = 168 * 3600
-# Production reads per origin and run. AK raised 6,000 to 6,700 on 2026-11-23 so the measured
-# week schedule (6,356 per origin) and a production-vs-production control sample fit.
-MAX_ATTEMPTS = 6700
+MAX_ATTEMPTS = 6000
 MAX_BODY = 2 * 1024 * 1024
 REQUEST_SECONDS = 20
 # An origin that keeps failing for this long, with at least three failures and no
