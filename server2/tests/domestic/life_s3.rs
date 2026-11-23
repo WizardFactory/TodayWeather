@@ -165,7 +165,7 @@ const KASI_NOW: f64 = 1_792_152_000_000.; // 2026-10-16T12:00:00Z
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -241,7 +241,7 @@ async fn life_inputs_restore_oracle_answers_from_s3_with_empty_memory() {
 /// Stored KASI is available on the first request without a capture pass or provider.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn first_request_restores_stored_kasi_without_acquirer_or_warmup() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -311,7 +311,7 @@ async fn served(peer: &Peer, needle: &str) -> u64 {
 /// without KASI and a later one has it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_long_kasi_restore_does_not_hold_the_request() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -369,7 +369,7 @@ async fn a_long_kasi_restore_does_not_hold_the_request() {
 /// object instead of reading every area and day.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_new_process_restores_kasi_from_the_stored_fold() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -415,7 +415,7 @@ async fn a_new_process_restores_kasi_from_the_stored_fold() {
 /// Days stored after an older fold are read from the listing on top of it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_older_kasi_fold_is_completed_from_the_listing() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -699,7 +699,7 @@ fn short_deadline() -> Instant {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn missing_national_datasets_are_acquired_once_and_published_before_use() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -796,7 +796,7 @@ async fn life_acquisition_across_kst_boundaries() {
 }
 /// `slot`: the MFDS slot expected at `at` (an explicit oracle, not `slot_at`).
 async fn slow_acquisition_at(at: &str, slot: Option<(u32, u16)>) {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, at).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, at).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -855,7 +855,7 @@ async fn slow_acquisition_at(at: &str, slot: Option<(u32, u16)>) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -874,7 +874,7 @@ async fn an_mfds_slot_is_asked_once_even_when_it_fails() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop_others() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -928,7 +928,7 @@ async fn the_kasi_capture_acquires_missing_days_and_a_failing_area_does_not_stop
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_snapshot_answers_the_life_store_calls() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     use super::source_s3::{NOW, request, seed};
     use server2::domestic::kma::backend::{KmaSource, SourceAnswer};
     use server2::domestic::kma::source::S3Source;
@@ -1020,7 +1020,7 @@ fn life_settings_use_the_legacy_mfds_endpoint() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1043,7 +1043,7 @@ async fn uv_tries_earlier_slots_while_a_slot_has_no_data() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     for shape in [1, 2] {
         let peer = Peer::persistent();
         let transport = peer.transport();
@@ -1068,7 +1068,7 @@ async fn mfds_accepts_only_a_direct_answer_within_one_mebibyte() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1126,7 +1126,7 @@ async fn an_old_nearest_location_still_decides_rise_set_after_a_cold_read() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
     // Its requests span a minute: a start away from the three-hour UV slot boundaries.
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1160,7 +1160,7 @@ async fn a_publication_after_a_request_instant_is_read_by_a_later_request() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1189,7 +1189,7 @@ async fn an_mfds_connection_may_take_the_legacy_ten_seconds() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_mfds_slot_is_known_by_its_period_not_by_its_reception_time() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1311,7 +1311,7 @@ impl server2::history::IndexListing for OrderedKasi {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn kasi_restore_reads_areas_in_order_and_recovers_after_a_partial_read_error() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1379,7 +1379,7 @@ async fn kasi_restore_reads_areas_in_order_and_recovers_after_a_partial_read_err
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_unreadable_kasi_fold_falls_back_to_the_originals() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1433,7 +1433,7 @@ async fn an_unreadable_kasi_fold_falls_back_to_the_originals() {
 /// The fold's age decides, not its date: this one is a day and an hour old on the next UTC date.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_kasi_fold_older_than_a_day_is_completed_on_the_next_date() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1454,7 +1454,7 @@ async fn a_kasi_fold_older_than_a_day_is_completed_on_the_next_date() {
 /// A request that waited behind a capture pass finds the fold loaded and lists nothing itself.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_request_behind_a_capture_pass_does_not_list_the_kasi_kind() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1552,7 +1552,7 @@ const LIFE_RAW: [&str; 5] = [
 /// answer had UV and pollen from acquisitions started at the head start.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_slow_first_life_read_starts_no_uv_or_pollen() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1622,7 +1622,7 @@ async fn a_slow_first_life_read_starts_no_uv_or_pollen() {
 /// out of season is asked again by any new process: the no-data mark is not stored.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_current_stored_slot_asks_no_uv() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -1862,7 +1862,7 @@ impl LifeAcquire for Asked {
 /// while a first read runs, so the answer's time shows the read's.)
 #[tokio::test(start_paused = true)]
 async fn the_needed_first_read_lists_the_life_families_together() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let mem = MemS3::default();
     let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
     for time in (0..=12).step_by(3).map(|h| format!("20261016{h:02}")) {
@@ -1922,7 +1922,7 @@ fn uv_page_numbered(issued: &str, n: u32) -> Vec<u8> {
 /// UV is on the first answer.
 #[tokio::test(start_paused = true)]
 async fn the_needed_first_read_restores_todays_records_together() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let mem = MemS3::default();
     let store = Arc::new(CatalogStore::new(mem.clone(), CatalogLimits::default()).unwrap());
     let p = Publication::parse_compact("202610161200").unwrap();
@@ -1972,7 +1972,7 @@ async fn the_needed_first_read_restores_todays_records_together() {
 /// answer has today's UV; the rest follows.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_life_read_restores_todays_slots_first() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let peer = Peer::persistent();
     let transport = peer.transport();
     let store = Arc::new(CatalogStore::new(transport.clone(), CatalogLimits::default()).unwrap());
@@ -2038,7 +2038,7 @@ async fn the_life_read_restores_todays_slots_first() {
 /// a request's KASI restore reads on the request lane.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_kasi_pass_uses_the_bulk_lane() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, FIXED_NOW).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, FIXED_NOW).await;
     let peer = Peer::persistent();
     let store = Arc::new(CatalogStore::new(peer.transport(), CatalogLimits::default()).unwrap());
     seed_oracle(&store).await;
@@ -2130,7 +2130,7 @@ impl LifeAcquire for Republish {
 /// asked; the next request makes no S3 request at all.
 #[tokio::test(start_paused = true)]
 async fn a_restart_over_identical_uv_acquisitions_reads_before_the_head_start() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let mem = MemS3::default();
     let s3 = BoundedS3::new(mem.clone(), 12);
     let store = Arc::new(CatalogStore::new(s3.clone(), CatalogLimits::default()).unwrap());
@@ -2295,7 +2295,7 @@ async fn identical_uv_bucket() -> (MemS3, BoundedS3<MemS3>, Arc<CatalogStore<Bou
 /// none either.
 #[tokio::test(start_paused = true)]
 async fn a_slow_restart_over_identical_uv_acquisitions_asks_no_uv() {
-    let _serial = fixed_now(&super::source_s3::S3_PEERS, &INSTANT, MIDDAY).await;
+    let _serial = fixed_now(super::source_s3::S3_PEERS.lock(), &INSTANT, MIDDAY).await;
     let (mem, s3, store) = identical_uv_bucket().await;
     {
         let mut d = mem.data();

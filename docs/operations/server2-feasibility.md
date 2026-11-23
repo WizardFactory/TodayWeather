@@ -48,7 +48,7 @@ checks. `foundation` publishes it only after every check, including `goldens`,
 has passed. The artifact records the commit that the run checked out. Download
 the successful run's `server2-linux-musl-verified` artifact, then check out that
 commit's source:
-the exact `source.revision`, full tracked `server2/` Git tree, verification scripts, fixtures and binaries must match its manifest. Dirty tracked sources reject before Docker. CI records the PR head and rejects a merge checkout with different server2 inputs. The native
+the exact `source.revision`, full tracked `server2/` Git tree, verification scripts, fixtures and binaries must match its manifest. Dirty tracked sources reject before Docker. The manifest records the commit the run checked out. The native
 Linux checks and Docker use the same `tools/verify_artifact.py` entrypoint. No
 local rebuild is required when the CI bundle is available.
 
