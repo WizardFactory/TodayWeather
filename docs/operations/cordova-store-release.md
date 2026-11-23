@@ -112,7 +112,7 @@ For Play, use Fastlane Supply's existing API client: begin an edit for the fixed
 
 For Apple, use the authenticated App Store Connect API through Spaceship: a live version's screenshots cannot change, so select the editable version (create the next version record when none exists) and the primary locale, and prove screenshot sets are separate from the live version before replacing them. Use `APP_IPHONE_67` for the 6.9-inch frames and `APP_IPAD_PRO_3GEN_129` for 13-inch frames. Upload in order, poll processing, read back ordered sets, require `COMPLETE` and compare `sourceFileChecksum` with local MD5. Keep errors/receipts private. Do not select a build, change review credentials or submit review in a screenshot operation. Preserve the old exported bytes for an explicit rollback.
 
-Do not advertise push delivery before #2626 passes on physical devices. For the Cordova 1.1.x binaries, which had no widgets, widget claims and screenshots were removed from every locale; the native apps (2.0 and later) ship widgets, and their listing shows and describes exactly the widgets of the binary in the store. Keep imagery consistent with the binary. Maintain actual data-provider identity when a fallback serves an observation.
+Do not advertise push delivery before #2626 passes on physical devices. For the Cordova 1.1.x binaries, which had no widgets, widget claims and screenshots were removed from every locale; the native apps (2.0 and later) ship widgets. For a native release, make the images and descriptions match the widgets that binary supports. Keep imagery consistent with the binary. Maintain actual data-provider identity when a fallback serves an observation.
 
 ## Provider and privacy review
 
