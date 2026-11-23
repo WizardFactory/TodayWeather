@@ -1,0 +1,14 @@
+{
+  "task": "DiskCacheSpawn3135",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3135",
+  "scope": "Keep lib tests that start child processes apart from disk-cache tests whose capacity flock a child's inherited file description can hold.",
+  "server2_paths": [
+    "server2/config/tasks/DiskCacheSpawn3135.json",
+    "server2/src/budget/qualification.rs",
+    "server2/src/cache/disk.rs",
+    "server2/src/lib.rs",
+    "server2/src/storage/allowance.rs",
+    "server2/src/test_spawn.rs"
+  ],
+  "outside": []
+}

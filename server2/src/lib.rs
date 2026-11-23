@@ -326,6 +326,8 @@ pub fn public_router_with_routes(state: Arc<SharedState>, routes: Router) -> Rou
 }
 
 #[cfg(test)]
+mod test_spawn;
+#[cfg(test)]
 mod allocator_tests {
     /// KMA-RESTART-BOUND: heap allocations, small and large, on this thread and on others, come
     /// from mimalloc's heap (musl's or the system's malloc would not be in its region).
