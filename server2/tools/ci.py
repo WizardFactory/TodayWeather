@@ -180,6 +180,7 @@ def command_plan(root, event, stage):
         ('python', [python, 'tests/integration/test_cutover_deadline.py']),
         ('python', [python, 'tools/test_native_artifact.py']),
         ('python', [python, 'tests/integration/test_paired_read.py']),
+        ('python', [python, 'tests/integration/test_qualification_evaluator.py']),
         ('python', [python, 'tests/integration/test_shadow_simulation.py']),
         ('python', [python, 'tests/integration/test_shadow_measured_simulation.py']),
         ('python', [python, '-m', 'unittest', 'discover', '-s', 'tests/integration', '-p', 'test_rehearsal_*.py']),

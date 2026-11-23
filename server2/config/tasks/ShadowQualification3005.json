@@ -1,0 +1,60 @@
+{
+  "task": "ShadowQualification3005",
+  "issue": "https://github.com/WizardFactory/TodayWeather/issues/3005",
+  "scope": "Assess SR-6 retained evidence for the SR-7 local decision report.",
+  "server2_paths": [
+    "server2/config/tasks/ShadowQualification3005.json",
+    "server2/tests/integration/test_qualification_evaluator.py",
+    "server2/tools/ci.py",
+    "server2/tools/shadow/qualification_criteria.md",
+    "server2/tools/shadow/qualification_evaluator.py",
+    "server2/tools/test_ci.py"
+  ],
+  "outside": [
+    {
+      "path": "docs/evidence/tasks/issue-3005/qualification.md",
+      "category": "documentation",
+      "reason": "Record the decision on the November 21–22 local workload and the outstanding cloud evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3005/criteria.observation-only.json",
+      "category": "documentation",
+      "reason": "Preserve the exact non-operational evaluation policy used for this retained evidence."
+    },
+    {
+      "path": "docs/evidence/tasks/issue-3005/qualification-summary.json",
+      "category": "documentation",
+      "reason": "Retain the eight machine outcomes, public aggregate counts and input hashes."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor.md",
+      "category": "documentation",
+      "reason": "Document offline scoring and the two owner decisions."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.json",
+      "category": "documentation",
+      "reason": "Extend the maintained workflow source with the qualification decision."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+      "category": "documentation",
+      "reason": "Render the edited Archify workflow."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/manual.json",
+      "category": "documentation",
+      "reason": "Update editable operator instructions."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/manual.pdf",
+      "category": "documentation",
+      "reason": "Render the operator manual."
+    },
+    {
+      "path": "docs/operations/server2-shadow-supervisor/qualification-output.png",
+      "category": "documentation",
+      "reason": "Show the observed offline evaluator output."
+    }
+  ]
+}
