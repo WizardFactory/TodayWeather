@@ -315,6 +315,12 @@ not production. Provider API keys remain private in the hashed configuration.
 This lifecycle supports only the initial process; it does not automatically
 restart, replace a host or replenish a grant.
 
+### Private configuration and a failed start
+
+`DONGNAE_SECRET_KEYS` and `AIRKOREA_SECRET_KEYS` are JSON arrays of keys (`'["key"]'`). A bare key leaves the list empty; without a data.go.kr key the candidate with a KMA family exits at startup with `invalid gateway configuration`; the November 23 canary's first run stopped this way. Before `prepare`, start the same binary once on the operator machine with the exact candidate environment and a throwaway cache directory and confirm it keeps running.
+
+When the install fails before any sample exists, `run` reports `acquisition_failed` and `finish` returns `awaiting_evidence`: it keeps the instance until paired evidence is verified or the 170-hour deadline passes. To end such a run earlier, read the host journal and unit states over SSH and keep them with the run, terminate the exact owned instance, then repeat `finish` with the original journal. It fences the terminated instance, removes the role, profile, security group and raw bucket, and keeps the state bucket (`evidence_incomplete`). [November 23 canary](../evidence/tasks/issue-3005/canary-20261123.md)
+
 ## Operator quick start
 
 The [three-page operator manual](server2-shadow-supervisor/manual.pdf) covers offline preparation, finish recovery and qualification of retained evidence. The final page shows the SR-7 decision from the November 21–22 rehearsal. [Editable source](server2-shadow-supervisor/manual.json)
