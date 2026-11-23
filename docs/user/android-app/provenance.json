@@ -6,7 +6,7 @@
   "capture_date": "2026-11-23",
   "environment": {
     "device": "owned Pixel 8 API 36 Google APIs emulator (AVD tw_api36_capture)",
-    "system_locale": "ko-KR (primary), en-US (secondary)",
+    "system_locale": "ko-KR",
     "app_locale": "ko-KR",
     "timezone": "Asia/Seoul",
     "raw_pixels": [
@@ -1178,8 +1178,8 @@
     "android/tools/emulator/offline.sh": "67db8967d6e0e3a61dba1a9466ce74def3bb0f705b70d857b9724fd91f398c1e",
     "android/tools/manual/capture.sh": "9b57265337a58ef178df08a59e11ecc5f12571fb1b1cf22fdd2e3cef9b2395d7"
   },
-  "manual_sha256": "f73e231ef368f302b40416ef1af07f41f72fc86552d9b0eb8233c81ef4ac1c3c",
-  "pdf_sha256": "7d0dd31e061d8ac71a689165dca3b550dc1e0cd2590f39b98fa7558f3ff0802e",
+  "manual_sha256": "f07ceba6bc0fd54d406c8df0bd2c8c226dfea581f3f4020ec0f3cd409f1d93b6",
+  "pdf_sha256": "8d6f475c1e45c8b83cc3b40d22ed0fcf76fa2a82237c1fb6e2ca3f4391061c5b",
   "limitations": [
     "API36 emulator captures; not a release APK or physical-device certification",
     "No actual notification delivery, analytics opt-in, or share recipient exercised",

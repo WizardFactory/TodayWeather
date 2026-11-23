@@ -19,8 +19,10 @@ The [older Cordova app manual](../cordova-app/README.md) describes version 1.1.1
 
 All 44 journey screenshots were captured from the running native app on 23 November 2026
 **without ads** (`capture.sh --no-ads`: the test application replaces the consent and
-Ads SDK platform, and every capture asserts that the SDK did not start and that no
-native ad card is on screen), using an owned API36 emulator at 1080×2400 pixels, 420dpi,
+Ads SDK platform; every capture asserts that the Ads SDK did not start, and every
+capture of an app screen also asserts that no native ad card is in it — the three
+system screens, the location and notification permission dialogs and the share
+chooser, are outside the app's view tree), using an owned API36 emulator at 1080×2400 pixels, 420dpi,
 font scale 1.0, Korean app/system language and Asia/Seoul time. Saved places are seeded
 for later sections. Weather, geocoding, nationwide data and Google Places search use the
 configured live services; weather values and warnings are dated examples. Images
@@ -38,9 +40,12 @@ The bottom tabs switch between pages. You can set the automatic refresh interval
 under 업데이트 주기 in the menu.
 
 All four tabs use outline icons. On the selected tab, the icon and its label
-use the theme’s accent color, with a short line above the icon. Every page of
-this edition shows that navigation as full device frames; the earlier cropped
-captures are in the previous edition named in the capture record.
+use the theme’s accent color, with a short line above the icon, on the pages
+that show the tab bar (the start, alarm, settings and nationwide pages have none).
+The 44 journey screenshots of this edition are full device frames; the
+pull-to-refresh example is a capture of the app's own view from a device test,
+without the system bars. The earlier cropped captures are in the previous edition
+named in the capture record.
 
 ## Reader notes
 
