@@ -286,8 +286,8 @@ Both charts keep the Cordova information model and reading order. The design sys
 
 **Anatomy, top to bottom, sharing one column grid:**
 1. **Day title.** For example `오늘 09.27` / `Today 09/27`. Role `caption`, weight 600. It appears at the first column of each date. A midnight guide line (`chart.grid.strong`) runs through the whole chart.
-2. **Hour label.** For example `21시` / `9 PM`. Role `chart-axis`. It is formatted by the locale; the width estimate already exists in `components.tsx:220-221`.
-3. **Sky icon.** Size 1.75em of `chart-axis` (28 px on mobile). The day or night variant comes from the data.
+2. **Hour label.** The hour and the native apps' short unit (`LOC_HOUR`): `21시`, `21h`, `21時`, `21Uhr` (`chart.hour`); KMA midnight reads `24` as the apps' `time: 24` rows. Role `chart-axis`. It does not follow the locale clock, so seven columns fit a phone; the cursor announcement and table keep the locale's time format.
+3. **Sky icon.** Size 1.75em of `chart-axis` (28 px on mobile). The day or night variant comes from the data. As in the native apps, a row's icon, probability and amount sit on the boundary before its hour (the period ending there), while the hour label and temperature dots sit under the hour.
 4. **Precipitation.** The probability is always printed, including `0%`, as in Cordova (`caption`, value plus `%`). At 30% or more it is colored `precip.text`, and at 60% or more the drop icon is filled. An amount (the first truthy of `rn1`/`s06`/`r06`, rounded when it is 10 or more) goes on a second `caption` line when present.
 
    Cordova column rules that are kept:
@@ -298,11 +298,11 @@ Both charts keep the Cordova information model and reading order. The design sys
 
    | Element | Line | Dot / marker | Value text |
    | --- | --- | --- | --- |
-   | Today | `chart.today` line, 2.5 px | Dots at least 1.6em of `chart-value` (24 px on mobile), filled `chart.today`; expand to fit negative/two-digit values with padding, enlarging columns if needed | `chart-value` in `chart.today.on` (white 4.81 / ink 8.18 dark) |
-   | Yesterday | `chart.yesterday.line`, 1.5 px, dashed "4 4" | Dots filled `chart.yesterday.dot` (`#637088` / `#8391a8`) | White 5.00 / ink 5.63 |
-   | Now | Between 3-hour columns, both lines are spliced through the current observation (today `t1h`, yesterday's value at the same time). When the current time falls on a 3-hour column, there is no splice. This follows Cordova's `sharp` rule (`client/www/js/app.js:547-551`, `706-721`, `748-871`) | `chart.now` point **on the today line at `t1h`** (`#e5484d` light 3.62 on canvas / `#ff6b70` dark 4.67 on raised). A `chart.yesterday.dot` point marks yesterday at the same time. Between columns: a 0.5em point placed half a column after `currentIndex`. On a 3-hour column: a full-size dot | On a 3-hour column: `chart-value` inside the dot. Otherwise the value appears in the column-cursor announcement and tooltip |
+   | Today | `chart.today` line, 2.5 px | Dots of radius 0.625rem (native radius 10), widened only to fit the value and never beyond the column, filled `chart.today` | The number without `°`, `chart-value` in `chart.today.on` (white 4.81 / ink 8.18 dark) |
+   | Yesterday | `chart.yesterday.line`, 1.5 px, dashed "4 4" | Same-size dots filled `chart.yesterday.dot` (`#637088` / `#8391a8`) in every column | The number without `°`; white 5.00 / ink 5.63 |
+   | Now | Between 3-hour columns, both lines are spliced through the current observation (today `t1h`, yesterday's value at the same time). When the current time falls on a 3-hour column, there is no splice. This follows Cordova's `sharp` rule (`client/www/js/app.js:547-551`, `706-721`, `748-871`) | `chart.now` point **on the today line at `t1h`** (`#e5484d` light 3.62 on canvas / `#ff6b70` dark 4.67 on raised). A `chart.yesterday.dot` point marks yesterday at the same time. Between columns: a 0.625em filled point (native radius 5) half a column after `currentIndex`, no ring or line. On a 3-hour column: that column's full-size today dot turns red (native `circle-today-current`), filled `status.danger.text` so its value keeps 4.5:1 (white on `#b3261e` 6.54; ink on `#ff8a80` 7.87). Under `forced-colors` the current dots use `Highlight` | On a 3-hour column: `chart-value` inside the dot. Otherwise the value appears in the column-cursor announcement, tooltip and table |
 
-   **Overlap rule.** When today's and yesterday's dots in a column would overlap vertically (less than 1 dot apart), yesterday's value text is hidden and its dot shrinks to 8 px. Today's value always wins. This fixes the Cordova overlap visible in `docs/rewrite/screenshots/native-ios-hourly.png`.
+   **Overlap rule.** As in the native apps, every yesterday value is drawn and today's dot is drawn over it where they meet; nothing is hidden. Dots are kept at the native size so they meet only for close temperatures.
 6. **Details rows (expander).** Wind direction arrow rotated by `vec`, wind speed plus unit, and humidity %. All use `caption`. The expanded state persists in a new preference, mirroring Cordova's `expandShortChart`. This needs `vec` mapped into `packages/weather-core` (currently unmapped).
 
 **Chart color tokens.** Line and fill colors are non-text and need at least 3:1. Dot text needs at least 4.5.
@@ -327,15 +327,15 @@ Both charts keep the Cordova information model and reading order. The design sys
 
 | | Mobile | Tablet | Desktop |
 | --- | --- | --- | --- |
-| Column width | clamp(3.25rem, 100vw / 7, 4rem): 57 px at 402, continuing Cordova `min(width/7, 60)` | 4.5rem (72 px) | 4rem (64 px) |
+| Column width | `min(chart width / 7, 60 px)` × text scale (rem / 16), as in the native apps (Cordova `colWidth`) | same | same |
 | Plot height | 11rem | 14rem | 13rem |
-| Visible columns | ≈7 | ≈10–16 | ≈14 in the main column |
+| Visible columns | 7 (fewer with larger text) | chart width / 60 | chart width / 60 |
 
 **Scroll.**
 - Horizontal scrolling happens inside the chart only.
-- The initial position is the column before the current time, as in Cordova.
-- The data span matches the service's 3-hour rows. The PWA's 16-point cap is lifted to the full series.
-- Mixed 1-hour and 3-hour rows (and off-hour observations) use bounded chronological segment spacing (`hourlyXPositions`: 1.0× column at ≤1h, smoothly up to 1.35× at 3h, capped at 1.5× for >3h gaps with a line break) so 3-hour spans do not stretch into empty mobile voids and off-hour observations cannot blow up chart width (#3114). The Y-axis ticks stay pinned at the viewport edge while scrolling.
+- The initial position puts the column before the current one at the left edge, as in the native apps (`getTodayPosition`).
+- The data span matches the service's rows from yesterday 00:00 (the response's current date minus one day) onward; older rows are not drawn and serve only as the yesterday comparison for yesterday's columns. The PWA's 16-point cap is lifted to the rest of the series.
+- Columns are the three-hour forecast rows only (KMA `short`, overseas `hourly`; `Weather.chartHourly`), one column per row at equal spacing, so the column count matches the native apps. The merged one-hour `shortest` rows stay in the rain and snow card. An off-hour observation is not a column (see Now). There is no Y axis; each dot carries its value.
 
 **Interaction and accessibility.**
 - The chart is a focusable `role="group"` with a summary label.
@@ -355,26 +355,27 @@ Both charts keep the Cordova information model and reading order. The design sys
 **Default view.** The Cordova daily chart replaces the PWA's current horizontal-row list (`web/src/Weather.tsx:625-670`) as the default daily view on every tier. The list becomes the table alternative.
 
 **Anatomy, one column per day, including past days the service returns:**
-1. **Weekday.** `chart-axis`, weight 600. Today's column gets an `accent.subtle` background and a small `caption` "Today" tag **above** the weekday, without replacing it. This is a new addition. Cordova's `current-rect` is transparent (`client/scss/ionic.app.scss:524`), except in the old theme, which fills it (`:832`, `:937`).
-2. **Day of month.** `chart-axis`.
-3. **AM and PM sky icons.** Shown as one icon when they are equal or PM is missing. Size 1.75em of `chart-axis`.
-4. **Precipitation.** Probability for today and later (Cordova rule: shown when `fromToday >= 0` and truthy), plus an amount when present. Uses `caption` and the same color rules as the hourly chart.
+1. **Weekday.** The short weekday, `chart-axis`, weight 600. Today's column uses the accent color, as the native apps' `current-rect`; there is no separate "Today" tag.
+2. **Day of month.** Two digits (`01`), as the native apps. `chart-axis`.
+3. **AM and PM sky icons.** Stacked, AM above PM, without period words (their names are in the cursor, tooltip and table). Shown as one icon when they are equal or PM is missing. The icon area keeps one height so the rows below stay aligned.
+4. **Precipitation.** Probability for today and later (Cordova rule: shown when `fromToday >= 0` and truthy; otherwise the cell is empty, as native, and the table shows a dash), plus an amount when present. Uses `caption` and the same color rules as the hourly chart.
 5. **Min–max bars on one y scale shared by all days.** This scale is what makes week-to-week change visible, and it is the Cordova signature.
-   - **Bar (D8).** Width 0.375rem (6 px, rounded caps); Cordova used 2 px. The fill is the PWA daily list's temperature gradient (`web/src/style.css:1058`) turned vertical:
+   - **Bar (D8).** Width 0.625rem (10 px, rounded caps); Cordova used 2 px. The fill is the PWA daily list's temperature gradient (`web/src/style.css:1058`) turned vertical:
      - bottom (min) `chart.range.cool` `#9bcdf0`
      - top (max) `chart.range.warm` `#f0c77f`
      - The same gradient is used in dark mode, where it reaches 7.62–9.68 on surface and raised.
      - In light mode the stops are 1.70 and 1.59 on white. The printed min/max values carry the information, and a 1 px solid outline `chart.range.edge` (`#637088` light / `#94a3b8` dark) keeps the bar shape visible.
    - **Values.** The maximum sits above the bar and the minimum below it, each as `N°` in `chart-value`.
-   - **Current temperature.** A `chart.now` dot on today's bar.
+   - **Current temperature.** A `chart.now` dot on today's bar, 1.4 times the bar width across (14 px), with no vertical line through the column: the cursor line appears only after the user picks a day (keyboard, click or hover). A range narrower than 0.375rem keeps that minimum bar height, centred on the real range.
    - **Past days** (new addition; Cordova does not distinguish them). Bars keep the D8 gradient at 55% opacity, and labels use `text.secondary`, which is the non-color cue.
    - **Y domain** (deviation from Cordova, which uses only `tmn`/`tmx`, `app.js:1197-1204`). The domain includes the current temperature, so today's dot can never fall off the scale.
 
 **Geometry.**
-- Column width is the same as the hourly chart. The chart fills the card width when the days fit.
+- Column width is the same as the hourly chart, and every supplied day is a column (the native count). The chart fills the card width when the days fit.
 - Initial scroll:
-  - When the days do not fit, today is the third column (Cordova rule below 640 px).
-  - When they fit (tablet and desktop in most cases), there is no scroll and the chart starts at the first day (Cordova behavior at 640 px and wider).
+  - When the days do not all fit, today is the third column (the native phone rule), as far as the chart can scroll.
+  - When they all fit, there is no scroll and the chart starts at the first day.
+  - The native tablet rule (first day from a 640 px screen) is not used: it assumes a full-width chart, and in the web card it left today at the right edge with the forecast off screen.
 
 **Interaction, accessibility and states.** Same as the hourly chart. The announcement is "Sat 26: AM cloudy, PM sunny, 30%, low 18°, high 27°".
 

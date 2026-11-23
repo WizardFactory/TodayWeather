@@ -496,6 +496,7 @@ const en: Catalog = {
     "These observations are old. Check the latest weather before going out.",
   "chart.label": "Hourly temperature trend; values are in the table below",
   "chart.empty": "No hourly forecast",
+  "chart.hour": "{hour}h",
   "chart.table": "Show hourly details",
   "chart.col.time": "Time",
   "chart.col.temperature": "Temperature (°{unit})",
