@@ -186,16 +186,21 @@ class CommandPlanTests(unittest.TestCase):
 
     def test_a_push_checks_each_server2_commit_against_its_parent(self):
         diffs = {('p1', 'm1'): ['server2/src/lib.rs', 'server2/config/tasks/A.json'],
-                 ('p2', 'm2'): ['ios/App.swift'],
+                 # A move out of server2/ (rename detection off) still selects the commit.
+                 ('p2', 'm2'): ['docs/asset', 'server2/asset'],
                  ('p3', 'm3'): ['.github/workflows/server2.yml', 'server2/config/tasks/B.json']}
         def git(*args):
             if args[1] == 'rev-list':
                 return 'm1\nm2\nm3'
             if args[1] == 'rev-parse':
                 return 'p' + args[2][1]
+            self.assertIn('--no-renames', args)
             if '--diff-filter=d' in args:
-                return '\n'.join(p for p in diffs[(args[4], args[5])] if p.startswith('server2/config/tasks/'))
-            return '\n'.join(diffs[(args[3], args[4])])
+                return '\n'.join(p for p in diffs[(args[5], args[6])] if p.startswith('server2/config/tasks/'))
+            return '\n'.join(diffs[(args[4], args[5])])
+        with patch.object(ci, 'output', side_effect=git), self.assertRaisesRegex(SystemExit, 'm2: one reviewed'):
+            ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
+        diffs[('p2', 'm2')] = ['ios/App.swift']
         with patch.object(ci, 'output', side_effect=git):
             commands = ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
         checks = [c for c in commands if c[0] == sys.executable]

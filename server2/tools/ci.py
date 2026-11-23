@@ -63,10 +63,11 @@ def push_placement_commands(root, event):
     commands = []
     for commit in commits:
         parent = output('git', 'rev-parse', f'{commit}^1')
-        paths = output('git', 'diff', '--name-only', parent, commit).splitlines()
+        # Without rename detection a move out of server2/ reports its source path too.
+        paths = output('git', 'diff', '--no-renames', '--name-only', parent, commit).splitlines()
         if not any(path.startswith('server2/') or path == '.github/workflows/server2.yml' for path in paths):
             continue
-        declared = output('git', 'diff', '--name-only', '--diff-filter=d', parent, commit, '--',
+        declared = output('git', 'diff', '--no-renames', '--name-only', '--diff-filter=d', parent, commit, '--',
                           ':(top)server2/config/tasks/*.json').splitlines()
         if len(declared) != 1:
             raise SystemExit(f'{commit}: one reviewed task declaration is required, found {len(declared)}')
