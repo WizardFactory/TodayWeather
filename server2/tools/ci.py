@@ -140,6 +140,7 @@ def stage_commands(root, event, stage):
         return [[python, 'tools/test_placement.py'], [python, 'tools/test_ci.py'],
                 [python, 'tools/check_test_partitions.py', '--shards', str(RUST_SHARDS)],
                 ['cargo', 'test', '--locked', '--workspace', '--doc'],
+                ['mkdir', '-p', str(Path(archive).parent)],
                 ['cargo', 'nextest', 'archive', '--locked', '--workspace', '--archive-file', archive]]
     if stage.startswith('rust-'):
         # Extracting into this checkout recreates the build job's target path, which

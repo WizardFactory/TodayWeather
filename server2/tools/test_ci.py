@@ -1,5 +1,6 @@
 """Check the command partition without starting subprocesses or providers."""
 from collections import Counter
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -161,8 +162,14 @@ class CommandPlanTests(unittest.TestCase):
                     extras = hosted - Counter(c for c in serial if c not in (workspace_tests, simulation))
                     # The whole commands are frozen, so a narrowing flag such as --lib cannot slip in.
                     archive = str(ROOT / ci.NEXTEST_ARCHIVE)
+                    # A fresh runner has no reports/: create it before nextest writes the archive.
+                    self.assertEqual(1, extras[('mkdir', '-p', str(Path(archive).parent))])
                     self.assertEqual(1, extras[('cargo', 'nextest', 'archive', '--locked', '--workspace',
                                                 '--archive-file', archive)])
+                    build = ci.stage_commands(ROOT, event, 'rust-build')
+                    self.assertLess(build.index(['mkdir', '-p', str(Path(archive).parent)]),
+                                    build.index(['cargo', 'nextest', 'archive', '--locked', '--workspace',
+                                                 '--archive-file', archive]))
                     for k in range(1, ci.RUST_SHARDS + 1):
                         self.assertEqual(1, extras[('env', 'RUST_MIN_STACK=8388608', 'cargo-nextest', 'nextest',
                                                     'run', '--archive-file', archive, '--workspace-remap', '.',
@@ -173,7 +180,7 @@ class CommandPlanTests(unittest.TestCase):
                                                 str(ci.RUST_SHARDS))])
                     shards = [c for c in extras if c[:2] == simulation]
                     self.assertEqual(len(ci.SHADOW_SHARDS), len(shards))
-                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 3 + len(shards))
+                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 4 + len(shards))
         self.assertEqual({'CARGO_PROFILE_DEV_DEBUG': '0', 'CARGO_PROFILE_TEST_DEBUG': '0'},
                          ci.STAGE_ENV['rust-build'])
 
@@ -219,6 +226,14 @@ class CommandPlanTests(unittest.TestCase):
         diffs[('p1', 'm1')] = ['server2/src/lib.rs']
         with patch.object(ci, 'output', side_effect=git), self.assertRaisesRegex(SystemExit, 'm1: one reviewed'):
             ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
+
+    def test_workflow_matrices_match_the_python_shard_counts(self):
+        workflow = (Path(__file__).parents[2] / '.github/workflows/server2.yml').read_text()
+        def matrix(job):
+            block = workflow[workflow.index(f'  {job}:\n'):]
+            return [int(n) for n in re.search(r'shard: \[([0-9, ]+)\]', block).group(1).split(',')]
+        self.assertEqual(list(range(1, ci.RUST_SHARDS + 1)), matrix('rust'))
+        self.assertEqual(list(range(1, len(ci.SHADOW_SHARDS) + 1)), matrix('shadow'))
 
     def test_shadow_shards_run_every_simulation_test_exactly_once(self):
         path = Path(__file__).parents[1] / ci.SHADOW_SIMULATION
