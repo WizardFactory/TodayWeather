@@ -58,12 +58,12 @@ Release CI is [Android release verification](../../.github/workflows/android-rel
 
 | Suite | Runner under `android/tools/` | Tests |
 | --- | --- | --- |
-| `device-tests` | `release-ci/run-device-tests.sh` | `CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held. A skipped test fails the suite |
+| `device-tests` | `release-ci/run-device-tests.sh` | `CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held |
 | `parity` | `parity-reference/run-native-smoke.sh` | `ParityDeviceTest` in Korean and English |
 | `shell-fit` | `large-screen/run-shell-fit.sh` | `ShellFitDeviceTest` with gesture and three-button navigation, on the tablet and the foldable |
 | `window-fit` | `large-screen/run-window-fit.sh` | `WindowFitDeviceTest`: split screen, rotation, fold, font scale 1.0 and 1.3 |
 
-`release-ci/run-suites.sh` runs a job's suites in turn and reports each, so one run shows every failure.
+`release-ci/run-suites.sh` runs a job's suites in turn and reports each, so one run shows every failure. Every suite reads the raw instrumentation status of each test (`instrumentation_passed` in `emulator/offline.sh`): a failed, crashed, ignored or assumption-skipped test fails it, where the plain `OK (N tests)` line would count a skipped test as run.
 
 Start a run for a commit and read its result:
 
@@ -73,6 +73,6 @@ gh run list --workflow android-release.yml --limit 5
 gh run view <run id> --json conclusion,jobs --jq '.conclusion, (.jobs[] | "\(.name): \(.conclusion)")'
 ```
 
-The run's title and its `Verified commit` job name the commit. `ref` must be the full SHA: the run of a branch name would not say which commit it verified. The nightly run starts at 02:30 Asia/Seoul and does nothing when `android/` and both workflows are unchanged since the last passed nightly run.
+The run's title and its `Verified commit` job name the commit. `ref` is required and must be the full 40-character SHA of the commit that gets checked out: a run of a branch name would not say which commit it verified, so it fails. The nightly run starts at 02:30 Asia/Seoul and does nothing when no input of the Android PR workflow (the paths that start it: `android/`, the client sources it imports, the server routes it reads) and neither workflow changed since the last passed nightly run.
 
 The suites that need a Cordova APK, the Firebase configuration, the production server, a Play Store image, an emulator of the reference captures' type, a physical device or the signed release APK are not in release CI. They are the manual gates of the [Android release runbook](../operations/android-release.md#manual-gates).

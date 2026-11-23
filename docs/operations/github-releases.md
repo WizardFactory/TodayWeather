@@ -21,14 +21,20 @@ Each delivery scope has its own `MAJOR.MINOR.PATCH` sequence; the scopes do not 
 
 **Store apps (Android, iOS)** release each binary given to a test track as a candidate, `-rc.N`, published as a GitHub pre-release. A candidate that fails keeps its tag and Release; the next one is `-rc.N+1` with a new versionCode or build number. When a candidate's binary goes to production unchanged, the final tag `vMAJOR.MINOR.PATCH` is created at the same commit, and its notes name the candidate and the same artifact identity. Nothing is rebuilt between the two. **Webapp and backend** scopes have no candidates: the webapp guard accepts `webapp/vMAJOR.MINOR.PATCH` only.
 
-Create the tag at the exact commit on `master`, annotated, and the Release from that existing tag:
+Draft the notes first, then create the annotated tag locally at the exact commit on `master`, check the notes against it, and only then push the tag and create the Release from it:
 
 ```sh
-git tag -a <scope>/v<version> <full SHA> -m "<target> <version>"
-git push origin <scope>/v<version>
-gh release create <scope>/v<version> --verify-tag --latest=false --title "<scope>/v<version>" --notes-file notes.md
+TAG=<scope>/v<version>
+node scripts/release-notes.mjs --scope <scope> --version <version> --commit <full SHA> > notes.md   # refuses an existing tag
+$EDITOR notes.md                                    # replace every <fill in>
+git tag -a "$TAG" <full SHA> -m "<target> <version>"
+node scripts/release-notes.mjs --check notes.md &&
+  git push origin "$TAG" &&
+  gh release create "$TAG" --verify-tag --latest=false --title "$TAG" --notes-file notes.md
 # a store-app candidate: add --prerelease
 ```
+
+A tag that was pushed is never moved or reused; a local tag at the wrong commit is deleted and created again before the push.
 
 `--verify-tag` stops `gh` from creating a tag at a moving branch head. `--latest=false` on every Release: the repository has one "Latest" label, and it would say nothing about the other scopes. List one scope's Releases with:
 
@@ -39,7 +45,7 @@ gh release list --limit 100 --json tagName,isPrerelease,publishedAt \
 
 ## Release-note template
 
-Draft the notes with `node scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]`. It writes the fields below with the scope's identity lines and lists what was merged under the scope's paths since its previous final tag, from the local Git history (`android/`; `ios/`; `web/` and `packages/`; `server/`; `server2/`). The list is a draft: a pull request that only refreshed a snapshot under those paths is listed too, so trim it to what the release changes and write the user impact. Replace every `<fill in>`, then run `node scripts/release-notes.mjs --check notes.md` after the tag exists: it fails while a field is unfilled or the tag is missing or at another commit. The first Release of a scope has no previous tag and needs `--from <commit>`.
+Draft the notes with `node scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]`. It writes the fields below with the scope's identity lines and lists what was merged under the scope's paths since its previous final tag, from the local Git history (`android/`; `ios/`; `web/` and `packages/`; `server/`; `server2/`). The list is a draft: a pull request that only refreshed a snapshot under those paths is listed too, so trim it to what the release changes and write the user impact. Replace every `<fill in>`, then run `node scripts/release-notes.mjs --check notes.md` once the local tag exists and before it is pushed: it fails while a field is unfilled or the tag is missing or at another commit. The first Release of a scope has no previous tag and needs `--from <commit>`.
 
 Use this template for all targets, with a scope-specific identity section. Update rollout status with a dated evidence reference; preserve previous attempts. Keep account/resource IDs, secrets and private backups in the operator inventory, not public notes.
 

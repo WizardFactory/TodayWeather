@@ -46,15 +46,12 @@ for spec in "$@"; do
     adb shell input keyevent KEYCODE_WAKEUP
     adb shell wm dismiss-keyguard
     # shellcheck disable=SC2086
-    adb shell am instrument -w -r $argument -e class "$PKG.$class" "$PKG.test/$PKG.TestRunner" | tr -d '\r' > "$OUT/$class.txt"
-    # Raw status per test: 1 started, 0 passed, -1 error, -2 failure, -3 ignored, -4 assumption not met.
-    passed=$(grep -c '^INSTRUMENTATION_STATUS_CODE: 0$' "$OUT/$class.txt" || true)
-    other=$(grep -c '^INSTRUMENTATION_STATUS_CODE: -[0-9]*$' "$OUT/$class.txt" || true)
-    if [ "$passed" != "$declared" ] || [ "$other" != 0 ] || ! grep -q '^INSTRUMENTATION_CODE: -1$' "$OUT/$class.txt"; then
-        grep -E '^INSTRUMENTATION_(STATUS: (test|stack)=|RESULT|FAILED|CODE)|^\s+at |Exception|Error' "$OUT/$class.txt" | head -40 >&2 || true
-        echo "$class: $passed of $declared declared tests passed, $other failed or skipped" >&2
+    adb shell am instrument -w -r $argument -e class "$PKG.$class" "$PKG.test/$PKG.TestRunner" > "$OUT/$class.txt" || true
+    if ! instrumentation_passed "$OUT/$class.txt" "$declared"; then
+        tr -d '\r' < "$OUT/$class.txt" | grep -E '^INSTRUMENTATION_(STATUS: (test|stack)=|STATUS_CODE: -|RESULT|FAILED|CODE)|Exception|Error' | head -n 40 >&2 || true
+        echo "$class: not all of its $declared declared tests passed (failed, skipped or unfinished)" >&2
         exit 1
     fi
-    echo "$class: $passed of $declared declared tests passed"
+    echo "$class: $declared of $declared declared tests passed"
 done
 echo "device tests passed: $*; evidence in $OUT"

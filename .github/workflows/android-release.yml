@@ -7,11 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Full SHA of the commit to verify (empty: the head of the selected branch or tag)"
-        required: false
+        description: "Full 40-character SHA of the commit to verify"
+        required: true
         type: string
   schedule:
-    # 02:30 Asia/Seoul; skipped unless android/ changed since the last passed nightly run.
+    # 02:30 Asia/Seoul; skipped unless an input of the Android PR workflow or this workflow changed since the
+    # last passed nightly run.
     - cron: "30 17 * * *"
   # A change of this verification is tried on its own pull request.
   pull_request:
@@ -47,18 +48,28 @@ jobs:
           REQUESTED: ${{ inputs.ref }}
         run: |
           sha=$(git rev-parse HEAD)
-          if [ -n "$REQUESTED" ] && [ "$REQUESTED" != "$sha" ]; then
-            echo "ref must be the full SHA of the commit to verify; $REQUESTED is $sha" >&2
-            exit 1
+          if [ "$EVENT" = workflow_dispatch ]; then
+            # A dispatch names its commit: a branch, a tag or a short SHA would not say which commit was verified.
+            if ! printf '%s' "$REQUESTED" | grep -Eq '^[0-9a-f]{40}$' || [ "$REQUESTED" != "$sha" ]; then
+              echo "ref must be the full 40-character SHA of the commit to verify; got '$REQUESTED', checked out $sha" >&2
+              exit 1
+            fi
           fi
           run=true
           if [ "$EVENT" = schedule ]; then
             last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow android-release.yml --event schedule \
               --status success --limit 1 --json headSha --jq '.[0].headSha // empty')
+            # The paths that start the Android PR workflow are the inputs of its checks (android/, the client
+            # sources it imports, the server routes it reads); git reads them as glob pathspecs.
+            ruby -ryaml -e 'w = YAML.load_file(".github/workflows/android.yml"); paths = (w["on"] || w[true])["pull_request"]["paths"]; abort "no paths" if paths.nil? || paths.empty?; puts paths.map { |p| ":(glob)#{p}" }' > "$RUNNER_TEMP/android-paths"
+            echo ":(glob).github/workflows/android-release.yml" >> "$RUNNER_TEMP/android-paths"
+            set --
+            while IFS= read -r spec; do set -- "$@" "$spec"; done < "$RUNNER_TEMP/android-paths"
+            # Skip only on a clean comparison: an unknown commit or a git error runs the verification.
             if [ -n "$last" ] && git cat-file -e "$last^{commit}" 2>/dev/null \
-              && git diff --quiet "$last" "$sha" -- android .github/workflows/android.yml .github/workflows/android-release.yml; then
+              && git diff --quiet "$last" "$sha" -- "$@"; then
               run=false
-              echo "No Android change since the last passed nightly run ($last)." >> "$GITHUB_STEP_SUMMARY"
+              echo "No change of the Android inputs since the last passed nightly run ($last)." >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
@@ -179,7 +190,9 @@ jobs:
       - name: Pack the evidence
         if: always()
         # One archive: the runners name directories with characters an artifact path may not contain.
-        run: tar -czf "$RUNNER_TEMP/device-suites-${{ matrix.name }}.tar.gz" -C "$RUNNER_TEMP" device-suites
+        run: |
+          mkdir -p "$RUNNER_TEMP/device-suites"
+          tar -czf "$RUNNER_TEMP/device-suites-${{ matrix.name }}.tar.gz" -C "$RUNNER_TEMP" device-suites
       - uses: actions/upload-artifact@v4
         if: always()
         with:

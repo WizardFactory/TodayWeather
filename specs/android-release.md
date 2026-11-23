@@ -9,27 +9,28 @@ Consumes [intent/android-release.md](../intent/android-release.md). The maintain
 - Tags are annotated, at an exact commit, never reused. Releases are created from an existing tag, never as "Latest".
 - `scripts/release-notes.mjs --scope <scope> --version <version> [--commit <ref>] [--from <ref>]` prints a draft: source commit (40 characters), scope, tag, previous release, the changes merged under the scope's paths on the first-parent history since the previous final tag contained in the commit, the scope's identity lines and the status fields. It reads Git only.
   - A merged pull request appears with its title and number; a squash commit with its own subject; any other commit with its subject and short hash. No change: one line saying so.
-  - Status 2 with a message and no output for: an unknown scope, a version that is not `MAJOR.MINOR.PATCH` or `-rc.N`, a candidate for a scope without candidates, an existing tag, an unresolvable commit, no previous final tag and no `--from`.
-- `scripts/release-notes.mjs --check <file>` passes when no `<fill in>` remains, the source commit is a full SHA and the notes' tag exists at that commit; otherwise status 1 naming each problem.
+  - Status 2 with a message and no output for: an unknown scope (own names of the scope list only), a version that is not `MAJOR.MINOR.PATCH` or `-rc.N`, a candidate for a scope without candidates, an existing tag, an unresolvable commit, a version that is not above the newest final release the commit contains, a `--from` that is not an ancestor of the commit, no previous final tag and no `--from`.
+- `scripts/release-notes.mjs --check <file>` passes when no `<fill in>` remains, the source commit is a full SHA, the notes' tag is a tag name of this convention for the notes' scope (never a revision expression) and that tag exists at that commit; otherwise status 1 naming each problem.
 - Neither mode writes a tag, a Release or a file.
 
 ## Android release runbook (AC2)
 
 `docs/operations/android-release.md` orders: version freeze; release CI on the full SHA; the manual emulator gates with their commands and prerequisites; local build and signing with `check-apk.sh`; the physical-device gate; candidate tag and notes; store declarations and test tracks; production tag, staged rollout and halt criteria; close; halt and rollback. Each step states who acts and what completes it. Steps needing private inputs, the signing key or store access are the operator's.
 
-`android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>` reports one line per check and fails (status 1) on: an invalid signature; a signing certificate or package different from the store release's; a `versionCode` not above it; a `versionName`, `versionCode`, `minSdk` or `targetSdk` different from the checkout's `app/build.gradle.kts`; a debuggable APK; Google's sample AdMob app ID or none; no Firebase configuration. It prints the identity lines for the notes and changes nothing. Status 2: usage, a missing file or missing SDK tools.
+`android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>` reports one line per check and fails (status 1) on: an invalid signature of either APK; a set of signer certificates or a package different from the store release's; an APK digest it cannot compute; a `versionCode` not above it; a `versionName`, `versionCode`, `minSdk` or `targetSdk` different from the checkout's `app/build.gradle.kts`; a debuggable APK; Google's sample AdMob app ID or none; no Firebase configuration. It prints the identity lines for the notes and changes nothing. Status 2: usage, a missing file or missing SDK tools.
 
 ## CI tiers (AC3, AC4)
 
 - `docs/development/ci-tiers.md` defines PR CI and release CI, the rules for placing a check, the measured state of each target and the Android split.
 - `.github/workflows/android-release.yml` runs on `workflow_dispatch` (input `ref`: the full SHA), nightly, and on pull requests that change the workflow or `android/tools/release-ci/`. Jobs: the commit to verify; the PR workflow's jobs on that commit (`android.yml` as a reusable workflow); `lintRelease`; device suites on hosted emulators (phone API 36, phone API 24, tablet API 36, foldable API 36); a final job that fails unless all passed and names the commit.
-  - A dispatch whose `ref` is not the full SHA of the checked-out commit fails.
-  - The nightly run skips every job when `android/` and the two workflows are unchanged since the last passed nightly run.
+  - `ref` is required; a dispatch whose `ref` is not the full 40-character SHA of the checked-out commit fails.
+  - The nightly run skips every job when the paths that start the Android PR workflow and the release workflow are unchanged since the last passed nightly run; an unknown last commit or a git error runs it.
   - No secret, no environment, `contents: read` (plus `actions: read` for the nightly comparison). The emulator action is pinned to a commit SHA.
-- `android/tools/release-ci/run-device-tests.sh <out> [Class[:name=value] …]` installs the debug and test APKs anew per class on an offline emulator and fails when a class's passed tests differ from its declared `@Test` count, or any test failed, was ignored or skipped by an assumption, or the instrumentation did not finish.
+- `instrumentation_passed <file> <count>` (`android/tools/emulator/offline.sh`) reads `am instrument -w -r` output and passes only for exactly `<count>` passed tests, no failed, crashed, ignored or assumption-skipped test, and a finished instrumentation. The release CI suites' runners (`run-device-tests.sh`, `run-native-smoke.sh`, `run-shell-fit.sh`, `run-window-fit.sh`) decide by it; `test-instrumentation-passed.sh` checks it against recorded outputs in PR CI.
+- `android/tools/release-ci/run-device-tests.sh <out> [Class[:name=value] …]` installs the debug and test APKs anew per class on an offline emulator and requires as many passed tests as the class declares `@Test`.
 - `android/tools/release-ci/run-suites.sh <out> <suite> …` runs the named suites in turn, continues after a failure, writes `summary.txt`, exits 1 when any failed and 2 for an unknown suite.
 - `android.yml` keeps its pull-request and push behavior; its measured time stays within 2–10 minutes.
 
 ## Not specified here
 
-Signing configuration in Gradle, Play upload automation, GitHub environments and secrets, the iOS and server2 CI splits, and fixes of product or test defects that release CI reveals beyond the two lint annotations needed for `lintRelease` to pass.
+Signing configuration in Gradle, Play upload automation, GitHub environments and secrets, the iOS and server2 CI splits, and fixes of product or test defects that release CI reveals beyond what its own run needs: the two lint annotations for `lintRelease`, and Robolectric's Android runtimes resolved through Gradle and read offline (`app/build.gradle.kts`), because the download Robolectric otherwise makes during the tests failed the reused PR job in two of three hosted runs.

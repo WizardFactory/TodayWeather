@@ -3,7 +3,8 @@
 # (docs/development/ci-tiers.md, .github/workflows/android-release.yml):
 #   ANDROID_SERIAL=emulator-5554 android/tools/release-ci/run-suites.sh <out-dir> <suite> [<suite> ...]
 # Suites: device-tests (run-device-tests.sh), parity, shell-fit, window-fit (the existing runners named below;
-# shell-fit is for a tablet or a foldable). A failed suite does not stop the next one, so one run shows
+# shell-fit is for a tablet or a foldable; parity and window-fit accept only an AVD named tw_*, and "fold" in
+# the name turns the fold steps on). A failed suite does not stop the next one, so one run shows
 # every failure; the status is 1 when any suite failed and 2 for an unknown suite. Each runner refuses anything
 # but an emulator, keeps it offline while the app is installed and removes the app. Requires ./gradlew
 # assembleDebug assembleDebugAndroidTest.

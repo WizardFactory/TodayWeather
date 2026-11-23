@@ -42,7 +42,23 @@ The run must conclude `success` and its `Verified commit` job must name the cand
 
 ### Manual gates
 
-Release CI has no secret, no Cordova build, no Play Store image and no phone. These checks cover what it cannot, on the candidate commit. Each runner refuses anything but an emulator, and the offline ones keep the emulator offline while an app is installed. Build first with `./gradlew assembleDebug assembleDebugAndroidTest` from `android/`, with the private inputs a gate names ([Private inputs](../../android/README.md#private-inputs)).
+Release CI has no secret, no Cordova build, no Play Store image and no phone. These checks cover what it cannot, on the candidate commit. Each runner refuses anything but an emulator, and the offline ones keep the emulator offline while an app is installed.
+
+Every runner takes the emulator from `ANDROID_SERIAL` and installs the debug and test APKs of the last build, so build for the gate you are about to run and name an output directory under ignored `reports/`:
+
+```sh
+git rev-parse HEAD                                 # the candidate's full SHA
+cd android && ./gradlew assembleDebug assembleDebugAndroidTest
+adb devices                                        # the emulator's serial, emulator-<port>
+ANDROID_SERIAL=emulator-5554 tools/<runner> [<apk> ...] ../reports/android-release/<version>/<gate>
+```
+
+The gates need two builds, each from the candidate commit with the inputs of [Private inputs](../../android/README.md#private-inputs):
+
+| Build | Private inputs | Gates |
+| --- | --- | --- |
+| Full | `app/google-services.json`, `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`, `TW_MAIL_TO` | Every gate but the menu hand-offs. The test application sends weather requests to the production server only in the production gates, and never sends a push request |
+| Without a server | `TW_MAIL_TO`; `TW_SERVER_URL` removed from the environment and `android/private.properties` | Menu hand-offs: its runner requires a build without a server URL |
 
 | Gate | Command under `android/tools/` | Needs | Emulators |
 | --- | --- | --- | --- |
@@ -52,19 +68,21 @@ Release CI has no secret, no Cordova build, no Play Store image and no phone. Th
 | Notification after the upgrade | `emulator/run-notification-check.sh <cordova-1.1.1-debug.apk> [out]` | Cordova 1.1.1 debug APK; `app/google-services.json`; a Google APIs image | API 36 and API 24 |
 | Ads, consent and analytics choice | `emulator/run-ads-check.sh [out]` | `app/google-services.json`; network | API 36 |
 | Weather, air and nationwide pages from production | `emulator/run-production-weather.sh [out]` | `TW_SERVER_URL`; network | API 36 and API 24 |
-| New install: position or search reaches the weather | `emulator/run-production-start.sh [out]` | `TW_SERVER_URL`; Google Play services; network | API 36 |
+| New install: position or search reaches the weather | `emulator/run-production-start.sh [out]` | `TW_SERVER_URL`, and `TW_PLACES_API_KEY_ANDROID` for the search with Google's predictions; Google Play services; network | API 36 |
 | Places from production: add, swipe, delete | `emulator/run-production-places.sh [out]` | `TW_SERVER_URL`, `TW_PLACES_API_KEY_ANDROID`; network | API 36 |
 | Charts against the Cordova captures of the same emulator type | `chart-reference/device-smoke.sh [out]` | An emulator of the type the references were captured on (arm64 Google APIs image): on the hosted x86_64 emulator the chart heights differed by 9 px and the comparison failed (2026-11-23) | API 36 |
-| Menu hand-offs to the browser, the mail app and the store | `emulator/run-settings-handoffs.sh [out] store` | `TW_MAIL_TO`; an image with the Play Store for `store` | API 34 Play image; without `store` on API 36 |
+| Menu hand-offs to the browser, the mail app and the store | `emulator/run-settings-handoffs.sh <out> store` | `TW_MAIL_TO`; an image with the Play Store for `store` | API 34 Play image; without `store` on API 36 |
 
 Keep each gate's output directory under ignored `reports/`; it can show private configuration. The release notes name the evidence by a private reference, never by its contents.
 
 ### 4. Build and sign
 
-On the operator's machine, from a clean checkout of the candidate commit with `app/google-services.json` and `android/private.properties` in place:
+On the operator's machine, at the root of a clean checkout of the candidate commit with `android/app/google-services.json` and `android/private.properties` in place (both are ignored by Git, so they do not show as changes):
 
 ```sh
-git status --porcelain --untracked-files=no     # empty: the checkout is the candidate
+CANDIDATE=<full SHA>                             # the SHA the release CI run verified
+test "$(git rev-parse HEAD)" = "$CANDIDATE"      # the checkout is that commit, and
+test -z "$(git status --porcelain)"              # nothing differs from it, untracked files included
 cd android
 ./gradlew clean assembleRelease                  # refuses sample or missing AdMob IDs
 BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
@@ -74,10 +92,11 @@ BUILD_TOOLS="$ANDROID_HOME/build-tools/36.0.0"
 tools/release/check-apk.sh "$OUT/TodayWeather-<versionName>-<versionCode>.apk" <installed-store-release.apk>
 ```
 
+- Stop when either `test` fails: an untracked source or resource file under `android/` would be built into the APK, and a clean checkout of another commit builds a different app with the same version numbers, and `check-apk.sh` cannot tell them apart. Record the candidate SHA, the signed APK's SHA-256 and the time of the build together; the release notes carry the first two.
 - `apksigner` asks for the keystore and key passwords; do not put them on the command line, in a file of the checkout or in a log. `TW_ANDROID_KEYSTORE` and `TW_ANDROID_KEY_ALIAS` name the existing release keystore and its key. The app is not enrolled in Play App Signing, so this key is the one users' installs are signed with: a different key cannot update them.
 - `$OUT` is outside the checkout or under ignored `reports/`. Keep the signed APK; the uploaded file and the checked file must be the same bytes.
 - `<installed-store-release.apk>` is the release users have now: the Cordova 1.1.1 store APK for the first native release.
-- `check-apk.sh` verifies the signature, compares the signing certificate and package with the store release, requires a higher `versionCode`, compares `versionName`, `versionCode`, `minSdk` and `targetSdk` with the checkout, and refuses a debuggable APK, Google's sample AdMob app ID and a build without the Firebase configuration. It prints the identity lines of the release notes. A `FAIL` line ends the candidate.
+- `check-apk.sh` verifies both signatures, compares every signer's certificate and the package with the store release, requires a higher `versionCode`, compares `versionName`, `versionCode`, `minSdk` and `targetSdk` with the checkout, and refuses a debuggable APK, Google's sample AdMob app ID and a build without the Firebase configuration. It prints the identity lines of the release notes. A `FAIL` line ends the candidate.
 - A release build that fails after an earlier success removes the earlier APK from `app/build/outputs`; copy the APK out before building again.
 
 ### 5. Device gate
@@ -86,7 +105,7 @@ On a physical phone that has the current store release installed with real state
 
 1. Places, the selected place, units, settings and alarms are those of the store release.
 2. The app registers its push token once per alarm with the same device ID, and a scheduled notification arrives and opens the app on its place.
-3. The analytics choice is the one made before the update; without a choice nothing is collected.
+3. The analytics choice is the one made before the update, and without an opt-in the app sends no Analytics event. Crash reports are a separate matter: Crashlytics collects them whatever the analytics choice is (`firebase_crashlytics_collection_enabled` in the manifest), as the Cordova build did, and the Play declarations of step 7 must say so.
 4. After consent, real ads load in the forecast and the interstitial follows its cap. No test ad appears.
 5. Current position, place search, the weather, air and nationwide pages, sharing and the widget work against production.
 6. The app starts without a crash after a restart of the phone.
@@ -95,16 +114,20 @@ Uninstalling, clearing data or downgrading on AK's phone needs AK's word each ti
 
 ### 6. Tag the candidate and publish its notes
 
+From the repository root:
+
 ```sh
 node scripts/release-notes.mjs --scope android --version <X.Y.Z>-rc.<N> --commit <full SHA> > "$OUT/notes.md"
 # the first native release has no earlier android/ tag: add --from <commit before the first android/ commit>
 $EDITOR "$OUT/notes.md"                          # replace every <fill in>; trim the change list to what users get
-git tag -a android/v<X.Y.Z>-rc.<N> <full SHA> -m "Android <X.Y.Z> candidate <N>"
-git push origin android/v<X.Y.Z>-rc.<N>
-node scripts/release-notes.mjs --check "$OUT/notes.md"
-gh release create android/v<X.Y.Z>-rc.<N> --verify-tag --prerelease --latest=false \
-  --title "android/v<X.Y.Z>-rc.<N>" --notes-file "$OUT/notes.md"
+TAG=android/v<X.Y.Z>-rc.<N>
+git tag -a "$TAG" <full SHA> -m "Android <X.Y.Z> candidate <N>"   # local only so far
+node scripts/release-notes.mjs --check "$OUT/notes.md" &&
+  git push origin "$TAG" &&
+  gh release create "$TAG" --verify-tag --prerelease --latest=false --title "$TAG" --notes-file "$OUT/notes.md"
 ```
+
+The tag is pushed only after `--check` passes on the local tag, and the Release is created only after the push. When `--check` fails, fix the notes, or delete the local tag (`git tag -d "$TAG"`) when it names the wrong commit, and run the chain again. A pushed tag is never moved or reused.
 
 The notes carry the release CI run, the `check-apk.sh` identity lines and the references of the manual and device gates. No APK is attached: Google Play is the only distribution, and the notes identify the file by its SHA-256.
 
@@ -119,16 +142,17 @@ Upload, review and track handling, with their failure cases, are in the [Cordova
 
 ### 8. Production rollout
 
-When the open test is accepted, the same file goes to production:
+When the open test is accepted, the same file goes to production. From the repository root:
 
 ```sh
-git tag -a android/v<X.Y.Z> <full SHA> -m "Android <X.Y.Z>"
-git push origin android/v<X.Y.Z>
-gh release create android/v<X.Y.Z> --verify-tag --latest=false \
-  --title "android/v<X.Y.Z>" --notes-file "$OUT/notes-final.md"
+TAG=android/v<X.Y.Z>
+git tag -a "$TAG" <full SHA> -m "Android <X.Y.Z>"                   # the candidate's commit; local only so far
+node scripts/release-notes.mjs --check "$OUT/notes-final.md" &&
+  git push origin "$TAG" &&
+  gh release create "$TAG" --verify-tag --latest=false --title "$TAG" --notes-file "$OUT/notes-final.md"
 ```
 
-`notes-final.md` is the candidate's notes with the final tag, the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
+`notes-final.md` is the candidate's notes with `Tag:` set to the final tag, the candidate's tag as the tested build, and the rollout record. The final tag points at the candidate's commit and names the candidate's APK; nothing is rebuilt.
 
 Roll out in stages and hold each stage until its window has passed without a halt:
 

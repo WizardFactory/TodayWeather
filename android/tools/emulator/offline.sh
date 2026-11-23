@@ -11,6 +11,16 @@
 # run that needs the network: when the removal cannot be confirmed it takes the device offline and exits 5.
 PKG=net.wizardfactory.todayweather
 
+# Whether the `am instrument -w -r` output in file $1 shows $2 passed tests and nothing else: no failed, crashed,
+# ignored or assumption-skipped test (the plain `OK (N tests)` line counts a skipped test as run), and an
+# instrumentation that finished. Raw status per test: 1 started, 0 passed, -1 error, -2 failure, -3 ignored,
+# -4 assumption not met.
+instrumentation_passed() {
+    [ "$(tr -d '\r' < "$1" | grep -c '^INSTRUMENTATION_STATUS_CODE: 0$')" = "$2" ] || return 1
+    if tr -d '\r' < "$1" | grep -q '^INSTRUMENTATION_STATUS_CODE: -'; then return 1; fi
+    tr -d '\r' < "$1" | grep -q '^INSTRUMENTATION_CODE: -1$'
+}
+
 emulator_guard() {
     case "${ANDROID_SERIAL:-}" in emulator-[0-9]*) ;; *) echo "Set ANDROID_SERIAL to an emulator" >&2; exit 2 ;; esac
     [ "$(adb get-state 2>/dev/null)" = device ] || { echo "No device $ANDROID_SERIAL" >&2; exit 2; }

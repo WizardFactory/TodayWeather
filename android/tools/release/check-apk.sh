@@ -3,7 +3,7 @@
 # for the release notes:
 #   android/tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>
 # The second APK is the release users have now (the Cordova 1.1.1 store APK for the first native release). The
-# check passes when the signature verifies, the signing certificate equals the store release's, the package is
+# check passes when both signatures verify, every signer's certificate equals the store release's, the package is
 # the same, the versionCode is higher, versionName, minSdk and targetSdk are those of app/build.gradle.kts, the
 # app is not debuggable, the AdMob app ID is not Google's sample and the Firebase configuration is in the APK.
 # It reads both files and changes nothing. Status 1: a check failed; 2: usage or a missing SDK tool.
@@ -24,13 +24,21 @@ fail() { echo "FAIL $*"; failed=1; }
 pass() { echo "ok   $*"; }
 badge() { "$TOOLS/aapt2" dump badging "$1"; }
 field() { printf '%s\n' "$1" | sed -n "s/^package:.* $2='\([^']*\)'.*/\1/p"; }
-certificate() { "$TOOLS/apksigner" verify --print-certs "$1" 2>/dev/null | sed -n 's/^Signer #1 certificate SHA-256 digest: //p'; }
+# The SHA-256 digests of every signer's certificate of $1, sorted, on one line; status 1 when the signature does
+# not verify.
+certificates() {
+    verified=$("$TOOLS/apksigner" verify --print-certs "$1" 2>/dev/null) || return 1
+    printf '%s\n' "$verified" | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' | sort | tr '\n' ' ' | sed 's/ $//'
+}
 
-if "$TOOLS/apksigner" verify "$APK" >/dev/null 2>&1; then pass "signature verifies"; else fail "apksigner verify"; fi
-cert=$(certificate "$APK")
-store_cert=$(certificate "$STORE")
-if [ -n "$cert" ] && [ "$cert" = "$store_cert" ]; then pass "signing certificate equals the store release's"
-else fail "signing certificate ${cert:-none}, the store release has ${store_cert:-none}"; fi
+cert=""
+store_cert=""
+if cert=$(certificates "$APK"); then pass "signature verifies"; else fail "apksigner verify"; fi
+if store_cert=$(certificates "$STORE"); then pass "the store release's signature verifies"
+else fail "apksigner verify of the store release $STORE"; fi
+# Every signer must match: the same first signer with another signer added is a different signing identity.
+if [ -n "$cert" ] && [ "$cert" = "$store_cert" ]; then pass "signing certificates equal the store release's"
+else fail "signing certificates ${cert:-none}, the store release has ${store_cert:-none}"; fi
 
 info=$(badge "$APK")
 store_info=$(badge "$STORE")
@@ -58,10 +66,13 @@ else fail "no AdMob app ID in the manifest"; fi
 if "$TOOLS/aapt2" dump resources "$APK" | grep -q "string/google_app_id"; then pass "Firebase configuration present"
 else fail "no Firebase configuration (app/google-services.json was missing at build time)"; fi
 
+digest=$( (shasum -a 256 "$APK" 2>/dev/null || sha256sum "$APK" 2>/dev/null) | cut -d' ' -f1)
+if printf '%s' "$digest" | grep -Eq '^[0-9a-f]{64}$'; then pass "SHA-256 computed"; else fail "cannot compute the APK's SHA-256"; fi
+
 echo
 echo "- versionName: $name"
 echo "- versionCode: $code"
 echo "- minSdk / targetSdk: $min / $target"
-echo "- APK SHA-256: $(shasum -a 256 "$APK" | cut -d' ' -f1)"
+echo "- APK SHA-256: $digest"
 echo "- Signing certificate SHA-256: $cert"
 exit $failed

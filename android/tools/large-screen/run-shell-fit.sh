@@ -38,9 +38,9 @@ for nav in gestural threebutton; do
     # An unlocked, awake screen, so the test's activity comes to the front.
     adb shell input keyevent KEYCODE_WAKEUP
     adb shell wm dismiss-keyguard
-    adb shell am instrument -w -e class $PKG.ShellFitDeviceTest $PKG.test/$PKG.TestRunner | tee "$OUT/$nav.txt"
+    adb shell am instrument -w -r -e class $PKG.ShellFitDeviceTest $PKG.test/$PKG.TestRunner | tee "$OUT/$nav.txt"
     mkdir -p "$OUT/$nav"
     adb exec-out run-as $PKG tar -C files -cf - shell-fit | tar -xf - -C "$OUT/$nav"
-    grep -q "^OK (1 test)" "$OUT/$nav.txt"
+    instrumentation_passed "$OUT/$nav.txt" 1
 done
 echo "shell fits with gesture and three-button navigation; images in $OUT"

@@ -120,6 +120,8 @@ test("refuses unknown scopes, bad versions, release candidates outside the store
   r.commit("android/b.txt", "next");
   for (const [args, message] of [
     [["--scope", "cordova/android", "--version", "1.0.0"], /unknown scope/],
+    [["--scope", "constructor", "--version", "1.0.0"], /unknown scope/],
+    [["--scope", "__proto__", "--version", "1.0.0"], /unknown scope/],
     [["--scope", "android", "--version", "v2.0.1"], /MAJOR\.MINOR\.PATCH/],
     [["--scope", "android", "--version", "2.0"], /MAJOR\.MINOR\.PATCH/],
     [["--scope", "webapp", "--version", "1.0.0-rc.1"], /release candidates/],
@@ -162,4 +164,74 @@ test("check passes complete notes for the tagged commit and names what is missin
   const complete = r.run("--check", notes);
   assert.equal(complete.code, 0, complete.err);
   assert.match(complete.out, /android\/v2\.0\.0: notes complete/);
+});
+
+test("a starting commit must be an ancestor of the release commit", (t) => {
+  const r = repository(t);
+  const first = r.commit("android/a.txt", "start");
+  r.git("checkout", "-q", "-b", "side");
+  const side = r.commit("android/side.txt", "on a side branch");
+  r.git("checkout", "-q", "master");
+  const head = r.commit("android/b.txt", "next");
+
+  const reversed = r.run("--scope", "android", "--version", "2.0.0", "--commit", first, "--from", head);
+  assert.equal(reversed.code, 2);
+  assert.match(reversed.err, /is not an ancestor of/);
+  assert.equal(reversed.out, "");
+  const diverged = r.run("--scope", "android", "--version", "2.0.0", "--commit", head, "--from", side);
+  assert.equal(diverged.code, 2);
+  assert.match(diverged.err, /is not an ancestor of/);
+  const same = r.run("--scope", "android", "--version", "2.0.0", "--commit", head, "--from", head);
+  assert.equal(same.code, 0, same.err);
+});
+
+test("a version must be above every final release the commit contains", (t) => {
+  const r = repository(t);
+  r.commit("ios/a.txt", "start");
+  r.git("tag", "ios/v2.0.9");
+  r.commit("ios/b.txt", "next");
+  r.git("tag", "ios/v2.1.0");
+  r.commit("ios/c.txt", "later");
+
+  for (const version of ["2.0.10", "2.1.0-rc.2", "2.0.9"]) {
+    const result = r.run("--scope", "ios", "--version", version);
+    assert.equal(result.code, 2, version);
+    assert.match(result.err, /ios\/v2\.1\.0|already exists/, version);
+    assert.equal(result.out, "");
+  }
+  const next = r.run("--scope", "ios", "--version", "2.1.1-rc.1");
+  assert.equal(next.code, 0, next.err);
+  assert.match(next.out, /^Previous release: ios\/v2\.1\.0 /m);
+});
+
+test("check takes the tag as an exact release tag of the notes' scope", (t) => {
+  const r = repository(t);
+  const first = r.commit("android/a.txt", "start");
+  const head = r.commit("android/b.txt", "next");
+  r.git("tag", "-a", "android/v2.0.0", "-m", "release", head);
+  const notes = join(r.dir, "notes.md");
+  const complete = (tag, commit, scope = "android") =>
+    writeFileSync(notes, `Source commit: ${commit}\nDelivery scope: ${scope}\nTag: ${tag}\n`);
+
+  // A revision expression is not a tag: android/v2.0.0^ resolves to the parent commit.
+  complete("android/v2.0.0^", first);
+  const expression = r.run("--check", notes);
+  assert.equal(expression.code, 1);
+  assert.match(expression.err, /is not a release tag/);
+
+  complete("android/v2.0.0", head, "ios");
+  const scope = r.run("--check", notes);
+  assert.equal(scope.code, 1);
+  assert.match(scope.err, /Delivery scope ios/);
+
+  complete("refs/heads/master", head);
+  assert.equal(r.run("--check", notes).code, 1);
+
+  complete("android/v2.0.0", head);
+  const exact = r.run("--check", notes);
+  assert.equal(exact.code, 0, exact.err);
+
+  const missing = r.run("--check", join(r.dir, "no-such-notes.md"));
+  assert.equal(missing.code, 2);
+  assert.match(missing.err, /cannot read the notes/);
 });

@@ -36,6 +36,8 @@ From `android/`:
 
 Set `ANDROID_SERIAL` to an emulator serial before any install or device test; a connected phone must not be the target by accident.
 
+The Robolectric tests read their Android runtimes (one jar per SDK level in `@Config`, listed in `app/build.gradle.kts`) from `app/build/robolectric-runtimes`, where Gradle copies them: Robolectric runs offline and downloads nothing while the tests run. A test of an SDK level without a listed runtime fails naming the missing jar; add the version Robolectric asks for.
+
 CI (`.github/workflows/android.yml`) runs the same build and tests twice: once after re-running the import tool, the corpus generator and the server route table generator and checking that they change nothing, and once in a checkout whose `client/` directory has been deleted.
 
 ## Imported client assets
@@ -368,8 +370,8 @@ The build and the unit tests run without them.
 The [Android release runbook](../docs/operations/android-release.md) is the procedure: version freeze, release CI, the manual emulator gates, the operator's build and signing, the device gate, the tag and its notes, the test tracks, the staged rollout and its halt and rollback. The release itself is [#2898](https://github.com/WizardFactory/TodayWeather/issues/2898).
 
 - **Release CI:** [Android release verification](../.github/workflows/android-release.yml) runs the pull-request checks, `lintRelease` and the device suites that need no private input on hosted API 36 and API 24 emulators, a tablet and a foldable, for a named commit and nightly ([PR CI and release CI](../docs/development/ci-tiers.md#android)).
-- **`tools/release-ci/run-suites.sh <out-dir> <suite> …`** runs those suites on one emulator and reports each. `tools/release-ci/run-device-tests.sh <out-dir> [Class[:name=value] …]` runs the instrumented classes without a runner of their own (`CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held), each in a new install, and fails on a failed or skipped test.
-- **`tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>`** checks a signed release APK against the release users have (signature, certificate, package, a higher `versionCode`, the checkout's version and SDK levels, not debuggable, a real AdMob app ID, the Firebase configuration) and prints its identity for the release notes.
+- **`tools/release-ci/run-suites.sh <out-dir> <suite> …`** runs those suites on one emulator and reports each. A suite passes by the raw status of every test (`instrumentation_passed` in `tools/emulator/offline.sh`), so a skipped test fails it. The `parity` and `window-fit` runners accept only an AVD whose name starts with `tw_`, and `fold` in the name turns the fold steps on. `tools/release-ci/run-device-tests.sh <out-dir> [Class[:name=value] …]` runs the instrumented classes without a runner of their own (`CoreOnDeviceTest`, `PullRefreshDeviceTest`, `ForecastInterstitialDeviceTest`, `EntryIntentTest` with the migration held), each in a new install, and fails on a failed or skipped test.
+- **`tools/release/check-apk.sh <signed.apk> <installed-store-release.apk>`** checks a signed release APK against the release users have (both signatures, every signer's certificate, package, a higher `versionCode`, the checkout's version and SDK levels, not debuggable, a real AdMob app ID, the Firebase configuration) and prints its identity for the release notes.
 - The build has no signing configuration: `./gradlew assembleRelease` writes `app-release-unsigned.apk`, and the operator signs it with `apksigner` and the existing release key. Signing inputs are never in the checkout.
 
 ### AN-18 large-window verification

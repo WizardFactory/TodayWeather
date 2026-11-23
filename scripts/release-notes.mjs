@@ -97,14 +97,19 @@ function parseVersion(text) {
   return { major, minor, patch, candidate: match[4] === undefined ? null : Number(match[4]) };
 }
 
+// Orders by MAJOR.MINOR.PATCH; candidates of a version compare equal to it.
+function compare(a, b) {
+  return a.major - b.major || a.minor - b.minor || a.patch - b.patch;
+}
+
+// The newest final tag of the scope among those the commit contains.
 function previousFinal(scope, commit) {
   const prefix = `${scope}/v`;
   const tags = git(["tag", "--merged", commit, "--list", `${prefix}*`]).split("\n").filter(Boolean);
   const finals = tags
     .map((tag) => ({ tag, version: parseVersion(tag.slice(prefix.length)) }))
     .filter(({ version }) => version && version.candidate === null)
-    .sort((a, b) =>
-      b.version.major - a.version.major || b.version.minor - a.version.minor || b.version.patch - a.version.patch);
+    .sort((a, b) => compare(b.version, a.version));
   return finals.length ? finals[0].tag : null;
 }
 
@@ -123,8 +128,10 @@ function changes(from, commit, paths) {
 }
 
 function draft(options) {
+  if (!Object.hasOwn(SCOPES, options.scope)) {
+    throw new UsageError(`unknown scope ${options.scope}: use one of ${Object.keys(SCOPES).join(", ")}`);
+  }
   const scope = SCOPES[options.scope];
-  if (!scope) throw new UsageError(`unknown scope ${options.scope}: use one of ${Object.keys(SCOPES).join(", ")}`);
   if (!options.version) throw new UsageError("--version MAJOR.MINOR.PATCH is required");
   const version = parseVersion(options.version);
   if (!version) throw new UsageError(`${options.version}: the version is MAJOR.MINOR.PATCH, or MAJOR.MINOR.PATCH-rc.N`);
@@ -138,14 +145,22 @@ function draft(options) {
   const commit = tryGit(["rev-parse", "--verify", "--quiet", `${options.commit}^{commit}`]);
   if (!commit) throw new UsageError(`cannot resolve the commit ${options.commit}`);
 
+  // Versions only grow along the history: a commit that already contains a final release of the scope cannot
+  // become an equal or older version, and its changes are counted from that release.
+  const last = previousFinal(options.scope, commit);
+  if (last && compare(version, parseVersion(last.slice(`${options.scope}/v`.length))) <= 0) {
+    throw new UsageError(`${options.version} is not above ${last}, which ${commit} already contains`);
+  }
   let from;
   let previous;
   if (options.from) {
     from = tryGit(["rev-parse", "--verify", "--quiet", `${options.from}^{commit}`]);
     if (!from) throw new UsageError(`cannot resolve the starting commit ${options.from}`);
+    if (tryGit(["merge-base", "--is-ancestor", from, commit]) === null) {
+      throw new UsageError(`the starting commit ${from} is not an ancestor of ${commit}`);
+    }
     previous = `none (changes since ${from})`;
   } else {
-    const last = previousFinal(options.scope, commit);
     if (!last) {
       throw new UsageError(
         `no previous ${options.scope}/v* release is contained in ${commit}: pass --from <commit> for the first one`);
@@ -197,16 +212,28 @@ function draft(options) {
 }
 
 function check(file) {
-  const text = readFileSync(file, "utf8");
+  let text;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (error) {
+    throw new UsageError(`cannot read the notes ${file}: ${error.code ?? error.message}`);
+  }
   const problems = [];
   const field = (name) => new RegExp(`^${name}: (.+)$`, "m").exec(text)?.[1].trim();
   const tag = field("Tag");
   const commit = field("Source commit");
+  // The tag is read as a name of this convention only, never as a Git revision expression (android/v2.0.0^).
+  const named = /^(.+)\/v([^/]+)$/.exec(tag ?? "");
+  const releaseTag = named !== null && Object.hasOwn(SCOPES, named[1]) && parseVersion(named[2]) !== null;
   if (!tag) problems.push("no Tag line");
+  else if (!releaseTag) problems.push(`${tag} is not a release tag (<scope>/vMAJOR.MINOR.PATCH or -rc.N)`);
+  else if (field("Delivery scope") !== named[1]) {
+    problems.push(`the tag is of scope ${named[1]}, the notes say Delivery scope ${field("Delivery scope") ?? "nothing"}`);
+  }
   if (!commit || !/^[0-9a-f]{40}$/.test(commit)) problems.push("Source commit is not a full 40-character SHA");
   const unfilled = text.split("\n").filter((line) => line.includes("<fill in")).map((line) => line.trim());
   if (unfilled.length) problems.push(`unfilled: ${unfilled.join(" | ")}`);
-  if (tag && commit) {
+  if (releaseTag && commit) {
     const tagged = tryGit(["rev-parse", "--verify", "--quiet", `refs/tags/${tag}^{commit}`]);
     if (tagged === null) problems.push(`tag ${tag} does not exist`);
     else if (tagged !== commit) problems.push(`tag ${tag} points at ${tagged}, the notes say ${commit}`);
