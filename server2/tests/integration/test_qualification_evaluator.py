@@ -332,6 +332,23 @@ class QualificationEvaluatorTests(unittest.TestCase):
                                  ('fail', 'stopped_ledger_disagrees_with_receipt'))
                 self.assertEqual(report['recommendation'], 'no_go')
 
+    def test_ssh_receipt_with_bucket_cached_bodies_passes_integrity(self):
+        # SR7-C5: a first SSH finish records bodies reused from the bucket as `cached`.
+        receipt = retained_finish_pairs(self.finish, self.host.launch_sha256)
+        first = sorted(receipt['files'], key=int)[0]
+        receipt['files'][first] = 'cached'
+        self.write_receipt(receipt)
+        criteria = {row['id']: row for row in self.run_evaluator()['criteria']}
+        self.assertEqual(criteria['C1']['status'], 'pass')
+
+    def test_ssh_receipt_naming_other_attempts_fails_integrity(self):
+        receipt = retained_finish_pairs(self.finish, self.host.launch_sha256)
+        receipt['files']['999'] = receipt['files'].pop(sorted(receipt['files'], key=int)[0])
+        self.write_receipt(receipt)
+        criteria = {row['id']: row for row in self.run_evaluator()['criteria']}
+        self.assertEqual((criteria['C1']['status'], criteria['C1']['reason']),
+                         ('fail', 'stopped_ledger_disagrees_with_receipt'))
+
     def test_oversized_ledger_start_is_an_evidence_failure(self):
         # SR7-C3
         db = sqlite3.connect(self.bundle / 'data/paired/ledger.sqlite3')

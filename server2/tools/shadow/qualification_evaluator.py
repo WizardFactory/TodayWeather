@@ -296,11 +296,15 @@ def retained_evidence(directory, policy):
             raise EvidenceMissing('stopped_ledger_missing')
         check(ledger.is_file() and 0 < ledger.stat().st_size <= 2*GIB, 'invalid_stopped_ledger')
         ledger_sha = file_sha256(ledger)
-        # SR7-C2: the stopped ledger and its pairs must reproduce the finish's own validation.
+        # SR7-C2: the stopped ledger and its pairs must reproduce the attempts the finish validated:
+        # the same attempt count, pending and capture-failure lists, and the same attempts with
+        # verified bodies. Where the finish took each body from (`cached` from the bucket or
+        # `recovered` over SSH, SR7-C5) is provenance, not integrity, so only the IDs are compared.
         replay = assess_recovery(bundle, policy['launch_sha256'], recovered=files)
+        receipt_files = selected.get('files')
         check(replay['status'] == 'complete' and replay['attempts'] > 0
-              and all(selected.get(key) == replay[key]
-                      for key in ('attempts', 'pending', 'capture_failures', 'files')),
+              and all(selected.get(key) == replay[key] for key in ('attempts', 'pending', 'capture_failures'))
+              and type(receipt_files) is dict and set(receipt_files) == set(replay['files']),
               'stopped_ledger_disagrees_with_receipt')
     else:
         bound, ledger_sha = archived_bucket(directory, policy, selected, name)
