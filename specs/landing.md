@@ -95,7 +95,7 @@ Each `/{lang}/index.html` is a single semantic, accessible document with clear l
    - Primary quick-open button to `https://app.todayweather.ai`.
 2. **Hero Section**:
    - Core product promise ("어제보다 오늘은" / "Understand today's weather at a glance compared to yesterday").
-   - Use one primary action, **Open TodayWeather**, linking to `https://link.todayweather.ai/open` on every platform. The OS can open an associated app. Browser visitors can choose the WebApp or a store on the link host's fallback page, as specified in [#3092](https://github.com/WizardFactory/TodayWeather/issues/3092).
+   - Use one primary action, **Open TodayWeather**, linking to `https://link.todayweather.ai/open` on every platform. On installed mobile devices the OS can open the native app directly; browser visitors redirect straight to the WebApp (`https://app.todayweather.ai/`), where mobile visitors see an "Open in app" action (native app or OS store) and desktop visitors see a fixed QR code to open the store on their phone, as specified in [#3092](https://github.com/WizardFactory/TodayWeather/issues/3092).
    - Link the hourly chart caption to `https://link.todayweather.ai/place/seoul` so visitors can open the Seoul forecast in the app or via the web fallback. Use a responsive native hourly chart capture in the hero. Offer direct browser entry in the WebApp section.
 3. **Core Feature Showcase (`#features`)**:
    - **Hourly Yesterday Comparison**: Visual showcase of today vs. yesterday temperature curve, precipitation amounts, and wind/humidity details.
