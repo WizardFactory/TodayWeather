@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="robots" content="noindex">
+  <link rel="canonical" href="https://todayweather.ai/">
   <meta name="description" content="어제와 같은 시간의 기온을 비교하고, 오늘의 최저·최고 기온과 홈 화면 위젯으로 외출을 준비하세요.">
   <title>오늘날씨 · 어제와 비교하는 날씨</title>
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -44,7 +44,7 @@
       <figure class="forecast">
         <div class="reading"><div><span class="place">서울 명동 · 예시 화면</span><strong>11.5<span>°</span></strong></div>
           <div class="comparison">구름많음<br><b>어제보다 +3°</b></div></div>
-        <img class="chart" width="720" height="492" src="../assets/ios-hourly.webp" alt="오늘 11월 17일 자정을 지나는 시간별 차트. 오전 6시는 오늘 11도, 어제 9도입니다. 파란색은 당일, 회색은 전일 기온입니다.">
+        <div class="capture"><img class="chart" width="720" height="492" src="../assets/ios-hourly.webp" alt="오늘 11월 17일 자정을 지나는 시간별 차트. 오전 6시는 오늘 11도, 어제 9도입니다. 파란색은 당일, 회색은 전일 기온입니다."></div>
         <figcaption><a class="forecast-link" href="https://link.todayweather.ai/place/seoul">서울 시간별 예보 보기 ↗</a><span>iOS 앱 화면 예시</span></figcaption>
       </figure>
     </section>
@@ -78,16 +78,23 @@
         </div>
         <figure class="browser">
           <picture>
+            <source media="(max-width: 40rem) and (prefers-color-scheme: dark)" srcset="../assets/web-mobile-dark.webp" width="780" height="2204">
             <source media="(max-width: 40rem)" srcset="../assets/web-mobile.webp" width="780" height="2204">
-            <img src="../assets/web-desktop.webp" width="2040" height="1833" loading="lazy" alt="오늘날씨 웹앱의 서울 화면. 시간별 날씨 차트에 예보와 어제 기온이 두 선으로 겹쳐 있고, 아래 일별 날씨 차트에는 날짜마다 최저·최고 기온 막대가 이어집니다.">
+            <source media="(prefers-color-scheme: dark)" srcset="../assets/web-desktop-dark.webp" width="2040" height="1833">
+            <img src="../assets/web-desktop.webp" width="2040" height="1833" loading="lazy" alt="오늘날씨 웹앱의 서울 화면. 시간별 날씨 차트에 예보와 어제 기온이 두 선으로 겹쳐 있습니다.">
           </picture>
-          <figcaption>app.todayweather.ai <span>2026년 11월 23일 서울 화면 예시</span></figcaption>
+          <figcaption>app.todayweather.ai <span>2026년 11월 24일 서울 화면 예시</span></figcaption>
         </figure>
+        <ul class="platforms">
+          <li><h3>웹앱</h3><p>설치 없이 브라우저에서 열어요. 연결이 끊겨도 마지막으로 받은 날씨를 볼 수 있어요.</p></li>
+          <li><h3>iPhone 앱</h3><p>어제와 비교하는 홈 화면 위젯, 요일과 시각을 정해 받는 날씨 알림.</p></li>
+          <li><h3>Android 앱</h3><p>도시 시계 홈 화면 위젯, 요일과 시각을 정해 받는 날씨 알림.</p></li>
+        </ul>
       </div>
     </section>
     <section id="reviews" class="reviews wrap" aria-labelledby="reviews-title">
-      <p class="label">스토어 리뷰</p><h2 id="reviews-title">오래 쓰는 분들이<br>꼽은 이유.</h2>
-      <p class="summary">App Store와 Google Play 리뷰에서 가장 자주 칭찬받은 점을 골랐어요.</p>
+      <p class="label">스토어 리뷰</p><h2 id="reviews-title">리뷰에서 꼽은<br>좋은 점.</h2>
+      <p class="summary">App Store와 Google Play 리뷰에 자주 나오거나, 두 스토어에서 똑같이 나온 이야기를 골랐어요.</p>
       <ul class="praise">
         <li><h3>어제와 비교하니 바로 와닿아요</h3>
           <blockquote><p>“어제랑 비교해서 한 눈에 오늘 날씨가 확 체감됩니다”</p><p class="by">App Store 리뷰</p></blockquote>

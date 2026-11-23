@@ -47,7 +47,9 @@ main h2 { font-size: clamp(2rem, 3.6vw, 3.35rem); }
 .reading strong span { font-size: .75em; vertical-align: top; }
 .comparison { text-align: end; }
 .chart { width: 100%; }
-.forecast .chart { -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+/* The native capture is light-only: fade its scrolled edges into its own white. */
+.capture { background: white; }
+.forecast .chart { --edge: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); -webkit-mask: var(--edge) top / 100% 36% no-repeat, linear-gradient(#000, #000) bottom / 100% 65% no-repeat; mask: var(--edge) top / 100% 36% no-repeat, linear-gradient(#000, #000) bottom / 100% 65% no-repeat; }
 .forecast-link { color: var(--tw-accent-text); text-underline-offset: .2em; text-decoration: underline; }
 figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: .35rem 1rem; flex-wrap: wrap; padding: .8rem 1.25rem; font-weight: 650; }
 figcaption span { color: var(--tw-text-secondary); font-size: var(--tw-type-body-sm-size); font-weight: 450; }
@@ -70,6 +72,9 @@ figcaption span { color: var(--tw-text-secondary); font-size: var(--tw-type-body
 .praise h3 { margin-bottom: .4rem; font-size: var(--tw-type-title-1-size); font-weight: 700; letter-spacing: -.03em; }
 .praise blockquote { margin-top: .9rem; padding-left: .95rem; border-left: 3px solid var(--tw-border-subtle); }
 .praise .by { margin-top: .25rem; color: var(--tw-text-secondary); font-size: var(--tw-type-body-sm-size); }
+.platforms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem 2rem; margin-top: 2rem; }
+.platforms h3 { margin-bottom: .3rem; font-size: 1.05rem; font-weight: 700; }
+.platforms p { color: var(--tw-text-secondary); }
 .closing { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.2rem 2rem; padding-block: clamp(2.5rem, 5vw, 4rem); }
 .closing h2 { font-size: clamp(1.6rem, 2.6vw, 2.3rem); }
 .closing p { margin-top: .5rem; color: var(--tw-text-secondary); }
@@ -77,10 +82,10 @@ figcaption span { color: var(--tw-text-secondary); font-size: var(--tw-type-body
 footer { padding-block: 2.5rem 1.5rem; color: var(--tw-text-secondary); font-size: var(--tw-type-body-sm-size); }
 footer h2 { font-size: 1rem; color: var(--tw-text-primary); margin-bottom: .35rem; }
 footer a { text-decoration: underline; text-underline-offset: .2em; }
-.foot nav a { text-decoration: none; }
+.foot nav a:not(:hover) { text-decoration: none; }
 .foot { margin-top: 1.5rem; padding-top: .75rem; border-top: 1px solid var(--tw-border-subtle); }
 @media (prefers-color-scheme: dark) {
-  .chart, .browser img { filter: brightness(.9); }
+  .capture, .range-card .chart { filter: brightness(.82); }
 }
 @media (max-width: 48rem) {
   .hero, .split, .web-copy { grid-template-columns: minmax(0, 1fr); }
@@ -88,7 +93,7 @@ footer a { text-decoration: underline; text-underline-offset: .2em; }
   .hero figure, .range-card { width: min(100%, 34rem); justify-self: center; }
 }
 @media (max-width: 40rem) {
-  .widget-pair, .praise { grid-template-columns: 1fr; }
+  .widget-pair, .praise, .platforms { grid-template-columns: 1fr; }
   .browser { width: min(100%, 24rem); margin-inline: auto; }
   .widget-stage { height: auto; }
   .widget-stage img { max-height: 14rem; }

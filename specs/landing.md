@@ -84,6 +84,8 @@ This specification records the settled cross-platform locale direction (AK, 2026
 
 ### 4.1 Page Structure (All 7 Languages)
 
+> **Korean page before the locale release.** The Korean page is published at `https://todayweather.ai/` ahead of the locale routes in §2. Until they ship, its canonical link, `og:url` and the sitemap entry use the root URL, its header links are Charts (`#features`), Widgets (`#widgets`), WebApp (`#platforms`) and Reviews (`#reviews`), and the language switcher, the quick-open header button, the air-quality and worldwide showcases, structured data and the consent controls wait for the locale release. Everything else below applies to it now.
+
 Each `/{lang}/index.html` is a single semantic, accessible document with clear landmark regions (`<header>`, `<main>`, `<footer>`):
 
 1. **Top Navigation (`<header>`)**:
@@ -103,7 +105,7 @@ Each `/{lang}/index.html` is a single semantic, accessible document with clear l
    - **Home-screen widget**: Show a released native widget on the phone’s home screen with a localized caption about checking the weather at a glance. The [Korean store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) documents the use case.
 4. **Cross-Platform Availability (`#platforms`)**:
    - Show the released WebApp with a current desktop capture in which the hourly comparison and the daily range chart appear together. Below 640 px, show a phone capture. Link directly to `https://app.todayweather.ai`.
-   - Side-by-side summary of **WebApp (PWA & Desktop)**, **iOS Native App**, and **Android Native App** (explicitly noting offline snapshot support on WebApp and scheduled/alert notifications on native mobile apps; no claims of web push or retired TodayAir/Cordova).
+   - Below the capture, a side-by-side summary of **WebApp (PWA & Desktop)**, **iOS Native App**, and **Android Native App** (explicitly noting offline snapshot support on WebApp and scheduled/alert notifications on native mobile apps; no claims of web push or retired TodayAir/Cordova).
 5. **What reviewers praise (`#reviews`)**:
    - Present the most praised points from App Store and Google Play reviews: the comparison with yesterday, deciding what to wear, the clear screen and the hourly forecast. Quote excerpts verbatim, labelled with the store only, without dates or reviewer names. The [store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) lists each excerpt and the theme counts.
    - Close with a second **Open TodayWeather** action to `https://link.todayweather.ai/open`.

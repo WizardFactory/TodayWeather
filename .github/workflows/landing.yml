@@ -1,10 +1,10 @@
 name: Landing page
 on:
   pull_request:
-    paths: ['landing/**', 'scripts/verification/landing-page.test.mjs', 'scripts/landing-font-subset.py', '.github/workflows/landing.yml']
+    paths: ['landing/**', 'packages/design-tokens/**', 'web/public/icon.svg', 'scripts/verification/landing-page.test.mjs', 'scripts/landing-font-subset.py', 'package.json', '.github/workflows/landing.yml']
   push:
     branches: [master, main]
-    paths: ['landing/**', 'scripts/verification/landing-page.test.mjs', 'scripts/landing-font-subset.py', '.github/workflows/landing.yml']
+    paths: ['landing/**', 'packages/design-tokens/**', 'web/public/icon.svg', 'scripts/verification/landing-page.test.mjs', 'scripts/landing-font-subset.py', 'package.json', '.github/workflows/landing.yml']
 permissions:
   contents: read
 jobs:
@@ -16,4 +16,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test scripts/verification/landing-page.test.mjs
+      - run: npm run test:landing
