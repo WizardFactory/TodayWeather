@@ -41,6 +41,34 @@ fixture.short = Array.from({ length: 41 }, (_, i) => {
     ...(rainy ? { r06: 4, pty: 1 } : {}),
   };
 });
+// The live API sends 18 daily rows, from seven days back to ten days ahead.
+// Yesterday, today and tomorrow match the hourly rows above.
+const days = [
+  [13, 22, "sun"], [12, 21, "sun_bigcloud"], [11, 19, "cloud"], [10, 18, "sun"],
+  [10, 17, "sun"], [10, 18, "sun"], [12, 20, "sun"], [18, 26, "sun"],
+  [14, 22, "sun", "rain", 60, 16], [13, 21, "sun_bigcloud", "sun", 20], [12, 20, "sun"],
+  [11, 21, "sun", "sun_bigcloud", 30], [12, 22, "sun"], [13, 23, "cloud", "rain", 60, 8],
+  [12, 21, "sun_bigcloud"], [11, 20, "sun"], [10, 19, "sun"], [10, 20, "sun"],
+];
+fixture.midData.dailyData = days.map(([tmn, tmx, skyAm, skyPm, pop, r06], i) => {
+  const d = new Date(Date.UTC(2026, 8, 16 + i)),
+    ymd = d.toISOString().slice(0, 10);
+  return {
+    ...fixture.midData.dailyData[1],
+    date: ymd.replaceAll("-", ""),
+    dateObj: `${ymd.replaceAll("-", ".")} 00:00`,
+    fromToday: i - 7,
+    dayOfWeek: d.getUTCDay(),
+    tmn,
+    tmx,
+    skyAm,
+    skyPm: skyPm ?? skyAm,
+    pop: pop ?? 0,
+    ...(r06 ? { r06 } : {}),
+    sunrise: `${ymd.replaceAll("-", ".")} 06:20`,
+    sunset: `${ymd.replaceAll("-", ".")} 18:25`,
+  };
+});
 Object.assign(fixture.current, {
   time: 7,
   liveTime: "0730",
@@ -131,7 +159,7 @@ try {
         browser: browser.version(),
         viewport: [820, 1180],
         fixture: "docs/rewrite/examples/client-kma-response.json",
-        fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); current time 7, liveTime 0730, t1h 20, yesterday 13",
+        fixturePatch: "41 three-hour short rows (09-21 00h to 09-25 24h); 18 daily rows (09-16 to 10-03); current time 7, liveTime 0730, t1h 20, yesterday 13",
         externalRequests: "blocked except fixture fulfilment",
         csp: "screenshot context bypasses CSP for Playwright capture injection; separate primary matrix enforces production CSP",
         // Keep entries written by other capture scripts (precipitation-*.png).
