@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 import ci
 
-STAGES = ('placement', 'python', 'rust', 'gnu', 'musl', 'promote')
 ROOT = Path('/checkout')
 REVISION = 'a' * 40
 
@@ -139,26 +138,91 @@ def expected_serial(platform, has_local_pair):
 
 
 class CommandPlanTests(unittest.TestCase):
-    def test_parallel_jobs_cover_the_frozen_serial_inventory_once(self):
+    def test_hosted_stages_cover_the_frozen_serial_inventory_once(self):
         event = {'pull_request': {'head': {'sha': REVISION}}}
+        workspace_tests = ('env', 'RUST_MIN_STACK=8388608', 'cargo', 'test', '--locked', '--workspace')
+        simulation = (sys.executable, ci.SHADOW_SIMULATION)
         for platform in ('linux', 'darwin'):
             for has_local_pair in (False, True):
                 with (self.subTest(platform=platform, has_local_pair=has_local_pair),
-                      patch.object(ci, 'placement_command', return_value=['<PLACEMENT>']) as placement,
+                      patch.object(ci, 'placement_command', return_value=['<PLACEMENT>']),
                       patch.object(sys, 'platform', platform),
                       patch.object(Path, 'is_file', return_value=has_local_pair)):
                     expected = expected_serial(platform, has_local_pair)
                     self.assertEqual(expected, list(ci.command_plan(ROOT, event, 'all')))
-                    actual = []
-                    for stage in STAGES:
-                        selected = [(group, cmd) for group, cmd in ci.command_plan(ROOT, event, stage)
-                                    if group == stage]
-                        self.assertEqual([item for item in expected if item[0] == stage], selected)
-                        actual += selected
-                    self.assertEqual(2, placement.call_count)
-                    counts = Counter((group, tuple(cmd)) for group, cmd in actual)
-                    self.assertEqual(Counter((group, tuple(cmd)) for group, cmd in expected), counts)
-                    self.assertTrue(all(count == 1 for count in counts.values()))
+                    hosted = Counter(tuple(cmd) for stage in ci.HOSTED_STAGES
+                                     for cmd in ci.stage_commands(ROOT, event, stage))
+                    serial = Counter(tuple(cmd) for _, cmd in expected)
+                    self.assertTrue(all(count == 1 for count in serial.values()))
+                    # Two serial commands are replaced by disjoint hosted partitions.
+                    for command in serial:
+                        self.assertEqual(0 if command in (workspace_tests, simulation) else 1,
+                                         hosted[command], command)
+                    extras = hosted - Counter(c for c in serial if c not in (workspace_tests, simulation))
+                    # The whole command is frozen, so a narrowing flag such as --lib cannot slip in.
+                    for k in range(1, ci.RUST_SHARDS + 1):
+                        self.assertEqual(1, extras[('env', 'RUST_MIN_STACK=8388608', 'cargo', 'nextest', 'run',
+                                                    '--locked', '--workspace', '--no-fail-fast', '--partition',
+                                                    f'count:{k}/{ci.RUST_SHARDS}')])
+                    self.assertEqual(1, extras[('cargo', 'test', '--locked', '--workspace', '--doc')])
+                    self.assertEqual(1, extras[(sys.executable, 'tools/check_test_partitions.py', '--shards',
+                                                str(ci.RUST_SHARDS))])
+                    shards = [c for c in extras if c[:2] == simulation]
+                    self.assertEqual(len(ci.SHADOW_SHARDS), len(shards))
+                    self.assertEqual(sum(extras.values()), ci.RUST_SHARDS + 2 + len(shards))
+
+    def test_in_process_test_locks_keep_their_limit_under_nextest(self):
+        server2 = Path(__file__).parents[1]
+        config = (server2 / '.config/nextest.toml').read_text()
+        settings = [line for line in config.splitlines() if not line.lstrip().startswith('#')]
+        self.assertFalse([line for line in settings if 'default-filter' in line])
+        # The S3 peer lock is host-wide, so every holder is serialised under nextest too.
+        source = (server2 / 'tests/domestic/source_s3.rs').read_text()
+        self.assertIn('pub static S3_PEERS: PeerLock = PeerLock::new();', source)
+        self.assertIn('file.lock().expect("take the S3 test peer lock")', source)
+        self.assertIn('SERIAL.lock', (server2 / 'tests/integration/main.rs').read_text())
+        self.assertIn("filter = 'binary(integration)'", config)
+        self.assertIn('integration-serial = { max-threads = 1 }', config)
+
+    def test_a_push_checks_each_server2_commit_against_its_parent(self):
+        diffs = {('p1', 'm1'): ['server2/src/lib.rs', 'server2/config/tasks/A.json'],
+                 # A move out of server2/ (rename detection off) still selects the commit.
+                 ('p2', 'm2'): ['docs/자료', 'server2/자료'],
+                 ('p3', 'm3'): ['.github/workflows/server2.yml', 'server2/config/tasks/B.json']}
+        def git(*args):
+            if args[1] == 'rev-list':
+                return 'm1\nm2\nm3'
+            if args[1] == 'rev-parse':
+                return 'p' + args[2][1]
+            self.assertIn('--no-renames', args)
+            self.assertIn('-z', args)
+            if '--diff-filter=d' in args:
+                return '\0'.join(p for p in diffs[(args[6], args[7])] if p.startswith('server2/config/tasks/'))
+            return '\0'.join(diffs[(args[5], args[6])])
+        with patch.object(ci, 'output', side_effect=git), self.assertRaisesRegex(SystemExit, 'm2: one reviewed'):
+            ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
+        diffs[('p2', 'm2')] = ['ios/App.swift']
+        with patch.object(ci, 'output', side_effect=git):
+            commands = ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
+        checks = [c for c in commands if c[0] == sys.executable]
+        self.assertEqual([['--declaration', str(ROOT / 'reports/placement/m1/server2/config/tasks/A.json'),
+                           '--base', 'p1'],
+                          ['--declaration', str(ROOT / 'reports/placement/m3/server2/config/tasks/B.json'),
+                           '--base', 'p3']], [c[-4:] for c in checks])
+        self.assertEqual(6, len(commands))
+        diffs[('p1', 'm1')] = ['server2/src/lib.rs']
+        with patch.object(ci, 'output', side_effect=git), self.assertRaisesRegex(SystemExit, 'm1: one reviewed'):
+            ci.placement_commands(ROOT, {'before': 'b' * 40, 'after': 'm3'})
+
+    def test_shadow_shards_run_every_simulation_test_exactly_once(self):
+        path = Path(__file__).parents[1] / ci.SHADOW_SIMULATION
+        tests = ci.simulation_tests(path)
+        shards = [ci.shadow_shard(path, k) for k in range(1, len(ci.SHADOW_SHARDS) + 1)]
+        self.assertEqual(sorted(tests), sorted(name for shard in shards for name in shard))
+        self.assertEqual(len(tests), len({name for shard in shards for name in shard}))
+        with patch.object(ci, 'SHADOW_SHARDS', ci.SHADOW_SHARDS + (('test_removed_name',),)):
+            with self.assertRaisesRegex(SystemExit, 'unique existing tests'):
+                ci.shadow_shard(path, 1)
 
     def test_missing_local_test_or_smoke_fails_closed(self):
         for outcomes in ([True, False], [False, True]):

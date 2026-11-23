@@ -1,0 +1,13 @@
+# Hosted CI runs the workspace tests with cargo-nextest, which starts every test in its own
+# process (#3139). The domestic S3 test peer lock (`tests/domestic/source_s3.rs` PeerLock) is
+# host-wide and needs no entry here. The integration binary serialises its tests with an
+# in-process mutex (`tests/integration/main.rs` SERIAL), so its tests keep one thread.
+# Do not add a default-filter: tools/check_test_partitions.py proves the partitions run every
+# test that `cargo test` runs.
+
+[test-groups]
+integration-serial = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'binary(integration)'
+test-group = 'integration-serial'
