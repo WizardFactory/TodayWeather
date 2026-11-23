@@ -125,6 +125,30 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="todayweather" />
             </intent-filter>
+            <!--
+              Verified App Links of link.todayweather.ai only (specs/deeplink.md §3.2); todayweather.ai and
+              app.todayweather.ai stay in the browser. The paths are the canonical routes, with the tolerated trailing slash.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="link.todayweather.ai" />
+                <data android:path="/" />
+                <data android:path="/open" />
+                <data android:path="/open/" />
+                <data android:pathPrefix="/place/" />
+                <data android:path="/loc" />
+                <data android:path="/loc/" />
+                <data android:pathPrefix="/air/" />
+                <data android:path="/nation/weather" />
+                <data android:path="/nation/weather/" />
+                <data android:path="/nation/air" />
+                <data android:path="/nation/air/" />
+                <data android:path="/warnings" />
+                <data android:path="/warnings/" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

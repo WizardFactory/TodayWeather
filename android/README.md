@@ -253,16 +253,21 @@ The emulator check is `tools/emulator/run-ads-check.sh` (#2894 AC2): online, a G
 
 ## Sharing, entry links and backup (AN-16)
 
-Sharing (O16), `todayweather://` links and device transfer (#2895), from TabCtrl's `doTabShare`, `branchInit` and the shipped 1.1.1 APK:
+Sharing (O16), `todayweather://` links and device transfer (#2895), from TabCtrl's `doTabShare`, `branchInit` and the shipped 1.1.1 APK, and `link.todayweather.ai` App Links (#3096, [specs/deeplink.md](../specs/deeplink.md)):
 
 - **Share (`core-domain` `ShareMessage`, `app` `WeatherShare`):** the share buttons of S03, S04 and S05 send the selected place's message through the system chooser, as the socialsharing plugin did (`ACTION_SEND`, plain text, no chooser title).
-  - The message has the place (its name, else the shortened address), `현재 t1h˚` with the sky's emoji, `최고 tmx˚, 최저 tmn˚`, the summary (`summaryWeather` and `summaryAir`, else `summary`), then the app name and the Branch link: `wgVmUTfVoM` when the device language has `ko`, `II1JstpVoM` otherwise.
+  - The message has the place (its name, else the shortened address), `현재 t1h˚` with the sky's emoji, `최고 tmx˚, 최저 tmn˚`, the summary (`summaryWeather` and `summaryAir`, else `summary`), then the app name and the `link.todayweather.ai` link of the place and the tab shared from (`DeepLink.shareUrl`): a catalog city within 0.04° as `/place/{slug}` (`?view=daily` from Daily) or `/air/{slug}` (`?pollutant=` from Air unless `aqi`), else `/loc` with the coordinates rounded to three decimals and the name, else `/open`. The Cordova app ended with a Branch link per language (`wgVmUTfVoM` for `ko`, `II1JstpVoM` otherwise); the link is now the same in every language (D35).
   - Values print as JavaScript prints them (`undefined`, `null`). Without weather or a sky icon the message is the place line alone, as in the Cordova build (V20).
   - Without a selected place or its location nothing is shared, and O02 asks how to start (AN-10).
 - **Entry links (`EntryLinks`, `WeatherSession.openPlace`):** `MainActivity` registers `todayweather` (`VIEW`, `DEFAULT`, `BROWSABLE`). After the migration (`EntryIntents`), `todayweather://N` selects place N, read as `branchInit` reads it (the first `todayweather://` removed, then `parseInt`). The place reloads at once (`reloadEvent 'deeplink'`), on cold and warm starts; the page shown stays.
   - An index outside the places keeps the selection but still reloads (A20); an empty or non-numeric link does nothing.
   - Recents opens a finished task again with the link that started it (`FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`); that delivery selects nothing.
   - 1.1.1 Android registered no scheme, so these links opened nothing there (B18). They come from the iOS widget and serve the Android widgets to come.
+- **App Links (`DeepLink`, `LinkRoutes`, `LinkPreview`, `LinkOpener`):** a verified `https` filter on `link.todayweather.ai` only (`autoVerify`, the canonical paths with their trailing slash); `todayweather.ai` and `app.todayweather.ai` stay in the browser. `DeepLink.parse` reads a link as the shared golden vectors say ([specs/deeplink.golden.json](../specs/deeplink.golden.json)); a link of the host it cannot read opens the app as it is. Links queue after the migration like `todayweather://` links, and Recents replays none.
+  - `/place/{slug}`, `/air/{slug}` and `/loc` select the first enabled saved place within 0.01° (never the current position), or else show the place without saving it (`LinkPreview`): appended and selected for the weather pages, loaded (`reloadEvent 'deeplink'`), with 공유된 지역 · 저장되지 않음 and 즐겨찾기 추가 over the tab bar. Its responses stay in memory; push, widgets and S02 never see it, and its bell does nothing. 즐겨찾기 추가 saves it as S02's add does (an equal saved place is selected instead); the Locations tab or a swipe to a saved place ends it. An unknown catalog city changes nothing.
+  - The menu, About and the pages over the tabs close, then the tab opens: Hourly, Daily, or Air on the link's pollutant.
+  - On S01 a place link shows its preview over the start page without closing it; 즐겨찾기 추가 closes S01 as a first place does (`closeStart`), and leaving the preview shows S01 again. `/nation/weather`, `/nation/air` and `/warnings` open S10, S11 and S12 once S01 has closed; `/` and `/open` change nothing.
+  - A place link opened before the app was installed opens the normal start after installation: deferred deep linking is not supported (D35).
 - **Backup and device transfer:** the policy, in `res/xml/data_extraction_rules.xml` (API 31+, cloud backup and device transfer) and `res/xml/backup_rules.xml` (API 24–30).
   - Backed up:
     - `files/app_state.json`: places, the selected place, units, settings, alarms and their push records;
@@ -276,9 +281,12 @@ Sharing (O16), `todayweather://` links and device transfer (#2895), from TabCtrl
   - Location is the system's permission; the app asks for it when it needs the current position (AN-10).
 
 Tests:
-- `ShareMessageTest` and `EntryLinkTest` (core-domain): the message lines and values, the link per language, the throw kept as the place line, the emoji; the index as `parseInt` reads it.
+- `ShareMessageTest` and `EntryLinkTest` (core-domain): the message lines and values, the `link.todayweather.ai` link per place and tab, the throw kept as the place line, the emoji; the index as `parseInt` reads it.
+- `DeepLinkTest` (core-domain): every parse and share case of the golden vectors, the catalog against the web app's `PLACES`, other hosts.
+- `LinkRoutesTest`, `LinkPreviewTest` and `LinkOpenerTest` (core-data): the saved place within 0.01° or the preview, the preview kept out of the saved state and its add, S01, the order of links and pages.
+- `DeepLinkScreenTest`: a link's tab with Add to favorites and its add, a saved place on Air, the Locations tab ending the preview, a link closing the menu and pages to open S12. `AppLinksManifestTest`: the one verified filter and its paths against the golden vectors. `DeepLinkManualCaptureTest` renders the [shared-link manual](../docs/user/android-app/shared-links/README.md)'s screens.
 - `WeatherSessionTest`: a link selects and loads its place, also within the ten minutes, keeps the selection out of range, and only selects while the retry confirmation is open.
-- `ShareTest`: the chooser from each tab with the message, the English link, O02 without a location, and the links' queue (not a link delivered again from Recents; none while S01 shows).
+- `ShareTest`: the chooser from each tab with the message and its tab's link, the same link in English, O02 without a location, and the links' queue (not a link delivered again from Recents; none while S01 shows; App Links of the link host only).
 - `BackupRulesTest`: the three rule lists include exactly the policy above, and the manifest names both files.
 
 The emulator check is `tools/backup/run-backup-test.sh <cordova-debug.apk>` (#2895 AC2), offline:
