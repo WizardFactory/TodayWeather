@@ -3,6 +3,7 @@ import {existsSync, readdirSync, readFileSync} from 'node:fs';
 import {dirname, join, resolve} from 'node:path';
 import {test} from 'node:test';
 import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
 import {brotliDecompressSync} from 'node:zlib';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -212,5 +213,17 @@ test('the share image, touch icon and root files are present', () => {
   }
   for (const name of ['robots.txt', 'sitemap.xml', 'favicon.ico']) {
     assert.ok(existsSync(join(landing, 'root', name)), name);
+  }
+});
+
+// Messengers such as KakaoTalk cache link previews by image URL, so a changed
+// share image must get a new name: the name carries its content hash.
+test('the share image name carries its content hash', () => {
+  for (const page of pages) {
+    const [url] = attribute(readFileSync(page, 'utf8'), /<meta property="og:image" content="([^"]+)">/g);
+    const match = /\/og\/[a-z-]+-([0-9a-f]{8})\.png$/.exec(url);
+    assert.ok(match, `${page}: og:image ${url} has no content hash`);
+    const file = join(landing, 'root', new URL(url).pathname.slice(1));
+    assert.equal(createHash('sha256').update(readFileSync(file)).digest('hex').slice(0, 8), match[1], `${page}: rename ${url} after changing the image`);
   }
 });
