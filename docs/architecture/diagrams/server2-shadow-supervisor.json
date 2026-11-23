@@ -5,7 +5,11 @@
     "title": "Bounded shadow supervision plan",
     "locale": "en",
     "quality_profile": "showcase",
-    "output": "docs/architecture/diagrams/server2-shadow-supervisor.html"
+    "output": "docs/architecture/diagrams/server2-shadow-supervisor.html",
+    "repository": {
+      "url": "https://github.com/WizardFactory/TodayWeather",
+      "revision": "2eb24cb0b57e6736679a4f2c6308671f34d57e72"
+    }
   },
   "lanes": [
     {
@@ -35,7 +39,14 @@
       "col": 0,
       "type": "security",
       "label": "Offline plan",
-      "sublabel": "prices and grants"
+      "sublabel": "prices and grants",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 13,
+          "end_line": 26
+        }
+      ]
     },
     {
       "id": "provision",
@@ -43,7 +54,14 @@
       "col": 1,
       "type": "cloud",
       "label": "One host",
-      "sublabel": "expiry at first boot"
+      "sublabel": "expiry at first boot",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 9,
+          "end_line": 9
+        }
+      ]
     },
     {
       "id": "bind",
@@ -51,7 +69,14 @@
       "col": 2,
       "type": "security",
       "label": "Install once",
-      "sublabel": "pinned SSH + grant"
+      "sublabel": "pinned SSH + grant",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 269,
+          "end_line": 272
+        }
+      ]
     },
     {
       "id": "collect",
@@ -59,7 +84,14 @@
       "col": 3,
       "type": "backend",
       "label": "Paired reads",
-      "sublabel": "fixed deadline"
+      "sublabel": "fixed deadline",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 269,
+          "end_line": 277
+        }
+      ]
     },
     {
       "id": "logs",
@@ -67,7 +99,14 @@
       "col": 4,
       "type": "backend",
       "label": "Ship host logs",
-      "sublabel": "journal to state bucket"
+      "sublabel": "journal to state bucket",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 226,
+          "end_line": 230
+        }
+      ]
     },
     {
       "id": "stop",
@@ -75,7 +114,14 @@
       "col": 3,
       "type": "security",
       "label": "Stop acquisition",
-      "sublabel": "deadline or guard; drain"
+      "sublabel": "deadline or guard; drain",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 274,
+          "end_line": 280
+        }
+      ]
     },
     {
       "id": "export",
@@ -83,7 +129,14 @@
       "col": 3,
       "type": "database",
       "label": "Seal originals",
-      "sublabel": "version IDs and hashes"
+      "sublabel": "version IDs and hashes",
+      "sources": [
+        {
+          "path": "server2/deploy/shadow/provision.py",
+          "line": 628,
+          "end_line": 645
+        }
+      ]
     },
     {
       "id": "clean",
@@ -91,7 +144,14 @@
       "col": 2,
       "type": "cloud",
       "label": "Dispose owned",
-      "sublabel": "retain incomplete state"
+      "sublabel": "retain incomplete state",
+      "sources": [
+        {
+          "path": "server2/deploy/shadow/provision.py",
+          "line": 646,
+          "end_line": 660
+        }
+      ]
     },
     {
       "id": "verified",
@@ -99,7 +159,14 @@
       "col": 1,
       "type": "backend",
       "label": "Verify disposition",
-      "sublabel": "absence or retention"
+      "sublabel": "absence or retention",
+      "sources": [
+        {
+          "path": "server2/deploy/shadow/provision.py",
+          "line": 655,
+          "end_line": 671
+        }
+      ]
     },
     {
       "id": "copy",
@@ -107,7 +174,14 @@
       "col": 4,
       "type": "backend",
       "label": "Copy evidence",
-      "sublabel": "hourly; final after stop"
+      "sublabel": "hourly; final after stop",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 206,
+          "end_line": 220
+        }
+      ]
     },
     {
       "id": "bucket",
@@ -115,7 +189,14 @@
       "col": 5,
       "type": "database",
       "label": "State bucket",
-      "sublabel": "logs/ and evidence/"
+      "sublabel": "logs/ and evidence/",
+      "sources": [
+        {
+          "path": "docs/operations/server2-shadow-supervisor.md",
+          "line": 202,
+          "end_line": 214
+        }
+      ]
     },
     {
       "id": "audit",
@@ -123,7 +204,14 @@
       "col": 5,
       "type": "database",
       "label": "Audit bucket first",
-      "sublabel": "SSH fills missing pairs"
+      "sublabel": "SSH fills missing pairs",
+      "sources": [
+        {
+          "path": "server2/deploy/shadow/provision.py",
+          "line": 604,
+          "end_line": 622
+        }
+      ]
     },
     {
       "id": "fence",
@@ -131,7 +219,29 @@
       "col": 4,
       "type": "security",
       "label": "Fence the host",
-      "sublabel": "verified copy or 170h"
+      "sublabel": "verified copy or 170h",
+      "sources": [
+        {
+          "path": "server2/deploy/shadow/provision.py",
+          "line": 628,
+          "end_line": 636
+        }
+      ]
+    },
+    {
+      "id": "qualification",
+      "lane": "finish",
+      "col": 0,
+      "type": "backend",
+      "label": "Evaluate offline",
+      "sublabel": "private finish + policy",
+      "sources": [
+        {
+          "path": "server2/tools/shadow/qualification_evaluator.py",
+          "line": 618,
+          "end_line": 647
+        }
+      ]
     }
   ],
   "edges": [
@@ -209,6 +319,11 @@
       "from": "fence",
       "to": "export",
       "variant": "default"
+    },
+    {
+      "from": "verified",
+      "to": "qualification",
+      "variant": "default"
     }
   ],
   "cards": [
@@ -255,6 +370,15 @@
         "Resume into the original private output directory and retain verified version receipts.",
         "After the exact instance is terminated, seal the version inventory before cleanup.",
         "At the deadline, keep the state bucket without expiry when evidence export remains incomplete."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "SR-7 offline decision",
+      "items": [
+        "Read the private finish directory and frozen criteria. Write the report to a new file.",
+        "SR-6 local-peer replay: C1 passed integrity checks. C2 through C8 remain unassessed. Recommendation: hold.",
+        "A short cloud canary and a week-long run each require a separate approval."
       ]
     }
   ]
