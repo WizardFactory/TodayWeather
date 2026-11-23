@@ -1,7 +1,8 @@
-//! KMA-NATION-READS: a catalog read the request waits on keeps the request's deadline up to
-//! `read_deadline` (8 s), so a read queued behind other readers' admissions is late rather than
-//! failed after the 3 s per-operation cap that writes keep. The SR-6 rehearsal answered the
-//! nation route with HTTP 500 in 23 of 24 samples when the fifteen city reads queued past 3 s.
+//! KMA-NATION-READS: a store with an 8 s `read_deadline` (the observed KMA source's) keeps a
+//! read the request waits on up to the request's deadline, so a read queued behind other readers'
+//! admissions is late rather than failed after the 3 s per-operation cap that writes and the
+//! default stores keep. The SR-6 rehearsal answered the nation route with HTTP 500 in 23 of 24
+//! samples when the fifteen city reads queued past 3 s.
 use server2::storage::{
     CatalogId, CatalogLimits, CatalogStore, CatalogTransport, ControlObject, Error, Object,
     ObjectTransport, PreparedRecord, WriteCondition,
@@ -52,12 +53,27 @@ fn id() -> CatalogId {
     }
 }
 
-async fn lookup(delay: Duration, budget: Duration) -> Result<(), Error> {
-    let store = CatalogStore::new(Slow(delay), CatalogLimits::default()).unwrap();
+fn observed() -> CatalogLimits {
+    CatalogLimits {
+        read_deadline: Duration::from_secs(8),
+        ..CatalogLimits::default()
+    }
+}
+
+async fn lookup_with(
+    limits: CatalogLimits,
+    delay: Duration,
+    budget: Duration,
+) -> Result<(), Error> {
+    let store = CatalogStore::new(Slow(delay), limits).unwrap();
     store
         .lookup(&id(), Instant::now() + budget)
         .await
         .map(|_| ())
+}
+
+async fn lookup(delay: Duration, budget: Duration) -> Result<(), Error> {
+    lookup_with(observed(), delay, budget).await
 }
 
 #[tokio::test(start_paused = true)]
@@ -86,15 +102,30 @@ async fn a_long_caller_deadline_is_capped_at_the_read_deadline() {
         lookup(Duration::from_secs(20), Duration::from_secs(60)).await,
         Err(Error::Timeout)
     ));
-    assert_eq!(start.elapsed(), CatalogLimits::default().read_deadline);
+    assert_eq!(start.elapsed(), Duration::from_secs(8));
+}
+
+#[tokio::test(start_paused = true)]
+async fn default_stores_keep_the_three_second_read_cap() {
+    let start = Instant::now();
+    assert!(matches!(
+        lookup_with(
+            CatalogLimits::default(),
+            Duration::from_secs(4),
+            Duration::from_secs(8)
+        )
+        .await,
+        Err(Error::Timeout)
+    ));
+    assert_eq!(start.elapsed(), Duration::from_secs(3));
 }
 
 #[test]
-fn read_deadline_defaults_to_eight_seconds_and_is_bounded() {
+fn read_deadline_defaults_to_the_operation_cap_and_is_bounded() {
     let limits = CatalogLimits::default();
-    assert_eq!(limits.read_deadline, Duration::from_secs(8));
+    assert_eq!(limits.read_deadline, limits.deadline);
     assert_eq!(limits.deadline, Duration::from_secs(3));
-    assert!(limits.validate().is_ok());
+    assert!(limits.validate().is_ok() && observed().validate().is_ok());
     for read_deadline in [Duration::ZERO, Duration::from_secs(10)] {
         let bad = CatalogLimits {
             read_deadline,

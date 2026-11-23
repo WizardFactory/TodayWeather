@@ -1,14 +1,15 @@
 {
   "task": "KMA-NATION-READS",
   "issue": "https://github.com/WizardFactory/TodayWeather/issues/2998",
-  "scope": "Catalog reads keep the caller's deadline up to an 8-second read cap instead of the 3-second per-operation cap that writes keep, so nation city reads queued for the shared S3 admissions are late rather than failed. Found in the SR-6 rehearsal. No deployment or production mutation.",
+  "scope": "The observed KMA source's catalog store ends reads at the earlier of the caller's deadline and 8 s; other stores and all writes and repairs keep the 3-second per-operation cap. Nation city reads queued for the store's admissions are then late rather than failed. Found in the SR-6 rehearsal. No deployment or production mutation.",
   "server2_paths": [
     "server2/config/tasks/KMA-NATION-READS.json",
+    "server2/src/domestic/kma/source/mod.rs",
     "server2/src/storage/catalog.rs",
     "server2/src/storage/catalog_model.rs",
     "server2/tests/raw_records.rs",
-    "server2/tests/storage/read_deadline.rs",
-    "server2/tests/storage/catalog_wire.rs"
+    "server2/tests/storage/catalog_wire.rs",
+    "server2/tests/storage/read_deadline.rs"
   ],
   "outside": [
     {
@@ -20,6 +21,16 @@
       "path": "docs/operations/server2-nation.md",
       "category": "documentation",
       "reason": "Nation behavior under concurrent stored reads."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.json",
+      "category": "documentation",
+      "reason": "Archify source of the nation sequence (stored-read wait)."
+    },
+    {
+      "path": "docs/architecture/diagrams/server2-nation.html",
+      "category": "documentation",
+      "reason": "Archify output regenerated from the source."
     }
   ]
 }

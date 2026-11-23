@@ -18,9 +18,10 @@ pub struct CatalogLimits {
     pub cpu: usize,
     /// Per-operation cap of every catalog operation except the reads below.
     pub deadline: Duration,
-    /// Cap of a catalog read (lookup, page, members), whose caller already bounds it with the
-    /// request deadline (KMA-NATION-READS). Queued reads may then wait up to the request's own
-    /// deadline instead of failing at [`Self::deadline`].
+    /// Cap of a catalog read (lookup, page, members) within the caller's deadline
+    /// (KMA-NATION-READS). The default equals [`Self::deadline`]; only a store whose readers own a
+    /// longer stored-read budget (the observed KMA source, 8 s) raises it, so a read queued for
+    /// that store's admissions ends at its request's deadline rather than at 3 s.
     pub read_deadline: Duration,
     pub raw: Limits,
 }
@@ -40,7 +41,7 @@ impl Default for CatalogLimits {
             io: 16,
             cpu: 2,
             deadline: Duration::from_secs(3),
-            read_deadline: Duration::from_secs(8),
+            read_deadline: Duration::from_secs(3),
             raw: Limits::default(),
         }
     }
