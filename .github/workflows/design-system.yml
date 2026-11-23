@@ -5,6 +5,9 @@ on:
   push:
     branches: [master, main]
     paths: ['packages/design-tokens/**', 'docs/design-system/**', 'scripts/design-gallery.mjs', 'scripts/verification/design-*', 'package*.json', '.github/workflows/design-system.yml']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

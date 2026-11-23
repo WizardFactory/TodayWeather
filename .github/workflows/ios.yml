@@ -133,6 +133,9 @@ on:
       - "android/tools/server-routes/generate.mjs"
       - ".github/workflows/ios.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 # Xcode 26.6 is the default of the macos-26 image; the iOS 26.5 simulator ships with it. Local builds use
 # Xcode 27 (ios/README.md); both build the iOS 17.0 deployment target.
 env:
