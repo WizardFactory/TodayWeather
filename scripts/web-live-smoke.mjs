@@ -48,8 +48,10 @@ export const DEEP_LINKS = [
 ];
 /**
  * Suffixes of the `rain.suffix.*` messages (web/src/i18n/ko.ts) for KMA data.
- * Observed and forecast amounts carry the hours the service covers
- * (`{hours}시간 관측`, `{hours}시간 예보`: 1, 3, 6 or 24), matched by RAIN_HOURS.
+ * Forecast amounts carry the hours the service covers, up to a day
+ * (`{hours}시간 예보`: 1 to 24, partial-day totals included); observed amounts
+ * are the current hour or a three-hour row (`1시간 관측`, `3시간 관측`), as
+ * `point()` in packages/weather-core assigns them. RAIN_HOURS matches these.
  */
 export const RAIN_LABELS = [
   "지금까지 관측",
@@ -57,7 +59,7 @@ export const RAIN_LABELS = [
   "1시간 예보(근사)",
   "예보",
 ];
-const RAIN_HOURS = /^[1-9]\d?시간 (관측|예보)$/;
+const RAIN_HOURS = /^(?:(?:[1-9]|1\d|2[0-4])시간 예보|[13]시간 관측)$/;
 const knownRainLabel = (label) =>
   RAIN_LABELS.includes(label) || RAIN_HOURS.test(label);
 /** Weather request paths of the probed places (coordinates from PLACES). */
@@ -95,6 +97,15 @@ export function unknownRainLabels(texts) {
       return m[2] !== undefined && !knownRainLabel(m[2]);
     return m[2] === undefined || !knownRainLabel(m[2]);
   });
+}
+/**
+ * Hourly chart columns from the current one on, given each column's
+ * current-column flag. The chart also draws yesterday's columns, which must
+ * not satisfy the forecast minimum: without a current column the count is 0.
+ */
+export function upcomingHourColumns(currentFlags) {
+  const current = currentFlags.indexOf(true);
+  return current < 0 ? 0 : currentFlags.length - current;
 }
 /** True when a KMA "YYYY.MM.DD.HH:MM" time was shown without parsing. */
 export function dottedKmaTime(text) {
@@ -1087,14 +1098,21 @@ export async function runSmoke({ base, target, expectCommit, screenshots }) {
       async () => {
         await rendered(".temperature");
         const temperature = await temperatureText();
-        const hours = await page.locator(".hourly-chart .chart-hour").count();
+        const hours = upcomingHourColumns(
+          await page
+            .locator(".hourly-chart .hourly-columns .chart-column")
+            .evaluateAll((columns) =>
+              columns.map((c) => c.classList.contains("current-column")),
+            ),
+        );
         const problems = [];
         if (!/\d/.test(temperature))
           problems.push("temperature " + JSON.stringify(temperature));
-        if (hours < 8) problems.push(`${hours} hourly chart labels (< 8)`);
+        if (hours < 8)
+          problems.push(`${hours} current and later hourly columns (< 8)`);
         if (problems.length)
           await renderFailure(problems.join(", "), SEOUL_WEATHER);
-        return `temperature ${temperature}, ${hours} hourly chart labels`;
+        return `temperature ${temperature}, ${hours} current and later hourly columns`;
       },
       "/weather/",
     );

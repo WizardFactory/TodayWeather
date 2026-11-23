@@ -774,6 +774,7 @@ it("accepts only the known precipitation labels in the live smoke", async () => 
       "강수 0 mm · 24시간 예보",
       "강수 0 mm · 1시간 예보",
       "강수 5 mm · 6시간 예보",
+      "강수 약 12 mm · 21시간 예보",
       "강수 3 mm · 예보",
       "강수량",
       "강수량 · 1시간 관측",
@@ -785,13 +786,25 @@ it("accepts only the known precipitation labels in the live smoke", async () => 
       "강수 1 mm · 6시간",
       "강수량 · 3시간",
       "강수 1 mm · 관측",
+      "강수 1 mm · 0시간 예보",
+      "강수 1 mm · 25시간 예보",
+      "강수 1 mm · 6시간 관측",
     ]),
   ).toEqual([
     "강수 1 mm",
     "강수 1 mm · 6시간",
     "강수량 · 3시간",
     "강수 1 mm · 관측",
+    "강수 1 mm · 0시간 예보",
+    "강수 1 mm · 25시간 예보",
+    "강수 1 mm · 6시간 관측",
   ]);
+  // Yesterday's columns alone do not meet the hourly forecast minimum.
+  const flags = (n: number, current: number) =>
+    Array.from({ length: n }, (_, i) => i === current);
+  expect(smoke.upcomingHourColumns(flags(33, 15))).toBe(18);
+  expect(smoke.upcomingHourColumns(flags(8, -1))).toBe(0);
+  expect(smoke.upcomingHourColumns(flags(8, 7))).toBe(1);
   expect(smoke.dottedKmaTime("관측 시각 2026.09.26.14:00")).toBe(true);
   expect(smoke.dottedKmaTime("관측 시각 2026-09-26 14:00")).toBe(false);
 });
