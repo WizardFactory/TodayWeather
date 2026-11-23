@@ -102,10 +102,14 @@ Each `/{lang}/index.html` is a single semantic, accessible document with clear l
    - **Worldwide Coverage & Regional Fit**: 21 priority markets & worldwide cities, regional units, official warnings, and Korean nationwide weather and air maps and solar-term summaries. Verify feature availability by client and market before publishing the claims.
    - **Home-screen widget**: Show a released native widget on the phone’s home screen with a localized caption about checking the weather at a glance. The [Korean store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) documents the use case.
 4. **Cross-Platform Availability (`#platforms`)**:
+   - Show the released WebApp with a current desktop capture in which the hourly comparison and the daily range chart appear together. Below 640 px, show a phone capture. Link directly to `https://app.todayweather.ai`.
    - Side-by-side summary of **WebApp (PWA & Desktop)**, **iOS Native App**, and **Android Native App** (explicitly noting offline snapshot support on WebApp and scheduled/alert notifications on native mobile apps; no claims of web push or retired TodayAir/Cordova).
-5. **Weather & Air Data Attribution (`#sources`)**:
+5. **What reviewers praise (`#reviews`)**:
+   - Present the most praised points from App Store and Google Play reviews: the comparison with yesterday, deciding what to wear, the clear screen and the hourly forecast. Quote excerpts verbatim, labelled with the store only, without dates or reviewer names. The [store review summary](../docs/evidence/research/landing-store-voice-2026-11-21.md) lists each excerpt and the theme counts.
+   - Close with a second **Open TodayWeather** action to `https://link.todayweather.ai/open`.
+6. **Weather & Air Data Attribution (`#sources`)**:
    - Transparent source credits matching [cordova-store-release.md](../docs/operations/cordova-store-release.md#L143-L155): KMA (Korea Meteorological Administration), AirKorea (Ministry of Environment / Korea Environment Corporation), Visual Crossing, Google Air Quality / Pollen, OpenWeather (and provisional-data / official-warning caution).
-6. **Footer (`<footer>`)**:
+7. **Footer (`<footer>`)**:
    - Official Developer / Operator identification matching [support.html](../client/fastlane/privacy/support.html): Flying Inc. (주식회사 플라잉) · Product Team · `mailto:todayweather@wizardfactory.net`.
    - Language-matched legal & support links to `/mobile/{privacy,terms,support}{suffix}.html`.
    - Persistent **"Analytics & Cookie Settings"** button (opens the consent preference modal in every region, allowing opt-in/opt-out at any time).

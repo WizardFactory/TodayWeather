@@ -7,7 +7,22 @@
   <meta name="robots" content="noindex">
   <meta name="description" content="어제와 같은 시간의 기온을 비교하고, 오늘의 최저·최고 기온과 홈 화면 위젯으로 외출을 준비하세요.">
   <title>오늘날씨 · 어제와 비교하는 날씨</title>
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a2536" media="(prefers-color-scheme: dark)">
+  <meta name="apple-itunes-app" content="app-id=1041700694">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="오늘날씨">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:url" content="https://todayweather.ai/">
+  <meta property="og:title" content="오늘날씨 · 어제와 비교하는 날씨">
+  <meta property="og:description" content="어제 같은 시간보다 몇 도 높은지, 낮은지. 오늘 뭘 입을지 고르기 쉬워져요.">
+  <meta property="og:image" content="https://todayweather.ai/og/ko.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="오늘날씨. 어제보다 오늘, 뭘 입을까요? 오늘과 어제 기온을 비교하는 시간별 차트.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../../web/public/icon.svg">
+  <link rel="apple-touch-icon" href="https://todayweather.ai/apple-touch-icon.png">
   <link rel="stylesheet" href="../../packages/design-tokens/generated/tokens.css">
   <link rel="stylesheet" href="../landing.css">
 </head>
@@ -15,7 +30,7 @@
   <a class="skip" href="#main">본문 바로가기</a>
   <header class="mast wrap">
     <a class="brand" href="#main"><img alt="" width="32" height="32" src="../../web/public/icon.svg">오늘날씨</a>
-    <nav aria-label="페이지 메뉴"><a href="#features">차트</a><a href="#widgets">위젯</a><a href="#platforms">웹앱</a></nav>
+    <nav aria-label="페이지 메뉴"><a href="#features">차트</a><a href="#widgets">위젯</a><a href="#platforms">웹앱</a><a href="#reviews">리뷰</a></nav>
   </header>
   <main id="main">
     <section class="hero wrap" aria-labelledby="intro">
@@ -27,7 +42,7 @@
         </div>
       </div>
       <figure class="forecast">
-        <div class="reading"><div><span class="place">서울 명동</span><strong>11.5<span>°</span></strong></div>
+        <div class="reading"><div><span class="place">서울 명동 · 예시 화면</span><strong>11.5<span>°</span></strong></div>
           <div class="comparison">구름많음<br><b>어제보다 +3°</b></div></div>
         <img class="chart" width="720" height="492" src="../assets/ios-hourly.webp" alt="오늘 11월 17일 자정을 지나는 시간별 차트. 오전 6시는 오늘 11도, 어제 9도입니다. 파란색은 당일, 회색은 전일 기온입니다.">
         <figcaption><a class="forecast-link" href="https://link.todayweather.ai/place/seoul">서울 시간별 예보 보기 ↗</a><span>iOS 앱 화면 예시</span></figcaption>
@@ -49,14 +64,54 @@
       </div>
     </section>
     <section id="platforms" class="feature-band">
-      <div class="wrap web-entry">
-        <h2>컴퓨터와 휴대폰에서 바로 보는 웹앱</h2>
-        <a class="text-link" href="https://app.todayweather.ai">웹앱 열기 ↗</a>
+      <div class="wrap web">
+        <div class="web-copy">
+          <div><p class="label">웹앱</p><h2>큰 화면에서는<br>사흘 예보를 한눈에.</h2></div>
+          <div><p class="summary">설치 없이 브라우저에서 바로 열려요. 컴퓨터에서는 시간별 차트와 일별 차트를 한 화면에서 이어 볼 수 있어요.</p>
+            <ul class="points">
+              <li>오늘부터 모레까지, 어제 기온과 겹쳐 보는 시간별 예보</li>
+              <li>지난 일주일부터 열흘 뒤까지 이어지는 일별 최저·최고</li>
+              <li>전국 날씨 · 전국 미세먼지 · 기상 특보</li>
+              <li>홈 화면에 추가하면 앱처럼</li>
+            </ul>
+            <a class="text-link" href="https://app.todayweather.ai">웹앱 열기 ↗</a></div>
+        </div>
+        <figure class="browser">
+          <picture>
+            <source media="(max-width: 40rem)" srcset="../assets/web-mobile.webp" width="780" height="2204">
+            <img src="../assets/web-desktop.webp" width="2040" height="1833" loading="lazy" alt="오늘날씨 웹앱의 서울 화면. 시간별 날씨 차트에 예보와 어제 기온이 두 선으로 겹쳐 있고, 아래 일별 날씨 차트에는 날짜마다 최저·최고 기온 막대가 이어집니다.">
+          </picture>
+          <figcaption>app.todayweather.ai <span>2026년 11월 23일 서울 화면 예시</span></figcaption>
+        </figure>
+      </div>
+    </section>
+    <section id="reviews" class="reviews wrap" aria-labelledby="reviews-title">
+      <p class="label">스토어 리뷰</p><h2 id="reviews-title">오래 쓰는 분들이<br>꼽은 이유.</h2>
+      <p class="summary">App Store와 Google Play 리뷰에서 가장 자주 칭찬받은 점을 골랐어요.</p>
+      <ul class="praise">
+        <li><h3>어제와 비교하니 바로 와닿아요</h3>
+          <blockquote><p>“어제랑 비교해서 한 눈에 오늘 날씨가 확 체감됩니다”</p><p class="by">App Store 리뷰</p></blockquote>
+          <blockquote><p>“오늘날씨가 날씨 비교하기도 좋고 한눈에 들어와서 제일 보기 편해요”</p><p class="by">Google Play 리뷰</p></blockquote></li>
+        <li><h3>오늘 뭘 입을지 정하기 쉬워요</h3>
+          <blockquote><p>“외출복장 선택할 때 굉장히 도움되는 어플입니다.”</p><p class="by">App Store 리뷰</p></blockquote>
+          <blockquote><p>“아이들 유치부라 어제랑 비교해서 옷입히면 넘 좋더라구요”</p><p class="by">Google Play 리뷰</p></blockquote></li>
+        <li><h3>깔끔해서 한눈에 들어와요</h3>
+          <blockquote><p>“가장 깔끔하고 직관적이며, 필요한 기능이 모두 들어있어서 사용하기에 좋아요.”</p><p class="by">App Store 리뷰</p></blockquote>
+          <blockquote><p>“아주간단 명료, 심플하고 직관적이라 알아보기가 매우 편하고 복잡하지않아 좋네요.”</p><p class="by">Google Play 리뷰</p></blockquote></li>
+        <li><h3>시간별 예보를 넘겨 보기 편해요</h3>
+          <blockquote><p>“시간별 날씨를 좌우로 움직여서 보는 것도 이 어플만큼 직관적인게 없습니다.”</p><p class="by">App Store 리뷰</p></blockquote>
+          <blockquote><p>“직관적으로 시간별 날씨를 파악할 수 있다는게 오늘날씨의 가장 큰 장점인 것 같아요.”</p><p class="by">App Store 리뷰</p></blockquote></li>
+      </ul>
+    </section>
+    <section class="feature-band">
+      <div class="wrap closing">
+        <div><h2>내일 아침, 어제와 비교해 보세요.</h2><p>iPhone · Android · 웹에서 쓸 수 있어요.</p></div>
+        <div class="actions"><a class="primary" href="https://link.todayweather.ai/open">오늘날씨 열기 <span aria-hidden="true">↗</span></a></div>
       </div>
     </section>
   </main>
-  <footer class="wrap"><div id="sources"><h2>날씨 자료 출처</h2><p>기상청 · 에어코리아 · Visual Crossing · Google Air Quality / Pollen · OpenWeather<br>제공 항목은 지역에 따라 달라요. 기상특보는 기상청의 최신 발표를 확인하세요.</p></div>
-    <div class="foot"><span>주식회사 플라잉 · 오늘날씨</span><nav aria-label="정책 및 문의"><a href="https://todayweather.ai/mobile/privacy.html">개인정보처리방침</a><a href="https://todayweather.ai/mobile/terms.html">이용약관</a><a href="https://todayweather.ai/mobile/support.html">고객지원</a></nav></div>
+  <footer class="wrap"><div id="sources"><h2>날씨 자료 출처</h2><p><a href="https://www.kma.go.kr">기상청</a> · <a href="https://www.airkorea.or.kr">에어코리아</a> · <a href="https://www.visualcrossing.com/">Visual Crossing</a> · Google Air Quality / Pollen · OpenWeather<br>제공 항목은 지역에 따라 달라요. 오늘날씨는 정부기관의 공식 앱이 아니에요. 기상특보는 기상청의 최신 발표를 확인하세요.</p></div>
+    <div class="foot"><span>주식회사 플라잉 · 오늘날씨 · <a href="mailto:todayweather@wizardfactory.net">todayweather@wizardfactory.net</a></span><nav aria-label="정책 및 문의"><a href="https://todayweather.ai/mobile/privacy.html">개인정보처리방침</a><a href="https://todayweather.ai/mobile/terms.html">이용약관</a><a href="https://todayweather.ai/mobile/support.html">고객지원</a></nav></div>
   </footer>
 </body>
 </html>
