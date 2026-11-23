@@ -34,7 +34,7 @@
       "image": "daily.png",
       "intro": "Daily bars use one temperature scale and one cool-to-warm gradient. Seven days fit a phone screen, as in the mobile apps; past days remain available.",
       "steps": [
-        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Each column shows the weekday over the two-digit day of the month; today starts in the third column whenever the days do not all fit; a screen wide enough shows every day at once.",
+        "Choose Daily; the daily chart scrolls into view and receives keyboard focus. Each column shows the weekday over the two-digit day of the month; when the days do not all fit, today starts in the third column, or as near to it as the chart can scroll; a screen wide enough shows every day at once.",
         "Compare minimum, maximum and current temperature: the red dot on today's bar is the current temperature. Different morning and afternoon conditions show two stacked icons (morning above); matching conditions share one icon.",
         "Use Left/Right/Home/End or the table for temperatures, conditions, precipitation probability and amount."
       ],

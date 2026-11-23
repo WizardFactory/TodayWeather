@@ -246,6 +246,19 @@ test("daily chart opens with today third whenever the days do not all fit, and a
     if (fits) expect(pos.scrollLeft).toBe(0);
     else expect(pos.todayPosition).toBe(3);
   }
+  // Today near the end of the days: the chart stops at its last scroll position.
+  raw.current = { ...raw.current, date: "20261002" };
+  await page.setViewportSize({ width: 402, height: 900 });
+  await page.goto("/weather/seoul/daily");
+  const daily = page.locator(".daily-chart");
+  await expect(daily.locator(".today-column")).toHaveCount(1);
+  await page.evaluate(() => document.fonts.ready);
+  const end = await daily.evaluate((el) => ({
+    scrollLeft: el.scrollLeft,
+    max: el.scrollWidth - el.clientWidth,
+  }));
+  expect(end.max).toBeGreaterThan(0);
+  expect(Math.abs(end.scrollLeft - end.max)).toBeLessThan(2);
 });
 test("chart route navigation scrolls and focuses on click, direct load and history", async ({
   page,
