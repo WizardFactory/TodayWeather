@@ -273,8 +273,6 @@ class CommandPlanTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir, log = Path(tmp), Path(tmp) / 'calls'
             stubs = {
-                # timeout DURATION COMMAND...: record the bound, then run the command.
-                'timeout': 'echo "timeout $1" >> "$LOG"; shift; exec "$@"',
                 'sudo': ('echo "sudo $*" >> "$LOG"\n'
                          'if [[ " $* " == *" update"* ]]; then\n'
                          '  n=$(grep -c " update" "$LOG"); [[ $n -le $FAILS ]] && exit 100\n'
@@ -296,8 +294,9 @@ class CommandPlanTests(unittest.TestCase):
         options = '-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30'
         result, calls = self.run_prepare(failing_updates=2)
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertEqual(['timeout 180', f'sudo apt-get {options} update'] * 3
-                         + ['timeout 600', f'sudo apt-get {options} install --yes --no-install-recommends '
+        bound = 'sudo timeout --kill-after=15s'
+        self.assertEqual([f'{bound} 180 apt-get {options} update --error-on=any'] * 3
+                         + [f'{bound} 600 apt-get {options} install --yes --no-install-recommends '
                             'bubblewrap apparmor'], calls)
         result, calls = self.run_prepare(failing_updates=3)
         self.assertEqual(1, result.returncode)
